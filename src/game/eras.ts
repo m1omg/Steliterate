@@ -1,4 +1,9 @@
-import type { EpochLength, EraId, GameState } from './types';
+import type { EpochLength, EraId } from './types';
+
+// Scale follows time. Each era has a natural pace, the Tide: the turn length a civilization
+// surviving at that moment would naturally live at. The Tide grows in proportion to the time
+// already spent in the era, so cosmic time advances geometrically. The player can quicken
+// (shorter turns, more turns while a bright source lasts) or slow down against the Tide.
 
 export interface EraDef {
   id: EraId;
@@ -6,14 +11,13 @@ export interface EraDef {
   numeral: string;
   name: string;
   science: string;
-  etaStart: number;
-  etaEnd: number;
   startYears: number;
-  logL0: number; // log10 of the first turn's length in years
-  step: Record<EpochLength, number>; // log10 growth of turn length per turn
+  endEta: number; // era ends when eta reaches this (dark: log10(eta) reaches it)
+  l0: number; // first Tide turn length (years)
+  growth: Record<EpochLength, number>; // per-turn growth factor of the Tide
   accent: string;
   accentSoft: string;
-  ink: string;
+  neon: string;
   intro: string;
 }
 
@@ -24,14 +28,13 @@ export const ERAS: EraDef[] = [
     numeral: 'I',
     name: 'The Long Dusk',
     science: 'Late Stelliferous Era',
-    etaStart: 13.954,
-    etaEnd: 14,
     startYears: 9.0e13,
-    logL0: 1.6,
-    step: { brief: 0.14, standard: 0.105, vast: 0.08 },
+    endEta: 14,
+    l0: 40,
+    growth: { brief: 1.38, standard: 1.27, vast: 1.2 },
     accent: '#f28a4f',
     accentSoft: '#ffb77a',
-    ink: '#efe4d6',
+    neon: '#4fe3d1',
     intro:
       'Ninety trillion years after the first light, the galaxy has run out of gas to make new stars. Only the smallest red dwarfs still burn, and they are near the end of their fuel. Your world circles one of them. Its core is cooling and its magnetic field is failing, and the star’s wind has begun to strip the air away.',
   },
@@ -41,16 +44,15 @@ export const ERAS: EraDef[] = [
     numeral: 'II',
     name: 'The Degenerate Age',
     science: 'Degenerate Era',
-    etaStart: 15,
-    etaEnd: 39,
     startYears: 1e15,
-    logL0: 9,
-    step: { brief: 0.65, standard: 0.45, vast: 0.33 },
+    endEta: 39,
+    l0: 1e9,
+    growth: { brief: 4.47, standard: 2.82, vast: 2.14 },
     accent: '#93c4ff',
     accentSoft: '#cfe3ff',
-    ink: '#e3e9f2',
+    neon: '#ff5fa2',
     intro:
-      'The last stars are gone. What remains are their corpses: white dwarfs kept faintly warm by dark matter falling into them, brown dwarfs that never ignited, neutron stars, and black holes. Every few ages two brown dwarfs collide and a new star burns briefly. The galaxy has begun to throw its remnants out into the void, and the protons themselves may not last.',
+      'The last ordinary stars are gone. What remains are their corpses: white dwarfs kept faintly warm by dark matter falling into them, brown dwarfs that never ignited, neutron stars, and black holes. Now and then two brown dwarfs collide and a small star burns again, or two white dwarfs merge into a brilliant, brief helium star. The galaxy has begun to throw its remnants into the void, and the protons themselves may not last.',
   },
   {
     id: 'blackhole',
@@ -58,14 +60,13 @@ export const ERAS: EraDef[] = [
     numeral: 'III',
     name: 'The Black Hole Age',
     science: 'Black Hole Era',
-    etaStart: 40,
-    etaEnd: 100,
     startYears: 1e40,
-    logL0: 39.3,
-    step: { brief: 1.5, standard: 1.1, vast: 0.8 },
+    endEta: 100,
+    l0: 2e39,
+    growth: { brief: 31.6, standard: 12.6, vast: 6.3 },
     accent: '#a48dff',
     accentSoft: '#d2c6ff',
-    ink: '#e6e2f2',
+    neon: '#ffb347',
     intro:
       'Ordinary matter has decayed away. Planets, white dwarfs and neutron stars have dissolved into radiation and a thin haze of electrons and positrons. Only the black holes remain. They spin, and they very slowly evaporate. Whatever you are now, you live around them.',
   },
@@ -75,16 +76,15 @@ export const ERAS: EraDef[] = [
     numeral: 'IV',
     name: 'The Dark Era',
     science: 'Dark Era',
-    etaStart: 100,
-    etaEnd: 141,
     startYears: 1e100,
-    logL0: 99.5,
-    step: { brief: 2.4, standard: 1.8, vast: 1.3 },
+    endEta: 122, // measured on log10(eta): the deep-time ruler
+    l0: 0,
+    growth: { brief: 0.005, standard: 0.0029, vast: 0.0018 },
     accent: '#9aa3b0',
     accentSoft: '#c9ced6',
-    ink: '#dcdfe4',
+    neon: '#7fd8ff',
     intro:
-      'The last black hole has evaporated. There are no more sources, only what you saved. Photons stretched longer than galaxies once were, and positronium atoms wider than the old observable universe, drift through the dark. Every thought now draws on a reserve that will never refill.',
+      'The last black hole has evaporated. There are no more sources, only what you saved. Photons stretched longer than galaxies once were, and positronium atoms wider than the old observable universe, drift through the dark. Every thought now draws on a reserve that will never refill, and time itself now passes in powers of powers.',
   },
 ];
 
@@ -95,29 +95,86 @@ export function nextEra(id: EraId): EraId | null {
   return i < ERAS.length - 1 ? ERAS[i + 1].id : null;
 }
 
-/** Length of the coming turn in years. */
-export function turnLengthFor(era: EraId, eraTurn: number, length: EpochLength): number {
-  const def = ERA_BY_ID[era];
-  return Math.pow(10, def.logL0 + def.step[length] * eraTurn);
-}
-
 export function eta(years: number): number {
   return Math.log10(Math.max(1, years));
 }
 
-/** Where the era should end (cosmic years). */
-export function eraEndYears(era: EraId): number {
-  return Math.pow(10, ERA_BY_ID[era].etaEnd);
+/** The natural turn length (years) at a given moment of an era, before pace. */
+export function tideLength(era: EraId, years: number, length: EpochLength): number {
+  const d = ERA_BY_ID[era];
+  if (era === 'dark') return Infinity;
+  const elapsed = Math.max(0, years - d.startYears);
+  return d.l0 + (d.growth[length] - 1) * elapsed;
 }
 
-/** Approximate number of turns an era lasts at a given epoch length (for UI previews). */
+/** Deep time: the per-turn growth factor of log10(eta) at the Tide. */
+function darkLambdaFactor(lambda: number, length: EpochLength): number {
+  const a = ERA_BY_ID.dark.growth[length];
+  const n = Math.sqrt(Math.max(0, Math.log(Math.max(lambda, 2) / 2)) / a);
+  return Math.exp(a * (2 * n + 1));
+}
+
+export interface TimeStep {
+  years: number;
+  eta: number;
+  turnLength: number;
+}
+
+/** Advance the clock by one turn at the given pace (log10 factor, + = quicker, shorter turns). */
+export function stepTime(era: EraId, years: number, etaNow: number, pace: number, length: EpochLength): TimeStep {
+  const factor = Math.pow(10, -pace);
+  if (era !== 'dark') {
+    const L = tideLength(era, years, length) * factor;
+    const y = years + L;
+    return { years: y, eta: eta(y), turnLength: L };
+  }
+  const lambda = Math.log10(Math.max(etaNow, 100));
+  const g = darkLambdaFactor(lambda, length);
+  const nextLambda = Math.min(122.5, lambda * Math.pow(g, Math.min(2, Math.max(0.5, factor))));
+  const nextEta = Math.pow(10, nextLambda);
+  const y = nextEta < 300 ? Math.pow(10, nextEta) : Infinity;
+  const L = isFinite(y) && isFinite(years) ? y - years : Infinity;
+  return { years: y, eta: nextEta, turnLength: L };
+}
+
+/** log10 of the turn length for tempo maths. In deep time the length is ~10^nextEta. */
+export function logTurnLength(step: TimeStep): number {
+  if (isFinite(step.turnLength)) return Math.log10(Math.max(1, step.turnLength));
+  return step.eta;
+}
+
+/** Has the era run its course? */
+export function eraOver(era: EraId, etaNow: number): boolean {
+  const d = ERA_BY_ID[era];
+  if (era === 'dark') return Math.log10(etaNow) >= d.endEta;
+  return etaNow >= d.endEta;
+}
+
+/** Turns until a cosmic year is reached at the Tide (for forecasts). */
+export function turnsUntil(era: EraId, years: number, target: number, length: EpochLength, pace = 0): number {
+  if (!isFinite(target)) return Infinity;
+  if (target <= years) return 0;
+  let y = years;
+  let e = eta(years);
+  for (let n = 1; n <= 400; n++) {
+    const s = stepTime(era, y, e, pace, length);
+    y = s.years;
+    e = s.eta;
+    if (y >= target) return n;
+  }
+  return Infinity;
+}
+
+/** Approximate number of turns an era lasts at the Tide. */
 export function estimateEraTurns(era: EraId, length: EpochLength): number {
-  const def = ERA_BY_ID[era];
-  let years = def.startYears;
-  const end = eraEndYears(era);
+  const d = ERA_BY_ID[era];
+  let y = d.startYears;
+  let e = eta(y);
   let n = 0;
-  while (years < end && n < 2000) {
-    years += turnLengthFor(era, n, length);
+  while (!eraOver(era, e) && n < 1000) {
+    const s = stepTime(era, y, e, 0, length);
+    y = s.years;
+    e = s.eta;
     n++;
   }
   return n;
@@ -134,65 +191,79 @@ export function sup(n: number | string): string {
     .join('');
 }
 
-function trimNum(x: number, digits: number): string {
+function num(x: number, digits: number): string {
   return x.toLocaleString('en-US', { maximumFractionDigits: digits });
 }
 
-/** "40 years", "3,200 years", "12.4 million years", "10²⁷·³ years" */
-export function formatYears(y: number): string {
-  if (!isFinite(y)) return '∞';
-  if (y < 1e4) return `${trimNum(Math.round(y), 0)} years`;
-  if (y < 1e6) return `${trimNum(Math.round(y / 100) * 100, 0)} years`;
-  if (y < 1e9) return `${trimNum(y / 1e6, 1)} million years`;
-  if (y < 1e12) return `${trimNum(y / 1e9, 1)} billion years`;
-  if (y < 1e15) return `${trimNum(y / 1e12, 1)} trillion years`;
+/** Human-readable span of years, valid from decades to powers of powers. */
+export function formatYears(y: number, etaHint?: number): string {
+  if (!isFinite(y)) {
+    const e = etaHint ?? Infinity;
+    if (!isFinite(e)) return '∞';
+    return `10^(10${sup(Math.log10(e).toFixed(1))}) years`;
+  }
+  if (y < 1e4) return `${num(Math.round(y), 0)} years`;
+  if (y < 1e6) return `${num(Math.round(y / 100) * 100, 0)} years`;
+  if (y < 1e9) return `${num(y / 1e6, 1)} million years`;
+  if (y < 1e12) return `${num(y / 1e9, 1)} billion years`;
+  if (y < 1e15) return `${num(y / 1e12, 1)} trillion years`;
   return `10${sup(eta(y).toFixed(1))} years`;
 }
 
-export function formatYearsShort(y: number): string {
+export function formatYearsShort(y: number, etaHint?: number): string {
+  if (!isFinite(y)) {
+    const e = etaHint ?? Infinity;
+    return isFinite(e) ? `10^10${sup(Math.log10(e).toFixed(1))} yr` : '∞';
+  }
   if (y < 1e4) return `${Math.round(y)} yr`;
-  if (y < 1e6) return `${trimNum(y / 1e3, 0)}k yr`;
-  if (y < 1e9) return `${trimNum(y / 1e6, 1)} Myr`;
-  if (y < 1e12) return `${trimNum(y / 1e9, 1)} Gyr`;
-  if (y < 1e15) return `${trimNum(y / 1e12, 1)} Tyr`;
+  if (y < 1e6) return `${num(y / 1e3, 0)}k yr`;
+  if (y < 1e9) return `${num(y / 1e6, 1)} Myr`;
+  if (y < 1e12) return `${num(y / 1e9, 1)} Gyr`;
+  if (y < 1e15) return `${num(y / 1e12, 1)} Tyr`;
   return `10${sup(eta(y).toFixed(1))} yr`;
 }
 
 /** η with enough precision to move visibly in each era. */
-export function formatEta(years: number, era: EraId): string {
-  const e = eta(years);
-  const digits = era === 'dusk' ? 4 : era === 'degenerate' ? 2 : 1;
+export function formatEta(e: number, era: EraId): string {
+  if (e >= 1e4) return `10${sup(Math.log10(e).toFixed(2))}`;
+  const digits = era === 'dusk' ? 4 : era === 'degenerate' ? 2 : era === 'blackhole' ? 1 : 1;
   return e.toFixed(digits);
 }
 
 export function formatDistance(ly: number): string {
-  if (ly < 1000) return `${trimNum(ly, ly < 10 ? 1 : 0)} ly`;
-  if (ly < 1e6) return `${trimNum(ly / 1000, 1)} kly`;
-  return `${trimNum(ly / 1e6, 2)} Mly`;
+  if (ly < 1000) return `${num(ly, ly < 10 ? 1 : 0)} ly`;
+  if (ly < 1e6) return `${num(ly / 1000, 1)} kly`;
+  return `${num(ly / 1e6, 2)} Mly`;
 }
 
 // ------------------------------------------------------------ chronometer milestones
 
 export interface Milestone {
-  eta: number;
+  at: number; // eta for the main ruler, log10(eta) for the deep ruler
   label: string;
   detail: string;
 }
 
 export const MILESTONES: Milestone[] = [
-  { eta: 14, label: 'Last Light', detail: 'The last ordinary stars leave the main sequence; star formation ends.' },
-  { eta: 15, label: 'Stripped worlds', detail: 'Close stellar encounters have torn most planets from their stars.' },
-  { eta: 19.5, label: 'Galactic evaporation', detail: 'Most remnants are flung out of their galaxies; a minority falls into the central black hole.' },
-  { eta: 23, label: 'Brown-dwarf stars end', detail: 'Collisions between brown dwarfs stop lighting new stars.' },
-  { eta: 25, label: 'Embers fade', detail: 'The dark-matter halo is depleted; white dwarfs stop being heated by WIMP annihilation.' },
-  { eta: 37, label: 'Proton decay?', detail: 'If protons decay (lifetime unknown, >10³⁴ years), ordinary matter dissolves by η ≈ 39.' },
-  { eta: 69, label: 'Stellar holes evaporate', detail: 'Black holes of a few to tens of solar masses finish evaporating by Hawking radiation.' },
-  { eta: 83, label: 'Million-sun holes', detail: 'Black holes of 10⁶ solar masses evaporate.' },
-  { eta: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
-  { eta: 99, label: 'Last Horizon', detail: 'Galaxy-sized black holes evaporate. The Black Hole Era ends.' },
-  { eta: 141, label: 'Positronium decays', detail: 'The last bound structures annihilate into photons.' },
+  { at: 14, label: 'Last Light', detail: 'The last ordinary stars leave the main sequence; star formation ends.' },
+  { at: 15, label: 'Stripped worlds', detail: 'Close stellar passes have torn most planets from their stars.' },
+  { at: 19.5, label: 'Galactic evaporation', detail: 'Most remnants are flung out of the galaxy; a minority falls into the central black hole.' },
+  { at: 23, label: 'Last collision stars', detail: 'Brown-dwarf collisions stop lighting new stars.' },
+  { at: 25, label: 'Embers fade', detail: 'The dark-matter halo is spent; white dwarfs are no longer warmed by WIMP annihilation.' },
+  { at: 37, label: 'Proton decay?', detail: 'If protons decay (lifetime unknown, above 10³⁴ years), ordinary matter dissolves by η ≈ 39.' },
+  { at: 69, label: 'Stellar holes evaporate', detail: 'Black holes of a few to tens of solar masses finish evaporating.' },
+  { at: 83, label: 'Million-sun holes', detail: 'Black holes of 10⁶ solar masses evaporate.' },
+  { at: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
+  { at: 99, label: 'Last Horizon', detail: 'Galaxy-sized black holes evaporate. The Black Hole Era ends.' },
+  { at: 141, label: 'Positronium decays', detail: 'The last bound atoms annihilate into photons.' },
 ];
 
-export function currentEraDef(state: GameState): EraDef {
-  return ERA_BY_ID[state.era];
-}
+/** Deep-time milestones, on log10(eta). Speculative physics, labelled as such in the Codex. */
+export const DEEP_MILESTONES: Milestone[] = [
+  { at: Math.log10(141), label: 'Positronium decays', detail: 'η ≈ 141 (Page & McKee).' },
+  { at: Math.log10(161), label: 'Vacuum decay?', detail: 'One Standard Model estimate puts the vacuum lifetime near 10¹⁶¹ years, with an uncertainty spanning over a thousand orders of magnitude.' },
+  { at: Math.log10(1500), label: 'Iron stars', detail: 'If protons are stable, cold fusion by tunnelling turns all matter to iron by about 10¹⁵⁰⁰ years (Dyson 1979).' },
+  { at: 26, label: 'Tunnelling collapse', detail: 'If protons are stable, iron stars tunnel into neutron stars and black holes between 10^(10²⁶) and 10^(10⁷⁶) years.' },
+  { at: 76, label: 'Last collapse', detail: 'The slowest estimate for matter tunnelling into black holes.' },
+  { at: 122, label: 'Recurrence', detail: 'Poincaré recurrence of a de Sitter horizon, about 10^(10¹²²) years: given long enough, any state returns.' },
+];

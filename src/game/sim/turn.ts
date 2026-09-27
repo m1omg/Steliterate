@@ -1,0 +1,453 @@
+import { SHIP_BY_ID } from '../data/ships';
+import { STRUCTURE_BY_ID } from '../data/structures';
+import { TECH_BY_ID } from '../data/techs';
+import { eraOver, logTurnLength, stepTime } from '../eras';
+import { evolveUniverse, type EvolutionNote } from '../physics';
+import type { Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
+import { THREADS } from '../types';
+import { runCrossing } from './crossing';
+import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
+import { checkEndings, workCost } from './endings';
+import { queueEvent, rollRandomEvent } from './events';
+import { advanceFleets, destroyColony, newFleet, updateDetection } from './fleets';
+import { updateForecasts } from './forecast';
+import { updateHunger } from './hunger';
+import { updateMinds } from './minds';
+import { computeMods, type Mods } from './mods';
+import { techCost } from './research';
+import { deliverSignals } from './signals';
+import { updateSociety } from './society';
+import { jointIncome, updateSurvivors } from './survivors';
+import { clamp, colonies, hasCharter, log, popsOf, totalPops, withRng } from './util';
+
+export interface TurnResult {
+  crossing: CrossingReport | null;
+  outcome: Outcome | null;
+  arrived: Signal[];
+  notes: EvolutionNote[];
+  wasted: number;
+}
+
+/** Industry drives the build queue; leftover becomes salvage. */
+function applyIndustry(state: GameState, c: Colony, industry: number, mods: Mods) {
+  let left = Math.max(industry, c.queue[0] && c.queue[0].progress >= c.queue[0].cost - 0.01 ? 0.01 : 0);
+  let guard = 0;
+  while (left > 0 && c.queue.length && guard++ < 8) {
+    const item = c.queue[0];
+    const need = item.cost - item.progress;
+    const use = Math.min(need, left);
+    item.progress += use;
+    left -= use;
+    if (item.progress >= item.cost - 1e-6) {
+      c.queue.shift();
+      if (item.kind === 'structure') {
+        const d = STRUCTURE_BY_ID[item.key];
+        c.structures[item.key] = (c.structures[item.key] ?? 0) + 1;
+        if (d?.vitalityOnce) {
+          const b = state.bodies[c.bodyId];
+          b.vitality = Math.min(1, b.vitality + d.vitalityOnce);
+        }
+        if (d?.coreHeatBonus) {
+          const b = state.bodies[c.bodyId];
+          b.coreHeat = Math.min(1, b.coreHeat + d.coreHeatBonus);
+        }
+        if (item.key === 'confluence_node') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
+        log(state, `${c.name}: ${d?.name ?? item.key} complete.`, 'good', c.systemId);
+      } else {
+        const def = SHIP_BY_ID[item.key];
+        const existing = Object.values(state.fleets).find((f) => f.at === c.systemId && f.order === 'idle' && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
+        if (existing) existing.ships.push({ cls: item.key, hp: def?.hp ?? 5 });
+        else newFleet(state, c.systemId, [item.key]);
+        log(state, `${c.name}: ${def?.name ?? item.key} launched from the slips.`, 'good', c.systemId);
+      }
+    }
+  }
+  if (left > 0 && !c.queue.length && !state.civ.dormant) {
+    if (!state.protonsDecay || state.era === 'dusk' || state.era === 'degenerate') state.civ.matter += left * 0.1;
+    else state.civ.energy += left * 0.05;
+  }
+  void mods;
+}
+
+function declineWorlds(state: GameState) {
+  for (const c of colonies(state)) {
+    const b = state.bodies[c.bodyId];
+    if (!b || b.dissolved) continue;
+    let mult = 1;
+    for (const [id, n] of Object.entries(c.structures)) {
+      const d = STRUCTURE_BY_ID[id];
+      if (d?.declineMult && n) mult *= d.declineMult;
+    }
+    if (c.overdrive) mult *= 1.3;
+    if (b.decline > 0) {
+      const accel = state.era === 'dusk' ? Math.min(3, 1 + state.eraTurn * 0.02) : 3;
+      b.vitality = Math.max(0, b.vitality - b.decline * mult * accel);
+    }
+    if (b.traits.includes('homeworld') && state.era === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
+    if (state.era !== 'dusk') b.vitality = Math.max(0, b.vitality - 0.05);
+  }
+}
+
+export function endTurn(state: GameState): TurnResult {
+  const result: TurnResult = { crossing: null, outcome: state.outcome, arrived: [], notes: [], wasted: 0 };
+  if (state.outcome) return result;
+  const civ = state.civ;
+  const mods = computeMods(state);
+  civ.pace = clamp(civ.pace, mods.paceMin, mods.paceMax);
+
+  // Long Sleep
+  if (civ.sleepTurns > 0) {
+    civ.dormant = true;
+    civ.sleepTurns--;
+    if (civ.sleepTurns === 0) {
+      civ.dormant = false;
+      civ.wakeBonus = hasCharter(state, 'the_long_watch') ? 2 : 1;
+      log(state, 'We wake.', 'info');
+    }
+  }
+
+  const step = stepTime(state.era, state.years, state.eta, civ.pace, state.settings.length);
+  const logL = logTurnLength(step);
+  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: Math.pow(10, -civ.pace), mods };
+
+  // ------------------------------------------------ 1. economy
+  let eIn = 0;
+  let eOut = 0;
+  let mIn = 0;
+  let mOut = 0;
+  let insight = 0;
+  let accord = 0;
+  let matterAvail = civ.matter;
+  const net: Record<string, number> = {};
+  for (const c of colonies(state)) {
+    const t = colonyTurn(state, c, ctx, matterAvail);
+    matterAvail -= t.matterBurn;
+    c.last = t.y;
+    eIn += t.y.energy;
+    eOut += t.y.energyUpkeep;
+    mIn += t.y.matter;
+    mOut += t.y.matterUpkeep;
+    insight += t.y.insight;
+    accord += t.y.accord;
+    net[c.id] = t.y.energy - t.y.energyUpkeep;
+    const sys = state.systems[c.systemId];
+    sys.primary.spin = Math.max(0, sys.primary.spin - t.spinDraw);
+    if (t.depletion > 0) {
+      const b = state.bodies[c.bodyId];
+      b.richness = Math.max(0.05, b.richness - t.depletion * 0.0006);
+      b.hydrogen = Math.max(0, b.hydrogen - t.depletion * 0.0004);
+    }
+    if (c.overdrive) {
+      c.damage = Math.min(1, c.damage + 0.04);
+      state.gfe = Math.max(0.05, state.gfe - 0.0002);
+    } else c.damage = Math.max(0, c.damage - 0.02);
+    for (const [id, n] of Object.entries(c.structures)) {
+      const d = STRUCTURE_BY_ID[id];
+      if (d?.gfeDrain && n) state.gfe = Math.max(0.05, state.gfe - d.gfeDrain * n * ctx.paceFactor);
+    }
+    applyIndustry(state, c, t.y.industry, mods);
+  }
+  eIn += jointIncome(state) * ctx.paceFactor;
+  accord -= latticeAlienation(state, mods);
+  civ.energy += eIn - eOut;
+  civ.matter += mIn - mOut;
+  civ.accord = clamp(civ.accord + accord, 0, 999);
+  const cap = reserveCapacity(state, mods);
+  civ.flags.reserve_cap = cap;
+  if (civ.energy > cap) {
+    result.wasted = civ.energy - cap;
+    civ.energy = cap;
+  }
+  civ.flags.last_energy_net = eIn - eOut;
+  civ.flags.last_matter_net = mIn - mOut;
+  civ.flags.last_insight = insight;
+  civ.flags.last_accord = accord;
+
+  // overdrive accidents
+  withRng(state, (rng) => {
+    for (const c of colonies(state)) {
+      if (c.overdrive && c.damage > 0.5 && rng.chance(c.damage * 0.25)) {
+        const keys = Object.keys(c.structures).filter((k) => STRUCTURE_BY_ID[k]?.energy);
+        if (keys.length) {
+          const k = rng.pick(keys);
+          c.structures[k]--;
+          if (c.structures[k] <= 0) delete c.structures[k];
+          log(state, `An overdriven Hearth failed at ${c.name}: ${STRUCTURE_BY_ID[k]?.name} is wrecked.`, 'bad', c.systemId);
+        }
+        c.damage *= 0.5;
+      }
+    }
+  });
+
+  // ------------------------------------------------ 2. starvation
+  let starving = false;
+  let popsLost = 0;
+  if (civ.energy < 0) {
+    starving = true;
+    civ.energy = 0;
+    const hungry = colonies(state).filter((c) => (net[c.id] ?? 0) < 0).sort((a, b) => (net[a.id] ?? 0) - (net[b.id] ?? 0));
+    for (const c of hungry.slice(0, 3)) {
+      c.starving++;
+      const lottery = hasCharter(state, 'cold_sleep_lottery') && capacity(state, c, mods).cryo > c.cryo;
+      if (c.pops.kin > 0) {
+        c.pops.kin--;
+        if (lottery) c.cryo++;
+        else {
+          popsLost++;
+          if (hasCharter(state, 'upload_at_death') && capacity(state, c, mods).echoes > c.pops.echoes && withRng(state, (r) => r.chance(0.5))) c.pops.echoes++;
+        }
+      } else if (c.pops.chorus + c.pops.echoes + c.pops.coldminds > 0 && c.starving % 2 === 0) {
+        const t = c.pops.echoes > 0 ? 'echoes' : c.pops.chorus > 0 ? 'chorus' : 'coldminds';
+        c.pops[t]--;
+        popsLost++;
+      }
+    }
+    log(state, 'The reserve is empty. Settlements are going cold.', 'bad');
+  } else {
+    for (const c of colonies(state)) c.starving = 0;
+  }
+  if (civ.matter < 0) {
+    civ.matter = 0;
+    const c = colonies(state).find((x) => x.pops.lattice > 0);
+    if (c) {
+      c.pops.lattice--;
+      log(state, `Without matter for repairs, a Lattice at ${c.name} wore out.`, 'bad', c.systemId);
+    }
+  }
+
+  // ------------------------------------------------ 3. research and works
+  let research = insight;
+  if (civ.work) {
+    const share = civ.researching ? 0.5 : 1;
+    civ.works[civ.work] = (civ.works[civ.work] ?? 0) + insight * share;
+    research = insight * (1 - share);
+    if ((civ.works[civ.work] ?? 0) >= workCost(state, civ.work)) {
+      log(state, `The Great Work is complete.`, 'era');
+      civ.work = null;
+    }
+  }
+  if (civ.researching) {
+    const bank = civ.flags.insight_bank ?? 0;
+    civ.research[civ.researching] = (civ.research[civ.researching] ?? 0) + research + bank;
+    civ.flags.insight_bank = 0;
+    const cost = techCost(state, civ.researching);
+    if (civ.research[civ.researching] >= cost) {
+      const id = civ.researching;
+      const def = TECH_BY_ID[id];
+      civ.techs.push(id);
+      civ.flags.insight_bank = civ.research[id] - cost;
+      delete civ.research[id];
+      civ.researching = null;
+      if (def?.taint) civ.taint = Math.min(100, civ.taint + def.taint);
+      log(state, `Research complete: ${def?.name ?? id}.`, 'good');
+      if (id === 'proton_question') queueEvent(state, 'proton_answer');
+    }
+  } else civ.flags.insight_bank = Math.min((civ.flags.insight_bank ?? 0) + research, 2000);
+
+  // ------------------------------------------------ 4. growth, capacity, worlds
+  declineWorlds(state);
+  for (const c of colonies(state)) {
+    const capc = capacity(state, c, mods);
+    const b = state.bodies[c.bodyId];
+    if (!civ.dormant && !starving) {
+      if (c.pops.kin > 0 && c.pops.kin < capc.kin) {
+        c.growth.kin += 0.12 * (0.5 + 0.5 * b.vitality) * (hasCharter(state, 'child_quotas') ? 0.4 : 1);
+      }
+      if (c.pops.echoes < capc.echoes && (c.pops.echoes > 0 || capc.echoes > 0) && civ.energy > 15) c.growth.echoes += 0.22;
+      if (c.pops.lattice < capc.lattice && civ.matter >= 4) c.growth.lattice += 0.35;
+    }
+    for (const t of THREADS) {
+      if (c.growth[t] >= 1) {
+        c.growth[t] -= 1;
+        if (t === 'lattice') civ.matter -= 3;
+        if (t === 'echoes') civ.energy -= 3;
+        if (c.pops[t] < capc[t] || (t === 'kin' && c.pops.kin === 0)) c.pops[t]++;
+      }
+      if (c.pops[t] > capc[t] && !(t === 'kin' && capc.kin === 0 && c.pops.kin <= 0)) {
+        c.pops[t]--;
+        popsLost++;
+        if (t === 'kin' && hasCharter(state, 'cold_sleep_lottery') && capc.cryo > c.cryo) {
+          c.cryo++;
+          popsLost--;
+        }
+      }
+    }
+    if (c.cryo > capc.cryo) {
+      const over = c.cryo - capc.cryo;
+      c.cryo -= over;
+      c.pops.kin += over;
+    }
+    if (popsOf(c) + c.cryo <= 0 && Object.keys(c.structures).length === 0) destroyColony(state, c, 'abandoned');
+  }
+
+  // ------------------------------------------------ 5. society
+  updateSociety(state, logL, popsLost, starving);
+  if (civ.wakeBonus > 0 && !civ.dormant) civ.wakeBonus--;
+  if (hasCharter(state, 'rationing')) civ.resolve = Math.max(0, civ.resolve - 0.5);
+
+  // ------------------------------------------------ 6. fleets, hazards, other minds
+  advanceFleets(state, step.turnLength, mods);
+  updateDetection(state, mods);
+  updateHunger(state, step.turnLength, mods);
+  updateSurvivors(state, logL, mods, step.turnLength);
+  updateMinds(state, logL, mods);
+
+  // ------------------------------------------------ 7. the universe moves on
+  const from = state.years;
+  const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
+  result.notes = notes;
+  handleNotes(state, notes);
+  if (state.era === 'dark') {
+    // Continuity: every cycle risks a little of the pattern
+    let decay = 2.2;
+    for (const c of colonies(state)) {
+      for (const [id, n] of Object.entries(c.structures)) {
+        const d = STRUCTURE_BY_ID[id];
+        if (d?.continuityMult && n) decay *= Math.pow(d.continuityMult, n);
+      }
+    }
+    if (civ.dormant) decay *= 0.35;
+    if (starving) decay += 5;
+    civ.continuity = Math.max(0, civ.continuity - decay);
+  }
+  state.years = step.years;
+  state.eta = step.eta;
+  state.turnLength = step.turnLength;
+  state.turn++;
+  state.eraTurn++;
+
+  // ------------------------------------------------ 8. signals, forecasts, events
+  result.arrived = deliverSignals(state);
+  for (const s of result.arrived) {
+    if (s.kind === 'last' && s.data.insight) {
+      const gain = Number(s.data.insight);
+      civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
+      if (hasCharter(state, 'salvage_the_dead') || hasCharter(state, 'consume_the_dead')) civ.matter += gain * 0.5;
+    }
+  }
+  if (state.turn === 3) queueEvent(state, 'dynamo_fails');
+  if (state.turn === 7) queueEvent(state, 'first_night');
+  if ((state.flags.hunger_woke ?? 0) > 0 && !state.fired.rust_in_the_belt) queueEvent(state, 'rust_in_the_belt');
+  rollRandomEvent(state);
+  updateForecasts(state);
+
+  // ------------------------------------------------ 9. crossings
+  if (eraOver(state.era, state.eta)) {
+    if (state.era === 'dark') {
+      // the deep-time ruler has run out: endurance
+    } else {
+      const atLastHorizon = state.era === 'blackhole';
+      if (atLastHorizon) {
+        const o = checkEndings(state, true);
+        if (o) {
+          result.outcome = o;
+          return result;
+        }
+      }
+      result.crossing = runCrossing(state, mods);
+      state.crossing = result.crossing;
+      updateForecasts(state);
+    }
+  }
+  // the last black hole may evaporate before the calendar says so
+  if (state.era === 'blackhole' && !Object.values(state.systems).some((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone)) {
+    const o = checkEndings(state, true);
+    if (o) {
+      result.outcome = o;
+      return result;
+    }
+    result.crossing = runCrossing(state, computeMods(state));
+    state.crossing = result.crossing;
+  }
+
+  // ------------------------------------------------ 10. endings, stats
+  result.outcome = checkEndings(state);
+  civ.stats.pops.push(totalPops(state));
+  civ.stats.energy.push(Math.round(civ.energy));
+  civ.stats.resolve.push(Math.round(civ.resolve));
+  for (const k of ['pops', 'energy', 'resolve'] as const) if (civ.stats[k].length > 500) civ.stats[k].shift();
+  if (!civ.capitalId || !state.colonies[civ.capitalId]) civ.capitalId = colonies(state).sort((a, b) => popsOf(b) - popsOf(a))[0]?.id ?? null;
+  return result;
+}
+
+function handleNotes(state: GameState, notes: EvolutionNote[]) {
+  const colonized = new Set(colonies(state).map((c) => c.systemId));
+  const known = state.civ.known;
+  for (const n of notes) {
+    const sys = state.systems[n.systemId];
+    if (!sys) continue;
+    const mine = colonized.has(sys.id);
+    const seen = !!known[sys.id];
+    switch (n.kind) {
+      case 'blue':
+        if (seen) log(state, `${sys.name} has left the main sequence. It is brightening into a blue dwarf, its final flare of life.`, mine ? 'good' : 'info', sys.id);
+        break;
+      case 'white':
+        if (seen) log(state, `${sys.name} has collapsed into a white dwarf. Its light is going out.`, mine ? 'bad' : 'info', sys.id);
+        break;
+      case 'collision':
+        queueEvent(state, 'new_star', { systemId: sys.id });
+        known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
+        break;
+      case 'merger':
+        queueEvent(state, 'white_fire', { systemId: sys.id });
+        known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
+        break;
+      case 'giant':
+        if (seen) log(state, `The merger star at ${sys.name} has swollen into a helium giant, blindingly bright and very brief.`, 'info', sys.id);
+        break;
+      case 'supernova':
+        for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'a supernova');
+        queueEvent(state, 'supernova', { systemId: sys.id });
+        break;
+      case 'burnout':
+        if (seen) log(state, `The star at ${sys.name} has burned out.`, mine ? 'bad' : 'info', sys.id);
+        break;
+      case 'rogue':
+        if (n.bodyId && state.bodies[n.bodyId]?.colonyId) queueEvent(state, 'unmoored', { systemId: sys.id, bodyId: n.bodyId });
+        break;
+      case 'feeding':
+      case 'rekindle':
+        if (mine || state.bodies[n.bodyId ?? '']?.traits.includes('homeworld')) queueEvent(state, 'world_falls', { systemId: sys.id, bodyId: n.bodyId ?? '' });
+        else if (seen) log(state, `A world is falling into the dead star at ${sys.name}, feeding it a faint new warmth.`, 'info', sys.id);
+        break;
+      case 'plunge':
+        if (n.bodyId) {
+          const b = state.bodies[n.bodyId];
+          if (b?.colonyId) {
+            const c = state.colonies[b.colonyId];
+            if (c) destroyColony(state, c, 'its world finished falling into its star');
+          }
+          if (seen) log(state, `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
+          state.civ.energy += colonized.has(sys.id) ? 20 : 0;
+        }
+        break;
+      case 'ejected':
+        if (mine) queueEvent(state, 'cast_out', { systemId: sys.id });
+        break;
+      case 'swallowed':
+        for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'the system fell into the Heart');
+        if (seen) log(state, `${sys.name} fell into the Heart.`, 'info', sys.id);
+        break;
+      case 'evaporated': {
+        let catchers = 0;
+        for (const c of colonies(state)) if (c.systemId === sys.id) catchers += c.structures.burst_catcher ?? 0;
+        if (catchers) {
+          state.civ.energy += 250 * catchers;
+          log(state, `Burst Catchers at ${sys.name} caught the black hole’s final burst.`, 'good', sys.id);
+        }
+        if (mine) queueEvent(state, 'final_burst', { systemId: sys.id });
+        for (const c of colonies(state)) if (c.systemId === sys.id && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) destroyColony(state, c, 'its black hole evaporated');
+        break;
+      }
+      case 'dissolved':
+        for (const c of colonies(state)) {
+          if (c.systemId === sys.id && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) {
+            state.flags.decay_lost = (state.flags.decay_lost ?? 0) + popsOf(c) + c.cryo;
+            destroyColony(state, c, 'its matter decayed');
+          }
+        }
+        break;
+    }
+  }
+}

@@ -6,7 +6,6 @@ export type Focus = 'balanced' | 'energy' | 'industry' | 'insight' | 'accord';
 export type ProtonFate = 'decays' | 'stable' | 'unknown';
 export type EpochLength = 'brief' | 'standard' | 'vast';
 export type Difficulty = 'gentle' | 'standard' | 'harsh';
-export type Persona = 'player' | 'bio' | 'upload' | 'chorus' | 'lattice' | 'hunger';
 
 export type PrimaryKind =
   | 'red_dwarf'
@@ -18,6 +17,9 @@ export type PrimaryKind =
   | 'black_hole'
   | 'smbh'
   | 'collision_star'
+  | 'helium_star'
+  | 'helium_giant'
+  | 'dark_star'
   | 'rogue'
   | 'void';
 
@@ -41,63 +43,71 @@ export interface Vec3 {
   z: number;
 }
 
-export interface Galaxy {
+/** A province of the Coalescence: the remains of one ancestral galaxy, or the halo/void. */
+export interface Province {
   id: string;
   name: string;
-  kind: 'host' | 'satellite';
-  pos: Vec3; // display units
-  phys: Vec3; // light-years
-  radiusLy: number;
-  displayRadius: number;
-  axes: [number, number, number]; // ellipsoid axes in display units
-  tilt: number;
-  seed: number;
-  coreSystemId: string | null;
+  kind: 'core' | 'ancestral' | 'stream' | 'halo' | 'void';
+  pos: Vec3; // display
+  phys: Vec3; // ly
+  radius: number; // display
+  lore: string;
 }
 
-/** A "reach": a local stellar neighbourhood inside a galaxy. */
+/** A reach: a local stellar neighbourhood (display 1 unit = 1 ly locally). */
 export interface Region {
   id: string;
   name: string;
-  galaxyId: string;
+  provinceId: string;
   pos: Vec3;
   phys: Vec3;
   radiusLy: number;
+  kind: 'reach' | 'globular' | 'core' | 'outlier';
 }
 
 export interface Primary {
   kind: PrimaryKind;
   mass: number; // solar masses
-  lum: number; // base light factor for its current phase
+  lum: number; // base light factor for its current phase (era-normalised)
   blueAt?: number; // cosmic year a red dwarf leaves the main sequence (blue dwarf)
   whiteAt?: number; // cosmic year it collapses into a white dwarf
-  bornAt?: number; // collision stars
-  diesAt?: number; // collision stars burn out
-  wdAge?: number; // for pre-existing white dwarfs: age at game start (years)
-  halo?: boolean; // white dwarf embedded in the dark-matter halo (WIMP-heated)
+  bornAt?: number; // collision / merger stars
+  diesAt?: number; // collision / merger stars burn out
+  halo?: boolean; // white dwarf warmed by dark-matter capture in the Degenerate Age
   spin: number; // extractable rotational energy left (energy units)
   spinMax: number;
   evaporateAt?: number; // black holes: Hawking evaporation (cosmic year)
-  ejected?: boolean; // galactic evaporation flung it out
+  rekindle?: number; // extra light from a feeding world or rekindling (era-normalised)
 }
 
 export interface StarSystem {
   id: string;
   name: string;
-  galaxyId: string;
   regionId: string;
+  provinceId: string;
   pos: Vec3; // display
   phys: Vec3; // ly
   primary: Primary;
   bodies: string[];
   seed: number;
-  special?: 'home' | 'core' | 'satellite_core' | 'rival_home';
-  hunger?: number; // infestation level
+  special?: 'home' | 'core' | 'outlier' | 'survivor' | 'slow' | 'sleeper';
+  ejected?: boolean; // flung out of the galaxy by dynamical evaporation
+  rust?: number; // Hunger infestation 0..1
+  beacon?: boolean; // decoy beacon placed by the player
+  gone?: boolean; // nothing left (dissolved / evaporated)
 }
 
 export interface Relic {
-  kind: 'archive' | 'engine' | 'sleepers' | 'tomb' | 'lattice';
-  surveyed: boolean;
+  kind: 'archive' | 'engine' | 'sleepers' | 'tomb' | 'ghosts';
+  state: 'hidden' | 'found' | 'studied' | 'woken' | 'spent';
+}
+
+export interface Feeding {
+  start: number; // cosmic year the planet reached its tidal limit
+  tau: number; // mass-loss timescale (years)
+  base: number; // era-normalised power at onset
+  model: 'feed' | 'rekindle';
+  revealed: boolean;
 }
 
 export interface Body {
@@ -109,6 +119,8 @@ export interface Body {
   phase: number;
   size: number; // display radius
   seed: number;
+  orbitAU: number; // physical semi-major axis
+  massEarth: number;
   habitability: number; // intrinsic suitability for Kin (0..1)
   vitality: number; // current living fraction (0..1)
   decline: number; // base vitality loss per turn
@@ -118,8 +130,10 @@ export interface Body {
   traits: string[];
   relic?: Relic;
   colonyId: string | null;
-  detached?: boolean; // stripped from its star by a stellar encounter
-  dissolved?: boolean; // gone to proton decay
+  inspiralAt?: number; // cosmic year it reaches the tidal limit of its (dead) star
+  feeding?: Feeding;
+  rogue?: boolean; // stripped from its star by a stellar close pass
+  dissolved?: boolean;
 }
 
 export interface QueueItem {
@@ -130,6 +144,15 @@ export interface QueueItem {
   cost: number;
 }
 
+export interface YieldLine {
+  label: string;
+  energy?: number;
+  matter?: number;
+  industry?: number;
+  insight?: number;
+  accord?: number;
+}
+
 export interface YieldBreakdown {
   energy: number;
   energyUpkeep: number;
@@ -138,12 +161,11 @@ export interface YieldBreakdown {
   industry: number;
   insight: number;
   accord: number;
-  lines: { label: string; energy?: number; matter?: number; industry?: number; insight?: number; accord?: number }[];
+  lines: YieldLine[];
 }
 
 export interface Colony {
   id: string;
-  empireId: string;
   bodyId: string;
   systemId: string;
   name: string;
@@ -154,8 +176,10 @@ export interface Colony {
   structures: Record<string, number>;
   queue: QueueItem[];
   focus: Focus;
-  defense: number;
+  overdrive: boolean;
+  damage: number; // 0..1 hearth damage from overdrive / attacks
   starving: number; // turns in energy deficit
+  flags_rushed?: number; // turn of the last emergency shift
   last?: YieldBreakdown;
 }
 
@@ -164,85 +188,149 @@ export interface Ship {
   hp: number;
 }
 
-export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey';
+export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame';
 
 export interface Fleet {
   id: string;
-  empireId: string;
   name: string;
   ships: Ship[];
   at: string | null; // system id while stationed
   from: string | null;
   to: string | null;
-  traveled: number; // ly travelled on the current leg
-  distance: number; // ly of the current leg
+  traveled: number; // ly on current leg
+  distance: number; // ly of current leg
   order: FleetOrder;
   targetBody?: string;
-  moved?: boolean; // moved this turn (render hint)
 }
 
-export type RelationStatus = 'unknown' | 'peace' | 'war' | 'pact';
-
-export interface Relation {
-  status: RelationStatus;
-  opinion: number; // -100..100
-  since: number;
-}
-
-export interface EmpireStats {
+export interface CivStats {
   pops: number[];
   energy: number[];
-  colonies: number[];
+  resolve: number[];
 }
 
-export interface Empire {
-  id: string;
+export interface Civ {
   name: string;
-  adjective: string;
-  color: string;
-  isPlayer: boolean;
-  persona: Persona;
-  alive: boolean;
+  homeSystemId: string;
   capitalId: string | null;
-  homeSystemId: string | null;
   energy: number; // reserve
   matter: number;
-  accord: number; // stock
+  accord: number; // stock, spent on charters
+  resolve: number; // 0..100 the will to go on
+  dissent: number; // 0..100
+  standing: Record<ThreadId, number>; // each Thread's approval 0..100
+  lowStanding: Record<ThreadId, number>; // turns spent below the fork threshold
+  demands: Record<ThreadId, string | null>;
   techs: string[];
   researching: string | null;
   research: Record<string, number>;
   work: string | null; // active Great Work
-  works: Record<string, number>; // progress (>= cost means complete)
-  doctrines: string[];
-  clockTarget: number; // log10 years; used when autoClock is off
-  autoClock: boolean;
+  works: Record<string, number>;
+  charters: string[];
+  pace: number; // log10 factor against the Tide: +1 = quicken x10 (shorter turns), -1 = slow x10
   dormant: boolean;
   sleepTurns: number;
-  wakeBonus: number; // turns of post-wake bonus left
-  threadAccord: Record<ThreadId, number>;
-  lowAccordTurns: Record<ThreadId, number>;
+  wakeBonus: number;
   known: Record<string, 1 | 2>; // 1 = detected, 2 = surveyed
-  relations: Record<string, Relation>;
-  continuity: number;
+  continuity: number; // Dark Era integrity 0..100
+  taint: number; // Hunger Taint 0..100
   flags: Record<string, number>;
-  stats: EmpireStats;
-  ending?: string;
-  diedTurn?: number;
-  origin?: string; // forked from which empire
+  stats: CivStats;
+}
+
+// ---------------------------------------------------------------- other minds
+
+export type SurvivorWay = 'garden' | 'upload' | 'chorus' | 'dormant' | 'lattice' | 'fork';
+
+export interface Survivor {
+  id: string;
+  kind: 'survivor';
+  name: string;
+  adjective: string;
+  color: string;
+  way: SurvivorWay;
+  homeSystemId: string;
+  systems: string[];
+  pop: number; // abstract population
+  health: number; // 0..1 trajectory; 0 = gone
+  reserve: number;
+  disposition: number; // -100..100 toward you
+  clock: number; // log10 years
+  contact: boolean;
+  alive: boolean;
+  fate?: 'faded' | 'saved' | 'absorbed' | 'seized' | 'devoured' | 'transcended';
+  aidGiven: number;
+  lastSent: number; // turn
+  forkOf?: ThreadId;
+}
+
+export interface Mind {
+  id: string;
+  kind: 'slow' | 'dark';
+  name: string;
+  systemId: string | null;
+  stage: number;
+  understanding: number; // 0..100
+  clock: number; // log10 years they think on
+  lastPattern: number[]; // for gestures
+  flags: Record<string, number>;
+}
+
+export interface Swarm {
+  id: string;
+  systemId: string | null;
+  from: string | null;
+  to: string | null;
+  traveled: number;
+  distance: number;
+  size: number;
+  awake: boolean;
+  tamed: boolean;
+  appetite: number;
+}
+
+export interface SignalChoice {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+export interface Signal {
+  uid: string;
+  from: string; // mind / survivor id, or 'astronomers'
+  kind: string; // e.g. 'aid', 'trade', 'refugees', 'raid', 'last', 'gesture', 'slow'
+  sentYears: number;
+  arriveYears: number;
+  arrivedTurn: number | null;
+  title: string;
+  text: string;
+  data: Record<string, number | string>;
+  choices: SignalChoice[];
+  resolved: string | null;
+}
+
+export interface Forecast {
+  uid: string;
+  kind: string;
+  title: string;
+  text: string;
+  dueYears: number; // cosmic year of the event (Infinity = open)
+  systemId?: string;
+  bodyId?: string;
+  severity: 'info' | 'warn' | 'danger' | 'boon';
 }
 
 export interface LogEntry {
   turn: number;
   era: EraId;
   text: string;
-  kind: 'info' | 'good' | 'bad' | 'era' | 'combat' | 'event';
+  kind: 'info' | 'good' | 'bad' | 'era' | 'combat' | 'event' | 'mind';
   systemId?: string;
 }
 
 export interface PendingEvent {
   uid: string;
   defId: string;
-  empireId: string;
   data: Record<string, string | number>;
 }
 
@@ -254,19 +342,18 @@ export interface CrossingReport {
   popsAfter: number;
   coloniesBefore: number;
   coloniesAfter: number;
-  extinct: string[];
 }
 
 export interface Outcome {
-  kind: 'victory' | 'defeat' | 'endurance';
+  kind: 'victory' | 'dark' | 'endurance' | 'defeat';
   ending: string;
   turn: number;
-  years: number;
+  eta: number;
 }
 
 export interface GameSettings {
   seed: number;
-  rivals: number;
+  survivors: number;
   length: EpochLength;
   difficulty: Difficulty;
   protonFate: ProtonFate;
@@ -276,9 +363,8 @@ export interface GameSettings {
 
 export interface Battle {
   systemId: string;
-  sides: string[];
-  losses: Record<string, number>;
   turn: number;
+  text: string;
 }
 
 export interface GameState {
@@ -288,17 +374,23 @@ export interface GameState {
   turn: number;
   era: EraId;
   eraTurn: number;
-  years: number;
-  turnLength: number;
+  years: number; // exact while < 1e300, Infinity beyond
+  eta: number; // log10(years), canonical
+  turnLength: number; // years spanned by the last turn (Infinity in deep time)
   protonsDecay: boolean;
-  galaxies: Galaxy[];
+  gfe: number; // galactic free energy 0..1
+  provinces: Province[];
   regions: Region[];
   systems: Record<string, StarSystem>;
   bodies: Record<string, Body>;
   colonies: Record<string, Colony>;
   fleets: Record<string, Fleet>;
-  empires: Record<string, Empire>;
-  playerId: string;
+  civ: Civ;
+  survivors: Record<string, Survivor>;
+  minds: Record<string, Mind>;
+  swarms: Record<string, Swarm>;
+  signals: Signal[];
+  forecasts: Forecast[];
   pending: PendingEvent[];
   log: LogEntry[];
   battles: Battle[];
@@ -306,5 +398,5 @@ export interface GameState {
   crossing: CrossingReport | null;
   outcome: Outcome | null;
   flags: Record<string, number>;
-  firedEvents: Record<string, number>;
+  fired: Record<string, number>;
 }
