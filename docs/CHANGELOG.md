@@ -119,3 +119,7 @@ https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Balance figures are "games th
   sparser and softer (about 60% fewer grains, half the level). The Canon was re-rendered with its
   tape hiss 13 dB lower (quiet passages −71.8 → −84.5 dB in the 3–9 kHz band), with the music and
   bitcrush unchanged (still −15 LUFS).
+- **A little more Amiga crunch in the Canon.** Glass plucks held at 12.5 kHz (was 16.6) with 75%
+  crushed mix (was 65%), pads at 14 kHz with 55% (was 45%), bass 35% (was 30%), final low-pass
+  6.8 kHz (was 6.2). Aliasing shimmer (8–14 kHz) in the runs +11 dB, slow lines +2.5 dB; still
+  below the old hiss level; key purity, loudness (−15 LUFS) and the quiet hiss unchanged.

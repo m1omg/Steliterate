@@ -241,14 +241,15 @@ bass *= np.interp(np.arange(N) / SR, (np.arange(len(shape)) + 0.5) * CYCLE, np.c
 for v in range(3):
     voices[v] *= gain
     glass[v] *= gain
-add(crush(bass, mix=0.3), 0.0, 0.22)
+add(crush(bass, mix=0.35), 0.0, 0.22)
 for v in range(3):
-    add(crush(voices[v], mix=0.45), pan[v], 0.2)
-    add(crush(echo(glass[v]), rate=16574, bits=8, mix=0.65), pan[v] * 1.4, 0.10)
+    add(crush(voices[v], rate=14000, mix=0.55), pan[v], 0.2)
+    # the runs get the most Amiga grit: a lower hold rate folds more of their overtones back down
+    add(crush(echo(glass[v]), rate=12500, bits=8, mix=0.75), pan[v] * 1.4, 0.10)
 add(drone, 0.0, 0.10)
 
 # darken: gentle low-pass, then a long dark hall
-b, a = signal.butter(2, 6200 / (SR / 2))
+b, a = signal.butter(2, 6800 / (SR / 2))
 L = signal.filtfilt(b, a, L)
 R = signal.filtfilt(b, a, R)
 
