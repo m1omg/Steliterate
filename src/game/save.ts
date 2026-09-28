@@ -3,6 +3,7 @@ import { SHIP_BY_ID } from './data/ships';
 import { STRUCTURE_BY_ID } from './data/structures';
 import { TECH_BY_ID } from './data/techs';
 import { defaultWater } from './gen';
+import { surveyWhereStationed } from './sim/fleets';
 import type { GameState } from './types';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
@@ -63,6 +64,8 @@ export function migrate(s: GameState): GameState {
     f.ships = f.ships.filter((x) => SHIP_BY_ID[x.cls]);
     if (!f.ships.length) delete s.fleets[f.id];
   }
+  // ships parked at stars they could not chart before (only probes could survey) chart them now
+  surveyWhereStationed(s);
   s.saveVersion = SAVE_VERSION;
   return s;
 }

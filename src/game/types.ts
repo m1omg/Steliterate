@@ -130,6 +130,8 @@ export interface Body {
   water?: number; // share of the surface covered by water or ice (subsurface ocean for ice-shelled worlds)
   traits: string[];
   relic?: Relic;
+  /** Discoveries made here (ruins, finds): event id -> what we chose. Absent in older saves. */
+  lore?: Record<string, string>;
   colonyId: string | null;
   inspiralAt?: number; // cosmic year it reaches the tidal limit of its (dead) star
   feeding?: Feeding;

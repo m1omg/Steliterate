@@ -3,7 +3,7 @@ import { THREAD_DEFS } from '../data/threads';
 import { hawkingLight, sourceLight } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
 import { THREADS } from '../types';
-import { scorched } from './flare';
+import { THAW_ROOM, scorched, thawed } from './flare';
 import { type Mods, strainFor, type Strain } from './mods';
 import { clamp, colonies, eraIndex } from './util';
 
@@ -28,6 +28,8 @@ export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number
   let cap = Math.floor(base * vit);
   if (mods.flags.has('charter:abandon_the_surface')) cap = Math.max(cap, Math.floor(base * 0.6));
   if (b.rogue || b.feeding) cap = Math.floor(cap * 0.3);
+  // a frozen world melted into warm sea by a flaring star: room to live by the water, for now
+  if (thawed(state, b) === 'warm') cap = Math.max(cap, THAW_ROOM);
   return cap;
 }
 

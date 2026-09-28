@@ -6,7 +6,7 @@ import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
 import { ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
 import { threadTotals, totalPops } from '../../game/sim/util';
-import type { GameState, PendingEvent } from '../../game/types';
+import type { Body, GameState, PendingEvent } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { music } from '../../audio/music';
@@ -75,6 +75,63 @@ function showEventStar(s: GameState, id: string) {
 /** Narrative events waiting for a decision. The first pending one is shown. */
 /** The outcome of the last event choice, shown before the next event. */
 export const eventResult = signal<{ title: string; text: string } | null>(null);
+
+/** A discovery's report, opened again from its world. */
+export const loreView = signal<{ defId: string; bodyId: string } | null>(null);
+
+/** The survey reports of one world (its ruins and remarkable finds), with what we chose. */
+export function worldFinds(s: GameState, b: Body): { defId: string; title: string; choice: string | null }[] {
+  const ids: string[] = [];
+  if (b.relic && b.relic.state !== 'hidden') ids.push(`relic_${b.relic.kind}`);
+  for (const t of b.traits) if (EVENT_BY_ID[`anom_${t}`]) ids.push(`anom_${t}`);
+  return ids
+    .filter((id) => EVENT_BY_ID[id])
+    .map((id) => {
+      const def = EVENT_BY_ID[id];
+      let choice = b.lore?.[id] ?? null;
+      if (!choice && !s.pending.some((p) => p.defId === id && p.data.bodyId === b.id)) {
+        // older games did not keep it with the world: look for it in the Record
+        const e = s.log.find((l) => l.kind === 'event' && l.text.startsWith(`${def.title}: `));
+        if (e) choice = e.text.slice(def.title.length + 2).replace(/\.$/, '');
+      }
+      return { defId: id, title: def.title, choice };
+    });
+}
+
+export function LoreModal({ s }: { s: GameState }) {
+  void rev.value;
+  const v = loreView.value;
+  const def = v ? EVENT_BY_ID[v.defId] : null;
+  const b = v ? s.bodies[v.bodyId] : null;
+  if (!v || !def || !b) return null;
+  let text = '';
+  try {
+    text = def.text(s, { bodyId: b.id, systemId: b.systemId });
+  } catch {
+    text = '…';
+  }
+  const find = worldFinds(s, b).find((f) => f.defId === v.defId);
+  const pending = s.pending.some((p) => p.defId === v.defId && p.data.bodyId === b.id);
+  const close = () => (loreView.value = null);
+  return (
+    <div class="modal-wrap" onClick={(e) => e.target === e.currentTarget && close()}>
+      <div class="modal panel narrow event" role="dialog" aria-modal="true" aria-label={def.title}>
+        <Plate art={def.art} />
+        <div class="modal-body scroll" style={{ marginTop: '-60px', position: 'relative' }}>
+          <div class="eyebrow">Survey report · {b.name}, {s.systems[b.systemId]?.name}</div>
+          <h1 class="event-title">{def.title}</h1>
+          <p class="event-text">{text}</p>
+          <p class="dim" style={{ fontSize: '13px' }}>
+            {find?.choice ? <>We chose: <span class="neon">{find.choice}</span>.</> : pending ? 'We have not decided yet.' : 'What we chose then is no longer in the Record.'}
+          </p>
+          <div class="row" style={{ justifyContent: 'flex-end', marginTop: '10px' }}>
+            <button class="btn primary" onClick={close}>Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function EventModal({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change

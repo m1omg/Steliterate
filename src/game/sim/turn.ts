@@ -8,7 +8,7 @@ import { runCrossing } from './crossing';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
-import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, updateDetection } from './fleets';
+import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { flareData, scorched, turnStep } from './flare';
 import { firstSwarm, updateHunger } from './hunger';
@@ -338,6 +338,7 @@ export function endTurn(state: GameState): TurnResult {
 
   // ------------------------------------------------ 6. fleets, hazards, other minds
   advanceFleets(state, step.turnLength, mods);
+  surveyWhereStationed(state);
   // look around before exploring ships set off again, so they scan every star they reach
   updateDetection(state, mods);
   firstSwarm(state);

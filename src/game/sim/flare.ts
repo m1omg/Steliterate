@@ -30,6 +30,23 @@ export function scorched(state: GameState, b: Body): boolean {
   return (c.night ?? c.mean) > SCORCH_K;
 }
 
+/** Kin a flare-thawed ocean holds without domes. */
+export const THAW_ROOM = 5;
+
+/**
+ * A frozen world with water that a flaring star melts into open sea (273 K up to boiling). Where
+ * it stays below SCORCH_K the sea is warm enough to live by, for as long as the flare lasts.
+ * Computed from the climate, never stored: when the star collapses it freezes again.
+ */
+export function thawed(state: GameState, b: Body): 'warm' | 'hot' | null {
+  const sys = state.systems[b.systemId];
+  if (!sys || sys.primary.kind !== 'blue_dwarf' || b.rogue || b.dissolved) return null;
+  if (!['ice', 'ocean_ice', 'super_earth', 'barren'].includes(b.kind) || (b.water ?? 0) < 0.1) return null;
+  const t = bodyClimate(state, b).mean;
+  if (t < 273 || t >= 373) return null;
+  return t <= SCORCH_K ? 'warm' : 'hot';
+}
+
 /** The earliest of our settled stars to leave the main sequence in (from, to], if any. */
 function flareDue(state: GameState, from: number, to: number): StarSystem | null {
   let best: StarSystem | null = null;
@@ -147,6 +164,18 @@ export function flareData(state: GameState, sys: StarSystem): Record<string, str
     turns: Math.max(1, Math.round(span / next)),
     clock: span < next * 3 ? 1 : 0,
   };
+  // the warmth reaches farther out: frozen worlds that melt into open sea while it lasts
+  const seas = sys.bodies.map((id) => state.bodies[id]).filter((b) => b && thawed(state, b));
+  if (seas.length) {
+    const k = (b: Body) => {
+      const h = flareHeat(state, b);
+      return `${b.name} (${Math.round(h.before.mean)} K until now, about ${Math.round(h.during.mean)} K while it burns)`;
+    };
+    const warm = seas.filter((b) => thawed(state, b) === 'warm');
+    const hot = seas.filter((b) => thawed(state, b) === 'hot');
+    if (warm.length) d.warm = warm.map(k).join(' and ');
+    if (hot.length) d.hot = hot.map(k).join(' and ');
+  }
   if (world) {
     const h = flareHeat(state, world);
     const k = (t: number | undefined) => Math.round(t ?? 0);

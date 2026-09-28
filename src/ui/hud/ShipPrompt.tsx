@@ -48,8 +48,11 @@ function suggestions(s: GameState, f: Fleet): Option[] {
     const unsurveyed = Object.values(s.systems).filter((x) => s.civ.known[x.id] === 1 && !x.gone && x.id !== here.id).map((x) => x.id);
     return [...top, ...ways(unsurveyed, 'survey').filter((o) => !skip.has(o.label))];
   }
+  // any other ship charts a star it reaches too: offer the nearest uncharted ones, then home
+  const unsurveyed = Object.values(s.systems).filter((x) => s.civ.known[x.id] === 1 && !x.gone && x.id !== here.id).map((x) => x.id);
   const ours = [...new Set(colonies(s).map((c) => c.systemId))].filter((id) => id !== here.id);
-  return [...top, ...ways(ours, 'move').filter((o) => !skip.has(o.label))];
+  const chart = f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles) ? [] : ways(unsurveyed, 'move').slice(0, 2).map((o) => ({ ...o, sub: `${o.sub} · survey` }));
+  return [...top, ...chart, ...ways(ours, 'move').filter((o) => !skip.has(o.label))].filter((o, i, a) => a.findIndex((x) => x.label === o.label) === i);
 }
 
 export function ShipPrompt({ s }: { s: GameState }) {

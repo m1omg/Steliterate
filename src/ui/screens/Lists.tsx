@@ -289,7 +289,7 @@ function WorldsList({ s }: { s: GameState }) {
           Unsettled only
         </button>
       </div>
-      {rows.length === 0 && <p class="dim">{findsOnly ? 'No discoveries among these worlds yet. Surveys turn one up now and then.' : 'No worlds charted yet. Send a probe to survey a star.'}</p>}
+      {rows.length === 0 && <p class="dim">{findsOnly ? 'No discoveries among these worlds yet. Surveys turn one up now and then.' : 'No worlds charted yet. Send a ship to survey a star.'}</p>}
       {bySystem ? (
         <div class="list">
           {systems.map(({ sys, ly, worlds, best, room, living, settled, finds }) => (

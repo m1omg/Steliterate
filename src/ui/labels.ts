@@ -1,5 +1,6 @@
 import { ANOMALIES } from '../game/data/events';
 import { bodyClimate } from '../game/physics';
+import { THAW_ROOM, thawed } from '../game/sim/flare';
 import type { Body, BodyKind, Focus, GameState, PrimaryKind, StarSystem } from '../game/types';
 import type { IconName } from './icons';
 
@@ -95,6 +96,8 @@ export const WAY_NAME: Record<string, string> = {
  * liquid on its day side; once the star is dead it is simply frozen.
  */
 export function bodyKindName(s: GameState, b: Body): string {
+  const sea = thawed(s, b);
+  if (sea) return sea === 'warm' ? 'Thawed ocean' : 'Hot sea';
   if (b.kind === 'eyeball') {
     const c = bodyClimate(s, b);
     if ((c.day ?? c.mean) < 195) return 'Frozen world';
@@ -104,6 +107,9 @@ export function bodyKindName(s: GameState, b: Body): string {
 
 /** A longer note on the kind, for tooltips: what it was, when that has changed. */
 export function bodyKindNote(s: GameState, b: Body): string {
+  const sea = thawed(s, b);
+  if (sea === 'warm') return `Once ${BODY_NAME[b.kind].toLowerCase()}. Its star's last flare has melted it into open ocean under a thin, steamy sky: room for ${THAW_ROOM} Kin by the water without domes, for as long as the flare lasts. When the star collapses it will freeze again.`;
+  if (sea === 'hot') return `Once ${BODY_NAME[b.kind].toLowerCase()}. Its star's last flare has melted it into a hot, steaming sea, too hot to live by. When the star collapses it will freeze again.`;
   return bodyKindName(s, b) !== BODY_NAME[b.kind] ? 'Once an eyeball world. Its star no longer warms it, and the sea on its day side has frozen over; what warmth is left comes from inside.' : '';
 }
 

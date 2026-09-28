@@ -280,6 +280,7 @@ window.__stel = {
   select(kind: 'fleet' | 'system' | 'body', id: string) {
     selection.value = { kind, id } as never;
   },
+  refresh: () => bump(),
   state: () => game.value,
   engine: () => engine(),
 };

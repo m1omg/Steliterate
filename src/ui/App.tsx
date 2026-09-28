@@ -10,7 +10,7 @@ import { MainMenu, Setup } from './screens/Menu';
 import { ResearchModal } from './screens/Research';
 import { SignalsModal } from './screens/Signals';
 import { FleetsModal, SettlementsModal } from './screens/Lists';
-import { CrossingScreen, EraIntro, EventModal, OutcomeScreen, eventResult } from './screens/Story';
+import { CrossingScreen, EraIntro, EventModal, LoreModal, OutcomeScreen, eventResult, loreView } from './screens/Story';
 import { TipLayer } from './Tip';
 import { dismissToast, game, hoverStar, modal, rev, screen, targeting, toasts } from './store';
 import { SHIP_BY_ID } from '../game/data/ships';
@@ -107,6 +107,7 @@ export function App() {
           <Drawer s={s} />
           <TargetBanner s={s} />
           {!blocking && (s.pending.length > 0 || eventResult.value) && <EventModal s={s} />}
+          {!blocking && loreView.value && !s.pending.length && !eventResult.value && <LoreModal s={s} />}
         </>
       )}
       <ModalHost s={s} />

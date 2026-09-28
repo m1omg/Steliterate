@@ -305,10 +305,13 @@ export const EVENTS: EventDef[] = [
       const refuge = need > 0
         ? ` Our only refuge is the night side: shelters cut into the rock and cooled by radiators, ${SHELTER_CAP} Kin to a shelter. We need ${need} (${need * SHELTER_MATTER} matter; we have ${Math.floor(s.civ.matter)}). Whoever the domes, cold berths and shelters cannot hold will not live through it.`
         : ' Our domes and shelters already hold everyone who lives there.';
+      const seas =
+        (d.warm ? ` The warmth reaches farther out too: ${d.warm} will melt into open ocean while it lasts, warm enough for Kin to live by the water without domes. A refuge, if we can get people there in time.` : '') +
+        (d.hot ? ` ${d.hot} will melt into a hot, steaming sea: liquid, but too hot to live by.` : '');
       const pace = Number(d.clock)
         ? ` At our pace the next turn alone would span ${d.next}: the whole flare would come and go inside it. Or we could quicken to the flare's own clock and live through it, ${FLARE_TURNS} turns of the brightest light we will ever see again.`
         : ` At our pace it will burn for about ${d.turns} turns.`;
-      return `${d.star} has left the main sequence. It is not swelling into a giant as bigger stars did: it is shrinking and heating up into a blue dwarf, about ${d.ratio ?? 'a hundred'} times brighter than it was, and it will stay that way for about ${d.span} before it collapses into a white dwarf.${heat}${refuge}${pace}`;
+      return `${d.star} has left the main sequence. It is not swelling into a giant as bigger stars did: it is shrinking and heating up into a blue dwarf, about ${d.ratio ?? 'a hundred'} times brighter than it was, and it will stay that way for about ${d.span} before it collapses into a white dwarf.${heat}${refuge}${seas}${pace}`;
     },
     choices: [
       {

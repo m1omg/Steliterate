@@ -28,6 +28,8 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   one click each. Double-click a fleet (or tap it twice) to follow it. **V** switches the view:
   Natural, Enhanced (light amplification for the dark ages) or Thermal (false colour by
   temperature). Probes can **Auto-explore**: they keep charting the nearest unsurveyed star.
+  Any ship charts the systems it reaches; probes are just cheap, far-sighted and can explore
+  by themselves. A planet panel's Ruins row and its find chips reopen that survey report.
   A ship at the edge of the map spots the nearest unseen stars (probes three, other ships
   one), even across the gaps between star clusters. On the map, a pale
   ring marks a surveyed system and a green one a living world; dim italic names are stars

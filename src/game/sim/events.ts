@@ -49,5 +49,8 @@ export function resolveEvent(state: GameState, eventUid: string, choiceIndex: nu
   const out = withRng(state, (rng) => choice.run(state, p.data, rng));
   state.pending.splice(idx, 1);
   log(state, `${def.title}: ${choice.label}.`, 'event');
+  // remember what we chose at a discovery, so its report can be read again with the world
+  const at = p.data.bodyId !== undefined ? state.bodies[String(p.data.bodyId)] : undefined;
+  if (at && /^(relic|anom)_/.test(p.defId)) (at.lore ??= {})[p.defId] = choice.label;
   return { ok: true, text: typeof out === 'string' ? out : undefined };
 }

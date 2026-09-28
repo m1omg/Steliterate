@@ -140,6 +140,8 @@ button { font: inherit; color: inherit; }
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border: 1px solid var(--line-2); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-dim); white-space: nowrap; }
 .chip.danger { border-color: color-mix(in srgb, var(--bad) 70%, transparent); color: var(--bad); }
 .chip.warn { border-color: color-mix(in srgb, var(--warn) 70%, transparent); color: var(--warn); }
+.chip.lore { background: none; font: inherit; font-size: 11px; cursor: pointer; color: var(--neon); border-color: color-mix(in srgb, var(--neon) 55%, transparent); }
+.chip.lore:hover { border-color: var(--neon); color: var(--ink); }
 .chip.boon { border-color: color-mix(in srgb, var(--boon) 70%, transparent); color: var(--boon); }
 .chip.good { border-color: color-mix(in srgb, var(--good) 70%, transparent); color: var(--good); }
 .chip.neon { border-color: var(--neon); color: var(--neon); }

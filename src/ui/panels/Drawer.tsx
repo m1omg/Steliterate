@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { STRUCTURE_BY_ID, structureLabel } from '../../game/data/structures';
+import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
 import { bodyClimate, primaryTemperature, sourceLight, waterState } from '../../game/physics';
@@ -41,6 +42,7 @@ import { FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon, bodyKindName, b
 import { act, engine, following, notify, rev, selection, targeting, view } from '../store';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
+import { loreView } from '../screens/Story';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 
@@ -262,7 +264,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
         )}
         {known === 1 && (
           <p class="dim" style={{ fontSize: '12px' }}>
-            Seen from afar: the star is known, its worlds are not. Send a probe to survey it.
+            Seen from afar: the star is known, its worlds are not. Send any ship to survey it (probes are the cheapest, and see farthest).
           </p>
         )}
         {(fleets.length > 0 || swarms.length > 0) && (
@@ -324,9 +326,15 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
         </div>
         <h2>{b.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
-          {b.traits.map((t) => (
-            <span key={t} class="chip" data-tip={TRAIT_NAME[t]?.[1] ?? ''}>{TRAIT_NAME[t]?.[0] ?? t}</span>
-          ))}
+          {b.traits.map((t) =>
+            EVENT_BY_ID[`anom_${t}`] ? (
+              <button key={t} class="chip lore" data-tip={`${TRAIT_NAME[t]?.[1] ?? ''}\nClick to read the survey report again.`} onClick={() => { sfx('open'); loreView.value = { defId: `anom_${t}`, bodyId: b.id }; }}>
+                <Icon name="relic" /> {TRAIT_NAME[t]?.[0] ?? t}
+              </button>
+            ) : (
+              <span key={t} class="chip" data-tip={TRAIT_NAME[t]?.[1] ?? ''}>{TRAIT_NAME[t]?.[0] ?? t}</span>
+            ),
+          )}
           {b.rogue && <span class="chip warn" data-tip="Stripped from its star by a close stellar pass. Only its own heat is left.">rogue</span>}
           {b.feeding && <span class="chip boon" data-tip="Being torn apart by its dead star; the debris stream heats the star.">feeding its star</span>}
         </div>
@@ -334,7 +342,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
       </div>
       <div class="drawer-body scroll">
         {!surveyed ? (
-          <p class="flavor">Not yet surveyed. Send a probe to learn what is here.</p>
+          <p class="flavor">Not yet surveyed. Send any ship to learn what is here.</p>
         ) : (
           <dl class="kv">
             <dt>Habitability</dt>
@@ -373,7 +381,12 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             {b.relic && b.relic.state !== 'hidden' && (
               <>
                 <dt>Ruins</dt>
-                <dd>{b.relic.kind} · {b.relic.state}</dd>
+                <dd>
+                  {EVENT_BY_ID[`relic_${b.relic.kind}`]?.title ?? b.relic.kind} · {b.relic.state}{' '}
+                  <button class="btn ghost small" style={{ marginLeft: '4px' }} data-tip="Read the survey report again, and what we chose." onClick={() => { sfx('open'); loreView.value = { defId: `relic_${b.relic!.kind}`, bodyId: b.id }; }}>
+                    <Icon name="relic" /> Read again
+                  </button>
+                </dd>
               </>
             )}
           </dl>

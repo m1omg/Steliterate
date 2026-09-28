@@ -118,15 +118,24 @@ function arrive(state: GameState, f: Fleet) {
   f.to = null;
   f.traveled = 0;
   f.distance = 0;
-  if (state.civ.known[sys.id] !== 2 && f.ships.some((s) => SHIP_BY_ID[s.cls]?.survey)) {
-    survey(state, sys.id);
-  } else if (!state.civ.known[sys.id]) state.civ.known[sys.id] = 1;
+  // any ship charts the system it reaches (probes are just cheap, fast to build and far-sighted)
+  if (state.civ.known[sys.id] !== 2) survey(state, sys.id);
   if (f.order === 'colonize' && f.targetBody) {
     const err = settle(state, f, f.targetBody);
     if (err) log(state, `${f.name} could not settle: ${err}`, 'bad', sys.id);
   }
   f.order = 'idle';
   f.targetBody = undefined;
+}
+
+/**
+ * Chart every unsurveyed system where one of our ships is stationed. Older versions let only
+ * probes survey, so a warship could be parked at a star it never charted; this catches those up.
+ */
+export function surveyWhereStationed(state: GameState) {
+  for (const f of Object.values(state.fleets)) {
+    if (f.at && state.systems[f.at] && state.civ.known[f.at] !== 2) survey(state, f.at);
+  }
 }
 
 export function survey(state: GameState, systemId: string) {
