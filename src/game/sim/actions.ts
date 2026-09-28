@@ -11,7 +11,7 @@ import { absorbSwarm, tameSwarm } from './hunger';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
-import { devourSurvivor, raidSurvivor, resolveSurvivorSignal, seizeSurvivor } from './survivors';
+import { devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
 import { eraIndex, hasCharter, hasTech, log, uid } from './util';
 
 export type ActionResult = string | null; // error message or null on success
@@ -365,6 +365,11 @@ export function seize(state: GameState, survivorId: string): ActionResult {
 /** Raid the civilization whose star this warship is parked at. Returns an error, or what happened. */
 export function raid(state: GameState, fleetId: string): string | { ok: boolean; text: string } {
   return raidSurvivor(state, fleetId);
+}
+
+/** Ask a civilization for energy; the answer comes back after the light-speed round trip. */
+export function askForAid(state: GameState, survivorId: string): ActionResult {
+  return requestAid(state, survivorId);
 }
 
 export function devour(state: GameState, survivorId: string): ActionResult {

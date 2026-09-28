@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
-import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
+import { formatDistance, formatYears, logTurnLength, turnsUntil } from '../../game/eras';
 import { turnStep } from '../../game/sim/flare';
-import { answerSignal, devour, makeGesture, seize, sendAid } from '../../game/sim/actions';
+import { answerSignal, askForAid, devour, makeGesture, seize, sendAid } from '../../game/sim/actions';
+import { ASK_COOLDOWN, askBlocked } from '../../game/sim/survivors';
 import { canConverse, voiceClock } from '../../game/sim/signals';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
 import type { GameState, Signal } from '../../game/types';
@@ -146,6 +147,28 @@ export function SignalsModal({ s }: { s: GameState }) {
                           <button class="btn small" disabled={s.civ.energy < 100} onClick={() => act((g) => sendAid(g, sv.id, 100)) && sfx('good')}>
                             Send 100
                           </button>
+                          {(() => {
+                            const blocked = askBlocked(s, sv);
+                            const cap = capital(s);
+                            const d = cap ? distLy(s.systems[cap.systemId], s.systems[sv.homeSystemId]) : 0;
+                            const turns = isFinite(s.years) ? turnsUntil(s.era, s.years, s.years + 2 * d, s.settings.length, s.civ.pace) : 0;
+                            const trip = d > 0 ? `${formatYears(2 * d)}${isFinite(turns) ? `, about ${turns} turn${turns === 1 ? '' : 's'} at your pace` : ''}` : 'no time';
+                            const inFlight = s.signals.find((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null);
+                            return (
+                              <button
+                                class="btn small"
+                                disabled={!!blocked}
+                                data-tip={
+                                  inFlight
+                                    ? `Our request is out. Their answer arrives in about ${formatYears(Math.max(0, inFlight.arriveYears - s.years))}.`
+                                    : `${blocked ? `${blocked}\n` : ''}Ask them for energy. The request and their answer (and the beam carrying what they give) travel at the speed of light: back in ${trip}. They decide by how they feel about us, how they are faring and what we have given them; giving costs them a little. Every request costs some goodwill, more if we keep asking; once every ${ASK_COOLDOWN} turns at most. A hostile civilization refuses, and if we are weak, it will know.`
+                                }
+                                onClick={() => act((g) => askForAid(g, sv.id)) && sfx('signal')}
+                              >
+                                {inFlight ? 'Request on its way…' : 'Ask for help'}
+                              </button>
+                            );
+                          })()}
                           <button class="btn small danger" data-tip="Take their star by force. Needs warships at their home. Everyone will know." onClick={() => act((g) => seize(g, sv.id)) && sfx('bad')}>
                             Seize
                           </button>

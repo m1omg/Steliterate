@@ -135,9 +135,11 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
             { id: 'refuse', label: 'Turn them away' },
           ],
         });
-      } else if ((sv.health < 0.22 || (sv.raidedAt !== undefined && sv.disposition < -50)) && sv.disposition < -20 && rng.chance(0.35)) {
-        // the desperate take what they can; those we raided come back for what we took
-        const revenge = sv.health >= 0.22;
+      } else if ((sv.health < 0.22 || (sv.raidedAt !== undefined && sv.disposition < -50) || (sv.tempted !== undefined && state.turn - sv.tempted < 10)) && sv.disposition < -20 && rng.chance(0.35)) {
+        // the desperate take what they can; those we raided come back for what we took; and
+        // the hostile we begged for help know we are weak
+        const revenge = sv.health >= 0.22 && sv.raidedAt !== undefined;
+        const opening = sv.health >= 0.22 && !revenge;
         sv.lastSent = state.turn;
         const took = Math.round(Math.min(civ.energy * 0.2, 60));
         const cap = capital(state);
@@ -153,7 +155,9 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
             ? 'Your defences turned their raiders away. They did not answer our hails afterwards.'
             : revenge
               ? `Their ships came back for what we took from them, and ${took} energy more. They did not answer our hails afterwards.`
-              : `Desperate ships drained ${took} energy from the reserve before anyone understood what was happening.`,
+              : opening
+                ? `We told them we were weak when we asked them for help. They came for ${took} energy of what little we had.`
+                : `Desperate ships drained ${took} energy from the reserve before anyone understood what was happening.`,
         });
       } else if (sv.disposition > 35 && sv.health > 0.4 && rng.chance(0.25) && !civ.flags[`joint_${sv.id}`]) {
         sv.lastSent = state.turn;
@@ -292,6 +296,73 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
   civ.taint = Math.min(100, civ.taint + 5);
   for (const o of Object.values(state.survivors)) if (o.alive) o.disposition -= 30;
   log(state, `You took ${sv.name}’s star. Some of them live on as your people now. The rest do not.`, 'bad', sys.id);
+  return null;
+}
+
+/** How many turns must pass before we can ask the same civilization for help again. */
+export const ASK_COOLDOWN = 8;
+
+/** Why we cannot ask this civilization for help right now, or null. */
+export function askBlocked(state: GameState, sv: Survivor): string | null {
+  if (!sv.alive) return 'They are gone.';
+  if (!sv.contact) return 'We have not made contact.';
+  if (state.signals.some((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null)) return 'Our last request is still on its way, or their answer is.';
+  if (sv.askedAt !== undefined && state.turn - sv.askedAt < ASK_COOLDOWN) return `We asked them recently. Wait ${ASK_COOLDOWN - (state.turn - sv.askedAt)} more turn(s).`;
+  return null;
+}
+
+/**
+ * Ask a civilization for energy. The request goes out at the speed of light and their answer (and
+ * the beam carrying what they give) comes back the same way, so it arrives after the round trip.
+ * What they give depends on how they feel about us, how they are faring and what we have given
+ * them; it costs them a little of their own health, and every request costs a little goodwill.
+ * A hostile civilization refuses, and if we are weak, now knows it.
+ */
+export function requestAid(state: GameState, id: string): string | null {
+  const sv = state.survivors[id];
+  if (!sv) return 'They are gone.';
+  const blocked = askBlocked(state, sv);
+  if (blocked) return blocked;
+  const civ = state.civ;
+  const cap = capital(state);
+  const home = state.systems[sv.homeSystemId];
+  const dist = cap && home ? distLy(state.systems[cap.systemId], home) : 0;
+  // asking again soon wears thin
+  const again = sv.askedAt !== undefined && state.turn - sv.askedAt < ASK_COOLDOWN * 3;
+  sv.askedAt = state.turn;
+  sv.disposition = Math.max(-100, sv.disposition - (again ? 12 : 6));
+  let energy = 0;
+  let words: string;
+  let protocol: string;
+  if (sv.disposition < -20) {
+    words = 'You took from us, or never helped us, and now you ask. No.';
+    protocol = 'REQUEST DENIED. COUNTERPARTY STANDING: NEGATIVE.';
+    if (civ.energy < 40) sv.tempted = state.turn;
+  } else if (sv.health < 0.3) {
+    words = 'We are sorry. We have nothing left to give; we are going dark ourselves.';
+    protocol = 'REQUEST DENIED. SURPLUS: NONE. OPERATIONS CONTRACTING.';
+  } else {
+    const reciprocity = Math.min(30, sv.aidGiven / 5);
+    energy = Math.round(Math.max(0, Math.min(60, sv.pop * sv.health * (0.4 + sv.disposition / 100) + reciprocity)));
+    if (energy < 5) {
+      energy = 0;
+      words = 'We cannot spare anything now. Perhaps later, if things go better for us, or between us.';
+      protocol = 'REQUEST DEFERRED. SURPLUS BELOW TRANSFER THRESHOLD.';
+    } else {
+      sv.health = clamp(sv.health - energy / 1200, 0, 1);
+      words = reciprocity > 10 ? `You helped us when we needed it. Here is ${energy} energy; it is the least we can do.` : `We can spare ${energy} energy. It is on its way to you.`;
+      protocol = `TRANSFER AUTHORISED: ${energy} UNITS BY BEAM. RECIPROCITY LOGGED.`;
+    }
+  }
+  sendSignal(state, {
+    from: sv.id,
+    kind: 'aid_answer',
+    distanceLy: dist * 2,
+    title: energy > 0 ? `${sv.name} sends help` : `${sv.name} answers our request`,
+    text: voice(sv, words, protocol),
+    data: { energy },
+  });
+  log(state, `We asked ${sv.name} for help. The request travels at the speed of light; their answer will take ${dist > 0 ? formatYears(dist * 2) : 'no time'} to come back.`, 'info', sv.homeSystemId);
   return null;
 }
 

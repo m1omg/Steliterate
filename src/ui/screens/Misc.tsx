@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { music } from '../../audio/music';
+import { music, TRACK_CHOICES, type TrackKey } from '../../audio/music';
 import { ERA_BY_ID } from '../../game/eras';
 import { deleteSlot, exportCode, hasSave, listSlots, loadGame, loadSlot, readSave, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
 import { offerFile, pickTextFile } from '../download';
@@ -125,6 +125,7 @@ export function SettingsModal() {
           <label for="vol-music">Music {Math.round(st.music * 100)}%</label>
           <input id="vol-music" type="range" min="0" max="1" step="0.05" value={st.music} onInput={(e) => set({ music: Number((e.target as HTMLInputElement).value) })} />
         </div>
+        <MusicTrackField />
         <div class="field">
           <label for="vol-sfx">Sound effects {Math.round(st.sfx * 100)}%</label>
           <input id="vol-sfx" type="range" min="0" max="1" step="0.05" value={st.sfx} onInput={(e) => set({ sfx: Number((e.target as HTMLInputElement).value) })} onChange={() => sfx('click')} />
@@ -176,6 +177,32 @@ export function SettingsModal() {
         </p>
       </div>
     </ModalFrame>
+  );
+}
+
+/** Pick a track by hand, or leave it to the age and the moment (Automatic). */
+function MusicTrackField() {
+  const [chosen, setChosen] = useState<TrackKey | null>(music.chosen);
+  const pick = (k: TrackKey | null) => {
+    music.setTrack(k);
+    setChosen(k);
+  };
+  const playing = TRACK_CHOICES.find((t) => t.key === music.current())?.name ?? 'the score for this moment';
+  return (
+    <div class="field">
+      <label for="music-track">Music track</label>
+      <select id="music-track" value={chosen ?? ''} onChange={(e) => pick(((e.target as HTMLSelectElement).value || null) as TrackKey | null)}>
+        <option value="">Automatic: whatever fits the age and the moment</option>
+        {TRACK_CHOICES.map((t) => (
+          <option key={t.key} value={t.key}>
+            {t.name}
+          </option>
+        ))}
+      </select>
+      <div class="faint" style={{ fontSize: '11px', marginTop: '3px' }}>
+        {chosen ? `Playing ${playing} until you choose Automatic again.` : `Now: ${playing}.`}
+      </div>
+    </div>
   );
 }
 

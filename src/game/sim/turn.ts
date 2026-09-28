@@ -385,6 +385,11 @@ export function endTurn(state: GameState): TurnResult {
   // ------------------------------------------------ 8. signals, forecasts, events
   result.arrived = deliverSignals(state);
   for (const s of result.arrived) {
+    // help we asked for, arriving by beam with their answer
+    if (s.kind === 'aid_answer' && Number(s.data.energy) > 0) {
+      civ.energy += Number(s.data.energy);
+      log(state, `${Number(s.data.energy)} energy arrived by beam from ${state.survivors[s.from]?.name ?? 'afar'}.`, 'good');
+    }
     if (s.kind === 'last' && s.data.insight) {
       const gain = Number(s.data.insight);
       civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;

@@ -272,6 +272,10 @@ export interface Survivor {
   forkOf?: ThreadId;
   /** The turn we last raided them (absent in older saves). */
   raidedAt?: number;
+  /** The turn we last asked them for help (absent in older saves). */
+  askedAt?: number;
+  /** The turn a hostile civilization learned we were weak, because we asked it for help. */
+  tempted?: number;
 }
 
 export interface Mind {

@@ -41,7 +41,9 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   click. Trip times read "~26t · 2.9 Myr": turns at your pace, then the flight's cosmic time
   (nothing outruns light; the turns just keep getting longer). Forecast turn counts follow
   the pace too.
-- **Other civilizations**: once you have made contact, a warship parked at one of their stars
+- **Other civilizations**: once you have made contact you can send aid or **Ask for help**; the
+  answer (and any energy, by beam) comes back after the light-speed round trip, and depends on
+  their goodwill, their fortunes and what you gave them. A warship parked at one of their stars
   can **Raid** them for part of their reserve. It costs you their trust, everyone else's
   good opinion, and some of your own people's; they may come back for it.
 - **Where to settle**: the Surveyed worlds list (W) sorts by what each kind of mind needs
@@ -53,6 +55,8 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   you what is coming and roughly when.
 - Keys: Enter end turn · R research · S settlements · F fleets · T threads · C charters ·
   G signals · L the Record · K Codex · W surveyed worlds · H home · P pause orbits · Esc close.
+
+Settings has a **Music track** picker: any track by hand, or Automatic to follow the age.
 
 Saves stay in your browser: as many named save slots as it will hold (Save / load on the rail), plus a quick save and the autosave. To keep a game safe or move it to another device, export it as a file and import it there; a save code does the same as pasteable text. Old saves load in newer versions.
 

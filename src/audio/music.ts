@@ -141,10 +141,23 @@ interface Layer {
 }
 
 type StyleKey = keyof typeof STYLES;
+/** Everything that can be playing: a style, or the Canon on its own. */
+export type TrackKey = StyleKey | 'canon';
+
+/** Tracks the player can pick by hand (Settings); null = automatic, following the age and the moment. */
+export const TRACK_CHOICES: { key: TrackKey; name: string }[] = [
+  { key: 'menu', name: 'Title (synthesised)' },
+  { key: 'dusk', name: 'The Long Dusk' },
+  { key: 'canon', name: 'Canon in D (the Degenerate Age’s overture)' },
+  { key: 'degenerate', name: 'The Degenerate Age' },
+  { key: 'blackhole', name: 'The Black Hole Age (synthesised)' },
+  { key: 'dark', name: 'The Dark (synthesised)' },
+];
 
 // Recorded tracks (generated instrumentals). Where one is missing or fails to load, the
 // procedural score plays instead.
-const TRACKS: Partial<Record<StyleKey, string>> = {
+const TRACKS: Partial<Record<TrackKey, string>> = {
+  canon: 'music/canon.mp3',
   menu: 'music/title.mp3',
   dusk: 'music/dusk.mp3',
   degenerate: 'music/degenerate.mp3',
@@ -161,6 +174,8 @@ const INTROS: Partial<Record<StyleKey, string>> = {
 
 class Music {
   private layer: Layer | null = null;
+  private layerKey: TrackKey | null = null;
+  private override: TrackKey | null = null;
   private introsPlayed = new Set<StyleKey>();
   private era: EraId = 'dusk';
   private mood: Mood = 'menu';
@@ -197,7 +212,23 @@ class Music {
     if (this.styleKey() !== was) this.apply();
   }
 
-  private styleKey(): StyleKey {
+  /** Play one track by hand until set back to null (automatic). */
+  setTrack(key: TrackKey | null) {
+    this.override = key;
+    this.apply();
+  }
+
+  /** The track playing (or about to): the chosen one, or the one the age and the moment call for. */
+  current(): TrackKey {
+    return this.styleKey();
+  }
+
+  get chosen(): TrackKey | null {
+    return this.override;
+  }
+
+  private styleKey(): TrackKey {
+    if (this.override) return this.override;
     if (this.mood === 'menu') return 'menu';
     if (this.mood === 'outcome') return 'outcome';
     return this.era;
@@ -207,8 +238,10 @@ class Music {
   private apply() {
     const a = audio();
     if (!a) return;
-    const style = STYLES[this.styleKey()];
-    if (this.layer?.style === style) return;
+    const key = this.styleKey();
+    const style = STYLES[key === 'canon' ? 'degenerate' : key];
+    if (this.layer && this.layerKey === key) return;
+    this.layerKey = key;
     const t = a.ctx.currentTime;
     const old = this.layer;
     if (old) {
@@ -316,17 +349,18 @@ class Music {
   }
 
   /** Try the recorded track for this style; once it is actually playing, hush the synth. */
-  private startTrack(layer: Layer, key: StyleKey) {
+  private startTrack(layer: Layer, key: TrackKey) {
     const a = audio();
     const url = TRACKS[key];
     if (!a || !url) return;
     const el = new Audio();
-    const intro = INTROS[key] && !this.introsPlayed.has(key) ? INTROS[key]! : null;
+    // the overture comes once, on its own, when the age begins (not when a track is picked by hand)
+    const intro = !this.override && key !== 'canon' && INTROS[key as StyleKey] && !this.introsPlayed.has(key as StyleKey) ? INTROS[key as StyleKey]! : null;
     el.src = intro ?? url;
     el.loop = !intro;
     el.preload = 'auto';
     if (intro) {
-      this.introsPlayed.add(key);
+      this.introsPlayed.add(key as StyleKey);
       // then the style's own track, looping (also if the intro is missing or fails)
       const toMain = () => {
         if (this.layer !== layer || el.loop) return;
