@@ -4,7 +4,7 @@ import { STRUCTURE_BY_ID, structureLabel } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
-import { bodyClimate, primaryTemperature, sourceLight, waterState } from '../../game/physics';
+import { bodyClimate, insolation, primaryTemperature, sourceLight, waterState } from '../../game/physics';
 import {
   absorb,
   buildableShips,
@@ -308,6 +308,8 @@ function ClimateRows({ s, b }: { s: GameState; b: Body }) {
       </dd>
       <dt>Water</dt>
       <dd style={{ fontSize: '12px' }}>{waterState(b, c)}</dd>
+      <dt data-tip="Sunlight on the surface compared with the star's standard orbit, by the inverse-square law. Surface Solar Arrays collect this much of the star's light; orbital collectors catch it anywhere.">Sunlight</dt>
+      <dd class="mono">{b.rogue ? 'none' : `×${n1(insolation(s, b))}`}</dd>
     </>
   );
 }
@@ -967,8 +969,8 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                 </h3>
                 <div class="row wrap" style={{ gap: '3px', marginBottom: '4px' }}>
                   {SETTLE_SORTS.map(([k, label, tip]) => (
-                    <button key={k} class={`btn small ghost ${settleSort === k ? 'on' : ''}`} data-tip={k === 'auto' ? `What ${THREAD_DEFS[settleDef?.settles?.thread ?? 'kin'].name} need most: ${SETTLE_BEST[settleDef?.settles?.thread ?? 'kin']}.` : tip} onClick={() => setSettleSort(k)}>
-                      {label}
+                    <button key={k} class={`btn small ghost ${settleSort === k ? 'on' : ''}`} data-tip={k === 'auto' ? `What ${THREAD_DEFS[settleDef?.settles?.thread ?? 'kin'].name} need most: ${SETTLE_SORTS.find((x) => x[0] === (settleDef?.settles?.thread ?? 'kin'))?.[2] ?? ''}.` : tip} onClick={() => setSettleSort(k)}>
+                      {k === 'auto' ? `Best for ${THREAD_DEFS[settleDef?.settles?.thread ?? 'kin'].name}: ${SETTLE_SORTS.find((x) => x[0] === (settleDef?.settles?.thread ?? 'kin'))?.[1] ?? ''}` : label}
                     </button>
                   ))}
                 </div>

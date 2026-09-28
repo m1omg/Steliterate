@@ -1,6 +1,6 @@
 import { STRUCTURES, structureLabel, type StructureDef } from '../data/structures';
 import { formatYears } from '../eras';
-import { bodyClimate, hawkingLight, sourceLight } from '../physics';
+import { bodyClimate, hawkingLight, insolation, sourceLight } from '../physics';
 import type { Body, GameState, ThreadId } from '../types';
 import { turnStep } from './flare';
 import { naturalKinRoom } from './fleets';
@@ -27,8 +27,8 @@ function buildableAt(state: GameState, b: Body, d: StructureDef): boolean {
 
 /**
  * Energy a settlement here could collect in a turn at the Tide, part by part: its Hearth plus
- * every collector we can build. Collectors catch the star's light the same anywhere in its
- * system (the game does not dim it with distance); what sets worlds apart is their core heat.
+ * every collector we can build. Surface Solar Arrays get the light where the world is (inverse
+ * square of its orbit); orbital collectors catch it anywhere in the system.
  */
 export function powerParts(state: GameState, b: Body): { label: string; e: number }[] {
   if (b.dissolved) return [];
@@ -44,7 +44,7 @@ export function powerParts(state: GameState, b: Body): { label: string; e: numbe
     let e = 0;
     switch (d.energy.mode) {
       case 'light':
-        e = a * light;
+        e = a * light * (d.id === 'solar_array' ? insolation(state, b) : 1);
         break;
       case 'geo':
         e = a * b.coreHeat;
@@ -114,7 +114,7 @@ export function siteValue(state: GameState, b: Body, thread: ThreadId): SiteValu
       return {
         score: p,
         label: `≈${Math.round(p)} energy`,
-        tip: `Minds on substrate need power, not air: about what a settlement here could collect each turn at the Tide, with its Hearth and every collector you can build now.\n${parts.map((x) => `${x.label}: ${x.e.toFixed(1)}`).join('\n')}\nCollectors catch ${sys.name}'s light the same on any of its worlds; its core heat (${Math.round(b.coreHeat * 100)}%) is what sets a world apart.`,
+        tip: `Minds on substrate need power, not air: about what a settlement here could collect each turn at the Tide, with its Hearth and every collector you can build now.\n${parts.map((x) => `${x.label}: ${x.e.toFixed(1)}`).join('\n')}\nSunlight here: ×${insolation(state, b).toFixed(2)} of ${sys.name}'s standard orbit (surface arrays only; orbital collectors catch the light anywhere). Core heat ${Math.round(b.coreHeat * 100)}% (geothermal).`,
       };
     }
     case 'lattice': {

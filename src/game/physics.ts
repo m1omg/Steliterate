@@ -435,6 +435,32 @@ export function bodyClimate(state: GameState, b: Body): BodyClimate {
   return { mean: t };
 }
 
+/**
+ * Sunlight on a world's surface relative to its star's standard orbit, by the inverse-square law:
+ * what surface Solar Arrays catch (orbital collectors sit wherever the light is best and do not
+ * care). For burning stars the standard orbit follows the star's mass and is set so the
+ * homeworld (0.031 AU around 0.1 M☉) gets exactly ×1; around remnants, whose light the game
+ * scales to the age, it is the system's middle orbit. Kept between ×0.05 and ×2.5.
+ */
+export function insolation(state: GameState, b: Body): number {
+  if (b.rogue) return 0;
+  const sys = state.systems[b.systemId];
+  if (!sys) return 1;
+  const p = sys.primary;
+  let aStd: number;
+  if (p.kind === 'red_dwarf' || p.kind === 'blue_dwarf' || p.kind === 'collision_star') {
+    aStd = 0.031 * Math.pow(Math.max(0.05, p.mass) / 0.1, 1.15);
+  } else {
+    const orbits = sys.bodies
+      .map((id) => state.bodies[id])
+      .filter((x) => x && x.kind !== 'deep' && !x.dissolved && !x.rogue && x.orbitAU > 0)
+      .map((x) => x.orbitAU)
+      .sort((x, y) => x - y);
+    aStd = orbits.length ? orbits[Math.floor(orbits.length / 2)] : b.orbitAU;
+  }
+  return Math.min(2.5, Math.max(0.05, (aStd / Math.max(0.003, b.orbitAU)) ** 2));
+}
+
 /** A plain description of a world's water at its current temperature. */
 export function waterState(b: Body, climate: BodyClimate): string {
   const w = b.water ?? 0;

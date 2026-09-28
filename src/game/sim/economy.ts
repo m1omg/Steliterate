@@ -1,6 +1,6 @@
 import { STRUCTURE_BY_ID, type StructureDef } from '../data/structures';
 import { THREAD_DEFS } from '../data/threads';
-import { hawkingLight, sourceLight } from '../physics';
+import { hawkingLight, insolation, sourceLight } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
 import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
@@ -166,6 +166,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
       switch (d.energy.mode) {
         case 'light':
           e = a * light.light * (body.rogue ? 0 : 1);
+          // arrays on the surface get the light where the world is (inverse square); orbital collectors do not care
+          if (d.id === 'solar_array') e *= insolation(state, body);
           if (flags.has('halo_siphons') && sys.primary.halo && state.era === 'degenerate') e *= 2;
           if (civ.flags.ember_restraint && sys.primary.halo && state.era === 'degenerate') e *= 0.75;
           break;
