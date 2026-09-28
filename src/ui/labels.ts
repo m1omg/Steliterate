@@ -1,6 +1,6 @@
 import { ANOMALIES } from '../game/data/events';
 import { bodyClimate } from '../game/physics';
-import type { Body, BodyKind, Focus, GameState, PrimaryKind } from '../game/types';
+import type { Body, BodyKind, Focus, GameState, PrimaryKind, StarSystem } from '../game/types';
 import type { IconName } from './icons';
 
 export const PRIMARY_NAME: Record<PrimaryKind, string> = {
@@ -106,3 +106,13 @@ export function bodyKindName(s: GameState, b: Body): string {
 export function bodyKindNote(s: GameState, b: Body): string {
   return bodyKindName(s, b) !== BODY_NAME[b.kind] ? 'Once an eyeball world. Its star no longer warms it, and the sea on its day side has frozen over; what warmth is left comes from inside.' : '';
 }
+
+/**
+ * In the Degenerate Age a collision star is the brightest thing for light-years around: every
+ * list of places puts the ones on our map first.
+ */
+export function isBeacon(s: GameState, sys: StarSystem): boolean {
+  return s.era === 'degenerate' && sys.primary.kind === 'collision_star' && !sys.gone && (s.civ.known[sys.id] ?? 0) > 0;
+}
+
+export const BEACON_TIP = 'A collision star: two dead stars that merged and caught fire again. In the Degenerate Age nothing else nearby shines like it.';

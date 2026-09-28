@@ -36,7 +36,7 @@ import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote } from '../labels';
+import { FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, isBeacon, BEACON_TIP } from '../labels';
 import { act, engine, following, rev, selection, targeting, view } from '../store';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
@@ -780,13 +780,15 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   const surveyor = f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey);
   const tender = f.ships.some((x) => SHIP_BY_ID[x.cls]?.tames);
   const tgt = targeting.value?.fleetId === f.id;
-  const dests = here
-    ? Object.values(s.systems)
-        .filter((x) => x.id !== here.id && !x.gone && (s.civ.known[x.id] ?? 0) > 0)
-        .map((x) => ({ sys: x, ly: distLy(here, x) }))
-        .sort((a, b) => (surveyor ? Number(s.civ.known[a.sys.id] === 2) - Number(s.civ.known[b.sys.id] === 2) : 0) || a.ly - b.ly)
-        .slice(0, 10)
-    : [];
+  const known = here ? Object.values(s.systems).filter((x) => x.id !== here.id && !x.gone && (s.civ.known[x.id] ?? 0) > 0).map((x) => ({ sys: x, ly: distLy(here, x) })) : [];
+  // collision stars first (all of them, in the Degenerate Age), then the nearest ten
+  const dests = [
+    ...known.filter((d) => isBeacon(s, d.sys)).sort((a, b) => a.ly - b.ly),
+    ...known
+      .filter((d) => !isBeacon(s, d.sys))
+      .sort((a, b) => (surveyor ? Number(s.civ.known[a.sys.id] === 2) - Number(s.civ.known[b.sys.id] === 2) : 0) || a.ly - b.ly)
+      .slice(0, 10),
+  ];
   const settleDef = settler ? SHIP_BY_ID[settler.cls] : null;
   const settleTargets =
     here && settleDef
@@ -794,7 +796,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
           .filter((b) => s.civ.known[b.systemId] === 2 && (!settleDef.inSystem || b.systemId === here.id) && !canSettle(s, b, settleDef.settles!.thread))
           .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), room: naturalKinRoom(b), hab: b.habitability * b.vitality }))
           // Kin want the most habitable worlds first; other minds do not care, so nearest first
-          .sort((a, b) => (settleDef.settles!.thread === 'kin' ? b.hab - a.hab || b.room - a.room : 0) || a.ly - b.ly)
+          .sort((a, b) => Number(isBeacon(s, s.systems[b.b.systemId])) - Number(isBeacon(s, s.systems[a.b.systemId])) || (settleDef.settles!.thread === 'kin' ? b.hab - a.hab || b.room - a.room : 0) || a.ly - b.ly)
           .slice(0, 10)
       : [];
   const swarmHere = here ? Object.values(s.swarms).find((w) => w.systemId === here.id && !w.tamed) : null;
@@ -886,6 +888,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                     <div key={b.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
                       <Icon name={bodyIcon(b.kind)} />
                       <span class="grow">
+                        {isBeacon(s, s.systems[b.systemId]) && <span class="chip boon" style={{ marginRight: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                         {b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
                       </span>
                       {settleDef?.settles?.thread === 'kin' && (
@@ -925,6 +928,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                     <Icon name={primaryIcon(sys.primary.kind)} />
                     <span class="grow">
                       {sys.name}
+                      {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                       {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '11px' }}> unsurveyed</span>}
                     </span>
                     <span class="mono faint" style={{ fontSize: '11px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>

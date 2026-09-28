@@ -13,7 +13,7 @@ import type { Body, Colony, Fleet, GameState } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
-import { PRIMARY_NAME, TRAIT_NAME, bodyKindName } from '../labels';
+import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, BEACON_TIP } from '../labels';
 import { engine, modal, rev, selection, targeting, view } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
@@ -246,7 +246,7 @@ function WorldsList({ s }: { s: GameState }) {
       return { b, sys, hab: b.habitability * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)) };
     })
     .filter((r) => !findsOnly || r.finds.length > 0)
-    .sort((x, y) => (sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
+    .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
   // the same worlds, one line per star: its best world, its total room, what was found there
   const systems = [...new Set(rows.map((r) => r.sys.id))]
     .map((id) => {
@@ -263,7 +263,7 @@ function WorldsList({ s }: { s: GameState }) {
         finds: [...new Set(rs.flatMap((r) => r.finds))],
       };
     })
-    .sort((x, y) => (sort === 'hab' ? y.best.hab - x.best.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.sys.name.localeCompare(y.sys.name)) || x.ly - y.ly);
+    .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (sort === 'hab' ? y.best.hab - x.best.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.sys.name.localeCompare(y.sys.name)) || x.ly - y.ly);
   const sorts: [WorldSort, string][] = [['hab', 'Habitable'], ['room', 'Room'], ['near', 'Nearest'], ['name', 'Name']];
   return (
     <>
@@ -296,6 +296,7 @@ function WorldsList({ s }: { s: GameState }) {
             <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
               <span class="grow">
                 {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
+                {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                 {settled && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
                 {finds.map((t) => (
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
@@ -318,6 +319,7 @@ function WorldsList({ s }: { s: GameState }) {
             <div key={b.id} class="list-item world-row" onClick={() => goToBody(b)}>
               <span class="grow">
                 {b.name} <span class="faint">{bodyKindName(s, b)}</span>
+                {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                 {b.colonyId && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
                 {finds.map((t) => (
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>

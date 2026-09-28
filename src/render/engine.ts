@@ -518,9 +518,20 @@ export class Engine {
           .filter((x) => x.dd < d * 1.1)
           .sort((a, b) => a.dd - b.dd)
           .slice(0, 36);
+        // in the Degenerate Age every collision star on the map keeps its name showing
+        if (state.era === 'degenerate') {
+          for (const p of this.galaxy.pickables) {
+            if (p.kind !== 'system' || state.systems[p.id]?.primary.kind !== 'collision_star' || cand.some((c) => c.p.id === p.id)) continue;
+            cand.push({ p, dd: 0 });
+          }
+        }
         for (const { p } of cand) {
           const s = state.systems[p.id];
           const mine = colonized.has(p.id);
+          if (state.era === 'degenerate' && s.primary.kind === 'collision_star') {
+            items.push({ text: `✦ ${s.name}`, pos: p.pos, cls: 'beacon', w: 5 });
+            continue;
+          }
           items.push({ text: s.name, pos: p.pos, cls: mine ? 'mine' : this.galaxy.living.has(p.id) ? 'living' : state.civ.known[p.id] === 2 ? 'surveyed' : 'seen', w: mine ? 3 : this.galaxy.living.has(p.id) ? 2 : 1 });
         }
       }

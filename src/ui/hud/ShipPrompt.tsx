@@ -7,6 +7,7 @@ import { computeMods } from '../../game/sim/mods';
 import { colonies, distLy } from '../../game/sim/util';
 import type { Fleet, GameState } from '../../game/types';
 import { Icon } from '../Icon';
+import { BEACON_TIP, isBeacon } from '../labels';
 import { act, rev } from '../store';
 import { goToFleet, pickOnMap, pivotToSystem } from '../screens/Lists';
 import { sfx } from '../../audio/sfx';
@@ -26,6 +27,7 @@ interface Option {
   label: string;
   sub: string;
   run: (g: GameState) => string | null | void;
+  beacon?: boolean;
 }
 
 function suggestions(s: GameState, f: Fleet): Option[] {
@@ -38,12 +40,16 @@ function suggestions(s: GameState, f: Fleet): Option[] {
       .sort((a, b) => a.ly - b.ly)
       .slice(0, 3)
       .map(({ sys, ly }) => ({ label: sys.name, sub: `${tripLabel(s, ly, mods)}${order === 'survey' ? ' · survey' : ''}`, run: (g: GameState) => orderFleet(g, f.id, sys.id, order) }));
+  // in the Degenerate Age the collision stars on our map come first
+  const beacons = Object.values(s.systems).filter((x) => isBeacon(s, x) && x.id !== here.id);
+  const top = ways(beacons.map((x) => x.id), 'move').map((o) => ({ ...o, beacon: true }));
+  const skip = new Set(beacons.map((x) => x.name));
   if (f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey)) {
     const unsurveyed = Object.values(s.systems).filter((x) => s.civ.known[x.id] === 1 && !x.gone && x.id !== here.id).map((x) => x.id);
-    return ways(unsurveyed, 'survey');
+    return [...top, ...ways(unsurveyed, 'survey').filter((o) => !skip.has(o.label))];
   }
   const ours = [...new Set(colonies(s).map((c) => c.systemId))].filter((id) => id !== here.id);
-  return ways(ours, 'move');
+  return [...top, ...ways(ours, 'move').filter((o) => !skip.has(o.label))];
 }
 
 export function ShipPrompt({ s }: { s: GameState }) {
@@ -83,7 +89,10 @@ export function ShipPrompt({ s }: { s: GameState }) {
         <div class="rp-options">
           {options.map((o) => (
             <button key={o.label} class="btn small rp-option" onClick={() => choose(o.run)}>
-              <span class="grow">{o.label}</span>
+              <span class="grow">
+                {o.label}
+                {o.beacon && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
+              </span>
               <span class="mono faint" data-tip={TRIP_TIP}>{o.sub}</span>
             </button>
           ))}
