@@ -78,7 +78,9 @@ node tools/process-art.mjs                             # grade art-src/*.png int
   checks this).
 - `src/ui/`: Preact interface. `src/audio/`: recorded tracks with a procedural Web Audio score
   as fallback, and synthesised interface sounds.
-- `docs/DESIGN.md`: the design. `docs/spoilers/dark-matter.md`: spoilers.
+- `docs/DESIGN.md`: the design. `docs/CHANGELOG.md`: what changed, commit by commit.
+  `docs/DEV-NOTES.md`: workflow, tests, where the systems live. `docs/SESSION-NOTES.md`:
+  decisions, answered questions and open threads. `docs/spoilers/dark-matter.md`: spoilers.
 
 ## Credits
 
