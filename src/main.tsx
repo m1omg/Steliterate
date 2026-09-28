@@ -4,14 +4,14 @@ import { newGame } from './game/newGame';
 import { orderFleet } from './game/sim/actions';
 import { endTurn } from './game/sim/turn';
 import { autoPlay } from './game/auto';
-import { exportCode, importCode } from './game/save';
+import { exportCode, importCode, loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
 import { installUnlock, setVolumes } from './audio/core';
 import { music } from './audio/music';
 import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import { App } from './ui/App';
-import { act, bump, engine, game, modal, screen, selection, setEngine, settings, targeting, view } from './ui/store';
+import { act, bump, engine, game, modal, notify, screen, selection, setEngine, settings, targeting, view } from './ui/store';
 import { doEndTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
 import './ui/styles.css';
@@ -109,6 +109,33 @@ const boot = (data: unknown) => {
 };
 if (hot?.ready) hot.ready(boot);
 else boot(hot?.data ?? null);
+
+// The GPU context: phones take it away in the background. Usually it comes back by itself;
+// if it will not, save, reload the page, and pick the game up again where it was.
+const RESUME = 'steliterate.resume';
+eng.onContextChange = (st) => {
+  if (st === 'lost') notify('The browser paused the graphics. Restoring…');
+  else if (st === 'restored') notify('Graphics restored.', 'good');
+  else if (screen.value === 'game' && game.value) {
+    let ok = saveGame(game.value, true);
+    try {
+      sessionStorage.setItem(RESUME, '1');
+    } catch {
+      ok = false;
+    }
+    if (ok) location.reload();
+    else notify('The graphics could not be restored. Make a save code (Save), then reload the page.', 'bad');
+  } else location.reload();
+};
+try {
+  if (sessionStorage.getItem(RESUME)) {
+    sessionStorage.removeItem(RESUME);
+    const g = loadGame(true);
+    if (g && screen.value !== 'game') startLoaded(g);
+  }
+} catch {
+  // no session storage: start at the menu as usual
+}
 
 // Keys: Enter ends the turn; letters open the main screens; H goes home.
 const SCREEN_KEYS: Record<string, 'research' | 'settlements' | 'fleets' | 'threads' | 'charters' | 'signals' | 'log' | 'codex'> = {

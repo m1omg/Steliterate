@@ -5,6 +5,7 @@ import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
 import { bump, engine, game, modal, notify, rev, saveSettings, screen, selection, settings } from '../store';
+import { Icon } from '../Icon';
 import { CODEX } from './Codex';
 import { MANUAL } from './Manual';
 import { startTutorial } from '../hud/Tutorial';
@@ -101,9 +102,23 @@ export function SettingsModal() {
     if (patch.quality) engine()?.setQuality(patch.quality);
     if (patch.uiScale) document.documentElement.style.fontSize = `${14 * patch.uiScale}px`;
   };
+  const g = screen.value === 'game' ? game.value : null;
   return (
-    <ModalFrame title="Settings" icon="settings" narrow>
+    <ModalFrame title={g ? 'Menu' : 'Settings'} icon="settings" narrow>
       <div class="col" style={{ gap: '14px' }}>
+        {g && (
+          <div class="row wrap" style={{ gap: '6px' }}>
+            <button class="btn primary" onClick={() => (saveGame(g) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Use a save code.', 'bad'))}>
+              <Icon name="save" /> Save
+            </button>
+            <button class="btn" onClick={() => (modal.value = { kind: 'save' })}>
+              Load, save codes…
+            </button>
+            <button class="btn ghost" onClick={() => quitToMenu(g)}>
+              Main menu
+            </button>
+          </div>
+        )}
         <div class="field">
           <label for="vol-music">Music {Math.round(st.music * 100)}%</label>
           <input id="vol-music" type="range" min="0" max="1" step="0.05" value={st.music} onInput={(e) => set({ music: Number((e.target as HTMLInputElement).value) })} />
@@ -171,6 +186,15 @@ export function startLoaded(g: GameState) {
   engine()?.focusGalaxyOn(g.civ.homeSystemId, 150, true);
 }
 
+/** Back to the title screen. The game is kept in the autosave slot, so Continue resumes it. */
+function quitToMenu(g: GameState) {
+  saveGame(g, true);
+  sfx('click');
+  modal.value = null;
+  selection.value = null;
+  screen.value = 'menu';
+}
+
 export function SaveModal({ s }: { s: GameState | null }) {
   const [code, setCode] = useState('');
   const [importText, setImportText] = useState('');
@@ -184,6 +208,9 @@ export function SaveModal({ s }: { s: GameState | null }) {
             </button>
             <button class="btn" onClick={() => setCode(exportCode(s))}>
               Make a save code
+            </button>
+            <button class="btn ghost" onClick={() => quitToMenu(s)} data-tip="Your game is kept as the autosave: Continue picks it up.">
+              Main menu
             </button>
           </div>
         )}
@@ -235,18 +262,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
             Load code
           </button>
         </div>
-        {s && (
-          <button
-            class="btn ghost"
-            onClick={() => {
-              saveGame(s, true);
-              modal.value = null;
-              screen.value = 'menu';
-            }}
-          >
-            Return to the main menu
-          </button>
-        )}
+
       </div>
     </ModalFrame>
   );

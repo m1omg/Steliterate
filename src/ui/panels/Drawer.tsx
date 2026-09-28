@@ -26,12 +26,13 @@ import {
 import { capacity } from '../../game/sim/economy';
 import { canSettle, launchCost, travelTurnsEstimate } from '../../game/sim/fleets';
 import { computeMods } from '../../game/sim/mods';
-import { project } from '../../game/sim/projection';
+import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
 import { capital, distLy, hasCharter, hasTech, popsOf } from '../../game/sim/util';
-import type { Body, Colony, Fleet, GameState, StarSystem, Swarm } from '../../game/types';
+import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
+import type { IconName } from '../icons';
 import { BODY_NAME, FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon } from '../labels';
 import { act, engine, rev, selection, targeting, view } from '../store';
 import { sfx } from '../../audio/sfx';
@@ -586,7 +587,11 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
   const [kind, setKind] = useState<'structure' | 'ship'>('structure');
   const rc = rushCost(s, c.id);
   let acc = 0;
-  const list = kind === 'structure' ? buildableStructures(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: x.def.desc, error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0 })) : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: x.def.desc, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
+  const ctx = project(s).ctx;
+  const list: { id: string; name: string; desc: string; error: string | null | undefined; cost: ReturnType<typeof buildCost>; count: number; fx?: BuildEffect }[] =
+    kind === 'structure'
+      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: x.def.desc, error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx) }))
+      : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: x.def.desc, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
   return (
     <>
       <div class="section" style={{ marginTop: 0 }}>
@@ -636,6 +641,8 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
               <span class="grow">
                 {x.name}
                 {x.count > 0 && <span class="faint"> ×{x.count}</span>}
+                {x.fx && <EffectLine fx={x.fx} />}
+                <div class="build-desc">{x.desc}</div>
                 {x.error && <div class="faint" style={{ fontSize: '11px' }}>{x.error}</div>}
               </span>
               <span class="mono faint" style={{ fontSize: '11px', textAlign: 'right' }}>
@@ -649,6 +656,36 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
       </div>
     </>
   );
+}
+
+/** What one more of a structure changes here, per turn: the numbers first, then the rest. */
+function EffectLine({ fx }: { fx: BuildEffect }) {
+  const parts: preact.JSX.Element[] = [];
+  const add = (v: number, icon: IconName, what: string) => {
+    if (Math.abs(v) < 0.05) return;
+    parts.push(
+      <span key={what} class={`fx ${v > 0 ? 'good' : 'bad'}`} data-tip={`${what} a turn, here`}>
+        {signed(v)}
+        <Icon name={icon} />
+      </span>,
+    );
+  };
+  add(fx.energy, 'energy', 'Energy');
+  add(fx.matter, 'matter', 'Matter');
+  add(fx.industry, 'industry', 'Industry');
+  add(fx.insight, 'insight', 'Insight');
+  add(fx.accord, 'accord', 'Accord');
+  for (const [k, v] of Object.entries(fx.room)) {
+    if (!v) continue;
+    parts.push(
+      <span key={k} class="fx good">
+        +{v} {k === 'cryo' ? 'cold sleep' : `${THREAD_DEFS[k as ThreadId].name} room`}
+      </span>,
+    );
+  }
+  for (const n of fx.notes) parts.push(<span key={n} class="fx note">{n}</span>);
+  if (!parts.length) return null;
+  return <div class="fx-line">{parts}</div>;
 }
 
 // ------------------------------------------------------------------ fleet

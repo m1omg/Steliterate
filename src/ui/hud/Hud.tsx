@@ -34,7 +34,7 @@ export function Hud({ s }: { s: GameState }) {
   );
 }
 
-function RailBtn({ icon, label, onClick, badge, on }: { icon: IconName; label: string; onClick: () => void; badge?: number; on?: boolean }) {
+function RailBtn({ icon, label, short, onClick, badge, on }: { icon: IconName; label: string; short: string; onClick: () => void; badge?: number; on?: boolean }) {
   return (
     <button
       class={`btn iconbtn ${on ? 'on' : ''}`}
@@ -46,6 +46,7 @@ function RailBtn({ icon, label, onClick, badge, on }: { icon: IconName; label: s
       }}
     >
       <Icon name={icon} size="lg" />
+      <span class="rail-label" aria-hidden="true">{short}</span>
       {badge ? <span class="badge">{badge}</span> : null}
     </button>
   );
@@ -58,16 +59,16 @@ function Rail({ s }: { s: GameState }) {
   const readySettlers = Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles)).length;
   return (
     <nav class="rail panel" aria-label="Civilization">
-      <RailBtn icon="research" label={`Research${s.civ.researching ? '' : ': nothing chosen'}`} on={m === 'research'} badge={s.civ.researching ? 0 : 1} onClick={() => (modal.value = { kind: 'research' })} />
-      <RailBtn icon="colony" label="Settlements" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
-      <RailBtn icon="fleet" label="Fleets" on={m === 'fleets'} badge={readySettlers} onClick={() => (modal.value = { kind: 'fleets' })} />
-      <RailBtn icon="threads" label="Threads: the kinds of mind you are made of" on={m === 'threads'} onClick={() => (modal.value = { kind: 'threads' })} />
-      <RailBtn icon="doctrines" label="Charters: the book of laws" on={m === 'charters'} onClick={() => (modal.value = { kind: 'charters' })} />
-      <RailBtn icon="diplomacy" label="Signals: the other minds" on={m === 'signals'} badge={unanswered} onClick={() => (modal.value = { kind: 'signals' })} />
-      <RailBtn icon="log" label="The Record" on={m === 'log'} onClick={() => (modal.value = { kind: 'log' })} />
-      <RailBtn icon="info" label="Codex: how to play, and how the universe ends" on={m === 'codex'} onClick={() => (modal.value = { kind: 'codex' })} />
-      <RailBtn icon="save" label="Save and load" on={m === 'save'} onClick={() => (modal.value = { kind: 'save' })} />
-      <RailBtn icon="settings" label="Settings" on={m === 'settings'} onClick={() => (modal.value = { kind: 'settings' })} />
+      <RailBtn icon="research" label={`Research${s.civ.researching ? '' : ': nothing chosen'}`} short="Research" on={m === 'research'} badge={s.civ.researching ? 0 : 1} onClick={() => (modal.value = { kind: 'research' })} />
+      <RailBtn icon="colony" label="Settlements" short="Settle" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
+      <RailBtn icon="fleet" label="Fleets" short="Fleets" on={m === 'fleets'} badge={readySettlers} onClick={() => (modal.value = { kind: 'fleets' })} />
+      <RailBtn icon="threads" label="Threads: the kinds of mind you are made of" short="Threads" on={m === 'threads'} onClick={() => (modal.value = { kind: 'threads' })} />
+      <RailBtn icon="doctrines" label="Charters: the book of laws" short="Laws" on={m === 'charters'} onClick={() => (modal.value = { kind: 'charters' })} />
+      <RailBtn icon="diplomacy" label="Signals: the other minds" short="Signals" on={m === 'signals'} badge={unanswered} onClick={() => (modal.value = { kind: 'signals' })} />
+      <RailBtn icon="log" label="The Record" short="Record" on={m === 'log'} onClick={() => (modal.value = { kind: 'log' })} />
+      <RailBtn icon="info" label="Codex: how to play, and how the universe ends" short="Codex" on={m === 'codex'} onClick={() => (modal.value = { kind: 'codex' })} />
+      <RailBtn icon="save" label="Save and load" short="Save" on={m === 'save'} onClick={() => (modal.value = { kind: 'save' })} />
+      <RailBtn icon="settings" label="Menu: settings, save, main menu" short="Menu" on={m === 'settings'} onClick={() => (modal.value = { kind: 'settings' })} />
     </nav>
   );
 }

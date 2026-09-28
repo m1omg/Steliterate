@@ -297,6 +297,11 @@ export class GalaxyView {
   }
 
   /** Rebuild everything that changes with the game state. */
+  /** After the GPU context was lost and restored: rebuild the point clouds on the next sync. */
+  invalidate() {
+    this.seedBuilt = -1;
+  }
+
   sync(state: GameState, now: number) {
     if (state !== this.syncedState) {
       // a different game (new, loaded, or the menu's preview world): fleet ids repeat between

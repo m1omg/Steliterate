@@ -52,6 +52,11 @@ export class Engine {
   private galaxyCam = { target: new THREE.Vector3(), distance: 220, yaw: 0.6, pitch: 0.85 };
   private leavePush = 0;
   private focusY: number | null = null;
+  /** The browser took the GPU away (a phone backgrounding the page, a driver reset). */
+  contextLost = false;
+  /** Lost: true when the picture goes, false when it is back. 'stuck' if it will not come back. */
+  onContextChange: ((state: 'lost' | 'restored' | 'stuck') => void) | null = null;
+  private lostTimer = 0;
   private viewShift = 0;
   quality: Quality = 'high';
   private tint = new THREE.Color(1, 0.94, 0.88);
@@ -81,11 +86,52 @@ export class Engine {
     this.rig.onZoomIntent = (requested) => this.zoomIntent(requested);
     this.rig.onHover = (x, y) => this.events.onHover(this.pickAt(x, y), x, y);
     window.addEventListener('resize', this.resize);
+    // Phones drop the GPU context when the page goes to the background. three.js asks for it
+    // back; hide the dead canvas meanwhile (some browsers paint it white), rebuild on return,
+    // and if it never comes back, say so.
+    const canvas = this.renderer.domElement;
+    canvas.addEventListener('webglcontextlost', () => {
+      this.contextLost = true;
+      canvas.style.visibility = 'hidden';
+      this.onContextChange?.('lost');
+      this.watchLost();
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      this.contextLost = false;
+      window.clearTimeout(this.lostTimer);
+      this.galaxy.invalidate();
+      if (this.state) this.setState(this.state);
+      this.resize();
+      canvas.style.visibility = '';
+      this.onContextChange?.('restored');
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      this.resize();
+      if (this.contextLost) this.watchLost();
+    });
     this.renderer.domElement.addEventListener('dblclick', (e) => {
       const p = this.pickAt(e.clientX, e.clientY);
       if (p && p.kind === 'system' && this.view === 'galaxy') this.events.onEnterSystem(p.id);
     });
     this.resize();
+  }
+
+  /** While visible and still lost: nudge the browser, then give up and report. */
+  private watchLost() {
+    window.clearTimeout(this.lostTimer);
+    if (document.visibilityState !== 'visible') return;
+    this.lostTimer = window.setTimeout(() => {
+      if (!this.contextLost || document.visibilityState !== 'visible') return;
+      try {
+        this.renderer.forceContextRestore();
+      } catch {
+        // no WEBGL_lose_context: nothing to nudge
+      }
+      this.lostTimer = window.setTimeout(() => {
+        if (this.contextLost && document.visibilityState === 'visible') this.onContextChange?.('stuck');
+      }, 3000);
+    }, 1500);
   }
 
   setQuality(q: Quality) {

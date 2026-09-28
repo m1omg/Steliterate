@@ -98,20 +98,34 @@ export function App() {
         <>
           <Hud s={s} />
           <Drawer s={s} />
-          {targeting.value && (
-            <div class="targeting panel" role="status">
-              Choose a destination for {s.fleets[targeting.value.fleetId]?.name ?? 'the fleet'}.{' '}
-              <button class="btn small ghost" onClick={() => (targeting.value = null)}>
-                Cancel
-              </button>
-            </div>
-          )}
+          <TargetBanner s={s} />
           {!blocking && (s.pending.length > 0 || eventResult.value) && <EventModal s={s} />}
         </>
       )}
       <ModalHost s={s} />
       <Toasts />
       <TipLayer />
+    </div>
+  );
+}
+
+/** "Choose a destination": only while the fleet is still waiting for one. An order given any
+ *  other way (the fleet panel's lists, a settle button) ends it too. */
+function TargetBanner({ s }: { s: GameState }) {
+  void rev.value;
+  const t = targeting.value;
+  const f = t ? s.fleets[t.fleetId] : null;
+  const waiting = !!f && !!f.at && !f.to;
+  useEffect(() => {
+    if (t && !waiting) targeting.value = null;
+  });
+  if (!t || !waiting) return null;
+  return (
+    <div class="targeting panel" role="status">
+      Choose a destination for {f!.name}.{' '}
+      <button class="btn small ghost" onClick={() => (targeting.value = null)}>
+        Cancel
+      </button>
     </div>
   );
 }
