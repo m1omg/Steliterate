@@ -114,6 +114,9 @@ export function sheltersNeeded(state: GameState, systemId: string): { colonyId: 
   const out: { colonyId: string; n: number; short: number }[] = [];
   for (const c of colonies(state)) {
     if (c.systemId !== systemId || c.pops.kin <= 0) continue;
+    // only where the flare makes the surface unlivable (a far, cold world may stay bearable)
+    const b = state.bodies[c.bodyId];
+    if (!b || !scorched(state, b)) continue;
     const short = Math.max(0, c.pops.kin - kinRoomIndoors(c));
     const n = Math.min(SHELTER_MAX - (c.structures.night_shelter ?? 0), Math.ceil(short / SHELTER_CAP));
     if (n > 0) out.push({ colonyId: c.id, n, short });
@@ -175,6 +178,21 @@ export function flareData(state: GameState, sys: StarSystem): Record<string, str
     const hot = seas.filter((b) => thawed(state, b) === 'hot');
     if (warm.length) d.warm = warm.map(k).join(' and ');
     if (hot.length) d.hot = hot.map(k).join(' and ');
+  }
+  // every other world we live on in this system, and what the flare does to it
+  const others = [...new Set(mine.map((c) => c.bodyId))]
+    .map((id) => state.bodies[id])
+    .filter((b) => b && b !== world && b.kind !== 'deep' && !thawed(state, b));
+  if (others.length) {
+    d.others = others
+      .map((b) => {
+        const h = flareHeat(state, b);
+        const t = `${b.name}, ${Math.round(h.before.mean)} K to about ${Math.round(h.during.mean)} K`;
+        if (scorched(state, b)) return t;
+        // an airless world locked to its star: nothing carries the heat round to the night side
+        return h.during.night !== undefined ? `${t}, though its night side stays at about ${Math.round(h.during.night)} K` : `${t} (still bearable)`;
+      })
+      .join('; ');
   }
   if (world) {
     const h = flareHeat(state, world);

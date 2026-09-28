@@ -301,7 +301,9 @@ export const EVENTS: EventDef[] = [
       const night = Number(d.night1) > SCORCH_K
         ? ` and even the night side, ${d.night0} K until now, will reach about ${d.night1} K. The seas will boil away. Nowhere on the surface will be livable while it lasts.`
         : `. The night side, ${d.night0} K until now, will reach about ${d.night1} K: the only place on the surface anyone can bear.`;
-      const heat = d.world ? ` On ${d.world} that means about ${d.mean1} K on average instead of ${d.mean0} K: some ${d.day1} K under the fixed sun, ${day},${night}` : '';
+      const heat =
+        (d.world ? ` On ${d.world} that means about ${d.mean1} K on average instead of ${d.mean0} K: some ${d.day1} K under the fixed sun, ${day},${night}` : '') +
+        (d.others ? ` Our other settlements there heat up too: ${d.others}.` : '');
       const refuge = need > 0
         ? ` Our only refuge is the night side: shelters cut into the rock and cooled by radiators, ${SHELTER_CAP} Kin to a shelter. We need ${need} (${need * SHELTER_MATTER} matter; we have ${Math.floor(s.civ.matter)}). Whoever the domes, cold berths and shelters cannot hold will not live through it.`
         : ' Our domes and shelters already hold everyone who lives there.';
