@@ -1,279 +1,330 @@
 # Steliterate: Design
 
-A turn-based 4X strategy game with real-time animated 3D views, set at the end of
-starlight. You begin on one geologically dying world orbiting a red dwarf at the
-very end of the Stelliferous Era, roughly 90 trillion years after the Big Bang.
-The goal is to survive for as long as the universe allows, and to choose what
-"surviving" means.
+A turn-based survival strategy game with real-time animated 3D views, set at the end of
+starlight. Think of it as a 4X in which the fourth X is **Endure**: explore, expand,
+exploit, endure. You begin on one geologically dying world orbiting a red dwarf at the very
+end of the Stelliferous Era, about 90 trillion years after the Big Bang. The goal is to keep
+your people alive for as long as the universe allows, and to decide what "alive" means.
 
-The civilization is never shown directly. It could be human descendants or
-something else entirely; the text calls them "the Kin" and nothing more.
+The antagonist is the dying universe itself (a little like Frostpunk, at cosmic scale). You
+are not alone, but the other minds are part of the world's texture and drama, not rivals on a
+scoreboard. There is no conquest victory.
+
+The civilization is never shown. It could be human descendants or something else; the text
+calls its original people "the Kin" and nothing more.
 
 ---
 
 ## 1. Pillars
 
-1. **The universe is the antagonist.** The map is not a static board. Stars
-   brighten, collapse and cool. Galaxies evaporate. Matter decays. Black holes
-   evaporate. Every era removes something you depended on.
-2. **Adaptation over conquest.** Rivals exist and war is possible, but the
-   pressure that shapes every decision is entropy. You win by changing what
-   you are faster than the universe changes around you.
-3. **Many ways to persist.** Biology, uploaded minds, merged minds,
-   non-conscious processes and speculative physics each lead to a different
-   ending. None of them is the "right" one.
-4. **Honest physics, clearly labelled speculation.** Timelines follow the
-   physical-eschatology literature (Section 9). Where the game goes beyond
-   known physics, the text says so.
+1. **The universe is the antagonist.** Stars brighten, collapse and cool. Planets are
+   stripped away or fall into their dead suns. The galaxy evaporates. Matter may decay.
+   Black holes evaporate. Every age removes something you depended on.
+2. **Adaptation over conquest.** You win by changing what you are faster than the universe
+   changes around you: slower minds, colder substrates, new sources of energy.
+3. **Many ways to persist.** Biology, uploaded minds, merged minds, non-conscious processes,
+   speculative physics, and a dark path that eats everything. None is the "right" one.
+4. **Honest physics, clearly labelled speculation.** Timelines follow the physical
+   eschatology literature (Section 11). Where the game goes beyond known physics, it says so.
 
 ---
 
-## 2. Time and scale: "scale follows time"
+## 2. The Coalescence
 
-The core problem: a single game has to span from a planet dying over thousands of years to
-black holes evaporating over 10^100 years, with no faster-than-light travel.
+The map is one galaxy: **the Coalescence**, a giant elliptical made from dozens of ancestral
+galaxies that merged over trillions of years. This is the expected fate of our own Local
+Group (whose merger product is nicknamed Milkomeda); in the game, names are invented so the
+species stays ambiguous, and the Codex explains the real analogue.
 
-**Solution: the length of a turn grows as the game goes on, and the map zooms
-out with it.**
+* **Provinces** are the remains of the ancestral galaxies: the core (**the Heart**, with its
+  supermassive black hole), three ancestral **Remnants**, two tidal **Streams**, and the
+  diffuse **Halo** with its ancient globular clusters (crowded with white dwarfs and
+  neutron stars, and home to intermediate-mass black holes).
+* Each province holds **reaches**: local neighbourhoods of roughly 10 to 20 systems.
+* **The void.** Accelerating expansion carried every other galaxy group past the cosmic
+  event horizon long ago (Krauss & Scherrer 2007). Two lonely outliers drift in the dark:
+  the Runaway cluster and the Wanderer, a hypervelocity black hole. Beyond them, nothing.
+* Display coordinates are compressed per level; travel always uses true light-years.
 
-* Cosmic time is stored in years (a double; 10^141 still fits) and shown as
-  the *cosmological decade* η = log10(years), the unit used by Adams & Laughlin.
-* Each era has its own turn-length schedule. Turn length grows geometrically
-  inside an era:
-  * **Dusk** starts at about 40 years per turn and ends above 10^11.
-  * **Degenerate** runs from about 10^9 to 10^39.
-  * **Black Hole** runs from 10^40 to 10^100.
-  * **Dark** runs from 10^100 to about 10^141.
-* **Travel is sublight and physical.** Each turn a fleet advances
-  `speed × turnLength` light-years. Early on, a 10 ly trip takes several turns.
-  Later a crossing of the galaxy fits into one turn, and distance is paid for
-  in energy instead of time.
-* **The strategic map is hierarchical.** Star systems sit inside *reaches*,
-  which are local stellar neighbourhoods tens of light-years across. Reaches sit
-  inside galaxies: one merged host galaxy plus a few bound dwarf satellites.
-  Display coordinates are compressed per level so all three scales stay
-  readable. Travel always uses the true distances.
-* **Why only these galaxies:** by 10^13 years every galaxy outside the bound
-  Local Group remnant has receded past the cosmic event horizon. Your
-  astronomers see one merged elliptical galaxy and a handful of satellites,
-  and the rest of the sky is empty (Krauss & Scherrer 2007). The map is
-  literally everything that can still be reached.
+---
+
+## 3. Time: every turn is longer than the last
+
+A game must span a planet dying over centuries and black holes evaporating over 10^100
+years, with no faster-than-light travel.
+
+* **The Tide.** Each age has a natural turn length that grows geometrically every turn:
+  from 40 years at the start of the Dusk to about 10^12 years at its end; roughly doubling
+  per turn in the Degenerate Age; about ×12 per turn in the Black Hole Age.
+* **The Dark Era advances the exponent itself.** There, each turn multiplies η (the
+  cosmological decade, log10 of the age in years), so the calendar runs from 10^100 years to
+  about 10^(10^122) years in a few dozen turns. The state stores exact years while they fit
+  in a double, and η beyond.
+* **Pace.** You can quicken (×10 or ×100 shorter turns: more decisions while a short-lived
+  source burns, but energy per turn falls with the time covered) or slow down (longer turns:
+  more energy per turn, but the universe moves on faster between decisions). Neither is
+  always right: a merger star that burns for 100 million years is a long summer to a mind at
+  human speed and a flash of lightning to a Coldmind. Energy storage lets you bank a flash.
+* **Travel is sublight.** A fleet advances `speed × turnLength` light-years per turn and pays
+  a launch cost in energy. Early on a 10 ly hop takes several turns; later a province fits
+  in one.
+* **Light-speed contact.** Every message travels at the speed of light. A plea can arrive
+  after its sender is already dead.
+
+Typical standard game: 90 to 140 Dusk turns, 40 to 70 in the Degenerate Age, 30 to 50 in the
+Black Hole Age, about 20 in the Dark Era.
 
 ### Tempo: the clock of the mind
 
-Each Thread (Section 3) thinks at a *clock*: roughly how many years one of its
-subjective cycles takes, expressed as log10 years. The **mismatch**
-`m = log10(turnLength) - clock` drives **Tempo Strain**:
+Each kind of mind (a **Thread**, Section 4) lives at a *clock*, log10 of the years one
+subjective moment takes, within a range that research widens. The mismatch
+`m = log10(turnLength) − clock` is **tempo strain**:
 
 | mismatch | meaning | effect |
 |---|---|---|
-| m > 0 | the age outruns you; each turn spans many of your cycles | upkeep x(1 + 0.3m), output x(1 + 0.05m) |
-| m < 0 | you are slower than the age | output x(1 + 0.4m), min 0.15; upkeep x(1 + 0.2m), min 0.3 |
+| m > 0 | the age outruns you | living through the Tide: upkeep ×(1 + 0.3m), output ×(1 + 0.05m) |
+| m > 0, from slowing below the Tide | you chose longer turns than your minds can match | the unabsorbed orders of magnitude cost the full extra time: upkeep ×10 per order |
+| m < 0 | you are faster than the turn | output ×(1 + 0.4m), min 0.15; upkeep ×(1 + 0.2m), min 0.3 |
 
-* **Kin** (biological) have a fixed clock of about one generation, so they
-  grow steadily more expensive as turns lengthen. This is the in-game form of
-  "biology is high maintenance".
-* Other Threads can **slow down**, up to a maximum clock unlocked by research.
-  With *auto-clock* on they track the age. Keeping that maximum ahead of the
-  calendar is a research race against cosmic time.
-* **Dormancy** ("burst and sleep") is the alternative to slowing down. A
-  dormant turn produces no Industry, Insight or Accord, but upkeep drops to a
-  few percent and energy still flows into the reserves. The *Long Sleep*
-  command skips several turns at once. Doctrines make waking cycles stronger.
-
-This implements Freeman Dyson's scaling argument (1979): a mind that slows
-down and hibernates can stretch a finite energy budget over enormous spans.
-Its limits in an accelerating universe (Krauss & Starkman 2000) come back as
-the Dark Era's hard budget.
+* **Only minds can slow themselves down.** When you slow below the Tide, Kin (fixed clock),
+  machines and sleepers pay for all of the extra time. Echoes and Coldminds that can stretch
+  their clocks pay nothing extra, which is Freeman Dyson's 1979 argument in game form: a mind
+  that slows can stretch a finite energy budget over enormous spans. Its limits in an
+  accelerating universe (Krauss & Starkman 2000) return as the Dark Era's hard budget.
+* **Dormancy** ("burst and sleep"): a dormant turn produces nothing, but upkeep falls to a
+  tenth (a twentieth with *The Long Watch*) and energy still comes in. **Long Sleep** ends
+  several turns automatically, pausing for any decision; waking gives +30% output.
 
 ---
 
-## 3. Threads (lineages of the civilization)
+## 4. Threads and society
 
-The civilization is a braid of *Threads*: populations of different substrates
-and kinds of mind. Each Thread has its own yields, upkeep, clock range and
-**Accord** (loyalty to the whole). A Thread whose Accord collapses can **fork**
-and break away as a new independent civilization.
+The civilization is a braid of **Threads**, each a faction with its own yields, upkeep, clock
+range, **standing** (0 to 100) and a rotating **demand**.
 
 | Thread | What it is | Strengths | Costs and limits |
 |---|---|---|---|
-| **Kin** | The original biological species | Insight, Accord, natural growth | Needs living worlds or domes; heavy energy upkeep; fixed clock; dies with the stars unless kept in Cold Sleep |
-| **Echoes** | Uploaded minds on substrate | Insight, low upkeep, can slow down | Need Substrate cores; drift lowers Accord |
-| **Chorus** | Many minds merged into one | Industry, Accord, efficient | Harder to slow; unsettles the other Threads |
-| **Lattice** | Self-maintaining processes with no consciousness | Huge Industry, grows on its own, immune to strain | Produces no Insight; wears out (Matter upkeep); alienates conscious Threads |
-| **Coldminds** | Minds in cryogenic vaults near 0 K | Tiny upkeep, extreme clocks | Low output; need Cold Vaults; unlocked in the Degenerate Age |
+| **Kin** | The original biological people | Industry, insight, accord | Heavy upkeep; fixed clock; need living worlds, domes or warrens |
+| **Echoes** | Uploaded minds on substrate | Insight, low upkeep, can slow | Need substrate; drift |
+| **Chorus** | Many minds merged into one | Industry, insight, accord | Harder to slow; unsettles others |
+| **Lattice** | Self-maintaining processes with no one inside | Huge industry, strain-immune | No insight; matter upkeep; conscious Threads resent it |
+| **Coldminds** | Minds in vaults near 0 K | Almost free to keep, extreme clocks | Low output; need Cold Vaults |
 
-Conversions (all require a structure or tech):
-* Kin to Echoes: *Upload Clinic*.
-* Echoes to Chorus: *Confluence Node*.
-* Echoes to Coldminds: *Cold Vault*.
-* Seeding a Lattice from Matter: *Lattice Foundry*.
-* Kin can be moved into or out of Cold Sleep at any colony with a Cryo
-  Hall.
+* Conversions: Upload (Kin to Echo), Merge (two Echoes to a Chorus), Cool (Echo to Coldmind,
+  free, the way a starving civilization saves itself), Cold Sleep and waking for Kin.
+* **Resolve** is the will to go on; everything scales with it. At zero for six turns, the
+  civilization gives up (*The Will Fails*). **Dissent** is how much the Threads disagree;
+  above 40 it slows work. A Thread with very low standing and high dissent **forks** away and
+  becomes one of the other minds.
+* **Charters** are permanent, morally loaded laws (about 20): *Cold Sleep Lottery*, *Upload at
+  Death*, *Sanctity of Flesh*, *Abandon the Surface*, *The Right to Stop*, *Merge Consent*,
+  *Child Quotas*, *Sanctuary*, *Salvage the Dead*, *Blackout*, *Rationing*, *Overdrive
+  Protocols* and more. Each Thread approves or opposes each one.
 
 ---
 
-## 4. Economy
+## 5. Economy
 
-* **Energy** is the master resource. Its flow per turn comes from each
-  system's primary via the capture structures you build. Surplus goes into a
-  **Reserve** with a capacity limit; deficits drain the Reserve and then
-  starve populations.
-* **Matter** is a stock. It comes from mining and is used for construction.
-  It is also fuel for fusion and black-hole accretion.
-* **Insight** goes into research.
-* **Accord** is civilization-wide cohesion. It is a stock spent on Doctrines,
-  and it also backs each Thread's loyalty.
-* **Industry** is produced per colony and drives that colony's build queue.
-  Unused Industry is salvaged into a little Matter.
+* **Energy** is the master resource. Surplus fills a **reserve** with a capacity limit;
+  deficits drain it and then starve settlements.
+* **The Hearth.** Every settlement has its own small power core fed by what is local:
+  starlight, core heat, or a black hole's spin. It can be **overdriven** under the Overdrive
+  Protocols charter for more energy, at the cost of damage and a brighter signature.
+* **Matter** is mined from finite deposits and used for construction, fusion and accretion.
+  After the Great Decay (if protons decay) construction is paid in energy.
+* **Insight** drives research and the Great Works; **Accord** buys Charters; **Industry**
+  drives each settlement's build queue.
+* Housing costs upkeep only for the share of it that is lived in.
+* **Galactic free energy** (100% at the start) scales every source and deposit for everyone.
+  The Hunger spends it, and so do your unsustainable acts: stellar lifting, long overdrive,
+  consuming the dead. It never moves the cosmic clock; what disappears early is what anyone
+  can do with the time.
 
-### Energy sources by era
+### Energy sources by age
 
-| Era | Sources |
+| Age | Sources |
 |---|---|
-| Dusk | Red-dwarf light (solar arrays, orbital collectors, Dyson swarms). Planetary geothermal, which declines. Blue dwarfs: a dying red dwarf's last bright phase, about 3x light. Fusion (Matter to Energy). |
-| Degenerate | Dark-matter-heated white dwarfs (about 10^15 W, 63 K, until η ≈ 25). Rare collision stars made by brown dwarfs colliding. Neutron-star spin-down. Black-hole **accretion engines** (Matter to Energy at very high efficiency). Brown-dwarf hydrogen. Late in the era: **proton-decay harvesting**. |
-| Black Hole | The **Penrose process**, which draws on a black hole's finite spin energy. **Hawking collectors**, whose output rises as a hole shrinks. The final bursts of evaporating holes. Accretion, but only if protons turn out to be stable. |
-| Dark | Your Reserve. A trickle of **horizon siphoning** (speculative). Positronium harvests. |
-
-Each era's sources are finite, fading or both, so over time the economy
-shrinks from abundance to careful rationing.
+| Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase at about 3× light; geothermal (declining); fusion |
+| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. **Collision stars** from brown dwarfs (η 15 to 23). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova). Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting** |
+| Black Hole | Penrose (finite spin), Hawking collectors (rising as holes shrink), final bursts, accretion only if protons are stable |
+| Dark | The reserve; a trickle of speculative horizon siphoning |
 
 ---
 
-## 5. Eras and Crossings
+## 6. Ages and Crossings
 
-| Era | η range | Turn length | Map | Core tension |
-|---|---|---|---|---|
-| **I. The Long Dusk** (late Stelliferous) | 13.95 to 14 | 40 yr to 10^11 yr | Your reach, then the galaxy | Keep the homeworld alive or adapt. Expand to the last red dwarfs. Prepare for the Last Light. |
-| **II. The Degenerate Age** | 15 to 39 | 10^9 to 10^39 yr | Galaxy and satellites, then scattered remnants | Harvest the ember white dwarfs and feed black holes before the galaxy evaporates and protons decay |
-| **III. The Black Hole Age** | 40 to 100 | 10^40 to 10^100 yr | Black holes only | Spin and Hawking energy. Relocate as small holes evaporate. |
-| **IV. The Dark Era** | 100 to about 141 | 10^100 yr and up | Nearly empty | A finite budget. Preserve continuity and complete an ending. |
-
-Between eras comes a **Crossing**, a narrative checkpoint. The world state
-changes, and your preparations decide what survives:
-
-* **The Last Light (I to II):** every remaining star becomes a white dwarf.
-  Colonies that depend on starlight without backup power lose populations.
-  Stellar encounters strip some planets from their stars.
-* **The Great Decay (II to III):** if protons decay, every planet, remnant
-  and baryonic structure dissolves. Only Threads moved to *leptonic* or
-  *horizon* substrates survive. If protons are stable, matter persists but is
-  frozen.
-* **The Last Horizon (III to IV):** the last supermassive black holes
-  evaporate.
-
-**Proton fate** is a setting at game start: *Decays* (canonical), *Stable*, or
-*Unknown* (randomised, and revealed when researched). The proton's lifetime
-really is unknown; experiments only put a lower limit of about 10^34 years on
-it.
-
----
-
-## 6. Rivals, hazards and events
-
-* **Rival remnants:** 0 to 4 AI civilizations, each with a persona
-  (Bio-conservative, Upload, Chorus, Lattice). They play by the same rules,
-  and they can go extinct in a Crossing. Their dead colonies become salvageable
-  ruins.
-* **Diplomacy** is kept light: war, peace, non-aggression and knowledge
-  exchange.
-* **Combat** is resolved automatically by fleet strength, with animated
-  engagements.
-* **The Hunger:** leftover self-replicating swarms from a long-dead
-  civilization that consume Matter. They are a roaming hazard.
-* **Relics:** ruins from the trillions of years of civilizations that came
-  before. Surveying them yields insight, technology and story.
-* **Events:** era-specific narrative choices with consequences. Examples:
-  red-dwarf flares, the homeworld's dynamo failing, a brown-dwarf collision
-  igniting a new star, systems thrown out of the galaxy, ancient sleepers,
-  schisms between Threads.
-
----
-
-## 7. Endings (multiple paths to success)
-
-| Ending | Path | Requirements (summary) |
+| Age | η | Core tension |
 |---|---|---|
-| **The Long Thought** | Continuance | Echoes or Coldminds reach the Dark Era; research *Asymptotic Mind*; complete the *Hibernal Cascade*; hold Continuity for the final cycles |
-| **One Voice** | Union | Chorus majority, high Accord across all Threads, complete *Confluence* |
-| **The Quiet Lattice** | Non-conscious persistence | Lattice majority, complete the *Archive of Everything*; consciousness ends but the pattern survives |
-| **The Aeon Seed** | Speculative physics (Penrose's conformal cyclic cosmology) | Hold a bastion at one of the last black holes, then imprint the *Seed* on the final evaporation |
-| **The Last Garden** | Biology | Protons stable; living Kin (awake or in Cold Sleep) reach the Dark Era; complete the *Garden of Embers* |
-| *Endurance* (lesser) | Any | Still exist when the Dark Era's clock runs out |
-| **Defeat** | | Every Thread is gone, or Continuity reaches 0 |
+| **I. The Long Dusk** (late Stelliferous) | 13.95 to 14 | Keep the homeworld alive or adapt; expand; prepare starless power before the Last Light |
+| **II. The Degenerate Age** | 15 to 39 | Live on embers, feeding worlds and black holes; survive galactic evaporation; prepare for the decay |
+| **III. The Black Hole Age** | 40 to 100 | Spin and Hawking energy; move as small holes evaporate |
+| **IV. The Dark Era** | 100 to 10^122 | A finite budget; hold **Continuity** and complete an ending |
+
+**Crossings** are the great storms between ages. Preparation decides what survives:
+
+* **The Last Light:** every remaining star becomes a white dwarf. Settlements without
+  starless power, reserves or cold sleep lose people.
+* **The Great Decay:** if protons decay, every planet and baryonic structure dissolves.
+  Settlements with leptonic substrate survive, and migrate to the black holes (bringing a
+  Penrose harvester if they know how to build one). If protons are stable, matter persists.
+* **The Last Horizon:** the last supermassive black holes evaporate.
+
+**Proton fate** is a setting: *decays*, *stable*, or *unknown* (revealed by research). The
+proton's lifetime really is unknown; experiments only give a lower limit around 10^34 years.
+
+**Forecasts** telegraph the catastrophes with countdowns: the star leaving the main
+sequence, a world reaching its dead star's tidal limit, galactic evaporation, the embers
+fading, proton decay, black holes evaporating, a swarm on its way, the free-energy trend.
 
 ---
 
-## 8. Presentation
+## 7. Planetary fates
 
-* **Visual identity:** "light sources of the ages". The accent colour of the
-  UI follows the dominant light of each era, drawn from real blackbody
-  temperatures: M-dwarf ember (about 3,000 K) in the Dusk, white-dwarf pale
-  blue in the Degenerate Age, horizon violet around black holes, and near-grey
-  in the Dark Era. The palette drains as the universe dies.
-* **The Chronometer** is the signature UI element. It is a log-scale ruler
-  across the top of the screen spanning η 13.9 to 150, with era bands and the
-  milestones (last stars, galactic evaporation, proton decay, black-hole
-  evaporation, positronium decay) marked on it. It shows where you are on the
-  universe's whole remaining lifetime.
-* **Type:** Cormorant Garamond for era titles and lore (elegiac), Saira Semi
-  Condensed for the interface, IBM Plex Mono for figures.
-* **Rendering:** Three.js with custom shaders for red and blue dwarfs, white,
-  black and brown dwarfs, pulsars, black holes with accretion disks and
-  photon rings, dying planets that freeze as their vitality falls, and Dyson
-  swarms. Bloom, grain and vignette are added in post-processing.
-* **Frame-rate independence:** every animation, camera damping and fleet
-  interpolation uses real elapsed time
-  (`1 - exp(-k·dt)` smoothing, clamped dt). The simulation is turn-based and
-  deterministic (seeded RNG), so nothing depends on the display refresh rate.
-* **Audio:** a procedural Web Audio score that changes with each era. Dusk is
-  slow synthwave: detuned saw pads, arpeggios, gated drums. The Degenerate Age
-  is glassy and cold. The Black Hole Age is drones and sub-bass. The Dark Era
-  is near-silence. Generated instrumental tracks provide the main themes.
+Built on the co-designer's speculation notes, which disagree with each other; the game keeps
+the disagreement as real model uncertainty.
+
+* **Going rogue is the common fate.** A star passes within about 1 AU of a given system
+  roughly once per 10^15 years; close passes strip planets. A rogue settlement loses its
+  starlight and keeps only its own heat.
+* **Feeding worlds are rare.** A close-in planet spirals into its dead star through
+  gravitational-wave orbital decay (an Earth mass: about 5×10^16 years from 0.02 AU, 3×10^19
+  from 0.1 AU; a Jupiter mass far faster) and is peeled into a debris disk at the tidal limit.
+* **The aftermath is uncertain.** The forecast gives two models and the truth is revealed
+  when it happens: a **slow feed** (likely; an Earth mass holds the dwarf at about 50 to
+  110 K for 10^14 to 10^15 years) or a **rekindling** (rare; a Jupiter mass can make the corpse
+  glow again for billions of years). Disk Skimmers harvest it.
+* **The final plunge** ends a feeding world. Its people evacuate to the system's Deep.
+* The homeworld, bound tightly to its dead star, eventually becomes the fuel that keeps its
+  own dead sun faintly warm.
 
 ---
 
-## 9. Science notes and sources
+## 8. Other minds
 
-* Adams, F. C. & Laughlin, G. (1997), *A dying universe: the long-term fate
-  and evolution of astrophysical objects*, Rev. Mod. Phys. 69, 337
-  ([arXiv:astro-ph/9701131](https://arxiv.org/abs/astro-ph/9701131)).
-  * Conventional star formation and stellar evolution end at η ≈ 14.
-  * Stars of about 0.1 solar masses never become red giants. They grow
-    brighter and bluer (blue dwarfs), then fade as helium white dwarfs.
-  * Brown-dwarf collisions keep about 100 hydrogen-burning stars alive in a
-    galaxy during 15 < η < 23. The galaxy-wide rate is about 10^-11 per year.
-  * Galactic evaporation takes about 10^19 to 10^20 years. Most remnants are
-    ejected, and a minority falls into the central black hole.
-  * White dwarfs that capture halo WIMPs (dark matter) stay at about
-    4×10^-12 L☉ (about 10^15 W, 63 K) for η ≈ 11 to 25.
-  * Proton decay governs 30 < η < 40. A white dwarf powered by it gives off
-    about 400 W.
-  * Hawking evaporation governs 60 < η < 100. A black hole of 10^6 solar
-    masses evaporates at η ≈ 83; galaxy-sized holes at about 98 to 100.
-  * Positronium forms at η ≈ 85 (flat universe) and decays at η ≈ 141.
-* Blue dwarfs: a 0.16 solar-mass red dwarf spends about 2.5 trillion years on
-  the main sequence, then about 5 billion years as a blue dwarf at about 1/3 of
-  the Sun's luminosity (Adams, Laughlin & Graves 2004).
-* Krauss & Scherrer (2007), *The Return of a Static Universe*: galaxies outside
-  the local bound group disappear from view.
-* Dyson, F. (1979), *Time without end*; Krauss & Starkman (2000), *Life, the
-  Universe, and Nothing*.
-* Speculative, and labelled as such in the game: leptonic substrates, horizon
-  computation, horizon siphoning, and the Aeon Seed (inspired by Penrose's
-  conformal cyclic cosmology).
+* **The Hunger.** Self-replicating harvesters of a civilization that died long ago. No mind,
+  no malice: they follow heat and matter like weather, strip systems and bud new swarms, and
+  they draw down galactic free energy. They are desperate survivors too, in a cancer-like
+  way, and they do not consume every run. You can fight them, hide (*Blackout*), lure them
+  with decoy beacons, or decode their makers' command language and **tame** them. Tamed
+  swarms can be absorbed as Lattice.
+* **Becoming the Hunger.** The dark path: consumption Charters (*Consume the Dead*, *Strip
+  the Sleepers*, *Absorb the Weak*, *Communion*), Hunger-derived technology, devouring
+  failing survivors. **Taint** brings plenty now, closes endings past 30 and 60, turns the
+  other minds against you, and at 100 you become it.
+* **Fellow survivors** (0 to 4): other young civilizations with their own way of coping
+  (clinging to biology, uploading, merging, sleeping, or the Tessellate, which is not
+  conscious at all and speaks only in protocol). They send pleas, trades, refugees, joint
+  works and raids; you can help, trade, take them in, seize their star, or devour them.
+  You watch other lights go out.
+* **The Slow Ones** think around the Heart on clocks of millions of years. You can only
+  converse when your own clock comes close to theirs. They matter for the *Aeon Seed*.
+* **Sleepers and ghosts:** vault civilizations and archived dead in ruins. Waking them is
+  costly and risky.
+* **The Unlit:** minds of the dark-matter sector, reachable only through gravity: moved
+  masses answered by moved masses. A misread reply can move a world. Their full design is in
+  `docs/spoilers/dark-matter.md`.
+
+Not every other intelligence is conscious in the way the protagonists are, and that does not
+stop them from talking.
 
 ---
 
-## 10. Scope of this first version
+## 9. Endings
 
-This version includes all four eras and all three Crossings, the five
-Threads, the tempo and dormancy systems, research, construction,
-colonization, sublight fleets, simple combat and diplomacy, AI rivals,
-narrative events, the endings, save and load, the procedural score, and key
-art.
+| Ending | Path | Requirement (summary) |
+|---|---|---|
+| **The Long Thought** | Continuance | Echoes and Coldminds (6+) reach the Dark Era; complete the *Hibernal Cascade* |
+| **One Voice** | Union | Chorus at least half of everyone, all standings high; complete *Confluence* |
+| **The Quiet Lattice** | Non-conscious persistence | Lattice at least half of everyone; complete the *Archive of Everything* |
+| **The Aeon Seed** | Speculative physics (Penrose's conformal cyclic cosmology) | A settlement at the Heart and the Slow Ones' trust; the seed is written as the Heart evaporates |
+| **The Last Garden** | Biology | Protons stable; 6+ living Kin reach the Dark Era; complete the *Garden of Embers* |
+| **The Hunger** | The dark path | Taint reaches 100 |
+| **Recurrence** | Endurance | Still exist at 10^(10^122) years, when the horizon's state recurs |
+| Defeat | | *Silence* (everyone gone), *The Will Fails*, *The Fade* (Continuity lost in the dark) |
 
-Candidates for later: deeper diplomacy and trade, ship design, more events and
-relics, a multi-scale camera that flies from galaxy to system without a view
-switch, balance passes, localisation.
+---
+
+## 10. Presentation
+
+* **Art direction:** painterly cinematic, with the lived-in, soot-stained decay of Fallout
+  but none of its 1950s kitsch, and a small dose of cyberpunk neon: thin strips of light
+  where people still live. Honest black skies (by η ≈ 14 there is no gas, so no nebulae).
+* **"Worn instrument" UI:** gunmetal panels with procedural grime and scratches, chamfered
+  corners, worn hairlines, CRT-phosphor figures, stencil labels, hazard striping only for
+  danger. The accent follows each age's dominant light (#f28a4f, #93c4ff, #a48dff, #9aa3b0)
+  with one neon per age for what is powered and inhabited.
+* **Type:** Big Shoulders Display (titles), Saira Semi Condensed (interface), IBM Plex Mono
+  (figures), Spectral (narrative).
+* **The Chronometer** spans the whole remaining life of the universe, one segment per age,
+  with milestones and forecast pins; in the Dark Era it folds into a deep-time ruler on
+  log10 η.
+* **Rendering:** Three.js with custom shaders (granulating dwarfs, cooling remnants, black
+  holes with disks and photon rings, dying eyeball worlds that freeze, Dyson swarms, swarm
+  murmurations) and a post chain: halation bloom, a procedural dirty lens, midtone grain,
+  vignette, edge chromatic aberration.
+* **Plates:** eleven painterly images (Krea and Codex image generation), one grade for all
+  (`tools/process-art.mjs`).
+* **Refresh-rate independence:** one rAF loop with clamped real-time deltas; all smoothing is
+  `1 − exp(−k·dt)`; camera flights and fleet moves follow elapsed time exactly. The playtest
+  checks 30 Hz against 144 Hz.
+* **Audio:** recorded instrumentals for the Dusk and the Degenerate Age, and a procedural
+  Web Audio score for every age (worn synthwave thinning to drones and near-silence), plus
+  synthesised interface sounds. Sound starts after the first click.
+
+---
+
+## 11. Science notes and sources
+
+* Adams & Laughlin (1997), *A dying universe*, Rev. Mod. Phys. 69, 337
+  ([arXiv:astro-ph/9701131](https://arxiv.org/abs/astro-ph/9701131)): end of star formation
+  at η ≈ 14; blue dwarfs; brown-dwarf collision stars (about 100 per galaxy, η 15 to 23);
+  galactic evaporation at 10^19 to 10^20 years; WIMP-heated white dwarfs (about 4×10^-12 L☉,
+  63 K); proton decay for 30 < η < 40 (about 400 W per white dwarf); Hawking evaporation
+  `t ≈ 2×10^67 (M/M☉)^3` years; positronium forms near η 85 and decays near η 141.
+* Adams, Laughlin & Graves (2004), *Red dwarfs and the end of the main sequence*.
+* Dyson (1979), *Time without end*, Rev. Mod. Phys. 51, 447: slowing minds; iron stars by
+  about 10^1500 years; tunnelling collapse at 10^(10^26) to 10^(10^76) years.
+* Krauss & Starkman (2000), *Life, the universe, and nothing*, ApJ 531, 22.
+* Krauss & Scherrer (2007), *The return of a static universe*, GRG 39, 1545.
+* Page & McKee (1981), positronium in the far future.
+* Andreassen, Frost & Schwartz (2018): Standard Model vacuum lifetime around 10^161 years,
+  uncertain by more than a thousand orders of magnitude.
+* Poincaré recurrence of a de Sitter horizon, about 10^(10^122) years (Dyson, Kleban &
+  Susskind 2002).
+* Penrose (2010), *Cycles of Time*: conformal cyclic cosmology (speculative).
+* Planet inspiral and accretion: estimates from the co-designer's speculation notes. They
+  are not peer-reviewed and disagree with each other; the game presents them as model
+  uncertainty.
+* Speculative and labelled as such: leptonic substrates, horizon computation and siphoning,
+  the Aeon Seed, the Unlit.
+
+---
+
+## 12. Balance
+
+`npm run sim -- [games] [length] [strategy] [--diff=gentle|standard|harsh]` autoplays whole
+games headlessly. The autoplayer paces from the same projection the HUD shows, expands only
+what its energy can carry, cools Echoes as the ages lengthen, and prepares for the decay.
+
+At the time of writing (12 games each):
+* **Standard, competent:** about half endure to the end of time; the rest fall in the Black
+  Hole Age or at the Great Decay.
+* **Vast:** Great Work victories appear (The Long Thought).
+* **Brief:** harder; fewer turns to prepare.
+* **Passive** (research only, first choice everywhere): dies in the Dusk.
+
+A thoughtful player should beat the autoplayer; the harness is a floor, not a target.
+
+---
+
+## 13. Scope of this version
+
+All four ages and the three Crossings; the Coalescence; five Threads with tempo, pace and
+dormancy; society (resolve, dissent, demands, forks, Charters); research (about 65 techs) and
+Great Works; construction (about 45 structures), settlement and sublight fleets; the Hunger
+and the dark path; fellow survivors, the Slow Ones, sleepers and ghosts, the Unlit; about 40
+events; forecasts; save, autosave and save codes; the score and plates.
+
+Candidates for later: deeper survivor diplomacy, ship design, more events and relics, an
+in-game advisor built on the autoplayer, a multi-scale camera without a view switch,
+localisation.

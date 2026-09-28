@@ -134,11 +134,16 @@ export class OrbitRig {
       this.goalTarget.lerpVectors(f.from, f.to, e);
       // logarithmic zoom so long flights feel even
       this.goalDistance = Math.exp(Math.log(f.fromD) + (Math.log(f.toD) - Math.log(f.fromD)) * e);
+      // a flight is already eased and depends only on elapsed time: follow it exactly, so the
+      // path is the same at any refresh rate (smoothing a moving goal would lag by frame rate)
+      this.target.copy(this.goalTarget);
+      this.distance = this.goalDistance;
       if (u >= 1) this.flight = null;
+    } else {
+      this.target.lerp(this.goalTarget, k);
+      this.distance += (this.goalDistance - this.distance) * k;
     }
     this.goalYaw += this.autoYaw * dt;
-    this.target.lerp(this.goalTarget, k);
-    this.distance += (this.goalDistance - this.distance) * k;
     this.yaw += (this.goalYaw - this.yaw) * k;
     this.pitch += (this.goalPitch - this.pitch) * k;
     const cp = Math.cos(this.pitch);

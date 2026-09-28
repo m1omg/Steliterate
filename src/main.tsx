@@ -4,6 +4,7 @@ import { newGame } from './game/newGame';
 import { orderFleet } from './game/sim/actions';
 import { endTurn } from './game/sim/turn';
 import { autoPlay } from './game/auto';
+import { exportCode, importCode } from './game/save';
 import type { GameState } from './game/types';
 import { installUnlock, setVolumes } from './audio/core';
 import { music } from './audio/music';
@@ -12,6 +13,7 @@ import { Engine } from './render/engine';
 import { App } from './ui/App';
 import { act, bump, engine, game, modal, screen, selection, setEngine, settings, targeting, view } from './ui/store';
 import { doEndTurn } from './ui/turnflow';
+import { startLoaded } from './ui/screens/Misc';
 import './ui/styles.css';
 
 const stage = document.getElementById('stage')!;
@@ -76,6 +78,23 @@ effect(() => {
 });
 
 render(<App />, document.getElementById('ui')!);
+
+// When the page is republished while open, carry the game across.
+interface Hot {
+  snapshot?: (fn: () => unknown) => void;
+  ready?: (fn: (data: unknown) => void) => void;
+  data?: unknown;
+}
+const hot = (window as unknown as { claude?: { hot?: Hot } }).claude?.hot;
+hot?.snapshot?.(() => (game.value && screen.value === 'game' ? { save: exportCode(game.value) } : {}));
+const boot = (data: unknown) => {
+  const code = (data as { save?: string } | null)?.save;
+  if (!code) return;
+  const g = importCode(code);
+  if (g) startLoaded(g);
+};
+if (hot?.ready) hot.ready(boot);
+else boot(hot?.data ?? null);
 
 // Enter ends the turn when nothing else has focus.
 window.addEventListener('keydown', (e) => {

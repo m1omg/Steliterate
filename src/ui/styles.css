@@ -333,6 +333,7 @@ button { font: inherit; color: inherit; }
   .turnbox .pace .stencil { display: none; }
   .pace .opts { margin-top: 0; }
   .endturn { min-height: 50px; font-size: 16px; padding: 0 12px; }
+  .turnbox .pace .row > .mono { display: none; }
   .viewswitch { bottom: calc(176px + env(safe-area-inset-bottom, 0px)); }
   .menu { grid-template-columns: 1fr; }
   .menu-side { padding: 40px 20px 24px; }
