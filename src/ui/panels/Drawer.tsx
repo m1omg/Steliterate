@@ -3,7 +3,7 @@ import { SHIP_BY_ID } from '../../game/data/ships';
 import { STRUCTURE_BY_ID } from '../../game/data/structures';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
-import { primaryTemperature, sourceLight } from '../../game/physics';
+import { bodyClimate, primaryTemperature, sourceLight, waterState } from '../../game/physics';
 import {
   absorb,
   buildableShips,
@@ -61,7 +61,11 @@ export function Drawer({ s }: { s: GameState }) {
 function selectBody(b: Body) {
   sfx('select');
   selection.value = { kind: 'body', id: b.id };
-  engine()?.select(`body:${b.id}`);
+  if (view.value === 'galaxy') {
+    // step inside and bring the planet to the middle of the screen
+    view.value = 'system';
+    engine()?.showSystem(b.systemId, b.id);
+  } else engine()?.select(`body:${b.id}`);
 }
 
 function selectSystem(id: string) {
@@ -157,7 +161,12 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
             </div>
           </div>
         )}
-        {known > 0 && (
+        {known === 1 && (
+          <p class="dim" style={{ fontSize: '12px' }}>
+            Seen from afar: the star is known, its worlds are not. Send a probe to survey it.
+          </p>
+        )}
+        {known === 2 && (
           <div class="section">
             <h3>Bodies</h3>
             <div class="list">
@@ -209,13 +218,35 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   );
 }
 
+function kelvin(k: number): string {
+  const c = k - 273.15;
+  return c > -120 && c < 200 ? `${n0(k)} K (${c > 0 ? '+' : ''}${n0(c)} °C)` : `${n0(k)} K`;
+}
+
+/** Temperature and water rows for a world's key/value list. */
+function ClimateRows({ s, b }: { s: GameState; b: Body }) {
+  if (b.kind === 'deep' || b.kind === 'gas_giant' || b.kind === 'ice_giant') return null;
+  const c = bodyClimate(s, b);
+  const tip = 'From starlight, the world’s own heat and what is left of its air. Tidally locked worlds keep a hot day side and a cold night side.';
+  return (
+    <>
+      <dt data-tip={tip}>Temperature</dt>
+      <dd class="mono" data-tip={c.day !== undefined ? `Day side ${kelvin(c.day)}\nNight side ${kelvin(c.night!)}` : ''}>
+        {c.day !== undefined ? `${n0(c.night!)}–${n0(c.day)} K` : kelvin(c.mean)}
+      </dd>
+      <dt>Water</dt>
+      <dd style={{ fontSize: '12px' }}>{waterState(b, c)}</dd>
+    </>
+  );
+}
+
 // ------------------------------------------------------------------ uninhabited body
 
 function BodyPanel({ s, b }: { s: GameState; b: Body }) {
   void rev.value; // mutable game state: re-render on every change
   const sys = s.systems[b.systemId];
   const surveyed = s.civ.known[sys.id] === 2;
-  const settlers = Object.values(s.fleets).filter((f) => f.at && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+  const settlers = Object.values(s.fleets).filter((f) => f.at && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles && (!SHIP_BY_ID[x.cls]?.inSystem || f.at === b.systemId)));
   return (
     <>
       <div class="drawer-head">
@@ -240,6 +271,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             <dd class="mono">{pct(b.habitability)}</dd>
             <dt>Vitality</dt>
             <dd class="mono">{pct(b.vitality)}</dd>
+            <ClimateRows s={s} b={b} />
             <dt>Core heat</dt>
             <dd class="mono">{pct(b.coreHeat)}</dd>
             <dt>Mineral richness</dt>
@@ -408,6 +440,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                     <span class="mono">{pct(b.vitality)}</span>
                   </div>
                 </dd>
+                <ClimateRows s={s} b={b} />
                 <dt>Core heat</dt>
                 <dd class="mono">{pct(b.coreHeat)}</dd>
                 {c.damage > 0.01 && (
@@ -424,6 +457,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                 )}
               </dl>
             </div>
+            <ExpandSection s={s} c={c} />
             <div class="section">
               <h3>Focus</h3>
               <div class="seg">
@@ -459,6 +493,74 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
       </div>
     </>
   );
+}
+
+/** Founding new settlements from here: ready settler ships, and one-click orders for more. */
+function ExpandSection({ s, c }: { s: GameState; c: Colony }) {
+  const ready = Object.values(s.fleets).filter((f) => f.at === c.systemId && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+  const ships = buildableShips(s, c).filter((x) => x.def.settles);
+  const queued = (id: string) => c.queue.filter((q) => q.key === id).length;
+  const noYard = !(c.structures.shipyard ?? 0);
+  return (
+    <div class="section">
+      <h3>Expand</h3>
+      {ready.map((f) => (
+        <div key={f.id} class="row ready-settler">
+          <Icon name="colonize" cls="neon" />
+          <span class="grow" style={{ fontSize: '12px' }}>
+            {f.name} is ready.
+          </span>
+          <button class="btn small primary" onClick={() => selectFleet(f)}>
+            Choose a world
+          </button>
+        </div>
+      ))}
+      {noYard ? (
+        <div class="faint" style={{ fontSize: '12px' }}>Build a Shipyard here to launch settlers.</div>
+      ) : (
+        <div class="settler-buttons">
+          {ships.map(({ def, error }) => {
+            const cost = buildCost(s, def, true);
+            const n = queued(def.id);
+            return (
+              <button
+                key={def.id}
+                class="btn small"
+                disabled={!!error}
+                data-tip={`${def.name}\n${def.desc}${error ? `\n${error}` : ''}`}
+                onClick={() => act((g) => queueBuild(g, c.id, 'ship', def.id)) && sfx('build')}
+              >
+                <Icon name="colonize" /> {def.name}
+                <span class="mono faint">
+                  {cost.industry}
+                  <Icon name="industry" />
+                  {cost.matter > 0 && (
+                    <>
+                      {' '}
+                      {cost.matter}
+                      <Icon name="matter" />
+                    </>
+                  )}
+                </span>
+                {n > 0 && <span class="chip neon">{n} queued</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {!hasTech(s, 'mind_substrate') && !hasTech(s, 'fusion_drives') && (
+        <div class="faint" style={{ fontSize: '11px', marginTop: '4px' }}>
+          Lighters reach worlds of this star. For other stars, research Mind Substrate (Seedcores) or Fusion Drives (Kin Arks).
+        </div>
+      )}
+    </div>
+  );
+}
+
+function selectFleet(f: Fleet) {
+  sfx('select');
+  selection.value = { kind: 'fleet', id: f.id };
+  engine()?.select(f.id);
 }
 
 function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: number }) {
@@ -548,13 +650,14 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         .sort((a, b) => (surveyor ? Number(s.civ.known[a.sys.id] === 2) - Number(s.civ.known[b.sys.id] === 2) : 0) || a.ly - b.ly)
         .slice(0, 10)
     : [];
+  const settleDef = settler ? SHIP_BY_ID[settler.cls] : null;
   const settleTargets =
-    here && settler
+    here && settleDef
       ? Object.values(s.bodies)
-          .filter((b) => s.civ.known[b.systemId] === 2 && !canSettle(s, b, SHIP_BY_ID[settler.cls].settles!.thread) && (SHIP_BY_ID[settler.cls].settles!.thread !== 'kin' || b.habitability * b.vitality > 0.15))
-          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]) }))
-          .sort((a, b) => a.ly - b.ly || b.b.habitability - a.b.habitability)
-          .slice(0, 8)
+          .filter((b) => s.civ.known[b.systemId] === 2 && (!settleDef.inSystem || b.systemId === here.id) && !canSettle(s, b, settleDef.settles!.thread))
+          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), room: Math.floor(12 * b.habitability * b.vitality) }))
+          .sort((a, b) => a.ly - b.ly || b.room - a.room)
+          .slice(0, 10)
       : [];
   const swarmHere = here ? Object.values(s.swarms).find((w) => w.systemId === here.id && !w.tamed) : null;
   return (
@@ -604,16 +707,19 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               <div class="section">
                 <h3>Where to settle</h3>
                 <div class="list">
-                  {settleTargets.map(({ b, ly }) => (
+                  {settleTargets.map(({ b, ly, room }) => (
                     <div key={b.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
                       <Icon name={bodyIcon(b.kind)} />
                       <span class="grow">
                         {b.name} <span class="faint" style={{ fontSize: '11px' }}>{BODY_NAME[b.kind]}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
                       </span>
-                      <span class="mono faint" style={{ fontSize: '11px' }}>
-                        {b.habitability > 0.3 ? `${pct(b.habitability * b.vitality)} · ` : ''}
-                        {ly > 0 ? `~${travelTurnsEstimate(s, ly, mods)}t` : 'here'}
-                      </span>
+                      {settleDef?.settles?.thread === 'kin' &&
+                        (room > 0 ? (
+                          <span class="chip good" data-tip={`Room for ${room} Kin without building anything.`}>{room} room</span>
+                        ) : (
+                          <span class="chip" data-tip="Nothing lives here. The Kin will live in the dome they bring, and in any domes or warrens you build.">domes only</span>
+                        ))}
+                      <span class="mono faint" style={{ fontSize: '11px' }}>{ly > 0 ? `~${travelTurnsEstimate(s, ly, mods)}t` : 'here'}</span>
                     </div>
                   ))}
                 </div>

@@ -76,6 +76,7 @@ export const PLANET_FRAG = /* glsl */ `
   uniform int uKind;
   uniform float uVitality;    // 1 = living, 0 = dead and frozen
   uniform float uLights;      // settlement night lights 0..1
+  uniform float uDev;        // how built-up the settlement is 0..1
   uniform vec3 uNeon;
   uniform vec3 uSunDir;       // world-space direction toward the primary
   uniform vec3 uSunColor;
@@ -143,16 +144,37 @@ export const PLANET_FRAG = /* glsl */ `
     // specular glint on water / ice
     vec3 hvec = normalize(normalize(uSunDir) + normalize(vView));
     col += light * spec * pow(max(0.0, dot(normalize(vNormal), hvec)), 40.0) * diff;
-    // night side: settlement lights, warm sodium with a few neon strips
+    // settlements: warm sodium with a few neon strips
     float night = smoothstep(0.08, -0.25, ndl);
-    float cityMask = smoothstep(0.55, 0.8, detail * 0.5 + 0.5 + snoise(p * 40.0 + uSeed) * 0.3) * uLights;
-    vec3 city = mix(vec3(1.0, 0.62, 0.3), uNeon, step(0.93, fract(sin(dot(floor(p * 60.0), vec3(12.9, 78.2, 37.7))) * 43758.5))) * cityMask;
-    col += city * night * 1.8;
+    float blocks = snoise(p * 40.0 + uSeed) * 0.3;
+    float cityMask = smoothstep(0.55, 0.8, detail * 0.5 + 0.5 + blocks) * uLights;
+    vec3 cityCol = mix(vec3(1.0, 0.62, 0.3), uNeon, step(0.93, fract(sin(dot(floor(p * 60.0), vec3(12.9, 78.2, 37.7))) * 43758.5)));
+    if (uKind == 1) {
+      // a tidally locked world is lived on along its terminator and the edge of the day side:
+      // the night side is ice. Cities spread along the ring as the settlement grows.
+      float facing = dot(p, normalize(uSubstellar));
+      float ring = smoothstep(-0.3 + 0.1 * (1.0 - uDev), -0.08, facing) * (1.0 - smoothstep(0.3 + 0.25 * uDev, 0.62 + 0.2 * uDev, facing));
+      float sprawl = smoothstep(0.78 - 0.4 * uDev, 0.95 - 0.3 * uDev, detail * 0.5 + 0.5 + blocks * 1.2);
+      float urban = ring * sprawl * smoothstep(0.0, 0.1, uDev);
+      // by day: grey-brown built ground and the glint of glass roofs
+      col = mix(col, vec3(0.28, 0.26, 0.25) * light * diff * (0.8 + 0.4 * detail), urban * 0.75);
+      // in the permanent twilight of the terminator the lights never go out
+      float twilight = smoothstep(0.45, -0.1, ndl);
+      col += cityCol * urban * uLights * twilight * 1.6;
+      // a thin neon thread of transit lines linking the cities around the ring
+      float lineMask = smoothstep(0.985, 1.0, sin((facing + 0.02 * snoise(p * 7.0 + uSeed)) * 120.0)) * ring * smoothstep(0.3, 0.8, uDev);
+      col += uNeon * lineMask * twilight * 0.8;
+    } else {
+      col += cityCol * cityMask * night * 1.8;
+    }
     col += albedo * 0.015; // faint ambient from the rest of the sky
+    // ice reflects what little starlight there is: the frozen night side stays faintly visible
+    if (uKind == 1 || uKind == 2 || uKind == 5) col += albedo * vec3(0.012, 0.016, 0.024) * night;
     // atmosphere rim, thinning as the world dies
-    float rim = pow(1.0 - max(0.0, dot(normalize(vNormal), normalize(vView))), 3.0);
+    // (only a thin twilight arc survives on the night side)
+    float rim = pow(1.0 - max(0.0, dot(normalize(vNormal), normalize(vView))), 4.0);
     vec3 atmo = uKind == 1 ? mix(vec3(0.45, 0.62, 0.9), vec3(0.9, 0.55, 0.35), 0.4) : vec3(0.5, 0.55, 0.65);
-    col += atmo * rim * (0.08 + 0.55 * uVitality) * (0.3 + 0.7 * max(0.0, ndl + 0.3)) * uSunPower;
+    col += atmo * rim * (0.08 + 0.55 * uVitality) * (0.03 + 0.97 * smoothstep(-0.3, 0.35, ndl)) * uSunPower;
     // being torn apart: glowing streaks
     col += vec3(1.0, 0.55, 0.3) * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))) * 0.8;
     gl_FragColor = vec4(col, 1.0);

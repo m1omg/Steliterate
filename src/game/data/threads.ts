@@ -22,7 +22,7 @@ export const THREAD_DEFS: Record<ThreadId, ThreadDef> = {
     id: 'kin',
     name: 'Kin',
     one: 'Kin',
-    blurb: 'The original people, born of the dying world. Warm-blooded and expensive to keep alive, and the source of most of what the others call meaning.',
+    blurb: 'Biological people: the species born on the homeworld, and any other living beings who have joined you, such as refugees from biological civilizations. They must be fed, warmed and housed, which makes them the most expensive minds to keep alive, and they are the source of most of what the others call meaning.',
     industry: 1.0,
     insight: 0.8,
     accord: 0.6,

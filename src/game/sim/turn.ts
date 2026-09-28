@@ -3,7 +3,7 @@ import { STRUCTURE_BY_ID } from '../data/structures';
 import { TECH_BY_ID } from '../data/techs';
 import { eraOver, logTurnLength, stepTime } from '../eras';
 import { evolveUniverse, type EvolutionNote } from '../physics';
-import type { Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
+import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { runCrossing } from './crossing';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
@@ -14,7 +14,7 @@ import { updateForecasts } from './forecast';
 import { updateHunger } from './hunger';
 import { updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
-import { techCost } from './research';
+import { IDLE_STUDY, researchDraw, techCost } from './research';
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
@@ -55,6 +55,7 @@ function applyIndustry(state: GameState, c: Colony, industry: number, mods: Mods
         log(state, `${c.name}: ${d?.name ?? item.key} complete.`, 'good', c.systemId);
       } else {
         const def = SHIP_BY_ID[item.key];
+        if (def?.crew) c.pops.kin = Math.max(0, c.pops.kin - def.crew);
         const existing = Object.values(state.fleets).find((f) => f.at === c.systemId && f.order === 'idle' && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
         if (existing) existing.ships.push({ cls: item.key, hp: def?.hp ?? 5 });
         else newFleet(state, c.systemId, [item.key]);
@@ -70,21 +71,48 @@ function applyIndustry(state: GameState, c: Colony, industry: number, mods: Mods
 }
 
 function declineWorlds(state: GameState) {
-  for (const c of colonies(state)) {
-    const b = state.bodies[c.bodyId];
-    if (!b || b.dissolved) continue;
+  const byBody = new Map(colonies(state).map((c) => [c.bodyId, c]));
+  for (const b of Object.values(state.bodies)) {
+    if (b.dissolved || b.vitality <= 0) continue;
+    const c = byBody.get(b.id);
     let mult = 1;
-    for (const [id, n] of Object.entries(c.structures)) {
-      const d = STRUCTURE_BY_ID[id];
-      if (d?.declineMult && n) mult *= d.declineMult;
+    let warmed = false;
+    let core = false;
+    if (c) {
+      for (const [id, n] of Object.entries(c.structures)) {
+        const d = STRUCTURE_BY_ID[id];
+        if (!d || !n) continue;
+        if (d.declineMult) mult *= d.declineMult;
+        if (d.warms) warmed = true;
+        if (id === 'core_stimulator') core = true;
+      }
+      if (c.overdrive) mult *= 1.3;
     }
-    if (c.overdrive) mult *= 1.3;
-    if (b.decline > 0) {
+    if (c && b.decline > 0) {
       const accel = state.era === 'dusk' ? Math.min(3, 1 + state.eraTurn * 0.02) : 3;
       b.vitality = Math.max(0, b.vitality - b.decline * mult * accel);
     }
-    if (b.traits.includes('homeworld') && state.era === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
-    if (state.era !== 'dusk') b.vitality = Math.max(0, b.vitality - 0.05);
+    if (c && b.traits.includes('homeworld') && state.era === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * (core ? 0.4 : 1));
+    // without a sun, a living world freezes within a few turns, unless someone keeps it warm
+    const sunless = state.era !== 'dusk' || !!b.rogue;
+    if (sunless && !warmed) b.vitality = Math.max(0, b.vitality - 0.05 * (core ? 0.5 : 1));
+    if (b.vitality <= 0) worldDies(state, b);
+  }
+}
+
+/** A living world that has lost its warmth freezes, or dries to bare rock. */
+function worldDies(state: GameState, b: Body) {
+  if (!['eyeball', 'terran', 'super_earth'].includes(b.kind)) return;
+  const was = b.kind;
+  b.kind = (b.water ?? 0) >= 0.1 ? 'ice' : 'barren';
+  b.habitability = b.kind === 'ice' ? 0.05 : 0;
+  b.vitality = 0;
+  if (!b.traits.includes('once_alive')) b.traits.push('once_alive');
+  const mine = !!b.colonyId;
+  const seen = (state.civ.known[b.systemId] ?? 0) === 2;
+  if (mine || seen) {
+    const what = was === 'eyeball' ? 'Its sea has frozen from the terminator to the substellar point' : 'Its seas have frozen and its air has settled out as frost';
+    log(state, `${b.name} has died. ${what}; it is ${b.kind === 'ice' ? 'an ice world' : 'bare rock'} now.`, mine ? 'bad' : 'info', b.systemId);
   }
 }
 
@@ -148,6 +176,7 @@ export function endTurn(state: GameState): TurnResult {
     applyIndustry(state, c, t.y.industry, mods);
   }
   eIn += jointIncome(state) * ctx.paceFactor;
+  eOut += researchDraw(state, insight);
   accord -= latticeAlienation(state, mods);
   civ.energy += eIn - eOut;
   civ.matter += mIn - mOut;
@@ -242,7 +271,7 @@ export function endTurn(state: GameState): TurnResult {
       log(state, `Research complete: ${def?.name ?? id}.`, 'good');
       if (id === 'proton_question') queueEvent(state, 'proton_answer');
     }
-  } else civ.flags.insight_bank = Math.min((civ.flags.insight_bank ?? 0) + research, 2000);
+  } else civ.flags.insight_bank = Math.min((civ.flags.insight_bank ?? 0) + research * IDLE_STUDY, 2000);
 
   // ------------------------------------------------ 4. growth, capacity, worlds
   declineWorlds(state);

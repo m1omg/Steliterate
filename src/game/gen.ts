@@ -232,8 +232,8 @@ function displaySize(kind: BodyKind, massEarth: number): number {
   }
 }
 
-function bodyStats(rng: Rng, kind: BodyKind): Pick<Body, 'habitability' | 'vitality' | 'decline' | 'coreHeat' | 'richness' | 'hydrogen'> {
-  const s = { habitability: 0, vitality: 0, decline: 0, coreHeat: 0, richness: 1, hydrogen: 0 };
+function bodyStats(rng: Rng, kind: BodyKind): Pick<Body, 'habitability' | 'vitality' | 'decline' | 'coreHeat' | 'richness' | 'hydrogen' | 'water'> {
+  const s = { habitability: 0, vitality: 0, decline: 0, coreHeat: 0, richness: 1, hydrogen: 0, water: 0 };
   switch (kind) {
     case 'eyeball':
       s.habitability = rng.range(0.5, 0.8);
@@ -347,6 +347,8 @@ class Builder {
       traits: [],
       colonyId: null,
     };
+    // from the body's own seed, so adding it does not disturb the rest of generation
+    b.water = defaultWater(kind, (b.seed % 1000) / 1000);
     if (kind !== 'deep' && sys.primary.kind !== 'rogue' && aAU > 0) {
       b.inspiralAt = START_YEARS + inspiralTime(aAU, massEarth, Math.max(0.1, sys.primary.mass));
       if (b.orbitAU < 0.08 && kind !== 'gas_giant') b.traits.push('tidally_locked');
@@ -504,7 +506,7 @@ export function generateWorld(settings: GameSettings): GameState {
   inner.richness = 1.6;
   const hw = b.addBody(home, 'eyeball', 0.031, 1.0, 1);
   hw.name = settings.homeName;
-  Object.assign(hw, { habitability: 0.85, vitality: 1.0, decline: 0.012, coreHeat: 0.8, richness: 1.0, relic: undefined });
+  Object.assign(hw, { habitability: 0.85, vitality: 1.0, decline: 0.012, coreHeat: 0.8, richness: 1.0, water: 0.42, relic: undefined });
   hw.traits = ['homeworld', 'tidally_locked', 'failing_dynamo'];
   hw.size = 2.0;
   hw.inspiralAt = START_YEARS + inspiralTime(0.031, 1, 0.1);
@@ -649,4 +651,26 @@ function makeCiv(settings: GameSettings, homeSystemId: string): Civ {
 
 export function systemDistanceLy(a: StarSystem, c: StarSystem): number {
   return Math.hypot(a.phys.x - c.phys.x, a.phys.y - c.phys.y, a.phys.z - c.phys.z);
+}
+
+/** Share of a world's surface under water or ice, by kind (u in 0..1 picks within the range). */
+export function defaultWater(kind: BodyKind, u = 0.5): number {
+  switch (kind) {
+    case 'eyeball':
+      return 0.25 + 0.3 * u;
+    case 'terran':
+      return 0.3 + 0.45 * u;
+    case 'super_earth':
+      return 0.05 + 0.35 * u;
+    case 'ocean_ice':
+      return 0.95 + 0.05 * u;
+    case 'ice':
+      return 0.3 + 0.4 * u;
+    case 'asteroids':
+      return 0.02 + 0.08 * u;
+    case 'barren':
+      return 0.01 * u;
+    default:
+      return 0;
+  }
 }

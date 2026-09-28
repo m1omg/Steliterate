@@ -45,6 +45,20 @@ species stays ambiguous, and the Codex explains the real analogue.
   event horizon long ago (Krauss & Scherrer 2007). Two lonely outliers drift in the dark:
   the Runaway cluster and the Wanderer, a hypervelocity black hole. Beyond them, nothing.
 * Display coordinates are compressed per level; travel always uses true light-years.
+  Because every turn is longer than the last, the number of turns a crossing takes grows
+  only with the logarithm of its distance: around turn 40 the Heart, 60,000 light-years
+  away, is three or four turns off while the nearest star is one. The travel estimate
+  simulates the lengthening turns rather than assuming today's turn length.
+* **Exploring.** A system is only its star until a probe surveys it. A survey charts every
+  world (kind, temperature, water, habitability) and has a chance of a **discovery**, each
+  grounded in real astrophysics: chemosynthetic life at hydrothermal vents, a natural fission
+  reactor's fossil isotopes, a diamond mantle, an interstellar shard on a hyperbolic path, a
+  gravitational lens that reveals distant systems, the imprint of an old magnetar, a rogue
+  world kept warm by radiogenic heat, and more. Each is a small choice with a cost.
+* **Settling.** The System Lighter needs no research: one family of Kin and a dome to
+  another world of the same star, crewed from the settlement that builds it. Crossing
+  between stars takes Kin Arks (Fusion Drives), Seedcores (Mind Substrate), Lattice Spores
+  and Vault Ships. A ready settler lists every valid world, with the natural room for Kin.
 
 ---
 
@@ -135,6 +149,10 @@ range, **standing** (0 to 100) and a rotating **demand**.
 * **Insight** drives research and the Great Works; **Accord** buys Charters; **Industry**
   drives each settlement's build queue.
 * Housing costs upkeep only for the share of it that is lived in.
+* **Research draws power.** While a project or Great Work runs, the labs cost 2% of insight
+  in energy each turn. Research can be paused: the draw stops, and half of each turn's
+  insight is banked and carried into the next project, as is any overflow or found knowledge.
+  Pausing is how a starving civilization buys a few turns; it is never free.
 * **Galactic free energy** (100% at the start) scales every source and deposit for everyone.
   The Hunger spends it, and so do your unsustainable acts: stellar lifting, long overdrive,
   consuming the dead. It never moves the cosmic clock; what disappears early is what anyone
@@ -194,6 +212,12 @@ the disagreement as real model uncertainty.
   110 K for 10^14 to 10^15 years) or a **rekindling** (rare; a Jupiter mass can make the corpse
   glow again for billions of years). Disk Skimmers harvest it.
 * **The final plunge** ends a feeding world. Its people evacuate to the system's Deep.
+* **Living worlds die without a sun.** Every body has water coverage and a temperature
+  (equilibrium from its primary's luminosity, internal heat, a greenhouse term; tidally
+  locked worlds have a day and a night value). After the Last Light, or once a world goes
+  rogue, an unwarmed living world freezes within a few turns and becomes an ice world
+  (enough water) or bare rock, and the game says so. Orbital Lamps (fusion lamps in orbit)
+  keep one alive; a Core Stimulator slows the cooling.
 * The homeworld, bound tightly to its dead star, eventually becomes the fuel that keeps its
   own dead sun faintly warm.
 
@@ -306,9 +330,11 @@ stop them from talking.
 games headlessly. The autoplayer paces from the same projection the HUD shows, expands only
 what its energy can carry, cools Echoes as the ages lengthen, and prepares for the decay.
 
-At the time of writing (12 games each):
-* **Standard, competent:** about half endure to the end of time; the rest fall in the Black
-  Hole Age or at the Great Decay.
+At the time of writing (60 games for the standard figure; 12 to 24 games are too noisy to
+compare changes):
+* **Standard, competent:** about 38% make it to the end of time (22 of 60 endure, 1 Great
+  Work victory); the rest fall at the Great Decay or in the Black Hole Age, a few when their
+  resolve gives out.
 * **Vast:** Great Work victories appear (The Long Thought).
 * **Brief:** harder; fewer turns to prepare.
 * **Passive** (research only, first choice everywhere): dies in the Dusk.
@@ -319,7 +345,10 @@ A thoughtful player should beat the autoplayer; the harness is a floor, not a ta
 
 ## 13. Scope of this version
 
-All four ages and the three Crossings; the Coalescence; five Threads with tempo, pace and
+A guide for the first turns and a gameplay manual in the Codex; survey discoveries (about a
+dozen hard-science finds); climate and water for every world; the System Lighter for settling
+within a star; settlement and fleet lists; keyboard shortcuts. All four ages and the three
+Crossings; the Coalescence; five Threads with tempo, pace and
 dormancy; society (resolve, dissent, demands, forks, Charters); research (about 65 techs) and
 Great Works; construction (about 45 structures), settlement and sublight fleets; the Hunger
 and the dark path; fellow survivors, the Slow Ones, sleepers and ghosts, the Unlit; about 40

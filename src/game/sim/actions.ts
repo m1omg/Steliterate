@@ -67,7 +67,10 @@ export function buildableStructures(state: GameState, c: Colony): { def: Structu
 
 export function buildableShips(state: GameState, c: Colony): { def: ShipDef; error: string | null }[] {
   const hasYard = (c.structures.shipyard ?? 0) > 0;
-  return SHIPS.filter((s) => !s.tech || hasTech(state, s.tech)).map((def) => ({ def, error: hasYard ? null : 'Needs a Shipyard.' }));
+  return SHIPS.filter((s) => !s.tech || hasTech(state, s.tech)).map((def) => ({
+    def,
+    error: !hasYard ? 'Needs a Shipyard.' : def.crew && c.pops.kin < def.crew + 1 ? `Needs at least ${def.crew + 1} Kin here.` : null,
+  }));
 }
 
 export function queueBuild(state: GameState, colonyId: string, kind: 'structure' | 'ship', key: string): ActionResult {
@@ -82,6 +85,7 @@ export function queueBuild(state: GameState, colonyId: string, kind: 'structure'
     if (!((c.structures.shipyard ?? 0) > 0)) return 'Needs a Shipyard.';
     const s = def as ShipDef;
     if (s.tech && !hasTech(state, s.tech)) return 'Not yet researched.';
+    if (s.crew && c.pops.kin < s.crew + 1) return `Needs at least ${s.crew + 1} Kin here: ${s.crew} of them will go.`;
   }
   const cost = buildCost(state, def, kind === 'ship');
   if (state.civ.matter < cost.matter) return `Needs ${cost.matter} matter.`;
@@ -165,6 +169,12 @@ export function setResearch(state: GameState, techId: string | null): ActionResu
   }
   if (!techAvailable(state, techId)) return 'Not available.';
   state.civ.researching = techId;
+  // insight carried over (overflow, finds, idle study) goes straight into the new project
+  const bank = state.civ.flags.insight_bank ?? 0;
+  if (bank > 0) {
+    state.civ.research[techId] = (state.civ.research[techId] ?? 0) + bank;
+    state.civ.flags.insight_bank = 0;
+  }
   return null;
 }
 

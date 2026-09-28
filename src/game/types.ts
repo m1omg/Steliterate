@@ -127,6 +127,7 @@ export interface Body {
   coreHeat: number; // geothermal potential (0..1)
   richness: number; // matter yield multiplier
   hydrogen: number; // fusion fuel yield multiplier
+  water?: number; // share of the surface covered by water or ice (subsurface ocean for ice-shelled worlds)
   traits: string[];
   relic?: Relic;
   colonyId: string | null;

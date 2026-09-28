@@ -120,7 +120,6 @@ export class Engine {
   /** Advance everything by dt seconds of real time and draw. Public so tests can drive it. */
   frame(dt: number) {
     this.now += dt;
-    this.rig.update(dt);
     // crossfade between views, time-based
     const k = 1 - Math.exp(-9 * dt);
     this.fade += (this.fadeTarget - this.fade) * k;
@@ -137,6 +136,8 @@ export class Engine {
     u.uTint.value.copy(this.tint);
     if (this.view === 'galaxy') this.galaxy.update(dt, this.now, this.camera, this.rig.distance);
     else this.system.update(dt, this.camera);
+    // the rig moves after the scene so a followed planet is centred on this frame's position
+    this.rig.update(dt);
     this.post.composer.render(dt);
     this.updateLabels();
   }
@@ -164,7 +165,7 @@ export class Engine {
     else this.rig.flyTo(t, distance, 1.2);
   }
 
-  showSystem(systemId: string) {
+  showSystem(systemId: string, focusBodyId?: string) {
     if (!this.state) return;
     const go = () => {
       if (this.view === 'galaxy') {
@@ -178,6 +179,10 @@ export class Engine {
       this.rig.jump(new THREE.Vector3(0, 0, 0), 150);
       this.rig.goalPitch = this.rig.pitch = 0.5;
       this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.4);
+      if (focusBodyId) {
+        this.system.selectedBody = focusBodyId;
+        this.focusBody(focusBodyId);
+      }
     };
     this.fadeTarget = 1;
     this.pendingSwitch = go;
@@ -201,7 +206,26 @@ export class Engine {
 
   select(id: string | null) {
     this.galaxy.selected = id && !id.startsWith('body:') ? id : null;
+    const was = this.system.selectedBody;
     this.system.selectedBody = id?.startsWith('body:') ? id.slice(5) : id;
+    if (this.view !== 'system') return;
+    if (id?.startsWith('body:')) this.focusBody(id.slice(5));
+    else if (was && this.rig.follow) {
+      // let go of the planet and step back to the whole system
+      this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.0);
+    }
+  }
+
+  /** Mark a discovery on the galaxy map. */
+  ping(systemId: string, color = '#9ff5e6') {
+    if (this.state) this.galaxy.ping(this.state, systemId, color, this.now);
+  }
+
+  /** In the system view: fly to a planet and keep it in the middle of the screen. */
+  focusBody(bodyId: string) {
+    const f = this.system.bodyFocus(bodyId);
+    if (!f) return;
+    this.rig.flyToFollow(() => this.system.bodyFocus(bodyId)?.pos ?? null, Math.max(9, f.radius * 7), 1.1);
   }
 
   private click(x: number, y: number) {

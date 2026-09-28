@@ -96,11 +96,45 @@ const boot = (data: unknown) => {
 if (hot?.ready) hot.ready(boot);
 else boot(hot?.data ?? null);
 
-// Enter ends the turn when nothing else has focus.
+// Keys: Enter ends the turn; letters open the main screens; H goes home.
+const SCREEN_KEYS: Record<string, 'research' | 'settlements' | 'fleets' | 'threads' | 'charters' | 'signals' | 'log' | 'codex'> = {
+  r: 'research',
+  s: 'settlements',
+  f: 'fleets',
+  t: 'threads',
+  c: 'charters',
+  g: 'signals',
+  l: 'log',
+  k: 'codex',
+};
 window.addEventListener('keydown', (e) => {
-  if (screen.value !== 'game' || modal.value) return;
+  if (screen.value !== 'game' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   const tag = (e.target as HTMLElement | null)?.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  const key = e.key.toLowerCase();
+  const open = modal.value?.kind;
+  const target = SCREEN_KEYS[key];
+  // Screens swap into each other; story dialogs (events, crossings) are never skipped this way.
+  if (target && (!open || Object.values(SCREEN_KEYS).includes(open as never) || open === 'save' || open === 'settings')) {
+    e.preventDefault();
+    sfx('click');
+    modal.value = open === target ? null : { kind: target };
+    return;
+  }
+  if (open) return;
+  if (key === 'h') {
+    const s = game.value;
+    if (!s) return;
+    sfx('select');
+    const cap = s.civ.capitalId ? s.colonies[s.civ.capitalId] : null;
+    const id = cap?.systemId ?? s.civ.homeSystemId;
+    if (view.value === 'system') eng.showSystem(id);
+    else eng.focusGalaxyOn(id, 150);
+    selection.value = { kind: 'system', id };
+    eng.select(id);
+    return;
+  }
+  if (tag === 'BUTTON') return;
   if (e.key === 'Enter') doEndTurn();
   if (e.key === 'Escape') {
     targeting.value = null;
@@ -118,6 +152,7 @@ declare global {
 window.__stel = {
   newGame(opts: Record<string, unknown> = {}) {
     game.value = newGame(opts);
+    if (opts.tutorial) game.value.flags.tut = 0;
     screen.value = 'game';
     modal.value = null;
     bump();
@@ -134,6 +169,9 @@ window.__stel = {
       s.pending.length = 0;
     }
     bump();
+  },
+  orderFleet(fleetId: string, systemId: string, order: 'move' | 'survey' | 'colonize' = 'survey') {
+    return act((g) => orderFleet(g, fleetId, systemId, order));
   },
   state: () => game.value,
   engine: () => engine(),

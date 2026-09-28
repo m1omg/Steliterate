@@ -2,8 +2,10 @@ import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
+import { stepTime } from '../eras';
 import { computeMods, type Mods } from './mods';
-import { colonies, distLy, eraIndex, log, uid } from './util';
+import { ANOMALIES } from '../data/events';
+import { colonies, distLy, eraIndex, log, uid, withRng } from './util';
 
 // No faster-than-light travel. Fleets advance speed × turn length light-years per turn.
 // Early on a 10 ly hop takes several turns; later a whole province fits into one.
@@ -20,10 +22,24 @@ export function launchCost(state: GameState, f: Fleet, ly: number, mods: Mods): 
   return Math.round(fleetMass(f) * (0.6 + 0.55 * Math.log10(1 + ly)) * cheap * ERA_LAUNCH[state.era] * 10) / 10;
 }
 
+/**
+ * How many turns a trip takes. Every turn is longer than the last, so this walks the Tide
+ * forward at the current pace instead of dividing by today's turn length.
+ */
 export function travelTurnsEstimate(state: GameState, ly: number, mods: Mods): number {
-  const perTurn = mods.speed * (isFinite(state.turnLength) ? state.turnLength : Infinity);
-  if (!isFinite(perTurn) || perTurn <= 0) return 1;
-  return Math.max(1, Math.ceil(ly / perTurn));
+  if (ly <= 0) return 1;
+  let years = state.years;
+  let eta = state.eta;
+  let covered = 0;
+  for (let n = 1; n <= 999; n++) {
+    const step = stepTime(state.era, years, eta, state.civ.pace, state.settings.length);
+    if (!isFinite(step.turnLength)) return n;
+    covered += mods.speed * step.turnLength;
+    if (covered >= ly) return n;
+    years = step.years;
+    eta = step.eta;
+  }
+  return 999;
 }
 
 export function newFleet(state: GameState, systemId: string, ships: string[], name?: string): Fleet {
@@ -53,6 +69,7 @@ export function orderMove(state: GameState, fleetId: string, to: string, order: 
   const f = state.fleets[fleetId];
   if (!f || !f.at) return 'That fleet is already under way.';
   if (f.at === to && order !== 'colonize' && order !== 'tame') return 'Already there.';
+  if (f.at !== to && f.ships.some((x) => SHIP_BY_ID[x.cls]?.inSystem)) return 'A System Lighter cannot leave its star.';
   const mods = computeMods(state);
   const a = state.systems[f.at];
   const b = state.systems[to];
@@ -116,6 +133,19 @@ export function survey(state: GameState, systemId: string) {
     }
   }
   log(state, `Surveyed ${sys.name}.`, 'info', systemId);
+  // a survey sometimes turns up something remarkable (at most one find per survey)
+  withRng(state, (rng) => {
+    if (!rng.chance(0.3)) return;
+    const found = new Set(ANOMALIES.map((a) => a.id));
+    const worlds = sys.bodies.map((id) => state.bodies[id]).filter((b) => b && !b.dissolved && !b.traits.some((t) => found.has(t)));
+    const options: { b: Body; id: string }[] = [];
+    for (const b of worlds) for (const a of ANOMALIES) if ((state.fired[`anom_${a.id}`] ?? 0) < 2 && a.fits(state, b)) options.push({ b, id: a.id });
+    if (!options.length) return;
+    const pick = rng.pick(options);
+    pick.b.traits.push(pick.id);
+    state.fired[`anom_${pick.id}`] = (state.fired[`anom_${pick.id}`] ?? 0) + 1;
+    state.pending.push({ uid: uid(state, 'ev'), defId: `anom_${pick.id}`, data: { bodyId: pick.b.id, systemId } });
+  });
 }
 
 export function canSettle(state: GameState, b: Body, thread: ThreadId): string | null {

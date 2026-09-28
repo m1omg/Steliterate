@@ -102,7 +102,7 @@ export const EVENTS: EventDef[] = [
     },
     text: () => 'The red sun threw off a superflare, a ten-minute blaze brighter than the whole star. On the day side, the thin air glowed. Sensors failed across the terminator, and the auroras reached the equator.',
     choices: [
-      { label: 'Everyone underground', hint: 'Energy −12. The world is spared the worst.', run: (s, d) => { energy(s, -12); const c = colonyById(s, d); if (c) { const b = s.bodies[c.bodyId]; b.vitality = Math.max(0, b.vitality - 0.01); } } },
+      { label: 'Everyone underground', hint: 'Energy −12 (−4 with the flare record). The world is spared the worst.', run: (s, d) => { energy(s, s.civ.flags.flare_warning ? -4 : -12); const c = colonyById(s, d); if (c) { const b = s.bodies[c.bodyId]; b.vitality = Math.max(0, b.vitality - 0.01); } } },
       { label: 'Keep the collectors running', hint: 'Energy +18, vitality −4%, resolve −2.', run: (s, d) => { energy(s, 18); res(s, -2); const c = colonyById(s, d); if (c) { const b = s.bodies[c.bodyId]; b.vitality = Math.max(0, b.vitality - 0.04); } } },
     ],
   },
@@ -557,5 +557,230 @@ export const EVENTS: EventDef[] = [
     ],
   },
 ];
+
+// ---------------------------------------------------------------- discoveries
+// Phenomena a survey can turn up. Hard science only; where the physics is hypothetical the
+// text says so. Each leaves a trait on the world so the find stays visible.
+
+export interface AnomalyDef {
+  id: string;
+  name: string; // shown as the world's trait
+  tip: string;
+  fits: (s: GameState, b: Body) => boolean;
+  event: Omit<EventDef, 'id'>;
+}
+
+const sysOf = (s: GameState, b: Body) => s.systems[b.systemId];
+const rocky = (b: Body) => ['barren', 'super_earth', 'terran', 'eyeball', 'ice', 'ocean_ice'].includes(b.kind);
+
+export const ANOMALIES: AnomalyDef[] = [
+  {
+    id: 'vent_life',
+    name: 'Vent life',
+    tip: 'Chemosynthetic life around hydrothermal vents in a buried ocean.',
+    fits: (_s, b) => (b.kind === 'ocean_ice' || b.traits.includes('subsurface_ocean')) && !b.colonyId,
+    event: {
+      title: 'Life Under the Ice',
+      art: 'sleepers',
+      text: (s, d) =>
+        `Under the ice shell of ${bodyById(s, d)?.name}, tidal flexing keeps an ocean liquid, and on its floor warm vents feed mats of something alive: chemosynthetic cells a few microns across, living on the chemistry of rock and water, with no light at all. Their biochemistry is not ours. They are the first life anyone here has found that is not related to us.`,
+      choices: [
+        { label: 'Study them without touching', hint: 'Insight +50, Resolve +3, Kin standing +3.', run: (s) => { insight(s, 50); res(s, 3); stand(s, 'kin', 3); } },
+        { label: 'Declare the ocean a sanctuary', hint: 'Resolve +6, Accord +10. The Kin will remember.', run: (s) => { res(s, 6); accord(s, 10); stand(s, 'kin', 4); } },
+        { label: 'Take samples for our own biology', hint: 'Insight +80. Some will call it theft: Kin standing −3.', run: (s) => { insight(s, 80); stand(s, 'kin', -3); } },
+      ],
+    },
+  },
+  {
+    id: 'fossil_reactor',
+    name: 'Fossil reactor',
+    tip: 'The isotope record of a natural fission reactor that burned out when the universe was young.',
+    fits: (_s, b) => rocky(b) && b.kind !== 'ocean_ice',
+    event: {
+      title: 'The Ghost of a Reactor',
+      art: 'ruins',
+      text: (s, d) =>
+        `Survey cores from ${bodyById(s, d)?.name} show the wrong isotopes in one layer of rock: xenon and neodymium in the ratios left by nuclear fission. Long ago, when the universe was only a few billion years old, groundwater flooded a seam of uranium ore here and it went critical, a natural reactor like the one found in Earth's Oklo mine. Every atom of that uranium decayed away tens of trillions of years ago. Only its fingerprints are left.`,
+      choices: [{ label: 'Read the record', hint: 'Insight +45: a clock for the early universe.', run: (s) => insight(s, 45) }],
+    },
+  },
+  {
+    id: 'diamond_mantle',
+    name: 'Diamond mantle',
+    tip: 'A carbon-rich world: beneath a graphite crust, a mantle of diamond.',
+    fits: (_s, b) => (b.kind === 'super_earth' || b.kind === 'barren') && b.massEarth > 1.5,
+    event: {
+      title: 'A Carbon World',
+      art: 'ruins',
+      text: (s, d) =>
+        `Seismic soundings of ${bodyById(s, d)?.name} ring like a bell. It formed from a disk rich in carbon and poor in oxygen, so instead of silicate rock it has a crust of graphite over a thick mantle of diamond.`,
+      choices: [
+        { label: 'Mine it', hint: 'Mineral richness +0.8, Matter +30.', run: (s, d) => { const b = bodyById(s, d); if (b) b.richness += 0.8; matter(s, 30); } },
+        { label: 'Use it as an instrument', hint: 'Insight +35: a diamond planet carries seismic waves very cleanly.', run: (s) => insight(s, 35) },
+      ],
+    },
+  },
+  {
+    id: 'primordial_hole',
+    name: 'Primordial black hole',
+    tip: 'A black hole the mass of a mountain, left from the first second of the universe and now evaporating. Speculative: such holes are hypothetical.',
+    fits: (_s, b) => b.kind === 'asteroids',
+    event: {
+      title: 'A Black Hole the Size of a Mountain',
+      art: 'blackhole',
+      text: (s, d) =>
+        `In the belt of ${sysOf(s, bodyById(s, d)!)?.name} the survey found a point of gamma-ray light with no surface at all: about four trillion kilograms, a black hole smaller than an atomic nucleus. Only a hole formed in the first second of the universe could be this small, and a hole this small should be finishing its Hawking evaporation about now, brightening as it shrinks. Primordial black holes were only ever a hypothesis. (Speculative physics.)`,
+      choices: [
+        { label: 'Catch its last light', hint: 'Energy +120, once. It is nearly gone.', run: (s) => energy(s, 120) },
+        { label: 'Measure it as it dies', hint: 'Insight +90: Hawking radiation, observed directly.', run: (s) => insight(s, 90) },
+      ],
+    },
+  },
+  {
+    id: 'interstellar_shard',
+    name: 'Interstellar visitor',
+    tip: 'A fragment of another star’s planet-forming disk, passing through.',
+    fits: (_s, b) => b.kind === 'asteroids' || b.kind === 'barren',
+    event: {
+      title: 'A Visitor From Another Star',
+      art: 'ruins',
+      text: (s, d) =>
+        `An elongated shard of rock is crossing ${sysOf(s, bodyById(s, d)!)?.name} on a hyperbolic path: it is not bound to this star. Its isotopes say it was thrown out of some other star's disk before the ancestral galaxies merged, and it has been falling between stars ever since.`,
+      choices: [
+        { label: 'Study it as it passes', hint: 'Insight +40.', run: (s) => insight(s, 40) },
+        { label: 'Catch it', hint: 'Energy −20, Matter +55.', ok: (s) => s.civ.energy >= 20, run: (s) => { energy(s, -20); matter(s, 55); } },
+      ],
+    },
+  },
+  {
+    id: 'fossils',
+    name: 'Fossil biosphere',
+    tip: 'Mineral structures grown around life that died tens of trillions of years ago.',
+    fits: (_s, b) => ['barren', 'super_earth', 'terran', 'ice'].includes(b.kind),
+    event: {
+      title: 'Someone Lived Here',
+      art: 'ruins',
+      text: (s, d) =>
+        `Under the dust of ${bodyById(s, d)?.name}: layered mounds of mineral that grew around mats of microbes, like stromatolites, in shallow seas that dried up some eighty trillion years ago. Life happened here, once, without anyone to see it.`,
+      choices: [
+        { label: 'Tell everyone', hint: 'Resolve +6, Dissent −2. We are not the first.', run: (s) => { res(s, 6); dis(s, -2); } },
+        { label: 'Archive it quietly', hint: 'Insight +30.', run: (s) => insight(s, 30) },
+      ],
+    },
+  },
+  {
+    id: 'flare_glass',
+    name: 'Flare glass',
+    tip: 'Plains of glass fused by the superflares of a young red dwarf.',
+    fits: (s, b) => (b.kind === 'barren' || b.kind === 'super_earth') && ['red_dwarf', 'blue_dwarf', 'white_dwarf'].includes(sysOf(s, b).primary.kind),
+    event: {
+      title: 'Plains of Glass',
+      art: 'flare',
+      text: (s, d) =>
+        `The day side of ${bodyById(s, d)?.name} is paved with glass: layer on layer of rock melted by superflares when its red dwarf was young and violent, trillions of years ago. Each layer dates an outburst.`,
+      choices: [
+        { label: 'Quarry the glass', hint: 'Matter +40.', run: (s) => matter(s, 40) },
+        { label: 'Read the flare record', hint: 'Insight +25, and our astronomers learn to see flares coming.', run: (s) => { insight(s, 25); s.civ.flags.flare_warning = 1; } },
+      ],
+    },
+  },
+  {
+    id: 'clathrates',
+    name: 'Clathrate ice',
+    tip: 'Methane and hydrogen locked in cages of ice: fuel for fusion.',
+    fits: (_s, b) => ['ice', 'ocean_ice', 'ice_giant'].includes(b.kind),
+    event: {
+      title: 'Fuel in the Ice',
+      art: 'degenerate',
+      text: (s, d) =>
+        `Kilometres down in the ice of ${bodyById(s, d)?.name}, the survey found clathrate hydrates: methane and hydrogen molecules trapped in cages of water ice, stable only at this cold and this pressure. A frozen store of fuel.`,
+      choices: [{ label: 'Chart the deposits', hint: 'Hydrogen yield +0.8 here (fuel for fusion).', run: (s, d) => { const b = bodyById(s, d); if (b) b.hydrogen += 0.8; } }],
+    },
+  },
+  {
+    id: 'lens',
+    name: 'Lensing alignment',
+    tip: 'A rogue world behind this star focused the light of distant stars for a while.',
+    fits: () => true,
+    event: {
+      title: 'A Lens in the Dark',
+      art: 'slow',
+      text: (s, d) =>
+        `A rogue planet drifting far behind ${sysOf(s, bodyById(s, d)!)?.name} has lined up with the star as seen from here. For a few years its gravity focuses the light of stars behind it, a microlensing event, and our instruments read their spectra as if they were next door.`,
+      choices: [
+        {
+          label: 'Map everything it shows us',
+          hint: 'Stars within 400 light-years appear on the map. Insight +20.',
+          run: (s, d) => {
+            const here = sysOf(s, bodyById(s, d)!);
+            for (const o of Object.values(s.systems)) {
+              if (s.civ.known[o.id] || o.gone) continue;
+              if (Math.hypot(o.phys.x - here.phys.x, o.phys.y - here.phys.y, o.phys.z - here.phys.z) <= 400) s.civ.known[o.id] = 1;
+            }
+            insight(s, 20);
+          },
+        },
+      ],
+    },
+  },
+  {
+    id: 'sail_graveyard',
+    name: 'Sail graveyard',
+    tip: 'A drift of dead lightsail probes from a civilization that died long ago.',
+    fits: (_s, b) => b.kind === 'asteroids' || b.kind === 'deep',
+    event: {
+      title: 'A Graveyard of Sails',
+      art: 'ruins',
+      text: (s, d) =>
+        `In the dark beyond ${bodyById(s, d)?.name}: hundreds of lightsails, each a few square kilometres of metal foil, the probes of someone who crossed between stars on starlight. Their cores are dead. The star charts etched into their frames are not.`,
+      choices: [
+        { label: 'Read the charts', hint: 'Insight +70.', run: (s) => insight(s, 70) },
+        { label: 'Salvage the foil', hint: 'Matter +60.', run: (s) => matter(s, 60) },
+      ],
+    },
+  },
+  {
+    id: 'resonance',
+    name: 'Tidal resonance',
+    tip: 'Locked in an orbital resonance with its neighbours: the flexing heats its interior.',
+    fits: (s, b) => ['ice', 'ocean_ice', 'eyeball', 'terran', 'super_earth'].includes(b.kind) && sysOf(s, b).bodies.length >= 4,
+    event: {
+      title: 'Kept Warm by Its Neighbours',
+      art: 'dusk',
+      text: (s, d) =>
+        `${bodyById(s, d)?.name} is locked in an orbital resonance with its sibling worlds: every few orbits they tug it back onto an eccentric path, and the endless squeezing heats its interior, as Jupiter's moons heat Io.`,
+      choices: [{ label: 'Tap the tidal heat', hint: 'Core heat +0.2 here, for geothermal power.', run: (s, d) => { const b = bodyById(s, d); if (b) b.coreHeat = Math.min(1, b.coreHeat + 0.2); } }],
+    },
+  },
+  {
+    id: 'magnetar_print',
+    name: 'Magnetar imprint',
+    tip: 'Rock magnetised by the field of a star that was once a magnetar.',
+    fits: (s, b) => rocky(b) && sysOf(s, b).primary.kind === 'neutron_star',
+    event: {
+      title: 'Written by a Magnetar',
+      art: 'degenerate',
+      text: (s, d) =>
+        `Every grain of iron in the rocks of ${bodyById(s, d)?.name} points the same way. Its neutron star was once a magnetar, with a magnetic field a thousand trillion times Earth's, and the field wrote itself into the planet before it faded.`,
+      choices: [{ label: 'Study the imprint', hint: 'Insight +40.', run: (s) => insight(s, 40) }],
+    },
+  },
+  {
+    id: 'warm_rogue',
+    name: 'Warm under hydrogen',
+    tip: 'A starless world whose thick hydrogen air holds in its own heat, with liquid water beneath.',
+    fits: (_s, b) => !!b.rogue && rocky(b),
+    event: {
+      title: 'Warm in the Dark',
+      art: 'dark',
+      text: (s, d) =>
+        `${bodyById(s, d)?.name} has no star, yet it is warm. A thick atmosphere of hydrogen, which lets heat out only very slowly at these temperatures, holds in the last warmth of its interior like a blanket, and under it there is liquid water.`,
+      choices: [{ label: 'Chart it for settlers', hint: 'Core heat +0.2 and habitability at least 15% here.', run: (s, d) => { const b = bodyById(s, d); if (b) { b.coreHeat = Math.min(1, b.coreHeat + 0.2); b.habitability = Math.max(b.habitability, 0.15); b.vitality = Math.max(b.vitality, 0.3); } } }],
+    },
+  },
+];
+
+// discoveries are events too (queued by the survey, never rolled at random)
+EVENTS.push(...ANOMALIES.map((a) => ({ id: `anom_${a.id}`, ...a.event })));
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

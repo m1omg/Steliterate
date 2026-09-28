@@ -12,15 +12,25 @@ sleepers in their vaults, and something in the dark matter.
 
 ## Playing
 
-- **End Turn** (or Enter). Every turn covers more cosmic time than the last.
+New to it? Leave **Guide me** on when you start a game: a short guide walks you through the
+first turns. The Codex (K) opens on **How to play**, the full manual.
+
+- **End Turn** (or Enter). Every turn covers more cosmic time than the last. The chips above
+  End Turn list anything still waiting for you.
 - **Pace**: quicken for more decisions while a short-lived source burns; slow down for more
   energy per turn. Slowing only pays for minds that can slow themselves (Echoes, Coldminds).
 - **Sleep / Long Sleep**: dormancy cuts upkeep to a tenth while energy still comes in.
-- Click a star to select it, double-click (or **System**) to look inside, click a settlement
-  to manage it. The left rail opens Research, Threads, Charters, Signals, the Record, the
-  Codex (the science behind it all), Save and Settings.
-- Watch the **Forecasts** (bottom left) and the **Chronometer** (top): they tell you what is
-  coming and roughly when.
+- Click a star to select it, double-click (or **System**) to look inside. Click a planet to
+  fly to it and follow it. Unsurveyed systems show only their star until a probe charts them.
+- **Settling**: a System Lighter (no research) carries a family to another world of the same
+  star; Kin Arks, Seedcores and the rest cross between stars. Settlements (S) and Fleets (F)
+  on the left rail list everything you have.
+- **Research**: overflow and found knowledge carry into the next project. You can pause
+  research to save the labs' power; only half of each turn's insight is kept while paused.
+- Watch the **Forecasts** (bottom left, closable) and the **Chronometer** (top): they tell
+  you what is coming and roughly when.
+- Keys: Enter end turn · R research · S settlements · F fleets · T threads · C charters ·
+  G signals · L the Record · K Codex · H home · Esc close.
 
 Saves stay in your browser; a save code lets you move a game elsewhere.
 

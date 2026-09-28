@@ -27,6 +27,8 @@ export class OrbitRig {
   onClick: ((x: number, y: number) => void) | null = null;
   onHover: ((x: number, y: number) => void) | null = null;
   autoYaw = 0; // slow cinematic drift (radians per second)
+  /** Something to keep centred (a planet on its orbit). Cleared when the player pans. */
+  follow: (() => THREE.Vector3 | null) | null = null;
 
   constructor(camera: THREE.PerspectiveCamera, el: HTMLElement) {
     this.camera = camera;
@@ -52,10 +54,20 @@ export class OrbitRig {
     this.goalTarget.copy(target);
     this.distance = this.goalDistance = distance;
     this.flight = null;
+    this.follow = null;
   }
 
   flyTo(target: THREE.Vector3, distance: number, duration = 1.1) {
+    this.follow = null;
     this.flight = { from: this.target.clone(), to: target.clone(), fromD: this.distance, toD: distance, t: 0, dur: Math.max(0.05, duration) };
+  }
+
+  /** Fly to something that moves, then keep it centred. */
+  flyToFollow(fn: () => THREE.Vector3 | null, distance: number, duration = 1.1) {
+    const now = fn();
+    if (!now) return;
+    this.flight = { from: this.target.clone(), to: now.clone(), fromD: this.distance, toD: distance, t: 0, dur: Math.max(0.05, duration) };
+    this.follow = fn;
   }
 
   private down = (e: PointerEvent) => {
@@ -122,12 +134,16 @@ export class OrbitRig {
     const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     this.goalTarget.addScaledVector(right, -dx * s).addScaledVector(fwd, -dy * s);
     this.flight = null;
+    this.follow = null;
   }
 
   update(dt: number) {
     const k = 1 - Math.exp(-this.sharpness * dt);
+    const followed = this.follow ? this.follow() : null;
+    if (this.follow && !followed) this.follow = null;
     if (this.flight) {
       const f = this.flight;
+      if (followed) f.to.copy(followed); // the destination keeps moving
       f.t += dt;
       const u = Math.min(1, f.t / f.dur);
       const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
@@ -139,6 +155,11 @@ export class OrbitRig {
       this.target.copy(this.goalTarget);
       this.distance = this.goalDistance;
       if (u >= 1) this.flight = null;
+    } else if (followed) {
+      // locked on: exact, so the view never lags by frame rate
+      this.goalTarget.copy(followed);
+      this.target.copy(followed);
+      this.distance += (this.goalDistance - this.distance) * k;
     } else {
       this.target.lerp(this.goalTarget, k);
       this.distance += (this.goalDistance - this.distance) * k;

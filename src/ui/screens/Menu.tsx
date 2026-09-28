@@ -5,6 +5,7 @@ import type { Difficulty, EpochLength, GameSettings, ProtonFate } from '../../ga
 import { music } from '../../audio/music';
 import { sfx } from '../../audio/sfx';
 import { modal, screen } from '../store';
+import { startTutorial } from '../hud/Tutorial';
 import { startLoaded } from './Misc';
 
 export function MainMenu() {
@@ -72,9 +73,11 @@ function Seg<T extends string | number>({ value, options, onPick }: { value: T; 
 export function Setup() {
   const [st, setSt] = useState<GameSettings>({ ...DEFAULT_SETTINGS, seed: Math.floor(Math.random() * 1e9) });
   const set = (p: Partial<GameSettings>) => setSt({ ...st, ...p });
+  const [guide, setGuide] = useState(true);
   const begin = () => {
     sfx('endturn');
     const g = newGame(st);
+    if (guide) startTutorial(g);
     startLoaded(g);
     modal.value = { kind: 'era_intro' };
   };
@@ -132,6 +135,17 @@ export function Setup() {
               { id: 'stable', name: 'Stable', tip: 'Matter endures. Different endings open.' },
             ]}
             onPick={(v) => set({ protonFate: v })}
+          />
+        </div>
+        <div class="field">
+          <label>Guide</label>
+          <Seg<number>
+            value={guide ? 1 : 0}
+            options={[
+              { id: 1, name: 'Guide me', tip: 'A short guide walks you through the first turns. Settings can start it again later.' },
+              { id: 0, name: 'No guide', tip: 'Start without the guide. The Codex has the full manual.' },
+            ]}
+            onPick={(v) => setGuide(v === 1)}
           />
         </div>
         <div class="field">

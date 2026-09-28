@@ -13,9 +13,12 @@ export interface ShipDef {
   survey?: boolean;
   settles?: { thread: ThreadId; pops: number; structure?: string };
   tames?: boolean;
+  inSystem?: boolean; // cannot leave its star
+  crew?: number; // Kin drawn from the settlement that builds it
 }
 
 export const SHIPS: ShipDef[] = [
+  { id: 'lighter', name: 'System Lighter', desc: 'A slow chemical-rocket hauler that carries one family of Kin and a folded dome to another world of the same star. It cannot cross interstellar space, and its colonists come from the settlement that builds it.', cost: 45, matter: 20, mass: 2, attack: 0, hp: 3, settles: { thread: 'kin', pops: 1, structure: 'habitat_dome' }, inSystem: true, crew: 1 },
   { id: 'probe', name: 'Survey Probe', desc: 'A small sublight probe that charts systems and ruins.', cost: 20, matter: 5, mass: 1, attack: 0, hp: 2, survey: true },
   { id: 'ark', name: 'Kin Ark', desc: 'Carries sleeping Kin and a folded dome to a new world.', tech: 'fusion_drives', cost: 80, matter: 30, mass: 8, attack: 0, hp: 6, settles: { thread: 'kin', pops: 2, structure: 'habitat_dome' } },
   { id: 'seedcore', name: 'Seedcore', desc: 'A substrate core with two Echoes aboard. Can settle anywhere, even the empty space around a dead star.', tech: 'mind_substrate', cost: 70, matter: 25, mass: 4, attack: 0, hp: 5, settles: { thread: 'echoes', pops: 2, structure: 'substrate_core' } },

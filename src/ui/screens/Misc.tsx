@@ -6,6 +6,8 @@ import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
 import { bump, engine, game, modal, notify, rev, saveSettings, screen, selection, settings } from '../store';
 import { CODEX } from './Codex';
+import { MANUAL } from './Manual';
+import { startTutorial } from '../hud/Tutorial';
 import { ModalFrame } from './Frame';
 
 const LOG_FILTERS: { id: 'all' | LogEntry['kind']; name: string }[] = [
@@ -56,22 +58,31 @@ export function LogModal({ s }: { s: GameState }) {
 }
 
 export function CodexModal({ topic }: { topic?: string }) {
-  const [cur, setCur] = useState(topic ?? CODEX[0].id);
-  const entry = CODEX.find((c) => c.id === cur) ?? CODEX[0];
+  const [cur, setCur] = useState(topic ?? MANUAL[0].id);
+  const all = [...MANUAL, ...CODEX];
+  const entry = all.find((c) => c.id === cur) ?? MANUAL[0];
+  const isManual = MANUAL.includes(entry);
+  const group = (label: string, list: typeof CODEX) => (
+    <>
+      <div class="eyebrow codex-group">{label}</div>
+      {list.map((c) => (
+        <button key={c.id} class={`btn small ${c.id === cur ? 'primary' : 'ghost'}`} onClick={() => setCur(c.id)}>
+          {c.title}
+        </button>
+      ))}
+    </>
+  );
   return (
-    <ModalFrame title="Codex" eyebrow="How the end of the universe works" icon="info">
+    <ModalFrame title="Codex" eyebrow="How to play, and how the end of the universe works" icon="info">
       <div class="codex">
         <nav class="codex-nav">
-          {CODEX.map((c) => (
-            <button key={c.id} class={`btn small ${c.id === cur ? 'primary' : 'ghost'}`} onClick={() => setCur(c.id)}>
-              {c.title}
-            </button>
-          ))}
+          {group('How to play', MANUAL)}
+          {group('The science', CODEX)}
         </nav>
-        <article class="codex-body">
+        <article class={`codex-body${isManual ? ' manual' : ''}`}>
           <h2>{entry.title}</h2>
           {entry.body.map((p, i) => (
-            <p key={i} class="flavor" style={{ color: 'var(--ink)' }}>
+            <p key={i} class={isManual ? '' : 'flavor'} style={{ color: 'var(--ink)' }}>
               {p}
             </p>
           ))}
@@ -121,6 +132,27 @@ export function SettingsModal() {
             ))}
           </div>
         </div>
+        {game.value && screen.value === 'game' && (
+          <div class="field">
+            <label>Guide</label>
+            <div class="row wrap" style={{ gap: '6px' }}>
+              <button
+                class="btn small"
+                onClick={() => {
+                  if (!game.value) return;
+                  startTutorial(game.value);
+                  bump();
+                  modal.value = null;
+                }}
+              >
+                Start the guide again
+              </button>
+              <button class="btn small ghost" onClick={() => (modal.value = { kind: 'codex' })}>
+                Open the manual
+              </button>
+            </div>
+          </div>
+        )}
         <p class="faint" style={{ fontSize: '12px', margin: 0 }}>
           Animation runs on elapsed time, so the game plays the same at any display refresh rate.
         </p>

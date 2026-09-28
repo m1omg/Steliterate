@@ -59,7 +59,8 @@ async function toEra(p, era) {
     await p.screenshot({ path: `${out}/${tag}-menu.png` });
     await p.evaluate(() => window.__stel.newGame({ seed: 24757 }));
     await p.waitForTimeout(1500);
-    for (const i of [0, 1, 2, 3, 4, 5, 6, 7]) {
+    const railCount = await p.locator('.rail button').count();
+    for (let i = 0; i < railCount; i++) {
       await p.locator('.rail button').nth(i).click();
       await p.waitForTimeout(250);
       if (!(await p.locator('.modal').count())) fail(`${tag}: rail button ${i} opened nothing`);
@@ -87,6 +88,104 @@ async function toEra(p, era) {
       }
     }
     if (p.errors.length) fail(`${tag}: console errors:\n  ${p.errors.slice(0, 8).join('\n  ')}`);
+    await p.close();
+  }
+
+  // ---------------------------------------------------------------- features: guide, keys, prompts, focus
+  {
+    const p = await page(browser, 1440, 900);
+    const shot = (name) => p.screenshot({ path: `${out}/feat-${name}.png` });
+    // Close whatever story dialog a turn left open.
+    const clearModals = async () => {
+      for (let i = 0; i < 6 && (await p.locator('.modal').count()); i++) {
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(200);
+        if (await p.locator('.modal').count()) {
+          const b = p.locator('.modal .choice, .modal .modal-body button').first();
+          if (await b.count()) await b.click();
+          await p.waitForTimeout(300);
+        }
+      }
+    };
+    const endTurn = async () => {
+      await clearModals();
+      await p.locator('.endturn').click();
+      await p.waitForTimeout(2600);
+    };
+    await p.evaluate(() => window.__stel.newGame({ seed: 24757, tutorial: true }));
+    await p.waitForTimeout(1500);
+    if (!(await p.locator('.tutorial').count())) fail('guide did not appear');
+    await p.locator('.tutorial .btn.primary').click();
+    await p.waitForTimeout(400);
+    await shot('tutorial');
+    // shortcuts: R opens and closes research, K opens the Codex on the manual
+    await p.keyboard.press('r');
+    await p.waitForTimeout(250);
+    if (!(await p.locator('.modal').count())) fail('R did not open research');
+    await p.keyboard.press('r');
+    await p.waitForTimeout(250);
+    if (await p.locator('.modal').count()) fail('R did not close research');
+    await p.keyboard.press('k');
+    await p.waitForTimeout(300);
+    if (!(await p.locator('.codex-body.manual').count())) fail('K did not open the manual');
+    await shot('manual');
+    await p.keyboard.press('Escape');
+    await p.locator('.tutorial [aria-label="End the guide"]').click();
+    // research prompt after a finished project
+    await p.evaluate(() => {
+      const s = window.__stel.state();
+      s.civ.researching = 'fusion';
+      s.civ.research.fusion = 1e7;
+      const probes = Object.values(s.fleets);
+      const near = Object.values(s.systems)
+        .filter((x) => x.id !== s.civ.homeSystemId && s.civ.known[x.id] === 1)
+        .map((x) => { const h = s.systems[s.civ.homeSystemId].phys; return { x, d: Math.hypot(x.phys.x - h.x, x.phys.y - h.y, x.phys.z - h.z) }; })
+        .sort((a, b) => a.d - b.d);
+      probes.forEach((f, i) => near[i] && window.__stel.orderFleet(f.id, near[i].x.id, 'survey'));
+    });
+    await p.waitForTimeout(300);
+    await p.evaluate(() => {
+      const s = window.__stel.state();
+      window.__stel.engine().focusGalaxyOn(s.civ.homeSystemId, 60, true);
+    });
+    await p.waitForTimeout(1200);
+    await shot('fleets');
+    await endTurn();
+    if (!(await p.locator('.research-prompt').count())) fail('research prompt did not appear');
+    await shot('research-prompt');
+    for (let i = 0; i < 6; i++) {
+      await endTurn();
+      if (await p.locator('.toast').count()) break;
+    }
+    await p.evaluate(() => {
+      const s = window.__stel.state();
+      window.__stel.engine().focusGalaxyOn(s.civ.homeSystemId, 260, true);
+    });
+    await p.waitForTimeout(700);
+    await shot('discovery');
+    // an unsurveyed system: the star only
+    const fog = await p.evaluate(() => {
+      const s = window.__stel.state();
+      const x = Object.values(s.systems).find((y) => s.civ.known[y.id] === 1);
+      return x ? x.id : null;
+    });
+    if (fog) {
+      await clearModals();
+      await p.evaluate((id) => {
+        window.__stel.engine().showSystem(id);
+      }, fog);
+      await p.waitForTimeout(1500);
+      await shot('unsurveyed');
+      await p.evaluate(() => window.__stel.engine().showGalaxy());
+    }
+    // settlements list -> the homeworld, focused and followed
+    await clearModals();
+    await p.keyboard.press('s');
+    await p.waitForTimeout(300);
+    await p.locator('.modal .list-item').first().click();
+    await p.waitForTimeout(6000);
+    await shot('homeworld-focus');
+    if (p.errors.length) fail(`features: console errors:\n  ${p.errors.slice(0, 8).join('\n  ')}`);
     await p.close();
   }
 

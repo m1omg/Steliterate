@@ -350,3 +350,85 @@ export function bodyIsGone(b: Body): boolean {
 }
 
 export const LAST_LIGHT_YEARS = LAST_LIGHT;
+
+/**
+ * Approximate luminosity of a primary in solar units, for surface temperatures shown to the
+ * player. (The economy uses era-normalised light factors instead; see sourceLight.)
+ */
+export function primaryLuminosity(p: Primary, years: number, era: EraId): number {
+  const m = Math.max(0.01, p.mass);
+  switch (p.kind) {
+    case 'red_dwarf':
+    case 'collision_star':
+      return 0.23 * Math.pow(m, 2.3); // lower main sequence
+    case 'blue_dwarf':
+      return Math.min(0.4, 2 * m); // a red dwarf's last bright phase, about a third of the Sun at peak
+    case 'helium_star':
+      return 30;
+    case 'helium_giant':
+      return 1000;
+    case 'dark_star':
+      return 1;
+    case 'white_dwarf': {
+      if (era === 'dusk') {
+        const age = p.whiteAt ? Math.max(0, years - p.whiteAt) : 1e13;
+        return 0.01 * Math.pow(1 + age / 1e8, -1.3);
+      }
+      if (era === 'degenerate' && p.halo && years < 1e25) return 4e-12; // warmed by dark matter
+      return 1e-15 + (p.rekindle ?? 0) * 1e-6;
+    }
+    case 'black_dwarf':
+      return 1e-17 + (p.rekindle ?? 0) * 1e-6;
+    case 'brown_dwarf':
+      return era === 'dusk' ? 1e-6 : 1e-8;
+    case 'neutron_star':
+      return era === 'dusk' ? 1e-5 : 1e-9;
+    default:
+      return 0;
+  }
+}
+
+export interface BodyClimate {
+  mean: number; // K
+  day?: number; // tidally locked worlds
+  night?: number;
+}
+
+/** Surface temperature: starlight (equilibrium, albedo 0.3), the world's own heat, a little greenhouse. */
+export function bodyClimate(state: GameState, b: Body): BodyClimate {
+  const sys = state.systems[b.systemId];
+  const L = b.rogue ? 0 : primaryLuminosity(sys.primary, state.years, state.era);
+  const a = Math.max(0.003, b.orbitAU);
+  const tEq = L > 0 ? 278 * Math.pow(L, 0.25) * Math.pow(0.7, 0.25) / Math.sqrt(a) : 0;
+  const tInt = 40 * b.coreHeat;
+  let t = Math.pow(Math.pow(tEq, 4) + Math.pow(tInt, 4), 0.25);
+  if (b.kind === 'eyeball' || b.kind === 'terran' || b.kind === 'super_earth') t *= 1 + 0.12 * b.vitality;
+  t = Math.max(1, t);
+  if (b.traits.includes('tidally_locked') && tEq > 0) {
+    // the day side faces the star for ever; air and sea carry some heat round to the night
+    const airless = b.kind === 'barren' || b.kind === 'asteroids';
+    if (airless) return { mean: t, day: t * 1.4, night: Math.max(tInt, t * 0.12) };
+    const carry = 0.25 + 0.45 * b.vitality;
+    return { mean: t, day: t * (1.3 - 0.15 * carry), night: Math.max(tInt, t * (0.35 + 0.4 * carry)) };
+  }
+  return { mean: t };
+}
+
+/** A plain description of a world's water at its current temperature. */
+export function waterState(b: Body, climate: BodyClimate): string {
+  const w = b.water ?? 0;
+  if (w <= 0.005) return 'none';
+  const share = `${Math.round(w * 100)}%`;
+  if (b.kind === 'ocean_ice') return `${share}: a global ocean under the ice`;
+  if (b.kind === 'asteroids') return `${share}: ice in the rubble`;
+  const liquidAt = (k: number) => k >= 273 && k < 373;
+  if (climate.day !== undefined && climate.night !== undefined) {
+    if (liquidAt(climate.day) && !liquidAt(climate.night)) return `${share}: open sea on the day side, ice beyond the terminator`;
+    if (liquidAt(climate.day)) return `${share}: open water`;
+    if (climate.day >= 373) return `${share}: boiled off the day side, ice on the night side`;
+    return `${share}: all frozen`;
+  }
+  if (liquidAt(climate.mean)) return `${share}: open water`;
+  if (climate.mean >= 373) return `${share}: steam`;
+  return `${share}: frozen`;
+}

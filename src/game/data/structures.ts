@@ -45,6 +45,7 @@ export interface StructureDef {
   signature: number; // how much it draws the Hunger (light and heat)
   decayProof?: boolean;
   continuityMult?: number;
+  warms?: boolean; // keeps a living world warm after its star has gone
   gfeDrain?: number; // unsustainable
   enables?: string; // conversion / action key
 }
@@ -64,6 +65,7 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'foundry', name: 'Orbital Foundry', desc: 'Furnaces in orbit, fed by the belts.', era: 'dusk', tech: 'orbital_industry', cost: 50, matter: 20, max: 2, industry: 3, signature: 1 }),
   S({ id: 'mag_shield', name: 'Magnetic Shield', desc: 'A superconducting loop at the inner Lagrange point, standing in for a dead dynamo.', era: 'dusk', tech: 'magnetospherics', cost: 80, matter: 30, max: 1, habitable: true, declineMult: 0.4, upkeep: 1, signature: 1 }),
   S({ id: 'warrens', name: 'Deep Warrens', desc: 'Cities dug below the frost line, lit by strip lamps.', era: 'dusk', tech: 'subterranean_cities', cost: 60, matter: 15, max: 3, notBodies: ['deep', 'gas_giant', 'asteroids'], cap: { kin: 4 }, upkeep: 0.5, signature: 0.3 }),
+  S({ id: 'orbital_lamps', name: 'Orbital Lamps', desc: 'A ring of fusion lamps in orbit, standing in for a dying or dead sun. While they burn, a living world stays alive after its star is gone. They are very hungry.', era: 'dusk', tech: 'fusion', cost: 140, matter: 60, max: 1, habitable: true, warms: true, declineMult: 0.5, upkeep: 6, signature: 3 }),
   S({ id: 'core_stimulator', name: 'Core Stimulator', desc: 'Deep-bored reactors keeping the mantle soft a little longer.', era: 'dusk', tech: 'deep_mantle', cost: 120, matter: 40, max: 1, habitable: true, coreHeatBonus: 0.3, declineMult: 0.7, upkeep: 1, signature: 1 }),
   S({ id: 'comet_shepherd', name: 'Volatile Shepherding', desc: 'Nudges icy bodies inward to replace what the wind has stripped.', era: 'dusk', tech: 'comet_shepherding', cost: 90, matter: 20, max: 1, habitable: true, vitalityOnce: 0.15, declineMult: 0.8, signature: 0.5 }),
   S({ id: 'cryo_hall', name: 'Cryo Hall', desc: 'Rows of cold berths. Every one of them a promise to wake someone later.', era: 'dusk', tech: 'cold_sleep', cost: 50, matter: 15, max: 2, cryoCap: 10, upkeep: 0.3, signature: 0.2 }),

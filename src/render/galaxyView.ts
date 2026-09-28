@@ -148,7 +148,11 @@ export class GalaxyView {
   private heartGlow: THREE.Sprite;
   private territory: THREE.Points | null = null;
   pickables: Pickable[] = [];
-  private fleetAnim = new Map<string, { from: THREE.Vector3; to: THREE.Vector3; t0: number; mesh: THREE.Object3D }>();
+  private pings: { mesh: THREE.Mesh; t0: number; delay: number }[] = [];
+  private fleetAnim = new Map<
+    string,
+    { from: THREE.Vector3; to: THREE.Vector3; t0: number; mesh: THREE.Sprite; kind: FleetKind; star: THREE.Vector3 | null; dest: THREE.Vector3 | null; phase: number; pick: Pickable | null }
+  >();
   private seedBuilt = -1;
   private time = 0;
   selected: string | null = null;
@@ -373,18 +377,27 @@ export class GalaxyView {
         lp.push(p.x, p.y, p.z, b.pos.x, b.pos.y, b.pos.z);
       }
       let anim = this.fleetAnim.get(f.id);
-      if (!anim) {
-        const mesh = fleetGlyph(f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis') ? '#ffd6a8' : '#bfe9ff');
+      const war = f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis');
+      const kind: FleetKind = war ? 'war' : f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls)) ? 'settler' : f.ships.every((s) => s.cls === 'probe') ? 'probe' : 'other';
+      const star = f.at ? new THREE.Vector3(state.systems[f.at].pos.x, state.systems[f.at].pos.y, state.systems[f.at].pos.z) : null;
+      const dest = f.to ? new THREE.Vector3(state.systems[f.to].pos.x, state.systems[f.to].pos.y, state.systems[f.to].pos.z) : null;
+      if (!anim || anim.kind !== kind) {
+        if (anim) this.fleetGroup.remove(anim.mesh);
+        const mesh = fleetGlyph(kind, war ? '#ffc98f' : kind === 'settler' ? '#9ff5e6' : '#bfe9ff');
         this.fleetGroup.add(mesh);
         mesh.position.copy(p);
-        anim = { from: p.clone(), to: p.clone(), t0: now, mesh };
+        anim = { from: p.clone(), to: p.clone(), t0: now, mesh, kind, star, dest, phase: (hashId(f.id) % 628) / 100, pick: null };
         this.fleetAnim.set(f.id, anim);
       } else {
         anim.from = anim.mesh.position.clone();
         anim.to = p;
         anim.t0 = now;
+        anim.star = star;
+        anim.dest = dest;
       }
-      this.pickables.push({ kind: 'fleet', id: f.id, pos: p.clone() });
+      const pick: Pickable = { kind: 'fleet', id: f.id, pos: p.clone() };
+      anim.pick = pick;
+      this.pickables.push(pick);
     }
     for (const [id, a] of this.fleetAnim) {
       if (!seen.has(id)) {
@@ -445,20 +458,68 @@ export class GalaxyView {
     this.group.add(this.swarmPts);
   }
 
+  /** A discovery: rings of light spread from a system for a couple of seconds. */
+  ping(state: GameState, systemId: string, color: string, now: number) {
+    const s = state.systems[systemId];
+    if (!s) return;
+    for (const delay of [0, 0.45]) {
+      const m = new THREE.Mesh(
+        new THREE.RingGeometry(0.92, 1, 64),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }),
+      );
+      m.position.set(s.pos.x, s.pos.y, s.pos.z);
+      m.renderOrder = 4;
+      this.group.add(m);
+      this.pings.push({ mesh: m, t0: now, delay });
+    }
+  }
+
   update(dt: number, now: number, camera: THREE.Camera, cameraDistance: number) {
     this.time += dt;
     const t = this.time;
+    for (let i = this.pings.length - 1; i >= 0; i--) {
+      const pg = this.pings[i];
+      const u = (now - pg.t0 - pg.delay) / 2.4;
+      const mat = pg.mesh.material as THREE.MeshBasicMaterial;
+      if (u >= 1) {
+        this.group.remove(pg.mesh);
+        pg.mesh.geometry.dispose();
+        mat.dispose();
+        this.pings.splice(i, 1);
+        continue;
+      }
+      const e = Math.max(0, u);
+      pg.mesh.lookAt(camera.position);
+      pg.mesh.scale.setScalar(Math.max(1.5, cameraDistance * 0.01) * (1 + e * 9));
+      mat.opacity = u < 0 ? 0 : 0.9 * (1 - e) * (1 - e);
+    }
     this.dustMat.uniforms.uTime.value = t;
     this.nodeMat.uniforms.uTime.value = t;
     this.swarmMat.uniforms.uTime.value = t;
     // fleets glide to their new positions over a fixed real-time span
+    const sz = Math.max(1.8, cameraDistance * 0.034);
     for (const a of this.fleetAnim.values()) {
       const u = Math.min(1, (now - a.t0) / 1.4);
       const e = u * u * (3 - 2 * u);
-      a.mesh.position.lerpVectors(a.from, a.to, e);
-      a.mesh.lookAt(camera.position);
-      const s = Math.max(0.6, cameraDistance * 0.012);
-      a.mesh.scale.setScalar(s);
+      let heading: THREE.Vector3 | null = null;
+      if (a.star && u >= 1) {
+        // parked: a slow station-keeping orbit around the star, on elapsed time
+        const r = 2.6;
+        const ang = a.phase + t * 0.25;
+        a.mesh.position.set(a.star.x + Math.cos(ang) * r, a.star.y + 0.9, a.star.z + Math.sin(ang) * r);
+        heading = new THREE.Vector3(-Math.sin(ang), 0, Math.cos(ang)).add(a.mesh.position);
+      } else {
+        a.mesh.position.lerpVectors(a.from, a.to, e);
+        heading = a.dest ?? a.to;
+      }
+      if (a.pick) a.pick.pos.copy(a.mesh.position);
+      // point the hull along its heading as seen on screen
+      const p0 = a.mesh.position.clone().project(camera);
+      const p1 = heading.clone().project(camera);
+      const dx = (p1.x - p0.x) * ((camera as THREE.PerspectiveCamera).aspect ?? 1);
+      const dy = p1.y - p0.y;
+      if (dx * dx + dy * dy > 1e-10) a.mesh.material.rotation = Math.atan2(dy, dx) - Math.PI / 2;
+      a.mesh.scale.setScalar(sz);
     }
     if (this.selected) {
       const p = this.pickables.find((x) => x.id === this.selected);
@@ -525,14 +586,114 @@ export function radialTexture(): THREE.Texture {
   return _radial;
 }
 
-function fleetGlyph(color: string): THREE.Object3D {
-  const shape = new THREE.Shape();
-  shape.moveTo(0, 1);
-  shape.lineTo(0.62, -0.7);
-  shape.lineTo(0, -0.3);
-  shape.lineTo(-0.62, -0.7);
-  shape.closePath();
-  const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false }));
+type FleetKind = 'settler' | 'probe' | 'war' | 'other';
+const _fleetTex = new Map<string, THREE.CanvasTexture>();
+
+/** A small hand-drawn hull seen from above, nose up: thin lit edges, a dark body, a warm drive. */
+function fleetTexture(kind: FleetKind, color: string): THREE.CanvasTexture {
+  const key = `${kind}:${color}`;
+  const hit = _fleetTex.get(key);
+  if (hit) return hit;
+  const S = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d')!;
+  g.translate(S / 2, S / 2);
+  // drive glow at the stern
+  const drive = g.createRadialGradient(0, 34, 0, 0, 34, 26);
+  drive.addColorStop(0, 'rgba(255,190,120,0.95)');
+  drive.addColorStop(0.35, 'rgba(255,120,60,0.35)');
+  drive.addColorStop(1, 'rgba(255,90,40,0)');
+  g.fillStyle = drive;
+  g.fillRect(-30, 8, 60, 56);
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  const hull = (pts: [number, number][]) => {
+    g.beginPath();
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (const [x, y] of pts.slice(1)) g.lineTo(x, y);
+    g.closePath();
+    g.fillStyle = 'rgba(10,12,16,0.92)';
+    g.fill();
+    g.strokeStyle = color;
+    g.lineWidth = 3;
+    g.stroke();
+  };
+  if (kind === 'probe') {
+    hull([[0, -30], [7, -8], [6, 26], [-6, 26], [-7, -8]]);
+    g.strokeStyle = color;
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(0, -30);
+    g.lineTo(0, -50);
+    g.stroke();
+    g.beginPath();
+    g.arc(0, -8, 11, Math.PI * 1.1, Math.PI * 1.9);
+    g.stroke();
+  } else if (kind === 'war') {
+    hull([[0, -40], [20, 10], [12, 28], [-12, 28], [-20, 10]]);
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(-9, 28);
+    g.lineTo(-9, 36);
+    g.moveTo(9, 28);
+    g.lineTo(9, 36);
+    g.stroke();
+  } else {
+    // a long hauler: spine, forward module, radiator fins; settlers carry a cargo drum
+    hull([[0, -42], [8, -30], [8, 26], [-8, 26], [-8, -30]]);
+    g.lineWidth = 2;
+    g.strokeStyle = color;
+    g.beginPath();
+    g.moveTo(-8, -6);
+    g.lineTo(-24, 2);
+    g.lineTo(-24, 12);
+    g.moveTo(8, -6);
+    g.lineTo(24, 2);
+    g.lineTo(24, 12);
+    g.stroke();
+    if (kind === 'settler') {
+      g.beginPath();
+      g.arc(0, 4, 12, 0, Math.PI * 2);
+      g.fillStyle = 'rgba(10,12,16,0.95)';
+      g.fill();
+      g.lineWidth = 2.5;
+      g.stroke();
+      g.fillStyle = color;
+      g.beginPath();
+      g.arc(0, 4, 3.5, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  // spine highlight and a single running light
+  g.globalAlpha = 0.55;
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(0, -26);
+  g.lineTo(0, 20);
+  g.stroke();
+  g.globalAlpha = 1;
+  g.fillStyle = color;
+  g.shadowColor = color;
+  g.shadowBlur = 8;
+  g.beginPath();
+  g.arc(0, -34, 2.4, 0, Math.PI * 2);
+  g.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  _fleetTex.set(key, t);
+  return t;
+}
+
+function fleetGlyph(kind: FleetKind, color: string): THREE.Sprite {
+  const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: fleetTexture(kind, color), transparent: true, depthWrite: false, depthTest: false }));
   m.renderOrder = 3;
   return m;
+}
+
+function hashId(id: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return h >>> 0;
 }

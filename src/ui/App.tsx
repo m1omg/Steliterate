@@ -9,9 +9,10 @@ import { CodexModal, LogModal, SaveModal, SettingsModal } from './screens/Misc';
 import { MainMenu, Setup } from './screens/Menu';
 import { ResearchModal } from './screens/Research';
 import { SignalsModal } from './screens/Signals';
+import { FleetsModal, SettlementsModal } from './screens/Lists';
 import { CrossingScreen, EraIntro, EventModal, OutcomeScreen, eventResult } from './screens/Story';
 import { TipLayer } from './Tip';
-import { game, modal, rev, screen, targeting, toast } from './store';
+import { dismissToast, game, modal, rev, screen, targeting, toasts } from './store';
 
 function applyEraColors(s: GameState | null) {
   const era = ERA_BY_ID[s?.era ?? 'dusk'];
@@ -21,19 +22,16 @@ function applyEraColors(s: GameState | null) {
   r.setProperty('--neon', era.neon);
 }
 
-function Toast() {
-  const t = toast.value;
-  useEffect(() => {
-    if (!t) return;
-    const id = window.setTimeout(() => {
-      if (toast.value === t) toast.value = null;
-    }, 3800);
-    return () => window.clearTimeout(id);
-  }, [t]);
-  if (!t) return null;
+function Toasts() {
+  const list = toasts.value;
+  if (!list.length) return null;
   return (
-    <div class={`toast panel ${t.kind}`} role="status" onClick={() => (toast.value = null)}>
-      {t.text}
+    <div class="toasts" role="status" aria-live="polite">
+      {list.map((t) => (
+        <div key={t.id} class={`toast panel ${t.kind}`} onClick={() => dismissToast(t.id)}>
+          {t.text}
+        </div>
+      ))}
     </div>
   );
 }
@@ -53,6 +51,10 @@ function ModalHost({ s }: { s: GameState | null }) {
   switch (m.kind) {
     case 'research':
       return <ResearchModal s={s} />;
+    case 'fleets':
+      return <FleetsModal s={s} />;
+    case 'settlements':
+      return <SettlementsModal s={s} />;
     case 'charters':
       return <ChartersModal s={s} />;
     case 'threads':
@@ -108,7 +110,7 @@ export function App() {
         </>
       )}
       <ModalHost s={s} />
-      <Toast />
+      <Toasts />
       <TipLayer />
     </div>
   );

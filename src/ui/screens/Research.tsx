@@ -5,7 +5,7 @@ import { ERAS } from '../../game/eras';
 import { setResearch, startWork } from '../../game/sim/actions';
 import { workCost, workRequirementMet } from '../../game/sim/endings';
 import { project } from '../../game/sim/projection';
-import { techAvailable, techCost, techVisible } from '../../game/sim/research';
+import { RESEARCH_DRAW, techAvailable, techCost, techVisible } from '../../game/sim/research';
 import { eraIndex, hasTech } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
 import { n0, n1, pct } from '../fmt';
@@ -42,7 +42,11 @@ export function ResearchModal({ s }: { s: GameState }) {
     if (act((g) => setResearch(g, t.id))) sfx('select');
   };
   return (
-    <ModalFrame title="Research" eyebrow={`${n1(p.insight)} insight per turn${s.civ.work ? ' · half goes to the Great Work' : ''}`} icon="research">
+    <ModalFrame
+      title="Research"
+      eyebrow={`${n1(p.insight)} insight per turn${s.civ.work ? ' · half goes to the Great Work' : ''} · the labs draw ${n1(p.insight * RESEARCH_DRAW)} energy while working`}
+      icon="research"
+    >
       <div class="research-top">
         {cur ? (
           <div class="grow">
@@ -55,7 +59,10 @@ export function ResearchModal({ s }: { s: GameState }) {
             <div class="dim" style={{ fontSize: '12px', marginTop: '4px' }}>{cur.desc}</div>
           </div>
         ) : (
-          <div class="grow warn">Nothing is being researched. Choose a project below.{s.civ.flags.insight_bank ? ` ${n0(s.civ.flags.insight_bank)} insight is waiting.` : ''}</div>
+          <div class="grow warn">
+            Research is paused: the labs draw no power, and half of each turn’s insight is kept for later. Choose a project below to resume.
+            {s.civ.flags.insight_bank ? ` ${n0(s.civ.flags.insight_bank)} insight is waiting and goes into whatever you choose.` : ''}
+          </div>
         )}
       </div>
       <div style={{ overflowX: 'auto' }}>

@@ -53,7 +53,18 @@ const TECH_PRIORITY = [
 ];
 
 function pickResearch(state: GameState) {
-  if (state.civ.researching) return;
+  const civ = state.civ;
+  const cap = reserveCapacity(state, computeMods(state));
+  const net = civ.flags.last_energy_net ?? 0;
+  // in an energy crisis, stand the labs down; resume once the reserve recovers
+  if (civ.researching && net < 0 && civ.energy < cap * 0.12) {
+    civ.flags.auto_paused = 1;
+    setResearch(state, null);
+    return;
+  }
+  if (civ.flags.auto_paused && civ.energy < cap * 0.35) return;
+  civ.flags.auto_paused = 0;
+  if (civ.researching) return;
   const avail = new Set(availableTechs(state).map((t) => t.id));
   const next = TECH_PRIORITY.find((id) => avail.has(id));
   if (next) setResearch(state, next);
@@ -162,13 +173,14 @@ function planFleets(state: GameState) {
   for (const f of Object.values(state.fleets)) {
     if (!f.at || f.order !== 'idle') continue;
     const here = state.systems[f.at];
-    const settler = f.ships.find((s) => ['ark', 'seedcore', 'spore', 'vaultship'].includes(s.cls));
+    const settler = f.ships.find((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls));
     if (settler) {
-      const thread: ThreadId = settler.cls === 'ark' ? 'kin' : settler.cls === 'spore' ? 'lattice' : settler.cls === 'vaultship' ? 'coldminds' : 'echoes';
+      const thread: ThreadId = settler.cls === 'ark' || settler.cls === 'lighter' ? 'kin' : settler.cls === 'spore' ? 'lattice' : settler.cls === 'vaultship' ? 'coldminds' : 'echoes';
       let best: Body | null = null;
       let bestS = 0;
       for (const [sid, k] of Object.entries(civ.known)) {
         if (!k) continue;
+        if (settler.cls === 'lighter' && sid !== here.id) continue;
         const sys = state.systems[sid];
         const d = distLy(here, sys);
         for (const bid of sys.bodies) {
@@ -195,7 +207,7 @@ function planFleets(state: GameState) {
   // build settlers
   const nCol = colonies(state).length;
   const want = state.era === 'dusk' ? 3 + Math.floor(state.eraTurn / 12) : 4 + Math.floor(state.eraTurn / 10);
-  const inFlight = Object.values(state.fleets).filter((f) => f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship'].includes(s.cls))).length + capital.queue.filter((q) => q.kind === 'ship').length;
+  const inFlight = Object.values(state.fleets).filter((f) => f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls))).length + capital.queue.filter((q) => q.kind === 'ship').length;
   // only expand what the economy can carry: new settlements cost upkeep long before they pay
   const pr = project(state);
   const netNow = pr.energyIn - pr.energyOut;
@@ -207,8 +219,15 @@ function planFleets(state: GameState) {
     if (eraIndex(state.era) >= 2) opts.unshift('vaultship');
     for (const k of opts) if (!queueBuild(state, capital.id, 'ship', k)) break;
   }
+  const lighterBusy = Object.values(state.fleets).some((f) => f.ships.some((x) => x.cls === 'lighter')) || capital.queue.some((q) => q.key === 'lighter');
+  const homeCols = colonies(state).filter((c) => c.systemId === capital.systemId).length;
+  // only worth a Lighter where the world itself still has room to live
+  const freeHere = home.bodies.some((bid) => {
+    const b = state.bodies[bid];
+    return b && !b.colonyId && !canSettle(state, b, 'kin') && b.habitability * b.vitality > 0.05;
+  });
+  if (state.era === 'dusk' && affordable && !lighterBusy && freeHere && homeCols < 2 && capital.pops.kin >= 6 && capital.queue.length < 3) queueBuild(state, capital.id, 'ship', 'lighter');
   if (state.eraTurn % 25 === 3 && Object.values(state.fleets).filter((f) => f.ships.some((s) => s.cls === 'probe')).length < 2) queueBuild(state, capital.id, 'ship', 'probe');
-  void home;
 }
 
 function planThreads(state: GameState) {

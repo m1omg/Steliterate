@@ -40,11 +40,20 @@ export class SystemView {
   primaryRadius = 5;
   neon = new THREE.Color('#4fe3d1');
   selectedBody: string | null = null;
+
+  /** Where a body is right now, and how big: for the camera to fly to and follow. */
+  bodyFocus(bodyId: string): { pos: THREE.Vector3; radius: number } | null {
+    const p = this.pickables.find((x) => x.id === `body:${bodyId}`);
+    if (!p) return null;
+    const rig = this.planets.find((x) => x.body.id === bodyId);
+    const radius = rig ? (rig.body.kind === 'asteroids' ? 4 : rig.body.size) : 3;
+    return { pos: p.pos.clone(), radius };
+  }
   private selRing: THREE.Mesh;
 
   constructor() {
     this.stars = backgroundStars();
-    this.selRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.06, 64), new THREE.MeshBasicMaterial({ color: '#ffd9b0', transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+    this.selRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 96), new THREE.MeshBasicMaterial({ color: '#ffd9b0', transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
     this.selRing.visible = false;
   }
 
@@ -78,7 +87,9 @@ export class SystemView {
     this.buildPrimary(state, sys);
     const light = primaryLightColor(state, sys);
     const colonized = new Set(Object.values(state.colonies).filter((c) => c.systemId === sys.id).map((c) => c.bodyId));
-    for (const bid of sys.bodies) {
+    // until a probe has surveyed it, a system is only its star: the worlds are not charted yet
+    const surveyed = state.civ.known[sys.id] === 2 || colonized.size > 0;
+    for (const bid of surveyed ? sys.bodies : []) {
       const b = state.bodies[bid];
       if (!b || b.dissolved) continue;
       if (b.kind === 'deep') {
@@ -87,7 +98,7 @@ export class SystemView {
       }
       this.buildBody(state, sys, b, light, colonized.has(b.id));
     }
-    this.buildStructures(state, sys);
+    if (surveyed) this.buildStructures(state, sys);
     this.buildSwarm(state, sys);
     this.buildFleets(state, sys);
     this.group.add(this.fleets);
@@ -247,6 +258,8 @@ export class SystemView {
         uKind: { value: KIND_INDEX[b.kind] ?? 0 },
         uVitality: { value: b.vitality },
         uLights: { value: settled ? Math.min(1, 0.35 + pops / 12) : 0 },
+        // how built-up the settlement is: people plus everything they have built
+        uDev: { value: settled && col ? Math.min(1, 0.15 + pops / 30 + Object.values(col.structures).reduce((a, n) => a + n, 0) / 40) : 0 },
         uNeon: { value: this.neon },
         uSunDir: { value: new THREE.Vector3(1, 0, 0) },
         uSunColor: { value: light.color },
@@ -452,6 +465,10 @@ export class SystemView {
         this.selRing.position.copy(p.pos);
         this.selRing.lookAt(camera.position);
         this.selRing.scale.setScalar(r * (1 + 0.05 * Math.sin(t * 3)));
+        // close up the planet fills the view; the ring steps back so it does not glare over it
+        const k = camera.position.distanceTo(p.pos) / r;
+        const fade = Math.min(1, Math.max(0, (k - 3) / 9));
+        (this.selRing.material as THREE.MeshBasicMaterial).opacity = 0.12 + 0.68 * fade * fade * (3 - 2 * fade);
       } else this.selRing.visible = false;
     } else this.selRing.visible = false;
   }

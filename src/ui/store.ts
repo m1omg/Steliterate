@@ -9,6 +9,8 @@ import type { GameState } from '../game/types';
 export type Screen = 'menu' | 'setup' | 'game';
 export type Modal =
   | { kind: 'research' }
+  | { kind: 'fleets' }
+  | { kind: 'settlements' }
   | { kind: 'charters' }
   | { kind: 'threads' }
   | { kind: 'signals' }
@@ -40,7 +42,13 @@ export const modal = signal<Modal>(null);
 export const selection = signal<Selection | null>(null);
 export const view = signal<'galaxy' | 'system'>('galaxy');
 export const hover = signal<{ text: string; x: number; y: number } | null>(null);
-export const toast = signal<{ text: string; kind: 'info' | 'bad' | 'good'; at: number } | null>(null);
+export interface Toast {
+  id: number;
+  text: string;
+  kind: 'info' | 'bad' | 'good';
+}
+export const toasts = signal<Toast[]>([]);
+let toastId = 0;
 export const busy = signal(false);
 /** A fleet waiting for the player to pick its destination on the map. */
 export const targeting = signal<{ fleetId: string; order: 'move' | 'survey' } | null>(null);
@@ -61,7 +69,11 @@ export function bump() {
 }
 
 export function notify(text: string, kind: 'info' | 'bad' | 'good' = 'info') {
-  toast.value = { text, kind, at: performance.now() };
+  // the same message twice in a row is one message
+  if (toasts.value.some((t) => t.text === text)) return;
+  const t: Toast = { id: ++toastId, text, kind };
+  toasts.value = [...toasts.value, t].slice(-3);
+  window.setTimeout(() => dismissToast(t.id), kind === 'bad' ? 6000 : 4500);
 }
 
 /** Run a game action; show its error if any, refresh otherwise. */
@@ -96,6 +108,34 @@ export function saveSettings(s: Settings) {
   settings.value = s;
   try {
     localStorage.setItem('steliterate.settings', JSON.stringify(s));
+  } catch {
+    /* storage may be unavailable */
+  }
+}
+
+export function dismissToast(id: number) {
+  toasts.value = toasts.value.filter((t) => t.id !== id);
+}
+
+/** What the player has chosen to show in the corners of the HUD (kept between sessions). */
+export interface HudPrefs {
+  forecasts: boolean;
+  feed: boolean;
+}
+function loadHudPrefs(): HudPrefs {
+  const d: HudPrefs = { forecasts: true, feed: true };
+  try {
+    const t = localStorage.getItem('steliterate.hud');
+    return t ? { ...d, ...JSON.parse(t) } : d;
+  } catch {
+    return d;
+  }
+}
+export const hudPrefs = signal<HudPrefs>(loadHudPrefs());
+export function setHudPrefs(p: Partial<HudPrefs>) {
+  hudPrefs.value = { ...hudPrefs.value, ...p };
+  try {
+    localStorage.setItem('steliterate.hud', JSON.stringify(hudPrefs.value));
   } catch {
     /* storage may be unavailable */
   }

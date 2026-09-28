@@ -1,3 +1,4 @@
+import { ANOMALIES } from '../game/data/events';
 import type { BodyKind, Focus, PrimaryKind } from '../game/types';
 import type { IconName } from './icons';
 
@@ -63,10 +64,12 @@ export function bodyIcon(k: BodyKind): IconName {
 }
 
 export const TRAIT_NAME: Record<string, [string, string]> = {
+  ...Object.fromEntries(ANOMALIES.map((a) => [a.id, [a.name, a.tip] as [string, string]])),
   homeworld: ['Homeworld', 'Where the Kin were born. They will not forgive its abandonment.'],
   tidally_locked: ['Tidally locked', 'One face always toward the star: a burning day side, a frozen night side, and a thin habitable ring between.'],
   failing_dynamo: ['Failing dynamo', 'The core is freezing and the magnetic field is fading. The stellar wind is stripping the air.'],
   subsurface_ocean: ['Buried ocean', 'Liquid water under the ice, kept warm by tides.'],
+  once_alive: ['Once alive', 'This world had seas, air and life. It froze or dried out when its warmth was gone.'],
 };
 
 export const FOCUS: { id: Focus; name: string; tip: string }[] = [
