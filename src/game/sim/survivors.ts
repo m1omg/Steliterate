@@ -77,20 +77,25 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         });
         continue;
       }
-      if (!sv.contact) continue;
-      const talk = canConverse(myClock, sv.clock, sv.way === 'lattice' ? 6 : 3);
-      if (state.turn - sv.lastSent < 5 || !talk) continue;
+      const talk = sv.contact && canConverse(myClock, sv.clock, sv.way === 'lattice' ? 6 : 3);
 
+      // with nothing left they fade, whether or not we can hear them go
       if (sv.health <= 0.02) {
         sv.alive = false;
         sv.fate = 'faded';
-        sv.lastSent = state.turn;
         for (const sid of sv.systems) {
           const s = state.systems[sid];
           if (!s) continue;
           const b = s.bodies.map((id) => state.bodies[id]).find((x) => x && x.kind !== 'deep' && !x.relic && !x.dissolved);
-          if (b) b.relic = { kind: 'tomb', state: 'found' };
+          // a tomb we know of if we knew them; otherwise one for a survey to find
+          if (b) b.relic = { kind: 'tomb', state: sv.contact ? 'found' : 'hidden' };
         }
+        if (!sv.contact) continue;
+        if (!talk) {
+          log(state, `${sv.name}’s lights have gone out. Whatever they said at the end, their clock and ours were too far apart for us to follow.`, 'bad', sv.homeSystemId);
+          continue;
+        }
+        sv.lastSent = state.turn;
         sendSignal(state, {
           from: sv.id,
           kind: 'last',
@@ -105,6 +110,9 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         });
         continue;
       }
+      if (!sv.contact) continue;
+      if (state.turn - sv.lastSent < 5 || !talk) continue;
+
       // what do they need, and how do they feel about us
       if (sv.health < 0.45 && rng.chance(0.55)) {
         const ask = Math.round(20 + (1 - sv.health) * 50);
