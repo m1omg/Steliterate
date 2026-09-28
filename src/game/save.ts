@@ -1,3 +1,8 @@
+import { CHARTER_BY_ID } from './data/charters';
+import { SHIP_BY_ID } from './data/ships';
+import { STRUCTURE_BY_ID } from './data/structures';
+import { TECH_BY_ID } from './data/techs';
+import { defaultWater } from './gen';
 import type { GameState } from './types';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
@@ -14,6 +19,54 @@ function ls(): Storage | null {
   }
 }
 
+/** The current save format. Bump it with a new step in migrate() whenever saved state changes shape. */
+export const SAVE_VERSION = 2;
+
+/**
+ * Bring a save from any earlier version up to date, so old games keep working. Every step is
+ * additive: fill in what the old format lacked, never throw away the player's progress.
+ */
+export function migrate(s: GameState): GameState {
+  const v = s.saveVersion ?? 1;
+  // containers a partial or hand-edited save might lack
+  s.flags ??= {};
+  s.fired ??= {};
+  s.pending ??= [];
+  s.log ??= [];
+  s.battles ??= [];
+  s.fleets ??= {};
+  s.swarms ??= {};
+  s.survivors ??= {};
+  s.signals ??= [];
+  s.forecasts ??= [];
+  s.civ.flags ??= {};
+  s.civ.research ??= {};
+  s.civ.techs ??= [];
+  s.civ.charters ??= [];
+  if (v < 2) {
+    // v2: every world has water coverage (it decides whether a dead world ices over)
+    for (const b of Object.values(s.bodies)) {
+      if (b.water === undefined) b.water = b.traits.includes('homeworld') ? 0.42 : defaultWater(b.kind, (b.seed % 1000) / 1000);
+    }
+  }
+  // anything this version of the game no longer knows is dropped rather than left to break it
+  s.civ.techs = s.civ.techs.filter((t) => TECH_BY_ID[t]);
+  s.civ.charters = s.civ.charters.filter((c) => CHARTER_BY_ID[c]);
+  if (s.civ.researching && !TECH_BY_ID[s.civ.researching]) s.civ.researching = null;
+  for (const c of Object.values(s.colonies)) {
+    c.structures ??= {};
+    c.queue ??= [];
+    for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]) delete c.structures[k];
+    c.queue = c.queue.filter((q) => (q.kind === 'ship' ? SHIP_BY_ID[q.key] : STRUCTURE_BY_ID[q.key]));
+  }
+  for (const f of Object.values(s.fleets)) {
+    f.ships = f.ships.filter((x) => SHIP_BY_ID[x.cls]);
+    if (!f.ships.length) delete s.fleets[f.id];
+  }
+  s.saveVersion = SAVE_VERSION;
+  return s;
+}
+
 function serialize(state: GameState): string {
   // Infinity does not survive JSON; encode it
   return JSON.stringify(state, (_k, v) => (v === Infinity ? '__inf' : v === -Infinity ? '__-inf' : v));
@@ -23,7 +76,7 @@ export function deserialize(text: string): GameState | null {
   try {
     const s = JSON.parse(text, (_k, v) => (v === '__inf' ? Infinity : v === '__-inf' ? -Infinity : v)) as GameState;
     if (!s || typeof s !== 'object' || !s.systems || !s.civ) return null;
-    return s;
+    return migrate(s);
   } catch {
     return null;
   }

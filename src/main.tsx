@@ -11,7 +11,7 @@ import { music } from './audio/music';
 import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import { App } from './ui/App';
-import { act, bump, engine, game, modal, notify, screen, selection, setEngine, settings, targeting, view } from './ui/store';
+import { act, bump, engine, game, hudPrefs, modal, notify, screen, selection, setEngine, settings, targeting, toggleOrbits, view } from './ui/store';
 import { doEndTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
 import './ui/styles.css';
@@ -62,6 +62,7 @@ const eng = new Engine(stage, {
 });
 setEngine(eng);
 eng.setQuality(settings.value.quality);
+eng.orbitsPaused = hudPrefs.value.orbitsPaused;
 eng.start();
 document.documentElement.style.fontSize = `${14 * settings.value.uiScale}px`;
 
@@ -163,6 +164,11 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (open) return;
+  if (key === 'p') {
+    e.preventDefault();
+    toggleOrbits();
+    return;
+  }
   if (key === 'h') {
     const s = game.value;
     if (!s) return;

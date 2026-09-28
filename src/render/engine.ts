@@ -278,10 +278,11 @@ export class Engine {
     this.system.selectedBody = id?.startsWith('body:') ? id.slice(5) : id;
     if (this.view !== 'system') return;
     if (id?.startsWith('body:')) this.focusBody(id.slice(5));
-    else if (was && this.rig.follow) {
-      // let go of the planet and step back to the whole system
-      this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.0);
+    else if (id && was && this.rig.follow) {
+      // picked the star (or something else): let go of the planet and see the whole system
+      this.frameSystem();
     }
+    // nothing picked (a click on empty space): the followed world stays in focus
   }
 
   /**
@@ -295,6 +296,20 @@ export class Engine {
   /** Mark a discovery on the galaxy map. */
   ping(systemId: string, color = '#9ff5e6') {
     if (this.state) this.galaxy.ping(this.state, systemId, color, this.now);
+  }
+
+  /** In the system view: step back to see the whole system (lets go of any followed world). */
+  frameSystem() {
+    if (this.view !== 'system') return;
+    this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.0);
+  }
+
+  get orbitsPaused() {
+    return this.system.orbitsPaused;
+  }
+
+  set orbitsPaused(v: boolean) {
+    this.system.orbitsPaused = v;
   }
 
   /** In the system view: fly to a planet and keep it in the middle of the screen. */

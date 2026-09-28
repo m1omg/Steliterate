@@ -33,6 +33,9 @@ export class OrbitRig {
   autoYaw = 0; // slow cinematic drift (radians per second)
   /** Something to keep centred (a planet on its orbit). Cleared when the player pans. */
   follow: (() => THREE.Vector3 | null) | null = null;
+  /** Where the view sits relative to what it follows: panning moves this, not the focus. */
+  private followOffset = new THREE.Vector3();
+  private followOffsetGoal = new THREE.Vector3();
 
   constructor(camera: THREE.PerspectiveCamera, el: HTMLElement) {
     this.camera = camera;
@@ -72,6 +75,8 @@ export class OrbitRig {
     if (!now) return;
     this.flight = { from: this.target.clone(), to: now.clone(), fromD: this.distance, toD: distance, t: 0, dur: Math.max(0.05, duration) };
     this.follow = fn;
+    this.followOffset.set(0, 0, 0);
+    this.followOffsetGoal.set(0, 0, 0);
   }
 
   private down = (e: PointerEvent) => {
@@ -152,9 +157,13 @@ export class OrbitRig {
     const s = this.distance * 0.0016;
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
     const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    if (this.follow) {
+      // still following: slide the view around the followed world instead of letting go
+      this.followOffsetGoal.addScaledVector(right, -dx * s).addScaledVector(fwd, -dy * s);
+      return;
+    }
     this.goalTarget.addScaledVector(right, -dx * s).addScaledVector(fwd, -dy * s);
     this.flight = null;
-    this.follow = null;
   }
 
   update(dt: number) {
@@ -176,9 +185,10 @@ export class OrbitRig {
       this.distance = this.goalDistance;
       if (u >= 1) this.flight = null;
     } else if (followed) {
-      // locked on: exact, so the view never lags by frame rate
-      this.goalTarget.copy(followed);
-      this.target.copy(followed);
+      // locked on: exact, so the view never lags by frame rate (only a pan offset eases in)
+      this.followOffset.lerp(this.followOffsetGoal, k);
+      this.goalTarget.copy(followed).add(this.followOffset);
+      this.target.copy(this.goalTarget);
       this.distance += (this.goalDistance - this.distance) * k;
     } else {
       this.target.lerp(this.goalTarget, k);

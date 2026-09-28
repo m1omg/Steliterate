@@ -2,6 +2,7 @@ import { generateWorld } from './gen';
 import { createColony, newFleet } from './sim/fleets';
 import { updateForecasts } from './sim/forecast';
 import { log } from './sim/util';
+import { SAVE_VERSION } from './save';
 import type { GameSettings, GameState } from './types';
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -27,5 +28,6 @@ export function newGame(partial: Partial<GameSettings> = {}): GameState {
   newFleet(state, home.id, ['probe'], 'Lamplighter');
   log(state, `${settings.civName}. ${hw.name}, the last living world of ${home.name}. The long dusk begins.`, 'era');
   updateForecasts(state);
+  state.saveVersion = SAVE_VERSION;
   return state;
 }

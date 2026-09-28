@@ -400,4 +400,6 @@ export interface GameState {
   outcome: Outcome | null;
   flags: Record<string, number>;
   fired: Record<string, number>;
+  /** Save format version (absent in the first published saves: version 1). */
+  saveVersion?: number;
 }

@@ -37,6 +37,9 @@ export class SystemView {
   private fleets = new THREE.Group();
   private stars: THREE.Points;
   private time = 0;
+  /** Orbital clock: stands still while orbits are paused (the stars keep burning on `time`). */
+  private orbitTime = 0;
+  orbitsPaused = false;
   primaryRadius = 5;
   neon = new THREE.Color('#4fe3d1');
   selectedBody: string | null = null;
@@ -391,7 +394,9 @@ export class SystemView {
 
   update(dt: number, camera: THREE.Camera) {
     this.time += dt;
+    if (!this.orbitsPaused) this.orbitTime += dt;
     const t = this.time;
+    const ot = this.orbitTime;
     if (this.starMat) this.starMat.uniforms.uTime.value = t;
     for (const m of this.glowMats) m.uniforms.uTime.value = t;
     for (const m of this.diskMats) m.uniforms.uTime.value = t;
@@ -401,13 +406,13 @@ export class SystemView {
     });
     const pick = (id: string) => this.pickables.find((p) => p.id === id);
     for (const pr of this.planets) {
-      const a = pr.phase + t * pr.speed;
+      const a = pr.phase + ot * pr.speed;
       pr.pivot.rotation.y = a;
       if (pr.body.kind === 'asteroids') {
         pr.mesh.rotation.y = a * 0.3;
         continue;
       }
-      pr.mesh.rotation.y = pr.body.traits.includes('tidally_locked') ? 0 : t * 0.1;
+      pr.mesh.rotation.y = pr.body.traits.includes('tidally_locked') ? 0 : ot * 0.1;
       const world = new THREE.Vector3();
       pr.mesh.getWorldPosition(world);
       const p = pick(`body:${pr.body.id}`);
@@ -435,7 +440,7 @@ export class SystemView {
       const up = new THREE.Vector3(0, 1, 0);
       for (let i = 0; i < this.dysonSpin.length; i++) {
         const s = this.dysonSpin[i];
-        const a = s.phase + t * s.speed;
+        const a = s.phase + ot * s.speed;
         const base = new THREE.Vector3().crossVectors(s.axis, up).normalize();
         if (base.lengthSq() < 0.01) base.set(1, 0, 0);
         v.copy(base).applyAxisAngle(s.axis, a).multiplyScalar(s.r);
@@ -447,7 +452,7 @@ export class SystemView {
     }
     for (const f of this.fleets.children) {
       const o = f.userData.orbit as { r: number; speed: number; phase: number };
-      const a = o.phase + t * o.speed;
+      const a = o.phase + ot * o.speed;
       f.position.set(Math.cos(a) * o.r, 1.2, Math.sin(a) * o.r);
       f.lookAt(Math.cos(a + 0.1) * o.r, 1.2, Math.sin(a + 0.1) * o.r);
     }

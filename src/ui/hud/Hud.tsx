@@ -8,7 +8,7 @@ import type { GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { act, busy, engine, hudPrefs, modal, rev, selection, setHudPrefs, view } from '../store';
+import { act, busy, engine, hudPrefs, modal, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
 import { goToColony } from '../screens/Lists';
 import { doEndTurn } from '../turnflow';
 import { Chronometer } from './Chronometer';
@@ -272,6 +272,16 @@ function ViewSwitch({ s }: { s: GameState }) {
       <button class="btn small ghost" onClick={home} data-tip="Back to your capital">
         <Icon name="colony" />
       </button>
+      {view.value === 'system' && (
+        <>
+          <button class={`btn small ghost ${hudPrefs.value.orbitsPaused ? 'on' : ''}`} onClick={() => { sfx('click'); toggleOrbits(); }} data-tip={hudPrefs.value.orbitsPaused ? 'Set the worlds moving again (P)' : 'Hold the worlds still in their orbits (P)'}>
+            <Icon name="clock" /> {hudPrefs.value.orbitsPaused ? 'Play' : 'Pause'}
+          </button>
+          <button class="btn small ghost" onClick={() => { sfx('click'); engine()?.frameSystem(); }} data-tip="See the whole system (lets go of a followed world)" aria-label="See the whole system">
+            <Icon name="focus" />
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -121,9 +121,10 @@ export function dismissToast(id: number) {
 export interface HudPrefs {
   forecasts: boolean;
   feed: boolean;
+  orbitsPaused: boolean;
 }
 function loadHudPrefs(): HudPrefs {
-  const d: HudPrefs = { forecasts: true, feed: true };
+  const d: HudPrefs = { forecasts: true, feed: true, orbitsPaused: false };
   try {
     const t = localStorage.getItem('steliterate.hud');
     return t ? { ...d, ...JSON.parse(t) } : d;
@@ -139,4 +140,12 @@ export function setHudPrefs(p: Partial<HudPrefs>) {
   } catch {
     /* storage may be unavailable */
   }
+}
+
+/** Freeze or release the planets' orbits in the system view (remembered between sessions). */
+export function toggleOrbits() {
+  const paused = !hudPrefs.value.orbitsPaused;
+  setHudPrefs({ orbitsPaused: paused });
+  const e = engine();
+  if (e) e.orbitsPaused = paused;
 }
