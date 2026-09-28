@@ -203,7 +203,7 @@ button { font: inherit; color: inherit; }
 
 .rail { position: absolute; left: 8px; top: calc(128px + env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; gap: 4px; padding: 6px; }
 
-.drawer { position: absolute; right: 8px; top: calc(78px + env(safe-area-inset-top, 0px)); width: 380px; max-height: calc(100vh - 170px - env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; }
+.drawer { position: absolute; right: 8px; top: calc(78px + env(safe-area-inset-top, 0px)); width: 380px; max-height: calc(100vh - 262px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; }
 .drawer-head { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); }
 .drawer-head h2 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 22px; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.05; text-wrap: balance; }
 .drawer-body { padding: 10px 14px 14px; }

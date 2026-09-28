@@ -135,7 +135,21 @@ interface Layer {
   arpIn: GainNode;
   wobble: GainNode; // tape wobble, in cents, fed to every oscillator
   persistent: AudioScheduledSourceNode[];
+  silenced: boolean; // a recorded track is playing instead
+  track: { el: HTMLAudioElement; gain: GainNode } | null;
 }
+
+type StyleKey = keyof typeof STYLES;
+
+// Recorded tracks (generated instrumentals). Where one is missing or fails to load, the
+// procedural score plays instead.
+const TRACKS: Partial<Record<StyleKey, string>> = {
+  menu: 'music/title.mp3',
+  dusk: 'music/dusk.mp3',
+  degenerate: 'music/degenerate.mp3',
+  blackhole: 'music/blackhole.mp3',
+  dark: 'music/dark.mp3',
+};
 
 class Music {
   private layer: Layer | null = null;
@@ -174,7 +188,7 @@ class Music {
     if (this.styleKey() !== was) this.apply();
   }
 
-  private styleKey(): keyof typeof STYLES {
+  private styleKey(): StyleKey {
     if (this.mood === 'menu') return 'menu';
     if (this.mood === 'outcome') return 'outcome';
     return this.era;
@@ -193,7 +207,19 @@ class Music {
       old.bus.gain.setValueAtTime(old.bus.gain.value, t);
       old.bus.gain.linearRampToValueAtTime(0, t + 3.5);
       for (const n of old.persistent) n.stop(t + 3.6);
-      window.setTimeout(() => old.bus.disconnect(), 5000);
+      const tr = old.track;
+      if (tr) {
+        tr.gain.gain.cancelScheduledValues(t);
+        tr.gain.gain.setValueAtTime(tr.gain.gain.value, t);
+        tr.gain.gain.linearRampToValueAtTime(0, t + 3.5);
+      }
+      window.setTimeout(() => {
+        old.bus.disconnect();
+        if (tr) {
+          tr.el.pause();
+          tr.gain.disconnect();
+        }
+      }, 5000);
     }
     const bus = a.ctx.createGain();
     bus.gain.setValueAtTime(0, t);
@@ -271,15 +297,52 @@ class Music {
       src.start(t);
       persistent.push(src);
     }
-    this.layer = { style, bus, arpIn, wobble, persistent };
+    const layer: Layer = { style, bus, arpIn, wobble, persistent, silenced: false, track: null };
+    this.layer = layer;
     this.step = 0;
     this.next = t + 0.1;
+    this.startTrack(layer, this.styleKey());
+  }
+
+  /** Try the recorded track for this style; once it is actually playing, hush the synth. */
+  private startTrack(layer: Layer, key: StyleKey) {
+    const a = audio();
+    const url = TRACKS[key];
+    if (!a || !url) return;
+    const el = new Audio();
+    el.src = url;
+    el.loop = true;
+    el.preload = 'auto';
+    let src: MediaElementAudioSourceNode;
+    try {
+      src = a.ctx.createMediaElementSource(el);
+    } catch {
+      return;
+    }
+    const gain = a.ctx.createGain();
+    gain.gain.value = 0;
+    src.connect(gain).connect(a.music);
+    layer.track = { el, gain };
+    el.addEventListener('playing', () => {
+      if (this.layer !== layer) return;
+      const t = a.ctx.currentTime;
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(gain.gain.value, t);
+      gain.gain.linearRampToValueAtTime(0.5, t + 3); // mastered tracks are much louder than the synth
+      layer.bus.gain.cancelScheduledValues(t);
+      layer.bus.gain.setValueAtTime(layer.bus.gain.value, t);
+      layer.bus.gain.linearRampToValueAtTime(0, t + 3);
+      window.setTimeout(() => (layer.silenced = true), 3200);
+    }, { once: true });
+    el.play().catch(() => {
+      /* missing file or blocked: the procedural score carries on */
+    });
   }
 
   private tick() {
     const a = audio();
     const L = this.layer;
-    if (!a || !L) return;
+    if (!a || !L || L.silenced) return;
     const now = a.ctx.currentTime;
     if (this.next < now - 0.2) this.next = now + 0.05; // fell behind (tab was asleep): skip, don't burst
     const stepDur = 60 / L.style.bpm / 4;

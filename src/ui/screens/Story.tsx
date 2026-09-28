@@ -140,7 +140,7 @@ export function CrossingScreen({ s }: { s: GameState }) {
   const from = ERA_BY_ID[r.from];
   return (
     <div class="crossing" role="dialog" aria-modal="true" aria-label={to.name}>
-      <div class="crossing-art" style={{ backgroundImage: `url(art/crossing_${r.to}.webp), url(art/${r.to}.webp)` }} />
+      <div class="crossing-art" style={{ backgroundImage: `url(art/${r.to}.webp)` }} />
       <div class="crossing-body">
         <div class="from">The end of {from.name}</div>
         <h1>{to.name}</h1>
@@ -200,7 +200,7 @@ export function OutcomeScreen({ s }: { s: GameState }) {
   const head = o.kind === 'victory' ? 'An ending' : o.kind === 'dark' ? 'The dark ending' : o.kind === 'endurance' ? 'Endurance' : 'The end';
   return (
     <div class="crossing" role="dialog" aria-modal="true" aria-label={o.ending}>
-      <div class="crossing-art" style={{ backgroundImage: `url(art/ending_${o.kind}.webp), url(art/${s.era}.webp)` }} />
+      <div class="crossing-art" style={{ backgroundImage: `url(art/${o.kind === 'dark' ? 'hunger' : s.era}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{head} · turn {o.turn} · η {formatEta(o.eta, s.era)}</div>
         <h1 class={o.kind === 'defeat' || o.kind === 'dark' ? 'bad' : ''}>{o.ending}</h1>

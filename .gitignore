@@ -3,3 +3,6 @@ dist/
 artifact/
 *.log
 .DS_Store
+
+# raw generated art (graded copies live in public/art)
+art-src/
