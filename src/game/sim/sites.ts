@@ -1,4 +1,4 @@
-import { STRUCTURES, type StructureDef } from '../data/structures';
+import { STRUCTURES, structureLabel, type StructureDef } from '../data/structures';
 import { formatYears } from '../eras';
 import { bodyClimate, hawkingLight, sourceLight } from '../physics';
 import type { Body, GameState, ThreadId } from '../types';
@@ -25,39 +25,49 @@ function buildableAt(state: GameState, b: Body, d: StructureDef): boolean {
   return true;
 }
 
-/** Energy a settlement here could collect in a turn at the Tide: its Hearth plus every collector we can build. */
-export function powerAt(state: GameState, b: Body): number {
-  if (b.dissolved) return 0;
+/**
+ * Energy a settlement here could collect in a turn at the Tide, part by part: its Hearth plus
+ * every collector we can build. Collectors catch the star's light the same anywhere in its
+ * system (the game does not dim it with distance); what sets worlds apart is their core heat.
+ */
+export function powerParts(state: GameState, b: Body): { label: string; e: number }[] {
+  if (b.dissolved) return [];
   const sys = state.systems[b.systemId];
   const p = sys.primary;
   const L = turnStep(state, 0).turnLength;
   const light = b.rogue ? 0 : sourceLight(state, sys, state.years, isFinite(L) ? L : 0).light;
   const hole = p.kind === 'black_hole' || p.kind === 'smbh';
-  let e = 2 * Math.max(0.25, Math.min(1.5, light), b.coreHeat * 0.8, hole && eraIndex(state.era) >= 1 ? 1 : 0);
+  const parts = [{ label: 'Hearth', e: 2 * Math.max(0.25, Math.min(1.5, light), b.coreHeat * 0.8, hole && eraIndex(state.era) >= 1 ? 1 : 0) }];
   for (const d of STRUCTURES) {
     if (!d.energy || !buildableAt(state, b, d)) continue;
     const a = d.energy.amount * d.max;
+    let e = 0;
     switch (d.energy.mode) {
       case 'light':
-        e += a * light;
+        e = a * light;
         break;
       case 'geo':
-        e += a * b.coreHeat;
+        e = a * b.coreHeat;
         break;
       case 'rekindle':
-        e += a * (p.rekindle ?? 0);
+        e = a * (p.rekindle ?? 0);
         break;
       case 'spin':
-        if (p.spin > 0) e += a;
+        e = p.spin > 0 ? a : 0;
         break;
       case 'hawking':
-        e += a * hawkingLight(p, state.years);
+        e = a * hawkingLight(p, state.years);
         break;
       default:
         break; // fuel burners and the late-age harvesters work the same anywhere
     }
+    if (e > 0.05) parts.push({ label: `${d.max > 1 ? `${d.max}× ` : ''}${structureLabel(d.id, sys).name}`, e });
   }
-  return e;
+  return parts;
+}
+
+export function powerAt(state: GameState, b: Body): number {
+  return powerParts(state, b).reduce((a, x) => a + x.e, 0);
 }
 
 /** Matter a settlement here could raise in a turn at the Tide: mines, skimmers and lifters. */
@@ -98,11 +108,13 @@ export function siteValue(state: GameState, b: Body, thread: ThreadId): SiteValu
     }
     case 'echoes':
     case 'chorus': {
-      const p = powerAt(state, b);
+      const parts = powerParts(state, b);
+      const p = parts.reduce((a, x) => a + x.e, 0);
+      const sys = state.systems[b.systemId];
       return {
         score: p,
         label: `≈${Math.round(p)} energy`,
-        tip: 'Minds on substrate need power, not air: about what a settlement here could collect each turn at the Tide, with its Hearth and every collector you can build now (light × the star, geothermal × the core).',
+        tip: `Minds on substrate need power, not air: about what a settlement here could collect each turn at the Tide, with its Hearth and every collector you can build now.\n${parts.map((x) => `${x.label}: ${x.e.toFixed(1)}`).join('\n')}\nCollectors catch ${sys.name}'s light the same on any of its worlds; its core heat (${Math.round(b.coreHeat * 100)}%) is what sets a world apart.`,
       };
     }
     case 'lattice': {

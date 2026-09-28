@@ -788,6 +788,17 @@ function EffectLine({ fx }: { fx: BuildEffect }) {
 
 // ------------------------------------------------------------------ fleet
 
+type SettleSort = 'auto' | 'near' | ThreadId;
+/** Other measures a settler list can be ranked by: key, button, tip, heading. */
+const SETTLE_SORTS: [SettleSort, string, string, string][] = [
+  ['auto', 'Best for them', '', ''],
+  ['kin', 'Livable', 'Habitability × vitality and room for Kin without domes', 'most livable first'],
+  ['echoes', 'Power', 'The energy a settlement there could collect each turn at the Tide', 'most power first'],
+  ['lattice', 'Matter', 'What mines, skimmers and lifters could raise there each turn', 'most matter first'],
+  ['coldminds', 'Lasting', 'How long before the world falls into its dead star', 'longest-lasting first'],
+  ['near', 'Nearest', 'The shortest trips first', 'nearest first'],
+];
+
 /** What each kind of settler looks for first. */
 const SETTLE_BEST: Record<ThreadId, string> = {
   kin: 'most livable first',
@@ -815,13 +826,17 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
       .slice(0, 10),
   ];
   const settleDef = settler ? SHIP_BY_ID[settler.cls] : null;
+  // settlers are ranked for their own kind unless the player picks another measure
+  const [settleSort, setSettleSort] = useState<SettleSort>('auto');
+  useEffect(() => setSettleSort('auto'), [f.id]);
+  const measure: ThreadId = settleSort === 'auto' || settleSort === 'near' ? (settleDef?.settles?.thread ?? 'kin') : settleSort;
   const settleTargets =
     here && settleDef
       ? Object.values(s.bodies)
           .filter((b) => s.civ.known[b.systemId] === 2 && (!settleDef.inSystem || b.systemId === here.id) && !canSettle(s, b, settleDef.settles!.thread))
-          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), hab: b.habitability * b.vitality, v: siteValue(s, b, settleDef.settles!.thread) }))
+          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), hab: b.habitability * b.vitality, v: siteValue(s, b, measure) }))
           // each kind of mind wants something different: Kin livable ground, Echoes power, the Lattice matter, Coldminds time
-          .sort((a, b) => Number(isBeacon(s, s.systems[b.b.systemId])) - Number(isBeacon(s, s.systems[a.b.systemId])) || b.v.score - a.v.score || a.ly - b.ly)
+          .sort((a, b) => Number(isBeacon(s, s.systems[b.b.systemId])) - Number(isBeacon(s, s.systems[a.b.systemId])) || (settleSort === 'near' ? a.ly - b.ly : b.v.score - a.v.score) || a.ly - b.ly)
           .slice(0, 10)
       : [];
   const swarmHere = here ? Object.values(s.swarms).find((w) => w.systemId === here.id && !w.tamed) : null;
@@ -946,10 +961,17 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               <div class="section">
                 <h3>
                   Where to settle{' '}
-                  <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }} data-tip={settleTargets[0]?.v.tip}>
-                    · {SETTLE_BEST[settleDef?.settles?.thread ?? 'kin']}
+                  <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                    · {settleSort === 'auto' ? SETTLE_BEST[settleDef?.settles?.thread ?? 'kin'] : SETTLE_SORTS.find((x) => x[0] === settleSort)?.[3]}
                   </span>
                 </h3>
+                <div class="row wrap" style={{ gap: '3px', marginBottom: '4px' }}>
+                  {SETTLE_SORTS.map(([k, label, tip]) => (
+                    <button key={k} class={`btn small ghost ${settleSort === k ? 'on' : ''}`} data-tip={k === 'auto' ? `What ${THREAD_DEFS[settleDef?.settles?.thread ?? 'kin'].name} need most: ${SETTLE_BEST[settleDef?.settles?.thread ?? 'kin']}.` : tip} onClick={() => setSettleSort(k)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <div class="list">
                   {settleTargets.map(({ b, ly, hab, v }) => (
                     <div key={b.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
