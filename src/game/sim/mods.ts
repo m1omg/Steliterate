@@ -13,7 +13,6 @@ export interface Mods {
   industryMult: number;
   upkeep: Record<ThreadId, number>;
   detect: number; // ly
-  crossing: number;
   flags: Set<string>;
 }
 
@@ -28,7 +27,6 @@ export function computeMods(state: GameState): Mods {
     industryMult: 1,
     upkeep: { kin: 1, echoes: 1, chorus: 1, lattice: 1, coldminds: 1 },
     detect: 60,
-    crossing: 1,
     flags: new Set(),
   };
   for (const id of state.civ.techs) {
@@ -42,7 +40,6 @@ export function computeMods(state: GameState): Mods {
     if (e.insightMult) m.insightMult *= e.insightMult;
     if (e.industryMult) m.industryMult *= e.industryMult;
     if (e.detect) m.detect = Math.max(m.detect, e.detect);
-    if (e.crossing) m.crossing *= e.crossing;
     if (e.upkeep) for (const t of THREADS) m.upkeep[t] *= e.upkeep[t] ?? 1;
     e.flags?.forEach((f) => m.flags.add(f));
   }

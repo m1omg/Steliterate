@@ -1,5 +1,6 @@
 import { ERA_BY_ID, eta, nextEra, tideLength } from '../eras';
 import { STRUCTURE_BY_ID } from '../data/structures';
+import { TECH_BY_ID } from '../data/techs';
 import type { Colony, CrossingReport, EraId, GameState } from '../types';
 import { THREADS } from '../types';
 import { capacity, reserveCapacity } from './economy';
@@ -8,6 +9,9 @@ import type { Mods } from './mods';
 import { colonies, log, popsOf, totalPops, withRng } from './util';
 
 // The three great storms. Each transforms the world; your preparation decides what survives.
+
+/** Each crossing's protocols: they halve the losses of that crossing only, as they say. */
+const PROTOCOLS: Partial<Record<EraId, string>> = { dusk: 'last_light_protocols', degenerate: 'great_decay_protocols', blackhole: 'last_horizon_protocols' };
 
 function decayProof(c: Colony): boolean {
   return Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof);
@@ -26,8 +30,10 @@ function migrateToBlackHoles(state: GameState): number {
   let moved = 0;
   for (const c of colonies(state)) {
     const here = state.systems[c.systemId];
-    if (here.primary.kind === 'black_hole' || here.primary.kind === 'smbh') continue;
-    const target = holes.slice().sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z))[0];
+    const atHole = here.primary.kind === 'black_hole' || here.primary.kind === 'smbh';
+    // a vault already at a hole stays there, but a planet it stood on has dissolved: into the Deep
+    if (atHole && state.bodies[c.bodyId]?.kind === 'deep') continue;
+    const target = atHole ? here : holes.slice().sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z))[0];
     const deep = state.bodies[target.bodies[0]];
     const oldBody = state.bodies[c.bodyId];
     if (oldBody) oldBody.colonyId = null;
@@ -64,7 +70,8 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
   const popsBefore = totalPops(state);
   const coloniesBefore = colonies(state).length;
   const civ = state.civ;
-  const crossingMult = mods.crossing;
+  const protocols = PROTOCOLS[from];
+  const crossingMult = protocols && civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1;
 
   withRng(state, (rng) => {
     if (from === 'dusk') {
@@ -213,7 +220,8 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
       }
       lines.push({ text: 'The Heart, the last and largest black hole, has evaporated. Nothing in the universe is making light any more.', kind: 'info' });
       const prep = Math.min(1, civ.energy / Math.max(200, reserveCapacity(state, mods) * 0.5));
-      civ.continuity = Math.round(100 * (0.5 + 0.5 * prep));
+      // what the crossing costs: Continuity short of 100, and energy (the protocols halve both)
+      civ.continuity = Math.round(100 - 50 * (1 - prep) * crossingMult);
       lines.push({ text: `We enter the dark with ${Math.round(civ.energy)} energy saved, and Continuity at ${civ.continuity}.`, kind: prep > 0.6 ? 'good' : 'bad' });
       for (const c of colonies(state)) {
         if (c.pops.kin > 0 && !((c.structures.garden_ark ?? 0) > 0)) {
@@ -222,7 +230,7 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
         }
       }
       for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health -= 0.4;
-      civ.energy *= 0.85;
+      civ.energy *= 1 - 0.15 * crossingMult;
     }
   });
 
