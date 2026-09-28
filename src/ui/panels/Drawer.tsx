@@ -36,7 +36,7 @@ import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { BODY_NAME, FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon } from '../labels';
 import { act, engine, rev, selection, targeting, view } from '../store';
-import { FORTIFY_BONUS, isWarFleet } from '../../game/sim/fleets';
+import { FORTIFY_BONUS, LIVING_WORLD, isWarFleet } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 
 export function Drawer({ s }: { s: GameState }) {
@@ -106,6 +106,41 @@ function distFromCapital(s: GameState, sys: StarSystem): number {
   return from ? distLy(from, sys) : 0;
 }
 
+/** A world's name inside its system: "III", "Deep". */
+function shortWorldName(b: Body, sys: StarSystem): string {
+  return b.name.startsWith(`${sys.name} `) ? b.name.slice(sys.name.length + 1) : b.name;
+}
+
+/** Every world of the system, one tap away, with the one shown marked. */
+function WorldStrip({ s, sys, current }: { s: GameState; sys: StarSystem; current: string }) {
+  if (s.civ.known[sys.id] !== 2) return null;
+  const worlds = sys.bodies.map((id) => s.bodies[id]).filter((b) => b && !b.dissolved);
+  if (worlds.length < 2) return null;
+  return (
+    <nav class="world-strip" aria-label={`Worlds of ${sys.name}`}>
+      <button class="ws-item ws-sys" onClick={() => selectSystem(sys.id)} data-tip={`${sys.name}: the whole system`}>
+        <Icon name={primaryIcon(sys.primary.kind)} />
+      </button>
+      {worlds.map((b) => {
+        const c = b.colonyId ? s.colonies[b.colonyId] : null;
+        const hab = b.habitability * b.vitality;
+        return (
+          <button
+            key={b.id}
+            class={`ws-item${b.id === current ? ' on' : ''}${c ? ' ours' : hab >= LIVING_WORLD ? ' living' : ''}`}
+            aria-current={b.id === current ? 'true' : undefined}
+            onClick={() => b.id !== current && selectBody(b)}
+            data-tip={`${c ? `${c.name} (our settlement)` : b.name} · ${BODY_NAME[b.kind]}${b.kind !== 'deep' ? ` · ${pct(hab)} habitable` : ''}`}
+          >
+            <Icon name={bodyIcon(b.kind)} />
+            <span>{shortWorldName(b, sys)}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 // ------------------------------------------------------------------ system
 
 function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
@@ -139,7 +174,40 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
         )}
       </div>
       <div class="drawer-body scroll">
-        <p class="flavor" style={{ margin: '0 0 8px' }}>{src.label}.</p>
+        {known === 2 && (
+          <div class="section" style={{ marginTop: 0 }}>
+            <h3>
+              Worlds <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>· click one to look at it</span>
+            </h3>
+            <div class="list">
+              {sys.bodies
+                .map((id) => s.bodies[id])
+                .filter((b) => b && !b.dissolved)
+                .map((b) => {
+                  const c = b.colonyId ? s.colonies[b.colonyId] : null;
+                  const hab = b.habitability * b.vitality;
+                  return (
+                    <div key={b.id} class="list-item" role="button" tabIndex={0} onClick={() => selectBody(b)} onKeyDown={(e) => e.key === 'Enter' && selectBody(b)}>
+                      <Icon name={bodyIcon(b.kind)} cls={c ? 'neon' : hab >= LIVING_WORLD ? 'boon' : ''} />
+                      <span class="grow">
+                        {c ? c.name : b.name} <span class="faint" style={{ fontSize: '11px' }}>{BODY_NAME[b.kind]}</span>
+                      </span>
+                      {b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls="accent" />}
+                      {b.rogue && <span class="chip warn">rogue</span>}
+                      {b.feeding && <span class="chip boon">feeding</span>}
+                      {c ? (
+                        <span class="mono neon" style={{ fontSize: '12px' }} data-tip="People living here">{popsOf(c)}</span>
+                      ) : b.kind !== 'deep' ? (
+                        <span class={`mono ${hab >= LIVING_WORLD ? 'boon' : 'faint'}`} style={{ fontSize: '11px' }} data-tip="Habitable: habitability × vitality">{pct(hab)}</span>
+                      ) : null}
+                      <Icon name="arrow_right" cls="faint" />
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+        <p class="flavor" style={{ margin: '8px 0' }}>{src.label}.</p>
         <dl class="kv">
           <dt>Light for collectors</dt>
           <dd class="mono" data-tip="How much a light collector here gathers compared with its rating.">{src.light > 0 ? `×${n1(src.light)}` : 'none'}</dd>
@@ -191,31 +259,6 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           <p class="dim" style={{ fontSize: '12px' }}>
             Seen from afar: the star is known, its worlds are not. Send a probe to survey it.
           </p>
-        )}
-        {known === 2 && (
-          <div class="section">
-            <h3>Bodies</h3>
-            <div class="list">
-              {sys.bodies
-                .map((id) => s.bodies[id])
-                .filter((b) => b && !b.dissolved)
-                .map((b) => {
-                  const c = b.colonyId ? s.colonies[b.colonyId] : null;
-                  return (
-                    <div key={b.id} class="list-item" onClick={() => selectBody(b)}>
-                      <Icon name={bodyIcon(b.kind)} cls={c ? 'neon' : ''} />
-                      <span class="grow">
-                        {c ? c.name : b.name} <span class="faint" style={{ fontSize: '11px' }}>{BODY_NAME[b.kind]}</span>
-                      </span>
-                      {known === 2 && b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls="accent" />}
-                      {b.rogue && <span class="chip warn">rogue</span>}
-                      {b.feeding && <span class="chip boon">feeding</span>}
-                      {c ? <span class="mono neon" style={{ fontSize: '12px' }}>{popsOf(c)}</span> : known === 2 && b.habitability > 0.3 ? <span class="mono faint" style={{ fontSize: '11px' }} data-tip="Habitability × vitality">{pct(b.habitability * b.vitality)}</span> : null}
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
         )}
         {(fleets.length > 0 || swarms.length > 0) && (
           <div class="section">
@@ -282,6 +325,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
           {b.rogue && <span class="chip warn" data-tip="Stripped from its star by a close stellar pass. Only its own heat is left.">rogue</span>}
           {b.feeding && <span class="chip boon" data-tip="Being torn apart by its dead star; the debris stream heats the star.">feeding its star</span>}
         </div>
+        <WorldStrip s={s} sys={sys} current={b.id} />
       </div>
       <div class="drawer-body scroll">
         {!surveyed ? (
@@ -393,6 +437,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
           {c.overdrive && <span class="chip warn">overdrive</span>}
           {b.rogue && <span class="chip warn">rogue</span>}
         </div>
+        <WorldStrip s={s} sys={sys} current={b.id} />
         <div class="row" style={{ marginTop: '8px', gap: '4px' }}>
           <button class={`btn small ${tab === 'overview' ? 'primary' : ''}`} onClick={() => setTab('overview')}>Overview</button>
           <button class={`btn small ${tab === 'build' ? 'primary' : ''}`} onClick={() => setTab('build')}>
@@ -404,23 +449,31 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
         {tab === 'overview' ? (
           <>
             {y && (
+              <>
+              <div class="eyebrow yields-head">This settlement, each turn</div>
               <div class="yields">
-                <div data-tip={`Energy\n${lineTip('energy')}\nUpkeep −${n1(y.energyUpkeep)}`}>
-                  <Icon name="energy" cls="accent" /> <span class={`mono ${eNet >= 0 ? 'good' : 'bad'}`}>{signed(eNet)}</span>
+                <div data-tip={`Energy: captured minus upkeep\n${lineTip('energy')}\nUpkeep −${n1(y.energyUpkeep)}`}>
+                  <span class="yv"><Icon name="energy" cls="accent" /> <span class={`mono ${eNet >= 0 ? 'good' : 'bad'}`}>{signed(eNet)}</span></span>
+                  <span class="yl">Energy</span>
                 </div>
-                <div data-tip={`Matter\n${lineTip('matter')}${y.matterUpkeep ? `\nUsed −${n1(y.matterUpkeep)}` : ''}`}>
-                  <Icon name="matter" /> <span class="mono">{signed(y.matter - y.matterUpkeep)}</span>
+                <div data-tip={`Matter: mined minus used\n${lineTip('matter')}${y.matterUpkeep ? `\nUsed −${n1(y.matterUpkeep)}` : ''}`}>
+                  <span class="yv"><Icon name="matter" /> <span class="mono">{signed(y.matter - y.matterUpkeep)}</span></span>
+                  <span class="yl">Matter</span>
                 </div>
-                <div data-tip={`Industry\n${lineTip('industry')}`}>
-                  <Icon name="industry" /> <span class="mono">{n1(y.industry)}</span>
+                <div data-tip={`Industry: builds this settlement's queue\n${lineTip('industry')}`}>
+                  <span class="yv"><Icon name="industry" /> <span class="mono">{n1(y.industry)}</span></span>
+                  <span class="yl">Industry</span>
                 </div>
-                <div data-tip={`Insight\n${lineTip('insight')}`}>
-                  <Icon name="insight" /> <span class="mono">{n1(y.insight)}</span>
+                <div data-tip={`Insight: drives research\n${lineTip('insight')}`}>
+                  <span class="yv"><Icon name="insight" /> <span class="mono">{n1(y.insight)}</span></span>
+                  <span class="yl">Insight</span>
                 </div>
-                <div data-tip={`Accord\n${lineTip('accord')}`}>
-                  <Icon name="accord" /> <span class="mono">{signed(y.accord)}</span>
+                <div data-tip={`Accord: buys Charters\n${lineTip('accord')}`}>
+                  <span class="yv"><Icon name="accord" /> <span class="mono">{signed(y.accord)}</span></span>
+                  <span class="yl">Accord</span>
                 </div>
               </div>
+              </>
             )}
             <div class="section">
               <h3>People</h3>
@@ -549,20 +602,12 @@ function ExpandSection({ s, c }: { s: GameState; c: Colony }) {
                 key={def.id}
                 class="btn small"
                 disabled={!!error}
-                data-tip={`${def.name}\n${def.desc}${error ? `\n${error}` : ''}`}
+                data-tip={`${def.name}\n${def.desc}\nCosts ${cost.industry} industry${cost.matter > 0 ? ` and ${cost.matter} matter` : ''}.${error ? `\n${error}` : ''}`}
                 onClick={() => act((g) => queueBuild(g, c.id, 'ship', def.id)) && sfx('build')}
               >
                 <Icon name="colonize" /> {def.name}
                 <span class="mono faint">
-                  {cost.industry}
-                  <Icon name="industry" />
-                  {cost.matter > 0 && (
-                    <>
-                      {' '}
-                      {cost.matter}
-                      <Icon name="matter" />
-                    </>
-                  )}
+                  {cost.industry} ind{cost.matter > 0 ? ` / ${cost.matter} mat` : ''}
                 </span>
                 {n > 0 && <span class="chip neon">{n} queued</span>}
               </button>
@@ -609,8 +654,8 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
               <div class="row">
                 <span class="grow">{def?.name ?? q.key}</span>
                 <span class="mono faint" style={{ fontSize: '11px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
-                <button class="btn ghost small" aria-label="Move up" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>
-                <button class="btn ghost small" aria-label="Move down" disabled={i === c.queue.length - 1} onClick={() => act((g) => moveQueued(g, c.id, q.uid, 1))}>▼</button>
+                <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>
+                <button class="btn ghost small" aria-label="Move down" data-tip="Build this later (move down the queue)" disabled={i === c.queue.length - 1} onClick={() => act((g) => moveQueued(g, c.id, q.uid, 1))}>▼</button>
                 <button class="btn ghost small" aria-label="Remove" data-tip="Remove (half the materials come back)" onClick={() => act((g) => removeQueued(g, c.id, q.uid))}>
                   <Icon name="close" />
                 </button>
@@ -630,6 +675,10 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
           <button class={`btn small ${kind === 'structure' ? 'primary' : ''}`} onClick={() => setKind('structure')}>Structures</button>
           <button class={`btn small ${kind === 'ship' ? 'primary' : ''}`} onClick={() => setKind('ship')}>Ships</button>
         </div>
+        <div class="list-head">
+          <span>{kind === 'structure' ? 'Click to queue · what one more adds here, per turn' : 'Click to queue'}</span>
+          <span>Cost</span>
+        </div>
         <div class="list">
           {list.map((x) => (
             <div
@@ -648,10 +697,10 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
                 <div class="build-desc">{x.desc}</div>
                 {x.error && <div class="faint" style={{ fontSize: '11px' }}>{x.error}</div>}
               </span>
-              <span class="mono faint" style={{ fontSize: '11px', textAlign: 'right' }}>
-                {x.cost.industry}<Icon name="industry" />
-                {x.cost.matter > 0 && <> {x.cost.matter}<Icon name="matter" /></>}
-                {x.cost.energy > 0 && <> {x.cost.energy}<Icon name="energy" /></>}
+              <span class="mono faint build-cost" data-tip={`Costs ${x.cost.industry} industry (the settlement's work)${x.cost.matter > 0 ? `, ${x.cost.matter} matter up front` : ''}${x.cost.energy > 0 ? `, ${x.cost.energy} energy` : ''}`}>
+                <span>{x.cost.industry} <Icon name="industry" /> ind</span>
+                {x.cost.matter > 0 && <span>{x.cost.matter} <Icon name="matter" /> mat</span>}
+                {x.cost.energy > 0 && <span>{x.cost.energy} <Icon name="energy" /> en</span>}
               </span>
             </div>
           ))}
@@ -688,6 +737,7 @@ function EffectLine({ fx }: { fx: BuildEffect }) {
       <span key={what} class={`fx ${v > 0 ? 'good' : 'bad'}`} data-tip={`${what} a turn, here`}>
         {signed(v)}
         <Icon name={icon} />
+        <span class="fx-word">{what.toLowerCase()}</span>
       </span>,
     );
   };

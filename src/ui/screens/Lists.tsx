@@ -189,6 +189,7 @@ function WorldsList({ s }: { s: GameState }) {
   void rev.value;
   const [sort, setSort] = useState<WorldSort>('hab');
   const [open, setOpen] = useState(true);
+  const [findsOnly, setFindsOnly] = useState(false);
   const cap = colonies(s).find((c) => c.id === s.civ.capitalId);
   const home = s.systems[cap?.systemId ?? s.civ.homeSystemId];
   const rows = Object.values(s.bodies)
@@ -198,6 +199,7 @@ function WorldsList({ s }: { s: GameState }) {
       const c = b.kind === 'gas_giant' || b.kind === 'ice_giant' ? null : bodyClimate(s, b);
       return { b, sys, hab: b.habitability * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)) };
     })
+    .filter((r) => !findsOnly || r.finds.length > 0)
     .sort((x, y) => (sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
   const sorts: [WorldSort, string][] = [['hab', 'Habitable'], ['room', 'Room'], ['near', 'Nearest'], ['name', 'Name']];
   return (
@@ -209,11 +211,14 @@ function WorldsList({ s }: { s: GameState }) {
           </button>
         ))}
         <span class="grow" />
+        <button class={`btn small ghost ${findsOnly ? 'on' : ''}`} onClick={() => setFindsOnly(!findsOnly)} data-tip="Only worlds where a survey turned up something remarkable">
+          With discoveries
+        </button>
         <button class={`btn small ghost ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} data-tip="Hide the worlds we have already settled">
           Unsettled only
         </button>
       </div>
-      {rows.length === 0 && <p class="dim">No worlds charted yet. Send a probe to survey a star.</p>}
+      {rows.length === 0 && <p class="dim">{findsOnly ? 'No discoveries among these worlds yet. Surveys turn one up now and then.' : 'No worlds charted yet. Send a probe to survey a star.'}</p>}
       <div class="list">
         {rows.map(({ b, sys, hab, room, c, ly, finds }) => (
           <div key={b.id} class="list-item world-row" onClick={() => goToBody(b)}>

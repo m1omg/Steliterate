@@ -94,14 +94,39 @@ export function autosave() {
   if (g) saveGame(g, true);
 }
 
+/** Interface sizes on offer; the whole UI layer is zoomed by the chosen factor. */
+export const UI_SCALES = [
+  { v: 0.85, label: 'Small' },
+  { v: 1, label: 'Normal' },
+  { v: 1.2, label: 'Large' },
+  { v: 1.4, label: 'Huge' },
+];
+
 function loadSettings(): Settings {
   const d: Settings = { music: 0.7, sfx: 0.7, quality: 'high', uiScale: 1 };
   try {
     const t = localStorage.getItem('steliterate.settings');
-    return t ? { ...d, ...JSON.parse(t) } : d;
+    const s: Settings = t ? { ...d, ...JSON.parse(t) } : d;
+    // older versions offered 0.9 / 1 / 1.12: snap to the nearest size now offered
+    s.uiScale = UI_SCALES.reduce((a, b) => (Math.abs(b.v - s.uiScale) < Math.abs(a.v - s.uiScale) ? b : a)).v;
+    return s;
   } catch {
     return d;
   }
+}
+
+/** The zoom actually in use: a bigger size is capped where the screen has no room for it. */
+export const uiZoom = signal(1);
+
+/** Zoom the UI layer (the 3D view keeps its own resolution). */
+export function applyUiScale(u: number) {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  // the layouts need about this much room, in the UI's own pixels
+  const room = w <= 760 ? Math.min(w / 380, h / 700) : Math.min(w / 1000, h / 640);
+  const z = u <= 1 ? u : Math.max(1, Math.min(u, room));
+  uiZoom.value = z;
+  document.documentElement.style.setProperty('--z', z.toFixed(3));
 }
 
 export function saveSettings(s: Settings) {

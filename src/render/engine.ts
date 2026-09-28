@@ -112,7 +112,11 @@ export class Engine {
     });
     this.renderer.domElement.addEventListener('dblclick', (e) => {
       const p = this.pickAt(e.clientX, e.clientY);
-      if (p && p.kind === 'system' && this.view === 'galaxy') this.events.onEnterSystem(p.id);
+      if (!p || p.kind !== 'system') return;
+      if (this.view === 'galaxy') this.events.onEnterSystem(p.id);
+      // with a mouse one click only selects; a double-click flies to the world, or back out to the whole system
+      else if (p.id.startsWith('body:')) this.focusBody(p.id.slice(5));
+      else this.frameSystem();
     });
     this.resize();
   }
@@ -272,11 +276,12 @@ export class Engine {
     this.pendingSwitch = go;
   }
 
-  select(id: string | null) {
+  /** Mark what is selected. `fly` (the default) also brings a picked world into focus in the system view. */
+  select(id: string | null, fly = true) {
     this.galaxy.selected = id && !id.startsWith('body:') ? id : null;
     const was = this.system.selectedBody;
     this.system.selectedBody = id?.startsWith('body:') ? id.slice(5) : id;
-    if (this.view !== 'system') return;
+    if (this.view !== 'system' || !fly) return;
     if (id?.startsWith('body:')) this.focusBody(id.slice(5));
     else if (id && was && this.rig.follow) {
       // picked the star (or something else): let go of the planet and see the whole system

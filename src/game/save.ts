@@ -132,6 +132,18 @@ export function importCode(code: string): GameState | null {
   }
 }
 
+/** A save as a file of its own: the same JSON the browser keeps, under a readable name. */
+export function saveFile(state: GameState): { name: string; text: string } {
+  const civ = (state.settings.civName || 'civilization').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'civilization';
+  return { name: `steliterate-${civ}-turn-${state.turn}.json`, text: serialize(state) };
+}
+
+/** Read a save from a file or pasted text: plain JSON or a save code, from any version. */
+export function readSave(text: string): GameState | null {
+  const t = text.trim().replace(/^\uFEFF/, '');
+  return t.startsWith('{') ? deserialize(t) : importCode(t);
+}
+
 export function cloneState(state: GameState): GameState {
   return deserialize(serialize(state))!;
 }

@@ -11,7 +11,7 @@ import { music } from './audio/music';
 import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import { App } from './ui/App';
-import { act, bump, engine, game, hudPrefs, modal, notify, screen, selection, setEngine, settings, targeting, toggleOrbits, view } from './ui/store';
+import { act, applyUiScale, bump, engine, game, hudPrefs, modal, notify, screen, selection, setEngine, settings, targeting, toggleOrbits, view } from './ui/store';
 import { doEndTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
 import './ui/styles.css';
@@ -44,7 +44,8 @@ const eng = new Engine(stage, {
       if (p.id.startsWith('body:')) selection.value = { kind: 'body', id: p.id.slice(5) };
       else selection.value = { kind: 'system', id: p.id };
     } else selection.value = { kind: p.kind, id: p.id };
-    eng.select(p.id);
+    // with a mouse a click only selects (double-click flies there); a tap flies at once
+    eng.select(p.id, pointerType !== 'mouse');
   },
   onHover() {},
   onEnterSystem(id) {
@@ -64,7 +65,8 @@ setEngine(eng);
 eng.setQuality(settings.value.quality);
 eng.orbitsPaused = hudPrefs.value.orbitsPaused;
 eng.start();
-document.documentElement.style.fontSize = `${14 * settings.value.uiScale}px`;
+applyUiScale(settings.value.uiScale);
+window.addEventListener('resize', () => applyUiScale(settings.value.uiScale));
 
 // Sound: allowed only after the first gesture.
 installUnlock();

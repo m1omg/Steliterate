@@ -109,7 +109,7 @@ export const MANUAL: CodexEntry[] = [
     id: 'm-controls',
     title: 'Controls',
     body: [
-      'Mouse: drag to turn the view, right-drag or two fingers to pan, wheel or pinch to zoom (toward whatever is under the pointer). Click to select. To look inside a star system: double-click it, tap it again on a touchscreen, press Look inside, or simply zoom in on it; zoom out past the edge of a system to return to the galaxy. Click a planet to fly to it: it stays in focus as it orbits (you can still turn, pan and zoom around it) until you pick another world, click the star, or press the whole-system button. Pause (or P) holds every world still in its orbit.',
+      'Mouse: drag to turn the view, right-drag or two fingers to pan, wheel or pinch to zoom (toward whatever is under the pointer). Click to select. To look inside a star system: double-click it, tap it again on a touchscreen, press Look inside, or simply zoom in on it; zoom out past the edge of a system to return to the galaxy. Click a planet to select it; double-click it (or tap it on a touchscreen) to fly there: it stays in focus as it orbits (you can still turn, pan and zoom around it) until you pick another world, double-click the star, or press the whole-system button. Every system and planet panel lists the system’s worlds: click one to go to it. Pause (or P) holds every world still in its orbit.',
       'Keys: Enter ends the turn. R research, S settlements, F fleets, T threads, C charters, G signals, L the Record, K the Codex, W surveyed worlds, H home, P pause or play the orbits, Esc closes a window or clears the selection.',
     ],
   },

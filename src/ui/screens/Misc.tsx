@@ -1,10 +1,11 @@
 import { useState } from 'preact/hooks';
 import { ERA_BY_ID } from '../../game/eras';
-import { exportCode, hasSave, importCode, loadGame, saveGame } from '../../game/save';
+import { exportCode, hasSave, loadGame, readSave, saveFile, saveGame } from '../../game/save';
+import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
-import { bump, engine, game, modal, notify, rev, saveSettings, screen, selection, settings } from '../store';
+import { UI_SCALES, applyUiScale, uiZoom, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, settings } from '../store';
 import { Icon } from '../Icon';
 import { CODEX } from './Codex';
 import { MANUAL } from './Manual';
@@ -100,7 +101,7 @@ export function SettingsModal() {
     saveSettings(next);
     setVolumes(next.music, next.sfx);
     if (patch.quality) engine()?.setQuality(patch.quality);
-    if (patch.uiScale) document.documentElement.style.fontSize = `${14 * patch.uiScale}px`;
+    if (patch.uiScale) applyUiScale(patch.uiScale);
   };
   const g = screen.value === 'game' ? game.value : null;
   return (
@@ -112,7 +113,7 @@ export function SettingsModal() {
               <Icon name="save" /> Save
             </button>
             <button class="btn" onClick={() => (modal.value = { kind: 'save' })}>
-              Load, save codes…
+              Load, export, import…
             </button>
             <button class="btn ghost" onClick={() => quitToMenu(g)}>
               Main menu
@@ -140,12 +141,13 @@ export function SettingsModal() {
         <div class="field">
           <label>Interface size</label>
           <div class="seg">
-            {[0.9, 1, 1.12].map((u) => (
-              <button key={u} class={`btn small ${st.uiScale === u ? 'primary' : ''}`} onClick={() => set({ uiScale: u })}>
-                {u === 0.9 ? 'Compact' : u === 1 ? 'Normal' : 'Large'}
+            {UI_SCALES.map((u) => (
+              <button key={u.v} class={`btn small ${st.uiScale === u.v ? 'primary' : ''}`} onClick={() => set({ uiScale: u.v })}>
+                {u.label}
               </button>
             ))}
           </div>
+          {uiZoom.value < st.uiScale - 0.005 && <div class="faint" style={{ fontSize: '11.5px', marginTop: '4px' }}>This screen has room for ×{uiZoom.value.toFixed(2)} at most; bigger sizes stop there.</div>}
         </div>
         {game.value && screen.value === 'game' && (
           <div class="field">
@@ -195,6 +197,22 @@ function quitToMenu(g: GameState) {
   screen.value = 'menu';
 }
 
+async function exportSave(g: GameState | null) {
+  if (!g) return notify('No saved game found.', 'bad');
+  const f = saveFile(g);
+  const r = await offerFile(f.name, f.text);
+  if (r === 'saved') notify(`Exported ${f.name}.`, 'good');
+  else if (r === 'failed') notify('This browser would not save the file. Use a save code instead.', 'bad');
+}
+
+async function importSave() {
+  const text = await pickTextFile('.json,.txt,application/json,text/plain');
+  if (text == null) return;
+  const g = readSave(text);
+  if (g) startLoaded(g);
+  else notify('That file is not a Steliterate save.', 'bad');
+}
+
 export function SaveModal({ s }: { s: GameState | null }) {
   const [code, setCode] = useState('');
   const [importText, setImportText] = useState('');
@@ -203,11 +221,11 @@ export function SaveModal({ s }: { s: GameState | null }) {
       <div class="col" style={{ gap: '12px' }}>
         {s && (
           <div class="row wrap" style={{ gap: '6px' }}>
-            <button class="btn primary" onClick={() => (saveGame(s) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Use a save code.', 'bad'))}>
-              Save
+            <button class="btn primary" onClick={() => (saveGame(s) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Export a file or use a save code.', 'bad'))}>
+              <Icon name="save" /> Save
             </button>
-            <button class="btn" onClick={() => setCode(exportCode(s))}>
-              Make a save code
+            <button class="btn" onClick={() => exportSave(s)} data-tip="Download this game as a file: keep it safe, or carry it to another device.">
+              Export save file
             </button>
             <button class="btn ghost" onClick={() => quitToMenu(s)} data-tip="Your game is kept as the autosave: Continue picks it up.">
               Main menu
@@ -237,7 +255,30 @@ export function SaveModal({ s }: { s: GameState | null }) {
           >
             Load autosave
           </button>
+          <button class="btn" onClick={importSave} data-tip="Open a save file exported from this or another device.">
+            Import save file…
+          </button>
         </div>
+        {!s && (hasSave() || hasSave(true)) && (
+          <div class="row wrap" style={{ gap: '6px' }}>
+            <button class="btn small" disabled={!hasSave()} onClick={() => exportSave(loadGame())}>
+              Export saved game
+            </button>
+            <button class="btn small" disabled={!hasSave(true)} onClick={() => exportSave(loadGame(true))}>
+              Export autosave
+            </button>
+          </div>
+        )}
+        <div class="eyebrow" style={{ marginTop: '4px' }}>
+          Save codes: the same save as text, for pasting
+        </div>
+        {s && !code && (
+          <div>
+            <button class="btn small" onClick={() => setCode(exportCode(s))}>
+              Make a save code
+            </button>
+          </div>
+        )}
         {code && (
           <div class="field">
             <label for="save-code">Save code: copy it somewhere safe</label>
@@ -248,13 +289,13 @@ export function SaveModal({ s }: { s: GameState | null }) {
           </div>
         )}
         <div class="field">
-          <label for="import-code">Load from a save code</label>
+          <label for="import-code">Load from a save code (or a save file’s text)</label>
           <textarea id="import-code" class="codebox" value={importText} onInput={(e) => setImportText((e.target as HTMLTextAreaElement).value)} placeholder="Paste a save code here" />
           <button
             class="btn small"
             disabled={!importText.trim()}
             onClick={() => {
-              const g = importCode(importText.trim());
+              const g = readSave(importText);
               if (g) startLoaded(g);
               else notify('That code could not be read.', 'bad');
             }}
@@ -262,7 +303,6 @@ export function SaveModal({ s }: { s: GameState | null }) {
             Load code
           </button>
         </div>
-
       </div>
     </ModalFrame>
   );

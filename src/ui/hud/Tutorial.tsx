@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'preact/hooks';
 import { SHIP_BY_ID } from '../../game/data/ships';
 import { colonies } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
+import { uiFactor } from '../Tip';
 import { Icon } from '../Icon';
 import { act, modal, rev, selection } from '../store';
 import { sfx } from '../../audio/sfx';
@@ -124,11 +125,12 @@ export function Tutorial({ s }: { s: GameState }) {
       if (el) {
         const r = t?.getBoundingClientRect();
         if (r && r.width > 0 && !modal.value) {
+          const f = uiFactor();
           el.style.display = 'block';
-          el.style.left = `${r.left - 4}px`;
-          el.style.top = `${r.top - 4}px`;
-          el.style.width = `${r.width + 8}px`;
-          el.style.height = `${r.height + 8}px`;
+          el.style.left = `${r.left / f - 4}px`;
+          el.style.top = `${r.top / f - 4}px`;
+          el.style.width = `${r.width / f + 8}px`;
+          el.style.height = `${r.height / f + 8}px`;
         } else el.style.display = 'none';
       }
       raf = requestAnimationFrame(place);

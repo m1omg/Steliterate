@@ -68,7 +68,7 @@ export function MainMenu() {
             New game
           </button>
           <button class="btn" onClick={() => { sfx('click'); modal.value = { kind: 'save' }; }}>
-            Load
+            Load / import
           </button>
           <button class="btn" onClick={() => { sfx('click'); modal.value = { kind: 'codex' }; }}>
             Codex

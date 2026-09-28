@@ -22,8 +22,10 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
 - **Sleep / Long Sleep**: dormancy cuts upkeep to a tenth while energy still comes in.
 - Click a star to select it. To look inside: double-click it, tap it again on a touchscreen,
   press **Look inside**, or just zoom in on it (zooming heads toward the pointer); zoom back
-  out past the edge of a system to return to the galaxy. Click a planet to fly to it: it
-  stays in focus as it orbits until you pick another world or the star. **Pause** (or P)
+  out past the edge of a system to return to the galaxy. Click a planet to select it and
+  double-click it (or tap it) to fly there: it stays in focus as it orbits until you pick
+  another world or double-click the star. System and planet panels list the system's worlds,
+  one click each. **Pause** (or P)
   holds the orbits still. Unsurveyed systems show only their star until a probe charts them.
 - **Settling**: a System Lighter (no research) carries a family to another world of the same
   star; Kin Arks, Seedcores and the rest cross between stars. Settlements (S) and Fleets (F)
@@ -35,7 +37,7 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
 - Keys: Enter end turn · R research · S settlements · F fleets · T threads · C charters ·
   G signals · L the Record · K Codex · W surveyed worlds · H home · P pause orbits · Esc close.
 
-Saves stay in your browser; a save code lets you move a game elsewhere.
+Saves stay in your browser. To keep a game safe or move it to another device, export it as a file (Menu → Load, export, import…) and import it there; a save code does the same as pasteable text. Old saves load in newer versions.
 
 ## Development
 

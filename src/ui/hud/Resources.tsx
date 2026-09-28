@@ -57,15 +57,17 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         <div class="col" style={{ gap: '2px' }}>
           <div class="row" style={{ gap: '6px' }}>
             <span class="v phos">{n1(p.insight)}</span>
-            <span class="d dim">{research ? research.name : <span class="warn">idle</span>}</span>
+            <span class="d dim">{research ? research.name : <span class="warn">no research</span>}</span>
           </div>
           <Gauge v={rProg} max={1} cls="neon" />
         </div>
+        <span class="l">Insight</span>
       </div>
       <div class="res" data-tip={`Accord ${n0(civ.accord)}: spent on Charters.\n${signed(p.accord)} per turn`} onClick={() => (modal.value = { kind: 'charters' })} style={{ cursor: 'pointer' }}>
         <Icon name="accord" size="lg" />
         <span class="v phos">{n0(civ.accord)}</span>
         <span class={`d mono ${p.accord >= 0 ? 'good' : 'bad'}`}>{signed(p.accord)}</span>
+        <span class="l">Accord</span>
       </div>
       <div class="res" data-tip={`Resolve ${n0(civ.resolve)}: the will to go on. Low resolve lowers everything you do; at zero for too long, the civilization gives up.`}>
         <span class="l" style={{ display: 'block' }}>Resolve</span>

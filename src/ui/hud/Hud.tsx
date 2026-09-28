@@ -37,7 +37,7 @@ export function Hud({ s }: { s: GameState }) {
   );
 }
 
-function RailBtn({ icon, label, short, onClick, badge, on }: { icon: IconName; label: string; short: string; onClick: () => void; badge?: number; on?: boolean }) {
+function RailBtn({ icon, label, short, wide, onClick, badge, on }: { icon: IconName; label: string; short: string; wide?: string; onClick: () => void; badge?: number; on?: boolean }) {
   return (
     <button
       class={`btn iconbtn ${on ? 'on' : ''}`}
@@ -49,7 +49,10 @@ function RailBtn({ icon, label, short, onClick, badge, on }: { icon: IconName; l
       }}
     >
       <Icon name={icon} size="lg" />
-      <span class="rail-label" aria-hidden="true">{short}</span>
+      <span class="rail-label" aria-hidden="true">
+        <span class="rl-short">{short}</span>
+        <span class="rl-wide">{wide ?? short}</span>
+      </span>
       {badge ? <span class="badge">{badge}</span> : null}
     </button>
   );
@@ -63,14 +66,14 @@ function Rail({ s }: { s: GameState }) {
   return (
     <nav class="rail panel" aria-label="Civilization">
       <RailBtn icon="research" label={`Research${s.civ.researching ? '' : ': nothing chosen'}`} short="Research" on={m === 'research'} badge={s.civ.researching ? 0 : 1} onClick={() => (modal.value = { kind: 'research' })} />
-      <RailBtn icon="colony" label="Settlements" short="Settle" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
+      <RailBtn icon="colony" label="Settlements" short="Settle" wide="Settlements" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
       <RailBtn icon="fleet" label="Fleets" short="Fleets" on={m === 'fleets'} badge={readySettlers} onClick={() => (modal.value = { kind: 'fleets' })} />
       <RailBtn icon="threads" label="Threads: the kinds of mind you are made of" short="Threads" on={m === 'threads'} onClick={() => (modal.value = { kind: 'threads' })} />
-      <RailBtn icon="doctrines" label="Charters: the book of laws" short="Laws" on={m === 'charters'} onClick={() => (modal.value = { kind: 'charters' })} />
+      <RailBtn icon="doctrines" label="Charters: the book of laws" short="Laws" wide="Charters" on={m === 'charters'} onClick={() => (modal.value = { kind: 'charters' })} />
       <RailBtn icon="diplomacy" label="Signals: the other minds" short="Signals" on={m === 'signals'} badge={unanswered} onClick={() => (modal.value = { kind: 'signals' })} />
       <RailBtn icon="log" label="The Record" short="Record" on={m === 'log'} onClick={() => (modal.value = { kind: 'log' })} />
       <RailBtn icon="info" label="Codex: how to play, and how the universe ends" short="Codex" on={m === 'codex'} onClick={() => (modal.value = { kind: 'codex' })} />
-      <RailBtn icon="save" label="Save and load" short="Save" on={m === 'save'} onClick={() => (modal.value = { kind: 'save' })} />
+      <RailBtn icon="save" label="Save and load" short="Save" wide="Save / load" on={m === 'save'} onClick={() => (modal.value = { kind: 'save' })} />
       <RailBtn icon="settings" label="Menu: settings, save, main menu" short="Menu" on={m === 'settings'} onClick={() => (modal.value = { kind: 'settings' })} />
     </nav>
   );
@@ -274,8 +277,8 @@ function ViewSwitch({ s }: { s: GameState }) {
       >
         <Icon name="system" /> System
       </button>
-      <button class="btn small ghost" onClick={home} data-tip="Back to your capital">
-        <Icon name="colony" />
+      <button class="btn small ghost" onClick={home} data-tip="Back to your capital (H)">
+        <Icon name="colony" /> <span class="vs-label">Home</span>
       </button>
       {view.value === 'system' && (
         <>
@@ -283,7 +286,7 @@ function ViewSwitch({ s }: { s: GameState }) {
             <Icon name="clock" /> {hudPrefs.value.orbitsPaused ? 'Play' : 'Pause'}
           </button>
           <button class="btn small ghost" onClick={() => { sfx('click'); engine()?.frameSystem(); }} data-tip="See the whole system (lets go of a followed world)" aria-label="See the whole system">
-            <Icon name="focus" />
+            <Icon name="focus" /> <span class="vs-label">Whole system</span>
           </button>
         </>
       )}
