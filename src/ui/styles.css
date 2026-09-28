@@ -519,3 +519,4 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .thermal-legend .tl-ticks span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
 /* collision stars in the Degenerate Age: always named on the map */
 .map-label.beacon { color: #ffe0a0; font-weight: 600; text-shadow: 0 0 4px #000, 0 0 10px rgba(255, 190, 90, 0.45); }
+.map-label.others { font-weight: 600; letter-spacing: 0.06em; }

@@ -84,6 +84,7 @@ export const MANUAL: CodexEntry[] = [
     title: 'Other minds and the Hunger',
     body: [
       'Messages travel at the speed of light, so news from far away is old when it arrives. The Signals screen holds messages that need an answer, your fellow survivors, and any other minds you have found.',
+      'Other young civilizations live in other star clusters, never next door: typically tens of thousands of light-years away, the nearest in one of the clusters closest to yours. A living civilization is far louder than a star, so you hear one from twenty-five times as far as you can see stars, the moment one of your ships surveys its star, or anywhere once you research Deep Listening; from the Degenerate Age on you hear everyone still alive. First contact is announced and marked on the map, and their name stays there in their colour (◈).',
       'Survivors may ask for aid, offer trades or joint works, send refugees, or raid you. You can help them, take them in, or take their stars from them.',
       'The Slow Ones think on clocks of millions of years; you can only talk to them when your own clock comes close to theirs. The Unlit answer moved masses with moved masses: read their pattern and answer it with a gesture.',
       'The Hunger is a mindless swarm of harvesters. Light and heat draw it. Defend with Defense Grids and warships, hide under the Blackout charter, lure it with decoy beacons, or learn the Command Language and tame it. Taking its ways as your own raises Taint.',

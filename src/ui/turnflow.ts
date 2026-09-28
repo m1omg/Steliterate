@@ -6,6 +6,8 @@ import { autosave, busy, bump, engine, game, modal, notify } from './store';
 import { TECH_BY_ID } from '../game/data/techs';
 import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
 import { shipQueue } from './hud/ShipPrompt';
+import { formatDistance } from '../game/eras';
+import { distLy } from '../game/sim/util';
 import { researchPrompt } from './hud/ResearchPrompt';
 
 // Ending a turn: run the simulation, refresh the views, and surface what needs attention.
@@ -22,6 +24,7 @@ export function doEndTurn() {
   const researchingBefore = s.civ.researching;
   const techsBefore = new Set(s.civ.techs);
   const idleBefore = new Set(Object.values(s.fleets).filter(isIdleFleet).map((f) => f.id));
+  const contactBefore = new Set(Object.values(s.survivors).filter((v) => v.contact).map((v) => v.id));
   const r = endTurn(s);
   bump();
   autosave();
@@ -39,6 +42,16 @@ export function doEndTurn() {
   if (s.era !== eraBefore) music.setEra(s.era);
   if (r.arrived.some((a) => a.choices.length)) {
     notify(`${r.arrived.length === 1 ? 'A signal has' : `${r.arrived.length} signals have`} arrived.`, 'info');
+    sfx('signal');
+  }
+  // first contact: we are not alone, and it should feel like it
+  for (const v of Object.values(s.survivors)) {
+    if (!v.contact || contactBefore.has(v.id)) continue;
+    const home = s.systems[v.homeSystemId];
+    const cap = s.colonies[s.civ.capitalId ?? ''];
+    const from = s.systems[cap?.systemId ?? s.civ.homeSystemId];
+    notify(`First contact: ${v.name}, ${home && from ? formatDistance(distLy(from, home)) : 'far'} away at ${home?.name ?? 'an unknown star'}. Their words are in Signals (G).`, 'good');
+    if (home) engine()?.ping(home.id, v.color);
     sfx('signal');
   }
   if (r.wasted > 5) notify(`${Math.round(r.wasted)} energy was lost: the reserve is full.`, 'bad');

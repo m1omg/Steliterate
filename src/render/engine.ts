@@ -501,7 +501,7 @@ export class Engine {
       return;
     }
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const items: { text: string; pos: THREE.Vector3; cls: string; w: number }[] = [];
+    const items: { text: string; pos: THREE.Vector3; cls: string; w: number; color?: string }[] = [];
     if (this.view === 'galaxy') {
       const d = this.rig.distance;
       if (d > 700) {
@@ -525,9 +525,19 @@ export class Engine {
             cand.push({ p, dd: 0 });
           }
         }
+        // other civilizations we have heard from keep their name on the map, in their colour
+        const others = new Map(Object.values(state.survivors).filter((v) => v.contact && v.alive).map((v) => [v.homeSystemId, v]));
+        for (const p of this.galaxy.pickables) {
+          if (p.kind === 'system' && others.has(p.id) && !cand.some((c) => c.p.id === p.id)) cand.push({ p, dd: 0 });
+        }
         for (const { p } of cand) {
           const s = state.systems[p.id];
           const mine = colonized.has(p.id);
+          const sv = others.get(p.id);
+          if (sv) {
+            items.push({ text: `◈ ${sv.name}`, pos: p.pos, cls: 'others', w: 4, color: sv.color });
+            continue;
+          }
           if (state.era === 'degenerate' && s.primary.kind === 'collision_star') {
             items.push({ text: `✦ ${s.name}`, pos: p.pos, cls: 'beacon', w: 5 });
             continue;
@@ -557,6 +567,7 @@ export class Engine {
       l.used = true;
       if (l.el.textContent !== it.text) l.el.textContent = it.text;
       l.el.className = `map-label ${it.cls}`;
+      l.el.style.color = it.color ?? '';
       l.el.style.display = 'block';
       l.el.style.transform = `translate(${Math.round(x + 9)}px, ${Math.round(y - 8)}px)`;
     }

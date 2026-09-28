@@ -44,7 +44,9 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       sv.pop = Math.max(0, sv.pop * (0.98 + sv.health * 0.03));
 
       const dist = distanceTo(state, sv);
-      const listening = civ.techs.includes('deep_listening') || dist <= mods.detect;
+      // a living civilization is far louder than a star: its lights, heat and chatter carry
+      // twenty-five times as far as we can see stars; and a ship that surveys its star meets it
+      const listening = civ.techs.includes('deep_listening') || dist <= mods.detect * 25 || civ.known[sv.homeSystemId] === 2;
       if (!sv.contact && listening) {
         sv.contact = true;
         civ.known[sv.homeSystemId] = Math.max(civ.known[sv.homeSystemId] ?? 0, 1) as 1 | 2;

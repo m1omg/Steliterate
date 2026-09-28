@@ -523,8 +523,20 @@ export function generateWorld(settings: GameSettings): GameState {
   const otherReaches = reaches.filter((r) => r.id !== homeReach.id);
   rng.shuffle(otherReaches);
   const picks = rng.shuffle([...SURVIVOR_NAMES]).slice(0, Math.max(0, Math.min(4, settings.survivors)));
+  // not next door, but not out of reach either: the first lives in one of the two clusters
+  // nearest ours, the second in one of the nearest five, the rest anywhere. (Chosen from the
+  // shuffled order, so the rest of the galaxy is generated exactly as before.)
+  const reachDist = (r: (typeof reaches)[number]) => Math.hypot(r.phys.x - homeReach.phys.x, r.phys.y - homeReach.phys.y, r.phys.z - homeReach.phys.z);
+  const nearest = [...otherReaches].sort((a, c) => reachDist(a) - reachDist(c));
+  const taken = new Set<string>();
+  const reachFor = (i: number) => {
+    const near = new Set((i === 0 ? nearest.slice(0, 2) : i === 1 ? nearest.slice(0, 5) : nearest).map((r) => r.id));
+    const r = otherReaches.find((x) => near.has(x.id) && !taken.has(x.id)) ?? otherReaches.find((x) => !taken.has(x.id)) ?? otherReaches[i % otherReaches.length];
+    taken.add(r.id);
+    return r;
+  };
   picks.forEach((sv, i) => {
-    const reach = otherReaches[i % otherReaches.length];
+    const reach = reachFor(i);
     const sys = b.addSystem(reach, randomInSphere(rng, reach.radiusLy * 0.4, 0.5), sv.way === 'lattice' ? 'brown_dwarf' : 'red_dwarf', 'survivor');
     const id = `sv${i}`;
     survivors[id] = {
