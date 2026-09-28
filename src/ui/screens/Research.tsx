@@ -10,7 +10,7 @@ import { eraIndex, hasTech } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
 import { n0, n1, pct } from '../fmt';
 import { Icon } from '../Icon';
-import { act, rev } from '../store';
+import { act, game, notify, rev } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
 
@@ -36,10 +36,16 @@ export function ResearchModal({ s }: { s: GameState }) {
   const curProg = cur ? s.civ.research[cur.id] ?? 0 : 0;
   const workShare = s.civ.work ? 0.5 : 0;
   const perTurn = p.insight * (1 - workShare);
-  const turns = cur && perTurn > 0 ? Math.ceil((curCost - curProg) / perTurn) : Infinity;
+  // already covered (stored insight): it finishes at the end of this turn, never "−3 turns"
+  const turns = cur && perTurn > 0 ? Math.max(1, Math.ceil((curCost - curProg) / perTurn)) : Infinity;
   const pick = (t: TechDef) => {
     if (!techAvailable(s, t.id)) return;
-    if (act((g) => setResearch(g, t.id))) sfx('select');
+    if (!act((g) => setResearch(g, t.id))) return;
+    if (game.value?.civ.techs.includes(t.id)) {
+      // stored insight already covered it: done on the spot, choose again
+      sfx('good');
+      notify(`${t.name}: worked out at once from stored insight.`, 'good');
+    } else sfx('select');
   };
   return (
     <ModalFrame
@@ -53,9 +59,9 @@ export function ResearchModal({ s }: { s: GameState }) {
             <div class="eyebrow">Researching</div>
             <div class="row">
               <strong style={{ fontSize: '16px' }}>{cur.name}</strong>
-              <span class="mono faint">{n0(curProg)} / {curCost}{isFinite(turns) ? ` · ${turns} turn${turns > 1 ? 's' : ''}` : ''}</span>
+              <span class="mono faint">{n0(Math.min(curProg, curCost))} / {curCost}{curProg >= curCost ? ' · done this turn' : isFinite(turns) ? ` · ${turns} turn${turns > 1 ? 's' : ''}` : ''}</span>
             </div>
-            <div class="bar neon" style={{ marginTop: '4px' }}><i style={{ width: pct(curProg / curCost) }} /></div>
+            <div class="bar neon" style={{ marginTop: '4px' }}><i style={{ width: pct(Math.min(1, curProg / curCost)) }} /></div>
             <div class="dim" style={{ fontSize: '12px', marginTop: '4px' }}>{cur.desc}</div>
           </div>
         ) : (
@@ -104,10 +110,10 @@ export function ResearchModal({ s }: { s: GameState }) {
                           {done && <Icon name="check" cls="good" />} {t.name}
                         </div>
                         <div class="cs">
-                          {done ? 'known' : `${techCost(s, t.id)}${prog > 0 ? ` · ${pct(prog / techCost(s, t.id))}` : ''}`}
+                          {done ? 'known' : `${techCost(s, t.id)}${prog > 0 ? ` · ${pct(Math.min(1, prog / techCost(s, t.id)))}` : ''}`}
                           {t.speculative ? ' · speculative' : ''}
                         </div>
-                        {prog > 0 && !done && <div class="bar neon"><i style={{ width: pct(prog / techCost(s, t.id)) }} /></div>}
+                        {prog > 0 && !done && <div class="bar neon"><i style={{ width: pct(Math.min(1, prog / techCost(s, t.id))) }} /></div>}
                       </button>
                     );
                   })}

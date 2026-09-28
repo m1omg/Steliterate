@@ -3,6 +3,7 @@ import { endTurn } from '../game/sim/turn';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
 import { autosave, busy, bump, engine, game, modal, notify } from './store';
+import { TECH_BY_ID } from '../game/data/techs';
 import { researchPrompt } from './hud/ResearchPrompt';
 
 // Ending a turn: run the simulation, refresh the views, and surface what needs attention.
@@ -17,6 +18,7 @@ export function doEndTurn() {
   const fleetsBefore = new Set(Object.keys(s.fleets));
   const knownBefore = { ...s.civ.known };
   const researchingBefore = s.civ.researching;
+  const techsBefore = new Set(s.civ.techs);
   const r = endTurn(s);
   bump();
   autosave();
@@ -41,6 +43,9 @@ export function doEndTurn() {
     researchPrompt.value = { done: researchingBefore };
     sfx('good');
   }
+  // worked out from surplus insight, without being asked
+  const surplus = s.civ.techs.filter((t) => !techsBefore.has(t) && t !== researchingBefore);
+  if (surplus.length) notify(`With insight to spare: ${surplus.map((t) => TECH_BY_ID[t]?.name ?? t).join(', ')}.`, 'good');
   // discoveries: new stars on the map, and systems charted by probes
   const detected = Object.keys(s.civ.known).filter((id) => s.civ.known[id] === 1 && !knownBefore[id]);
   const surveyed = Object.keys(s.civ.known).filter((id) => s.civ.known[id] === 2 && knownBefore[id] !== 2 && !Object.values(s.colonies).some((c) => c.systemId === id));

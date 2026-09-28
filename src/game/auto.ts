@@ -64,13 +64,12 @@ function pickResearch(state: GameState) {
   }
   if (civ.flags.auto_paused && civ.energy < cap * 0.35) return;
   civ.flags.auto_paused = 0;
-  if (civ.researching) return;
-  const avail = new Set(availableTechs(state).map((t) => t.id));
-  const next = TECH_PRIORITY.find((id) => avail.has(id));
-  if (next) setResearch(state, next);
-  else {
-    const cheapest = [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
-    if (cheapest) setResearch(state, cheapest);
+  // a pick that stored insight already covers is done at once: pick again, as a player would
+  for (let i = 0; i < 6 && !civ.researching; i++) {
+    const avail = new Set(availableTechs(state).map((t) => t.id));
+    const next = TECH_PRIORITY.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
+    if (!next) break;
+    setResearch(state, next);
   }
 }
 

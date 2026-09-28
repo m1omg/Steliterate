@@ -35,6 +35,7 @@ export interface TechDef {
   effects?: TechEffects;
   speculative?: boolean;
   taint?: number; // Hunger-derived knowledge
+  noAuto?: boolean; // a deliberate choice with consequences: never worked out from surplus insight
   needsStable?: boolean; // only if protons are stable
   needsDecay?: boolean; // only if protons decay
 }
@@ -105,7 +106,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'hunger_engines', name: 'Hunger Engines', era: 'degenerate', field: 'harvest', cost: 460, requires: ['command_language'], taint: 12, desc: 'Borrow the swarms’ way of eating. Matter yields +40%. The Hunger’s logic stays with you.', effects: { flags: ['hunger_engines'] } }),
   T({ id: 'communion', name: 'Communion', era: 'degenerate', field: 'mind', cost: 600, requires: ['hunger_engines'], taint: 18, desc: 'Do not tame the swarms: join them. Unlocks the Communion charter.' }),
   T({ id: 'gravitic_semaphore', name: 'Gravitic Semaphore', era: 'degenerate', field: 'continuity', cost: 380, requires: [], desc: 'Speak with mass itself: move worlds a little, read the replies in orbits. Contact with what hides in the halo becomes possible.' }),
-  T({ id: 'halo_siphons', name: 'Halo Siphons', era: 'degenerate', field: 'harvest', cost: 560, requires: ['ember_harvest'], desc: 'Drive dark matter into the embers faster. Ember yields double, and the halo empties sooner.', effects: { flags: ['halo_siphons'] } }),
+  T({ id: 'halo_siphons', name: 'Halo Siphons', era: 'degenerate', field: 'harvest', cost: 560, requires: ['ember_harvest'], desc: 'Drive dark matter into the embers faster. Ember yields double, and the halo empties sooner.', effects: { flags: ['halo_siphons'] } , noAuto: true }),
   T({ id: 'great_decay_protocols', name: 'Great Decay Protocols', era: 'degenerate', field: 'continuity', cost: 700, requires: [], desc: 'Prepare for the end of matter. Losses in the Great Decay are halved.', effects: { crossing: 0.5 } }),
 
   // ============================================================ III. Black Hole

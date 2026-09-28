@@ -7,7 +7,7 @@ import { eraIndex } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
 import { n0, n1 } from '../fmt';
 import { Icon } from '../Icon';
-import { act, modal, rev } from '../store';
+import { act, modal, notify, rev } from '../store';
 import { sfx } from '../../audio/sfx';
 
 /** Set when a project finishes; cleared when the player picks the next one or pauses. */
@@ -26,7 +26,13 @@ export function ResearchPrompt({ s }: { s: GameState }) {
     .sort((a, b) => eraIndex(b.era) - eraIndex(a.era) || techCost(s, a.id) - techCost(s, b.id))
     .slice(0, 4);
   const pick = (id: string) => {
-    if (act((g) => setResearch(g, id))) {
+    if (!act((g) => setResearch(g, id))) return;
+    if (s.civ.techs.includes(id)) {
+      // stored insight covered it: done at once; keep the prompt up for the next choice
+      sfx('good');
+      notify(`${TECH_BY_ID[id]?.name ?? id}: worked out at once from stored insight.`, 'good');
+      researchPrompt.value = { done: id };
+    } else {
       sfx('select');
       researchPrompt.value = null;
     }
@@ -53,7 +59,7 @@ export function ResearchPrompt({ s }: { s: GameState }) {
           return (
             <button key={t.id} class="btn small rp-option" data-tip={t.desc} onClick={() => pick(t.id)}>
               <span class="grow">{t.name}</span>
-              <span class="mono faint">~{Math.max(1, Math.ceil(left / perTurn))}t</span>
+              <span class="mono faint">{left <= 0 ? 'now' : `~${Math.max(1, Math.ceil(left / perTurn))}t`}</span>
             </button>
           );
         })}

@@ -10,7 +10,7 @@ import { orderMove } from './fleets';
 import { absorbSwarm, tameSwarm } from './hunger';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
-import { techAvailable } from './research';
+import { completeTech, techAvailable, techCost } from './research';
 import { devourSurvivor, resolveSurvivorSignal, seizeSurvivor } from './survivors';
 import { eraIndex, hasCharter, hasTech, log, uid } from './util';
 
@@ -174,6 +174,12 @@ export function setResearch(state: GameState, techId: string | null): ActionResu
   if (bank > 0) {
     state.civ.research[techId] = (state.civ.research[techId] ?? 0) + bank;
     state.civ.flags.insight_bank = 0;
+  }
+  // already paid for: it is done now, and what is left stays stored for the next choice
+  const cost = techCost(state, techId);
+  if ((state.civ.research[techId] ?? 0) >= cost) {
+    state.civ.flags.insight_bank = (state.civ.research[techId] ?? 0) - cost;
+    completeTech(state, techId, 'stored');
   }
   return null;
 }

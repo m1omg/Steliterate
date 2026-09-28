@@ -1,6 +1,5 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID } from '../data/structures';
-import { TECH_BY_ID } from '../data/techs';
 import { eraOver, logTurnLength, stepTime } from '../eras';
 import { evolveUniverse, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
@@ -14,7 +13,7 @@ import { updateForecasts } from './forecast';
 import { updateHunger } from './hunger';
 import { updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
-import { IDLE_STUDY, researchDraw, techCost } from './research';
+import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost } from './research';
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
@@ -262,16 +261,12 @@ export function endTurn(state: GameState): TurnResult {
     const cost = techCost(state, civ.researching);
     if (civ.research[civ.researching] >= cost) {
       const id = civ.researching;
-      const def = TECH_BY_ID[id];
-      civ.techs.push(id);
       civ.flags.insight_bank = civ.research[id] - cost;
-      delete civ.research[id];
-      civ.researching = null;
-      if (def?.taint) civ.taint = Math.min(100, civ.taint + def.taint);
-      log(state, `Research complete: ${def?.name ?? id}.`, 'good');
-      if (id === 'proton_question') queueEvent(state, 'proton_answer');
+      completeTech(state, id);
     }
   } else civ.flags.insight_bank = Math.min((civ.flags.insight_bank ?? 0) + research * IDLE_STUDY, 2000);
+  // a great deal of insight left over: the scholars fill in the cheapest open projects themselves
+  discoverFromSurplus(state);
 
   // ------------------------------------------------ 4. growth, capacity, worlds
   declineWorlds(state);

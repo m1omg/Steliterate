@@ -62,7 +62,7 @@ export const MANUAL: CodexEntry[] = [
     title: 'Research and Great Works',
     body: [
       'Research is organised by field and by age. Pick any project whose requirements you have; later ages’ projects open as you reach them. Some are marked speculative: the science behind them is uncertain.',
-      'Insight that overflows a finished project, or comes from discoveries and relics, is carried over into whatever you choose next. When a project finishes, a prompt suggests what to do next. You can also pause research: the labs stop drawing power, and half of each turn’s insight is kept for later.',
+      'Insight that overflows a finished project, or comes from discoveries and relics, is stored and goes into whatever you choose next; if the store already covers a project, it is worked out the moment you choose it. With a great deal stored (more than the dearest open project would need), the scholars spend only the excess, filling in the cheapest open projects on their own, up to three a turn; they never take up the Hunger’s ways or a deliberate choice such as Halo Siphons. When a project finishes, a prompt suggests what to do next. You can also pause research: the labs stop drawing power, and half of each turn’s insight is kept for later.',
       'Great Works are the projects that can end the game in something other than silence. Each belongs to an age, needs a technology and a condition (for example, enough Echoes and Coldminds). Once begun, half of your insight goes into the Work.',
     ],
   },
