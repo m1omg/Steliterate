@@ -120,7 +120,7 @@ export function ThreadsModal({ s }: { s: GameState }) {
                 <span class="mono">{totals[t]}</span>
               </div>
               <div class="flavor" style={{ fontSize: '13px' }}>{d.blurb}</div>
-              {!d.conscious && <span class="chip" data-tip="No one inside. They cannot be persuaded, only maintained.">not conscious</span>}
+              {!d.conscious && <span class="chip" data-tip="The Lattice has no standing and no demand: it has never asked for anything. It cannot be persuaded, only maintained.">asks for nothing</span>}
               <dl class="kv">
                 <dt>Upkeep</dt>
                 <dd class="mono">{n1(d.energyUpkeep * mods.upkeep[t])} energy{d.matterUpkeep ? `, ${n1(d.matterUpkeep)} matter` : ''}</dd>

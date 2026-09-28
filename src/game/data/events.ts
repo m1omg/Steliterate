@@ -17,7 +17,7 @@ export interface EventChoice {
 export interface EventDef {
   id: string;
   title: string;
-  art: 'dusk' | 'degenerate' | 'blackhole' | 'dark' | 'flare' | 'ruins' | 'hunger' | 'sleepers' | 'survivor' | 'slow';
+  art: 'dusk' | 'degenerate' | 'blackhole' | 'dark' | 'flare' | 'ruins' | 'hunger' | 'sleepers' | 'survivor' | 'slow' | `finds/${string}`;
   eras?: EraId[];
   weight?: number; // random pool weight (0 or undefined = scripted only)
   once?: boolean;
@@ -250,7 +250,7 @@ export const EVENTS: EventDef[] = [
     weight: 3,
     once: true,
     bind: (s) => (threadTotals(s).lattice >= 3 ? {} : null),
-    text: () => 'A Lattice unit asked a question in the maintenance logs: “What is the repair for?” No one programmed it to ask. The Lattice has no one inside. Everyone is sure of that. Almost everyone.',
+    text: () => 'A Lattice unit asked a question in the maintenance logs: “What is the repair for?” No one programmed it to ask. Everyone is sure there is no one inside the Lattice. Almost everyone.',
     choices: [
       { label: 'Study it', hint: 'Insight +50.', run: (s) => { insight(s, 50); } },
       { label: 'Answer it honestly', hint: 'Resolve +2. Kin standing −2.', run: (s) => { res(s, 2); stand(s, 'kin', -2); s.civ.flags.lattice_asked = 1; } },
@@ -567,7 +567,7 @@ export interface AnomalyDef {
   name: string; // shown as the world's trait
   tip: string;
   fits: (s: GameState, b: Body) => boolean;
-  event: Omit<EventDef, 'id'>;
+  event: Omit<EventDef, 'id' | 'art'>; // the plate is art/finds/<id>.webp
 }
 
 const sysOf = (s: GameState, b: Body) => s.systems[b.systemId];
@@ -581,7 +581,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => (b.kind === 'ocean_ice' || b.traits.includes('subsurface_ocean')) && !b.colonyId,
     event: {
       title: 'Life Under the Ice',
-      art: 'sleepers',
       text: (s, d) =>
         `Under the ice shell of ${bodyById(s, d)?.name}, tidal flexing keeps an ocean liquid, and on its floor warm vents feed mats of something alive: chemosynthetic cells a few microns across, living on the chemistry of rock and water, with no light at all. Their biochemistry is not ours. They are the first life anyone here has found that is not related to us.`,
       choices: [
@@ -598,7 +597,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => rocky(b) && b.kind !== 'ocean_ice',
     event: {
       title: 'The Ghost of a Reactor',
-      art: 'ruins',
       text: (s, d) =>
         `Survey cores from ${bodyById(s, d)?.name} show the wrong isotopes in one layer of rock: xenon and neodymium in the ratios left by nuclear fission. Long ago, when the universe was only a few billion years old, groundwater flooded a seam of uranium ore here and it went critical, a natural reactor like the one found in Earth's Oklo mine. Every atom of that uranium decayed away tens of trillions of years ago. Only its fingerprints are left.`,
       choices: [{ label: 'Read the record', hint: 'Insight +45: a clock for the early universe.', run: (s) => insight(s, 45) }],
@@ -611,7 +609,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => (b.kind === 'super_earth' || b.kind === 'barren') && b.massEarth > 1.5,
     event: {
       title: 'A Carbon World',
-      art: 'ruins',
       text: (s, d) =>
         `Seismic soundings of ${bodyById(s, d)?.name} ring like a bell. It formed from a disk rich in carbon and poor in oxygen, so instead of silicate rock it has a crust of graphite over a thick mantle of diamond.`,
       choices: [
@@ -627,7 +624,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => b.kind === 'asteroids',
     event: {
       title: 'A Black Hole the Size of a Mountain',
-      art: 'blackhole',
       text: (s, d) =>
         `In the belt of ${sysOf(s, bodyById(s, d)!)?.name} the survey found a point of gamma-ray light with no surface at all: about four trillion kilograms, a black hole smaller than an atomic nucleus. Only a hole formed in the first second of the universe could be this small, and a hole this small should be finishing its Hawking evaporation about now, brightening as it shrinks. Primordial black holes were only ever a hypothesis. (Speculative physics.)`,
       choices: [
@@ -643,7 +639,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => b.kind === 'asteroids' || b.kind === 'barren',
     event: {
       title: 'A Visitor From Another Star',
-      art: 'ruins',
       text: (s, d) =>
         `An elongated shard of rock is crossing ${sysOf(s, bodyById(s, d)!)?.name} on a hyperbolic path: it is not bound to this star. Its isotopes say it was thrown out of some other star's disk before the ancestral galaxies merged, and it has been falling between stars ever since.`,
       choices: [
@@ -659,7 +654,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => ['barren', 'super_earth', 'terran', 'ice'].includes(b.kind),
     event: {
       title: 'Someone Lived Here',
-      art: 'ruins',
       text: (s, d) =>
         `Under the dust of ${bodyById(s, d)?.name}: layered mounds of mineral that grew around mats of microbes, like stromatolites, in shallow seas that dried up some eighty trillion years ago. Life happened here, once, without anyone to see it.`,
       choices: [
@@ -675,7 +669,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (s, b) => (b.kind === 'barren' || b.kind === 'super_earth') && ['red_dwarf', 'blue_dwarf', 'white_dwarf'].includes(sysOf(s, b).primary.kind),
     event: {
       title: 'Plains of Glass',
-      art: 'flare',
       text: (s, d) =>
         `The day side of ${bodyById(s, d)?.name} is paved with glass: layer on layer of rock melted by superflares when its red dwarf was young and violent, trillions of years ago. Each layer dates an outburst.`,
       choices: [
@@ -691,7 +684,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => ['ice', 'ocean_ice', 'ice_giant'].includes(b.kind),
     event: {
       title: 'Fuel in the Ice',
-      art: 'degenerate',
       text: (s, d) =>
         `Kilometres down in the ice of ${bodyById(s, d)?.name}, the survey found clathrate hydrates: methane and hydrogen molecules trapped in cages of water ice, stable only at this cold and this pressure. A frozen store of fuel.`,
       choices: [{ label: 'Chart the deposits', hint: 'Hydrogen yield +0.8 here (fuel for fusion).', run: (s, d) => { const b = bodyById(s, d); if (b) b.hydrogen += 0.8; } }],
@@ -704,7 +696,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: () => true,
     event: {
       title: 'A Lens in the Dark',
-      art: 'slow',
       text: (s, d) =>
         `A rogue planet drifting far behind ${sysOf(s, bodyById(s, d)!)?.name} has lined up with the star as seen from here. For a few years its gravity focuses the light of stars behind it, a microlensing event, and our instruments read their spectra as if they were next door.`,
       choices: [
@@ -730,7 +721,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => b.kind === 'asteroids' || b.kind === 'deep',
     event: {
       title: 'A Graveyard of Sails',
-      art: 'ruins',
       text: (s, d) =>
         `In the dark beyond ${bodyById(s, d)?.name}: hundreds of lightsails, each a few square kilometres of metal foil, the probes of someone who crossed between stars on starlight. Their cores are dead. The star charts etched into their frames are not.`,
       choices: [
@@ -746,7 +736,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (s, b) => ['ice', 'ocean_ice', 'eyeball', 'terran', 'super_earth'].includes(b.kind) && sysOf(s, b).bodies.length >= 4,
     event: {
       title: 'Kept Warm by Its Neighbours',
-      art: 'dusk',
       text: (s, d) =>
         `${bodyById(s, d)?.name} is locked in an orbital resonance with its sibling worlds: every few orbits they tug it back onto an eccentric path, and the endless squeezing heats its interior, as Jupiter's moons heat Io.`,
       choices: [{ label: 'Tap the tidal heat', hint: 'Core heat +0.2 here, for geothermal power.', run: (s, d) => { const b = bodyById(s, d); if (b) b.coreHeat = Math.min(1, b.coreHeat + 0.2); } }],
@@ -759,7 +748,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (s, b) => rocky(b) && sysOf(s, b).primary.kind === 'neutron_star',
     event: {
       title: 'Written by a Magnetar',
-      art: 'degenerate',
       text: (s, d) =>
         `Every grain of iron in the rocks of ${bodyById(s, d)?.name} points the same way. Its neutron star was once a magnetar, with a magnetic field a thousand trillion times Earth's, and the field wrote itself into the planet before it faded.`,
       choices: [{ label: 'Study the imprint', hint: 'Insight +40.', run: (s) => insight(s, 40) }],
@@ -772,7 +760,6 @@ export const ANOMALIES: AnomalyDef[] = [
     fits: (_s, b) => !!b.rogue && rocky(b),
     event: {
       title: 'Warm in the Dark',
-      art: 'dark',
       text: (s, d) =>
         `${bodyById(s, d)?.name} has no star, yet it is warm. A thick atmosphere of hydrogen, which lets heat out only very slowly at these temperatures, holds in the last warmth of its interior like a blanket, and under it there is liquid water.`,
       choices: [{ label: 'Chart it for settlers', hint: 'Core heat +0.2 and habitability at least 15% here.', run: (s, d) => { const b = bodyById(s, d); if (b) { b.coreHeat = Math.min(1, b.coreHeat + 0.2); b.habitability = Math.max(b.habitability, 0.15); b.vitality = Math.max(b.vitality, 0.3); } } }],
@@ -781,6 +768,6 @@ export const ANOMALIES: AnomalyDef[] = [
 ];
 
 // discoveries are events too (queued by the survey, never rolled at random)
-EVENTS.push(...ANOMALIES.map((a) => ({ id: `anom_${a.id}`, ...a.event })));
+EVENTS.push(...ANOMALIES.map((a): EventDef => ({ id: `anom_${a.id}`, art: `finds/${a.id}`, ...a.event })));
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

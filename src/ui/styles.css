@@ -297,6 +297,7 @@ button { font: inherit; color: inherit; }
 
 .menu { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(320px, 520px) 1fr; background: transparent; }
 .menu-art { position: absolute; inset: 0; background-size: cover; background-position: 60% 50%; opacity: 0.9; }
+.menu-loop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 50%; }
 .menu-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2, 2, 3, 0.96) 0%, rgba(2, 2, 3, 0.8) 32%, rgba(2, 2, 3, 0.2) 70%, rgba(2, 2, 3, 0.5) 100%), linear-gradient(0deg, rgba(2, 2, 3, 0.9), transparent 40%); }
 .menu-side { position: relative; z-index: 1; padding: 64px 40px 32px 48px; display: flex; flex-direction: column; gap: 22px; max-height: 100vh; overflow-y: auto; }
 .title { font-family: var(--f-display); font-weight: 800; font-size: clamp(48px, 7vw, 86px); letter-spacing: 0.08em; line-height: 0.9; text-transform: uppercase; margin: 0; }

@@ -56,7 +56,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'slow_instancing', name: 'Slow Instancing', era: 'dusk', field: 'mind', cost: 170, requires: ['mind_substrate'], desc: 'Echoes can run a thought across millennia. Echo clock limit rises to 10⁷ years.', effects: { echoMaxClock: 7 } }),
   T({ id: 'mind_merging', name: 'Confluence', era: 'dusk', field: 'mind', cost: 210, requires: ['upload'], desc: 'Many minds, one voice. Unlocks the Chorus and Confluence Nodes.' }),
   T({ id: 'reversible_logic', name: 'Reversible Logic', era: 'dusk', field: 'mind', cost: 320, requires: ['slow_instancing'], desc: 'Thinking without erasing, so almost without heat. Echo clock limit 10¹¹ years; Echo upkeep −15%.', effects: { echoMaxClock: 11, upkeep: { echoes: 0.85, chorus: 0.9 } } }),
-  T({ id: 'autonomous_replicators', name: 'Autonomous Replicators', era: 'dusk', field: 'mind', cost: 150, requires: [], desc: 'Self-repairing machines with no one inside. Unlocks the Lattice and Lattice Spores.' }),
+  T({ id: 'autonomous_replicators', name: 'Autonomous Replicators', era: 'dusk', field: 'mind', cost: 150, requires: [], desc: 'Self-repairing machines that learn their own maintenance. Unlocks the Lattice and Lattice Spores.' }),
   // reach
   T({ id: 'survey_optics', name: 'Deep Survey Optics', era: 'dusk', field: 'reach', cost: 30, requires: [], desc: 'Chart farther and see the dead more clearly. Detection range grows.', effects: { detect: 150 } }),
   T({ id: 'fusion_drives', name: 'Fusion Drives', era: 'dusk', field: 'reach', cost: 60, requires: ['survey_optics'], desc: 'Ships at six percent of light. Unlocks the Kin Ark.', effects: { speed: 0.06 } }),

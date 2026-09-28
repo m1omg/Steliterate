@@ -30,7 +30,7 @@ export const CODEX: CodexEntry[] = [
     id: 'tempo',
     title: 'Threads and tempo',
     body: [
-      'Your civilization is made of Threads: the Kin (the original people), Echoes (uploads), the Chorus (merged minds), the Lattice (processes with no one inside) and Coldminds (minds held near absolute zero).',
+      'Your civilization is made of Threads: the Kin (the original people), Echoes (uploads), the Chorus (merged minds), the Lattice (self-maintaining processes) and Coldminds (minds held near absolute zero).',
       'Each kind of mind lives at its own clock. When a turn is much longer than a Thread’s clock, that Thread has to stay awake through the whole span, and its upkeep climbs: this is tempo strain. When a turn is much shorter than a slow mind’s clock, it idles and produces little.',
       'Freeman Dyson (1979) argued that a mind which keeps slowing its thinking, and hibernates between bursts, could have an unlimited number of thoughts on a finite energy budget. Krauss & Starkman (2000) disputed it: with accelerating expansion, and quantum limits on memory, eternal thought is probably impossible. The game lets you try.',
     ],

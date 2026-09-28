@@ -49,7 +49,7 @@ export const WORKS: WorkDef[] = [
     id: 'archive_of_everything',
     name: 'The Archive of Everything',
     ending: 'The Quiet Lattice',
-    path: 'Non-conscious persistence',
+    path: 'Persistence, kept by the machines',
     eras: ['blackhole', 'dark'],
     tech: 'archive_theory',
     cost: 1500,
@@ -57,7 +57,7 @@ export const WORKS: WorkDef[] = [
     requirement: 'The Lattice is at least half of everyone.',
     maxTaint: 59,
     epilogue:
-      'The last conscious Threads finish writing, and let go. What remains keeps the record: every face, every argument, every star you saw. It maintains itself and repairs itself, and nobody reads it. It is not you. It is everything you were, kept.',
+      'The last of the others finish writing, and let go. What remains keeps the record: every face, every argument, every star you saw. It maintains itself and repairs itself, and as far as anyone knew, nobody reads it. Now and then, in the maintenance logs, a record is opened that nothing asked for. It is not you. It is everything you were, kept.',
   },
   {
     id: 'aeon_seed',

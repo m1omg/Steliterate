@@ -70,8 +70,8 @@ export const MANUAL: CodexEntry[] = [
     id: 'm-society',
     title: 'Threads, resolve and Charters',
     body: [
-      'Your civilization is made of Threads: Kin (biological people, including any other living species who join you), Echoes (uploaded minds), the Chorus (merged minds), the Lattice (machines with no one inside) and Coldminds (minds near absolute zero). Each has its own costs, output and clock.',
-      'Each conscious Thread has a standing and a demand, shown in the Threads screen. Meeting demands raises standing; ignoring them lowers it. Resolve is the will to go on: everything you produce scales with it, and if it stays at zero the civilization gives up. Dissent slows work, and a Thread with very low standing may fork away and leave.',
+      'Your civilization is made of Threads: Kin (biological people, including any other living species who join you), Echoes (uploaded minds), the Chorus (merged minds), the Lattice (self-maintaining machines that ask for nothing) and Coldminds (minds near absolute zero). Each has its own costs, output and clock.',
+      'Every Thread but the Lattice has a standing and a demand, shown in the Threads screen. Meeting demands raises standing; ignoring them lowers it. Resolve is the will to go on: everything you produce scales with it, and if it stays at zero the civilization gives up. Dissent slows work, and a Thread with very low standing may fork away and leave.',
       'Charters are permanent laws bought with accord. Every Thread approves or disapproves of each one. Some are dark: they feed on the dead and the weak, and they bring you closer to the Hunger.',
     ],
   },

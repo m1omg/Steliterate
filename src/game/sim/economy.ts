@@ -249,7 +249,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   return { y, spinDraw, matterBurn, strain, depletion };
 }
 
-/** Civilization-wide Lattice resentment (conscious Threads dislike being outnumbered by nobody). */
+/** Civilization-wide Lattice resentment (the other Threads dislike being outnumbered by machines). */
 export function latticeAlienation(state: GameState, mods: Mods): number {
   if (mods.flags.has('charter:lattice_compact')) return 0;
   let lattice = 0;

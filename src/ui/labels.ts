@@ -85,6 +85,6 @@ export const WAY_NAME: Record<string, string> = {
   upload: 'uploaded',
   chorus: 'merged into one mind',
   dormant: 'asleep, waking rarely',
-  lattice: 'no one inside: processes and protocol',
+  lattice: 'handed over to processes and protocol',
   fork: 'a Thread that left you',
 };

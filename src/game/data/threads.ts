@@ -64,7 +64,7 @@ export const THREAD_DEFS: Record<ThreadId, ThreadDef> = {
     id: 'lattice',
     name: 'Lattice',
     one: 'Lattice',
-    blurb: 'Self-maintaining processes with no one inside. They build, repair and replicate tirelessly, need no meaning and ask for nothing, and wear out.',
+    blurb: 'Self-maintaining processes. They build, repair and replicate without rest, make no demands, keep no grudges, and wear out. Whether anyone is in there is a question they have never raised.',
     industry: 2.2,
     insight: 0,
     accord: 0,

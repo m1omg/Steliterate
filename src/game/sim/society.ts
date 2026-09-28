@@ -84,7 +84,7 @@ export function updateSociety(state: GameState, logL: number, popsLost: number, 
       if (mods.flags.has('charter:thread_parity')) civ.standing[t] += (55 - civ.standing[t]) * 0.05;
       if (mods.flags.has('charter:sanctity_of_flesh') && t === 'kin') civ.standing[t] += 0.4;
       if (hasCharter(state, 'assembly_of_threads') || civ.techs.includes('assembly_of_threads')) civ.standing[t] += (60 - civ.standing[t]) * 0.02;
-      // conscious Threads resent the Lattice, and fear the Taint
+      // the other Threads resent the Lattice, and fear the Taint
       if (!mods.flags.has('charter:lattice_compact')) civ.standing[t] -= (totals.lattice / Math.max(1, all)) * 2;
       civ.standing[t] -= civ.taint / 60;
       civ.standing[t] = clamp(civ.standing[t], 0, 100);

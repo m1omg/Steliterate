@@ -1,12 +1,14 @@
 // One grade for every generated plate: light era tint, lifted blacks, slight desaturation,
 // film grain and a vignette, exported as webp at 1600 px wide.
 //   node tools/process-art.mjs            (reads art-src/*.png, writes public/art/*.webp)
+//   node tools/process-art.mjs finds      (reads art-src/anom/*.png, writes public/art/finds/*.webp)
 import sharp from 'sharp';
 import { mkdirSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-const SRC = 'art-src';
-const OUT = 'public/art';
+const SET = process.argv[2] === 'finds' ? 'finds' : 'plates';
+const SRC = SET === 'finds' ? 'art-src/anom' : 'art-src';
+const OUT = SET === 'finds' ? 'public/art/finds' : 'public/art';
 const WIDTH = 1600;
 
 // per-plate grade: channel gains and lifts (0..255)
@@ -27,11 +29,27 @@ const GRADE = {
   hunger: NEUTRAL,
   sleepers: COLD,
   survivor: NEUTRAL,
+  // survey discoveries
+  vent_life: COLD,
+  fossil_reactor: NEUTRAL,
+  diamond_mantle: NEUTRAL,
+  primordial_hole: VIOLET,
+  interstellar_shard: WARM,
+  fossils: WARM,
+  flare_glass: WARM,
+  clathrates: COLD,
+  lens: VIOLET,
+  sail_graveyard: NEUTRAL,
+  resonance: COLD,
+  magnetar_print: COLD,
+  warm_rogue: GREY,
 };
 
 // regions to soften (fractions of the image): stray letter-like shapes the models add
 const SOFTEN = {
   survivor: [{ x: 0.58, y: 0.0, w: 0.2, h: 0.24 }],
+  warm_rogue: [{ x: 0.89, y: 0.86, w: 0.1, h: 0.13 }], // painted signatures
+  fossil_reactor: [{ x: 0.92, y: 0.9, w: 0.075, h: 0.1 }],
 };
 
 function grain(w, h, amount) {

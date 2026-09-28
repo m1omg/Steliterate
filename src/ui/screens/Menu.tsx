@@ -4,15 +4,44 @@ import { hasSave, loadGame } from '../../game/save';
 import type { Difficulty, EpochLength, GameSettings, ProtonFate } from '../../game/types';
 import { music } from '../../audio/music';
 import { sfx } from '../../audio/sfx';
-import { modal, screen } from '../store';
+import { modal, screen, settings } from '../store';
 import { startTutorial } from '../hud/Tutorial';
 import { startLoaded } from './Misc';
+
+const reducedMotion = () => {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * The title painting, slowly alive: a short seamless loop over the still plate. The still stays
+ * underneath, so with reduced motion, the low quality setting, or a browser that cannot play
+ * the clip, the menu simply shows the painting.
+ */
+function MenuArt({ opacity }: { opacity?: number }) {
+  const [failed, setFailed] = useState(false);
+  const still = settings.value.quality === 'low' || reducedMotion();
+  return (
+    <div class="menu-art" style={{ backgroundImage: 'url(art/title.webp)', opacity }}>
+      {!still && !failed && (
+        <video class="menu-loop" poster="art/title.webp" autoplay muted loop playsInline preload="auto" aria-hidden="true">
+          <source src="art/title-loop.webm" type="video/webm" />
+          {/* an error on the last source means nothing could play: fall back to the still */}
+          <source src="art/title-loop.mp4" type="video/mp4" onError={() => setFailed(true)} />
+        </video>
+      )}
+    </div>
+  );
+}
 
 export function MainMenu() {
   const canContinue = hasSave(true) || hasSave();
   return (
     <div class="menu">
-      <div class="menu-art" style={{ backgroundImage: 'url(art/title.webp)' }} />
+      <MenuArt />
       <div class="menu-side">
         <div>
           <div class="eyebrow" style={{ marginBottom: '10px' }}>A survival game at the end of time</div>
@@ -83,7 +112,7 @@ export function Setup() {
   };
   return (
     <div class="menu">
-      <div class="menu-art" style={{ backgroundImage: 'url(art/title.webp)', opacity: 0.35 }} />
+      <MenuArt opacity={0.35} />
       <div class="menu-side" style={{ maxWidth: '560px' }}>
         <div>
           <div class="eyebrow">New game</div>

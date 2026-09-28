@@ -121,7 +121,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | **Kin** | The original biological people | Industry, insight, accord | Heavy upkeep; fixed clock; need living worlds, domes or warrens |
 | **Echoes** | Uploaded minds on substrate | Insight, low upkeep, can slow | Need substrate; drift |
 | **Chorus** | Many minds merged into one | Industry, insight, accord | Harder to slow; unsettles others |
-| **Lattice** | Self-maintaining processes with no one inside | Huge industry, strain-immune | No insight; matter upkeep; conscious Threads resent it |
+| **Lattice** | Self-maintaining processes that ask for nothing; everyone assumes no one is inside, and the game only ever hints otherwise | Huge industry, strain-immune | No insight; matter upkeep; the other Threads resent it |
 | **Coldminds** | Minds in vaults near 0 K | Almost free to keep, extreme clocks | Low output; need Cold Vaults |
 
 * Conversions: Upload (Kin to Echo), Merge (two Echoes to a Chorus), Cool (Echo to Coldmind,
@@ -259,7 +259,7 @@ stop them from talking.
 |---|---|---|
 | **The Long Thought** | Continuance | Echoes and Coldminds (6+) reach the Dark Era; complete the *Hibernal Cascade* |
 | **One Voice** | Union | Chorus at least half of everyone, all standings high; complete *Confluence* |
-| **The Quiet Lattice** | Non-conscious persistence | Lattice at least half of everyone; complete the *Archive of Everything* |
+| **The Quiet Lattice** | Persistence, kept by the machines | Lattice at least half of everyone; complete the *Archive of Everything* |
 | **The Aeon Seed** | Speculative physics (Penrose's conformal cyclic cosmology) | A settlement at the Heart and the Slow Ones' trust; the seed is written as the Heart evaporates |
 | **The Last Garden** | Biology | Protons stable; 6+ living Kin reach the Dark Era; complete the *Garden of Embers* |
 | **The Hunger** | The dark path | Taint reaches 100 |
