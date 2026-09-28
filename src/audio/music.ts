@@ -137,6 +137,7 @@ interface Layer {
   persistent: AudioScheduledSourceNode[];
   silenced: boolean; // a recorded track is playing instead
   track: { el: HTMLAudioElement; gain: GainNode } | null;
+  hiss: GainNode | null; // the synth's tape hiss: part of the synth, so it goes when a recording plays
 }
 
 type StyleKey = keyof typeof STYLES;
@@ -291,6 +292,7 @@ class Music {
       }
     }
     // tape hiss
+    let hissOut: GainNode | null = null;
     if (style.hiss > 0) {
       const src = a.ctx.createBufferSource();
       src.buffer = a.noise;
@@ -301,11 +303,12 @@ class Music {
       hp.Q.value = 0.4;
       const g = a.ctx.createGain();
       g.gain.value = style.hiss;
-      src.connect(hp).connect(g).connect(a.music);
+      hissOut = a.ctx.createGain();
+      src.connect(hp).connect(g).connect(hissOut).connect(a.music);
       src.start(t);
       persistent.push(src);
     }
-    const layer: Layer = { style, bus, arpIn, wobble, persistent, silenced: false, track: null };
+    const layer: Layer = { style, bus, arpIn, wobble, persistent, silenced: false, track: null, hiss: hissOut };
     this.layer = layer;
     this.step = 0;
     this.next = t + 0.1;
@@ -353,6 +356,11 @@ class Music {
       layer.bus.gain.cancelScheduledValues(t);
       layer.bus.gain.setValueAtTime(layer.bus.gain.value, t);
       layer.bus.gain.linearRampToValueAtTime(0, t + 3);
+      if (layer.hiss) {
+        layer.hiss.gain.cancelScheduledValues(t);
+        layer.hiss.gain.setValueAtTime(layer.hiss.gain.value, t);
+        layer.hiss.gain.linearRampToValueAtTime(0, t + 3);
+      }
       window.setTimeout(() => (layer.silenced = true), 3200);
     }, { once: true });
     el.play().catch(() => {
