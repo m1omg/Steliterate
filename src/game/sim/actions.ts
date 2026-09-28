@@ -256,8 +256,7 @@ export function convert(state: GameState, colonyId: string, kind: Conversion): A
       if (!(c.structures.cold_vault ?? 0) && !(c.structures.lepton_substrate ?? 0) && !(c.structures.bastion ?? 0)) return 'Needs a Cold Vault.';
       if (c.pops.echoes < 1) return 'Needs an Echo.';
       if (c.pops.coldminds >= cap.coldminds) return 'No room in the vaults.';
-      if (civ.energy < 5) return 'Needs 5 energy.';
-      civ.energy -= 5;
+      // cooling a mind is how a starving civilization saves itself: it costs nothing but the self it was
       c.pops.echoes--;
       c.pops.coldminds++;
       return null;

@@ -28,7 +28,7 @@ export function demandMet(state: GameState, id: string, mods: Mods, logL: number
     case 'echoes_stop':
       return hasCharter(state, 'right_to_stop');
     case 'echoes_clock':
-      return strainFor('echoes', logL, mods).m < 1;
+      return strainFor('echoes', logL, mods, -state.civ.pace).m < 1;
     case 'chorus_consent':
       return hasCharter(state, 'merge_consent');
     case 'chorus_grow':
@@ -79,7 +79,7 @@ export function updateSociety(state: GameState, logL: number, popsLost: number, 
         civ.standing[t] -= 1.4 + share * 1.5;
       }
       // tempo strain wears a Thread down
-      const s = strainFor(t, logL, mods);
+      const s = strainFor(t, logL, mods, -state.civ.pace);
       if (s.m > 0.5) civ.standing[t] -= Math.min(3, s.m * 0.35);
       if (mods.flags.has('charter:thread_parity')) civ.standing[t] += (55 - civ.standing[t]) * 0.05;
       if (mods.flags.has('charter:sanctity_of_flesh') && t === 'kin') civ.standing[t] += 0.4;

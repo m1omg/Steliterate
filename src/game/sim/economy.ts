@@ -103,9 +103,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   // ---- populations
   const strain = {} as Record<ThreadId, Strain>;
   const upkeepScale = dormant ? (flags.has('charter:the_long_watch') ? 0.05 : 0.1) : 1;
+  // machines and sleepers run for the whole of a slowed turn; only minds can slow themselves down
+  const slowTime = Math.max(1, pf);
   for (const t of THREADS) {
     const n = c.pops[t];
-    const s = strainFor(t, ctx.logL, ctx.mods);
+    const s = strainFor(t, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor));
     strain[t] = s;
     if (n <= 0) continue;
     const d = THREAD_DEFS[t];
@@ -124,13 +126,30 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
   }
   if (c.cryo > 0) {
-    const cu = c.cryo * 0.08 * (flags.has('charter:cold_sleep_lottery') ? 0.5 : 1);
+    const cu = c.cryo * 0.08 * (flags.has('charter:cold_sleep_lottery') ? 0.5 : 1) * slowTime;
     energyUpkeep += cu;
     lines.push({ label: `${c.cryo} Kin in Cold Sleep`, energy: -cu });
   }
 
   // ---- structures
   const light = sourceLight(state, sys, ctx.years, isFinite(ctx.L) ? ctx.L : 0);
+  // housing costs upkeep only for the share of it that is lived in
+  const capAll = capacity(state, c, ctx.mods);
+  const occupancy = (d: StructureDef): number => {
+    let have = 0;
+    let room = 0;
+    for (const t of THREADS) {
+      const k = d.cap?.[t] ?? 0;
+      if (!k) continue;
+      room += capAll[t];
+      have += Math.min(c.pops[t], capAll[t]);
+    }
+    if (d.cryoCap) {
+      room += capAll.cryo;
+      have += Math.min(c.cryo, capAll.cryo);
+    }
+    return room > 0 ? Math.max(0.1, have / room) : 1;
+  };
   const gfeMatter = 0.4 + 0.6 * state.gfe;
   let spinLeft = sys.primary.spin;
   for (const [id, n] of Object.entries(c.structures)) {
@@ -192,7 +211,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const ind = (d.industry ?? 0) * n * out;
     const ins = (d.insight ?? 0) * n * out;
     const acc = (d.accord ?? 0) * n * out;
-    const up = (d.upkeep ?? 0) * n * upkeepScale;
+    const up = (d.upkeep ?? 0) * n * upkeepScale * slowTime * (d.cap || d.cryoCap ? occupancy(d) : 1);
     energy += e;
     industry += ind;
     insight += ins;
@@ -201,6 +220,16 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     if (e || mt || ind || ins || acc || up) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc });
   }
   if (matterBurn > 0) lines.push({ label: 'Fuel burned', matter: -matterBurn });
+
+  // ---- the Hearth: every settlement's own power core, fed by whatever is local
+  if (!body.dissolved) {
+    const hole = sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh';
+    // at a black hole the Hearth draws on its spin and the thin gas still falling in
+    const local = Math.max(0.25, Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(state.era) >= 1 ? 1 : 0);
+    const hearth = 2 * local * (1 - c.damage) * pf * overdrive * focusMul(c, 'energy') * taintBoost;
+    energy += hearth;
+    lines.push({ label: c.overdrive ? 'Hearth (overdriven)' : 'Hearth', energy: hearth });
+  }
 
   industry *= ctx.mods.industryMult * focusMul(c, 'industry');
   insight *= ctx.mods.insightMult * focusMul(c, 'insight');

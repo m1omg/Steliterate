@@ -9,7 +9,7 @@ import { runCrossing } from './crossing';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
-import { advanceFleets, destroyColony, newFleet, updateDetection } from './fleets';
+import { advanceFleets, createColony, destroyColony, newFleet, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { updateHunger } from './hunger';
 import { updateMinds } from './minds';
@@ -416,7 +416,7 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
           const b = state.bodies[n.bodyId];
           if (b?.colonyId) {
             const c = state.colonies[b.colonyId];
-            if (c) destroyColony(state, c, 'its world finished falling into its star');
+            if (c) evacuate(state, c);
           }
           if (seen) log(state, `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
           state.civ.energy += colonized.has(sys.id) ? 20 : 0;
@@ -450,4 +450,30 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         break;
     }
   }
+}
+
+/** A world falls into its star: whoever can get off is caught by the habitats of the Deep. */
+function evacuate(state: GameState, c: Colony) {
+  const sys = state.systems[c.systemId];
+  const deep = sys.bodies.map((id) => state.bodies[id]).find((b) => b && b.kind === 'deep' && !b.dissolved);
+  const saved: Partial<Record<(typeof THREADS)[number], number>> = {};
+  let n = 0;
+  for (const t of THREADS) {
+    saved[t] = Math.floor(c.pops[t] * 0.75);
+    n += saved[t]!;
+  }
+  const cryo = Math.floor(c.cryo * 0.75);
+  const orbital = Object.entries(c.structures).filter(([id]) => STRUCTURE_BY_ID[id]?.bodies?.includes('deep'));
+  destroyColony(state, c, 'its world finished falling into its star');
+  if (!deep || n + cryo <= 0) return;
+  let host = deep.colonyId ? state.colonies[deep.colonyId] : null;
+  if (!host) {
+    host = createColony(state, deep, {});
+    host.name = `${sys.name} Deep`;
+  }
+  for (const t of THREADS) host.pops[t] += saved[t] ?? 0;
+  host.cryo += cryo;
+  for (const [id, k] of orbital) host.structures[id] = Math.max(host.structures[id] ?? 0, k);
+  if (!host.structures.substrate_core && (saved.echoes ?? 0) > 0) host.structures.substrate_core = Math.ceil((saved.echoes ?? 0) / 4);
+  log(state, `${n + cryo} of ${c.name}’s people escaped to the Deep before the end.`, 'good', sys.id);
 }

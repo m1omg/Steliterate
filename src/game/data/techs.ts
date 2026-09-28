@@ -109,8 +109,8 @@ export const TECHS: TechDef[] = [
   T({ id: 'great_decay_protocols', name: 'Great Decay Protocols', era: 'degenerate', field: 'continuity', cost: 700, requires: [], desc: 'Prepare for the end of matter. Losses in the Great Decay are halved.', effects: { crossing: 0.5 } }),
 
   // ============================================================ III. Black Hole
-  T({ id: 'penrose_process', name: 'Penrose Process', era: 'blackhole', field: 'harvest', cost: 700, requires: [], desc: 'Extract a black hole’s spin. Unlocks Penrose Harvesters.' }),
-  T({ id: 'hawking_capture', name: 'Hawking Capture', era: 'blackhole', field: 'harvest', cost: 750, requires: [], desc: 'Collect the heat of evaporating holes. Unlocks Hawking Collectors.' }),
+  T({ id: 'penrose_process', name: 'Penrose Process', era: 'degenerate', field: 'harvest', cost: 700, requires: ['accretion_engines'], desc: 'Extract a black hole’s spin. Unlocks Penrose Harvesters.' }),
+  T({ id: 'hawking_capture', name: 'Hawking Capture', era: 'degenerate', field: 'harvest', cost: 750, requires: ['penrose_process'], desc: 'Collect the heat of evaporating holes. Unlocks Hawking Collectors.' }),
   T({ id: 'bastion_architecture', name: 'Bastion Architecture', era: 'blackhole', field: 'stewardship', cost: 550, requires: [], desc: 'Shells of leptonic structure around black holes. Unlocks Bastion Shells.' }),
   T({ id: 'horizon_cognition', name: 'Horizon Cognition', era: 'blackhole', field: 'mind', cost: 800, requires: [], desc: 'Echo clock limit 10⁶⁰ years.', effects: { echoMaxClock: 60 } }),
   T({ id: 'hawking_patience', name: 'Hawking-Scale Patience', era: 'blackhole', field: 'mind', cost: 1000, requires: ['horizon_cognition'], desc: 'Echo clock limit 10⁸⁰ years.', effects: { echoMaxClock: 80 } }),

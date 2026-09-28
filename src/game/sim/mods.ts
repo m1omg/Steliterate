@@ -72,14 +72,27 @@ export interface Strain {
   upkeepMul: number;
 }
 
-/** Tempo strain for a Thread living through a turn of 10^logL years. */
-export function strainFor(t: ThreadId, logL: number, mods: Mods): Strain {
+/**
+ * Tempo strain for a Thread living through a turn of 10^logL years.
+ * `slowOrders` is how many orders of magnitude the civilization has slowed below the Tide.
+ * Living through the Tide itself is era-normalised (a gentle cost for minds too fast for the
+ * age). Deliberately slowing further is not: a mind that cannot slow its own clock to match
+ * lives through all of that extra time awake, and pays for all of it.
+ */
+export function strainFor(t: ThreadId, logL: number, mods: Mods, slowOrders = 0): Strain {
   const d = THREAD_DEFS[t];
   if (d.strainImmune) return { clock: logL, m: 0, outMul: 1, upkeepMul: 1 };
   const [lo, hi] = clockRange(t, mods);
   const clock = Math.max(lo, Math.min(hi, logL));
   const m = Math.max(-50, Math.min(50, logL - clock));
-  if (m > 0) return { clock, m, outMul: 1 + 0.05 * Math.min(m, 10), upkeepMul: 1 + 0.3 * m };
+  if (m > 0) {
+    const slow = Math.max(0, slowOrders);
+    const logTide = logL - slow;
+    const mTide = Math.max(0, logTide - Math.max(lo, Math.min(hi, logTide)));
+    const unabsorbed = Math.max(0, Math.min(slow, m - mTide));
+    const eraPart = m - unabsorbed;
+    return { clock, m, outMul: 1 + 0.05 * Math.min(eraPart, 10), upkeepMul: (1 + 0.3 * eraPart) * Math.pow(10, unabsorbed) };
+  }
   if (m < 0) return { clock, m, outMul: Math.max(0.15, 1 + 0.4 * m), upkeepMul: Math.max(0.3, 1 + 0.2 * m) };
   return { clock, m: 0, outMul: 1, upkeepMul: 1 };
 }

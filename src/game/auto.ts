@@ -25,6 +25,7 @@ import { capacity, reserveCapacity } from './sim/economy';
 import { workRequirementMet } from './sim/endings';
 import { computeMods, strainFor } from './sim/mods';
 import { patternAnswer } from './sim/minds';
+import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle } from './sim/fleets';
 import { colonies, distLy, eraIndex, hasTech, threadTotals } from './sim/util';
@@ -36,16 +37,16 @@ export type Strategy = 'competent' | 'passive';
 
 const TECH_PRIORITY = [
   'energy_storage', 'magnetospherics', 'the_long_record', 'orbital_collectors', 'survey_optics', 'mind_substrate', 'fusion_drives', 'hardy_lineages',
-  'subterranean_cities', 'orbital_industry', 'fusion', 'upload', 'cold_sleep', 'slow_instancing', 'orbital_defense', 'dyson_swarms', 'deep_listening',
-  'reversible_logic', 'hibernation_protocols', 'hunger_studies', 'magnetic_sails', 'comet_shepherding', 'last_light_protocols', 'assembly_of_threads',
+  'subterranean_cities', 'orbital_industry', 'fusion', 'upload', 'cold_sleep', 'slow_instancing', 'ember_harvest', 'orbital_defense', 'dyson_swarms',
+  'last_light_protocols', 'reversible_logic', 'hibernation_protocols', 'deep_listening', 'hunger_studies', 'magnetic_sails', 'comet_shepherding', 'assembly_of_threads',
   'horizon_physics', 'accretion_engines', 'proton_question', 'deep_mantle', 'catalyzed_drives', 'mind_merging', 'halo_dynamics', 'pulsar_braking', 'hunger_lures',
-  'ember_harvest',
   // degenerate
-  'cold_computation', 'glacial_cognition', 'deep_time_protocols', 'leptonic_computation', 'deep_storage', 'brown_dwarf_mining', 'accretion_modelling', 'gravitic_semaphore', 'burst_capture',
-  'horizon_storage', 'abyssal_thought', 'great_decay_protocols', 'baryon_decay_harvest', 'quickening', 'relativistic_arks',
+  'cold_computation', 'glacial_cognition', 'relativistic_arks', 'deep_time_protocols', 'baryon_decay_harvest', 'leptonic_computation', 'penrose_process',
+  'great_decay_protocols', 'hawking_capture',
+  'deep_storage', 'brown_dwarf_mining', 'accretion_modelling', 'burst_capture', 'horizon_storage', 'abyssal_thought', 'gravitic_semaphore', 'quickening',
   'garden_arks', 'aegis_lattices', 'command_language',
   // black hole
-  'bastion_architecture', 'penrose_process', 'hawking_capture', 'horizon_cognition', 'error_correction', 'hawking_patience', 'last_horizon_protocols',
+  'bastion_architecture', 'horizon_cognition', 'error_correction', 'hawking_patience', 'last_horizon_protocols',
   'conformal_mathematics', 'archive_theory', 'total_confluence', 'ultimate_slowness',
   // dark
   'asymptotic_mind', 'horizon_siphon', 'garden_of_embers',
@@ -72,7 +73,7 @@ function tryBuild(state: GameState, c: Colony, ids: string[]): boolean {
     if (!d) continue;
     if (structureCheck(state, c, d)) continue;
     const cost = buildCost(state, d, false);
-    if (state.civ.matter < cost.matter + 10 || state.civ.energy < cost.energy + 20) continue;
+    if ((cost.matter > 0 && state.civ.matter < cost.matter + 10) || (cost.energy > 0 && state.civ.energy < cost.energy + 20)) continue;
     if (!queueBuild(state, c.id, 'structure', id)) return true;
   }
   return false;
@@ -87,14 +88,16 @@ function planBuilds(state: GameState) {
   const preDecay = state.era === 'degenerate' && state.eta > 27;
   const t = threadTotals(state);
   for (const c of colonies(state)) {
-    // before the protons go, re-encoding comes first
+    // before the protons go, re-encoding goes to the front of the queue
     if (preDecay && state.protonsDecay && hasTech(state, 'leptonic_computation') && (c.structures.lepton_substrate ?? 0) < 2) {
       if (!c.queue.some((q) => q.key === 'lepton_substrate')) {
-        while (c.queue.length) removeQueued(state, c.id, c.queue[0].uid);
-        tryBuild(state, c, ['lepton_substrate']);
+        if (c.queue.length >= 6) removeQueued(state, c.id, c.queue[c.queue.length - 1].uid);
+        if (tryBuild(state, c, ['lepton_substrate'])) {
+          const q = c.queue.pop()!;
+          c.queue.unshift(q);
+        }
       }
       if (c.queue[0]?.key === 'lepton_substrate') rushBuild(state, c.id);
-      continue;
     }
     if (c.queue[0] && civ.matter > 600) rushBuild(state, c.id);
     if (c.queue.length >= 2) continue;
@@ -104,8 +107,14 @@ function planBuilds(state: GameState) {
     const energyFirst = net < 3 || civ.energy < cap * 0.25;
     const plan: string[] = [];
     if (preDecay && state.protonsDecay) plan.push('lepton_substrate');
-    if (state.era === 'blackhole') plan.push('bastion', 'penrose_harvester', 'hawking_collector', 'horizon_vault');
+    if (state.era === 'blackhole') plan.push('penrose_harvester', 'hawking_collector', 'bastion', 'horizon_vault');
+    if (state.era === 'degenerate' && state.eta > 30) plan.push('penrose_harvester', 'hawking_collector');
     if (state.era === 'dark') plan.push('preservation_array', 'horizon_siphon');
+    // after the embers: burn matter (it is going anyway), feed black holes, catch the decay
+    if (state.era === 'degenerate' && light < 0.3) {
+      if (state.protonsDecay && state.eta > 29) plan.push('decay_harvester');
+      if (civ.matter > 60) plan.push('accretion_engine', 'fusion_plant');
+    }
     if (energyFirst) {
       if (light > 0.3) plan.push('dyson_swarm', 'orbital_collector', 'ember_collector', 'solar_array');
       plan.push('disk_skimmer', 'accretion_engine', 'pulsar_brake', 'geothermal_tap', 'fusion_plant', 'decay_harvester');
@@ -113,7 +122,7 @@ function planBuilds(state: GameState) {
     if (b.traits.includes('homeworld') && state.era === 'dusk') plan.push('mag_shield', 'comet_shepherd', 'core_stimulator');
     if (c.pops.kin >= capc.kin - 1 && state.era === 'dusk') plan.push('warrens', 'habitat_dome');
     if (hasTech(state, 'mind_substrate') && c.pops.echoes >= capc.echoes - 1) plan.push('substrate_core');
-    if (hasTech(state, 'cold_computation') && c.pops.coldminds >= capc.coldminds - 1) plan.push('cold_vault');
+    if (hasTech(state, 'cold_computation') && c.pops.coldminds >= capc.coldminds - 1) plan.unshift('cold_vault');
     if (lateDusk && c.pops.kin > 0) plan.push('cryo_hall');
     if (state.era === 'dusk' && state.eta > 13.985) plan.push('ember_collector', 'fusion_plant', 'accretion_engine', 'reserve_vault');
     if (civ.energy > cap * 0.8) plan.push('reserve_vault', 'superconducting_ring', 'horizon_vault', 'burst_catcher');
@@ -135,8 +144,12 @@ function settleScore(state: GameState, b: Body, thread: ThreadId): number {
   if (thread === 'kin') s += b.habitability * 4 * (0.3 + b.vitality);
   if (state.era === 'degenerate' && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 3;
   if (state.era === 'degenerate' && sys.primary.halo) s += 2;
+  // late in the Dusk, look ahead: dark-matter embers and black holes will be all that is left
+  if (state.era === 'dusk' && state.eta > 13.99 && (sys.primary.halo || sys.primary.kind === 'black_hole')) s += 2.5;
   if (sys.special === 'core' && eraIndex(state.era) >= 1) s += 4;
   if (eraIndex(state.era) >= 2 && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 2 + Math.min(6, sys.primary.spin / 200);
+  // matter will dissolve: the future is at the black holes
+  if (state.era === 'degenerate' && state.protonsDecay && state.eta > 24 && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 10;
   if (b.kind === 'deep' && thread !== 'kin') s += 0.5;
   return s;
 }
@@ -183,7 +196,13 @@ function planFleets(state: GameState) {
   const nCol = colonies(state).length;
   const want = state.era === 'dusk' ? 3 + Math.floor(state.eraTurn / 12) : 4 + Math.floor(state.eraTurn / 10);
   const inFlight = Object.values(state.fleets).filter((f) => f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship'].includes(s.cls))).length + capital.queue.filter((q) => q.kind === 'ship').length;
-  if (nCol + inFlight < want && (capital.structures.shipyard ?? 0) > 0 && capital.queue.length < 3) {
+  // only expand what the economy can carry: new settlements cost upkeep long before they pay
+  const pr = project(state);
+  const netNow = pr.energyIn - pr.energyOut;
+  const affordable = netNow > 2 + nCol * 1.5 && civ.energy > reserveCapacity(state, computeMods(state)) * 0.4;
+  const atHole = colonies(state).some((c) => ['black_hole', 'smbh'].includes(state.systems[c.systemId].primary.kind));
+  const needHole = state.era === 'degenerate' && state.protonsDecay && state.eta > 22 && !atHole && inFlight === 0 && civ.matter > 80;
+  if ((affordable || needHole) && nCol + inFlight < want + (needHole ? 1 : 0) && (capital.structures.shipyard ?? 0) > 0 && capital.queue.length < 3) {
     const opts = state.era === 'dusk' ? ['seedcore', 'ark', 'spore'] : ['vaultship', 'seedcore', 'spore'];
     if (eraIndex(state.era) >= 2) opts.unshift('vaultship');
     for (const k of opts) if (!queueBuild(state, capital.id, 'ship', k)) break;
@@ -203,7 +222,7 @@ function planThreads(state: GameState) {
       if (kinStrain > 2 && c.pops.kin > 1) {
         if (convert(state, c.id, 'upload')) convert(state, c.id, 'freeze');
       }
-      if (echoStrain > 1 && c.pops.echoes > 0) convert(state, c.id, 'cool');
+      if (echoStrain > 0.5 && c.pops.echoes > 0) convert(state, c.id, 'cool');
       if (state.era === 'dusk' && state.eta > 13.995 && c.pops.kin > 0) convert(state, c.id, 'freeze');
     }
   }
@@ -251,11 +270,29 @@ function planPace(state: GameState) {
   const civ = state.civ;
   const mods = computeMods(state);
   const cap = reserveCapacity(state, mods);
-  const net = civ.flags.last_energy_net ?? 0;
-  if (civ.energy >= cap * 0.95 && net > cap * 0.05 && civ.pace < mods.paceMax) setPace(state, civ.pace + 1);
-  else if ((net < 0 && civ.energy < cap * 0.2) && civ.pace > mods.paceMin) setPace(state, civ.pace - 1);
-  else if (civ.pace > 0 && net < 0) setPace(state, civ.pace - 1);
-  else if (civ.pace < 0 && net > 0 && civ.energy > cap * 0.5) setPace(state, civ.pace + 1);
+  const netAt = (p: number) => {
+    const pr = project(state, p);
+    return pr.energyIn - pr.energyOut;
+  };
+  const here = netAt(civ.pace);
+  if (here < 0 || civ.energy < cap * 0.2) {
+    // in trouble: take whichever neighbouring pace pays best right now
+    let best = civ.pace;
+    let bestNet = here;
+    for (const p of [civ.pace - 1, civ.pace + 1]) {
+      if (p < mods.paceMin || p > mods.paceMax) continue;
+      const n = netAt(p);
+      if (n > bestNet + 0.5) {
+        best = p;
+        bestNet = n;
+      }
+    }
+    if (best !== civ.pace) setPace(state, best);
+    return;
+  }
+  // comfortable and full: quicken for more turns out of the age, if it still pays
+  if (civ.energy >= cap * 0.9 && civ.pace < mods.paceMax && netAt(civ.pace + 1) > 0) setPace(state, civ.pace + 1);
+  else if (civ.pace < 0 && civ.energy > cap * 0.5 && netAt(civ.pace + 1) > 0) setPace(state, civ.pace + 1);
 }
 
 function planWorks(state: GameState) {

@@ -94,8 +94,8 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'superconducting_ring', name: 'Deep Storage Ring', desc: 'Giant, patient batteries for the long nights between sources.', era: 'degenerate', tech: 'deep_storage', cost: 70, matter: 40, max: 3, reserveCap: 150, burstCap: 100, signature: 0.3 }),
 
   // ---------------------------------------------------------------- Black Hole Age
-  S({ id: 'penrose_harvester', name: 'Penrose Harvester', desc: 'Throws mass into the ergosphere and catches it coming back heavier.', era: 'blackhole', tech: 'penrose_process', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'spin', amount: 20 }, signature: 2 }),
-  S({ id: 'hawking_collector', name: 'Hawking Collector', desc: 'Listens to the faint heat of a black hole slowly boiling away.', era: 'blackhole', tech: 'hawking_capture', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'hawking', amount: 12 }, signature: 1 }),
+  S({ id: 'penrose_harvester', name: 'Penrose Harvester', desc: 'Throws mass into the ergosphere and catches it coming back heavier.', era: 'degenerate', tech: 'penrose_process', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'spin', amount: 20 }, signature: 2 }),
+  S({ id: 'hawking_collector', name: 'Hawking Collector', desc: 'Listens to the faint heat of a black hole slowly boiling away.', era: 'degenerate', tech: 'hawking_capture', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'hawking', amount: 12 }, signature: 1 }),
   S({ id: 'bastion', name: 'Bastion Shell', desc: 'A shell of leptonic structure around a black hole.', era: 'blackhole', tech: 'bastion_architecture', cost: 90, matter: 0, max: 3, cap: { echoes: 3, coldminds: 4, lattice: 3 }, decayProof: true, signature: 1 }),
 
   // ---------------------------------------------------------------- Dark Era

@@ -57,6 +57,6 @@ export function project(state: GameState, paceOverride?: number): Projection {
   }
   p.energyIn += jointIncome(state) * ctx.paceFactor;
   p.accord -= latticeAlienation(state, mods);
-  for (const t of THREADS) p.strain[t] = strainFor(t, logL, mods);
+  for (const t of THREADS) p.strain[t] = strainFor(t, logL, mods, -pace);
   return p;
 }

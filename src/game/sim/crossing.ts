@@ -47,6 +47,13 @@ function migrateToBlackHoles(state: GameState): number {
       state.civ.known[target.id] = 2;
     }
   }
+  // the migrants bring what they know how to build: a harvester for the hole's spin
+  if (moved && state.civ.techs.includes('penrose_process')) {
+    for (const c of colonies(state)) {
+      const k = state.systems[c.systemId].primary.kind;
+      if ((k === 'black_hole' || k === 'smbh') && !(c.structures.penrose_harvester ?? 0)) c.structures.penrose_harvester = 1;
+    }
+  }
   return moved;
 }
 

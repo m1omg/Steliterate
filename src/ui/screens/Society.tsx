@@ -107,7 +107,7 @@ export function ThreadsModal({ s }: { s: GameState }) {
         {THREADS.map((t) => {
           const d = THREAD_DEFS[t];
           const [lo, hi] = clockRange(t, mods);
-          const st = strainFor(t, logL, mods);
+          const st = strainFor(t, logL, mods, -s.civ.pace);
           const dem = s.civ.demands[t];
           const demDef = dem ? DEMANDS.find((x) => x.id === dem) : null;
           const met = dem ? demandMet(s, dem, mods, logL) : true;

@@ -19,7 +19,8 @@ for (const strategy of strategies) {
   console.log(`\n=== ${strategy} · ${length} ===`);
   for (let g = 0; g < games; g++) {
     const seed = 1000 + g * 7919;
-    const state = newGame({ seed, length, survivors: 3 });
+    const difficulty = (process.argv.find((a) => a.startsWith('--diff='))?.slice(7) ?? 'standard') as 'gentle' | 'standard' | 'harsh';
+    const state = newGame({ seed, length, survivors: 3, difficulty });
     const eraTurns: Record<string, number> = {};
     let crossings = '';
     const t0 = Date.now();
