@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { bodyClimate, diskLight, primaryTemperature } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
-import type { Body, GameState, StarSystem } from '../game/types';
+import { survivorWorld } from '../game/sim/homes';
+import type { Body, GameState, StarSystem, Survivor } from '../game/types';
 import { radialTexture, type Pickable } from './galaxyView';
 import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, STAR_FRAG, STAR_VERT, VIEW_MODE, thermalRGB } from './shaders/bodies';
 import { blackbody } from './shaders/noise';
@@ -36,6 +37,10 @@ export class SystemView {
   private dyson: THREE.InstancedMesh | null = null;
   private dysonSpin: { axis: THREE.Vector3; speed: number; r: number; phase: number }[] = [];
   private fleets = new THREE.Group();
+  /** Other civilizations' habitats: groups that turn slowly, some following their world, lights that breathe. */
+  private habitats: { obj: THREE.Object3D; spin: number; follow: THREE.Object3D | null; pulse: THREE.MeshBasicMaterial[] }[] = [];
+  /** Sleepers' vault lights, breathing slowly. */
+  private sleepLights: THREE.ShaderMaterial[] = [];
   private stars: THREE.Points;
   private time = 0;
   /** Orbital clock: stands still while orbits are paused (the stars keep burning on `time`). */
@@ -83,6 +88,8 @@ export class SystemView {
     this.dysonSpin = [];
     this.swarm = null;
     this.swarmMat = null;
+    this.habitats = [];
+    this.sleepLights = [];
     this.fleets = new THREE.Group();
     this.starMat = null;
   }
@@ -99,14 +106,23 @@ export class SystemView {
     const colonized = new Set(Object.values(state.colonies).filter((c) => c.systemId === sys.id).map((c) => c.bodyId));
     // until a probe has surveyed it, a system is only its star: the worlds are not charted yet
     const surveyed = state.civ.known[sys.id] === 2 || colonized.size > 0;
+    // other civilizations living here, on the world their way of life calls for
+    const residents = new Map<string, Survivor>();
+    if (surveyed) {
+      for (const v of Object.values(state.survivors)) {
+        if (!v.alive || !v.systems.includes(sys.id)) continue;
+        const w = survivorWorld(state, v, sys.id);
+        if (w) residents.set(w.id, v);
+      }
+    }
     for (const bid of surveyed ? sys.bodies : []) {
       const b = state.bodies[bid];
       if (!b || b.dissolved) continue;
       if (b.kind === 'deep') {
-        this.buildDeep(state, sys, b, colonized.has(b.id));
+        this.buildDeep(state, sys, b, colonized.has(b.id), residents.get(b.id));
         continue;
       }
-      this.buildBody(state, sys, b, light, colonized.has(b.id));
+      this.buildBody(state, sys, b, light, colonized.has(b.id), residents.get(b.id));
     }
     if (surveyed) this.buildStructures(state, sys);
     this.buildSwarm(state, sys);
@@ -226,9 +242,10 @@ export class SystemView {
     this.group.add(disk);
   }
 
-  private buildDeep(state: GameState, sys: StarSystem, b: Body, settled: boolean) {
+  private buildDeep(state: GameState, sys: StarSystem, b: Body, settled: boolean, sv?: Survivor) {
     const r = this.primaryRadius * 2.4 + 3;
-    const ring = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.12, 128), new THREE.MeshBasicMaterial({ color: settled ? this.neon : '#6b6f7a', transparent: true, opacity: settled ? 0.55 : 0.18, side: THREE.DoubleSide, depthWrite: false }));
+    const other = sv ? othersColor(sv) : null;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.12, 128), new THREE.MeshBasicMaterial({ color: settled ? this.neon : (other ?? '#6b6f7a'), transparent: true, opacity: settled ? 0.55 : other ? 0.4 : 0.18, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2;
     this.group.add(ring);
     const pos = new THREE.Vector3(r, 0, 0);
@@ -241,11 +258,13 @@ export class SystemView {
       lights.position.copy(pos);
       this.group.add(hull, lights);
     }
+    // another civilization's orbital habitats, where the Deep is theirs
+    if (sv && other) this.addHabitats(sv, other, pos.clone(), null, 0);
     void state;
     void sys;
   }
 
-  private buildBody(state: GameState, sys: StarSystem, b: Body, light: { color: THREE.Color; power: number }, settled: boolean) {
+  private buildBody(state: GameState, sys: StarSystem, b: Body, light: { color: THREE.Color; power: number }, settled: boolean, sv?: Survivor) {
     const pivot = new THREE.Object3D();
     const orbitR = b.rogue ? b.orbit * 2.6 + 30 : b.orbit + this.primaryRadius * 1.5;
     const size = b.size;
@@ -263,6 +282,9 @@ export class SystemView {
     const col = state.colonies[b.colonyId ?? ''];
     const climate = bodyClimate(state, b);
     const pops = col ? col.pops.kin + col.pops.echoes + col.pops.chorus + col.pops.lattice + col.pops.coldminds : 0;
+    // another civilization that lives on the surface: their cities, in their own colour
+    const other = sv ? othersColor(sv) : null;
+    const surface = !!sv && (sv.way === 'garden' || sv.way === 'dormant' || sv.way === 'fork');
     mat = new THREE.ShaderMaterial({
       vertexShader: PLANET_VERT,
       fragmentShader: PLANET_FRAG,
@@ -271,10 +293,11 @@ export class SystemView {
         uSeed: { value: (hashSeed(b.id) % 1000) / 37 },
         uKind: { value: KIND_INDEX[b.kind] ?? 0 },
         uVitality: { value: b.vitality },
-        uLights: { value: settled ? Math.min(1, 0.35 + pops / 12) : 0 },
+        uLights: { value: settled ? Math.min(1, 0.35 + pops / 12) : surface ? (sv!.way === 'dormant' ? 0.3 : sv!.way === 'fork' ? 0.7 : 0.85) : 0 },
         // how built-up the settlement is: people plus everything they have built
-        uDev: { value: settled && col ? Math.min(1, 0.15 + pops / 30 + Object.values(col.structures).reduce((a, n) => a + n, 0) / 40) : 0 },
-        uNeon: { value: this.neon },
+        uDev: { value: settled && col ? Math.min(1, 0.15 + pops / 30 + Object.values(col.structures).reduce((a, n) => a + n, 0) / 40) : surface ? (sv!.way === 'dormant' ? 0.12 : Math.min(1, 0.25 + sv!.pop / 40)) : 0 },
+        uNeon: { value: surface && other ? other : this.neon },
+        uCityCol: { value: surface && other ? other.clone().lerp(new THREE.Color(1.0, 0.62, 0.3), 0.25) : new THREE.Color(1.0, 0.62, 0.3) },
         uSunDir: { value: new THREE.Vector3(1, 0, 0) },
         uSunColor: { value: light.color },
         uSunPower: { value: b.rogue ? 0.02 : light.power },
@@ -310,6 +333,20 @@ export class SystemView {
         extra.push(shield);
       }
     }
+    if (sv && other) {
+      if (surface) {
+        // a thin ring in their colour marks a world someone else lives on (sleepers show only their faint lights)
+        if (sv.way !== 'dormant') {
+          const theirs = new THREE.Mesh(new THREE.TorusGeometry(size * 1.45, 0.02 + size * 0.008, 6, 96), new THREE.MeshBasicMaterial({ color: other, transparent: true, opacity: 0.45 }));
+          theirs.rotation.x = Math.PI / 2 - 0.35;
+          mesh.add(theirs);
+          extra.push(theirs);
+        } else this.sleepLights.push(mat);
+      } else {
+        // minds on substrate with no Deep to live in: their habitats orbit their world
+        this.addHabitats(sv, other, null, mesh, size * 1.4);
+      }
+    }
     // orbit line
     const orbit = new THREE.Mesh(new THREE.RingGeometry(orbitR - 0.04, orbitR + 0.04, 180), new THREE.MeshBasicMaterial({ color: b.rogue ? '#4a4a52' : '#8a8f9c', transparent: true, opacity: b.rogue ? 0.08 : 0.16, side: THREE.DoubleSide, depthWrite: false }));
     orbit.rotation.x = -Math.PI / 2;
@@ -318,6 +355,85 @@ export class SystemView {
     const speed = b.rogue ? 0.004 : 0.25 / Math.pow(orbitR / 12, 1.5);
     this.planets.push({ body: b, pivot, mesh, mat, speed, phase: b.phase, radius: orbitR, extra });
     this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos: mesh.position.clone(), radius: size });
+  }
+
+  /**
+   * Another civilization's habitats, shaped by how they live: a flotilla of archive stations for
+   * uploaded minds, one ring-station whose lights breathe together for a merged Chorus, a lattice
+   * of identical cells for processes. `clear` keeps them outside a host world's surface.
+   */
+  private addHabitats(sv: Survivor, color: THREE.Color, anchor: THREE.Vector3 | null, follow: THREE.Object3D | null, clear: number) {
+    const g = new THREE.Group();
+    const rng = new Rng(hashSeed(sv.id + 'habitats'));
+    const hullMat = new THREE.MeshBasicMaterial({ color: '#16151b' });
+    const lightMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 });
+    const pulse: THREE.MeshBasicMaterial[] = [];
+    if (sv.way === 'chorus') {
+      const R = Math.max(1.3, clear + 0.5);
+      const torus = new THREE.Mesh(new THREE.TorusGeometry(R, 0.14, 8, 72), hullMat);
+      torus.rotation.x = Math.PI / 2;
+      g.add(torus);
+      const node = new THREE.SphereGeometry(0.2, 12, 8);
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2;
+        const m = new THREE.Mesh(node, lightMat);
+        m.position.set(Math.cos(a) * R, 0, Math.sin(a) * R);
+        g.add(m);
+      }
+      if (!follow) {
+        // the heart of the station, and spokes to it, where no world sits in the middle
+        g.add(new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), lightMat));
+        const spoke = new THREE.CylinderGeometry(0.025, 0.025, R, 4);
+        for (let i = 0; i < 3; i++) {
+          const a = (i / 3) * Math.PI * 2;
+          const sp = new THREE.Mesh(spoke, hullMat);
+          sp.position.set(Math.cos(a) * R * 0.5, 0, Math.sin(a) * R * 0.5);
+          sp.rotation.set(0, -a, Math.PI / 2);
+          g.add(sp);
+        }
+      }
+      pulse.push(lightMat);
+    } else if (sv.way === 'lattice') {
+      const n = 5;
+      const step = 0.45;
+      const cells = new THREE.InstancedMesh(new THREE.BoxGeometry(0.18, 0.18, 0.18), lightMat, n * n * 3);
+      const off = follow ? clear + (n * step) / 2 + 0.6 : 0;
+      const m4 = new THREE.Matrix4();
+      let k = 0;
+      for (let x = 0; x < n; x++)
+        for (let z = 0; z < n; z++)
+          for (let y = 0; y < 3; y++) {
+            if (rng.chance(0.25)) continue;
+            m4.makeTranslation(off + (x - (n - 1) / 2) * step, (y - 1) * step, (z - (n - 1) / 2) * step);
+            cells.setMatrixAt(k++, m4);
+          }
+      cells.count = k;
+      g.add(cells);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(n * step, 3 * step, n * step), new THREE.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.22 }));
+      frame.position.x = off;
+      g.add(frame);
+    } else {
+      for (let i = 0; i < 7; i++) {
+        const st = new THREE.Group();
+        const len = rng.range(0.6, 1.2);
+        st.add(new THREE.Mesh(new THREE.BoxGeometry(len, 0.22, 0.22), hullMat));
+        st.add(new THREE.Mesh(new THREE.BoxGeometry(len * 1.02, 0.05, 0.24), lightMat));
+        const r = clear > 0 ? clear + rng.range(0.3, 1.2) : rng.range(0.4, 2.2);
+        const a = rng.range(0, Math.PI * 2);
+        st.position.set(Math.cos(a) * r, rng.range(-0.5, 0.5), Math.sin(a) * r);
+        st.rotation.set(rng.range(0, Math.PI), rng.range(0, Math.PI), 0);
+        g.add(st);
+      }
+    }
+    // a soft glow, so their home can be found from across the system
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTexture(), color, transparent: true, opacity: follow ? 0.18 : 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.setScalar(follow ? clear * 3 : 5.5);
+    g.add(glow);
+    if (anchor) g.position.copy(anchor);
+    // in the Deep they stand alone: a little larger, so they hold their own beside the planets
+    if (!follow) g.scale.setScalar(1.4);
+    this.group.add(g);
+    this.habitats.push({ obj: g, spin: sv.way === 'lattice' ? 0.05 : 0.12, follow, pulse });
   }
 
   private buildStructures(state: GameState, sys: StarSystem) {
@@ -460,6 +576,13 @@ export class SystemView {
         }
       }
     }
+    // other civilizations' habitats turn slowly (on elapsed time); a Chorus's lights breathe as one
+    for (const h of this.habitats) {
+      if (h.follow) h.follow.getWorldPosition(h.obj.position);
+      h.obj.rotation.y = t * h.spin;
+      for (const m of h.pulse) m.opacity = 0.6 + 0.35 * Math.sin(t * 1.3);
+    }
+    for (const m of this.sleepLights) m.uniforms.uLights.value = 0.2 + 0.12 * Math.sin(t * 0.35);
     if (this.dyson) {
       const m = new THREE.Matrix4();
       const q = new THREE.Quaternion();
@@ -601,4 +724,9 @@ function withNearFade<T extends THREE.Material>(m: T): T {
       .replace('void main() {', 'void main() {\n  if (vViewDepth < uNearFade) discard;');
   };
   return m;
+}
+
+/** How we see another civilization's lights: in their colour once we know them. */
+function othersColor(sv: Survivor): THREE.Color {
+  return new THREE.Color(sv.contact ? sv.color : '#d9cdb8');
 }

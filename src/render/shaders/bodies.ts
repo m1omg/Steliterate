@@ -134,6 +134,7 @@ export const PLANET_FRAG = /* glsl */ `
   uniform float uLights;      // settlement night lights 0..1
   uniform float uDev;        // how built-up the settlement is 0..1
   uniform vec3 uNeon;
+  uniform vec3 uCityCol;     // the colour of the lights: sodium for ours, their own colour for others
   uniform vec3 uSunDir;       // world-space direction toward the primary
   uniform vec3 uSunColor;
   uniform float uSunPower;
@@ -221,7 +222,7 @@ export const PLANET_FRAG = /* glsl */ `
     float cityLo = mix(0.9, 0.56, uDev);
     float cityMask = smoothstep(cityLo, cityLo + 0.2, detail * 0.5 + 0.5 + blocks) * uLights;
     float neonCell = step(0.965, fract(sin(dot(floor(p * 60.0), vec3(12.9, 78.2, 37.7))) * 43758.5)) * fineAA;
-    vec3 cityCol = mix(vec3(1.0, 0.62, 0.3), uNeon, neonCell);
+    vec3 cityCol = mix(uCityCol, uNeon, neonCell);
     if (uKind == 1) {
       // a tidally locked world is lived on along its terminator and the edge of the day side:
       // the night side is ice. Cities spread along the ring as the settlement grows.
@@ -240,14 +241,14 @@ export const PLANET_FRAG = /* glsl */ `
       // and they light the air above them: a soft sodium haze over the built-up ring,
       // drawn on the world itself rather than smeared across the screen
       float haze = ring * smoothstep(0.5 - 0.4 * uDev, 0.95 - 0.3 * uDev, detail * 0.5 + 0.5) * smoothstep(0.0, 0.1, uDev);
-      col += vec3(1.0, 0.62, 0.3) * haze * uLights * twilight * 0.12 * lamp;
+      col += uCityCol * haze * uLights * twilight * 0.12 * lamp;
       // a thin neon thread of transit lines linking the cities around the ring
       float lineMask = smoothstep(0.985, 1.0, sin((facing + 0.02 * snoise(p * 7.0 + uSeed)) * 120.0)) * ring * smoothstep(0.3, 0.8, uDev);
       col += uNeon * lineMask * twilight * 0.8 * lamp * lamp;
     } else {
       col += cityCol * cityMask * dark * 1.1;
       // and a faint sodium glow in the air over them
-      col += vec3(1.0, 0.62, 0.3) * smoothstep(cityLo - 0.12, cityLo + 0.12, detail * 0.5 + 0.5) * uLights * dark * 0.1;
+      col += uCityCol * smoothstep(cityLo - 0.12, cityLo + 0.12, detail * 0.5 + 0.5) * uLights * dark * 0.1;
     }
     col += albedo * 0.015; // faint ambient from the rest of the sky
     // ice reflects what little starlight there is: the frozen night side stays faintly visible

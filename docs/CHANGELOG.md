@@ -123,3 +123,10 @@ https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Balance figures are "games th
   crushed mix (was 65%), pads at 14 kHz with 55% (was 45%), bass 35% (was 30%), final low-pass
   6.8 kHz (was 6.2). Aliasing shimmer (8–14 kHz) in the runs +11 dB, slow lines +2.5 dB; still
   below the old hiss level; key purity, loudness (−15 LUFS) and the quiet hiss unchanged.
+- **Other civilizations are drawn in the system view.** Those living on a planet (still
+  biological, or a Thread that left us) light its night side with cities in their colour, with a
+  thin ring in their colour; sleepers show only a few faint lights that breathe slowly. Minds on
+  substrate live in the Deep (or orbit their world where there is no Deep): uploaded minds as a
+  flotilla of archive stations, a merged Chorus as one ring-station whose lights pulse together,
+  the Lattice as a glowing lattice of identical cells; each with a soft glow in their colour.
+  Their world's label reads "‹world› · ◈ ‹name›" in their colour. Rendering only.

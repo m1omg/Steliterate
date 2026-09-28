@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { residentsOf } from '../game/sim/homes';
 import { ERA_BY_ID } from '../game/eras';
 import type { GameState } from '../game/types';
 import { OrbitRig } from './camera';
@@ -550,7 +551,15 @@ export class Engine {
         if (!p.id.startsWith('body:')) continue;
         const b = state.bodies[p.id.slice(5)];
         if (!b) continue;
-        items.push({ text: b.kind === 'deep' ? 'The Deep' : b.name, pos: p.pos.clone().add(new THREE.Vector3(0, b.size + 1.2, 0)), cls: b.colonyId ? 'mine' : 'body', w: 2 });
+        const name = b.kind === 'deep' ? 'The Deep' : b.name;
+        const lift = new THREE.Vector3(0, b.size + 1.2, 0);
+        // a world another civilization lives on carries their name, in their colour
+        const sv = residentsOf(state, b);
+        if (sv && sv.contact) {
+          items.push({ text: `${name} · ◈ ${sv.name}`, pos: p.pos.clone().add(lift), cls: 'others', w: 3, color: sv.color });
+          continue;
+        }
+        items.push({ text: name, pos: p.pos.clone().add(lift), cls: b.colonyId ? 'mine' : 'body', w: 2 });
       }
     }
     let i = 0;
