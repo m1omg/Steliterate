@@ -4,7 +4,7 @@ import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
 import { autosave, busy, bump, engine, game, modal, notify } from './store';
 import { TECH_BY_ID } from '../game/data/techs';
-import { isIdleFleet } from '../game/sim/fleets';
+import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
 import { shipQueue } from './hud/ShipPrompt';
 import { researchPrompt } from './hud/ResearchPrompt';
 
@@ -57,6 +57,13 @@ export function doEndTurn() {
   const surveyed = Object.keys(s.civ.known).filter((id) => s.civ.known[id] === 2 && knownBefore[id] !== 2 && !Object.values(s.colonies).some((c) => c.systemId === id));
   for (const id of detected) engine()?.ping(id, '#bfe9ff');
   for (const id of surveyed) engine()?.ping(id, '#9ff5e6');
+  const living = surveyed.flatMap((id) => livingWorlds(s, id));
+  if (living.length) {
+    const b = living.sort((x, y) => y.habitability * y.vitality - x.habitability * x.vitality)[0];
+    notify(`Living world found: ${b.name} in ${s.systems[b.systemId].name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b)} Kin${living.length > 1 ? ` (and ${living.length - 1} more)` : ''}.`, 'good');
+    for (const w of living) engine()?.ping(w.systemId, '#b8f5a0');
+    sfx('good');
+  }
   if (surveyed.length) {
     const sys = s.systems[surveyed[0]];
     const worlds = sys.bodies.filter((b) => s.bodies[b] && !s.bodies[b].dissolved && s.bodies[b].kind !== 'deep').length;

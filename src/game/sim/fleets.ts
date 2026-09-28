@@ -133,6 +133,9 @@ export function survey(state: GameState, systemId: string) {
     }
   }
   log(state, `Surveyed ${sys.name}.`, 'info', systemId);
+  for (const b of livingWorlds(state, systemId)) {
+    log(state, `A living world at ${sys.name}: ${b.name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b)} Kin without domes.`, 'good', systemId);
+  }
   // a survey sometimes turns up something remarkable (at most one find per survey)
   withRng(state, (rng) => {
     if (!rng.chance(0.3)) return;
@@ -239,3 +242,20 @@ export function isIdleFleet(f: Fleet): boolean {
 
 /** Fortified warships count double when they defend the system they hold. */
 export const FORTIFY_BONUS = 2;
+
+/** Room for Kin a world offers on its own, before any domes or warrens. */
+export function naturalKinRoom(b: Body): number {
+  if (b.dissolved) return 0;
+  const cap = Math.floor(Math.round(12 * b.habitability) * b.vitality);
+  return b.rogue || b.feeding ? Math.floor(cap * 0.3) : cap;
+}
+
+/** Habitable enough to be news: at least half as good as a living world can be, right now. */
+export const LIVING_WORLD = 0.5;
+
+/** Unsettled worlds in a system that are at least LIVING_WORLD habitable. */
+export function livingWorlds(state: GameState, systemId: string): Body[] {
+  return state.systems[systemId].bodies
+    .map((id) => state.bodies[id])
+    .filter((b) => b && !b.dissolved && !b.colonyId && b.kind !== 'gas_giant' && b.habitability * b.vitality >= LIVING_WORLD);
+}

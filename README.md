@@ -33,7 +33,7 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
 - Watch the **Forecasts** (bottom left, closable) and the **Chronometer** (top): they tell
   you what is coming and roughly when.
 - Keys: Enter end turn · R research · S settlements · F fleets · T threads · C charters ·
-  G signals · L the Record · K Codex · H home · P pause orbits · Esc close.
+  G signals · L the Record · K Codex · W surveyed worlds · H home · P pause orbits · Esc close.
 
 Saves stay in your browser; a save code lets you move a game elsewhere.
 

@@ -163,6 +163,14 @@ window.addEventListener('keydown', (e) => {
     modal.value = open === target ? null : { kind: target };
     return;
   }
+  // W: the list of every surveyed world (a tab of the Settlements window)
+  if (key === 'w' && (!open || Object.values(SCREEN_KEYS).includes(open as never) || open === 'save' || open === 'settings')) {
+    e.preventDefault();
+    sfx('click');
+    const m = modal.value;
+    modal.value = m?.kind === 'settlements' && m.tab === 'worlds' ? null : { kind: 'settlements', tab: 'worlds' };
+    return;
+  }
   if (open) return;
   if (key === 'p') {
     e.preventDefault();

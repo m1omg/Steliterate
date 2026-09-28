@@ -10,7 +10,7 @@ export type Screen = 'menu' | 'setup' | 'game';
 export type Modal =
   | { kind: 'research' }
   | { kind: 'fleets' }
-  | { kind: 'settlements' }
+  | { kind: 'settlements'; tab?: 'worlds' }
   | { kind: 'charters' }
   | { kind: 'threads' }
   | { kind: 'signals' }

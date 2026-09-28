@@ -39,7 +39,7 @@ export const MANUAL: CodexEntry[] = [
     body: [
       'Click a settlement (on the map, or in the Settlements list on the rail) to open its panel. Overview shows its yields, people, world and structures. Build shows its queue and what it can build; Rush finishes the first item at once for matter and energy, and people resent it.',
       'Focus shifts a settlement’s effort toward energy, industry, insight or accord. Overdrive (after the Overdrive Protocols charter) runs the Hearth hot for much more energy, at a cost in damage and attention from the Hunger.',
-      'People need room. Kin can live on a living world up to its natural capacity, and anywhere in Habitat Domes and Deep Warrens. Echoes live in Substrate Cores, Coldminds in Cold Vaults, the Lattice in Lattice Foundries. Housing costs upkeep only for the share that is lived in.',
+      'People need room. A world’s natural room for Kin is about 12 × its habitability × its vitality (a third of that on a rogue or feeding world); a barren world has none. Beyond that, Kin need housing: Habitat Domes hold 3 each (up to 5), Deep Warrens 4 (up to 3), Garden Arks 4. Kin never grow past their room, and if room shrinks below them (a world dying, the Last Light) the extra die, or go into cold sleep under the Cold Sleep Lottery. So you need domes on any world that is not alive, on a living world once you want more Kin than it holds, and everywhere once the living worlds freeze. Echoes live in Substrate Cores, Coldminds in Cold Vaults, the Lattice in Lattice Foundries. Housing costs upkeep only for the share that is lived in.',
       'Living worlds die. Aster is losing its magnetic field (a Magnetic Shield slows that), and once the stars go out every living world freezes within a few turns and becomes an ice world or bare rock, unless you keep it warm with Orbital Lamps or slow it with a Core Stimulator.',
       'Conversions (in the People section): Upload turns a Kin into an Echo, Merge two Echoes into a Chorus, Cool an Echo into a Coldmind. Freeze and Thaw move Kin in and out of cold sleep. Echoes also form by themselves in free substrate (Substrate Cores), about one every five turns while your reserve stays above 15 energy; uploading is the fast way.',
     ],
@@ -48,7 +48,7 @@ export const MANUAL: CodexEntry[] = [
     id: 'm-expand',
     title: 'Exploring and expanding',
     body: [
-      'Stars you can see are on the map; their worlds are unknown until a probe surveys the system. Select a probe (Fleets on the rail) and pick a destination from its Nearby list, or press Move and click a star. A survey charts every world and sometimes turns up something remarkable.',
+      'Stars you can see are on the map; their worlds are unknown until a probe surveys the system. Select a probe (Fleets on the rail) and pick a destination from its Nearby list, or press Move and click a star. A survey charts every world and sometimes turns up something remarkable; a world at least 50% habitable is announced. Settlements (S) has a second tab, Surveyed worlds (W), listing every charted world with its habitability, room for Kin, temperature and water.',
       'Settler ships, from any settlement with a Shipyard (the Expand section of the settlement panel, or Build then Ships):',
       'System Lighter: no research needed. Carries one family of Kin and a dome to another world of the same star. Its colonists come from the settlement that builds it.',
       'Seedcore (Mind Substrate): two Echoes and their substrate. Can settle almost anywhere, including the empty orbital space of a dead star.',
@@ -110,7 +110,7 @@ export const MANUAL: CodexEntry[] = [
     title: 'Controls',
     body: [
       'Mouse: drag to turn the view, right-drag or two fingers to pan, wheel or pinch to zoom (toward whatever is under the pointer). Click to select. To look inside a star system: double-click it, tap it again on a touchscreen, press Look inside, or simply zoom in on it; zoom out past the edge of a system to return to the galaxy. Click a planet to fly to it: it stays in focus as it orbits (you can still turn, pan and zoom around it) until you pick another world, click the star, or press the whole-system button. Pause (or P) holds every world still in its orbit.',
-      'Keys: Enter ends the turn. R research, S settlements, F fleets, T threads, C charters, G signals, L the Record, K the Codex, H home, P pause or play the orbits, Esc closes a window or clears the selection.',
+      'Keys: Enter ends the turn. R research, S settlements, F fleets, T threads, C charters, G signals, L the Record, K the Codex, W surveyed worlds, H home, P pause or play the orbits, Esc closes a window or clears the selection.',
     ],
   },
 ];

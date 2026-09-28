@@ -1,18 +1,24 @@
+import { useState } from 'preact/hooks';
+import { ANOMALIES } from '../../game/data/events';
+import { bodyClimate } from '../../game/physics';
+import { LIVING_WORLD, naturalKinRoom } from '../../game/sim/fleets';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
 import { travelTurnsEstimate } from '../../game/sim/fleets';
 import { project } from '../../game/sim/projection';
-import { colonies, popsOf } from '../../game/sim/util';
-import type { Colony, Fleet, GameState } from '../../game/types';
+import { colonies, distLy, popsOf } from '../../game/sim/util';
+import type { Body, Colony, Fleet, GameState } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
-import { BODY_NAME, PRIMARY_NAME } from '../labels';
+import { BODY_NAME, PRIMARY_NAME, TRAIT_NAME } from '../labels';
 import { engine, modal, rev, selection, view } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
+
+const ANOMALY_IDS = new Set(ANOMALIES.map((a) => a.id));
 
 export function goToFleet(s: GameState, f: Fleet) {
   sfx('select');
@@ -90,8 +96,23 @@ export function FleetsModal({ s }: { s: GameState }) {
   );
 }
 
-export function SettlementsModal({ s }: { s: GameState }) {
+export function SettlementsModal({ s, tab }: { s: GameState; tab?: 'worlds' }) {
   void rev.value;
+  const [which, setWhich] = useState<'ours' | 'worlds'>(tab ?? 'ours');
+  const surveyedCount = Object.values(s.bodies).filter((b) => s.civ.known[b.systemId] === 2 && !b.dissolved && b.kind !== 'deep').length;
+  const tabs = (
+    <div class="row" style={{ gap: '4px', marginBottom: '8px' }}>
+      <button class={`btn small ${which === 'ours' ? 'primary' : ''}`} onClick={() => setWhich('ours')}>Our settlements</button>
+      <button class={`btn small ${which === 'worlds' ? 'primary' : ''}`} onClick={() => setWhich('worlds')}>Surveyed worlds <span class="mono faint">{surveyedCount}</span></button>
+    </div>
+  );
+  if (which === 'worlds')
+    return (
+      <ModalFrame title="Surveyed worlds" eyebrow="Every world a probe has charted" icon="planet" narrow>
+        {tabs}
+        <WorldsList s={s} />
+      </ModalFrame>
+    );
   const p = project(s);
   const bySystem = new Map<string, Colony[]>();
   for (const c of colonies(s)) {
@@ -102,6 +123,7 @@ export function SettlementsModal({ s }: { s: GameState }) {
   const total = colonies(s).reduce((a, c) => a + popsOf(c) + c.cryo, 0);
   return (
     <ModalFrame title="Settlements" eyebrow={`${colonies(s).length} settlements in ${bySystem.size} system${bySystem.size === 1 ? '' : 's'} · ${total} people`} icon="colony" narrow>
+      {tabs}
       {[...bySystem.entries()].map(([sid, cs]) => {
         const sys = s.systems[sid];
         return (
@@ -149,5 +171,71 @@ export function SettlementsModal({ s }: { s: GameState }) {
         );
       })}
     </ModalFrame>
+  );
+}
+
+export function goToBody(b: Body) {
+  sfx('select');
+  modal.value = null;
+  selection.value = { kind: 'body', id: b.id };
+  view.value = 'system';
+  engine()?.showSystem(b.systemId, b.id);
+}
+
+type WorldSort = 'hab' | 'near' | 'room' | 'name';
+
+/** Every charted world, best places to live first: what a settler would find there. */
+function WorldsList({ s }: { s: GameState }) {
+  void rev.value;
+  const [sort, setSort] = useState<WorldSort>('hab');
+  const [open, setOpen] = useState(true);
+  const cap = colonies(s).find((c) => c.id === s.civ.capitalId);
+  const home = s.systems[cap?.systemId ?? s.civ.homeSystemId];
+  const rows = Object.values(s.bodies)
+    .filter((b) => s.civ.known[b.systemId] === 2 && !b.dissolved && b.kind !== 'deep' && (!open || !b.colonyId))
+    .map((b) => {
+      const sys = s.systems[b.systemId];
+      const c = b.kind === 'gas_giant' || b.kind === 'ice_giant' ? null : bodyClimate(s, b);
+      return { b, sys, hab: b.habitability * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)) };
+    })
+    .sort((x, y) => (sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
+  const sorts: [WorldSort, string][] = [['hab', 'Habitable'], ['room', 'Room'], ['near', 'Nearest'], ['name', 'Name']];
+  return (
+    <>
+      <div class="row wrap" style={{ gap: '4px', marginBottom: '6px' }}>
+        {sorts.map(([k, label]) => (
+          <button key={k} class={`btn small ghost ${sort === k ? 'on' : ''}`} onClick={() => setSort(k)}>
+            {label}
+          </button>
+        ))}
+        <span class="grow" />
+        <button class={`btn small ghost ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} data-tip="Hide the worlds we have already settled">
+          Unsettled only
+        </button>
+      </div>
+      {rows.length === 0 && <p class="dim">No worlds charted yet. Send a probe to survey a star.</p>}
+      <div class="list">
+        {rows.map(({ b, sys, hab, room, c, ly, finds }) => (
+          <div key={b.id} class="list-item world-row" onClick={() => goToBody(b)}>
+            <span class="grow">
+              {b.name} <span class="faint">{BODY_NAME[b.kind]}</span>
+              {b.colonyId && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
+              {finds.map((t) => (
+                <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
+              ))}
+              <div class="faint" style={{ fontSize: '11px' }}>
+                {sys.name} · {formatDistance(ly)}
+                {c ? ` · ${c.day !== undefined ? `${Math.round(c.night!)}–${Math.round(c.day)}` : Math.round(c.mean)} K` : ''}
+                {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
+              </div>
+            </span>
+            <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
+              <span class={hab >= LIVING_WORLD ? 'good' : hab > 0.05 ? '' : 'faint'}>{Math.round(hab * 100)}%</span>
+              <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
+            </span>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
