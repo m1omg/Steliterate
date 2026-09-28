@@ -62,10 +62,19 @@ function flareDue(state: GameState, from: number, to: number): StarSystem | null
   return best;
 }
 
+/**
+ * Still keeping time with a flare? Within a millionth of a flare turn of its end counts as over:
+ * six additions of the step can fall an ulp or two short of it, which gave a seventh turn.
+ */
+function keepingTime(state: GameState): boolean {
+  const f = state.civ.flags;
+  return !!f.flare_until && !!f.flare_step && state.years < f.flare_until - f.flare_step * 1e-6;
+}
+
 /** Are we keeping time with a flare? Returns which of its turns comes next (1-based), or 0. */
 export function flareClock(state: GameState): { turn: number; of: number; system: string } | null {
   const f = state.civ.flags;
-  if (!f.flare_until || state.years >= f.flare_until || !f.flare_step) return null;
+  if (!keepingTime(state)) return null;
   const sys = Object.values(state.systems).find((s) => s.primary.kind === 'blue_dwarf' && s.primary.whiteAt === f.flare_until);
   const done = Math.round((state.years - (f.flare_until - f.flare_step * FLARE_TURNS)) / f.flare_step);
   return { turn: Math.min(FLARE_TURNS, done + 1), of: FLARE_TURNS, system: sys?.name ?? 'our star' };
@@ -81,7 +90,11 @@ export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
   if (state.era !== 'dusk' || !isFinite(step.years)) return step;
   let end = step.years;
   const f = state.civ.flags;
-  if (f.flare_until && f.flare_step && state.years < f.flare_until) end = Math.min(end, state.years + f.flare_step, f.flare_until);
+  if (keepingTime(state)) {
+    // the last of its turns ends exactly when the flare does, not an ulp or two short of it
+    const next = state.years + f.flare_step;
+    end = Math.min(end, next >= f.flare_until - f.flare_step * 1e-6 ? f.flare_until : next);
+  }
   const due = flareDue(state, state.years, end);
   if (due) end = due.primary.blueAt!;
   if (end === step.years) return step;
