@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { SHIP_BY_ID } from '../../game/data/ships';
+import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { STRUCTURE_BY_ID } from '../../game/data/structures';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
@@ -663,6 +663,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   return (
     <>
       <div class="drawer-head">
+        <img class="fleet-portrait" src={`art/ships/${fleetLook(f.ships.map((x) => x.cls))}.png`} alt="" />
         <div class="eyebrow">{here ? `At ${here.name}` : f.to ? `Under way to ${s.systems[f.to]?.name}` : 'Adrift'}</div>
         <h2>{f.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>

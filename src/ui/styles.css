@@ -431,3 +431,8 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .tut-ring { position: fixed; z-index: 30; pointer-events: none; border: 2px solid var(--accent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent), inset 0 0 10px color-mix(in srgb, var(--accent) 30%, transparent); animation: tut-pulse 1.6s ease-in-out infinite; display: none; }
 @keyframes tut-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 @media (max-width: 760px) { .tutorial { left: 8px; right: 8px; width: auto; top: calc(110px + env(safe-area-inset-top, 0px)); } }
+
+/* painted hulls in the fleet list and panel */
+.fleet-thumb { width: 34px; height: 34px; object-fit: contain; flex: none; filter: drop-shadow(0 0 3px rgba(159, 245, 230, 0.25)); }
+.fleet-thumb.moving { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--neon) 70%, transparent)); }
+.drawer-head .fleet-portrait { float: right; width: 64px; height: 64px; object-fit: contain; margin: 14px 4px 0 8px; filter: drop-shadow(0 0 6px rgba(159, 245, 230, 0.2)); }

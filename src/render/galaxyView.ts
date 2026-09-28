@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fleetLook, type FleetLook } from '../game/data/ships';
 import { primaryTemperature } from '../game/physics';
 import { Rng, hashSeed } from '../game/rng';
 import type { GameState, StarSystem } from '../game/types';
@@ -149,6 +150,7 @@ export class GalaxyView {
   private territory: THREE.Points | null = null;
   pickables: Pickable[] = [];
   private pings: { mesh: THREE.Mesh; t0: number; delay: number }[] = [];
+  private syncedState: GameState | null = null;
   private fleetAnim = new Map<
     string,
     { from: THREE.Vector3; to: THREE.Vector3; t0: number; mesh: THREE.Sprite; kind: FleetKind; star: THREE.Vector3 | null; dest: THREE.Vector3 | null; phase: number; pick: Pickable | null }
@@ -296,6 +298,13 @@ export class GalaxyView {
 
   /** Rebuild everything that changes with the game state. */
   sync(state: GameState, now: number) {
+    if (state !== this.syncedState) {
+      // a different game (new, loaded, or the menu's preview world): fleet ids repeat between
+      // games, so start every hull where it is instead of gliding in from the old map
+      for (const a of this.fleetAnim.values()) this.fleetGroup.remove(a.mesh);
+      this.fleetAnim.clear();
+      this.syncedState = state;
+    }
     if (this.seedBuilt !== state.settings.seed) {
       this.buildDust(state);
       this.seedBuilt = state.settings.seed;
@@ -377,8 +386,8 @@ export class GalaxyView {
         lp.push(p.x, p.y, p.z, b.pos.x, b.pos.y, b.pos.z);
       }
       let anim = this.fleetAnim.get(f.id);
-      const war = f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis');
-      const kind: FleetKind = war ? 'war' : f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls)) ? 'settler' : f.ships.every((s) => s.cls === 'probe') ? 'probe' : 'other';
+      const kind = fleetLook(f.ships.map((s) => s.cls));
+      const war = kind === 'war';
       const star = f.at ? new THREE.Vector3(state.systems[f.at].pos.x, state.systems[f.at].pos.y, state.systems[f.at].pos.z) : null;
       const dest = f.to ? new THREE.Vector3(state.systems[f.to].pos.x, state.systems[f.to].pos.y, state.systems[f.to].pos.z) : null;
       if (!anim || anim.kind !== kind) {
@@ -586,104 +595,50 @@ export function radialTexture(): THREE.Texture {
   return _radial;
 }
 
-type FleetKind = 'settler' | 'probe' | 'war' | 'other';
+type FleetKind = FleetLook;
 const _fleetTex = new Map<string, THREE.CanvasTexture>();
 
-/** A small hand-drawn hull seen from above, nose up: thin lit edges, a dark body, a warm drive. */
+/**
+ * A painted hull seen from above, bow up (public/art/ships), over a faint halo in the fleet's
+ * colour so it reads against black space. The halo shows at once; the hull fills in once the
+ * image has loaded.
+ */
 function fleetTexture(kind: FleetKind, color: string): THREE.CanvasTexture {
   const key = `${kind}:${color}`;
   const hit = _fleetTex.get(key);
   if (hit) return hit;
-  const S = 128;
+  const S = 160;
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d')!;
-  g.translate(S / 2, S / 2);
-  // drive glow at the stern
-  const drive = g.createRadialGradient(0, 34, 0, 0, 34, 26);
-  drive.addColorStop(0, 'rgba(255,190,120,0.95)');
-  drive.addColorStop(0.35, 'rgba(255,120,60,0.35)');
-  drive.addColorStop(1, 'rgba(255,90,40,0)');
-  g.fillStyle = drive;
-  g.fillRect(-30, 8, 60, 56);
-  g.lineJoin = 'round';
-  g.lineCap = 'round';
-  const hull = (pts: [number, number][]) => {
-    g.beginPath();
-    g.moveTo(pts[0][0], pts[0][1]);
-    for (const [x, y] of pts.slice(1)) g.lineTo(x, y);
-    g.closePath();
-    g.fillStyle = 'rgba(10,12,16,0.92)';
-    g.fill();
-    g.strokeStyle = color;
-    g.lineWidth = 3;
-    g.stroke();
-  };
-  if (kind === 'probe') {
-    hull([[0, -30], [7, -8], [6, 26], [-6, 26], [-7, -8]]);
-    g.strokeStyle = color;
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(0, -30);
-    g.lineTo(0, -50);
-    g.stroke();
-    g.beginPath();
-    g.arc(0, -8, 11, Math.PI * 1.1, Math.PI * 1.9);
-    g.stroke();
-  } else if (kind === 'war') {
-    hull([[0, -40], [20, 10], [12, 28], [-12, 28], [-20, 10]]);
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(-9, 28);
-    g.lineTo(-9, 36);
-    g.moveTo(9, 28);
-    g.lineTo(9, 36);
-    g.stroke();
-  } else {
-    // a long hauler: spine, forward module, radiator fins; settlers carry a cargo drum
-    hull([[0, -42], [8, -30], [8, 26], [-8, 26], [-8, -30]]);
-    g.lineWidth = 2;
-    g.strokeStyle = color;
-    g.beginPath();
-    g.moveTo(-8, -6);
-    g.lineTo(-24, 2);
-    g.lineTo(-24, 12);
-    g.moveTo(8, -6);
-    g.lineTo(24, 2);
-    g.lineTo(24, 12);
-    g.stroke();
-    if (kind === 'settler') {
-      g.beginPath();
-      g.arc(0, 4, 12, 0, Math.PI * 2);
-      g.fillStyle = 'rgba(10,12,16,0.95)';
-      g.fill();
-      g.lineWidth = 2.5;
-      g.stroke();
-      g.fillStyle = color;
-      g.beginPath();
-      g.arc(0, 4, 3.5, 0, Math.PI * 2);
-      g.fill();
-    }
-  }
-  // spine highlight and a single running light
-  g.globalAlpha = 0.55;
-  g.strokeStyle = '#ffffff';
-  g.lineWidth = 1;
-  g.beginPath();
-  g.moveTo(0, -26);
-  g.lineTo(0, 20);
-  g.stroke();
-  g.globalAlpha = 1;
-  g.fillStyle = color;
-  g.shadowColor = color;
-  g.shadowBlur = 8;
-  g.beginPath();
-  g.arc(0, -34, 2.4, 0, Math.PI * 2);
-  g.fill();
+  const halo = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  halo.addColorStop(0, hexA(color, 0.22));
+  halo.addColorStop(0.55, hexA(color, 0.08));
+  halo.addColorStop(1, hexA(color, 0));
+  g.fillStyle = halo;
+  g.fillRect(0, 0, S, S);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
+  const img = new Image();
+  img.onload = () => {
+    const d = S * 0.8;
+    const o = (S - d) / 2;
+    // a thin rim of the fleet colour around the silhouette, then the hull itself on top
+    g.shadowColor = color;
+    g.shadowBlur = 7;
+    g.drawImage(img, o, o, d, d);
+    g.shadowBlur = 0;
+    g.drawImage(img, o, o, d, d);
+    t.needsUpdate = true;
+  };
+  img.src = `art/ships/${kind}.png`;
   _fleetTex.set(key, t);
   return t;
+}
+
+function hexA(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
 function fleetGlyph(kind: FleetKind, color: string): THREE.Sprite {

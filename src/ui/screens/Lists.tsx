@@ -1,4 +1,4 @@
-import { SHIP_BY_ID } from '../../game/data/ships';
+import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
@@ -62,7 +62,7 @@ export function FleetsModal({ s }: { s: GameState }) {
           const settler = f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles);
           return (
             <div key={f.id} class="list-item fleet-row" onClick={() => goToFleet(s, f)}>
-              <Icon name={settler ? 'colonize' : f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey) ? 'survey' : 'fleet'} cls={moving ? 'neon' : ''} />
+              <img class={`fleet-thumb${moving ? ' moving' : ''}`} src={`art/ships/${fleetLook(f.ships.map((x) => x.cls))}.png`} alt="" />
               <span class="grow">
                 {f.name}
                 <div class="faint" style={{ fontSize: '11px' }}>{shipSummary(f)}</div>

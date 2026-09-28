@@ -30,3 +30,13 @@ export const SHIPS: ShipDef[] = [
 ];
 
 export const SHIP_BY_ID: Record<string, ShipDef> = Object.fromEntries(SHIPS.map((s) => [s.id, s]));
+
+export type FleetLook = 'settler' | 'probe' | 'war' | 'other';
+
+/** Which painted hull stands for a fleet on the map and in the lists. */
+export function fleetLook(classes: string[]): FleetLook {
+  if (classes.some((c) => c === 'warden' || c === 'aegis')) return 'war';
+  if (classes.some((c) => SHIP_BY_ID[c]?.settles)) return 'settler';
+  if (classes.length > 0 && classes.every((c) => c === 'probe')) return 'probe';
+  return 'other';
+}
