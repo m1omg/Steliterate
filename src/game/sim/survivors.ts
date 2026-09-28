@@ -5,6 +5,7 @@ import { createColony, isWarFleet } from './fleets';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
 import { queueEvent } from './events';
+import { survivorWorld } from './homes';
 import { formatDistance, formatYears } from '../eras';
 import { capital, clamp, distLy, hasCharter, log, withRng } from './util';
 
@@ -283,10 +284,11 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
   const civ = state.civ;
   const fleetThere = Object.values(state.fleets).some((f) => f.at === sv.homeSystemId && f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis'));
   if (!fleetThere) return 'You need warships at their home system.';
+  const sys = state.systems[sv.homeSystemId];
+  // we take the world they lived on
+  const b = survivorWorld(state, sv) ?? sys.bodies.map((bid) => state.bodies[bid]).find((x) => x && !x.colonyId && !x.dissolved);
   sv.alive = false;
   sv.fate = 'seized';
-  const sys = state.systems[sv.homeSystemId];
-  const b = sys.bodies.map((bid) => state.bodies[bid]).find((x) => x && !x.colonyId && !x.dissolved);
   if (b) {
     const t: ThreadId = sv.way === 'lattice' ? 'lattice' : sv.way === 'garden' ? 'kin' : 'echoes';
     createColony(state, b, { [t]: Math.max(1, Math.round(sv.pop / 6)) });

@@ -38,12 +38,13 @@ import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, isBeacon, BEACON_TIP } from '../labels';
+import { FOCUS, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, isBeacon, BEACON_TIP } from '../labels';
 import { act, engine, following, notify, rev, selection, targeting, view } from '../store';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
 import { loreView } from '../screens/Story';
 import { siteValue } from '../../game/sim/sites';
+import { residentsOf, survivorPeople, survivorWorld } from '../../game/sim/homes';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 
@@ -161,6 +162,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const fleets = Object.values(s.fleets).filter((f) => f.at === sys.id);
   const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id);
   const survivor = Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id));
+  const survivorHome = survivor && known === 2 ? survivorWorld(s, survivor, sys.id) : null;
   const fc = s.forecasts.filter((f) => f.systemId === sys.id);
   const d = distFromCapital(s, sys);
   return (
@@ -201,6 +203,9 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                         {c ? c.name : b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}</span>
                       </span>
                       {b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls="accent" />}
+                      {survivor && survivorHome?.id === b.id && (
+                        <span data-tip={`${survivor.contact ? survivor.name : 'Someone'} live${survivor.contact ? '' : 's'} here`} style={{ width: '9px', height: '9px', background: survivor.color, display: 'inline-block' }} />
+                      )}
                       {b.rogue && <span class="chip warn">rogue</span>}
                       {b.feeding && <span class="chip boon">feeding</span>}
                       {c ? (
@@ -256,10 +261,19 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
         {survivor && (
           <div class="section">
             <h3>Others</h3>
-            <div class="row" style={{ fontSize: '13px' }}>
+            <div
+              class={`row ${survivorHome ? 'list-item' : ''}`}
+              style={{ fontSize: '13px' }}
+              role={survivorHome ? 'button' : undefined}
+              onClick={() => survivorHome && selectBody(survivorHome)}
+              data-tip={survivorHome ? `They live ${survivorHome.kind === 'deep' ? 'in orbital habitats in the Deep' : `on ${survivorHome.name}`}. Click to look at it.` : ''}
+            >
               <span style={{ width: '10px', height: '10px', background: survivor.color, display: 'inline-block' }} />
-              <span class="grow">{survivor.name}</span>
-              <span class="faint">{survivor.contact ? `${n0(survivor.pop)} people` : 'not contacted'}</span>
+              <span class="grow">
+                {survivor.name}
+                {survivorHome && <span class="faint" style={{ fontSize: '11px' }}> · {survivorHome.kind === 'deep' ? 'in the Deep' : `on ${survivorHome.name}`}</span>}
+              </span>
+              <span class="faint">{survivor.contact ? survivorPeople(survivor) : 'not contacted'}</span>
             </div>
           </div>
         )}
@@ -321,6 +335,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
   const sys = s.systems[b.systemId];
   const surveyed = s.civ.known[sys.id] === 2;
   const settlers = Object.values(s.fleets).filter((f) => f.at && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles && (!SHIP_BY_ID[x.cls]?.inSystem || f.at === b.systemId)));
+  const residents = surveyed ? residentsOf(s, b) : null;
   return (
     <>
       <div class="drawer-head">
@@ -328,6 +343,20 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
           <span style={{ cursor: 'pointer' }} onClick={() => selectSystem(sys.id)}>{sys.name}</span> · <span data-tip={bodyKindNote(s, b)}>{bodyKindName(s, b)}</span>
         </div>
         <h2>{b.name}</h2>
+        {residents && (
+          <div class="row" style={{ marginTop: '4px', fontSize: '13px', gap: '6px' }} data-tip={residents.contact ? `${residents.name}: ${WAY_NAME[residents.way] ?? ''}. Their world cannot be settled; it can only be taken, or left to them.` : 'Someone lives here. We have not made contact with them yet.'}>
+            <span style={{ width: '10px', height: '10px', background: residents.color, display: 'inline-block' }} />
+            <span>
+              {residents.contact ? (
+                <>
+                  Home of <b>{residents.name}</b> <span class="faint">· {survivorPeople(residents)}{b.kind === 'deep' ? ', in orbital habitats' : ''}</span>
+                </>
+              ) : (
+                'Someone lives here.'
+              )}
+            </span>
+          </div>
+        )}
         <div class="row wrap" style={{ marginTop: '6px' }}>
           {b.traits.map((t) =>
             EVENT_BY_ID[`anom_${t}`] ? (

@@ -1,4 +1,5 @@
 import { SHIP_BY_ID } from '../data/ships';
+import { residentsOf } from './homes';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
@@ -174,6 +175,8 @@ export function canSettle(state: GameState, b: Body, thread: ThreadId): string |
   if (b.kind === 'deep' && thread === 'kin' && eraIndex(state.era) === 0 && !state.civ.techs.includes('orbital_industry')) return 'Kin need Orbital Industry to live in the Deep.';
   const sys = state.systems[b.systemId];
   if (sys.gone) return 'The system is gone.';
+  const others = residentsOf(state, b);
+  if (others) return `${others.contact ? others.name : 'Someone'} already live${others.contact ? '' : 's'} here.`;
   return null;
 }
 
