@@ -91,7 +91,7 @@ export function Chronometer({ s }: { s: GameState }) {
             ))}
           {deep && (
             <div class="eyebrow" style={{ position: 'absolute', left: '0', top: '-2px', fontSize: '9.5px' }}>
-              I–III · deep time: log₁₀ η →
+              I–III · deep time: log₁₀ <span class="greek">η</span> →
             </div>
           )}
         </div>

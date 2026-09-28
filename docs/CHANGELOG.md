@@ -131,3 +131,16 @@ https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Balance figures are "games th
   minds as a flotilla of archive stations, a merged Chorus as one ring-station whose lights
   pulse together, the Lattice as a glowing lattice of identical cells; each with a soft glow in
   their colour. Their world's label reads "‹world› · ◈ ‹name›" in their colour. Rendering only.
+
+## The review of 28 Sep (new session)
+
+On branch `claude/epic-wozniak-lyhulf`, stacked on `0815fe4`: not deployed (Pages builds `main`
+and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organization.
+
+- `231b7fb` **Handoff.** `npm run savecompat` with a 71-turn save regenerated from `551fb1a` in
+  `tools/saves/`; `CLAUDE.md`; notes and design brought up to date. No game code.
+- **Interface fixes.** Loading another game's save while looking inside a system no longer
+  throws and leaves the view black: a system the loaded game lacks sends the view back to the
+  galaxy, and the music follows the loaded age. η stays lowercase in capitalised text (the Dark
+  Era chronometer, the ending screen), where uppercase made it Η. The Long Sleep tooltip says
+  what it does: four dormant turns, then waking on the fifth with +30% output.

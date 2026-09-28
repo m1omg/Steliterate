@@ -238,7 +238,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
             <Icon name={civ.dormant ? 'wake' : 'sleep'} /> {civ.dormant ? 'Wake' : 'Sleep'}
           </button>
           {hasTech(s, 'hibernation_protocols') && (
-            <button class="btn small" data-tip="Long Sleep: stay dormant for the next five turns. Turns end on their own, pausing whenever an event needs a decision; press Wake to stop early. On waking, output is +30% for a turn." onClick={() => act((g) => longSleep(g, 5)) && doEndTurn()}>
+            <button class="btn small" data-tip="Long Sleep: the next five turns end on their own, pausing whenever an event needs a decision; press Wake to stop early. We stay dormant for four of them and wake on the fifth, with output +30% for that turn." onClick={() => act((g) => longSleep(g, 5)) && doEndTurn()}>
               Long Sleep ×5
             </button>
           )}

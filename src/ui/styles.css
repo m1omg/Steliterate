@@ -93,6 +93,8 @@ button { font: inherit; color: inherit; }
 .bad { color: var(--bad); }
 .warn { color: var(--warn); }
 .boon { color: var(--boon); }
+/* η inside capitalised text: uppercase would turn it into Η, which reads as a Latin H */
+.greek { text-transform: none; }
 .accent { color: var(--accent-soft); }
 .neon { color: var(--neon); text-shadow: 0 0 8px color-mix(in srgb, var(--neon) 60%, transparent); }
 .row { display: flex; align-items: center; gap: 8px; }

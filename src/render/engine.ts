@@ -233,7 +233,9 @@ export class Engine {
     this.post.finish.uniforms.uGrain.value = state.era === 'dark' ? 0.06 : 0.035;
     this.galaxy.sync(state, this.now);
     if (this.view === 'system' && this.system.systemId) {
-      if (state.systems[this.system.systemId]?.gone) this.showGalaxy();
+      // a system that is gone, or one this game never had (a save from another game was loaded), sends us back out
+      const sys = state.systems[this.system.systemId];
+      if (!sys || sys.gone) this.showGalaxy();
       else this.system.build(state, this.system.systemId);
     }
   }

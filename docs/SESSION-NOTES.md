@@ -50,7 +50,9 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   Music v2.5 version of the Canon could be generated. The prompt used is in `DEV-NOTES.md`.
 - **Blue-dwarf visibility (offered, not built):** a distinct map marker for blue dwarfs.
 
-## Found in the review of 28 Sep (verified, not fixed yet)
+## Found in the review of 28 Sep (verified)
+
+Not fixed yet:
 
 - **Flare clock: a seventh micro-turn in about 15% of flares.** Six additions of `flare_step`
   can land 1–2 ulps short of `flare_until` (`turnStep` in `flare.ts`, the check at
@@ -66,22 +68,16 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   Hearth needs a body that is not dissolved (`economy.ts:232`).
 - **Despair counts twice on crossing turns:** `checkEndings` runs in the crossing
   (`turn.ts:425` or `438`) and again at `:448`, so The Will Fails can come a turn early.
-- **Long Sleep ×5 sleeps four turns** and wakes on the fifth (`turn.ts:151-159`); the tooltip
-  promises five (`Hud.tsx:241`).
 - **Other civilizations with no health left fade only once we can converse:** the check at
   `survivors.ts:84` sits behind the conversation gate, and some keep paying joint income for
   many turns. Other civilizations: discuss before changing.
-- **Loading another game's save while looking inside a system throws** (`Engine.setState`
-  rebuilds a system the loaded game lacks, since `?.gone` is not true for a missing system).
-  The view stays black until Galaxy or Home, and the music keeps the old age. Fix: treat a
-  missing system like a gone one.
-- **η reads as "H" in uppercased text:** the Dark Era chronometer label (`.eyebrow`,
-  `Chronometer.tsx:94`) and the ending screen's header (`.crossing-body .from`,
-  `Story.tsx:308`) turn η into Greek capital Η. Fix: keep η out of the uppercase.
 - **Small:** a colony or civilization named "__inf" loads back as the number Infinity (the save
   format's sentinel); `tools/sim.ts` reads `--diff=…` in the strategy slot as a strategy name.
 - **Harness blind spots, wider than listed in DEV-NOTES:** every victory is The Long Thought,
   and the autoplayer never tries the other Great Works, raids, asks for help, seizes or devours.
+
+Fixed since (see the CHANGELOG, "The review of 28 Sep"): loading another game's save from
+inside a system; η in capitalised text; the Long Sleep tooltip.
 
 ## Questions answered in this session (short versions)
 

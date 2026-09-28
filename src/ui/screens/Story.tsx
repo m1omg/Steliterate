@@ -306,7 +306,7 @@ export function OutcomeScreen({ s }: { s: GameState }) {
     <div class="crossing" role="dialog" aria-modal="true" aria-label={o.ending}>
       <div class="crossing-art" style={{ backgroundImage: `url(art/${o.kind === 'dark' ? 'hunger' : s.era}.webp)` }} />
       <div class="crossing-body">
-        <div class="from">{head} · turn {o.turn} · η {formatEta(o.eta, s.era)}</div>
+        <div class="from">{head} · turn {o.turn} · <span class="greek">η</span> {formatEta(o.eta, s.era)}</div>
         <h1 class={o.kind === 'defeat' || o.kind === 'dark' ? 'bad' : ''}>{o.ending}</h1>
         <p class="intro">{epilogue}</p>
         <div class="lines panel" style={{ padding: '12px 16px', width: '100%' }}>
