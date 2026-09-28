@@ -115,3 +115,7 @@ https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Balance figures are "games th
   biological → most livable world; sleepers → warmest core; minds on substrate → the Deep or the
   largest world). Shown in the system and planet panels; cannot be settled over; Seize takes it.
   (114/300; full playtest not run for this commit.)
+- **Quieter noise.** The synthesised score's tape hiss is 12 dB lower and its vinyl crackle
+  sparser and softer (about 60% fewer grains, half the level). The Canon was re-rendered with its
+  tape hiss 13 dB lower (quiet passages −71.8 → −84.5 dB in the 3–9 kHz band), with the music and
+  bitcrush unchanged (still −15 LUFS).

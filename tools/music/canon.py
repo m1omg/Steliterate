@@ -275,8 +275,8 @@ pos = np.clip(pos, 0, N - 1)
 L = np.interp(pos, np.arange(N), L)
 R = np.interp(pos, np.arange(N), R)
 hiss = signal.lfilter(*signal.butter(2, [2500 / (SR / 2), 9000 / (SR / 2)], 'band'), rng.standard_normal((2, N)))
-L += hiss[0] * 0.0022
-R += hiss[1] * 0.0022
+L += hiss[0] * 0.0005  # faint: there, not in the way
+R += hiss[1] * 0.0005
 
 # fade in/out edges, soft saturation, normalise
 fade = np.clip(tt / 1.5, 0, 1) * np.clip((N / SR - tt) / 6.0, 0, 1)

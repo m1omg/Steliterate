@@ -44,8 +44,8 @@ const STYLES: Record<EraId | 'menu' | 'outcome', Style> = {
     drone: { vol: 0.03, notes: [-24, -17], cutoff: 400 },
     bells: null,
     boomEvery: 0,
-    crackle: 0.5,
-    hiss: 0.004,
+    crackle: 0.2,
+    hiss: 0.001,
   },
   dusk: {
     bpm: 84,
@@ -60,8 +60,8 @@ const STYLES: Record<EraId | 'menu' | 'outcome', Style> = {
     drone: { vol: 0.03, notes: [-24, -12], cutoff: 500 },
     bells: null,
     boomEvery: 0,
-    crackle: 0.6,
-    hiss: 0.004,
+    crackle: 0.25,
+    hiss: 0.001,
   },
   degenerate: {
     bpm: 64,
@@ -76,8 +76,8 @@ const STYLES: Record<EraId | 'menu' | 'outcome', Style> = {
     drone: { vol: 0.04, notes: [-24, -17, -12], cutoff: 700 },
     bells: { vol: 0.05, prob: 0.35 },
     boomEvery: 0,
-    crackle: 0.3,
-    hiss: 0.0025,
+    crackle: 0.12,
+    hiss: 0.0006,
   },
   blackhole: {
     bpm: 50,
@@ -92,8 +92,8 @@ const STYLES: Record<EraId | 'menu' | 'outcome', Style> = {
     drone: { vol: 0.07, notes: [-36, -24, -17], cutoff: 260 },
     bells: { vol: 0.045, prob: 0.25 },
     boomEvery: 8,
-    crackle: 2.5,
-    hiss: 0.002,
+    crackle: 1.0,
+    hiss: 0.0005,
   },
   dark: {
     bpm: 40,
@@ -108,7 +108,7 @@ const STYLES: Record<EraId | 'menu' | 'outcome', Style> = {
     drone: { vol: 0.035, notes: [-24, -5], cutoff: 180 },
     bells: { vol: 0.03, prob: 0.1 },
     boomEvery: 0,
-    crackle: 0.15,
+    crackle: 0.06,
     hiss: 0,
   },
   outcome: {
@@ -124,8 +124,8 @@ const STYLES: Record<EraId | 'menu' | 'outcome', Style> = {
     drone: { vol: 0.03, notes: [-24], cutoff: 400 },
     bells: { vol: 0.03, prob: 0.2 },
     boomEvery: 0,
-    crackle: 0.2,
-    hiss: 0.002,
+    crackle: 0.08,
+    hiss: 0.0005,
   },
 };
 
@@ -640,7 +640,7 @@ class Music {
     const pan = a.ctx.createStereoPanner();
     pan.pan.value = Math.random() * 2 - 1;
     pan.connect(L.bus);
-    this.noiseHit(t, 0.004 + Math.random() * 0.02, 0.02 + Math.random() * 0.03, 'highpass', 2000 + Math.random() * 5000, pan);
+    this.noiseHit(t, 0.002 + Math.random() * 0.01, 0.02 + Math.random() * 0.03, 'highpass', 2000 + Math.random() * 5000, pan);
   }
 }
 
