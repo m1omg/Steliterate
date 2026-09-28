@@ -4,13 +4,15 @@ import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
 import { ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
 import { threadTotals, totalPops } from '../../game/sim/util';
-import type { GameState } from '../../game/types';
+import type { GameState, PendingEvent } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { music } from '../../audio/music';
 import { sfx } from '../../audio/sfx';
 import { n0 } from '../fmt';
-import { bump, modal, rev, screen } from '../store';
+import { bump, engine, hudPrefs, modal, rev, screen, selection, setHudPrefs } from '../store';
+import { pivotToSystem } from './Lists';
+import { Icon } from '../Icon';
 import { ModalFrame } from './Frame';
 
 // Art plates live in art/<name>.webp. Until one exists the plate is a graded gradient.
@@ -41,6 +43,17 @@ export function Plate({ art, height = 220 }: { art: string; height?: number }) {
   );
 }
 
+/** The star an event is about, if it is about one we can see. */
+function eventSystem(s: GameState, p: PendingEvent): string | null {
+  const d = p.data;
+  const id =
+    (typeof d.systemId === 'string' && d.systemId) ||
+    (typeof d.bodyId === 'string' && s.bodies[d.bodyId]?.systemId) ||
+    (typeof d.colonyId === 'string' && s.colonies[d.colonyId]?.systemId) ||
+    null;
+  return id && s.systems[id] && !s.systems[id].gone && (s.civ.known[id] ?? 0) > 0 ? id : null;
+}
+
 /** Narrative events waiting for a decision. The first pending one is shown. */
 /** The outcome of the last event choice, shown before the next event. */
 export const eventResult = signal<{ title: string; text: string } | null>(null);
@@ -65,6 +78,8 @@ export function EventModal({ s }: { s: GameState }) {
   } catch {
     text = '…';
   }
+  const sysId = eventSystem(s, p);
+  const pivot = !!sysId && hudPrefs.value.eventPivot;
   return (
     <div class="modal-wrap">
       <div class="modal panel narrow event" role="dialog" aria-modal="true" aria-label={def.title}>
@@ -91,6 +106,11 @@ export function EventModal({ s }: { s: GameState }) {
                     sfx('select');
                     bump();
                     if (r.text) eventResult.value = { title: def.title, text: r.text };
+                    if (pivot && sysId && s.systems[sysId] && !s.systems[sysId].gone) {
+                      selection.value = { kind: 'system', id: sysId };
+                      engine()?.select(sysId);
+                      pivotToSystem(sysId);
+                    }
                   }}
                 >
                   <span>{c.label}</span>
@@ -99,6 +119,12 @@ export function EventModal({ s }: { s: GameState }) {
               );
             })}
           </div>
+          {sysId && (
+            <label class="check-row">
+              <input type="checkbox" checked={hudPrefs.value.eventPivot} onChange={(e) => setHudPrefs({ eventPivot: (e.target as HTMLInputElement).checked })} />
+              <Icon name="focus" /> Show {s.systems[sysId].name} after choosing
+            </label>
+          )}
         </div>
       </div>
     </div>

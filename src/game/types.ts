@@ -203,6 +203,8 @@ export interface Fleet {
   distance: number; // ly of current leg
   order: FleetOrder;
   targetBody?: string;
+  /** Standing orders the fleet carries out by itself (absent in older saves). */
+  auto?: 'explore';
 }
 
 export interface CivStats {

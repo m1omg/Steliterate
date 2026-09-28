@@ -8,9 +8,10 @@ import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { act, busy, engine, hudPrefs, modal, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
+import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
 import { goToColony, goToFleet } from '../screens/Lists';
 import { isIdleFleet } from '../../game/sim/fleets';
+import { thermalRGB } from '../../render/shaders/bodies';
 import { ShipPrompt, shipPrompt } from './ShipPrompt';
 import { doEndTurn } from '../turnflow';
 import { Chronometer } from './Chronometer';
@@ -109,12 +110,16 @@ function BottomLeft({ s }: { s: GameState }) {
       </div>
       {ui.forecasts &&
         shown.map((f) => {
-          const turns = isFinite(f.dueYears) && s.era !== 'dark' ? turnsUntil(s.era, s.years, f.dueYears, s.settings.length, 0) : Infinity;
+          // turns at the pace you have chosen (the Tide figure too, when they differ)
+          const due = isFinite(f.dueYears) && s.era !== 'dark';
+          const turns = due ? turnsUntil(s.era, s.years, f.dueYears, s.settings.length, s.civ.pace, 5000) : Infinity;
+          const tideTurns = due && s.civ.pace !== 0 ? turnsUntil(s.era, s.years, f.dueYears, s.settings.length, 0, 5000) : turns;
+          const tip = isFinite(turns) ? `${f.text}\n~${turns} turns at this pace${tideTurns !== turns && isFinite(tideTurns) ? ` (~${tideTurns} at the Tide)` : ''}.` : f.text;
           return (
             <div
               key={f.uid}
               class="forecast panel"
-              data-tip={f.text}
+              data-tip={tip}
               onClick={() => {
                 if (f.systemId) {
                   selection.value = { kind: 'system', id: f.systemId };
@@ -280,6 +285,19 @@ function ViewSwitch({ s }: { s: GameState }) {
       <button class="btn small ghost" onClick={home} data-tip="Back to your capital (H)">
         <Icon name="colony" /> <span class="vs-label">Home</span>
       </button>
+      <button
+        class={`btn small ghost ${hudPrefs.value.viewMode ? 'on' : ''}`}
+        onClick={() => { sfx('click'); cycleViewMode(); }}
+        data-tip={`${VIEW_MODES[hudPrefs.value.viewMode].tip}\nClick (or V) for the next view: ${VIEW_MODES.map((m) => m.label).join(' → ')}.`}
+        aria-label={`View: ${VIEW_MODES[hudPrefs.value.viewMode].label}`}
+      >
+        <Icon name="survey" /> {VIEW_MODES[hudPrefs.value.viewMode].label}
+      </button>
+      {following.value?.kind === 'fleet' && s.fleets[following.value.id] && (
+        <button class="btn small ghost on" onClick={() => { sfx('click'); engine()?.unfollow(); }} data-tip="The view follows this fleet. Click to let go." aria-label="Stop following">
+          <Icon name="fleet" /> <span class="vs-label">{s.fleets[following.value.id].name}</span> <Icon name="close" />
+        </button>
+      )}
       {view.value === 'system' && (
         <>
           <button class={`btn small ghost ${hudPrefs.value.orbitsPaused ? 'on' : ''}`} onClick={() => { sfx('click'); toggleOrbits(); }} data-tip={hudPrefs.value.orbitsPaused ? 'Set the worlds moving again (P)' : 'Hold the worlds still in their orbits (P)'}>
@@ -290,6 +308,37 @@ function ViewSwitch({ s }: { s: GameState }) {
           </button>
         </>
       )}
+      {hudPrefs.value.viewMode === 2 && <ThermalLegend />}
+    </div>
+  );
+}
+
+const TICKS: [number, string][] = [
+  [0, '0 K'],
+  [0.2, '4'],
+  [0.4, '25'],
+  [0.6, '120'],
+  [0.75, '400'],
+  [1, '3000 K'],
+];
+
+/** The thermal view's key: the same ramp the shaders use, with a few temperatures marked. */
+function ThermalLegend() {
+  const stops = [0, 0.2, 0.4, 0.6, 0.75, 0.9, 1].map((t) => {
+    const k = Math.pow(3001, t) - 1;
+    const [r, g, b] = thermalRGB(k);
+    return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}) ${t * 100}%`;
+  });
+  return (
+    <div class="thermal-legend" aria-label="Thermal view: temperature scale">
+      <div class="tl-bar" style={{ background: `linear-gradient(90deg, ${stops.join(', ')})` }} />
+      <div class="tl-ticks mono">
+        {TICKS.map(([t, label]) => (
+          <span key={label} style={{ left: `${t * 100}%` }}>
+            {label}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

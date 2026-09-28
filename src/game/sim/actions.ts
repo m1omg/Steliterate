@@ -6,7 +6,7 @@ import type { Colony, Focus, GameState } from '../types';
 import { capacity } from './economy';
 import { workRequirementMet } from './endings';
 import { resolveEvent } from './events';
-import { isWarFleet, orderMove } from './fleets';
+import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
 import { absorbSwarm, tameSwarm } from './hunger';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
@@ -296,7 +296,24 @@ export function convert(state: GameState, colonyId: string, kind: Conversion): A
 }
 
 export function orderFleet(state: GameState, fleetId: string, systemId: string, order: 'move' | 'colonize' | 'survey' | 'tame' = 'move', bodyId?: string): ActionResult {
-  return orderMove(state, fleetId, systemId, order, bodyId);
+  const err = orderMove(state, fleetId, systemId, order, bodyId);
+  // an order by hand ends standing orders
+  if (!err && state.fleets[fleetId]) state.fleets[fleetId].auto = undefined;
+  return err;
+}
+
+/** Set a survey ship exploring by itself (it sets out at once if it can), or call it off. */
+export function setAutoExplore(state: GameState, fleetId: string, on: boolean): ActionResult {
+  const f = state.fleets[fleetId];
+  if (!f) return 'No such fleet.';
+  if (on && !canSurvey(f)) return 'Only survey ships can explore by themselves.';
+  f.auto = on ? 'explore' : undefined;
+  if (on) {
+    if (f.at) f.order = 'idle';
+    autoExplore(state, computeMods(state));
+    if (f.at && !f.to && f.auto) log(state, `${f.name} will explore as soon as the reserve allows.`, 'info', f.at);
+  }
+  return null;
 }
 
 export function disbandFleet(state: GameState, fleetId: string): ActionResult {
@@ -403,6 +420,7 @@ export function standFleet(state: GameState, fleetId: string, order: 'fortify' |
   if (!f || !f.at) return 'Only a fleet that has arrived can do that.';
   if (order === 'fortify' && !isWarFleet(f)) return 'Only warships can fortify.';
   f.order = order;
+  f.auto = undefined;
   if (order === 'fortify') log(state, `${f.name} has fortified ${state.systems[f.at]?.name ?? 'its station'}.`, 'info', f.at);
   return null;
 }

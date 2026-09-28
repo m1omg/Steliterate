@@ -6,7 +6,7 @@ import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
-import { travelTurnsEstimate } from '../../game/sim/fleets';
+import { tripLabel } from '../trip';
 import { project } from '../../game/sim/projection';
 import { colonies, distLy, popsOf } from '../../game/sim/util';
 import type { Body, Colony, Fleet, GameState } from '../../game/types';
@@ -14,7 +14,7 @@ import { THREADS } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
 import { BODY_NAME, PRIMARY_NAME, TRAIT_NAME } from '../labels';
-import { engine, modal, rev, selection, view } from '../store';
+import { engine, modal, rev, selection, targeting, view } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
 
@@ -27,15 +27,39 @@ export function goToFleet(s: GameState, f: Fleet) {
   const sysId = f.at ?? f.to ?? f.from;
   if (view.value === 'system' && f.at) {
     engine()?.showSystem(f.at);
+  } else if (!f.at && view.value === 'galaxy') {
+    // under way: ride along with it
+    engine()?.focusFleet(f.id);
   } else if (sysId) {
-    if (view.value === 'system') {
-      view.value = 'galaxy';
-      engine()?.showGalaxy();
-    }
-    engine()?.focusGalaxyOn(sysId, 110);
+    // close enough to see the neighbours it could go to next
+    view.value = 'galaxy';
+    engine()?.showGalaxy(sysId, f.at ? 45 : 110);
   }
   engine()?.select(f.id);
   void s;
+}
+
+/** Choose a fleet's next destination by clicking a star on the galaxy map. */
+export function pickOnMap(f: Fleet) {
+  sfx('click');
+  modal.value = null;
+  const probe = f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey);
+  targeting.value = { fleetId: f.id, order: probe ? 'survey' : 'move' };
+  selection.value = { kind: 'fleet', id: f.id };
+  engine()?.select(f.id);
+  view.value = 'galaxy';
+  // pull back far enough to see the stars around it
+  if (f.at) engine()?.showGalaxy(f.at, 70);
+}
+
+/** Swing the view round to a system: close up on the galaxy map, or (inside) into the system itself. */
+export function pivotToSystem(id: string, inside = false) {
+  sfx('select');
+  modal.value = null;
+  if (inside || view.value === 'system') {
+    view.value = 'system';
+    engine()?.showSystem(id);
+  } else engine()?.focusGalaxyOn(id, 40);
 }
 
 export function goToColony(c: Colony) {
@@ -78,16 +102,30 @@ export function FleetsModal({ s }: { s: GameState }) {
                   <>
                     → {s.systems[f.to!]?.name}
                     <div class="faint">
-                      {formatDistance(left)} · ~{travelTurnsEstimate(s, left, mods)}t{f.order === 'colonize' ? ' · to settle' : f.order === 'survey' ? ' · to survey' : ''}
+                      {formatDistance(left)} · {tripLabel(s, left, mods)}{f.order === 'colonize' ? ' · to settle' : f.auto === 'explore' ? ' · exploring' : f.order === 'survey' ? ' · to survey' : ''}
                     </div>
                   </>
                 ) : (
                   <>
                     {s.systems[f.at!]?.name}
-                    <div class={settler && f.order === 'idle' ? 'neon' : f.order === 'fortify' ? 'good' : 'faint'}>{f.order === 'fortify' ? 'fortified' : f.order === 'hold' ? 'holding' : settler ? 'ready to settle' : 'idle'}</div>
+                    <div class={f.auto === 'explore' ? 'neon' : settler && f.order === 'idle' ? 'neon' : f.order === 'fortify' ? 'good' : 'faint'}>{f.auto === 'explore' ? 'exploring (waiting for energy)' : f.order === 'fortify' ? 'fortified' : f.order === 'hold' ? 'holding' : settler ? 'ready to settle' : 'idle'}</div>
                   </>
                 )}
               </span>
+              {f.at && (
+                <button
+                  class="btn ghost small"
+                  aria-label={`Look inside ${s.systems[f.at]?.name}`}
+                  data-tip={`Look inside ${s.systems[f.at]?.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    selection.value = { kind: 'fleet', id: f.id };
+                    pivotToSystem(f.at!, true);
+                  }}
+                >
+                  <Icon name="system" />
+                </button>
+              )}
             </div>
           );
         })}

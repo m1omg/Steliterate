@@ -5,6 +5,7 @@ import { OrbitRig } from './camera';
 import { GalaxyView, type Pickable } from './galaxyView';
 import { createPost, type PostChain } from './post';
 import { SystemView } from './systemView';
+import { VIEW_MODE } from './shaders/bodies';
 
 export type ViewKind = 'galaxy' | 'system';
 export type Quality = 'low' | 'medium' | 'high';
@@ -15,6 +16,13 @@ export interface EngineEvents {
   onEnterSystem: (systemId: string) => void;
   /** Zoomed out past the edge of a system: back to the galaxy. */
   onLeaveSystem?: () => void;
+  /** The camera started or stopped following a world or a fleet. */
+  onFollow?: (f: Followed | null) => void;
+}
+
+export interface Followed {
+  kind: 'body' | 'fleet';
+  id: string;
 }
 
 /** Zooming the galaxy view closer than this dives into the system at the focus. */
@@ -112,6 +120,7 @@ export class Engine {
     });
     this.renderer.domElement.addEventListener('dblclick', (e) => {
       const p = this.pickAt(e.clientX, e.clientY);
+      if (p?.kind === 'fleet') return this.focusFleet(p.id);
       if (!p || p.kind !== 'system') return;
       if (this.view === 'galaxy') this.events.onEnterSystem(p.id);
       // with a mouse one click only selects; a double-click flies to the world, or back out to the whole system
@@ -208,6 +217,7 @@ export class Engine {
     else this.system.update(dt, this.camera, this.rig.distance);
     // the rig moves after the scene so a followed planet is centred on this frame's position
     this.rig.update(dt);
+    if (this.followed && !this.rig.follow) this.setFollowed(null);
     this.post.composer.render(dt);
     this.updateLabels();
   }
@@ -219,7 +229,7 @@ export class Engine {
     this.galaxy.setPalette(era.accent, era.neon);
     this.system.neon.set(era.neon);
     this.tintGoal.set(state.era === 'dusk' ? '#fff0e2' : state.era === 'degenerate' ? '#e6eeff' : state.era === 'blackhole' ? '#ece6ff' : '#e2e4e8');
-    this.post.finish.uniforms.uGrain.value = state.era === 'dark' ? 0.09 : 0.06;
+    this.post.finish.uniforms.uGrain.value = state.era === 'dark' ? 0.06 : 0.035;
     this.galaxy.sync(state, this.now);
     if (this.view === 'system' && this.system.systemId) {
       if (state.systems[this.system.systemId]?.gone) this.showGalaxy();
@@ -227,12 +237,18 @@ export class Engine {
     }
   }
 
-  focusGalaxyOn(systemId: string, distance = 160, instant = false) {
+  /** In the galaxy view: make a star the centre the view turns and zooms around, at the same zoom. */
+  centreOn(systemId: string) {
+    if (this.view !== 'galaxy' || this.rig.follow) return;
+    this.focusGalaxyOn(systemId, this.rig.goalDistance, false, 0.6);
+  }
+
+  focusGalaxyOn(systemId: string, distance = 160, instant = false, duration = 1.2) {
     const s = this.state?.systems[systemId];
     if (!s) return;
     const t = new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z);
     if (instant) this.rig.jump(t, distance);
-    else this.rig.flyTo(t, distance, 1.2);
+    else this.rig.flyTo(t, distance, duration);
   }
 
   showSystem(systemId: string, focusBodyId?: string) {
@@ -260,8 +276,13 @@ export class Engine {
     this.pendingSwitch = go;
   }
 
-  showGalaxy() {
+  /**
+   * Back to the galaxy, centred on focusId if given, else on the system just left (at the zoom
+   * the galaxy was seen from before), so the view never comes back off-centre.
+   */
+  showGalaxy(focusId?: string, distance?: number, instant = false) {
     const go = () => {
+      const from = this.system.systemId;
       this.view = 'galaxy';
       this.post.setScene(this.galaxyScene, this.camera);
       this.rig.minDistance = 6;
@@ -270,8 +291,13 @@ export class Engine {
       this.rig.goalYaw = this.rig.yaw = this.galaxyCam.yaw;
       this.rig.goalPitch = this.rig.pitch = this.galaxyCam.pitch;
       this.system.systemId = null;
+      const at = focusId ?? from;
+      if (at) this.focusGalaxyOn(at, distance ?? this.galaxyCam.distance, true);
     };
-    if (this.view === 'galaxy') return;
+    if (this.view === 'galaxy') {
+      if (focusId) this.focusGalaxyOn(focusId, distance ?? this.rig.goalDistance, instant);
+      return;
+    }
     this.fadeTarget = 1;
     this.pendingSwitch = go;
   }
@@ -309,6 +335,20 @@ export class Engine {
     this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.0);
   }
 
+  /** 0 natural light, 1 enhanced (light amplification), 2 thermal (false colour by temperature). */
+  get viewMode() {
+    return VIEW_MODE.value;
+  }
+
+  set viewMode(m: number) {
+    VIEW_MODE.value = m;
+    // enhanced opens the exposure up as well as lifting the dark
+    this.renderer.toneMappingExposure = m === 1 ? 1.4 : 1.05;
+    this.galaxy.setViewMode(m);
+    this.system.applyViewMode();
+    if (this.state) this.galaxy.sync(this.state, this.now);
+  }
+
   get orbitsPaused() {
     return this.system.orbitsPaused;
   }
@@ -322,6 +362,32 @@ export class Engine {
     const f = this.system.bodyFocus(bodyId);
     if (!f) return;
     this.rig.flyToFollow(() => this.system.bodyFocus(bodyId)?.pos ?? null, Math.max(9, f.radius * 7), 1.1);
+    this.setFollowed({ kind: 'body', id: bodyId });
+  }
+
+  /** Fly to a fleet and keep it centred as it moves, in either view (like a planet). */
+  focusFleet(fleetId: string) {
+    const view = this.view;
+    // only in the view it was picked in: switching views lets go
+    const at = () => (this.view !== view ? null : view === 'galaxy' ? this.galaxy.fleetPos(fleetId) : this.system.fleetPos(fleetId));
+    if (!at()) return;
+    this.rig.flyToFollow(at, view === 'galaxy' ? 36 : 10, 1.1);
+    this.setFollowed({ kind: 'fleet', id: fleetId });
+  }
+
+  /** Stop following, and leave the camera where it is. */
+  unfollow() {
+    this.rig.follow = null;
+    this.setFollowed(null);
+  }
+
+  /** What the camera is following, if anything. */
+  followed: Followed | null = null;
+
+  private setFollowed(f: Followed | null) {
+    if (f?.kind === this.followed?.kind && f?.id === this.followed?.id) return;
+    this.followed = f;
+    this.events.onFollow?.(f);
   }
 
   private click(x: number, y: number, pointerType?: string) {
@@ -442,7 +508,7 @@ export class Engine {
         for (const { p } of cand) {
           const s = state.systems[p.id];
           const mine = colonized.has(p.id);
-          items.push({ text: s.name, pos: p.pos, cls: mine ? 'mine' : state.civ.known[p.id] === 2 ? 'surveyed' : 'seen', w: mine ? 3 : 1 });
+          items.push({ text: s.name, pos: p.pos, cls: mine ? 'mine' : this.galaxy.living.has(p.id) ? 'living' : state.civ.known[p.id] === 2 ? 'surveyed' : 'seen', w: mine ? 3 : this.galaxy.living.has(p.id) ? 2 : 1 });
         }
       }
     } else if (this.system.systemId) {

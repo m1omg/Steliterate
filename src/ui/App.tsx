@@ -12,7 +12,14 @@ import { SignalsModal } from './screens/Signals';
 import { FleetsModal, SettlementsModal } from './screens/Lists';
 import { CrossingScreen, EraIntro, EventModal, OutcomeScreen, eventResult } from './screens/Story';
 import { TipLayer } from './Tip';
-import { dismissToast, game, modal, rev, screen, targeting, toasts } from './store';
+import { dismissToast, game, hoverStar, modal, rev, screen, targeting, toasts } from './store';
+import { SHIP_BY_ID } from '../game/data/ships';
+import { formatDistance } from '../game/eras';
+import { launchCost } from '../game/sim/fleets';
+import { tripLabel } from './trip';
+import { computeMods } from '../game/sim/mods';
+import { distLy } from '../game/sim/util';
+import { n0 } from './fmt';
 
 function applyEraColors(s: GameState | null) {
   const era = ERA_BY_ID[s?.era ?? 'dusk'];
@@ -120,10 +127,23 @@ function TargetBanner({ s }: { s: GameState }) {
     if (t && !waiting) targeting.value = null;
   });
   if (!t || !waiting) return null;
+  const here = s.systems[f!.at!];
+  const hov = hoverStar.value ? s.systems[hoverStar.value] : null;
+  const mods = computeMods(s);
+  const ly = hov ? distLy(here, hov) : 0;
+  const probe = f!.ships.some((x) => SHIP_BY_ID[x.cls]?.survey);
   return (
     <div class="targeting panel" role="status">
-      Choose a destination for {f!.name}.{' '}
-      <button class="btn small ghost" onClick={() => (targeting.value = null)}>
+      <div>
+        <b>{f!.name}</b>: click a star on the map to send it there{probe ? '; it surveys any star it has not charted' : ''}. Esc cancels.
+      </div>
+      {hov && hov.id !== here.id && (
+        <div class="mono target-est">
+          {hov.name} · {formatDistance(ly)} · {tripLabel(s, ly, mods, true)} · {n0(launchCost(s, f!, ly, mods))} energy
+          {s.civ.known[hov.id] !== 2 ? ' · unsurveyed' : ''}
+        </div>
+      )}
+      <button class="btn small ghost" onClick={() => { targeting.value = null; hoverStar.value = null; }}>
         Cancel
       </button>
     </div>

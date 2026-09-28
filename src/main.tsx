@@ -10,19 +10,37 @@ import { installUnlock, setVolumes } from './audio/core';
 import { music } from './audio/music';
 import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
+import type { Pickable } from './render/galaxyView';
+import { tripLabel } from './ui/trip';
+import { computeMods } from './game/sim/mods';
 import { App } from './ui/App';
-import { act, applyUiScale, bump, engine, game, hudPrefs, modal, notify, screen, selection, setEngine, settings, targeting, toggleOrbits, view } from './ui/store';
+import { act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, modal, notify, screen, selection, setEngine, settings, targeting, toggleOrbits, view } from './ui/store';
 import { doEndTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
 import './ui/styles.css';
 
 const stage = document.getElementById('stage')!;
+/** The star system a pick stands for: the star itself, or the one a fleet is parked at. */
+function starOf(p: Pickable): string | null {
+  if (p.kind === 'system') return p.id.startsWith('body:') ? null : p.id;
+  if (p.kind === 'fleet') return game.value?.fleets[p.id]?.at ?? null;
+  return null;
+}
+
 const eng = new Engine(stage, {
   onPick(p, v, pointerType) {
     const t = targeting.value;
-    if (t && p && p.kind === 'system' && !p.id.startsWith('body:')) {
+    // choosing a destination: a star, or a fleet parked at one, means that star
+    const dest = t && p ? starOf(p) : null;
+    if (t && dest) {
       targeting.value = null;
-      if (act((g) => orderFleet(g, t.fleetId, p.id, t.order))) sfx('select');
+      hoverStar.value = null;
+      const f = game.value?.fleets[t.fleetId];
+      if (act((g) => orderFleet(g, t.fleetId, dest, t.order))) {
+        sfx('select');
+        const g = game.value;
+        if (g && f?.to) notify(`${f.name} sets out for ${g.systems[dest].name}: ${tripLabel(g, f.distance, computeMods(g), true)}.`, 'info');
+      }
       return;
     }
     if (screen.value !== 'game') return;
@@ -33,6 +51,11 @@ const eng = new Engine(stage, {
     }
     // on a touchscreen there is no double-click: tapping the selected star again looks inside
     const sel = selection.value;
+    if (pointerType !== 'mouse' && p.kind === 'fleet' && sel?.kind === 'fleet' && sel.id === p.id) {
+      sfx('select');
+      eng.focusFleet(p.id);
+      return;
+    }
     if (v === 'galaxy' && pointerType !== 'mouse' && p.kind === 'system' && !p.id.startsWith('body:') && sel?.kind === 'system' && sel.id === p.id) {
       sfx('select');
       view.value = 'system';
@@ -46,8 +69,20 @@ const eng = new Engine(stage, {
     } else selection.value = { kind: p.kind, id: p.id };
     // with a mouse a click only selects (double-click flies there); a tap flies at once
     eng.select(p.id, pointerType !== 'mouse');
+    // on the galaxy map a picked star becomes the centre of the view (same zoom)
+    if (v === 'galaxy' && p.kind === 'system' && !p.id.startsWith('body:')) eng.centreOn(p.id);
   },
-  onHover() {},
+  onHover(p) {
+    if (!targeting.value) {
+      if (hoverStar.value) hoverStar.value = null;
+      return;
+    }
+    const id = p ? starOf(p) : null;
+    if (hoverStar.value !== id) hoverStar.value = id;
+  },
+  onFollow(f) {
+    following.value = f;
+  },
   onEnterSystem(id) {
     if (screen.value !== 'game') return;
     selection.value = { kind: 'system', id };
@@ -64,8 +99,13 @@ const eng = new Engine(stage, {
 setEngine(eng);
 eng.setQuality(settings.value.quality);
 eng.orbitsPaused = hudPrefs.value.orbitsPaused;
+eng.viewMode = hudPrefs.value.viewMode;
 eng.start();
 applyUiScale(settings.value.uiScale);
+// a crosshair over the map while a destination is being chosen
+effect(() => {
+  document.documentElement.classList.toggle('picking', !!targeting.value);
+});
 window.addEventListener('resize', () => applyUiScale(settings.value.uiScale));
 
 // Sound: allowed only after the first gesture.
@@ -179,6 +219,12 @@ window.addEventListener('keydown', (e) => {
     toggleOrbits();
     return;
   }
+  if (key === 'v') {
+    e.preventDefault();
+    sfx('click');
+    cycleViewMode();
+    return;
+  }
   if (key === 'h') {
     const s = game.value;
     if (!s) return;
@@ -195,6 +241,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') doEndTurn();
   if (e.key === 'Escape') {
     targeting.value = null;
+    hoverStar.value = null;
     selection.value = null;
     eng.select(null);
   }

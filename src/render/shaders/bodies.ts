@@ -3,6 +3,51 @@ import { NOISE_GLSL } from './noise';
 // Shaders for things seen up close: stars and remnants, planets that die in front of you,
 // black holes with a photon ring and a Doppler-bright disk.
 
+/**
+ * How the universe is shown, shared by every body material: 0 natural light, 1 enhanced
+ * (light amplification: a soft fill from the viewer), 2 thermal (false colour by temperature).
+ */
+export const VIEW_MODE = { value: 0 };
+
+const THERMAL_STOPS: [number, [number, number, number]][] = [
+  [0, [0.043, 0.024, 0.125]],
+  [0.2, [0.165, 0.102, 0.431]],
+  [0.4, [0.416, 0.122, 0.541]],
+  [0.6, [0.761, 0.188, 0.353]],
+  [0.75, [0.941, 0.416, 0.165]],
+  [0.9, [1.0, 0.82, 0.4]],
+  [1, [1, 1, 1]],
+];
+
+/** The thermal ramp on the CPU (map nodes, the legend): same stops as THERMAL_GLSL. */
+export function thermalRGB(k: number): [number, number, number] {
+  const t = Math.min(1, Math.max(0, Math.log(Math.max(k, 0) + 1) / Math.log(3001)));
+  for (let i = 1; i < THERMAL_STOPS.length; i++) {
+    const [t1, c1] = THERMAL_STOPS[i];
+    const [t0, c0] = THERMAL_STOPS[i - 1];
+    if (t <= t1) {
+      const u = (t - t0) / (t1 - t0);
+      const e = u * u * (3 - 2 * u);
+      return [c0[0] + (c1[0] - c0[0]) * e, c0[1] + (c1[1] - c0[1]) * e, c0[2] + (c1[2] - c0[2]) * e];
+    }
+  }
+  return [1, 1, 1];
+}
+
+/** Temperature (K) to a false-colour ramp on a log scale: 0 K indigo, ~4 K violet, ~25 K purple,
+ *  ~120 K crimson, ~400 K orange, ~1300 K gold, 3000 K and hotter white. Mirrors thermalRGB(). */
+export const THERMAL_GLSL = /* glsl */ `
+  vec3 thermal(float k) {
+    float t = clamp(log(max(k, 0.0) + 1.0) / log(3001.0), 0.0, 1.0);
+    vec3 c = mix(vec3(0.043, 0.024, 0.125), vec3(0.165, 0.102, 0.431), smoothstep(0.0, 0.2, t));
+    c = mix(c, vec3(0.416, 0.122, 0.541), smoothstep(0.2, 0.4, t));
+    c = mix(c, vec3(0.761, 0.188, 0.353), smoothstep(0.4, 0.6, t));
+    c = mix(c, vec3(0.941, 0.416, 0.165), smoothstep(0.6, 0.75, t));
+    c = mix(c, vec3(1.0, 0.82, 0.4), smoothstep(0.75, 0.9, t));
+    return mix(c, vec3(1.0), smoothstep(0.9, 1.0, t));
+  }
+`;
+
 export const STAR_VERT = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vPos;
@@ -18,6 +63,9 @@ export const STAR_VERT = /* glsl */ `
 
 export const STAR_FRAG = /* glsl */ `
   ${NOISE_GLSL}
+  ${THERMAL_GLSL}
+  uniform int uViewMode;
+  uniform float uTempK;
   uniform float uTime;
   uniform vec3 uColor;
   uniform float uGranule;   // granulation strength (convective stars)
@@ -49,6 +97,9 @@ export const STAR_FRAG = /* glsl */ `
     col += hot * flare * 1.4 * uIntensity;
     // hot rim where the corona begins
     col += uColor * pow(1.0 - mu, 3.0) * 0.5 * uIntensity;
+    // enhanced: even a burnt-out star shows its disc; thermal: its surface temperature
+    if (uViewMode == 1) col += vec3(0.05, 0.055, 0.065) * (0.35 + 0.65 * mu);
+    else if (uViewMode == 2) col = thermal(uTempK) * (0.55 + 0.45 * limb) * (0.9 + 0.2 * n1);
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -71,6 +122,10 @@ export const PLANET_VERT = /* glsl */ `
 // kind: 0 rocky, 1 eyeball (tidally locked, substellar sea), 2 ice, 3 gas giant, 4 ice giant, 5 ocean-ice
 export const PLANET_FRAG = /* glsl */ `
   ${NOISE_GLSL}
+  ${THERMAL_GLSL}
+  uniform int uViewMode;
+  uniform float uTempDay;     // K (the same as uTempNight unless tidally locked)
+  uniform float uTempNight;
   uniform float uTime;
   uniform float uSeed;
   uniform int uKind;
@@ -150,9 +205,15 @@ export const PLANET_FRAG = /* glsl */ `
     col = min(col, vec3(0.55)) + over / (1.0 + over * 1.8);
     // settlements: warm sodium with a few neon strips
     float night = smoothstep(0.08, -0.25, ndl);
-    float blocks = snoise(p * 40.0 + uSeed) * 0.3;
-    float cityMask = smoothstep(0.55, 0.8, detail * 0.5 + 0.5 + blocks) * uLights;
-    vec3 cityCol = mix(vec3(1.0, 0.62, 0.3), uNeon, step(0.93, fract(sin(dot(floor(p * 60.0), vec3(12.9, 78.2, 37.7))) * 43758.5)));
+    // the fine street-scale texture fades out before it gets smaller than a pixel, so a
+    // distant world shows soft clusters of light instead of aliased speckle
+    float fineAA = 1.0 - smoothstep(0.2, 0.7, length(fwidth(p * 40.0)));
+    float blocks = snoise(p * 40.0 + uSeed) * 0.3 * fineAA;
+    // a young settlement is a few lit clusters; the lights spread as it grows (uDev)
+    float cityLo = mix(0.9, 0.56, uDev);
+    float cityMask = smoothstep(cityLo, cityLo + 0.2, detail * 0.5 + 0.5 + blocks) * uLights;
+    float neonCell = step(0.965, fract(sin(dot(floor(p * 60.0), vec3(12.9, 78.2, 37.7))) * 43758.5)) * fineAA;
+    vec3 cityCol = mix(vec3(1.0, 0.62, 0.3), uNeon, neonCell);
     if (uKind == 1) {
       // a tidally locked world is lived on along its terminator and the edge of the day side:
       // the night side is ice. Cities spread along the ring as the settlement grows.
@@ -164,12 +225,18 @@ export const PLANET_FRAG = /* glsl */ `
       col = mix(col, vec3(0.28, 0.26, 0.25) * light * diff * (0.8 + 0.4 * detail), urban * 0.75);
       // in the permanent twilight of the terminator the lights never go out
       float twilight = smoothstep(0.45, -0.1, ndl);
-      col += cityCol * urban * uLights * twilight * 1.6;
+      col += cityCol * urban * uLights * twilight * 0.95;
+      // and they light the air above them: a soft sodium haze over the built-up ring,
+      // drawn on the world itself rather than smeared across the screen
+      float haze = ring * smoothstep(0.5 - 0.4 * uDev, 0.95 - 0.3 * uDev, detail * 0.5 + 0.5) * smoothstep(0.0, 0.1, uDev);
+      col += vec3(1.0, 0.62, 0.3) * haze * uLights * twilight * 0.22;
       // a thin neon thread of transit lines linking the cities around the ring
       float lineMask = smoothstep(0.985, 1.0, sin((facing + 0.02 * snoise(p * 7.0 + uSeed)) * 120.0)) * ring * smoothstep(0.3, 0.8, uDev);
       col += uNeon * lineMask * twilight * 0.8;
     } else {
-      col += cityCol * cityMask * night * 1.8;
+      col += cityCol * cityMask * night * 1.1;
+      // and a faint sodium glow in the air over them
+      col += vec3(1.0, 0.62, 0.3) * smoothstep(cityLo - 0.12, cityLo + 0.12, detail * 0.5 + 0.5) * uLights * night * 0.1;
     }
     col += albedo * 0.015; // faint ambient from the rest of the sky
     // ice reflects what little starlight there is: the frozen night side stays faintly visible
@@ -181,6 +248,19 @@ export const PLANET_FRAG = /* glsl */ `
     col += atmo * rim * (0.08 + 0.55 * uVitality) * (0.03 + 0.97 * smoothstep(-0.3, 0.35, ndl)) * uSunPower;
     // being torn apart: glowing streaks
     col += vec3(1.0, 0.55, 0.3) * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))) * 0.8;
+    float toViewer = max(0.0, dot(normalize(vNormal), normalize(vView)));
+    if (uViewMode == 1) {
+      // light amplification: a soft fill from the viewer, so dark worlds show their ground
+      col += albedo * (0.08 + 0.4 * toViewer);
+    } else if (uViewMode == 2) {
+      // thermal: what the world radiates, not what it reflects. Day and night sides of a locked
+      // world, and the warmth of wherever people live
+      float warmSide = smoothstep(-0.25, 0.6, dot(p, normalize(uSubstellar)));
+      float T = mix(uTempNight, uTempDay, warmSide);
+      T = max(T, 290.0 * uLights * smoothstep(cityLo - 0.1, cityLo + 0.15, detail * 0.5 + 0.5));
+      T = max(T, 900.0 * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))));
+      col = thermal(T) * (0.5 + 0.5 * toViewer) * (0.9 + 0.2 * detail);
+    }
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -239,7 +319,8 @@ export const GLOW_FRAG = /* glsl */ `
     vec2 c = vUv - 0.5;
     float d = length(c) * 2.0;
     float a = atan(c.y, c.x);
-    float corona = pow(max(0.0, 1.0 - d), 3.0) * (0.8 + 0.4 * fbm3(vec3(cos(a) * 2.0, sin(a) * 2.0, uTime * 0.1)));
+    // the corona is the star's own glow (there is no screen-wide bloom to lend it one)
+    float corona = pow(max(0.0, 1.0 - d), 3.0) * (0.8 + 0.4 * fbm3(vec3(cos(a) * 2.0, sin(a) * 2.0, uTime * 0.1))) * 1.3;
     float beams = 0.0;
     if (uBeams > 0.0) {
       float ba = a + uTime * uBeams;

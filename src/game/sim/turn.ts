@@ -8,7 +8,7 @@ import { runCrossing } from './crossing';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
-import { advanceFleets, createColony, destroyColony, newFleet, updateDetection } from './fleets';
+import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { updateHunger } from './hunger';
 import { updateMinds } from './minds';
@@ -55,7 +55,7 @@ function applyIndustry(state: GameState, c: Colony, industry: number, mods: Mods
       } else {
         const def = SHIP_BY_ID[item.key];
         if (def?.crew) c.pops.kin = Math.max(0, c.pops.kin - def.crew);
-        const existing = Object.values(state.fleets).find((f) => f.at === c.systemId && f.order === 'idle' && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
+        const existing = Object.values(state.fleets).find((f) => f.at === c.systemId && f.order === 'idle' && !f.auto && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
         if (existing) existing.ships.push({ cls: item.key, hp: def?.hp ?? 5 });
         else newFleet(state, c.systemId, [item.key]);
         log(state, `${c.name}: ${def?.name ?? item.key} launched from the slips.`, 'good', c.systemId);
@@ -312,6 +312,7 @@ export function endTurn(state: GameState): TurnResult {
 
   // ------------------------------------------------ 6. fleets, hazards, other minds
   advanceFleets(state, step.turnLength, mods);
+  autoExplore(state, mods);
   updateDetection(state, mods);
   updateHunger(state, step.turnLength, mods);
   updateSurvivors(state, logL, mods, step.turnLength);

@@ -150,13 +150,13 @@ export function eraOver(era: EraId, etaNow: number): boolean {
   return etaNow >= d.endEta;
 }
 
-/** Turns until a cosmic year is reached at the Tide (for forecasts). */
-export function turnsUntil(era: EraId, years: number, target: number, length: EpochLength, pace = 0): number {
+/** Turns until a cosmic year is reached at the Tide (for forecasts), or Infinity past maxTurns. */
+export function turnsUntil(era: EraId, years: number, target: number, length: EpochLength, pace = 0, maxTurns = 400): number {
   if (!isFinite(target)) return Infinity;
   if (target <= years) return 0;
   let y = years;
   let e = eta(years);
-  for (let n = 1; n <= 400; n++) {
+  for (let n = 1; n <= maxTurns; n++) {
     const s = stepTime(era, y, e, pace, length);
     y = s.years;
     e = s.eta;

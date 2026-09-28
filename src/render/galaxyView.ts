@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { fleetLook, type FleetLook } from '../game/data/ships';
-import { primaryTemperature } from '../game/physics';
+import { diskLight, primaryTemperature } from '../game/physics';
+import { thermalRGB } from './shaders/bodies';
+import { livingWorlds } from '../game/sim/fleets';
 import { Rng, hashSeed } from '../game/rng';
 import type { GameState, StarSystem } from '../game/types';
 import { blackbody } from './shaders/noise';
@@ -44,46 +46,81 @@ const NODE_VERT = /* glsl */ `
   attribute float aSize;
   attribute vec3 aColor;
   attribute vec4 aState; // x: owned, y: rust, z: pulse phase, w: dim
+  attribute float aMark; // 0: seen from afar, 1: surveyed, 2: surveyed, with a living world
   uniform float uTime;
   uniform float uPixel;
+  uniform float uLift; // 0 natural, 1 enhanced, 2 thermal
   varying vec3 vColor;
   varying vec4 vState;
   varying float vSize;
+  varying float vStar;
+  varying float vMark;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
     float s = aSize * uPixel * (1.0 + 60.0 / max(8.0, -mv.z));
-    gl_PointSize = clamp(s, 5.0 * uPixel, 64.0 * uPixel);
+    vStar = clamp(s, (uLift > 0.5 ? 9.0 : 5.0) * uPixel, 64.0 * uPixel);
+    // marked systems get room for their ring, however small the star is drawn
+    bool marked = aMark > 0.5 || aState.x > 0.5 || aState.y > 0.01;
+    gl_PointSize = max(vStar, marked ? 26.0 * uPixel : 0.0);
     vColor = aColor;
     vState = aState;
     vSize = gl_PointSize;
+    vMark = aMark;
   }
 `;
 
 const NODE_FRAG = /* glsl */ `
   uniform float uTime;
+  uniform float uPixel;
   uniform vec3 uOwned;
   uniform vec3 uRust;
+  uniform vec3 uCharted;
+  uniform vec3 uLiving;
+  uniform float uLift; // 0 natural, 1 enhanced, 2 thermal: every known star stays visible
   varying vec3 vColor;
   varying vec4 vState;
   varying float vSize;
+  varying float vStar;
+  varying float vMark;
+  // a line lw pixels wide along the circle of radius R (pixels)
+  float ringAt(float px, float R, float lw) {
+    return 1.0 - smoothstep(0.0, lw, abs(px - R));
+  }
   void main() {
     vec2 c = gl_PointCoord - 0.5;
-    float d = length(c) * 2.0;
-    float core = smoothstep(0.22, 0.0, d);
-    float halo = smoothstep(1.0, 0.0, d) * 0.35;
+    float px = length(c) * vSize; // distance from the centre, in pixels
+    float r = vStar * 0.5;        // the star's own radius, in pixels
+    float core = 1.0 - smoothstep(0.0, 0.22 * r, px);
+    float halo = (1.0 - smoothstep(0.0, r, px)) * 0.35;
     vec3 col = vColor * (core * 1.6 + halo) * vState.w;
     float a = max(core, halo * 0.9) * vState.w;
-    // settlement ring
+    if (uLift > 0.5) {
+      // a small solid disc, however dead the star: grey-white when enhanced, its temperature
+      // colour in the thermal view
+      float R = max(0.3 * r, 2.6 * uPixel);
+      float disc = 1.0 - smoothstep(R - 0.8 * uPixel, R + 0.8 * uPixel, px);
+      float glow = (1.0 - smoothstep(0.0, R * 2.6, px)) * 0.35;
+      vec3 lc = uLift > 1.5 ? vColor : mix(vec3(0.72, 0.76, 0.84), vColor, 0.45);
+      col = max(col, lc * (disc + glow));
+      a = max(a, max(disc, glow));
+    }
+    float lw = 1.2 * uPixel;
     if (vState.x > 0.5) {
-      float ring = smoothstep(0.08, 0.0, abs(d - 0.72)) * (0.75 + 0.25 * sin(uTime * 1.6 + vState.z));
+      // settlement ring
+      float ring = ringAt(px, max(r * 0.72, 8.0 * uPixel), lw * 1.3) * (0.75 + 0.25 * sin(uTime * 1.6 + vState.z));
       col += uOwned * ring * 1.4;
+      a = max(a, ring);
+    } else if (vMark > 0.5) {
+      // surveyed: a steady thin ring; green where a living world waits
+      float ring = ringAt(px, max(r * 0.62, 7.0 * uPixel), lw) * (vMark > 1.5 ? 0.9 : 0.6);
+      col += (vMark > 1.5 ? uLiving : uCharted) * ring;
       a = max(a, ring);
     }
     // the Hunger's rust bloom, flickering
     if (vState.y > 0.01) {
       float flick = 0.6 + 0.4 * sin(uTime * 7.0 + vState.z * 13.0) * sin(uTime * 2.3 + vState.z);
-      float rust = smoothstep(0.1, 0.0, abs(d - 0.9)) * vState.y * flick;
+      float rust = ringAt(px, max(r * 0.9, 11.0 * uPixel), lw * 1.6) * vState.y * flick;
       col += uRust * rust;
       a = max(a, rust);
     }
@@ -149,6 +186,10 @@ export class GalaxyView {
   private heartGlow: THREE.Sprite;
   private territory: THREE.Points | null = null;
   pickables: Pickable[] = [];
+  /** 0 natural, 1 enhanced, 2 thermal (see VIEW_MODE). */
+  viewMode = 0;
+  /** Surveyed systems with an unsettled living world (for the map's marks and labels). */
+  living = new Set<string>();
   private pings: { mesh: THREE.Mesh; t0: number; delay: number }[] = [];
   private syncedState: GameState | null = null;
   private fleetAnim = new Map<
@@ -171,7 +212,15 @@ export class GalaxyView {
     this.nodeMat = new THREE.ShaderMaterial({
       vertexShader: NODE_VERT,
       fragmentShader: NODE_FRAG,
-      uniforms: { uTime: { value: 0 }, uPixel: { value: 1 }, uOwned: { value: new THREE.Color('#4fe3d1') }, uRust: { value: new THREE.Color('#b8452a') } },
+      uniforms: {
+        uTime: { value: 0 },
+        uPixel: { value: 1 },
+        uOwned: { value: new THREE.Color('#4fe3d1') },
+        uRust: { value: new THREE.Color('#b8452a') },
+        uCharted: { value: new THREE.Color('#cfe3ea') },
+        uLiving: { value: new THREE.Color('#b8f5a0') },
+        uLift: { value: 0 },
+      },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -297,6 +346,17 @@ export class GalaxyView {
   }
 
   /** Rebuild everything that changes with the game state. */
+  /** Switch how the map is shown; the next sync recolours the stars. */
+  setViewMode(m: number) {
+    this.viewMode = m;
+    this.nodeMat.uniforms.uLift.value = m;
+  }
+
+  /** Where a fleet's hull is drawn right now (it glides during the turn animation). */
+  fleetPos(id: string): THREE.Vector3 | null {
+    return this.fleetAnim.get(id)?.mesh.position ?? null;
+  }
+
   /** After the GPU context was lost and restored: rebuild the point clouds on the next sync. */
   invalidate() {
     this.seedBuilt = -1;
@@ -319,7 +379,8 @@ export class GalaxyView {
     const totalRed = Math.max(1, (state.flags.red_total ??= liveRed));
     const bright =
       state.era === 'dusk' ? 0.12 + 0.88 * (liveRed / totalRed) : state.era === 'degenerate' ? 0.1 : state.era === 'blackhole' ? 0.018 : 0.0;
-    this.dustMat.uniforms.uBright.value = bright;
+    // enhanced and thermal views keep the old population faintly visible even when it is dark
+    this.dustMat.uniforms.uBright.value = this.viewMode === 1 ? Math.max(bright, 0.28) : this.viewMode === 2 ? Math.max(bright, 0.14) : bright;
     this.dustMat.uniforms.uTint.value.set(state.era === 'dusk' ? '#ffffff' : state.era === 'degenerate' ? '#9fb8ff' : '#8c86b8');
     this.heartGlow.material.opacity = state.era === 'dusk' ? 0.35 : state.era === 'degenerate' ? 0.16 : state.era === 'blackhole' ? 0.06 : 0;
 
@@ -330,14 +391,19 @@ export class GalaxyView {
     const col: number[] = [];
     const size: number[] = [];
     const st: number[] = [];
+    const mark: number[] = [];
     this.pickables = [];
+    this.living.clear();
     for (const s of Object.values(state.systems)) {
       if (!known[s.id] || s.gone) continue;
-      const [r, g, b] = nodeColor(s, state);
+      const [r, g, b] = this.viewMode === 2 ? thermalRGB(nodeTemperature(s, state)) : nodeColor(s, state);
       pos.push(s.pos.x, s.pos.y, s.pos.z);
       col.push(r, g, b);
       size.push(nodeSize(s));
       st.push(colonized.has(s.id) ? 1 : 0, s.rust ?? 0, (hashSeed(s.id) % 1000) / 159, known[s.id] === 2 ? 1 : 0.7);
+      const alive = known[s.id] === 2 && livingWorlds(state, s.id).length > 0;
+      if (alive) this.living.add(s.id);
+      mark.push(known[s.id] === 2 ? (alive ? 2 : 1) : 0);
       this.pickables.push({ kind: 'system', id: s.id, pos: new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z) });
     }
     if (this.nodes) {
@@ -349,6 +415,7 @@ export class GalaxyView {
     ng.setAttribute('aColor', new THREE.Float32BufferAttribute(col, 3));
     ng.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
     ng.setAttribute('aState', new THREE.Float32BufferAttribute(st, 4));
+    ng.setAttribute('aMark', new THREE.Float32BufferAttribute(mark, 1));
     this.nodes = new THREE.Points(ng, this.nodeMat);
     this.nodes.frustumCulled = false;
     this.nodes.renderOrder = 2;
@@ -546,6 +613,14 @@ export class GalaxyView {
       } else this.selRing.visible = false;
     } else this.selRing.visible = false;
   }
+}
+
+/** A primary's surface (or, for holes, its disk's) temperature for the thermal view, in K. */
+function nodeTemperature(s: StarSystem, state: GameState): number {
+  const k = s.primary.kind;
+  if (k === 'black_hole' || k === 'smbh') return 2.7 + 900 * diskLight(k, state.era, state.years);
+  if (k === 'void' || k === 'rogue') return 3;
+  return primaryTemperature(s.primary, state.years, state.era);
 }
 
 function nodeColor(s: StarSystem, state: GameState): [number, number, number] {

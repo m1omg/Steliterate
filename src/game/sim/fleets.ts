@@ -23,23 +23,30 @@ export function launchCost(state: GameState, f: Fleet, ly: number, mods: Mods): 
 }
 
 /**
- * How many turns a trip takes. Every turn is longer than the last, so this walks the Tide
- * forward at the current pace instead of dividing by today's turn length.
+ * How long a trip takes: in turns at the given pace (every turn is longer than the last, so this
+ * walks the Tide forward instead of dividing by today's turn length), and in cosmic years of
+ * flight, which no pace changes: distance ÷ speed, never faster than light.
  */
-export function travelTurnsEstimate(state: GameState, ly: number, mods: Mods): number {
-  if (ly <= 0) return 1;
-  let years = state.years;
+export function travelEstimate(state: GameState, ly: number, mods: Mods, pace = state.civ.pace): { turns: number; years: number } {
+  const years = ly > 0 ? ly / mods.speed : 0;
+  if (ly <= 0) return { turns: 1, years };
+  let y = state.years;
   let eta = state.eta;
   let covered = 0;
   for (let n = 1; n <= 999; n++) {
-    const step = stepTime(state.era, years, eta, state.civ.pace, state.settings.length);
-    if (!isFinite(step.turnLength)) return n;
+    const step = stepTime(state.era, y, eta, pace, state.settings.length);
+    if (!isFinite(step.turnLength)) return { turns: n, years };
     covered += mods.speed * step.turnLength;
-    if (covered >= ly) return n;
-    years = step.years;
+    if (covered >= ly) return { turns: n, years };
+    y = step.years;
     eta = step.eta;
   }
-  return 999;
+  return { turns: 999, years };
+}
+
+/** How many turns a trip takes at the current pace (see travelEstimate). */
+export function travelTurnsEstimate(state: GameState, ly: number, mods: Mods): number {
+  return travelEstimate(state, ly, mods).turns;
 }
 
 export function newFleet(state: GameState, systemId: string, ships: string[], name?: string): Fleet {
@@ -237,7 +244,42 @@ export function isWarFleet(f: Fleet): boolean {
 
 /** Stationed with nothing to do: the fleets the game should ask about. */
 export function isIdleFleet(f: Fleet): boolean {
-  return !!f.at && f.order === 'idle';
+  return !!f.at && f.order === 'idle' && !f.auto;
+}
+
+/** Energy an exploring ship leaves in the reserve: it waits rather than take the last of it. */
+export const EXPLORE_RESERVE = 20;
+
+/** Can this fleet chart stars (and so explore by itself)? */
+export function canSurvey(f: Fleet): boolean {
+  return f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey);
+}
+
+/**
+ * Ships set to explore head for the nearest star no one has charted yet and no other ship is
+ * already bound for. When nothing is left they report back and wait for orders.
+ */
+export function autoExplore(state: GameState, mods: Mods) {
+  const claimed = new Set(Object.values(state.fleets).map((f) => f.to).filter((x): x is string => !!x));
+  for (const f of Object.values(state.fleets)) {
+    if (f.auto !== 'explore' || !f.at || f.to) continue;
+    if (!canSurvey(f)) {
+      f.auto = undefined;
+      continue;
+    }
+    const here = state.systems[f.at];
+    const next = Object.values(state.systems)
+      .filter((x) => state.civ.known[x.id] === 1 && !x.gone && !claimed.has(x.id))
+      .map((x) => ({ x, ly: distLy(here, x) }))
+      .sort((a, b) => a.ly - b.ly)[0];
+    if (!next) {
+      f.auto = undefined;
+      log(state, `${f.name} has charted every star we know of and waits for orders.`, 'info', f.at);
+      continue;
+    }
+    if (state.civ.energy - launchCost(state, f, next.ly, mods) < EXPLORE_RESERVE) continue; // wait for energy
+    if (orderMove(state, f.id, next.x.id, 'survey') === null) claimed.add(next.x.id);
+  }
 }
 
 /** Fortified warships count double when they defend the system they hold. */

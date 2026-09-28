@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { diskLight, primaryTemperature } from '../game/physics';
+import { bodyClimate, diskLight, primaryTemperature } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import type { Body, GameState, StarSystem } from '../game/types';
 import { radialTexture, type Pickable } from './galaxyView';
-import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, STAR_FRAG, STAR_VERT } from './shaders/bodies';
+import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, STAR_FRAG, STAR_VERT, VIEW_MODE, thermalRGB } from './shaders/bodies';
 import { blackbody } from './shaders/noise';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
@@ -27,6 +27,7 @@ export class SystemView {
   systemId: string | null = null;
   pickables: Pickable[] = [];
   private starMat: THREE.ShaderMaterial | null = null;
+  private rockMats: { mat: THREE.MeshBasicMaterial; tempK: number }[] = [];
   private glowMats: THREE.ShaderMaterial[] = [];
   private diskMats: THREE.ShaderMaterial[] = [];
   private planets: PlanetRig[] = [];
@@ -45,6 +46,11 @@ export class SystemView {
   selectedBody: string | null = null;
 
   /** Where a body is right now, and how big: for the camera to fly to and follow. */
+  /** Where a fleet in this system is drawn right now. */
+  fleetPos(id: string): THREE.Vector3 | null {
+    return this.pickables.find((x) => x.kind === 'fleet' && x.id === id)?.pos ?? null;
+  }
+
   bodyFocus(bodyId: string): { pos: THREE.Vector3; radius: number } | null {
     const p = this.pickables.find((x) => x.id === `body:${bodyId}`);
     if (!p) return null;
@@ -70,6 +76,7 @@ export class SystemView {
     this.group.clear();
     this.planets = [];
     this.glowMats = [];
+    this.rockMats = [];
     this.diskMats = [];
     this.pickables = [];
     this.dyson = null;
@@ -131,7 +138,7 @@ export class SystemView {
       this.starMat = new THREE.ShaderMaterial({
         vertexShader: STAR_VERT,
         fragmentShader: STAR_FRAG,
-        uniforms: { uTime: { value: 0 }, uColor: { value: color }, uGranule: { value: granule }, uBands: { value: bands }, uIntensity: { value: intensity }, uSeed: { value: seed } },
+        uniforms: { uTime: { value: 0 }, uColor: { value: color }, uGranule: { value: granule }, uBands: { value: bands }, uIntensity: { value: intensity }, uSeed: { value: seed }, uViewMode: VIEW_MODE, uTempK: { value: temp } },
       });
       const m = new THREE.Mesh(new THREE.SphereGeometry(r, 64, 48), this.starMat);
       this.group.add(m);
@@ -246,12 +253,15 @@ export class SystemView {
     let mat: THREE.ShaderMaterial | null = null;
     if (b.kind === 'asteroids') {
       mesh = asteroidBelt(orbitR, hashSeed(b.id), b.richness);
+      this.rockMats.push({ mat: mesh.material as THREE.MeshBasicMaterial, tempK: bodyClimate(state, b).mean });
+      this.applyViewMode();
       this.group.add(mesh);
       this.planets.push({ body: b, pivot, mesh, mat: null, speed: 0.02 / Math.pow(orbitR / 20, 1.5), phase: b.phase, radius: orbitR, extra: [] });
       this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos: new THREE.Vector3(orbitR, 0, 0) });
       return;
     }
     const col = state.colonies[b.colonyId ?? ''];
+    const climate = bodyClimate(state, b);
     const pops = col ? col.pops.kin + col.pops.echoes + col.pops.chorus + col.pops.lattice + col.pops.coldminds : 0;
     mat = new THREE.ShaderMaterial({
       vertexShader: PLANET_VERT,
@@ -271,6 +281,9 @@ export class SystemView {
         uSubstellar: { value: new THREE.Vector3(-1, 0, 0) },
         uRust: { value: sys.rust ?? 0 },
         uFeeding: { value: b.feeding ? 1 : 0 },
+        uViewMode: VIEW_MODE,
+        uTempDay: { value: climate.day ?? climate.mean },
+        uTempNight: { value: climate.night ?? climate.mean },
       },
     });
     mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 64, 48), mat);
@@ -391,6 +404,14 @@ export class SystemView {
       this.fleets.add(hull);
       this.pickables.push({ kind: 'fleet', id: f.id, pos: new THREE.Vector3() });
     });
+  }
+
+  /** Rocks are unlit: recolour them for the view mode (the shaders read VIEW_MODE themselves). */
+  applyViewMode() {
+    for (const r of this.rockMats) {
+      if (VIEW_MODE.value === 2) r.mat.color.setRGB(...thermalRGB(r.tempK)).multiplyScalar(0.8);
+      else r.mat.color.set(VIEW_MODE.value === 1 ? '#6a625c' : '#2e2926');
+    }
   }
 
   update(dt: number, camera: THREE.Camera, viewDistance = 100) {

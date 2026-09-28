@@ -25,11 +25,18 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   out past the edge of a system to return to the galaxy. Click a planet to select it and
   double-click it (or tap it) to fly there: it stays in focus as it orbits until you pick
   another world or double-click the star. System and planet panels list the system's worlds,
-  one click each. **Pause** (or P)
+  one click each. Double-click a fleet (or tap it twice) to follow it. **V** switches the view:
+  Natural, Enhanced (light amplification for the dark ages) or Thermal (false colour by
+  temperature). Probes can **Auto-explore**: they keep charting the nearest unsurveyed star. On the map, a pale
+  ring marks a surveyed system and a green one a living world; dim italic names are stars
+  not yet surveyed. **Pause** (or P)
   holds the orbits still. Unsurveyed systems show only their star until a probe charts them.
 - **Settling**: a System Lighter (no research) carries a family to another world of the same
   star; Kin Arks, Seedcores and the rest cross between stars. Settlements (S) and Fleets (F)
-  on the left rail list everything you have.
+  on the left rail list everything you have. **Choose on map** sends a ship to any star you
+  click. Trip times read "~26t · 2.9 Myr": turns at your pace, then the flight's cosmic time
+  (nothing outruns light; the turns just keep getting longer). Forecast turn counts follow
+  the pace too.
 - **Research**: overflow and found knowledge carry into the next project. You can pause
   research to save the labs' power; only half of each turn's insight is kept while paused.
 - Watch the **Forecasts** (bottom left, closable) and the **Chronometer** (top): they tell

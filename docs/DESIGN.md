@@ -284,8 +284,9 @@ stop them from talking.
   log10 η.
 * **Rendering:** Three.js with custom shaders (granulating dwarfs, cooling remnants, black
   holes with disks and photon rings, dying eyeball worlds that freeze, Dyson swarms, swarm
-  murmurations) and a post chain: halation bloom, a procedural dirty lens, midtone grain,
-  vignette, edge chromatic aberration.
+  murmurations) and a restrained post chain: a faint, tight bloom only on what is brighter
+  than white (light sources carry their own coronae, as in ra-system-alpha), fine midtone
+  grain, vignette, edge chromatic aberration. No full-screen haze and no lens dirt.
 * **Plates:** eleven painterly images (Krea and Codex image generation), one grade for all
   (`tools/process-art.mjs`).
 * **Refresh-rate independence:** one rAF loop with clamped real-time deltas; all smoothing is

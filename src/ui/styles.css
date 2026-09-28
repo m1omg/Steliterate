@@ -495,3 +495,25 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .ws-item.living { color: var(--boon); }
 .ws-item.on { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 14%, transparent); cursor: default; }
 .ws-item:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+/* an inline link that acts (the idle-ship card's location) */
+.linkbtn { display: inline-flex; align-items: center; gap: 3px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; pointer-events: auto; }
+.linkbtn .icon { width: 11px; height: 11px; }
+.linkbtn:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+/* map labels: settled, surveyed (a living world in green), or only seen from afar */
+.map-label.surveyed { color: rgba(214, 232, 236, 0.78); }
+.map-label.living { color: var(--boon); }
+.map-label.seen { font-style: italic; }
+/* a remembered checkbox under an event's choices */
+.check-row { display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 12px; color: var(--ink-dim); cursor: pointer; user-select: none; }
+.check-row input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.check-row .icon { width: 13px; height: 13px; }
+/* choosing a destination on the map */
+.targeting { flex-wrap: wrap; justify-content: center; max-width: min(680px, calc(calc(100vw / var(--z, 1)) - 24px)); text-align: center; }
+.targeting .target-est { flex-basis: 100%; font-size: 12px; color: var(--neon); }
+.picking #stage canvas { cursor: crosshair; }
+/* the thermal view's temperature key, over the view switch */
+.viewswitch { flex-wrap: wrap; }
+.thermal-legend { flex-basis: 100%; padding: 4px 4px 0; }
+.thermal-legend .tl-bar { height: 6px; margin: 0 10px; border: 1px solid var(--line-2); }
+.thermal-legend .tl-ticks { position: relative; height: 12px; font-size: 9.5px; color: var(--ink-dim); margin: 2px 10px 0; }
+.thermal-legend .tl-ticks span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }

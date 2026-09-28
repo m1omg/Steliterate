@@ -1,13 +1,14 @@
 import { signal } from '@preact/signals';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
-import { orderFleet, standFleet } from '../../game/sim/actions';
-import { isIdleFleet, isWarFleet, travelTurnsEstimate } from '../../game/sim/fleets';
+import { orderFleet, setAutoExplore, standFleet } from '../../game/sim/actions';
+import { canSurvey, isIdleFleet, isWarFleet } from '../../game/sim/fleets';
+import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { colonies, distLy } from '../../game/sim/util';
 import type { Fleet, GameState } from '../../game/types';
 import { Icon } from '../Icon';
 import { act, rev } from '../store';
-import { goToFleet } from '../screens/Lists';
+import { goToFleet, pickOnMap, pivotToSystem } from '../screens/Lists';
 import { sfx } from '../../audio/sfx';
 import { researchPrompt } from './ResearchPrompt';
 
@@ -36,7 +37,7 @@ function suggestions(s: GameState, f: Fleet): Option[] {
       .map((sys) => ({ sys, ly: distLy(here, sys) }))
       .sort((a, b) => a.ly - b.ly)
       .slice(0, 3)
-      .map(({ sys, ly }) => ({ label: sys.name, sub: `~${travelTurnsEstimate(s, ly, mods)}t${order === 'survey' ? ' · survey' : ''}`, run: (g: GameState) => orderFleet(g, f.id, sys.id, order) }));
+      .map(({ sys, ly }) => ({ label: sys.name, sub: `${tripLabel(s, ly, mods)}${order === 'survey' ? ' · survey' : ''}`, run: (g: GameState) => orderFleet(g, f.id, sys.id, order) }));
   if (f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey)) {
     const unsurveyed = Object.values(s.systems).filter((x) => s.civ.known[x.id] === 1 && !x.gone && x.id !== here.id).map((x) => x.id);
     return ways(unsurveyed, 'survey');
@@ -66,7 +67,12 @@ export function ShipPrompt({ s }: { s: GameState }) {
       <div class="row">
         <img class="fleet-thumb" src={`art/ships/${fleetLook(f.ships.map((x) => x.cls))}.png`} alt="" />
         <div class="grow">
-          <div class="eyebrow">Awaiting orders · {here?.name}</div>
+          <div class="eyebrow">
+            Awaiting orders ·{' '}
+            <button class="linkbtn" onClick={() => pivotToSystem(here.id)} data-tip={`Centre the view on ${here.name}`}>
+              <Icon name="focus" /> {here.name}
+            </button>
+          </div>
           <div class="rp-title">{f.name}</div>
         </div>
         <button class="btn ghost small" aria-label="Later" data-tip="Later: ask again next time" onClick={() => drop(f.id)}>
@@ -78,29 +84,41 @@ export function ShipPrompt({ s }: { s: GameState }) {
           {options.map((o) => (
             <button key={o.label} class="btn small rp-option" onClick={() => choose(o.run)}>
               <span class="grow">{o.label}</span>
-              <span class="mono faint">{o.sub}</span>
+              <span class="mono faint" data-tip={TRIP_TIP}>{o.sub}</span>
             </button>
           ))}
         </div>
       )}
       <div class="row wrap" style={{ gap: '6px', marginTop: '8px' }}>
+        {canSurvey(f) && (
+          <button class="btn small primary" data-tip="Keep charting on its own: always the nearest unsurveyed star, keeping a little energy in reserve. It stops asking until nothing is left to chart." onClick={() => choose((g) => setAutoExplore(g, f.id, true))}>
+            <Icon name="survey" /> Auto-explore
+          </button>
+        )}
         {war ? (
           <button class="btn small primary" data-tip="Dig in here: stronger defence, and it stops asking." onClick={() => choose((g) => standFleet(g, f.id, 'fortify'))}>
             <Icon name="shield" /> Fortify here
           </button>
         ) : (
-          <button class="btn small" data-tip="Park it here: the game stops asking about it." onClick={() => choose((g) => standFleet(g, f.id, 'hold'))}>
+          <button class="btn small ghost" data-tip="Park it here: the game stops asking about it." onClick={() => choose((g) => standFleet(g, f.id, 'hold'))}>
             Hold here
           </button>
         )}
+        <button class="btn small" onClick={() => pickOnMap(f)} data-tip="Pick any star on the galaxy map as its destination">
+          <Icon name="move" /> Choose on map
+        </button>
+        <button class="btn small ghost" onClick={() => pivotToSystem(here.id, true)} data-tip={`Step inside ${here.name} to see its worlds`}>
+          <Icon name="system" /> Look inside
+        </button>
         <button
           class="btn small ghost"
+          data-tip="Open the fleet's panel, with every destination"
           onClick={() => {
             goToFleet(s, f);
             drop(f.id);
           }}
         >
-          Show…
+          All orders…
         </button>
       </div>
     </div>

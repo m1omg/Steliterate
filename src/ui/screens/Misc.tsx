@@ -5,7 +5,7 @@ import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
-import { UI_SCALES, applyUiScale, uiZoom, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, settings } from '../store';
+import { UI_SCALES, applyUiScale, uiZoom, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, settings, view } from '../store';
 import { Icon } from '../Icon';
 import { CODEX } from './Codex';
 import { MANUAL } from './Manual';
@@ -184,8 +184,10 @@ export function startLoaded(g: GameState) {
   modal.value = null;
   selection.value = null;
   bump();
-  engine()?.showGalaxy();
-  engine()?.focusGalaxyOn(g.civ.homeSystemId, 150, true);
+  // start centred on the capital (or the homeworld, if there is no capital)
+  const cap = g.civ.capitalId ? g.colonies[g.civ.capitalId] : null;
+  view.value = 'galaxy';
+  engine()?.showGalaxy(cap?.systemId ?? g.civ.homeSystemId, 150, true);
 }
 
 /** Back to the title screen. The game is kept in the autosave slot, so Continue resumes it. */

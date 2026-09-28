@@ -52,6 +52,10 @@ let toastId = 0;
 export const busy = signal(false);
 /** A fleet waiting for the player to pick its destination on the map. */
 export const targeting = signal<{ fleetId: string; order: 'move' | 'survey' } | null>(null);
+/** While choosing a destination on the map: the star under the pointer. */
+export const hoverStar = signal<string | null>(null);
+/** What the camera is following (set by the engine). */
+export const following = signal<{ kind: 'body' | 'fleet'; id: string } | null>(null);
 export const settings = signal<Settings>(loadSettings());
 
 let engineRef: Engine | null = null;
@@ -147,9 +151,13 @@ export interface HudPrefs {
   forecasts: boolean;
   feed: boolean;
   orbitsPaused: boolean;
+  /** After answering an event about a particular star, swing the view there. */
+  eventPivot: boolean;
+  /** 0 natural light, 1 enhanced, 2 thermal. */
+  viewMode: number;
 }
 function loadHudPrefs(): HudPrefs {
-  const d: HudPrefs = { forecasts: true, feed: true, orbitsPaused: false };
+  const d: HudPrefs = { forecasts: true, feed: true, orbitsPaused: false, eventPivot: true, viewMode: 0 };
   try {
     const t = localStorage.getItem('steliterate.hud');
     return t ? { ...d, ...JSON.parse(t) } : d;
@@ -168,6 +176,20 @@ export function setHudPrefs(p: Partial<HudPrefs>) {
 }
 
 /** Freeze or release the planets' orbits in the system view (remembered between sessions). */
+export const VIEW_MODES = [
+  { label: 'Natural', tip: 'Natural light: what an eye would see. Late in the universe that is very little.' },
+  { label: 'Enhanced', tip: 'Enhanced: light amplification. Dark worlds, night sides and dead stars show their surfaces, and the map keeps every known star visible.' },
+  { label: 'Thermal', tip: 'Thermal: false colour by temperature, from near absolute zero (indigo) to thousands of kelvin (white). Settlements show as warm spots.' },
+];
+
+/** Step to the next view mode (V). */
+export function cycleViewMode() {
+  const m = (hudPrefs.value.viewMode + 1) % VIEW_MODES.length;
+  setHudPrefs({ viewMode: m });
+  const e = engine();
+  if (e) e.viewMode = m;
+}
+
 export function toggleOrbits() {
   const paused = !hudPrefs.value.orbitsPaused;
   setHudPrefs({ orbitsPaused: paused });

@@ -13,6 +13,7 @@ import {
   disbandFleet,
   moveQueued,
   orderFleet,
+  setAutoExplore,
   standFleet,
   placeBeacon,
   queueBuild,
@@ -25,7 +26,8 @@ import {
   type Conversion,
 } from '../../game/sim/actions';
 import { capacity } from '../../game/sim/economy';
-import { canSettle, launchCost, travelTurnsEstimate } from '../../game/sim/fleets';
+import { canSettle, launchCost } from '../../game/sim/fleets';
+import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
 import { capital, distLy, hasCharter, hasTech, popsOf } from '../../game/sim/util';
@@ -35,8 +37,9 @@ import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { BODY_NAME, FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon } from '../labels';
-import { act, engine, rev, selection, targeting, view } from '../store';
-import { FORTIFY_BONUS, LIVING_WORLD, isWarFleet } from '../../game/sim/fleets';
+import { act, engine, following, rev, selection, targeting, view } from '../store';
+import { pickOnMap, pivotToSystem } from '../screens/Lists';
+import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 
 export function Drawer({ s }: { s: GameState }) {
@@ -336,6 +339,14 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             <dd class="mono">{pct(b.habitability)}</dd>
             <dt>Vitality</dt>
             <dd class="mono">{pct(b.vitality)}</dd>
+            {b.kind !== 'deep' && b.kind !== 'gas_giant' && (
+              <>
+                <dt data-tip="Kin the world holds by itself: about 12 × habitability × vitality, rounded down (a third of that on a rogue or feeding world). Below about 8% habitability × vitality there is no room, and Kin can live here only in domes, warrens or a Garden Ark.">Room for Kin</dt>
+                <dd class={naturalKinRoom(b) > 0 ? 'mono good' : ''} style={naturalKinRoom(b) > 0 ? undefined : { fontSize: '12px' }}>
+                  {naturalKinRoom(b) > 0 ? `${naturalKinRoom(b)} without domes` : 'none: domes needed'}
+                </dd>
+              </>
+            )}
             <ClimateRows s={s} b={b} />
             <dt>Core heat</dt>
             <dd class="mono">{pct(b.coreHeat)}</dd>
@@ -379,7 +390,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
                 <div key={f.id} class="row" style={{ marginBottom: '4px' }}>
                   <span class="grow" style={{ fontSize: '12px' }}>
                     {def.name} at {from.name}
-                    <div class="faint mono" style={{ fontSize: '11px' }}>{ly > 0 ? `${formatDistance(ly)} · ~${travelTurnsEstimate(s, ly, mods)} turns · ${n0(launchCost(s, f, ly, mods))} energy` : 'here'}</div>
+                    <div class="faint mono" style={{ fontSize: '11px' }}>{ly > 0 ? `${formatDistance(ly)} · ${tripLabel(s, ly, mods, true)} · ${n0(launchCost(s, f, ly, mods))} energy` : 'here'}</div>
                   </span>
                   <button class="btn small" disabled={!!err} data-tip={err ?? `Send ${def.settles!.pops} ${THREAD_DEFS[def.settles!.thread].name} to live here.`} onClick={() => act((g) => orderFleet(g, f.id, sys.id, 'colonize', b.id)) && sfx('good')}>
                     <Icon name="colonize" /> Settle
@@ -800,6 +811,17 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
           ))}
           {f.order === 'fortify' && <span class="chip neon" data-tip={`Dug in: counts ${FORTIFY_BONUS}× against swarms here, and turns raiders away from the capital.`}><Icon name="shield" /> fortified</span>}
           {f.order === 'hold' && <span class="chip" data-tip="Parked on purpose: the game will not ask about it.">holding</span>}
+          {f.auto === 'explore' && <span class="chip neon" data-tip={`Exploring by itself: always the nearest unsurveyed star. It waits while the reserve is under ${EXPLORE_RESERVE} energy plus the launch.`}><Icon name="survey" /> exploring</span>}
+        </div>
+        <div class="row wrap" style={{ marginTop: '8px', gap: '4px' }}>
+          <button class={`btn small ${following.value?.kind === 'fleet' && following.value.id === f.id ? 'on' : ''}`} onClick={() => { sfx('click'); engine()?.focusFleet(f.id); }} data-tip="Keep the view on this fleet as it moves (or double-click it; tap it twice on a touchscreen).">
+            <Icon name="focus" /> Follow
+          </button>
+          {here && view.value === 'galaxy' && (
+            <button class="btn small" onClick={() => pivotToSystem(here.id, true)} data-tip={`Step inside ${here.name} to see its worlds`}>
+              <Icon name="system" /> Look inside {here.name}
+            </button>
+          )}
         </div>
       </div>
       <div class="drawer-body scroll">
@@ -807,16 +829,26 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
           <>
             <div class="bar neon" style={{ marginBottom: '6px' }}><i style={{ width: pct(f.distance > 0 ? f.traveled / f.distance : 1) }} /></div>
             <div class="mono dim" style={{ fontSize: '12px' }}>
-              {formatDistance(f.traveled)} of {formatDistance(f.distance)} · about {travelTurnsEstimate(s, f.distance - f.traveled, mods)} more turn(s)
+              {formatDistance(f.traveled)} of {formatDistance(f.distance)} · {tripLabel(s, f.distance - f.traveled, mods, true)} to go
             </div>
             {f.order === 'colonize' && f.targetBody && <div class="faint" style={{ fontSize: '12px', marginTop: '4px' }}>To settle {s.bodies[f.targetBody]?.name}.</div>}
+            {f.auto === 'explore' && (
+              <button class="btn small" style={{ marginTop: '8px' }} onClick={() => act((g) => setAutoExplore(g, f.id, false)) && sfx('click')} data-tip="It finishes this trip, then waits for orders.">
+                <Icon name="survey" /> Stop exploring
+              </button>
+            )}
           </>
         )}
         {here && (
           <>
             <div class="row wrap" style={{ gap: '4px' }}>
-              <button class={`btn small ${tgt ? 'on' : ''}`} onClick={() => (targeting.value = tgt ? null : { fleetId: f.id, order: 'move' })} data-tip="Then click a destination on the map.">
-                <Icon name="move" /> {tgt ? 'Pick a destination…' : 'Move'}
+              {surveyor && (
+                <button class={`btn small ${f.auto === 'explore' ? 'on' : 'primary'}`} onClick={() => act((g) => setAutoExplore(g, f.id, f.auto !== 'explore')) && sfx('click')} data-tip={f.auto === 'explore' ? 'Call off exploring: it waits here for orders.' : 'Keep charting on its own: always the nearest unsurveyed star, keeping a little energy in reserve.'}>
+                  <Icon name="survey" /> {f.auto === 'explore' ? 'Stop exploring' : 'Auto-explore'}
+                </button>
+              )}
+              <button class={`btn small ${tgt ? 'on' : ''}`} onClick={() => (tgt ? (targeting.value = null) : pickOnMap(f))} data-tip="Click, then click any star on the map to send it there (or pick one from the list below).">
+                <Icon name="move" /> {tgt ? 'Click a star… (Esc cancels)' : 'Choose on map'}
               </button>
               {hasTech(s, 'hunger_lures') && !here.beacon && (
                 <button class="btn small" data-tip="Light a decoy beacon here (30 energy). Swarms are drawn to it instead of to us." onClick={() => act((g) => placeBeacon(g, f.id))}>
@@ -861,7 +893,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                         ) : (
                           <span class="chip" data-tip="Nothing lives here. The Kin will live in the dome they bring, and in any domes or warrens you build.">domes only</span>
                         ))}
-                      <span class="mono faint" style={{ fontSize: '11px' }}>{ly > 0 ? `~${travelTurnsEstimate(s, ly, mods)}t` : 'here'}</span>
+                      <span class="mono faint" style={{ fontSize: '11px' }} data-tip={ly > 0 ? TRIP_TIP : ''}>{ly > 0 ? tripLabel(s, ly, mods) : 'here'}</span>
                     </div>
                   ))}
                 </div>
@@ -877,8 +909,8 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                       {sys.name}
                       {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '11px' }}> unsurveyed</span>}
                     </span>
-                    <span class="mono faint" style={{ fontSize: '11px' }} data-tip="Distance · turns at the current Tide · launch energy">
-                      {formatDistance(ly)} · ~{travelTurnsEstimate(s, ly, mods)}t · {n0(launchCost(s, f, ly, mods))}
+                    <span class="mono faint" style={{ fontSize: '11px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>
+                      {formatDistance(ly)} · {tripLabel(s, ly, mods)} · {n0(launchCost(s, f, ly, mods))}
                       <Icon name="energy" />
                     </span>
                   </div>
