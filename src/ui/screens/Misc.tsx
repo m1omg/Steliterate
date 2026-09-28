@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { music } from '../../audio/music';
 import { ERA_BY_ID } from '../../game/eras';
 import { deleteSlot, exportCode, hasSave, listSlots, loadGame, loadSlot, readSave, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
 import { offerFile, pickTextFile } from '../download';
@@ -188,6 +189,8 @@ export function startLoaded(g: GameState) {
   const cap = g.civ.capitalId ? g.colonies[g.civ.capitalId] : null;
   view.value = 'galaxy';
   engine()?.showGalaxy(cap?.systemId ?? g.civ.homeSystemId, 150, true);
+  // loading from inside a game keeps the screen, so switch the score to the loaded game's age here
+  music.setEra(g.era);
 }
 
 /** Back to the title screen. The game is kept in the autosave slot, so Continue resumes it. */
