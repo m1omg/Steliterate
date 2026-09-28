@@ -6,7 +6,7 @@ import type { Colony, Focus, GameState } from '../types';
 import { capacity } from './economy';
 import { workRequirementMet } from './endings';
 import { resolveEvent } from './events';
-import { orderMove } from './fleets';
+import { isWarFleet, orderMove } from './fleets';
 import { absorbSwarm, tameSwarm } from './hunger';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
@@ -392,3 +392,17 @@ export function renameColony(state: GameState, colonyId: string, name: string): 
 }
 
 export const ALL_CHARTERS = CHARTERS;
+
+/**
+ * Give a stationed fleet a standing order. fortify: warships dig in and defend this system
+ * (they count double against swarms, and turn raiders away from the capital). hold: park on
+ * purpose, so the game stops asking. idle: back to waiting for orders.
+ */
+export function standFleet(state: GameState, fleetId: string, order: 'fortify' | 'hold' | 'idle'): ActionResult {
+  const f = state.fleets[fleetId];
+  if (!f || !f.at) return 'Only a fleet that has arrived can do that.';
+  if (order === 'fortify' && !isWarFleet(f)) return 'Only warships can fortify.';
+  f.order = order;
+  if (order === 'fortify') log(state, `${f.name} has fortified ${state.systems[f.at]?.name ?? 'its station'}.`, 'info', f.at);
+  return null;
+}

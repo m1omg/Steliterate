@@ -226,3 +226,16 @@ export function signatureOf(state: GameState, systemId: string): number {
   }
   return sig;
 }
+
+/** Warships: anything that can fight. */
+export function isWarFleet(f: Fleet): boolean {
+  return f.ships.some((x) => (SHIP_BY_ID[x.cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[x.cls]?.settles);
+}
+
+/** Stationed with nothing to do: the fleets the game should ask about. */
+export function isIdleFleet(f: Fleet): boolean {
+  return !!f.at && f.order === 'idle';
+}
+
+/** Fortified warships count double when they defend the system they hold. */
+export const FORTIFY_BONUS = 2;

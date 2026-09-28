@@ -78,7 +78,7 @@ export function FleetsModal({ s }: { s: GameState }) {
                 ) : (
                   <>
                     {s.systems[f.at!]?.name}
-                    <div class={settler ? 'neon' : 'faint'}>{settler ? 'ready to settle' : 'idle'}</div>
+                    <div class={settler && f.order === 'idle' ? 'neon' : f.order === 'fortify' ? 'good' : 'faint'}>{f.order === 'fortify' ? 'fortified' : f.order === 'hold' ? 'holding' : settler ? 'ready to settle' : 'idle'}</div>
                   </>
                 )}
               </span>

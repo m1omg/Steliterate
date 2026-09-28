@@ -201,7 +201,7 @@ export class Engine {
     u.uFade.value = this.fade;
     u.uTint.value.copy(this.tint);
     if (this.view === 'galaxy') this.galaxy.update(dt, this.now, this.camera, this.rig.distance);
-    else this.system.update(dt, this.camera);
+    else this.system.update(dt, this.camera, this.rig.distance);
     // the rig moves after the scene so a followed planet is centred on this frame's position
     this.rig.update(dt);
     this.post.composer.render(dt);

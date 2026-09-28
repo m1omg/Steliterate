@@ -4,6 +4,8 @@ import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
 import { autosave, busy, bump, engine, game, modal, notify } from './store';
 import { TECH_BY_ID } from '../game/data/techs';
+import { isIdleFleet } from '../game/sim/fleets';
+import { shipQueue } from './hud/ShipPrompt';
 import { researchPrompt } from './hud/ResearchPrompt';
 
 // Ending a turn: run the simulation, refresh the views, and surface what needs attention.
@@ -19,6 +21,7 @@ export function doEndTurn() {
   const knownBefore = { ...s.civ.known };
   const researchingBefore = s.civ.researching;
   const techsBefore = new Set(s.civ.techs);
+  const idleBefore = new Set(Object.values(s.fleets).filter(isIdleFleet).map((f) => f.id));
   const r = endTurn(s);
   bump();
   autosave();
@@ -43,6 +46,9 @@ export function doEndTurn() {
     researchPrompt.value = { done: researchingBefore };
     sfx('good');
   }
+  // ships that have just run out of orders (arrived, surveyed, or newly built): ask about them
+  const nowIdle = Object.values(s.fleets).filter((f) => isIdleFleet(f) && !idleBefore.has(f.id) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles)).map((f) => f.id);
+  if (nowIdle.length) shipQueue.value = [...shipQueue.value.filter((id) => s.fleets[id] && isIdleFleet(s.fleets[id])), ...nowIdle];
   // worked out from surplus insight, without being asked
   const surplus = s.civ.techs.filter((t) => !techsBefore.has(t) && t !== researchingBefore);
   if (surplus.length) notify(`With insight to spare: ${surplus.map((t) => TECH_BY_ID[t]?.name ?? t).join(', ')}.`, 'good');

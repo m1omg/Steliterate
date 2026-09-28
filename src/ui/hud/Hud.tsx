@@ -4,12 +4,14 @@ import { computeMods } from '../../game/sim/mods';
 import { project, type Projection } from '../../game/sim/projection';
 import { setDormant, setPace, longSleep } from '../../game/sim/actions';
 import { colonies, hasTech } from '../../game/sim/util';
-import type { GameState } from '../../game/types';
+import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { act, busy, engine, hudPrefs, modal, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
-import { goToColony } from '../screens/Lists';
+import { goToColony, goToFleet } from '../screens/Lists';
+import { isIdleFleet } from '../../game/sim/fleets';
+import { ShipPrompt, shipPrompt } from './ShipPrompt';
 import { doEndTurn } from '../turnflow';
 import { Chronometer } from './Chronometer';
 import { Resources } from './Resources';
@@ -28,6 +30,7 @@ export function Hud({ s }: { s: GameState }) {
       <BottomLeft s={s} />
       <TurnBox s={s} p={p} />
       <ResearchPrompt s={s} />
+      <ShipPrompt s={s} />
       <Tutorial s={s} />
       <ViewSwitch s={s} />
     </>
@@ -174,6 +177,8 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
   if (!civ.researching) todo.push({ text: 'Research paused', tip: 'Nothing is being researched. Open the research web.', go: () => (modal.value = { kind: 'research' }) });
   if (idle.length) todo.push({ text: `${idle.length} idle settlement${idle.length > 1 ? 's' : ''}`, tip: idle.map((c) => c.name).join(', '), go: () => (idle.length === 1 ? goToColony(idle[0]) : (modal.value = { kind: 'settlements' })) });
   if (readySettlers.length) todo.push({ text: `${readySettlers.length} settler${readySettlers.length > 1 ? 's' : ''} waiting`, tip: 'Choose a world to settle.', go: () => (modal.value = { kind: 'fleets' }) });
+  const idleShips = Object.values(s.fleets).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+  if (idleShips.length) todo.push({ text: `${idleShips.length} ship${idleShips.length > 1 ? 's' : ''} idle`, tip: `${idleShips.map((f) => f.name).join(', ')}. Click to go to the next one; Fortify or Hold stops the asking.`, go: () => nextIdleShip(s, idleShips) });
   if (unanswered) todo.push({ text: `${unanswered} signal${unanswered > 1 ? 's' : ''} to answer`, tip: 'Open Signals.', go: () => (modal.value = { kind: 'signals' }) });
   const warnings = todo.map((t) => t.text);
   const eNet = p.energyIn - p.energyOut;
@@ -284,4 +289,12 @@ function ViewSwitch({ s }: { s: GameState }) {
       )}
     </div>
   );
+}
+
+let idleCursor = 0;
+/** Step through the idle ships, one per click, and offer each its choices. */
+function nextIdleShip(s: GameState, list: Fleet[]) {
+  const f = list[idleCursor++ % list.length];
+  goToFleet(s, f);
+  shipPrompt.value = f.id;
 }

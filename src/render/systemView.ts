@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { primaryTemperature } from '../game/physics';
+import { diskLight, primaryTemperature } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import type { Body, GameState, StarSystem } from '../game/types';
 import { radialTexture, type Pickable } from './galaxyView';
@@ -190,7 +190,8 @@ export class SystemView {
         this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3() });
         addGlow(r * 6, new THREE.Color('#ffd2a8'), 0.0, 0, 1.0);
         const fed = Object.values(state.colonies).some((c) => c.systemId === sys.id && ((c.structures.accretion_engine ?? 0) > 0 || (c.structures.penrose_harvester ?? 0) > 0));
-        const heat = p.kind === 'smbh' ? (state.era === 'dark' ? 0 : 0.55) : fed ? 1.0 : 0.18;
+        const shine = diskLight(p.kind, state.era, state.years);
+        const heat = fed ? 1.0 : p.kind === 'smbh' ? Math.min(0.75, 0.12 + shine * 0.4) : 0.18;
         this.addDisk(r * 1.6, r * (p.kind === 'smbh' ? 9 : 6), heat);
         break;
       }
@@ -312,7 +313,7 @@ export class SystemView {
     const dysonCount = count('dyson_swarm') * 1400 + count('orbital_collector') * 90 + count('ember_collector') * 160;
     if (dysonCount > 0) {
       const geo = new THREE.PlaneGeometry(0.5, 0.32);
-      const mat = new THREE.MeshBasicMaterial({ color: '#2a2622', side: THREE.DoubleSide });
+      const mat = withNearFade(new THREE.MeshBasicMaterial({ color: '#2a2622', side: THREE.DoubleSide }));
       const inst = new THREE.InstancedMesh(geo, mat, dysonCount);
       const rng = new Rng(hashSeed(sys.id + 'dyson'));
       const lit = new THREE.Color('#ffb070');
@@ -392,7 +393,10 @@ export class SystemView {
     });
   }
 
-  update(dt: number, camera: THREE.Camera) {
+  update(dt: number, camera: THREE.Camera, viewDistance = 100) {
+    // rocks and collectors that drift right in front of the camera fade out instead of
+    // blotting out the world being looked at
+    NEAR_FADE.value = viewDistance * 0.3;
     this.time += dt;
     if (!this.orbitsPaused) this.orbitTime += dt;
     const t = this.time;
@@ -492,6 +496,14 @@ function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Co
   if (p.kind === 'black_hole' || p.kind === 'smbh' || p.kind === 'void' || p.kind === 'rogue') {
     c.set('#8a7aa8');
     power = 0.05;
+    if (p.kind === 'black_hole' || p.kind === 'smbh') {
+      // lit by the disk: warm light, as strong as what the collectors get
+      const shine = diskLight(p.kind, state.era, state.years);
+      if (shine > 0.05) {
+        c.set('#ffd6b0');
+        power = Math.min(1.4, 0.1 + shine * 0.85);
+      }
+    }
   }
   if (p.kind === 'dark_star') {
     c.set('#ffcfa0');
@@ -523,7 +535,7 @@ function asteroidBelt(r: number, seed: number, richness: number): THREE.Mesh {
   const rng = new Rng(seed);
   const n = 700;
   const geo = new THREE.IcosahedronGeometry(0.12, 0);
-  const inst = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: '#2e2926' }), n);
+  const inst = new THREE.InstancedMesh(geo, withNearFade(new THREE.MeshBasicMaterial({ color: '#2e2926' })), n);
   const m = new THREE.Matrix4();
   for (let i = 0; i < n; i++) {
     const a = rng.range(0, Math.PI * 2);
@@ -543,4 +555,20 @@ function shipMesh(war: boolean): THREE.Object3D {
   glow.position.z = -0.55;
   g.add(hull, glow);
   return g;
+}
+
+/** Shared: fragments nearer the camera than this are dropped (set each frame from the zoom). */
+const NEAR_FADE = { value: 0 };
+
+function withNearFade<T extends THREE.Material>(m: T): T {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uNearFade = NEAR_FADE;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying float vViewDepth;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvViewDepth = -mvPosition.z;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vViewDepth;\nuniform float uNearFade;')
+      .replace('void main() {', 'void main() {\n  if (vViewDepth < uNearFade) discard;');
+  };
+  return m;
 }

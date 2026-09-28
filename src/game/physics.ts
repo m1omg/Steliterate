@@ -101,8 +101,23 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       return { light: base * frac * (0.5 + 0.5 * gfe), label, temperatureK: primaryTemperature(p, years, era), alive: [born, dies] };
     }
     case 'black_hole':
-    case 'smbh':
-      return { light: 0, label: p.kind === 'smbh' ? 'Supermassive black hole at the heart of the Coalescence' : 'Black hole', temperatureK: 0, alive: null };
+    case 'smbh': {
+      // collectors see the accretion disk. The Heart's disk is fed by its crowded core
+      // (stars torn apart, stellar winds), bright in the Dusk and fading as those stars die;
+      // a lone stellar hole has only a faint trickle of infalling gas
+      const disk = diskLight(p.kind, era, years) * (0.35 + 0.65 * gfe);
+      const label =
+        p.kind === 'smbh'
+          ? disk > 0.3
+            ? 'Supermassive black hole: its accretion disk, fed by the crowded Heart, still shines'
+            : disk > 0
+              ? 'Supermassive black hole: a dimming disk, fed only now and then'
+              : 'Supermassive black hole, quiet'
+          : disk > 0
+            ? 'Black hole with a faint accretion disk'
+            : 'Black hole';
+      return { light: disk, label, temperatureK: 0, alive: null };
+    }
     default:
       return { light: 0, label: sys.primary.kind === 'rogue' ? 'Starless: rogue worlds drifting alone' : 'Nothing remains', temperatureK: 0, alive: null };
   }
@@ -431,4 +446,22 @@ export function waterState(b: Body, climate: BodyClimate): string {
   if (liquidAt(climate.mean)) return `${share}: open water`;
   if (climate.mean >= 373) return `${share}: steam`;
   return `${share}: frozen`;
+}
+
+/**
+ * Light from a black hole's accretion disk, in collector units (a red dwarf's light = 1).
+ * Also sets how brightly the disk is drawn, so what you see is what collectors get.
+ */
+export function diskLight(kind: 'black_hole' | 'smbh', era: string, years: number): number {
+  if (kind === 'smbh') {
+    if (era === 'dusk') return 1.5;
+    if (era === 'degenerate') {
+      // the Heart's stars die and scatter across the age: from bright to a trickle
+      const e = Math.log10(Math.max(1, years));
+      return Math.max(0.15, 1.2 - (e - 15) * 0.07);
+    }
+    if (era === 'blackhole') return 0.08;
+    return 0;
+  }
+  return era === 'dusk' || era === 'degenerate' ? 0.05 : 0;
 }

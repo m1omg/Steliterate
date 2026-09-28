@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { GameState, StarSystem, Swarm } from '../types';
-import { signatureOf, destroyColony } from './fleets';
+import { FORTIFY_BONUS, destroyColony, signatureOf } from './fleets';
 import type { Mods } from './mods';
 import { colonies, distLy, hasCharter, log, uid, withRng } from './util';
 
@@ -30,7 +30,9 @@ function defenseAt(state: GameState, systemId: string, mods: Mods): number {
   }
   for (const f of Object.values(state.fleets)) {
     if (f.at !== systemId) continue;
-    for (const s of f.ships) d += SHIP_BY_ID[s.cls]?.attack ?? 0;
+    // dug in with the settlement's own grid, a fortified fleet defends twice as well
+    const k = f.order === 'fortify' ? FORTIFY_BONUS : 1;
+    for (const s of f.ships) d += (SHIP_BY_ID[s.cls]?.attack ?? 0) * k;
   }
   if (mods.flags.has('charter:wardens_oath')) d *= 1.5;
   return d;

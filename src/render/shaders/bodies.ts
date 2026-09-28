@@ -144,6 +144,10 @@ export const PLANET_FRAG = /* glsl */ `
     // specular glint on water / ice
     vec3 hvec = normalize(normalize(uSunDir) + normalize(vView));
     col += light * spec * pow(max(0.0, dot(normalize(vNormal), hvec)), 40.0) * diff;
+    // a bright sun would clip the day side to flat white: roll off only the highlights,
+    // leaving everything below the knee exactly as it was
+    vec3 over = max(col - 0.55, 0.0);
+    col = min(col, vec3(0.55)) + over / (1.0 + over * 1.8);
     // settlements: warm sodium with a few neon strips
     float night = smoothstep(0.08, -0.25, ndl);
     float blocks = snoise(p * 40.0 + uSeed) * 0.3;

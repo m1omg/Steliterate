@@ -189,7 +189,8 @@ export interface Ship {
   hp: number;
 }
 
-export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame';
+// fortify: warships dug in to defend where they are; hold: parked on purpose (neither counts as idle)
+export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame' | 'fortify' | 'hold';
 
 export interface Fleet {
   id: string;

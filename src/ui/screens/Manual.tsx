@@ -41,7 +41,7 @@ export const MANUAL: CodexEntry[] = [
       'Focus shifts a settlement’s effort toward energy, industry, insight or accord. Overdrive (after the Overdrive Protocols charter) runs the Hearth hot for much more energy, at a cost in damage and attention from the Hunger.',
       'People need room. Kin can live on a living world up to its natural capacity, and anywhere in Habitat Domes and Deep Warrens. Echoes live in Substrate Cores, Coldminds in Cold Vaults, the Lattice in Lattice Foundries. Housing costs upkeep only for the share that is lived in.',
       'Living worlds die. Aster is losing its magnetic field (a Magnetic Shield slows that), and once the stars go out every living world freezes within a few turns and becomes an ice world or bare rock, unless you keep it warm with Orbital Lamps or slow it with a Core Stimulator.',
-      'Conversions (in the People section): Upload turns a Kin into an Echo, Merge two Echoes into a Chorus, Cool an Echo into a Coldmind. Freeze and Thaw move Kin in and out of cold sleep.',
+      'Conversions (in the People section): Upload turns a Kin into an Echo, Merge two Echoes into a Chorus, Cool an Echo into a Coldmind. Freeze and Thaw move Kin in and out of cold sleep. Echoes also form by themselves in free substrate (Substrate Cores), about one every five turns while your reserve stays above 15 energy; uploading is the fast way.',
     ],
   },
   {
@@ -54,6 +54,7 @@ export const MANUAL: CodexEntry[] = [
       'Seedcore (Mind Substrate): two Echoes and their substrate. Can settle almost anywhere, including the empty orbital space of a dead star.',
       'Kin Ark (Fusion Drives): two Kin and a dome, to any world except a gas giant. Lattice Spore (Autonomous Replicators) and Vault Ship (Cold Computation, Degenerate Age) carry Lattice and Coldminds.',
       'When a settler is ready, its panel lists where it can go, nearest first, with the natural room for Kin ("domes only" means nothing lives there) and the travel time. Launching costs energy; longer trips cost more.',
+      'When a ship runs out of orders, a card asks what next: the nearest unsurveyed stars for a probe, or Fortify for warships. Fortified warships defend their system at double strength and turn raiders away from the capital; Hold parks any other ship. Neither is counted as idle again until you give it new orders.',
       'Think ahead: after the Last Light the useful places are white dwarfs warmed by dark matter (for ember collectors) and black holes (for accretion and, later, Penrose and Hawking harvesting).',
     ],
   },

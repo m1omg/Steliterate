@@ -13,6 +13,7 @@ import {
   disbandFleet,
   moveQueued,
   orderFleet,
+  standFleet,
   placeBeacon,
   queueBuild,
   removeQueued,
@@ -35,6 +36,7 @@ import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { BODY_NAME, FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon } from '../labels';
 import { act, engine, rev, selection, targeting, view } from '../store';
+import { FORTIFY_BONUS, isWarFleet } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 
 export function Drawer({ s }: { s: GameState }) {
@@ -441,6 +443,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                   <span class="mono">{c.cryo}<span class="faint">/{capy.cryo}</span></span>
                 </div>
               )}
+              {capy.echoes > c.pops.echoes && <EchoHint s={s} c={c} />}
               <div class="row wrap" style={{ gap: '4px', marginTop: '6px' }}>
                 {CONVERSIONS.filter((cv) => cv.show(s, c)).map((cv) => (
                   <button key={cv.id} class="btn small" data-tip={cv.tip} onClick={() => act((g) => convert(g, c.id, cv.id))}>
@@ -658,6 +661,24 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
   );
 }
 
+/** Free substrate and no Echoes yet: say where Echoes come from, and when the next one forms. */
+function EchoHint({ s, c }: { s: GameState; c: Colony }) {
+  const grown = c.growth?.echoes ?? 0;
+  const turns = Math.max(1, Math.ceil((1 - grown) / 0.22));
+  const clinic = (c.structures.upload_clinic ?? 0) > 0;
+  const stalled = s.civ.energy <= 15;
+  return (
+    <div class="faint echo-hint">
+      {stalled ? (
+        <span class="warn">No new Echoes while the reserve is at 15 energy or less.</span>
+      ) : (
+        <>A new Echo forms in the free substrate in about {turns} turn{turns > 1 ? 's' : ''} (one every ~5 turns while the reserve is above 15).</>
+      )}{' '}
+      {clinic ? 'Upload a Kin for one at once (6 energy).' : hasTech(s, 'upload') ? 'For one at once, build an Upload Clinic and upload a Kin.' : 'For one at once, research Upload and build an Upload Clinic.'}
+    </div>
+  );
+}
+
 /** What one more of a structure changes here, per turn: the numbers first, then the rest. */
 function EffectLine({ fx }: { fx: BuildEffect }) {
   const parts: preact.JSX.Element[] = [];
@@ -727,6 +748,8 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               {SHIP_BY_ID[x.cls]?.name ?? x.cls}
             </span>
           ))}
+          {f.order === 'fortify' && <span class="chip neon" data-tip={`Dug in: counts ${FORTIFY_BONUS}× against swarms here, and turns raiders away from the capital.`}><Icon name="shield" /> fortified</span>}
+          {f.order === 'hold' && <span class="chip" data-tip="Parked on purpose: the game will not ask about it.">holding</span>}
         </div>
       </div>
       <div class="drawer-body scroll">
@@ -753,6 +776,19 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               {tender && swarmHere && (
                 <button class="btn small" data-tip="Broadcast the dead makers' command language to take control of the swarm." onClick={() => act((g) => tame(g, swarmHere.id))}>
                   Tame swarm
+                </button>
+              )}
+              {f.order === 'fortify' || f.order === 'hold' ? (
+                <button class="btn small" data-tip="Stand down: it waits for orders again." onClick={() => act((g) => standFleet(g, f.id, 'idle')) && sfx('click')}>
+                  Stand down
+                </button>
+              ) : isWarFleet(f) ? (
+                <button class="btn small primary" data-tip={`Dig in here: counts ${FORTIFY_BONUS}× against swarms in this system, turns raiders away from the capital, and stops asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
+                  <Icon name="shield" /> Fortify
+                </button>
+              ) : (
+                <button class="btn small" data-tip="Park it here on purpose: the game stops asking about it." onClick={() => act((g) => standFleet(g, f.id, 'hold')) && sfx('click')}>
+                  Hold here
                 </button>
               )}
               <button class="btn small danger" data-tip="Scrap the fleet here and recover some matter." onClick={() => act((g) => disbandFleet(g, f.id)) && (selection.value = null)}>

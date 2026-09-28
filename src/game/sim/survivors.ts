@@ -124,7 +124,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         sv.lastSent = state.turn;
         const took = Math.round(Math.min(civ.energy * 0.2, 60));
         const cap = capital(state);
-        const defended = cap && (cap.structures.defense_grid ?? 0) > 0;
+        // a defence grid, or warships fortified over the capital, turns raiders away
+        const defended = cap && ((cap.structures.defense_grid ?? 0) > 0 || Object.values(state.fleets).some((f) => f.at === cap.systemId && f.order === 'fortify'));
         if (!defended && took > 0) civ.energy -= took;
         sendSignal(state, {
           from: sv.id,
