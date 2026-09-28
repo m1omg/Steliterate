@@ -26,6 +26,8 @@ export function newGame(partial: Partial<GameSettings> = {}): GameState {
   state.civ.capitalId = c.id;
   newFleet(state, home.id, ['probe'], 'Pathfinder');
   newFleet(state, home.id, ['probe'], 'Lamplighter');
+  // one old escort, kept on watch over the homeworld: parked, so it does not ask for orders
+  newFleet(state, home.id, ['warden'], 'Vigil').order = 'hold';
   log(state, `${settings.civName}. ${hw.name}, the last living world of ${home.name}. The long dusk begins.`, 'era');
   updateForecasts(state);
   state.saveVersion = SAVE_VERSION;

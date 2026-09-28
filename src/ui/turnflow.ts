@@ -6,8 +6,6 @@ import { autosave, busy, bump, engine, game, modal, notify } from './store';
 import { TECH_BY_ID } from '../game/data/techs';
 import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
 import { shipQueue } from './hud/ShipPrompt';
-import { formatDistance } from '../game/eras';
-import { distLy } from '../game/sim/util';
 import { researchPrompt } from './hud/ResearchPrompt';
 
 // Ending a turn: run the simulation, refresh the views, and surface what needs attention.
@@ -47,10 +45,8 @@ export function doEndTurn() {
   // first contact: we are not alone, and it should feel like it
   for (const v of Object.values(s.survivors)) {
     if (!v.contact || contactBefore.has(v.id)) continue;
+    // the First Contact event tells the story; the map shows where
     const home = s.systems[v.homeSystemId];
-    const cap = s.colonies[s.civ.capitalId ?? ''];
-    const from = s.systems[cap?.systemId ?? s.civ.homeSystemId];
-    notify(`First contact: ${v.name}, ${home && from ? formatDistance(distLy(from, home)) : 'far'} away at ${home?.name ?? 'an unknown star'}. Their words are in Signals (G).`, 'good');
     if (home) engine()?.ping(home.id, v.color);
     sfx('signal');
   }

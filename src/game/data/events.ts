@@ -276,11 +276,23 @@ export const EVENTS: EventDef[] = [
     title: 'Rust in the Belt',
     art: 'hunger',
     once: true,
-    text: () =>
-      'Surveyors found asteroids hollowed from the inside, and a haze of fine dark motes that moved away from their lights. It is a swarm: harvesters left running by a civilization that died before our sun was born. It does not seem to know it is alone. It only eats and grows, and it is drawn to warmth.',
+    text: (_s, d) =>
+      'Surveyors found asteroids hollowed from the inside, and a haze of fine dark motes that moved away from their lights. It is a swarm: harvesters left running by a civilization that died before our sun was born. It does not seem to know it is alone. It only eats and grows, and it is drawn to warmth.' +
+      (d.fleet ? ` Part of it came for ${d.fleet}. ${d.outcome ?? ''}` : ''),
     choices: [
       { label: 'Study it', hint: 'Research toward Hunger Studies jumps ahead.', run: (s) => { s.civ.research.hunger_studies = (s.civ.research.hunger_studies ?? 0) + 50; } },
       { label: 'Arm the settlements', hint: 'Research toward Orbital Defence jumps ahead. Resolve −2.', run: (s) => { s.civ.research.orbital_defense = (s.civ.research.orbital_defense ?? 0) + 40; res(s, -2); } },
+    ],
+  },
+  {
+    id: 'first_contact',
+    title: 'We Are Not Alone',
+    art: 'survivor',
+    text: (_s, d) =>
+      `Our listeners have picked out a civilization: ${d.name}, at ${d.star}, ${d.dist} away. What we are hearing left them ${d.age} ago; whatever they are now, they were alive then, and facing the same end as us. The first thing we could make out: “${d.words}”`,
+    choices: [
+      { label: 'Tell everyone', hint: 'Resolve +4. Our people learn they are not the last.', run: (s) => res(s, 4) },
+      { label: 'Keep it with the listeners for now', hint: 'Insight +30. Nobody panics, and nobody hopes too soon.', run: (s) => insight(s, 30) },
     ],
   },
   {

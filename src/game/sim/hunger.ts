@@ -4,6 +4,7 @@ import type { GameState, StarSystem, Swarm } from '../types';
 import { FORTIFY_BONUS, destroyColony, signatureOf } from './fleets';
 import type { Mods } from './mods';
 import { colonies, distLy, hasCharter, log, uid, withRng } from './util';
+import { queueEvent } from './events';
 
 // The Hunger: harvesters left running by a civilization that died long ago. Its makers built
 // it to survive; it still does, the way a tumour does. It has no plan beyond the next meal,
@@ -37,6 +38,59 @@ function defenseAt(state: GameState, systemId: string, mods: Mods): number {
   if (mods.flags.has('charter:wardens_oath')) d *= 1.5;
   return d;
 }
+
+/**
+ * The first swarm one of our ships comes near, asleep or awake, does not let it pass. A part of
+ * it comes for the ship (a warship can kill it there; anything else is mauled but gets away), and
+ * what is left of that part goes for the nearest warmth: our settlements.
+ */
+export function firstSwarm(state: GameState) {
+  if (state.flags.first_swarm) return;
+  for (const f of Object.values(state.fleets)) {
+    if (!f.at) continue;
+    const here = state.systems[f.at];
+    // a swarm notices a warm ship anywhere nearby, not only in its own system
+    const sw = Object.values(state.swarms).find((w) => w.systemId && !w.tamed && distLy(here, state.systems[w.systemId]) <= FIRST_SWARM_REACH);
+    if (!sw) continue;
+    const nest = state.systems[sw.systemId!];
+    state.flags.first_swarm = state.turn;
+    if (!state.civ.known[nest.id]) state.civ.known[nest.id] = 1;
+    let outcome = '';
+    withRng(state, (rng) => {
+      const size = Math.min(1.6, Math.max(1, sw.size * 0.3));
+      sw.size = Math.max(0.8, sw.size - size * 0.5);
+      const frag: Swarm = { id: uid(state, 'sw'), systemId: here.id, from: null, to: null, traveled: 0, distance: 0, size, awake: true, tamed: false, appetite: sw.appetite };
+      const attack = f.ships.reduce((a, s) => a + (SHIP_BY_ID[s.cls]?.attack ?? 0), 0);
+      if (attack > 0 && attack >= size * 1.2 * rng.range(0.6, 1.1)) {
+        state.civ.matter += size * 2;
+        for (const s of f.ships) s.hp = Math.max(1, s.hp - rng.range(0, size));
+        outcome = `${f.name} fought, and burned it out of the sky (+${Math.round(size * 2)} salvaged matter). The rest of the swarm stays at ${nest.name}, eating.`;
+        log(state, `Part of the swarm at ${nest.name} came for ${f.name} at ${here.name}. It was destroyed.`, 'combat', here.id);
+        return;
+      }
+      // mauled, but it gets away
+      for (const s of f.ships) s.hp = Math.max(1, s.hp - rng.range(0.6, 1.6));
+      state.swarms[frag.id] = frag;
+      const target = colonies(state)
+        .map((c) => state.systems[c.systemId])
+        .sort((a, b) => distLy(here, a) - distLy(here, b))[0];
+      if (target && target.id !== here.id) {
+        frag.systemId = null;
+        frag.from = here.id;
+        frag.to = target.id;
+        frag.distance = distLy(here, target);
+        outcome = `${f.name} was mauled but got away. What came for it is heading for the warmth of ${target.name}.`;
+      } else outcome = `${f.name} was mauled but got away. What came for it is still at ${here.name}.`;
+      log(state, `Part of the swarm at ${nest.name} came for ${f.name} at ${here.name}. ${outcome}`, 'combat', here.id);
+    });
+    state.flags.hunger_woke = (state.flags.hunger_woke ?? 0) + 1;
+    queueEvent(state, 'rust_in_the_belt', { systemId: nest.id, fleet: f.name, outcome });
+    return;
+  }
+}
+
+/** How close a ship must come to a swarm for the first one to notice it (ly). */
+const FIRST_SWARM_REACH = 60;
 
 function rangeLy(state: GameState): number {
   return state.era === 'dusk' ? 90 : state.era === 'degenerate' ? 4e5 : 1e9;

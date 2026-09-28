@@ -3,6 +3,8 @@ import type { GameState, Survivor, ThreadId } from '../types';
 import { createColony } from './fleets';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
+import { queueEvent } from './events';
+import { formatDistance, formatYears } from '../eras';
 import { capital, clamp, distLy, hasCharter, log, withRng } from './util';
 
 // Fellow survivors: other young civilizations facing the same end. Simulated lightly: their
@@ -50,6 +52,16 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       if (!sv.contact && listening) {
         sv.contact = true;
         civ.known[sv.homeSystemId] = Math.max(civ.known[sv.homeSystemId] ?? 0, 1) as 1 | 2;
+        // first contact is a moment, not a line in the log
+        queueEvent(state, 'first_contact', {
+          survivorId: sv.id,
+          systemId: sv.homeSystemId,
+          name: sv.name,
+          star: home?.name ?? 'a distant star',
+          dist: formatDistance(dist),
+          age: formatYears(dist),
+          words: voice(sv, firstWords(sv), `PROTOCOL HANDSHAKE. ORIGIN: ${sv.name.toUpperCase()}. STATUS: CONTINUING.`),
+        });
         sendSignal(state, {
           from: sv.id,
           kind: 'hello',

@@ -614,6 +614,11 @@ export function generateWorld(settings: GameSettings): GameState {
   });
   rng.shuffle(nestCandidates);
   const nests = settings.difficulty === 'harsh' ? 3 : settings.difficulty === 'gentle' ? 1 : 2;
+  // one nest lies in a cluster near ours, where the first probes will find it; the rest anywhere
+  // (picked from the same shuffled order, so the galaxy itself is unchanged)
+  const near3 = new Set(nearest.slice(0, 2).map((r) => r.id));
+  const first = nestCandidates.findIndex((s) => near3.has(s.regionId));
+  if (first > 0) nestCandidates.unshift(...nestCandidates.splice(first, 1));
   nestCandidates.slice(0, nests).forEach((s, i) => {
     const id = `hg${i}`;
     state.swarms[id] = { id, systemId: s.id, from: null, to: null, traveled: 0, distance: 0, size: 2 + i, awake: false, tamed: false, appetite: 1 };

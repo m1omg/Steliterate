@@ -10,7 +10,7 @@ import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
-import { updateHunger } from './hunger';
+import { firstSwarm, updateHunger } from './hunger';
 import { updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
 import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost } from './research';
@@ -314,6 +314,7 @@ export function endTurn(state: GameState): TurnResult {
   advanceFleets(state, step.turnLength, mods);
   // look around before exploring ships set off again, so they scan every star they reach
   updateDetection(state, mods);
+  firstSwarm(state);
   autoExplore(state, mods);
   updateHunger(state, step.turnLength, mods);
   updateSurvivors(state, logL, mods, step.turnLength);
