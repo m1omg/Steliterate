@@ -1,0 +1,538 @@
+import * as THREE from 'three';
+import { primaryTemperature } from '../game/physics';
+import { Rng, hashSeed } from '../game/rng';
+import type { GameState, StarSystem } from '../game/types';
+import { blackbody } from './shaders/noise';
+
+// The Coalescence seen from outside: layered star populations of the ancestral galaxies,
+// dimming era by era, with every known system as a node you can pick.
+
+const DUST_VERT = /* glsl */ `
+  attribute float aSize;
+  attribute vec3 aColor;
+  attribute float aSeed;
+  uniform float uTime;
+  uniform float uScale;
+  uniform float uBright;
+  varying vec3 vColor;
+  varying float vAlpha;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    float tw = 0.85 + 0.15 * sin(uTime * (0.3 + aSeed * 0.9) + aSeed * 40.0);
+    gl_PointSize = clamp(aSize * uScale / -mv.z, 0.6, 22.0);
+    vColor = aColor;
+    vAlpha = uBright * tw * clamp(aSize * uScale / -mv.z, 0.25, 1.0);
+  }
+`;
+
+const DUST_FRAG = /* glsl */ `
+  varying vec3 vColor;
+  varying float vAlpha;
+  uniform vec3 uTint;
+  void main() {
+    vec2 c = gl_PointCoord - 0.5;
+    float d = length(c);
+    float a = smoothstep(0.5, 0.0, d);
+    a = a * a;
+    gl_FragColor = vec4(vColor * uTint, a * vAlpha);
+  }
+`;
+
+const NODE_VERT = /* glsl */ `
+  attribute float aSize;
+  attribute vec3 aColor;
+  attribute vec4 aState; // x: owned, y: rust, z: pulse phase, w: dim
+  uniform float uTime;
+  uniform float uPixel;
+  varying vec3 vColor;
+  varying vec4 vState;
+  varying float vSize;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    float s = aSize * uPixel * (1.0 + 60.0 / max(8.0, -mv.z));
+    gl_PointSize = clamp(s, 5.0 * uPixel, 64.0 * uPixel);
+    vColor = aColor;
+    vState = aState;
+    vSize = gl_PointSize;
+  }
+`;
+
+const NODE_FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform vec3 uOwned;
+  uniform vec3 uRust;
+  varying vec3 vColor;
+  varying vec4 vState;
+  varying float vSize;
+  void main() {
+    vec2 c = gl_PointCoord - 0.5;
+    float d = length(c) * 2.0;
+    float core = smoothstep(0.22, 0.0, d);
+    float halo = smoothstep(1.0, 0.0, d) * 0.35;
+    vec3 col = vColor * (core * 1.6 + halo) * vState.w;
+    float a = max(core, halo * 0.9) * vState.w;
+    // settlement ring
+    if (vState.x > 0.5) {
+      float ring = smoothstep(0.08, 0.0, abs(d - 0.72)) * (0.75 + 0.25 * sin(uTime * 1.6 + vState.z));
+      col += uOwned * ring * 1.4;
+      a = max(a, ring);
+    }
+    // the Hunger's rust bloom, flickering
+    if (vState.y > 0.01) {
+      float flick = 0.6 + 0.4 * sin(uTime * 7.0 + vState.z * 13.0) * sin(uTime * 2.3 + vState.z);
+      float rust = smoothstep(0.1, 0.0, abs(d - 0.9)) * vState.y * flick;
+      col += uRust * rust;
+      a = max(a, rust);
+    }
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(col, a);
+  }
+`;
+
+const SWARM_VERT = /* glsl */ `
+  attribute vec3 aCenter;
+  attribute vec4 aParams; // x: phase, y: radius, z: speed, w: size of swarm
+  uniform float uTime;
+  uniform float uPixel;
+  varying float vFlick;
+  // murmuration: every mote follows the same few slow waves, so the flock moves as one
+  void main() {
+    float t = uTime * aParams.z;
+    float p = aParams.x;
+    vec3 flow = vec3(
+      sin(t * 0.7 + p * 1.3) + 0.6 * sin(t * 1.9 + p * 0.4),
+      0.5 * sin(t * 1.1 + p * 2.1) + 0.3 * cos(t * 0.5 + p),
+      cos(t * 0.8 + p * 1.7) + 0.6 * cos(t * 1.5 + p * 0.8)
+    );
+    vec3 shared = vec3(sin(t * 0.33), 0.4 * sin(t * 0.21), cos(t * 0.27)) * 0.8;
+    vec3 pos = aCenter + (flow * 0.55 + shared) * aParams.y;
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+    gl_Position = projectionMatrix * mv;
+    gl_PointSize = clamp(2.2 * uPixel * (1.0 + 30.0 / max(6.0, -mv.z)), 1.0, 6.0 * uPixel);
+    vFlick = 0.5 + 0.5 * sin(uTime * 5.0 + p * 31.0);
+  }
+`;
+
+const SWARM_FRAG = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uOpacity;
+  varying float vFlick;
+  void main() {
+    vec2 c = gl_PointCoord - 0.5;
+    if (length(c) > 0.5) discard;
+    // dark motes, catching dull red light now and then
+    vec3 col = mix(vec3(0.05, 0.03, 0.03), uColor, step(0.82, vFlick));
+    gl_FragColor = vec4(col, uOpacity * (0.55 + 0.45 * vFlick));
+  }
+`;
+
+export interface Pickable {
+  kind: 'system' | 'fleet' | 'swarm';
+  id: string;
+  pos: THREE.Vector3;
+}
+
+export class GalaxyView {
+  group = new THREE.Group();
+  private dust: THREE.Points | null = null;
+  private dustMat: THREE.ShaderMaterial;
+  private nodes: THREE.Points | null = null;
+  private nodeMat: THREE.ShaderMaterial;
+  private swarmPts: THREE.Points | null = null;
+  private swarmMat: THREE.ShaderMaterial;
+  private fleetGroup = new THREE.Group();
+  private lines: THREE.LineSegments | null = null;
+  private selRing: THREE.Mesh;
+  private heartGlow: THREE.Sprite;
+  private territory: THREE.Points | null = null;
+  pickables: Pickable[] = [];
+  private fleetAnim = new Map<string, { from: THREE.Vector3; to: THREE.Vector3; t0: number; mesh: THREE.Object3D }>();
+  private seedBuilt = -1;
+  private time = 0;
+  selected: string | null = null;
+
+  constructor() {
+    this.dustMat = new THREE.ShaderMaterial({
+      vertexShader: DUST_VERT,
+      fragmentShader: DUST_FRAG,
+      uniforms: { uTime: { value: 0 }, uScale: { value: 300 }, uBright: { value: 1 }, uTint: { value: new THREE.Color(1, 1, 1) } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.nodeMat = new THREE.ShaderMaterial({
+      vertexShader: NODE_VERT,
+      fragmentShader: NODE_FRAG,
+      uniforms: { uTime: { value: 0 }, uPixel: { value: 1 }, uOwned: { value: new THREE.Color('#4fe3d1') }, uRust: { value: new THREE.Color('#b8452a') } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.swarmMat = new THREE.ShaderMaterial({
+      vertexShader: SWARM_VERT,
+      fragmentShader: SWARM_FRAG,
+      uniforms: { uTime: { value: 0 }, uPixel: { value: 1 }, uColor: { value: new THREE.Color('#c0482c') }, uOpacity: { value: 0.9 } },
+      transparent: true,
+      depthWrite: false,
+    });
+    const ringGeo = new THREE.RingGeometry(1, 1.08, 64);
+    this.selRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#ffd9b0', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
+    this.selRing.visible = false;
+    this.group.add(this.selRing);
+    const glowTex = radialTexture();
+    this.heartGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: '#ffae70', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.5 }));
+    this.heartGlow.scale.set(260, 260, 1);
+    this.group.add(this.heartGlow);
+    this.group.add(this.fleetGroup);
+  }
+
+  setPixelRatio(pr: number) {
+    this.nodeMat.uniforms.uPixel.value = pr;
+    this.swarmMat.uniforms.uPixel.value = pr;
+    this.dustMat.uniforms.uScale.value = 300 * pr;
+  }
+
+  setPalette(accent: string, neon: string) {
+    void accent;
+    this.nodeMat.uniforms.uOwned.value.set(neon);
+  }
+
+  /** Build the unchanging star field of the Coalescence once per world. */
+  private buildDust(state: GameState) {
+    if (this.dust) {
+      this.group.remove(this.dust);
+      this.dust.geometry.dispose();
+    }
+    const rng = new Rng(hashSeed(state.settings.seed * 3 + 1));
+    const pos: number[] = [];
+    const col: number[] = [];
+    const size: number[] = [];
+    const seed: number[] = [];
+    const push = (x: number, y: number, z: number, c: [number, number, number], s: number) => {
+      pos.push(x, y, z);
+      col.push(...c);
+      size.push(s);
+      seed.push(rng.next());
+    };
+    const warm = (t: number): [number, number, number] => blackbody(t);
+    const gauss = () => rng.gauss();
+    // one vast shared envelope: a de Vaucouleurs-like profile, bright core, long faint wings
+    for (let i = 0; i < 30000; i++) {
+      const r = 18 + Math.pow(rng.next(), 2.6) * 820;
+      const th = rng.next() * Math.PI * 2;
+      const ph = Math.acos(rng.range(-1, 1));
+      push(r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph) * 0.62, r * Math.sin(ph) * Math.sin(th), warm(rng.range(2600, 3600)), rng.range(1.0, 2.4));
+    }
+    // merger shells: faint concentric arcs left by galaxies that fell in (seen around real merger remnants)
+    for (let k = 0; k < 7; k++) {
+      const R = 260 + k * 85 + rng.range(-20, 20);
+      const axis = rng.range(0, Math.PI * 2);
+      const span = rng.range(0.7, 1.4);
+      const side = k % 2 === 0 ? 1 : -1;
+      for (let i = 0; i < 1300; i++) {
+        const a = axis + side * (Math.PI / 2) + rng.range(-span, span);
+        const rr = R + gauss() * 5;
+        push(Math.cos(a) * rr, gauss() * 22 * 0.62, Math.sin(a) * rr, warm(rng.range(2700, 3300)), rng.range(0.9, 1.7));
+      }
+    }
+    for (const p of state.provinces) {
+      if (p.kind === 'ancestral') {
+        const tint = rng.range(-300, 300);
+        const n = 9000;
+        for (let i = 0; i < n; i++) {
+          const r = Math.abs(gauss()) * p.radius * 0.5;
+          const th = rng.next() * Math.PI * 2;
+          const ph = Math.acos(rng.range(-1, 1));
+          push(p.pos.x + r * Math.sin(ph) * Math.cos(th), p.pos.y + r * Math.cos(ph) * 0.45, p.pos.z + r * Math.sin(ph) * Math.sin(th), warm(rng.range(2700, 3700) + tint), rng.range(1, 2.2));
+        }
+        // a bridge of stars back to the core: they are falling together
+        for (let i = 0; i < 2600; i++) {
+          const u = rng.next();
+          const j = gauss() * 45;
+          push(p.pos.x * u + j, p.pos.y * u + gauss() * 20, p.pos.z * u + gauss() * 45, warm(rng.range(2600, 3400)), rng.range(0.8, 1.8));
+        }
+      } else if (p.kind === 'stream') {
+        const ang0 = Math.atan2(p.pos.z, p.pos.x);
+        const rad = Math.hypot(p.pos.x, p.pos.z);
+        for (let i = 0; i < 4200; i++) {
+          const a = ang0 + rng.range(-0.9, 0.9);
+          const rr = rad + gauss() * 22;
+          push(Math.cos(a) * rr, p.pos.y + gauss() * 16 + Math.sin(a * 3) * 40, Math.sin(a) * rr, warm(rng.range(2600, 3300)), rng.range(0.9, 1.9));
+        }
+      }
+    }
+    // the halo: sparse, old, wide
+    for (let i = 0; i < 9000; i++) {
+      const r = 300 + Math.abs(gauss()) * 480;
+      const th = rng.next() * Math.PI * 2;
+      const ph = Math.acos(rng.range(-1, 1));
+      push(r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph) * 0.8, r * Math.sin(ph) * Math.sin(th), warm(rng.range(2500, 3200)), rng.range(0.7, 1.5));
+    }
+    for (const r of state.regions) {
+      if (r.kind !== 'globular' && r.kind !== 'outlier') continue;
+      const n = r.kind === 'globular' ? 2200 : 500;
+      for (let i = 0; i < n; i++) {
+        const rr = Math.abs(gauss()) * (r.kind === 'globular' ? 14 : 8);
+        const th = rng.next() * Math.PI * 2;
+        const ph = Math.acos(rng.range(-1, 1));
+        push(r.pos.x + rr * Math.sin(ph) * Math.cos(th), r.pos.y + rr * Math.cos(ph), r.pos.z + rr * Math.sin(ph) * Math.sin(th), warm(rng.range(2800, 4200)), rng.range(0.8, 1.6));
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('aColor', new THREE.Float32BufferAttribute(col, 3));
+    g.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
+    g.setAttribute('aSeed', new THREE.Float32BufferAttribute(seed, 1));
+    this.dust = new THREE.Points(g, this.dustMat);
+    this.dust.frustumCulled = false;
+    this.group.add(this.dust);
+  }
+
+  /** Rebuild everything that changes with the game state. */
+  sync(state: GameState, now: number) {
+    if (this.seedBuilt !== state.settings.seed) {
+      this.buildDust(state);
+      this.seedBuilt = state.settings.seed;
+    }
+    // brightness of the old stellar population by era
+    const liveRed = Object.values(state.systems).filter((s) => s.primary.kind === 'red_dwarf' || s.primary.kind === 'blue_dwarf').length;
+    const totalRed = Math.max(1, (state.flags.red_total ??= liveRed));
+    const bright =
+      state.era === 'dusk' ? 0.12 + 0.88 * (liveRed / totalRed) : state.era === 'degenerate' ? 0.1 : state.era === 'blackhole' ? 0.018 : 0.0;
+    this.dustMat.uniforms.uBright.value = bright;
+    this.dustMat.uniforms.uTint.value.set(state.era === 'dusk' ? '#ffffff' : state.era === 'degenerate' ? '#9fb8ff' : '#8c86b8');
+    this.heartGlow.material.opacity = state.era === 'dusk' ? 0.35 : state.era === 'degenerate' ? 0.16 : state.era === 'blackhole' ? 0.06 : 0;
+
+    // system nodes
+    const known = state.civ.known;
+    const colonized = new Set(Object.values(state.colonies).map((c) => c.systemId));
+    const pos: number[] = [];
+    const col: number[] = [];
+    const size: number[] = [];
+    const st: number[] = [];
+    this.pickables = [];
+    for (const s of Object.values(state.systems)) {
+      if (!known[s.id] || s.gone) continue;
+      const [r, g, b] = nodeColor(s, state);
+      pos.push(s.pos.x, s.pos.y, s.pos.z);
+      col.push(r, g, b);
+      size.push(nodeSize(s));
+      st.push(colonized.has(s.id) ? 1 : 0, s.rust ?? 0, (hashSeed(s.id) % 1000) / 159, known[s.id] === 2 ? 1 : 0.7);
+      this.pickables.push({ kind: 'system', id: s.id, pos: new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z) });
+    }
+    if (this.nodes) {
+      this.group.remove(this.nodes);
+      this.nodes.geometry.dispose();
+    }
+    const ng = new THREE.BufferGeometry();
+    ng.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    ng.setAttribute('aColor', new THREE.Float32BufferAttribute(col, 3));
+    ng.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
+    ng.setAttribute('aState', new THREE.Float32BufferAttribute(st, 4));
+    this.nodes = new THREE.Points(ng, this.nodeMat);
+    this.nodes.frustumCulled = false;
+    this.nodes.renderOrder = 2;
+    this.group.add(this.nodes);
+
+    // settled territory: soft neon discs
+    if (this.territory) {
+      this.group.remove(this.territory);
+      this.territory.geometry.dispose();
+    }
+    const tp: number[] = [];
+    for (const id of colonized) {
+      const s = state.systems[id];
+      tp.push(s.pos.x, s.pos.y, s.pos.z);
+    }
+    const tg = new THREE.BufferGeometry();
+    tg.setAttribute('position', new THREE.Float32BufferAttribute(tp, 3));
+    const tm = new THREE.PointsMaterial({ size: 38, map: radialTexture(), color: this.nodeMat.uniforms.uOwned.value, transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+    this.territory = new THREE.Points(tg, tm);
+    this.group.add(this.territory);
+
+    this.syncFleets(state, now);
+    this.syncSwarms(state);
+  }
+
+  private syncFleets(state: GameState, now: number) {
+    const seen = new Set<string>();
+    const lp: number[] = [];
+    for (const f of Object.values(state.fleets)) {
+      seen.add(f.id);
+      let p: THREE.Vector3;
+      if (f.at) {
+        const s = state.systems[f.at];
+        p = new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z).add(new THREE.Vector3(2.2, 1.2, 0));
+      } else {
+        const a = state.systems[f.from!];
+        const b = state.systems[f.to!];
+        const u = f.distance > 0 ? f.traveled / f.distance : 1;
+        p = new THREE.Vector3(a.pos.x + (b.pos.x - a.pos.x) * u, a.pos.y + (b.pos.y - a.pos.y) * u, a.pos.z + (b.pos.z - a.pos.z) * u);
+        lp.push(p.x, p.y, p.z, b.pos.x, b.pos.y, b.pos.z);
+      }
+      let anim = this.fleetAnim.get(f.id);
+      if (!anim) {
+        const mesh = fleetGlyph(f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis') ? '#ffd6a8' : '#bfe9ff');
+        this.fleetGroup.add(mesh);
+        mesh.position.copy(p);
+        anim = { from: p.clone(), to: p.clone(), t0: now, mesh };
+        this.fleetAnim.set(f.id, anim);
+      } else {
+        anim.from = anim.mesh.position.clone();
+        anim.to = p;
+        anim.t0 = now;
+      }
+      this.pickables.push({ kind: 'fleet', id: f.id, pos: p.clone() });
+    }
+    for (const [id, a] of this.fleetAnim) {
+      if (!seen.has(id)) {
+        this.fleetGroup.remove(a.mesh);
+        this.fleetAnim.delete(id);
+      }
+    }
+    if (this.lines) {
+      this.group.remove(this.lines);
+      this.lines.geometry.dispose();
+    }
+    const lg = new THREE.BufferGeometry();
+    lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
+    this.lines = new THREE.LineSegments(lg, new THREE.LineDashedMaterial({ color: '#8fd7ff', dashSize: 3, gapSize: 3, transparent: true, opacity: 0.45 }));
+    this.lines.computeLineDistances();
+    this.group.add(this.lines);
+  }
+
+  private syncSwarms(state: GameState) {
+    if (this.swarmPts) {
+      this.group.remove(this.swarmPts);
+      this.swarmPts.geometry.dispose();
+      this.swarmPts = null;
+    }
+    const centers: number[] = [];
+    const params: number[] = [];
+    const pos: number[] = [];
+    for (const sw of Object.values(state.swarms)) {
+      if (!sw.awake && !sw.tamed) continue;
+      let c: THREE.Vector3 | null = null;
+      if (sw.systemId) {
+        const s = state.systems[sw.systemId];
+        if (!state.civ.known[s.id]) continue;
+        c = new THREE.Vector3(s.pos.x, s.pos.y + 1.5, s.pos.z);
+      } else if (sw.from && sw.to) {
+        const a = state.systems[sw.from];
+        const b = state.systems[sw.to];
+        const u = sw.distance > 0 ? Math.min(1, sw.traveled / sw.distance) : 0;
+        c = new THREE.Vector3(a.pos.x + (b.pos.x - a.pos.x) * u, a.pos.y + (b.pos.y - a.pos.y) * u, a.pos.z + (b.pos.z - a.pos.z) * u);
+      }
+      if (!c) continue;
+      this.pickables.push({ kind: 'swarm', id: sw.id, pos: c.clone() });
+      const n = Math.round(80 + sw.size * 30);
+      const rad = 2.5 + Math.sqrt(sw.size) * 1.6;
+      for (let i = 0; i < n; i++) {
+        centers.push(c.x, c.y, c.z);
+        pos.push(c.x, c.y, c.z);
+        params.push(Math.random() * 100, rad * (0.4 + Math.random() * 0.8), 0.4 + Math.random() * 0.25, sw.size);
+      }
+    }
+    if (!centers.length) return;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('aCenter', new THREE.Float32BufferAttribute(centers, 3));
+    g.setAttribute('aParams', new THREE.Float32BufferAttribute(params, 4));
+    this.swarmPts = new THREE.Points(g, this.swarmMat);
+    this.swarmPts.frustumCulled = false;
+    this.group.add(this.swarmPts);
+  }
+
+  update(dt: number, now: number, camera: THREE.Camera, cameraDistance: number) {
+    this.time += dt;
+    const t = this.time;
+    this.dustMat.uniforms.uTime.value = t;
+    this.nodeMat.uniforms.uTime.value = t;
+    this.swarmMat.uniforms.uTime.value = t;
+    // fleets glide to their new positions over a fixed real-time span
+    for (const a of this.fleetAnim.values()) {
+      const u = Math.min(1, (now - a.t0) / 1.4);
+      const e = u * u * (3 - 2 * u);
+      a.mesh.position.lerpVectors(a.from, a.to, e);
+      a.mesh.lookAt(camera.position);
+      const s = Math.max(0.6, cameraDistance * 0.012);
+      a.mesh.scale.setScalar(s);
+    }
+    if (this.selected) {
+      const p = this.pickables.find((x) => x.id === this.selected);
+      if (p) {
+        this.selRing.visible = true;
+        this.selRing.position.copy(p.pos);
+        this.selRing.lookAt(camera.position);
+        const s = Math.max(1.6, cameraDistance * 0.028) * (1 + 0.06 * Math.sin(t * 3));
+        this.selRing.scale.setScalar(s);
+      } else this.selRing.visible = false;
+    } else this.selRing.visible = false;
+  }
+}
+
+function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
+  const k = s.primary.kind;
+  if (k === 'black_hole' || k === 'smbh') return [0.62, 0.52, 1.0];
+  if (k === 'void' || k === 'rogue') return [0.35, 0.36, 0.42];
+  if (k === 'brown_dwarf') return [0.62, 0.3, 0.28];
+  if (k === 'black_dwarf') return s.primary.rekindle ? [0.9, 0.45, 0.25] : [0.3, 0.3, 0.34];
+  const tK = primaryTemperature(s.primary, state.years, state.era);
+  if (k === 'white_dwarf' && state.era !== 'dusk') return s.primary.halo && state.eta < 25 ? [0.55, 0.62, 0.8] : [0.35, 0.37, 0.45];
+  const [r, g, b] = blackbody(Math.max(1800, tK));
+  const boost = k === 'red_dwarf' || k === 'collision_star' ? 1.0 : 1.2;
+  return [r * boost, g * boost, b * boost];
+}
+
+function nodeSize(s: StarSystem): number {
+  switch (s.primary.kind) {
+    case 'smbh':
+      return 11;
+    case 'helium_giant':
+    case 'dark_star':
+      return 10;
+    case 'blue_dwarf':
+    case 'helium_star':
+      return 8;
+    case 'red_dwarf':
+    case 'collision_star':
+      return 6;
+    case 'black_hole':
+      return 6;
+    case 'neutron_star':
+      return 5;
+    default:
+      return 4.5;
+  }
+}
+
+let _radial: THREE.Texture | null = null;
+export function radialTexture(): THREE.Texture {
+  if (_radial) return _radial;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grd.addColorStop(0, 'rgba(255,255,255,1)');
+  grd.addColorStop(0.25, 'rgba(255,255,255,0.45)');
+  grd.addColorStop(0.6, 'rgba(255,255,255,0.08)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 128, 128);
+  _radial = new THREE.CanvasTexture(c);
+  return _radial;
+}
+
+function fleetGlyph(color: string): THREE.Object3D {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 1);
+  shape.lineTo(0.62, -0.7);
+  shape.lineTo(0, -0.3);
+  shape.lineTo(-0.62, -0.7);
+  shape.closePath();
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false }));
+  m.renderOrder = 3;
+  return m;
+}
