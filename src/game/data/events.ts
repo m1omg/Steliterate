@@ -278,7 +278,7 @@ export const EVENTS: EventDef[] = [
     once: true,
     text: (_s, d) =>
       'Surveyors found asteroids hollowed from the inside, and a haze of fine dark motes that moved away from their lights. It is a swarm: harvesters left running by a civilization that died before our sun was born. It does not seem to know it is alone. It only eats and grows, and it is drawn to warmth.' +
-      (d.fleet ? ` Part of it came for ${d.fleet}. ${d.outcome ?? ''}` : ''),
+      (d.fleet ? (String(d.outcome ?? '').startsWith('It paid') ? ` ${d.outcome}` : ` Part of it came for ${d.fleet}. ${d.outcome ?? ''}`) : ''),
     choices: [
       { label: 'Study it', hint: 'Research toward Hunger Studies jumps ahead.', run: (s) => { s.civ.research.hunger_studies = (s.civ.research.hunger_studies ?? 0) + 50; } },
       { label: 'Arm the settlements', hint: 'Research toward Orbital Defence jumps ahead. Resolve −2.', run: (s) => { s.civ.research.orbital_defense = (s.civ.research.orbital_defense ?? 0) + 40; res(s, -2); } },

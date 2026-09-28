@@ -40,9 +40,9 @@ function defenseAt(state: GameState, systemId: string, mods: Mods): number {
 }
 
 /**
- * The first swarm one of our ships comes near, asleep or awake, does not let it pass. A part of
- * it comes for the ship (a warship can kill it there; anything else is mauled but gets away), and
- * what is left of that part goes for the nearest warmth: our settlements.
+ * The first swarm one of our ships comes near, asleep or awake. Often a part of it comes for the
+ * ship (a warship can kill it there; anything else is mauled but gets away) and what is left of
+ * that part goes for the nearest warmth, our settlements; sometimes it lets the ship go.
  */
 export function firstSwarm(state: GameState) {
   if (state.flags.first_swarm) return;
@@ -57,6 +57,12 @@ export function firstSwarm(state: GameState) {
     if (!state.civ.known[nest.id]) state.civ.known[nest.id] = 1;
     let outcome = '';
     withRng(state, (rng) => {
+      // not every swarm cares: some let the ship go, for now
+      if (!rng.chance(0.55)) {
+        outcome = `It paid ${f.name} no attention. Yet.`;
+        log(state, `${f.name} came near the swarm at ${nest.name}. It did not react.`, 'info', here.id);
+        return;
+      }
       const size = Math.min(1.6, Math.max(1, sw.size * 0.3));
       sw.size = Math.max(0.8, sw.size - size * 0.5);
       const frag: Swarm = { id: uid(state, 'sw'), systemId: here.id, from: null, to: null, traveled: 0, distance: 0, size, awake: true, tamed: false, appetite: sw.appetite };
