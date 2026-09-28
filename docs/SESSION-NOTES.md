@@ -52,32 +52,22 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 
 ## Found in the review of 28 Sep (verified)
 
-Not fixed yet:
+All fixed, a commit each (see the CHANGELOG, "The review of 28 Sep"): the flare clock's seventh
+turn; the crossing protocols (Last Horizon Protocols did nothing, the others stacked); leptonic
+vaults on a black hole's planet; despair counted twice at the Last Horizon; the Long Sleep
+tooltip; other civilizations lingering with no health left; loading another game's save from
+inside a system; η in capitalised text; "__inf" names; the harness's flags.
 
-- **Flare clock: a seventh micro-turn in about 15% of flares.** Six additions of `flare_step`
-  can land 1–2 ulps short of `flare_until` (`turnStep` in `flare.ts`, the check at
-  `turn.ts:380`), so a turn of about 0.02 years follows. It counts as a full flare turn
-  (collectors ≈3×, another unsheltered Kin lost) and the Pace panel shows "turn 6 of 6" twice.
-  Fix: snap to `flare_until` within a tolerance, or count the turns in `civ.flags`. Rules:
-  check the harness.
-- **Last Horizon Protocols does nothing.** The Last Horizon branch of `runCrossing` never reads
-  `mods.crossing`. The protocol techs also multiply together: Last Light Protocols halves Great
-  Decay losses too, and alone opens the leptonic migration (`crossingMult < 1`). Rules: harness.
-- **A leptonic settlement on a planet of a black hole loses its Hearth at the Great Decay:**
-  `migrateToBlackHoles` skips it (already at a hole), the decay dissolves its planet, and the
-  Hearth needs a body that is not dissolved (`economy.ts:232`).
-- **Despair counts twice on crossing turns:** `checkEndings` runs in the crossing
-  (`turn.ts:425` or `438`) and again at `:448`, so The Will Fails can come a turn early.
-- **Other civilizations with no health left fade only once we can converse:** the check at
-  `survivors.ts:84` sits behind the conversation gate, and some keep paying joint income for
-  many turns. Other civilizations: discuss before changing.
-- **Small:** a colony or civilization named "__inf" loads back as the number Infinity (the save
-  format's sentinel); `tools/sim.ts` reads `--diff=…` in the strategy slot as a strategy name.
-- **Harness blind spots, wider than listed in DEV-NOTES:** every victory is The Long Thought,
-  and the autoplayer never tries the other Great Works, raids, asks for help, seizes or devours.
+Still open:
 
-Fixed since (see the CHANGELOG, "The review of 28 Sep"): loading another game's save from
-inside a system; η in capitalised text; the Long Sleep tooltip.
+- **Other civilizations' last transmission (the player's call):** since they fade on time, many
+  now fade while we cannot follow their clock, and their last transmission is lost (181 insight
+  a game, against 252). Sending it always, as a one-way archive that needs no conversation, is
+  a one-line change (331 insight a game, 327/900; the conservative version gives 325/900).
+- **Balance after the fixes:** 325/900 survive, against 341 at `0815fe4` (within noise); the
+  fading fix alone measured −33 in 900 games against the other fixes, cause not found.
+- **Harness blind spots** (also in DEV-NOTES): every victory is The Long Thought, and the
+  autoplayer never tries the other Great Works, raids, asks for help, seizes or devours.
 
 ## Questions answered in this session (short versions)
 

@@ -75,7 +75,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Generation changes** must keep RNG consumption the same (pick from the already-shuffled
   order), or every seed's galaxy changes.
 - **Harness blind spots:** the autoplayer never raids, asks for aid or picks tracks, so those
-  never move the harness. It does answer the flare event with choice 0 (keep time with the
+  never move the harness. Every victory it reaches is The Long Thought: the other Great Works
+  never move it either. It does answer the flare event with choice 0 (keep time with the
   flare).
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
@@ -167,3 +168,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `09cdd8c` | 114 | |
 | `1e8a321` | 114 | re-run in a fresh container (28 Sep): identical, 94 Endurance + 20 Victory |
 | `0815fe4` | 114 | rendering only: all 300 games identical to `1e8a321` |
+| `f8a2cd6` | 122 | the flare clock's seventh turn gone |
+| `a5debf5` | 121 | each crossing's protocols for that crossing only |
+| `fa5737d` | 121 | despair once a turn |
+| `eebeefa` | 107 | other civilizations fade on time; 900 games: 325, against 358 without it and 341 at `0815fe4` |

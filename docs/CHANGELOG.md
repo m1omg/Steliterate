@@ -139,8 +139,26 @@ and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organizat
 
 - `231b7fb` **Handoff.** `npm run savecompat` with a 71-turn save regenerated from `551fb1a` in
   `tools/saves/`; `CLAUDE.md`; notes and design brought up to date. No game code.
-- **Interface fixes.** Loading another game's save while looking inside a system no longer
+- `0b49601` **Interface fixes.** Loading another game's save while looking inside a system no longer
   throws and leaves the view black: a system the loaded game lacks sends the view back to the
   galaxy, and the music follows the loaded age. η stays lowercase in capitalised text (the Dark
   Era chronometer, the ending screen), where uppercase made it Η. The Long Sleep tooltip says
   what it does: four dormant turns, then waking on the fifth with +30% output.
+- `f8a2cd6` **Flare clock: six turns, never a seventh.** Six additions of a sixth of the flare
+  could land an ulp short of its end, and a seventh micro-turn followed that counted as a full
+  flare turn (24 of 163 flares in 100 games). Now every flare takes six. (122/300)
+- `a5debf5` **Crossing protocols; black-hole vaults.** Each protocol halves its own crossing only:
+  they multiplied across all three, and Last Horizon Protocols did nothing. At the Last Horizon it
+  halves the Continuity shortfall and the energy drain. A leptonic vault on a planet of a black
+  hole moves into the hole's Deep at the Great Decay instead of losing its Hearth for good.
+  (121/300)
+- `fa5737d` **Despair counts once a turn;** the Last Horizon's turn counted it twice. (121/300)
+- `07459f0` **Small fixes.** A civilization or settlement named "__inf" or "__-inf" is kept as
+  "_inf" / "_-inf" (the save format reads those as ±Infinity); `tools/sim.ts` takes its flags
+  anywhere.
+- `eebeefa` **Other civilizations with no health left fade** at once, not only on a turn we can
+  converse with them (some lingered 155 turns, still paying joint income). Their last
+  transmission comes only if we can follow their clock; otherwise the Record says their lights
+  have gone out. A civilization we never met leaves a hidden tomb. (107/300; 900 games: 325,
+  against 358 without this change and 341 at `0815fe4`. Not the lost last transmissions:
+  sending them always still gives 327.)

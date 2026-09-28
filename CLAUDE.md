@@ -42,4 +42,5 @@ npm run savecompat                       # "SAVE COMPAT OK"
 npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; count in DEV-NOTES
 ```
 
-Balance reference: 114 of 300 standard competent games survive at `0815fe4` (noise ±12).
+Balance reference: 107 of 300 standard competent games survive at `eebeefa` (114 before the fixes
+of the 28 Sep review; noise ±12; 900 games: 325).
