@@ -225,6 +225,9 @@ export function enactCharter(state: GameState, id: string): ActionResult {
   if (d.dissent) civ.dissent = Math.max(0, Math.min(100, civ.dissent + d.dissent));
   if (d.taint) civ.taint = Math.min(100, civ.taint + d.taint);
   if (id === 'consume_the_dead' || id === 'salvage_the_dead') state.gfe = Math.max(0.05, state.gfe - 0.01);
+  // stripping what is already dead and in reach pays at once
+  if (id === 'salvage_the_dead') civ.matter += 40;
+  if (id === 'consume_the_dead') civ.matter += hasCharter(state, 'salvage_the_dead') ? 80 : 120;
   log(state, `Charter enacted: ${d.name}.`, d.dark ? 'bad' : 'event');
   return null;
 }

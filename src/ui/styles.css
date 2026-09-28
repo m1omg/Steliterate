@@ -437,3 +437,4 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .fleet-thumb { width: 34px; height: 34px; object-fit: contain; flex: none; filter: drop-shadow(0 0 3px rgba(159, 245, 230, 0.25)); }
 .fleet-thumb.moving { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--neon) 70%, transparent)); }
 .drawer-head .fleet-portrait { float: right; width: 64px; height: 64px; object-fit: contain; margin: 14px 4px 0 8px; filter: drop-shadow(0 0 6px rgba(159, 245, 230, 0.2)); }
+.drawer-head .enter-system { margin-top: 8px; }

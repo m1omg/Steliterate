@@ -24,7 +24,11 @@ export class OrbitRig {
   private dragMode: 'rotate' | 'pan' | null = null;
   private pinchDist = 0;
   private moved = 0;
-  onClick: ((x: number, y: number) => void) | null = null;
+  onClick: ((x: number, y: number, pointerType: string) => void) | null = null;
+  /** The world point a zoom at this screen position should head toward (null: the centre). */
+  zoomAnchor: ((x: number, y: number) => THREE.Vector3 | null) | null = null;
+  /** Called after every zoom the player makes, with the distance they asked for before clamping. */
+  onZoomIntent: ((requested: number) => void) | null = null;
   onHover: ((x: number, y: number) => void) | null = null;
   autoYaw = 0; // slow cinematic drift (radians per second)
   /** Something to keep centred (a planet on its orbit). Cleared when the player pans. */
@@ -96,7 +100,7 @@ export class OrbitRig {
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (this.pinchDist > 0) this.zoomBy(this.pinchDist / Math.max(1, d));
+      if (this.pinchDist > 0) this.userZoom(this.pinchDist / Math.max(1, d), (a.x + b.x) / 2, (a.y + b.y) / 2);
       this.pinchDist = d;
       this.pan(dx * 0.5, dy * 0.5);
       return;
@@ -109,7 +113,7 @@ export class OrbitRig {
   };
 
   private up = (e: PointerEvent) => {
-    if (this.pointers.has(e.pointerId) && this.pointers.size === 1 && this.moved < 6) this.onClick?.(e.clientX, e.clientY);
+    if (this.pointers.has(e.pointerId) && this.pointers.size === 1 && this.moved < 6) this.onClick?.(e.clientX, e.clientY, e.pointerType);
     this.pointers.delete(e.pointerId);
     if (this.pointers.size === 0) this.dragMode = null;
     this.pinchDist = 0;
@@ -118,8 +122,24 @@ export class OrbitRig {
   private wheel = (e: WheelEvent) => {
     e.preventDefault();
     const k = Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0022);
-    this.zoomBy(k);
+    this.userZoom(k, e.clientX, e.clientY);
   };
+
+  /** A zoom from the wheel or a pinch: heads toward what is under the pointer, then reports. */
+  private userZoom(k: number, x: number, y: number) {
+    const requested = this.goalDistance * k;
+    const before = this.goalDistance;
+    this.zoomBy(k);
+    const anchor = this.zoomAnchor?.(x, y);
+    if (anchor && !this.follow) {
+      // keep the anchored point where it is on screen: move the focus by the share the
+      // distance actually changed (nothing once the zoom is clamped)
+      const f = 1 - this.goalDistance / before;
+      this.goalTarget.addScaledVector(anchor.clone().sub(this.goalTarget), f);
+      if (this.flight) this.flight.to.addScaledVector(anchor.clone().sub(this.flight.to), f);
+    }
+    this.onZoomIntent?.(requested);
+  }
 
   zoomBy(k: number) {
     this.goalDistance = THREE.MathUtils.clamp(this.goalDistance * k, this.minDistance, this.maxDistance);

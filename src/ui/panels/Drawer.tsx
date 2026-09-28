@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { STRUCTURE_BY_ID } from '../../game/data/structures';
 import { THREAD_DEFS } from '../../game/data/threads';
@@ -38,6 +38,24 @@ import { sfx } from '../../audio/sfx';
 
 export function Drawer({ s }: { s: GameState }) {
   void rev.value;
+  const ref = useRef<HTMLElement>(null);
+  // On a phone the panel covers the lower half of the screen: slide the view up so what is
+  // selected stays visible (and can be tapped again) between the top bar and the panel.
+  useLayoutEffect(() => {
+    const place = () => {
+      const eng = engine();
+      const el = ref.current;
+      if (!eng) return;
+      if (!el || window.innerWidth > 760) return eng.setFocusY(null);
+      const top = (document.querySelector('.resources') as HTMLElement | null)?.getBoundingClientRect().bottom ?? 0;
+      const bottom = el.getBoundingClientRect().top;
+      eng.setFocusY(bottom - top > 80 ? (top + bottom) / 2 : null);
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  });
+  useEffect(() => () => engine()?.setFocusY(null), []);
   const sel = selection.value;
   if (!sel) return null;
   let body: preact.JSX.Element | null = null;
@@ -49,7 +67,7 @@ export function Drawer({ s }: { s: GameState }) {
   else if (sel.kind === 'swarm' && s.swarms[sel.id]) body = <SwarmPanel s={s} sw={s.swarms[sel.id]} />;
   if (!body) return null;
   return (
-    <aside class="drawer panel" aria-label="Selection">
+    <aside ref={ref} class="drawer panel" aria-label="Selection">
       <button class="btn ghost small drawer-close" aria-label="Close" onClick={() => { selection.value = null; engine()?.select(null); }}>
         <Icon name="close" />
       </button>
@@ -111,6 +129,11 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           {sys.beacon && <span class="chip neon">decoy beacon</span>}
           {sys.gone && <span class="chip danger">gone</span>}
         </div>
+        {view.value === 'galaxy' && known > 0 && !sys.gone && (
+          <button class="btn small primary enter-system" onClick={() => enterSystem(sys.id)} data-tip="Or double-click the star, tap it again, or zoom in on it.">
+            <Icon name="system" /> Look inside
+          </button>
+        )}
       </div>
       <div class="drawer-body scroll">
         <p class="flavor" style={{ margin: '0 0 8px' }}>{src.label}.</p>
@@ -207,11 +230,6 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
               ))}
             </div>
           </div>
-        )}
-        {view.value === 'galaxy' && known > 0 && (
-          <button class="btn" style={{ marginTop: '12px', width: '100%' }} onClick={() => enterSystem(sys.id)}>
-            <Icon name="system" /> Enter system
-          </button>
         )}
       </div>
     </>

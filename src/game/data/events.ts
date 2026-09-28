@@ -211,7 +211,7 @@ export const EVENTS: EventDef[] = [
     choices: [
       { label: 'Let the idea spread', hint: 'Coldminds and Echoes standing +5, Kin −3. You may slow further (pace).', run: (s) => { stand(s, 'coldminds', 5); stand(s, 'echoes', 5); stand(s, 'kin', -3); s.civ.flags.stillness = 1; } },
       { label: 'Argue it out in the Commons', hint: 'Accord −8, Dissent −4.', run: (s) => { accord(s, -8); dis(s, -4); } },
-      { label: 'Ban the petition', hint: 'Dissent +8.', run: (s) => { dis(s, 8); } },
+      { label: 'Ban the petition', hint: 'Kin standing +5, Resolve +3: nobody is going to sleep forever. Dissent +8, Echoes and Coldminds standing −3.', run: (s) => { stand(s, 'kin', 5); res(s, 3); dis(s, 8); stand(s, 'echoes', -3); stand(s, 'coldminds', -3); } },
     ],
   },
 

@@ -310,9 +310,10 @@ export function endTurn(state: GameState): TurnResult {
   }
 
   // ------------------------------------------------ 5. society
+  // Consume the Dead: nothing is buried any more
+  if (popsLost > 0 && hasCharter(state, 'consume_the_dead')) civ.matter += popsLost * 4;
   updateSociety(state, logL, popsLost, starving);
   if (civ.wakeBonus > 0 && !civ.dormant) civ.wakeBonus--;
-  if (hasCharter(state, 'rationing')) civ.resolve = Math.max(0, civ.resolve - 0.5);
 
   // ------------------------------------------------ 6. fleets, hazards, other minds
   advanceFleets(state, step.turnLength, mods);
@@ -351,7 +352,9 @@ export function endTurn(state: GameState): TurnResult {
     if (s.kind === 'last' && s.data.insight) {
       const gain = Number(s.data.insight);
       civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
-      if (hasCharter(state, 'salvage_the_dead') || hasCharter(state, 'consume_the_dead')) civ.matter += gain * 0.5;
+      // their dead worlds, stripped
+      if (hasCharter(state, 'consume_the_dead')) civ.matter += gain;
+      else if (hasCharter(state, 'salvage_the_dead')) civ.matter += gain * 0.5;
     }
   }
   if (state.turn === 3) queueEvent(state, 'dynamo_fails');

@@ -49,7 +49,7 @@ export function computeMods(state: GameState): Mods {
   for (const c of state.civ.charters) m.flags.add(`charter:${c}`);
   if (m.flags.has('charter:open_archives')) m.insightMult *= 1.15;
   if (m.flags.has('charter:abandon_the_surface')) m.industryMult *= 1.1;
-  if (m.flags.has('charter:child_quotas')) m.upkeep.kin *= 0.88;
+  if (m.flags.has('charter:child_quotas')) m.upkeep.kin *= 0.8;
   if (m.flags.has('charter:rationing')) for (const t of THREADS) m.upkeep[t] *= 0.85;
   if (state.era !== 'dusk') m.detect = Math.max(m.detect, state.era === 'degenerate' ? 3e5 : 1e7);
   return m;

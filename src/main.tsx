@@ -18,7 +18,7 @@ import './ui/styles.css';
 
 const stage = document.getElementById('stage')!;
 const eng = new Engine(stage, {
-  onPick(p) {
+  onPick(p, v, pointerType) {
     const t = targeting.value;
     if (t && p && p.kind === 'system' && !p.id.startsWith('body:')) {
       targeting.value = null;
@@ -29,6 +29,14 @@ const eng = new Engine(stage, {
     if (!p) {
       selection.value = null;
       eng.select(null);
+      return;
+    }
+    // on a touchscreen there is no double-click: tapping the selected star again looks inside
+    const sel = selection.value;
+    if (v === 'galaxy' && pointerType !== 'mouse' && p.kind === 'system' && !p.id.startsWith('body:') && sel?.kind === 'system' && sel.id === p.id) {
+      sfx('select');
+      view.value = 'system';
+      eng.showSystem(p.id);
       return;
     }
     sfx('select');
@@ -42,8 +50,14 @@ const eng = new Engine(stage, {
   onEnterSystem(id) {
     if (screen.value !== 'game') return;
     selection.value = { kind: 'system', id };
+    eng.select(id);
     view.value = 'system';
     eng.showSystem(id);
+  },
+  onLeaveSystem() {
+    if (screen.value !== 'game') return;
+    view.value = 'galaxy';
+    eng.showGalaxy();
   },
 });
 setEngine(eng);

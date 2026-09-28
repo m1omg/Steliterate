@@ -20,8 +20,10 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
 - **Pace**: quicken for more decisions while a short-lived source burns; slow down for more
   energy per turn. Slowing only pays for minds that can slow themselves (Echoes, Coldminds).
 - **Sleep / Long Sleep**: dormancy cuts upkeep to a tenth while energy still comes in.
-- Click a star to select it, double-click (or **System**) to look inside. Click a planet to
-  fly to it and follow it. Unsurveyed systems show only their star until a probe charts them.
+- Click a star to select it. To look inside: double-click it, tap it again on a touchscreen,
+  press **Look inside**, or just zoom in on it (zooming heads toward the pointer); zoom back
+  out past the edge of a system to return to the galaxy. Click a planet to fly to it and
+  follow it. Unsurveyed systems show only their star until a probe charts them.
 - **Settling**: a System Lighter (no research) carries a family to another world of the same
   star; Kin Arks, Seedcores and the rest cross between stars. Settlements (S) and Fleets (F)
   on the left rail list everything you have.

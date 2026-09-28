@@ -10,10 +10,17 @@ export type ViewKind = 'galaxy' | 'system';
 export type Quality = 'low' | 'medium' | 'high';
 
 export interface EngineEvents {
-  onPick: (p: Pickable | null, view: ViewKind) => void;
+  onPick: (p: Pickable | null, view: ViewKind, pointerType?: string) => void;
   onHover: (p: Pickable | null, x: number, y: number) => void;
   onEnterSystem: (systemId: string) => void;
+  /** Zoomed out past the edge of a system: back to the galaxy. */
+  onLeaveSystem?: () => void;
 }
+
+/** Zooming the galaxy view closer than this dives into the system at the focus. */
+const ENTER_ZOOM = 12;
+/** How far past a system view's widest zoom the player must push to leave it (log scale). */
+const LEAVE_PUSH = Math.log(1.5);
 
 interface Label {
   el: HTMLDivElement;
@@ -43,6 +50,9 @@ export class Engine {
   private labelLayer: HTMLDivElement;
   private running = false;
   private galaxyCam = { target: new THREE.Vector3(), distance: 220, yaw: 0.6, pitch: 0.85 };
+  private leavePush = 0;
+  private focusY: number | null = null;
+  private viewShift = 0;
   quality: Quality = 'high';
   private tint = new THREE.Color(1, 0.94, 0.88);
   private tintGoal = new THREE.Color(1, 0.94, 0.88);
@@ -66,7 +76,9 @@ export class Engine {
     this.labelLayer = document.createElement('div');
     this.labelLayer.className = 'label-layer';
     host.appendChild(this.labelLayer);
-    this.rig.onClick = (x, y) => this.click(x, y);
+    this.rig.onClick = (x, y, type) => this.click(x, y, type);
+    this.rig.zoomAnchor = (x, y) => (this.view === 'galaxy' ? this.zoomAnchorAt(x, y) : null);
+    this.rig.onZoomIntent = (requested) => this.zoomIntent(requested);
     this.rig.onHover = (x, y) => this.events.onHover(this.pickAt(x, y), x, y);
     window.addEventListener('resize', this.resize);
     this.renderer.domElement.addEventListener('dblclick', (e) => {
@@ -130,6 +142,14 @@ export class Engine {
       this.fadeTarget = 0;
     }
     this.tint.lerp(this.tintGoal, 1 - Math.exp(-1.5 * dt));
+    // slide the picture so the focus sits where the UI asked (phones: above an open panel)
+    const el = this.renderer.domElement;
+    const w = el.clientWidth || window.innerWidth;
+    const h = el.clientHeight || window.innerHeight;
+    const shiftGoal = this.focusY === null ? 0 : h / 2 - this.focusY;
+    this.viewShift += (shiftGoal - this.viewShift) * (1 - Math.exp(-8 * dt));
+    if (Math.abs(this.viewShift) > 0.5) this.camera.setViewOffset(w, h, 0, this.viewShift, w, h);
+    else if (this.camera.view) this.camera.clearViewOffset();
     const u = this.post.finish.uniforms;
     u.uTime.value = this.now;
     u.uFade.value = this.fade;
@@ -169,8 +189,10 @@ export class Engine {
     if (!this.state) return;
     const go = () => {
       if (this.view === 'galaxy') {
-        this.galaxyCam = { target: this.rig.target.clone(), distance: this.rig.goalDistance, yaw: this.rig.goalYaw, pitch: this.rig.goalPitch };
+        // (entered by zooming in: come back a little further out, to see the neighbourhood)
+        this.galaxyCam = { target: this.rig.goalTarget.clone(), distance: Math.max(this.rig.goalDistance, 36), yaw: this.rig.goalYaw, pitch: this.rig.goalPitch };
       }
+      this.leavePush = 0;
       this.view = 'system';
       this.system.build(this.state!, systemId);
       this.post.setScene(this.systemScene, this.camera);
@@ -216,6 +238,14 @@ export class Engine {
     }
   }
 
+  /**
+   * Where on screen (CSS px from the top) the centre of the view should sit; null for the
+   * middle. On a phone the selection panel covers the lower half, so the view slides up.
+   */
+  setFocusY(y: number | null) {
+    this.focusY = y;
+  }
+
   /** Mark a discovery on the galaxy map. */
   ping(systemId: string, color = '#9ff5e6') {
     if (this.state) this.galaxy.ping(this.state, systemId, color, this.now);
@@ -228,9 +258,57 @@ export class Engine {
     this.rig.flyToFollow(() => this.system.bodyFocus(bodyId)?.pos ?? null, Math.max(9, f.radius * 7), 1.1);
   }
 
-  private click(x: number, y: number) {
+  private click(x: number, y: number, pointerType?: string) {
     const p = this.pickAt(x, y);
-    this.events.onPick(p, this.view);
+    this.events.onPick(p, this.view, pointerType);
+  }
+
+  /** Zoom toward the star under the pointer, or else the point on the galactic plane there. */
+  private zoomAnchorAt(x: number, y: number): THREE.Vector3 | null {
+    const p = this.pickAt(x, y);
+    if (p && p.kind === 'system') return p.pos.clone();
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, this.camera);
+    const hit = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.rig.goalTarget.y), new THREE.Vector3());
+    // a grazing ray would fling the focus far away: only trust nearby points
+    return hit && hit.distanceTo(this.rig.goalTarget) < this.rig.goalDistance * 3 ? hit : null;
+  }
+
+  /** The system the galaxy view is focused on, if the camera is close to one. */
+  private systemAtFocus(): string | null {
+    const t = this.rig.goalTarget;
+    const reach = Math.max(2.5, this.rig.goalDistance * 0.45);
+    let best: string | null = null;
+    let bestD = reach;
+    for (const p of this.galaxy.pickables) {
+      if (p.kind !== 'system') continue;
+      const d = p.pos.distanceTo(t) * (p.id === this.galaxy.selected ? 0.5 : 1); // the selected star wins ties
+      if (d < bestD) {
+        bestD = d;
+        best = p.id;
+      }
+    }
+    return best;
+  }
+
+  private zoomIntent(requested: number) {
+    if (this.pendingSwitch || !this.state) return;
+    if (this.view === 'galaxy') {
+      if (this.rig.goalDistance > ENTER_ZOOM) return;
+      const id = this.systemAtFocus();
+      if (id) this.events.onEnterSystem(id);
+      return;
+    }
+    // in a system: pushing on past the widest view goes back out to the galaxy
+    const max = this.rig.maxDistance;
+    if (requested > max && this.rig.goalDistance >= max * 0.999) this.leavePush += Math.log(requested / max);
+    else if (requested < this.rig.goalDistance) this.leavePush = 0;
+    if (this.leavePush > LEAVE_PUSH) {
+      this.leavePush = 0;
+      this.events.onLeaveSystem?.();
+    }
   }
 
   pickAt(x: number, y: number): Pickable | null {
