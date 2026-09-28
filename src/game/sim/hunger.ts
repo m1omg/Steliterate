@@ -1,5 +1,5 @@
 import { SHIP_BY_ID } from '../data/ships';
-import { STRUCTURE_BY_ID } from '../data/structures';
+import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import type { GameState, StarSystem, Swarm } from '../types';
 import { FORTIFY_BONUS, destroyColony, signatureOf } from './fleets';
 import type { Mods } from './mods';
@@ -145,7 +145,7 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
             const k = rng.weighted(structs, (s) => (STRUCTURE_BY_ID[s]?.signature ?? 1) + 0.5);
             c.structures[k]--;
             if (c.structures[k] <= 0) delete c.structures[k];
-            log(state, `The swarm stripped ${STRUCTURE_BY_ID[k]?.name ?? k} at ${c.name}.`, 'combat', sys.id);
+            log(state, `The swarm stripped ${structureLabel(k, sys).name} at ${c.name}.`, 'combat', sys.id);
           }
           civ.matter = Math.max(0, civ.matter - sw.size * 2);
           if (rng.chance(0.35)) {

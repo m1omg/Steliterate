@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
-import { STRUCTURE_BY_ID } from '../../game/data/structures';
+import { STRUCTURE_BY_ID, structureLabel } from '../../game/data/structures';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
 import { bodyClimate, primaryTemperature, sourceLight, waterState } from '../../game/physics';
@@ -36,7 +36,7 @@ import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { BODY_NAME, FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon } from '../labels';
+import { FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote } from '../labels';
 import { act, engine, following, rev, selection, targeting, view } from '../store';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
@@ -133,7 +133,7 @@ function WorldStrip({ s, sys, current }: { s: GameState; sys: StarSystem; curren
             class={`ws-item${b.id === current ? ' on' : ''}${c ? ' ours' : hab >= LIVING_WORLD ? ' living' : ''}`}
             aria-current={b.id === current ? 'true' : undefined}
             onClick={() => b.id !== current && selectBody(b)}
-            data-tip={`${c ? `${c.name} (our settlement)` : b.name} · ${BODY_NAME[b.kind]}${b.kind !== 'deep' ? ` · ${pct(hab)} habitable` : ''}`}
+            data-tip={`${c ? `${c.name} (our settlement)` : b.name} · ${bodyKindName(s, b)}${b.kind !== 'deep' ? ` · ${pct(hab)} habitable` : ''}`}
           >
             <Icon name={bodyIcon(b.kind)} />
             <span>{shortWorldName(b, sys)}</span>
@@ -193,7 +193,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                     <div key={b.id} class="list-item" role="button" tabIndex={0} onClick={() => selectBody(b)} onKeyDown={(e) => e.key === 'Enter' && selectBody(b)}>
                       <Icon name={bodyIcon(b.kind)} cls={c ? 'neon' : hab >= LIVING_WORLD ? 'boon' : ''} />
                       <span class="grow">
-                        {c ? c.name : b.name} <span class="faint" style={{ fontSize: '11px' }}>{BODY_NAME[b.kind]}</span>
+                        {c ? c.name : b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}</span>
                       </span>
                       {b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls="accent" />}
                       {b.rogue && <span class="chip warn">rogue</span>}
@@ -318,7 +318,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
     <>
       <div class="drawer-head">
         <div class="eyebrow">
-          <span style={{ cursor: 'pointer' }} onClick={() => selectSystem(sys.id)}>{sys.name}</span> · {BODY_NAME[b.kind]}
+          <span style={{ cursor: 'pointer' }} onClick={() => selectSystem(sys.id)}>{sys.name}</span> · <span data-tip={bodyKindNote(s, b)}>{bodyKindName(s, b)}</span>
         </div>
         <h2>{b.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
@@ -436,7 +436,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
     <>
       <div class="drawer-head">
         <div class="eyebrow">
-          <span style={{ cursor: 'pointer' }} onClick={() => selectSystem(sys.id)}>{sys.name}</span> · {BODY_NAME[b.kind]}
+          <span style={{ cursor: 'pointer' }} onClick={() => selectSystem(sys.id)}>{sys.name}</span> · <span data-tip={bodyKindNote(s, b)}>{bodyKindName(s, b)}</span>
         </div>
         <h2>{c.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
@@ -565,8 +565,8 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                 {Object.entries(c.structures)
                   .filter(([, n]) => n > 0)
                   .map(([id, n]) => (
-                    <span key={id} class="chip" data-tip={STRUCTURE_BY_ID[id]?.desc ?? ''}>
-                      {STRUCTURE_BY_ID[id]?.name ?? id}
+                    <span key={id} class="chip" data-tip={structureLabel(id, sys).desc}>
+                      {structureLabel(id, sys).name}
                       {n > 1 ? ` ×${n}` : ''}
                     </span>
                   ))}
@@ -649,7 +649,7 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
   const ctx = project(s).ctx;
   const list: { id: string; name: string; desc: string; error: string | null | undefined; cost: ReturnType<typeof buildCost>; count: number; fx?: BuildEffect }[] =
     kind === 'structure'
-      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: x.def.desc, error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx) }))
+      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId]), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx) }))
       : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: x.def.desc, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
   return (
     <>
@@ -663,7 +663,7 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
           return (
             <div key={q.uid} class="queue-item">
               <div class="row">
-                <span class="grow">{def?.name ?? q.key}</span>
+                <span class="grow">{q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId]).name : def?.name ?? q.key}</span>
                 <span class="mono faint" style={{ fontSize: '11px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
                 <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>
                 <button class="btn ghost small" aria-label="Move down" data-tip="Build this later (move down the queue)" disabled={i === c.queue.length - 1} onClick={() => act((g) => moveQueued(g, c.id, q.uid, 1))}>▼</button>
@@ -886,7 +886,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                     <div key={b.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
                       <Icon name={bodyIcon(b.kind)} />
                       <span class="grow">
-                        {b.name} <span class="faint" style={{ fontSize: '11px' }}>{BODY_NAME[b.kind]}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
+                        {b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
                       </span>
                       {settleDef?.settles?.thread === 'kin' && (
                         <span class={`mono ${hab >= LIVING_WORLD ? 'good' : 'faint'}`} style={{ fontSize: '11px' }} data-tip="Habitable: habitability × vitality">

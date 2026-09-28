@@ -1,4 +1,6 @@
 import { signal } from '@preact/signals';
+import { useEffect } from 'preact/hooks';
+import { SHIP_BY_ID } from '../../game/data/ships';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
 import { ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
@@ -43,15 +45,31 @@ export function Plate({ art, height = 220 }: { art: string; height?: number }) {
   );
 }
 
+/** Events about the homeworld and its star, which carry no place of their own. */
+const AT_HOME = new Set(['dynamo_fails', 'first_night', 'comet']);
+
 /** The star an event is about, if it is about one we can see. */
 function eventSystem(s: GameState, p: PendingEvent): string | null {
   const d = p.data;
+  const home = Object.values(s.bodies).find((b) => b.traits.includes('homeworld'));
+  // the derelict ark was found by one of our probes: wherever a survey ship is
+  const probe = Object.values(s.fleets).find((f) => f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey));
   const id =
     (typeof d.systemId === 'string' && d.systemId) ||
     (typeof d.bodyId === 'string' && s.bodies[d.bodyId]?.systemId) ||
     (typeof d.colonyId === 'string' && s.colonies[d.colonyId]?.systemId) ||
+    (AT_HOME.has(p.defId) && (home?.systemId ?? s.civ.homeSystemId)) ||
+    (p.defId === 'derelict_ark' && probe && (probe.at ?? probe.to ?? probe.from)) ||
     null;
   return id && s.systems[id] && !s.systems[id].gone && (s.civ.known[id] ?? 0) > 0 ? id : null;
+}
+
+/** Swing the view to the star an event is about (and select it). */
+function showEventStar(s: GameState, id: string) {
+  if (!s.systems[id] || s.systems[id].gone) return;
+  selection.value = { kind: 'system', id };
+  engine()?.select(id);
+  pivotToSystem(id);
 }
 
 /** Narrative events waiting for a decision. The first pending one is shown. */
@@ -61,6 +79,13 @@ export const eventResult = signal<{ title: string; text: string } | null>(null);
 export function EventModal({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const result = eventResult.value;
+  const top = s.pending[0];
+  // as an event about a star opens, the view swings there behind it
+  useEffect(() => {
+    if (!top || eventResult.value || !hudPrefs.value.eventPivot) return;
+    const id = eventSystem(s, top);
+    if (id) showEventStar(s, id);
+  }, [top?.uid]);
   if (result) {
     return (
       <ModalFrame title={result.title} narrow closable={false} foot={<button class="btn primary" onClick={() => (eventResult.value = null)}>Continue</button>}>
@@ -106,11 +131,7 @@ export function EventModal({ s }: { s: GameState }) {
                     sfx('select');
                     bump();
                     if (r.text) eventResult.value = { title: def.title, text: r.text };
-                    if (pivot && sysId && s.systems[sysId] && !s.systems[sysId].gone) {
-                      selection.value = { kind: 'system', id: sysId };
-                      engine()?.select(sysId);
-                      pivotToSystem(sysId);
-                    }
+                    if (pivot && sysId) showEventStar(s, sysId);
                   }}
                 >
                   <span>{c.label}</span>
@@ -122,7 +143,7 @@ export function EventModal({ s }: { s: GameState }) {
           {sysId && (
             <label class="check-row">
               <input type="checkbox" checked={hudPrefs.value.eventPivot} onChange={(e) => setHudPrefs({ eventPivot: (e.target as HTMLInputElement).checked })} />
-              <Icon name="focus" /> Show {s.systems[sysId].name} after choosing
+              <Icon name="focus" /> Show {s.systems[sysId].name} (now and after choosing)
             </label>
           )}
         </div>

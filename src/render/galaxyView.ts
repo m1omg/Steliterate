@@ -170,6 +170,8 @@ export interface Pickable {
   kind: 'system' | 'fleet' | 'swarm';
   id: string;
   pos: THREE.Vector3;
+  /** Size in world units: a click anywhere on its disc on screen picks it. */
+  radius?: number;
 }
 
 export class GalaxyView {

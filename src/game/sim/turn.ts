@@ -1,5 +1,5 @@
 import { SHIP_BY_ID } from '../data/ships';
-import { STRUCTURE_BY_ID } from '../data/structures';
+import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import { eraOver, logTurnLength, stepTime } from '../eras';
 import { evolveUniverse, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
@@ -17,7 +17,7 @@ import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost }
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
-import { clamp, colonies, hasCharter, log, popsOf, totalPops, withRng } from './util';
+import { clamp, colonies, distLy, hasCharter, log, popsOf, totalPops, withRng } from './util';
 
 export interface TurnResult {
   crossing: CrossingReport | null;
@@ -51,7 +51,7 @@ function applyIndustry(state: GameState, c: Colony, industry: number, mods: Mods
           b.coreHeat = Math.min(1, b.coreHeat + d.coreHeatBonus);
         }
         if (item.key === 'confluence_node') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
-        log(state, `${c.name}: ${d?.name ?? item.key} complete.`, 'good', c.systemId);
+        log(state, `${c.name}: ${item.kind === 'structure' ? structureLabel(item.key, state.systems[c.systemId]).name : d?.name ?? item.key} complete.`, 'good', c.systemId);
       } else {
         const def = SHIP_BY_ID[item.key];
         if (def?.crew) c.pops.kin = Math.max(0, c.pops.kin - def.crew);
@@ -200,7 +200,7 @@ export function endTurn(state: GameState): TurnResult {
           const k = rng.pick(keys);
           c.structures[k]--;
           if (c.structures[k] <= 0) delete c.structures[k];
-          log(state, `An overdriven Hearth failed at ${c.name}: ${STRUCTURE_BY_ID[k]?.name} is wrecked.`, 'bad', c.systemId);
+          log(state, `An overdriven Hearth failed at ${c.name}: ${structureLabel(k, state.systems[c.systemId]).name} is wrecked.`, 'bad', c.systemId);
         }
         c.damage *= 0.5;
       }
@@ -356,7 +356,18 @@ export function endTurn(state: GameState): TurnResult {
   }
   if (state.turn === 3) queueEvent(state, 'dynamo_fails');
   if (state.turn === 7) queueEvent(state, 'first_night');
-  if ((state.flags.hunger_woke ?? 0) > 0 && !state.fired.rust_in_the_belt) queueEvent(state, 'rust_in_the_belt');
+  if ((state.flags.hunger_woke ?? 0) > 0 && !state.fired.rust_in_the_belt) {
+    // our surveyors found it: say where (the woken swarm nearest the capital), and chart that star
+    const capSys = state.systems[state.colonies[state.civ.capitalId ?? '']?.systemId ?? state.civ.homeSystemId];
+    // (a swarm that has already set off was found where it fed: the system it left)
+    const at = (w: (typeof state.swarms)[string]) => w.systemId ?? w.from ?? w.to ?? null;
+    const sw = Object.values(state.swarms)
+      .filter((w) => w.awake && at(w) && state.systems[at(w)!])
+      .sort((a, b) => distLy(capSys, state.systems[at(a)!]) - distLy(capSys, state.systems[at(b)!]))[0];
+    const where = sw ? at(sw) : null;
+    if (where && !state.civ.known[where]) state.civ.known[where] = 1;
+    queueEvent(state, 'rust_in_the_belt', where ? { systemId: where } : {});
+  }
   rollRandomEvent(state);
   updateForecasts(state);
 

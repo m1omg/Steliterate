@@ -446,8 +446,12 @@ export class Engine {
   pickAt(x: number, y: number): Pickable | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const list = this.view === 'galaxy' ? this.galaxy.pickables : this.system.pickables;
+    const reach = this.view === 'galaxy' ? 16 : 26;
+    // pixels per world unit at distance 1, for the size of a body on screen
+    const pxPerUnit = rect.height / 2 / Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     let best: Pickable | null = null;
-    let bestD = this.view === 'galaxy' ? 16 : 26;
+    let bestScore = Infinity;
+    let bestDepth = Infinity;
     const v = new THREE.Vector3();
     for (const p of list) {
       v.copy(p.pos).project(this.camera);
@@ -455,8 +459,17 @@ export class Engine {
       const sx = rect.left + ((v.x + 1) / 2) * rect.width;
       const sy = rect.top + ((1 - v.y) / 2) * rect.height;
       const d = Math.hypot(sx - x, sy - y) - (p.kind === 'fleet' ? 4 : 0);
-      if (d < bestD) {
-        bestD = d;
+      // a world seen up close is a big disc: anywhere on it counts, not just near its centre
+      const depth = this.camera.position.distanceTo(p.pos);
+      const disc = p.radius ? (p.radius * pxPerUnit) / Math.max(1e-3, depth) : 0;
+      const within = Math.max(reach, disc + 4);
+      if (d > within) continue;
+      // inside a disc, the nearer body wins (it is in front); otherwise the closest to the pointer
+      const inside = disc > 0 && d <= disc + 4;
+      const score = inside ? -1 : d / within;
+      if (score < bestScore || (inside && score === bestScore && depth < bestDepth)) {
+        bestScore = score;
+        bestDepth = depth;
         best = p;
       }
     }

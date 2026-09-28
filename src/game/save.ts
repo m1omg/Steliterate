@@ -132,6 +132,86 @@ export function importCode(code: string): GameState | null {
   }
 }
 
+// ---- save slots: as many named saves as the browser will hold, kept gzipped where it can
+
+const SLOT_INDEX = 'steliterate.slots.v1';
+const slotKey = (id: string) => `steliterate.slot.${id}`;
+
+export interface SlotInfo {
+  id: string;
+  name: string;
+  civ: string;
+  turn: number;
+  era: string;
+  savedAt: number; // ms since 1970
+  bytes: number;
+}
+
+export function listSlots(): SlotInfo[] {
+  const store = ls();
+  if (!store) return [];
+  try {
+    const list = JSON.parse(store.getItem(SLOT_INDEX) ?? '[]') as SlotInfo[];
+    return Array.isArray(list) ? list.sort((a, b) => b.savedAt - a.savedAt) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeIndex(list: SlotInfo[]) {
+  ls()?.setItem(SLOT_INDEX, JSON.stringify(list));
+}
+
+async function pack(text: string): Promise<string> {
+  if (typeof CompressionStream === 'undefined') return `js:${text}`;
+  const buf = new Uint8Array(await new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  return `gz:${btoa(bin)}`;
+}
+
+async function unpack(stored: string): Promise<string> {
+  if (stored.startsWith('js:')) return stored.slice(3);
+  const bin = atob(stored.slice(3));
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+}
+
+/** Save into a slot: a new one, or over `id`. Resolves the slot, or an error to show. */
+export async function saveToSlot(state: GameState, name: string, id?: string): Promise<SlotInfo | string> {
+  const store = ls();
+  if (!store) return 'Storage is unavailable here. Export a file instead.';
+  const slotId = id ?? `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
+  try {
+    const data = await pack(serialize(state));
+    store.setItem(slotKey(slotId), data);
+    const info: SlotInfo = { id: slotId, name: name.trim() || `Turn ${state.turn}`, civ: state.settings.civName, turn: state.turn, era: state.era, savedAt: Date.now(), bytes: data.length };
+    writeIndex([info, ...listSlots().filter((x) => x.id !== slotId)]);
+    return info;
+  } catch {
+    return 'The browser’s storage is full. Delete a slot or two, or export this game to a file.';
+  }
+}
+
+export async function loadSlot(id: string): Promise<GameState | null> {
+  try {
+    const stored = ls()?.getItem(slotKey(id));
+    return stored ? deserialize(await unpack(stored)) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function deleteSlot(id: string) {
+  try {
+    ls()?.removeItem(slotKey(id));
+    writeIndex(listSlots().filter((x) => x.id !== id));
+  } catch {
+    /* storage may be unavailable */
+  }
+}
+
 /** A save as a file of its own: the same JSON the browser keeps, under a readable name. */
 export function saveFile(state: GameState): { name: string; text: string } {
   const civ = (state.settings.civName || 'civilization').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'civilization';

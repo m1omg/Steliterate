@@ -143,7 +143,7 @@ export class SystemView {
       const m = new THREE.Mesh(new THREE.SphereGeometry(r, 64, 48), this.starMat);
       this.group.add(m);
       this.primaryRadius = r;
-      this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3() });
+      this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: r });
     };
     switch (p.kind) {
       case 'red_dwarf':
@@ -194,7 +194,7 @@ export class SystemView {
         const hole = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), new THREE.MeshBasicMaterial({ color: '#000000' }));
         this.group.add(hole);
         this.primaryRadius = r;
-        this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3() });
+        this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: r });
         addGlow(r * 6, new THREE.Color('#ffd2a8'), 0.0, 0, 1.0);
         const fed = Object.values(state.colonies).some((c) => c.systemId === sys.id && ((c.structures.accretion_engine ?? 0) > 0 || (c.structures.penrose_harvester ?? 0) > 0));
         const shine = diskLight(p.kind, state.era, state.years);
@@ -282,6 +282,8 @@ export class SystemView {
         uRust: { value: sys.rust ?? 0 },
         uFeeding: { value: b.feeding ? 1 : 0 },
         uViewMode: VIEW_MODE,
+        // an eyeball stays one only while its star keeps a sea liquid on the day side
+        uEye: { value: eyeStrength(b, climate) },
         uTempDay: { value: climate.day ?? climate.mean },
         uTempNight: { value: climate.night ?? climate.mean },
       },
@@ -315,7 +317,7 @@ export class SystemView {
     this.group.add(pivot);
     const speed = b.rogue ? 0.004 : 0.25 / Math.pow(orbitR / 12, 1.5);
     this.planets.push({ body: b, pivot, mesh, mat, speed, phase: b.phase, radius: orbitR, extra });
-    this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos: mesh.position.clone() });
+    this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos: mesh.position.clone(), radius: size });
   }
 
   private buildStructures(state: GameState, sys: StarSystem) {
@@ -502,6 +504,13 @@ export class SystemView {
       } else this.selRing.visible = false;
     } else this.selRing.visible = false;
   }
+}
+
+/** How much an eyeball world is still an eyeball: 1 while its star keeps the day side warm, 0 frozen over. */
+export function eyeStrength(b: Body, climate: { mean: number; day?: number }): number {
+  if (b.kind !== 'eyeball') return 0;
+  const t = Math.min(1, Math.max(0, ((climate.day ?? climate.mean) - 150) / 90));
+  return t * t * (3 - 2 * t);
 }
 
 function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Color; power: number } {

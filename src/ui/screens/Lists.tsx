@@ -13,7 +13,7 @@ import type { Body, Colony, Fleet, GameState } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
-import { BODY_NAME, PRIMARY_NAME, TRAIT_NAME } from '../labels';
+import { PRIMARY_NAME, TRAIT_NAME, bodyKindName } from '../labels';
 import { engine, modal, rev, selection, targeting, view } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
@@ -181,7 +181,7 @@ export function SettlementsModal({ s, tab }: { s: GameState; tab?: 'worlds' }) {
                       {s.civ.capitalId === c.id && <span class="chip neon" style={{ marginLeft: '6px' }}>capital</span>}
                       {c.starving > 0 && <span class="chip danger" style={{ marginLeft: '6px' }}>starving</span>}
                       <div class="faint" style={{ fontSize: '11px' }}>
-                        {BODY_NAME[b.kind]} · {c.queue.length ? `building ${c.queue.length}` : <span class="warn">idle</span>}
+                        {bodyKindName(s, b)} · {c.queue.length ? `building ${c.queue.length}` : <span class="warn">idle</span>}
                       </div>
                     </span>
                     <span class="row" style={{ gap: '6px', fontSize: '12px' }}>
@@ -317,7 +317,7 @@ function WorldsList({ s }: { s: GameState }) {
           {rows.map(({ b, sys, hab, room, c, ly, finds }) => (
             <div key={b.id} class="list-item world-row" onClick={() => goToBody(b)}>
               <span class="grow">
-                {b.name} <span class="faint">{BODY_NAME[b.kind]}</span>
+                {b.name} <span class="faint">{bodyKindName(s, b)}</span>
                 {b.colonyId && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
                 {finds.map((t) => (
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>

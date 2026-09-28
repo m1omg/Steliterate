@@ -1,5 +1,6 @@
 import { ANOMALIES } from '../game/data/events';
-import type { BodyKind, Focus, PrimaryKind } from '../game/types';
+import { bodyClimate } from '../game/physics';
+import type { Body, BodyKind, Focus, GameState, PrimaryKind } from '../game/types';
 import type { IconName } from './icons';
 
 export const PRIMARY_NAME: Record<PrimaryKind, string> = {
@@ -88,3 +89,20 @@ export const WAY_NAME: Record<string, string> = {
   lattice: 'handed over to processes and protocol',
   fork: 'a Thread that left you',
 };
+
+/**
+ * What kind of world a body is now. An eyeball world is one only while its star keeps a sea
+ * liquid on its day side; once the star is dead it is simply frozen.
+ */
+export function bodyKindName(s: GameState, b: Body): string {
+  if (b.kind === 'eyeball') {
+    const c = bodyClimate(s, b);
+    if ((c.day ?? c.mean) < 195) return 'Frozen world';
+  }
+  return BODY_NAME[b.kind];
+}
+
+/** A longer note on the kind, for tooltips: what it was, when that has changed. */
+export function bodyKindNote(s: GameState, b: Body): string {
+  return bodyKindName(s, b) !== BODY_NAME[b.kind] ? 'Once an eyeball world. Its star no longer warms it, and the sea on its day side has frozen over; what warmth is left comes from inside.' : '';
+}

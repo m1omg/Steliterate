@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { ERA_BY_ID } from '../../game/eras';
-import { exportCode, hasSave, loadGame, readSave, saveFile, saveGame } from '../../game/save';
+import { deleteSlot, exportCode, hasSave, listSlots, loadGame, loadSlot, readSave, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
 import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
@@ -110,10 +110,10 @@ export function SettingsModal() {
         {g && (
           <div class="row wrap" style={{ gap: '6px' }}>
             <button class="btn primary" onClick={() => (saveGame(g) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Use a save code.', 'bad'))}>
-              <Icon name="save" /> Save
+              <Icon name="save" /> Quick save
             </button>
             <button class="btn" onClick={() => (modal.value = { kind: 'save' })}>
-              Load, export, import…
+              Save slots, load, export…
             </button>
             <button class="btn ghost" onClick={() => quitToMenu(g)}>
               Main menu
@@ -215,6 +215,93 @@ async function importSave() {
   else notify('That file is not a Steliterate save.', 'bad');
 }
 
+const ERA_SHORT: Record<string, string> = { dusk: 'the Long Dusk', degenerate: 'the Degenerate Age', blackhole: 'the Black Hole Age', dark: 'the Dark' };
+
+function slotWhen(ms: number): string {
+  const d = new Date(ms);
+  return d.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+/** Named saves: as many as the browser will hold. */
+function SaveSlots({ s }: { s: GameState | null }) {
+  const [slots, setSlots] = useState<SlotInfo[]>(() => listSlots());
+  const [name, setName] = useState('');
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const [busySlot, setBusySlot] = useState(false);
+  const refresh = () => setSlots(listSlots());
+  const defaultName = s ? `${s.settings.civName} · turn ${s.turn}` : '';
+  const save = async (id?: string, over?: string) => {
+    if (!s || busySlot) return;
+    setBusySlot(true);
+    const r = await saveToSlot(s, over ?? (name || defaultName), id);
+    setBusySlot(false);
+    if (typeof r === 'string') notify(r, 'bad');
+    else {
+      notify(`Saved “${r.name}”.`, 'good');
+      sfx('good');
+      setName('');
+    }
+    setConfirm(null);
+    refresh();
+  };
+  return (
+    <div class="section" style={{ marginTop: 0 }}>
+      <h3>Save slots</h3>
+      {s && (
+        <div class="row" style={{ gap: '6px', marginBottom: '8px' }}>
+          <input class="grow" aria-label="Name of the new save" placeholder={defaultName} value={name} maxLength={60} onInput={(e) => setName((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
+          <button class="btn primary" disabled={busySlot} onClick={() => save()}>
+            <Icon name="save" /> Save to a new slot
+          </button>
+        </div>
+      )}
+      {slots.length === 0 ? (
+        <p class="dim" style={{ fontSize: '12px', margin: 0 }}>No saved slots yet.</p>
+      ) : (
+        <div class="list save-slots">
+          {slots.map((x) => (
+            <div key={x.id} class="list-item" style={{ cursor: 'default' }}>
+              <span class="grow">
+                {x.name}
+                <div class="faint" style={{ fontSize: '11px' }}>
+                  {x.civ} · turn {x.turn}, {ERA_SHORT[x.era] ?? x.era} · saved {slotWhen(x.savedAt)} · {Math.max(1, Math.round(x.bytes / 1024))} KB
+                </div>
+              </span>
+              <button
+                class="btn small"
+                onClick={async () => {
+                  const g = await loadSlot(x.id);
+                  if (g) startLoaded(g);
+                  else notify('That slot could not be read.', 'bad');
+                }}
+              >
+                Load
+              </button>
+              {s && (
+                <button class={`btn small ${confirm === `o:${x.id}` ? 'danger' : 'ghost'}`} disabled={busySlot} onClick={() => (confirm === `o:${x.id}` ? save(x.id, x.name) : setConfirm(`o:${x.id}`))} data-tip="Save this game over the slot">
+                  {confirm === `o:${x.id}` ? 'Overwrite?' : 'Overwrite'}
+                </button>
+              )}
+              <button
+                class={`btn small ${confirm === `d:${x.id}` ? 'danger' : 'ghost'}`}
+                aria-label={`Delete ${x.name}`}
+                onClick={() => {
+                  if (confirm !== `d:${x.id}`) return setConfirm(`d:${x.id}`);
+                  deleteSlot(x.id);
+                  setConfirm(null);
+                  refresh();
+                }}
+              >
+                {confirm === `d:${x.id}` ? 'Delete?' : <Icon name="close" />}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SaveModal({ s }: { s: GameState | null }) {
   const [code, setCode] = useState('');
   const [importText, setImportText] = useState('');
@@ -223,18 +310,19 @@ export function SaveModal({ s }: { s: GameState | null }) {
       <div class="col" style={{ gap: '12px' }}>
         {s && (
           <div class="row wrap" style={{ gap: '6px' }}>
-            <button class="btn primary" onClick={() => (saveGame(s) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Export a file or use a save code.', 'bad'))}>
-              <Icon name="save" /> Save
-            </button>
-            <button class="btn" onClick={() => exportSave(s)} data-tip="Download this game as a file: keep it safe, or carry it to another device.">
-              Export save file
-            </button>
             <button class="btn ghost" onClick={() => quitToMenu(s)} data-tip="Your game is kept as the autosave: Continue picks it up.">
               Main menu
             </button>
           </div>
         )}
+        <SaveSlots s={s} />
+        <div class="eyebrow">Quick save and autosave</div>
         <div class="row wrap" style={{ gap: '6px' }}>
+          {s && (
+            <button class="btn" onClick={() => (saveGame(s) ? notify('Quick-saved.', 'good') : notify('Could not save: storage is unavailable here. Export a file or use a save code.', 'bad'))} data-tip="One quick slot, overwritten each time">
+              Quick save
+            </button>
+          )}
           <button
             class="btn"
             disabled={!hasSave()}
@@ -244,7 +332,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
               else notify('No saved game found.', 'bad');
             }}
           >
-            Load saved game
+            Load quick save
           </button>
           <button
             class="btn"
@@ -257,6 +345,14 @@ export function SaveModal({ s }: { s: GameState | null }) {
           >
             Load autosave
           </button>
+        </div>
+        <div class="eyebrow">Files: keep a game safe, or move it to another device</div>
+        <div class="row wrap" style={{ gap: '6px' }}>
+          {s && (
+            <button class="btn" onClick={() => exportSave(s)} data-tip="Download this game as a file: keep it safe, or carry it to another device.">
+              Export save file
+            </button>
+          )}
           <button class="btn" onClick={importSave} data-tip="Open a save file exported from this or another device.">
             Import save file…
           </button>
@@ -264,7 +360,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
         {!s && (hasSave() || hasSave(true)) && (
           <div class="row wrap" style={{ gap: '6px' }}>
             <button class="btn small" disabled={!hasSave()} onClick={() => exportSave(loadGame())}>
-              Export saved game
+              Export quick save
             </button>
             <button class="btn small" disabled={!hasSave(true)} onClick={() => exportSave(loadGame(true))}>
               Export autosave

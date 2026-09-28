@@ -1,4 +1,4 @@
-import type { BodyKind, EraId, PrimaryKind, ThreadId } from '../types';
+import type { BodyKind, EraId, PrimaryKind, StarSystem, ThreadId } from '../types';
 
 export type EnergyMode =
   | 'light' // share of the primary's light (stars, embers, merger stars, rekindled dwarfs)
@@ -106,3 +106,54 @@ export const STRUCTURES: StructureDef[] = [
 ];
 
 export const STRUCTURE_BY_ID: Record<string, StructureDef> = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));
+
+// Light-fed structures take the name of what they actually gather where they stand: a solar
+// array around a dead star is not solar any more. (The ids, and so the saves, stay the same;
+// what they yield has always followed the light the source really gives.)
+type LightSource = 'star' | 'remnant' | 'cold' | 'pulsar' | 'hole';
+
+const LOCAL_NAMES: Record<string, Partial<Record<LightSource, [string, string]>>> = {
+  solar_array: {
+    remnant: ['Glow Arrays', 'Photovoltaic fields retuned to the fading glow of a white dwarf.'],
+    cold: ['Infrared Nets', 'Thermal membranes drinking the last faint infrared of a dead star. Next to nothing, unless something warms it again.'],
+    pulsar: ['Beam Arrays', 'Collector fields timed to the sweep of a pulsar’s beam.'],
+    hole: ['Disk Arrays', 'Collector fields turned toward the glow of the accretion disk.'],
+  },
+  orbital_collector: {
+    remnant: ['Orbital Glow Sails', 'Mirror-sails in close orbit, catching what light a white dwarf still gives.'],
+    cold: ['Orbital Infrared Sails', 'Wide, cold sails gathering the faint heat of a dead star.'],
+    pulsar: ['Orbital Beam Catchers', 'Sails that ride the pulsar’s beam as it sweeps past.'],
+    hole: ['Disk-Light Sails', 'Mirror-sails in orbit about the accretion disk.'],
+  },
+  dyson_swarm: {
+    remnant: ['Remnant Swarm', 'Collectors wrapped close around a white dwarf.'],
+    cold: ['Cold Swarm', 'A swarm of cold membranes around a dead star, gathering almost nothing unless it is warmed again.'],
+    pulsar: ['Pulsar Swarm', 'Collectors wrapped around a neutron star, shielded from its beams.'],
+    hole: ['Disk Swarm', 'Collectors ringing the accretion disk of a black hole.'],
+  },
+};
+
+function lightSourceOf(sys: StarSystem): LightSource {
+  switch (sys.primary.kind) {
+    case 'white_dwarf':
+      return 'remnant';
+    case 'black_dwarf':
+    case 'brown_dwarf':
+      return (sys.primary.rekindle ?? 0) > 0.05 ? 'remnant' : 'cold';
+    case 'neutron_star':
+      return 'pulsar';
+    case 'black_hole':
+    case 'smbh':
+      return 'hole';
+    default:
+      return 'star';
+  }
+}
+
+/** A structure's name and description where it stands (in `sys`), or in general. */
+export function structureLabel(id: string, sys?: StarSystem | null): { name: string; desc: string } {
+  const def = STRUCTURE_BY_ID[id];
+  if (!def) return { name: id, desc: '' };
+  const local = sys ? LOCAL_NAMES[id]?.[lightSourceOf(sys)] : undefined;
+  return local ? { name: local[0], desc: local[1] } : { name: def.name, desc: def.desc };
+}

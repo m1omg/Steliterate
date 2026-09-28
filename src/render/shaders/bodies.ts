@@ -124,6 +124,7 @@ export const PLANET_FRAG = /* glsl */ `
   ${NOISE_GLSL}
   ${THERMAL_GLSL}
   uniform int uViewMode;
+  uniform float uEye;         // eyeball worlds: how much their star still shapes them (0 once it is dead)
   uniform float uTempDay;     // K (the same as uTempNight unless tidally locked)
   uniform float uTempNight;
   uniform float uTime;
@@ -172,16 +173,21 @@ export const PLANET_FRAG = /* glsl */ `
     } else {
       albedo = rockPalette(h, detail);
       if (uKind == 1) {
-        // an eyeball world: a sea and green-brown land facing the sun, ice everywhere else
+        // an eyeball world: a sea and green-brown land facing the sun, ice everywhere else. The eye
+        // is its star's doing (uEye): once the star is dead the sea freezes over and the world is
+        // one ice shell, the old sea only a smoother, darker plain under it
         float facing = dot(p, normalize(uSubstellar));
         float land = smoothstep(0.02, 0.12, h + 0.05);
         vec3 living = mix(vec3(0.05, 0.12, 0.16), mix(vec3(0.16, 0.2, 0.1), vec3(0.3, 0.26, 0.18), detail * 0.5 + 0.5), land);
         vec3 frozen = mix(vec3(0.6, 0.64, 0.7), vec3(0.82, 0.85, 0.9), smoothstep(-0.2, 0.3, detail));
         float warmZone = smoothstep(0.25 - 0.55 * uVitality, 0.75 - 0.35 * uVitality, facing);
-        float alive = warmZone * smoothstep(0.02, 0.35, uVitality);
+        float alive = warmZone * smoothstep(0.02, 0.35, uVitality) * uEye;
         albedo = mix(frozen, living, alive);
-        // what is left of the dead: grey, dust-dry land
-        albedo = mix(albedo, rockPalette(h, detail) * 0.8, (1.0 - smoothstep(0.0, 0.4, uVitality)) * warmZone * 0.7);
+        // a dried-out eye while the star still burns: grey, dust-dry land facing it
+        albedo = mix(albedo, rockPalette(h, detail) * 0.8, (1.0 - smoothstep(0.0, 0.4, uVitality)) * warmZone * 0.7 * uEye);
+        // the star gone: ice everywhere, a little darker and smoother over the old sea
+        float oldSea = smoothstep(0.3, 0.7, facing) * (1.0 - land);
+        albedo = mix(albedo, mix(frozen * (0.92 + 0.08 * detail), vec3(0.48, 0.53, 0.6), oldSea * 0.55), 1.0 - uEye);
         spec = (1.0 - land) * alive * 0.7;
         clouds = smoothstep(0.1, 0.55, fbm(p * 3.0 + vec3(uTime * 0.02, uSeed, 0.0))) * alive * 0.8;
       }
@@ -205,6 +211,8 @@ export const PLANET_FRAG = /* glsl */ `
     col = min(col, vec3(0.55)) + over / (1.0 + over * 1.8);
     // settlements: warm sodium with a few neon strips
     float night = smoothstep(0.08, -0.25, ndl);
+    // around a dead star there is no day side: it is night everywhere
+    float dark = max(night, 1.0 - smoothstep(0.05, 0.3, uSunPower));
     // the fine street-scale texture fades out before it gets smaller than a pixel, so a
     // distant world shows soft clusters of light instead of aliased speckle
     float fineAA = 1.0 - smoothstep(0.2, 0.7, length(fwidth(p * 40.0)));
@@ -218,25 +226,28 @@ export const PLANET_FRAG = /* glsl */ `
       // a tidally locked world is lived on along its terminator and the edge of the day side:
       // the night side is ice. Cities spread along the ring as the settlement grows.
       float facing = dot(p, normalize(uSubstellar));
-      float ring = smoothstep(-0.3 + 0.1 * (1.0 - uDev), -0.08, facing) * (1.0 - smoothstep(0.3 + 0.25 * uDev, 0.62 + 0.2 * uDev, facing));
+      // (the cities stay where they were built, on the old terminator, even after the star dies)
+      float ring = smoothstep(-0.3 + 0.1 * (1.0 - uDev), -0.08, facing) * (1.0 - smoothstep(0.25 + 0.15 * uDev, 0.5 + 0.15 * uDev, facing));
       float sprawl = smoothstep(0.78 - 0.4 * uDev, 0.95 - 0.3 * uDev, detail * 0.5 + 0.5 + blocks * 1.2);
       float urban = ring * sprawl * smoothstep(0.0, 0.1, uDev);
       // by day: grey-brown built ground and the glint of glass roofs
       col = mix(col, vec3(0.28, 0.26, 0.25) * light * diff * (0.8 + 0.4 * detail), urban * 0.75);
       // in the permanent twilight of the terminator the lights never go out
-      float twilight = smoothstep(0.45, -0.1, ndl);
-      col += cityCol * urban * uLights * twilight * 0.95;
+      float twilight = max(smoothstep(0.45, -0.1, ndl), dark);
+      // around a dead star the cities burn low, on inner heat and fusion
+      float lamp = mix(1.0, 0.5, 1.0 - smoothstep(0.05, 0.3, uSunPower));
+      col += cityCol * urban * uLights * twilight * 0.95 * lamp;
       // and they light the air above them: a soft sodium haze over the built-up ring,
       // drawn on the world itself rather than smeared across the screen
       float haze = ring * smoothstep(0.5 - 0.4 * uDev, 0.95 - 0.3 * uDev, detail * 0.5 + 0.5) * smoothstep(0.0, 0.1, uDev);
-      col += vec3(1.0, 0.62, 0.3) * haze * uLights * twilight * 0.22;
+      col += vec3(1.0, 0.62, 0.3) * haze * uLights * twilight * 0.12 * lamp;
       // a thin neon thread of transit lines linking the cities around the ring
       float lineMask = smoothstep(0.985, 1.0, sin((facing + 0.02 * snoise(p * 7.0 + uSeed)) * 120.0)) * ring * smoothstep(0.3, 0.8, uDev);
-      col += uNeon * lineMask * twilight * 0.8;
+      col += uNeon * lineMask * twilight * 0.8 * lamp * lamp;
     } else {
-      col += cityCol * cityMask * night * 1.1;
+      col += cityCol * cityMask * dark * 1.1;
       // and a faint sodium glow in the air over them
-      col += vec3(1.0, 0.62, 0.3) * smoothstep(cityLo - 0.12, cityLo + 0.12, detail * 0.5 + 0.5) * uLights * night * 0.1;
+      col += vec3(1.0, 0.62, 0.3) * smoothstep(cityLo - 0.12, cityLo + 0.12, detail * 0.5 + 0.5) * uLights * dark * 0.1;
     }
     col += albedo * 0.015; // faint ambient from the rest of the sky
     // ice reflects what little starlight there is: the frozen night side stays faintly visible

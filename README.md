@@ -46,7 +46,7 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
 - Keys: Enter end turn · R research · S settlements · F fleets · T threads · C charters ·
   G signals · L the Record · K Codex · W surveyed worlds · H home · P pause orbits · Esc close.
 
-Saves stay in your browser. To keep a game safe or move it to another device, export it as a file (Menu → Load, export, import…) and import it there; a save code does the same as pasteable text. Old saves load in newer versions.
+Saves stay in your browser: as many named save slots as it will hold (Save / load on the rail), plus a quick save and the autosave. To keep a game safe or move it to another device, export it as a file and import it there; a save code does the same as pasteable text. Old saves load in newer versions.
 
 ## Development
 
