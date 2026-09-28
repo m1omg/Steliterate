@@ -169,7 +169,7 @@ function BottomLeft({ s }: { s: GameState }) {
   );
 }
 
-const PACE_LABEL: Record<number, string> = { 3: 'Quick ×1000', 2: 'Quick ×100', 1: 'Quick ×10', 0: 'Tide', [-1]: 'Slow ×10', [-2]: 'Slow ×100' };
+const PACE_LABEL: Record<number, string> = { 3: 'Quick ×1000', 2: 'Quick ×100', 1: 'Quick ×10', 0: 'Tide', [-1]: 'Slow ×10', [-2]: 'Slow ×100', [-3]: 'Slow ×1000' };
 
 function TurnBox({ s, p }: { s: GameState; p: Projection }) {
   void rev.value; // mutable game state: re-render on every change

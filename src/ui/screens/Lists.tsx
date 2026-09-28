@@ -220,6 +220,13 @@ export function goToBody(b: Body) {
   engine()?.showSystem(b.systemId, b.id);
 }
 
+/** Select a star and centre the view on it (the system panel lists its worlds). */
+export function goToSystem(id: string) {
+  selection.value = { kind: 'system', id };
+  engine()?.select(id);
+  pivotToSystem(id);
+}
+
 type WorldSort = 'hab' | 'near' | 'room' | 'name';
 
 /** Every charted world, best places to live first: what a settler would find there. */
@@ -228,6 +235,7 @@ function WorldsList({ s }: { s: GameState }) {
   const [sort, setSort] = useState<WorldSort>('hab');
   const [open, setOpen] = useState(true);
   const [findsOnly, setFindsOnly] = useState(false);
+  const [bySystem, setBySystem] = useState(false);
   const cap = colonies(s).find((c) => c.id === s.civ.capitalId);
   const home = s.systems[cap?.systemId ?? s.civ.homeSystemId];
   const rows = Object.values(s.bodies)
@@ -239,10 +247,35 @@ function WorldsList({ s }: { s: GameState }) {
     })
     .filter((r) => !findsOnly || r.finds.length > 0)
     .sort((x, y) => (sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
+  // the same worlds, one line per star: its best world, its total room, what was found there
+  const systems = [...new Set(rows.map((r) => r.sys.id))]
+    .map((id) => {
+      const rs = rows.filter((r) => r.sys.id === id);
+      const best = rs.reduce((a, r) => (r.hab > a.hab ? r : a), rs[0]);
+      return {
+        sys: rs[0].sys,
+        ly: rs[0].ly,
+        worlds: rs.length,
+        best,
+        room: rs.reduce((a, r) => a + r.room, 0),
+        living: rs.filter((r) => r.hab >= LIVING_WORLD).length,
+        settled: rs.some((r) => r.b.colonyId),
+        finds: [...new Set(rs.flatMap((r) => r.finds))],
+      };
+    })
+    .sort((x, y) => (sort === 'hab' ? y.best.hab - x.best.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.sys.name.localeCompare(y.sys.name)) || x.ly - y.ly);
   const sorts: [WorldSort, string][] = [['hab', 'Habitable'], ['room', 'Room'], ['near', 'Nearest'], ['name', 'Name']];
   return (
     <>
       <div class="row wrap" style={{ gap: '4px', marginBottom: '6px' }}>
+        <div class="seg" role="group" aria-label="Show">
+          <button class={`btn small ${!bySystem ? 'primary' : ''}`} onClick={() => setBySystem(false)} data-tip="Every charted world on its own line">
+            Planets
+          </button>
+          <button class={`btn small ${bySystem ? 'primary' : ''}`} onClick={() => setBySystem(true)} data-tip="One line per star: its best world, total room and discoveries">
+            Systems
+          </button>
+        </div>
         {sorts.map(([k, label]) => (
           <button key={k} class={`btn small ghost ${sort === k ? 'on' : ''}`} onClick={() => setSort(k)}>
             {label}
@@ -257,28 +290,52 @@ function WorldsList({ s }: { s: GameState }) {
         </button>
       </div>
       {rows.length === 0 && <p class="dim">{findsOnly ? 'No discoveries among these worlds yet. Surveys turn one up now and then.' : 'No worlds charted yet. Send a probe to survey a star.'}</p>}
-      <div class="list">
-        {rows.map(({ b, sys, hab, room, c, ly, finds }) => (
-          <div key={b.id} class="list-item world-row" onClick={() => goToBody(b)}>
-            <span class="grow">
-              {b.name} <span class="faint">{BODY_NAME[b.kind]}</span>
-              {b.colonyId && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
-              {finds.map((t) => (
-                <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
-              ))}
-              <div class="faint" style={{ fontSize: '11px' }}>
-                {sys.name} · {formatDistance(ly)}
-                {c ? ` · ${c.day !== undefined ? `${Math.round(c.night!)}–${Math.round(c.day)}` : Math.round(c.mean)} K` : ''}
-                {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
-              </div>
-            </span>
-            <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
-              <span class={hab >= LIVING_WORLD ? 'good' : hab > 0.05 ? '' : 'faint'}>{Math.round(hab * 100)}%</span>
-              <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
-            </span>
-          </div>
-        ))}
-      </div>
+      {bySystem ? (
+        <div class="list">
+          {systems.map(({ sys, ly, worlds, best, room, living, settled, finds }) => (
+            <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
+              <span class="grow">
+                {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
+                {settled && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
+                {finds.map((t) => (
+                  <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
+                ))}
+                <div class="faint" style={{ fontSize: '11px' }}>
+                  {worlds} world{worlds === 1 ? '' : 's'}
+                  {living ? ` · ${living} living` : ''} · best: {best.b.name} · {formatDistance(ly)}
+                </div>
+              </span>
+              <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
+                <span class={best.hab >= LIVING_WORLD ? 'good' : best.hab > 0.05 ? '' : 'faint'} data-tip="Its most habitable world">{Math.round(best.hab * 100)}%</span>
+                <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room` : 'domes only'}</div>
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="list">
+          {rows.map(({ b, sys, hab, room, c, ly, finds }) => (
+            <div key={b.id} class="list-item world-row" onClick={() => goToBody(b)}>
+              <span class="grow">
+                {b.name} <span class="faint">{BODY_NAME[b.kind]}</span>
+                {b.colonyId && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
+                {finds.map((t) => (
+                  <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
+                ))}
+                <div class="faint" style={{ fontSize: '11px' }}>
+                  {sys.name} · {formatDistance(ly)}
+                  {c ? ` · ${c.day !== undefined ? `${Math.round(c.night!)}–${Math.round(c.day)}` : Math.round(c.mean)} K` : ''}
+                  {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
+                </div>
+              </span>
+              <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
+                <span class={hab >= LIVING_WORLD ? 'good' : hab > 0.05 ? '' : 'faint'}>{Math.round(hab * 100)}%</span>
+                <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }

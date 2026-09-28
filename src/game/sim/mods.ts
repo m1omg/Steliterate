@@ -46,6 +46,8 @@ export function computeMods(state: GameState): Mods {
     if (e.upkeep) for (const t of THREADS) m.upkeep[t] *= e.upkeep[t] ?? 1;
     e.flags?.forEach((f) => m.flags.add(f));
   }
+  // the Prophet of Stillness: a people at peace with sleeping can slow one step further
+  if (state.civ.flags.stillness) m.paceMin = Math.max(-3, m.paceMin - 1);
   for (const c of state.civ.charters) m.flags.add(`charter:${c}`);
   if (m.flags.has('charter:open_archives')) m.insightMult *= 1.15;
   if (m.flags.has('charter:abandon_the_surface')) m.industryMult *= 1.1;

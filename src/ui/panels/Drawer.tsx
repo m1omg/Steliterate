@@ -792,8 +792,9 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
     here && settleDef
       ? Object.values(s.bodies)
           .filter((b) => s.civ.known[b.systemId] === 2 && (!settleDef.inSystem || b.systemId === here.id) && !canSettle(s, b, settleDef.settles!.thread))
-          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), room: Math.floor(12 * b.habitability * b.vitality) }))
-          .sort((a, b) => a.ly - b.ly || b.room - a.room)
+          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), room: naturalKinRoom(b), hab: b.habitability * b.vitality }))
+          // Kin want the most habitable worlds first; other minds do not care, so nearest first
+          .sort((a, b) => (settleDef.settles!.thread === 'kin' ? b.hab - a.hab || b.room - a.room : 0) || a.ly - b.ly)
           .slice(0, 10)
       : [];
   const swarmHere = here ? Object.values(s.swarms).find((w) => w.systemId === here.id && !w.tamed) : null;
@@ -879,14 +880,19 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
             </div>
             {settleTargets.length > 0 && (
               <div class="section">
-                <h3>Where to settle</h3>
+                <h3>Where to settle <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>· {settleDef?.settles?.thread === 'kin' ? 'most habitable first' : 'nearest first'}</span></h3>
                 <div class="list">
-                  {settleTargets.map(({ b, ly, room }) => (
+                  {settleTargets.map(({ b, ly, room, hab }) => (
                     <div key={b.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
                       <Icon name={bodyIcon(b.kind)} />
                       <span class="grow">
                         {b.name} <span class="faint" style={{ fontSize: '11px' }}>{BODY_NAME[b.kind]}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
                       </span>
+                      {settleDef?.settles?.thread === 'kin' && (
+                        <span class={`mono ${hab >= LIVING_WORLD ? 'good' : 'faint'}`} style={{ fontSize: '11px' }} data-tip="Habitable: habitability × vitality">
+                          {Math.round(hab * 100)}%
+                        </span>
+                      )}
                       {settleDef?.settles?.thread === 'kin' &&
                         (room > 0 ? (
                           <span class="chip good" data-tip={`Room for ${room} Kin without building anything.`}>{room} room</span>
