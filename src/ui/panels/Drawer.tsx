@@ -906,7 +906,19 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               </div>
             )}
             <div class="section">
-              <h3>{surveyor ? 'Unsurveyed nearby' : 'Nearby'}</h3>
+              <h3>
+                Nearby{' '}
+                {surveyor && (
+                  <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                    · {dests.some((d) => s.civ.known[d.sys.id] !== 2) ? 'unsurveyed first' : 'all charted'}
+                  </span>
+                )}
+              </h3>
+              {surveyor && !dests.some((d) => s.civ.known[d.sys.id] !== 2) && (
+                <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>
+                  Every star we know of here is charted. A ship with nothing uncharted near it takes a long look at the end of the turn and picks out the nearest unseen stars (a probe three, other ships one), even across the gulfs between clusters. Deep Survey Optics lets everyone see farther.
+                </p>
+              )}
               <div class="list">
                 {dests.map(({ sys, ly }) => (
                   <div key={sys.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, sys.id, 'move')) && sfx('select')}>

@@ -205,6 +205,8 @@ export interface Fleet {
   targetBody?: string;
   /** Standing orders the fleet carries out by itself (absent in older saves). */
   auto?: 'explore';
+  /** The last system it made a long-baseline scan from (absent in older saves). */
+  scanned?: string;
 }
 
 export interface CivStats {

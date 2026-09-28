@@ -312,8 +312,9 @@ export function endTurn(state: GameState): TurnResult {
 
   // ------------------------------------------------ 6. fleets, hazards, other minds
   advanceFleets(state, step.turnLength, mods);
-  autoExplore(state, mods);
+  // look around before exploring ships set off again, so they scan every star they reach
   updateDetection(state, mods);
+  autoExplore(state, mods);
   updateHunger(state, step.turnLength, mods);
   updateSurvivors(state, logL, mods, step.turnLength);
   updateMinds(state, logL, mods);

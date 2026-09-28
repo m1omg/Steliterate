@@ -2,7 +2,7 @@ import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
-import { stepTime } from '../eras';
+import { formatDistance, stepTime } from '../eras';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
 import { colonies, distLy, eraIndex, log, uid, withRng } from './util';
@@ -217,12 +217,45 @@ export function destroyColony(state: GameState, c: Colony, reason: string) {
 }
 
 /** Systems within detection range of any settlement or fleet become known. */
+/** Past this, even a ship's long-baseline scan picks nothing out (ly). */
+const SCAN_REACH = 60000;
+/** A ship scans for new stars only once no known star this close is still uncharted (ly). */
+const SCAN_LOCAL = 2000;
+
+/**
+ * What we can see. Settlements see as far as research allows; a ship sees from wherever it is
+ * (a survey ship three times as far). And a ship at the edge of what is known (no uncharted
+ * star it knows of within SCAN_LOCAL) takes a long-baseline look, once per system, and picks
+ * out the nearest stars no one has seen yet (a survey ship three, any other ship one), so
+ * exploring can always go on, even across the gulfs between clusters. The far outliers in the
+ * void stay hidden.
+ */
 export function updateDetection(state: GameState, mods: Mods) {
-  const eyes: string[] = [...colonies(state).map((c) => c.systemId), ...Object.values(state.fleets).filter((f) => f.at).map((f) => f.at!)];
-  const uniq = [...new Set(eyes)].map((id) => state.systems[id]);
+  const eyes = [
+    ...colonies(state).map((c) => ({ sys: state.systems[c.systemId], range: mods.detect })),
+    ...Object.values(state.fleets)
+      .filter((f) => f.at)
+      .map((f) => ({ sys: state.systems[f.at!], range: mods.detect * (canSurvey(f) ? 3 : 1) })),
+  ];
   for (const s of Object.values(state.systems)) {
     if (state.civ.known[s.id]) continue;
-    if (uniq.some((e) => distLy(e, s) <= mods.detect)) state.civ.known[s.id] = 1;
+    if (eyes.some((e) => distLy(e.sys, s) <= e.range)) state.civ.known[s.id] = 1;
+  }
+  for (const f of Object.values(state.fleets)) {
+    if (!f.at || f.scanned === f.at) continue;
+    const here = state.systems[f.at];
+    // only from the edge of what is known: while an uncharted star lies close by, look there first
+    if (Object.values(state.systems).some((s) => state.civ.known[s.id] === 1 && !s.gone && distLy(here, s) <= SCAN_LOCAL)) continue;
+    f.scanned = f.at;
+    const found = Object.values(state.systems)
+      .filter((s) => !state.civ.known[s.id] && !s.gone && s.special !== 'outlier')
+      .map((s) => ({ s, ly: distLy(here, s) }))
+      .filter((x) => x.ly <= SCAN_REACH)
+      .sort((a, b) => a.ly - b.ly)
+      .slice(0, canSurvey(f) ? 3 : 1);
+    for (const x of found) state.civ.known[x.s.id] = 1;
+    if (found.length)
+      log(state, `From ${here.name}, ${f.name} picks out ${found.length === 1 ? 'a distant star' : `${found.length} distant stars`}: ${found.map((x) => `${x.s.name} (${formatDistance(x.ly)})`).join(', ')}.`, 'info', here.id);
   }
 }
 

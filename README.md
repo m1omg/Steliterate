@@ -27,7 +27,9 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   another world or double-click the star. System and planet panels list the system's worlds,
   one click each. Double-click a fleet (or tap it twice) to follow it. **V** switches the view:
   Natural, Enhanced (light amplification for the dark ages) or Thermal (false colour by
-  temperature). Probes can **Auto-explore**: they keep charting the nearest unsurveyed star. On the map, a pale
+  temperature). Probes can **Auto-explore**: they keep charting the nearest unsurveyed star.
+  A ship at the edge of the map spots the nearest unseen stars (probes three, other ships
+  one), even across the gaps between star clusters. On the map, a pale
   ring marks a surveyed system and a green one a living world; dim italic names are stars
   not yet surveyed. **Pause** (or P)
   holds the orbits still. Unsurveyed systems show only their star until a probe charts them.
