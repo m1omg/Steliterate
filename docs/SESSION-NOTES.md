@@ -29,9 +29,12 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 
 ## Open threads and pending decisions
 
-- **Next steps:** the player said they may have more changes in mind; wait for them. The full
-  playtest has not been run for the last commit (`09cdd8c`, civilizations' home worlds). The
-  typecheck, a browser check and the balance harness (114/300) passed.
+- **Next steps:** the player said they may have more changes in mind; wait for them.
+- **Checked in a fresh container (28 Sep, new session)** at `1e8a321` and again at `0815fe4`:
+  typecheck; build (the same hashes as the live site); the full playtest (ALL CHECKS PASSED,
+  30/144 Hz parity within 2e-15); the harness (114/300 both times, game for game identical);
+  and the `551fb1a` save, which loads through Load / import and plays to the end (now
+  `npm run savecompat`). The system view draws all five ways of life without console errors.
 - **Lattice rework:** not to be implemented until discussed. The player's idea: Greg Egan's
   "jewel" / p-zombie horror. Do not spoil the intended ending.
 - **Diplomacy:** the player asked not to change it beyond Ask for help (done) until discussed.
@@ -46,6 +49,39 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   audio tool is speech-only (it forbids general music). If Krea is topped up, an ElevenLabs
   Music v2.5 version of the Canon could be generated. The prompt used is in `DEV-NOTES.md`.
 - **Blue-dwarf visibility (offered, not built):** a distinct map marker for blue dwarfs.
+
+## Found in the review of 28 Sep (verified, not fixed yet)
+
+- **Flare clock: a seventh micro-turn in about 15% of flares.** Six additions of `flare_step`
+  can land 1–2 ulps short of `flare_until` (`turnStep` in `flare.ts`, the check at
+  `turn.ts:380`), so a turn of about 0.02 years follows. It counts as a full flare turn
+  (collectors ≈3×, another unsheltered Kin lost) and the Pace panel shows "turn 6 of 6" twice.
+  Fix: snap to `flare_until` within a tolerance, or count the turns in `civ.flags`. Rules:
+  check the harness.
+- **Last Horizon Protocols does nothing.** The Last Horizon branch of `runCrossing` never reads
+  `mods.crossing`. The protocol techs also multiply together: Last Light Protocols halves Great
+  Decay losses too, and alone opens the leptonic migration (`crossingMult < 1`). Rules: harness.
+- **A leptonic settlement on a planet of a black hole loses its Hearth at the Great Decay:**
+  `migrateToBlackHoles` skips it (already at a hole), the decay dissolves its planet, and the
+  Hearth needs a body that is not dissolved (`economy.ts:232`).
+- **Despair counts twice on crossing turns:** `checkEndings` runs in the crossing
+  (`turn.ts:425` or `438`) and again at `:448`, so The Will Fails can come a turn early.
+- **Long Sleep ×5 sleeps four turns** and wakes on the fifth (`turn.ts:151-159`); the tooltip
+  promises five (`Hud.tsx:241`).
+- **Other civilizations with no health left fade only once we can converse:** the check at
+  `survivors.ts:84` sits behind the conversation gate, and some keep paying joint income for
+  many turns. Other civilizations: discuss before changing.
+- **Loading another game's save while looking inside a system throws** (`Engine.setState`
+  rebuilds a system the loaded game lacks, since `?.gone` is not true for a missing system).
+  The view stays black until Galaxy or Home, and the music keeps the old age. Fix: treat a
+  missing system like a gone one.
+- **η reads as "H" in uppercased text:** the Dark Era chronometer label (`.eyebrow`,
+  `Chronometer.tsx:94`) and the ending screen's header (`.crossing-body .from`,
+  `Story.tsx:308`) turn η into Greek capital Η. Fix: keep η out of the uppercase.
+- **Small:** a colony or civilization named "__inf" loads back as the number Infinity (the save
+  format's sentinel); `tools/sim.ts` reads `--diff=…` in the strategy slot as a strategy name.
+- **Harness blind spots, wider than listed in DEV-NOTES:** every victory is The Long Thought,
+  and the autoplayer never tries the other Great Works, raids, asks for help, seizes or devours.
 
 ## Questions answered in this session (short versions)
 

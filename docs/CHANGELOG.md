@@ -114,19 +114,20 @@ https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Balance figures are "games th
 - `09cdd8c` **Other civilizations live on a world of their own** (worked out from their way:
   biological → most livable world; sleepers → warmest core; minds on substrate → the Deep or the
   largest world). Shown in the system and planet panels; cannot be settled over; Seize takes it.
-  (114/300; full playtest not run for this commit.)
-- **Quieter noise.** The synthesised score's tape hiss is 12 dB lower and its vinyl crackle
-  sparser and softer (about 60% fewer grains, half the level). The Canon was re-rendered with its
-  tape hiss 13 dB lower (quiet passages −71.8 → −84.5 dB in the 3–9 kHz band), with the music and
-  bitcrush unchanged (still −15 LUFS).
-- **A little more Amiga crunch in the Canon.** Glass plucks held at 12.5 kHz (was 16.6) with 75%
-  crushed mix (was 65%), pads at 14 kHz with 55% (was 45%), bass 35% (was 30%), final low-pass
-  6.8 kHz (was 6.2). Aliasing shimmer (8–14 kHz) in the runs +11 dB, slow lines +2.5 dB; still
-  below the old hiss level; key purity, loudness (−15 LUFS) and the quiet hiss unchanged.
-- **Other civilizations are drawn in the system view.** Those living on a planet (still
-  biological, or a Thread that left us) light its night side with cities in their colour, with a
-  thin ring in their colour; sleepers show only a few faint lights that breathe slowly. Minds on
-  substrate live in the Deep (or orbit their world where there is no Deep): uploaded minds as a
-  flotilla of archive stations, a merged Chorus as one ring-station whose lights pulse together,
-  the Lattice as a glowing lattice of identical cells; each with a soft glow in their colour.
-  Their world's label reads "‹world› · ◈ ‹name›" in their colour. Rendering only.
+  (114/300; the full playtest was run later, on `1e8a321`, and passed.)
+- `d9848dd` **Quieter noise.** The synthesised score's tape hiss is 12 dB lower and its vinyl
+  crackle sparser and softer (about 60% fewer grains, half the level). The Canon was re-rendered
+  with its tape hiss 13 dB lower (quiet passages −71.8 → −84.5 dB in the 3–9 kHz band), with the
+  music and bitcrush unchanged (still −15 LUFS).
+- `1e8a321` **A little more Amiga crunch in the Canon.** Glass plucks held at 12.5 kHz (was
+  16.6) with 75% crushed mix (was 65%), pads at 14 kHz with 55% (was 45%), bass 35% (was 30%),
+  final low-pass 6.8 kHz (was 6.2). Aliasing shimmer (8–14 kHz) in the runs +11 dB, slow lines
+  +2.5 dB; still below the old hiss level; key purity, loudness (−15 LUFS) and the quiet hiss
+  unchanged.
+- `0815fe4` **Other civilizations are drawn in the system view.** Those living on a planet
+  (still biological, or a Thread that left us) light its night side with cities in their colour,
+  with a thin ring in their colour; sleepers show only a few faint lights that breathe slowly.
+  Minds on substrate live in the Deep (or orbit their world where there is no Deep): uploaded
+  minds as a flotilla of archive stations, a merged Chorus as one ring-station whose lights
+  pulse together, the Lattice as a glowing lattice of identical cells; each with a soft glow in
+  their colour. Their world's label reads "‹world› · ◈ ‹name›" in their colour. Rendering only.

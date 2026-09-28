@@ -162,7 +162,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 
 | Age | Sources |
 |---|---|
-| Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase at about 3× light; geothermal (declining); fusion |
+| Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase (about 174× as luminous; about 3× the light per turn for collectors while you keep time with it); geothermal (declining); fusion |
 | Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. **Collision stars** from brown dwarfs (η 15 to 23). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova). Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting** |
 | Black Hole | Penrose (finite spin), Hawking collectors (rising as holes shrink), final bursts, accretion only if protons are stable |
 | Dark | The reserve; a trickle of speculative horizon siphoning |
@@ -287,12 +287,14 @@ stop them from talking.
   murmurations) and a restrained post chain: a faint, tight bloom only on what is brighter
   than white (light sources carry their own coronae, as in ra-system-alpha), fine midtone
   grain, vignette, edge chromatic aberration. No full-screen haze and no lens dirt.
-* **Plates:** eleven painterly images (Krea and Codex image generation), one grade for all
-  (`tools/process-art.mjs`).
+* **Plates:** eleven painterly images for the ages and events and thirteen for the survey
+  discoveries (Krea and Codex image generation), one grade for all (`tools/process-art.mjs`);
+  four painted ship sprites (Higgsfield, `tools/process-sprites.mjs`).
 * **Refresh-rate independence:** one rAF loop with clamped real-time deltas; all smoothing is
   `1 − exp(−k·dt)`; camera flights and fleet moves follow elapsed time exactly. The playtest
   checks 30 Hz against 144 Hz.
-* **Audio:** recorded instrumentals for the Dusk and the Degenerate Age, and a procedural
+* **Audio:** recorded instrumentals for the Dusk and the Degenerate Age, Pachelbel's Canon in D
+  synthesised as the Degenerate Age's overture (`tools/music/canon.py`), and a procedural
   Web Audio score for every age (worn synthwave thinning to drones and near-silence), plus
   synthesised interface sounds. Sound starts after the first click.
 
@@ -350,7 +352,7 @@ A guide for the first turns and a gameplay manual in the Codex; survey discoveri
 dozen hard-science finds); climate and water for every world; the System Lighter for settling
 within a star; settlement and fleet lists; keyboard shortcuts. All four ages and the three
 Crossings; the Coalescence; five Threads with tempo, pace and
-dormancy; society (resolve, dissent, demands, forks, Charters); research (about 65 techs) and
+dormancy; society (resolve, dissent, demands, forks, Charters); research (about 70 techs) and
 Great Works; construction (about 45 structures), settlement and sublight fleets; the Hunger
 and the dark path; fellow survivors, the Slow Ones, sleepers and ghosts, the Unlit; about 40
 events; forecasts; save, autosave and save codes; the score and plates.

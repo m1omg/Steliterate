@@ -16,8 +16,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      `grep -oE "^seed [0-9]+: [A-Z]+" | awk '{print $3}' | sort | uniq -c`. Survival is
      ENDURANCE + VICTORY; noise is about ±12 per 300 games. For a closer call, compare 900 games
      against a `git worktree` of HEAD (symlink `node_modules` into it).
-   - Save compatibility: load the 71-turn save from `551fb1a` and play on. `importCode` →
-     `migrate`.
+   - Save compatibility: `npm run savecompat` loads every save in `tools/saves/` (so far the
+     71-turn save from `551fb1a`) through `readSave` → `migrate`, checks the round trip, and
+     plays each to the end. It must end with "SAVE COMPAT OK". To try one in the browser, gunzip
+     it and paste the JSON into Load / import → "Load from a save code".
 3. **Commit** with the attribution lines, then `git push -u origin claude/lucid-newton-30cbpk`.
    The Pages workflow builds and force-pushes `dist/` to `gh-pages` on every push to that
    branch or `main`.
@@ -28,6 +30,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      `music/canon.mp3`.
    - Set the old hashes to `null`.
    - Omit `capabilities` so the stored `downloads` capability carries forward.
+   - That artifact belongs to the organization the game was built in. A session in another
+     organization can read it but not update it (seen 28 Sep). There, rely on GitHub Pages,
+     or publish a new artifact and record its URL here.
 
 ## Test hooks and scripts
 
@@ -47,13 +52,15 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Headless sim checks:** `npx tsx script.ts`, importing from `src/game/...` (`newGame`,
   `endTurn`, `autoPlay`). `autoPlay` answers events itself: it takes the first allowed choice
   that isn't tainted.
-- **Scratch scripts** live in the session scratchpad, which is ephemeral: `raid.cjs`,
-  `flare.ts`, `flare2.ts`, `flareui.cjs`, `lore.cjs`, `survload.cjs`, `sitesui.cjs`,
-  `settlesort.cjs`, `track.cjs`, `homes.cjs`, `ask.ts`, `archive.ts`, `thaw*.ts`, `sites.ts`,
-  `loadold.ts` + `oldsave.txt`.
+- **Scratch scripts** live in the session scratchpad, which is ephemeral. The first session's
+  (`raid.cjs`, `flare.ts`, `flareui.cjs`, `lore.cjs`, `ask.ts`, `thaw*.ts`, `loadold.ts` +
+  `oldsave.txt` and others) are gone; its old save was regenerated from `551fb1a` into
+  `tools/saves/`. Anything worth keeping belongs in `tools/`.
 - **The container is ephemeral.** Anything installed with pip is gone next session: numpy,
   scipy, matplotlib, imageio-ffmpeg (ffmpeg binary at
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).
+  So is `art-src/` (ignored by git): the graded files in `public/art/` are the only copies of
+  the plates and sprites, so new art needs new source images.
 
 ## Gotchas
 
@@ -158,3 +165,5 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `c6edc66` | 126 | |
 | `aff6571` | 114 | 900 games: 341 vs 347 without the change |
 | `09cdd8c` | 114 | |
+| `1e8a321` | 114 | re-run in a fresh container (28 Sep): identical, 94 Endurance + 20 Victory |
+| `0815fe4` | 114 | rendering only: all 300 games identical to `1e8a321` |

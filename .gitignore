@@ -3,6 +3,7 @@ dist/
 artifact/
 *.log
 .DS_Store
+playtest-shots/
 
 # raw generated art (graded copies live in public/art)
 art-src/
