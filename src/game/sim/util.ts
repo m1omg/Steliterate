@@ -19,6 +19,11 @@ export function rngOf(state: GameState): Rng {
   return new Rng(state.rng);
 }
 
+/** A name the save format can keep: "__inf" and "__-inf" stand for ±Infinity there (save.ts). */
+export function savableName(name: string): string {
+  return name === '__inf' || name === '__-inf' ? name.slice(1) : name;
+}
+
 export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string) {
   state.log.push({ turn: state.turn, era: state.era, text, kind, systemId });
   if (state.log.length > 400) state.log.splice(0, state.log.length - 400);

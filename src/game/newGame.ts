@@ -1,7 +1,7 @@
 import { generateWorld } from './gen';
 import { createColony, newFleet } from './sim/fleets';
 import { updateForecasts } from './sim/forecast';
-import { log } from './sim/util';
+import { log, savableName } from './sim/util';
 import { SAVE_VERSION } from './save';
 import type { GameSettings, GameState } from './types';
 
@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
 
 export function newGame(partial: Partial<GameSettings> = {}): GameState {
   const settings: GameSettings = { ...DEFAULT_SETTINGS, ...partial };
+  settings.civName = savableName(settings.civName);
   const state = generateWorld(settings);
   const home = state.systems[state.civ.homeSystemId];
   const hw = home.bodies.map((id) => state.bodies[id]).find((b) => b.traits.includes('homeworld'))!;

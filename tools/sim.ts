@@ -9,9 +9,11 @@ import { endTurn } from '../src/game/sim/turn';
 import { colonies, threadTotals, totalPops } from '../src/game/sim/util';
 import type { EpochLength } from '../src/game/types';
 
-const games = Number(process.argv[2] ?? 4);
-const length = (process.argv[3] ?? 'standard') as EpochLength;
-const which = process.argv[4] ?? 'both';
+// positional arguments, with the flags (-v, --diff=…) taken out wherever they stand
+const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));
+const games = Number(args[0] ?? 4);
+const length = (args[1] ?? 'standard') as EpochLength;
+const which = args[2] ?? 'both';
 const strategies: Strategy[] = which === 'both' ? ['competent', 'passive'] : [which as Strategy];
 const verbose = process.argv.includes('-v');
 

@@ -12,7 +12,7 @@ import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
 import { devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { eraIndex, hasCharter, hasTech, log, uid } from './util';
+import { eraIndex, hasCharter, hasTech, log, savableName, uid } from './util';
 
 export type ActionResult = string | null; // error message or null on success
 
@@ -414,7 +414,7 @@ export function answerEvent(state: GameState, eventUid: string, choice: number) 
 export function renameColony(state: GameState, colonyId: string, name: string): ActionResult {
   const c = state.colonies[colonyId];
   if (!c) return 'No such settlement.';
-  c.name = name.slice(0, 32) || c.name;
+  c.name = savableName(name.slice(0, 32)) || c.name;
   return null;
 }
 
