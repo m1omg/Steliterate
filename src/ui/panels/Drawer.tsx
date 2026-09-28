@@ -17,6 +17,7 @@ import {
   standFleet,
   placeBeacon,
   queueBuild,
+  raid,
   removeQueued,
   rushBuild,
   rushCost,
@@ -37,7 +38,8 @@ import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { FOCUS, PRIMARY_NAME, TRAIT_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, isBeacon, BEACON_TIP } from '../labels';
-import { act, engine, following, rev, selection, targeting, view } from '../store';
+import { act, engine, following, notify, rev, selection, targeting, view } from '../store';
+import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
@@ -800,6 +802,29 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
           .slice(0, 10)
       : [];
   const swarmHere = here ? Object.values(s.swarms).find((w) => w.systemId === here.id && !w.tamed) : null;
+  // another civilization lives here: our warships could take from them
+  const [raidArmed, setRaidArmed] = useState(false);
+  useEffect(() => setRaidArmed(false), [f.id, f.at]);
+  const raidSv = here && isWarFleet(f) ? raidTarget(s, here.id) : null;
+  const raidWait = raidSv?.raidedAt !== undefined ? RAID_COOLDOWN - (s.turn - raidSv.raidedAt) : 0;
+  const doRaid = () => {
+    if (!raidArmed) {
+      setRaidArmed(true);
+      sfx('warn');
+      return;
+    }
+    setRaidArmed(false);
+    const out: { r?: { ok: boolean; text: string } } = {};
+    const done = act((g) => {
+      const r = raid(g, f.id);
+      if (typeof r === 'string') return r;
+      out.r = r;
+    });
+    if (done && out.r) {
+      notify(out.r.text, out.r.ok ? 'good' : 'bad');
+      sfx(out.r.ok ? 'good' : 'bad');
+    }
+  };
   return (
     <>
       <div class="drawer-head">
@@ -874,6 +899,20 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               ) : (
                 <button class="btn small" data-tip="Park it here on purpose: the game stops asking about it." onClick={() => act((g) => standFleet(g, f.id, 'hold')) && sfx('click')}>
                   Hold here
+                </button>
+              )}
+              {raidSv && (
+                <button
+                  class={`btn small danger ${raidArmed ? 'on' : ''}`}
+                  disabled={raidWait > 0}
+                  onClick={doRaid}
+                  data-tip={
+                    raidWait > 0
+                      ? `${raidSv.name} is on guard since our last raid. ${raidWait} more turn${raidWait === 1 ? '' : 's'}.`
+                      : `Take part of ${raidSv.name}’s reserve by force. Every warship here joins in (attack ${raidStrength(s, here.id)}); if their defences hold, it is our ships that get hurt.\nWhatever happens: they will not forgive it, every civilization we know hears of it, Resolve −3, Dissent +4. Once every ${RAID_COOLDOWN} turns at most.`
+                  }
+                >
+                  <Icon name="attack" /> {raidArmed ? 'Really raid? (click again)' : `Raid ${raidSv.name}`}
                 </button>
               )}
               <button class="btn small danger" data-tip="Scrap the fleet here and recover some matter." onClick={() => act((g) => disbandFleet(g, f.id)) && (selection.value = null)}>

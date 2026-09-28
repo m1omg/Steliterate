@@ -39,6 +39,9 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   click. Trip times read "~26t · 2.9 Myr": turns at your pace, then the flight's cosmic time
   (nothing outruns light; the turns just keep getting longer). Forecast turn counts follow
   the pace too.
+- **Other civilizations**: once you have made contact, a warship parked at one of their stars
+  can **Raid** them for part of their reserve. It costs you their trust, everyone else's
+  good opinion, and some of your own people's; they may come back for it.
 - **Research**: overflow and found knowledge carry into the next project. You can pause
   research to save the labs' power; only half of each turn's insight is kept while paused.
 - Watch the **Forecasts** (bottom left, closable) and the **Chronometer** (top): they tell

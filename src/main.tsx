@@ -277,6 +277,9 @@ window.__stel = {
   orderFleet(fleetId: string, systemId: string, order: 'move' | 'survey' | 'colonize' = 'survey') {
     return act((g) => orderFleet(g, fleetId, systemId, order));
   },
+  select(kind: 'fleet' | 'system' | 'body', id: string) {
+    selection.value = { kind, id } as never;
+  },
   state: () => game.value,
   engine: () => engine(),
 };

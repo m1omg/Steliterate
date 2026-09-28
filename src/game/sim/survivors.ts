@@ -1,6 +1,7 @@
 import { sourceLight } from '../physics';
+import { SHIP_BY_ID } from '../data/ships';
 import type { GameState, Survivor, ThreadId } from '../types';
-import { createColony } from './fleets';
+import { createColony, isWarFleet } from './fleets';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
 import { queueEvent } from './events';
@@ -134,7 +135,9 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
             { id: 'refuse', label: 'Turn them away' },
           ],
         });
-      } else if (sv.health < 0.22 && sv.disposition < -20 && rng.chance(0.35)) {
+      } else if ((sv.health < 0.22 || (sv.raidedAt !== undefined && sv.disposition < -50)) && sv.disposition < -20 && rng.chance(0.35)) {
+        // the desperate take what they can; those we raided come back for what we took
+        const revenge = sv.health >= 0.22;
         sv.lastSent = state.turn;
         const took = Math.round(Math.min(civ.energy * 0.2, 60));
         const cap = capital(state);
@@ -146,7 +149,11 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
           kind: 'raid',
           distanceLy: 0,
           title: defended ? `${sv.name} tried to raid you` : `${sv.name} raided your reserves`,
-          text: defended ? 'Your defences turned their raiders away. They did not answer our hails afterwards.' : `Desperate ships drained ${took} energy from the reserve before anyone understood what was happening.`,
+          text: defended
+            ? 'Your defences turned their raiders away. They did not answer our hails afterwards.'
+            : revenge
+              ? `Their ships came back for what we took from them, and ${took} energy more. They did not answer our hails afterwards.`
+              : `Desperate ships drained ${took} energy from the reserve before anyone understood what was happening.`,
         });
       } else if (sv.disposition > 35 && sv.health > 0.4 && rng.chance(0.25) && !civ.flags[`joint_${sv.id}`]) {
         sv.lastSent = state.turn;
@@ -286,6 +293,81 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
   for (const o of Object.values(state.survivors)) if (o.alive) o.disposition -= 30;
   log(state, `You took ${sv.name}’s star. Some of them live on as your people now. The rest do not.`, 'bad', sys.id);
   return null;
+}
+
+/** How many turns must pass before the same civilization can be raided again. */
+export const RAID_COOLDOWN = 5;
+
+const isRaider = (cls: string) => (SHIP_BY_ID[cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[cls]?.settles;
+
+/** The combined attack of every warship stationed at `systemId`: they all join a raid. */
+export function raidStrength(state: GameState, systemId: string): number {
+  let a = 0;
+  for (const f of Object.values(state.fleets)) if (f.at === systemId) for (const s of f.ships) if (isRaider(s.cls)) a += SHIP_BY_ID[s.cls].attack;
+  return a;
+}
+
+/** A civilization our warships at `systemId` could raid, if any. */
+export function raidTarget(state: GameState, systemId: string): Survivor | null {
+  return Object.values(state.survivors).find((v) => v.alive && v.contact && v.systems.includes(systemId)) ?? null;
+}
+
+/**
+ * Raid another civilization with the warships parked at one of its stars: take part of its
+ * reserve and some matter, if the ships get through. Whatever happens, they will not forget it,
+ * the others hear of it, and our own people do not like what we have become.
+ */
+export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; text: string } | string {
+  const f = state.fleets[fleetId];
+  if (!f || !f.at) return 'The fleet must be stationed at their star.';
+  const sv = raidTarget(state, f.at);
+  if (!sv) return 'No civilization we know of lives here.';
+  if (!isWarFleet(f)) return 'Only warships can raid.';
+  const attack = raidStrength(state, f.at);
+  if (sv.raidedAt !== undefined && state.turn - sv.raidedAt < RAID_COOLDOWN) return `They are on guard since the last raid. Wait ${RAID_COOLDOWN - (state.turn - sv.raidedAt)} more turn(s).`;
+  const civ = state.civ;
+  const sys = state.systems[f.at];
+  sv.raidedAt = state.turn;
+  let result: { ok: boolean; text: string } = { ok: false, text: '' };
+  withRng(state, (rng) => {
+    const defence = Math.max(1, sv.pop * sv.health * 0.3);
+    const hurt = (lo: number, hi: number) => {
+      for (const x of Object.values(state.fleets).filter((y) => y.at === f.at)) {
+        for (const s of x.ships) if (isRaider(s.cls)) s.hp -= rng.range(lo, hi);
+        x.ships = x.ships.filter((s) => s.hp > 0);
+        if (!x.ships.length) delete state.fleets[x.id];
+      }
+    };
+    if (attack * rng.range(0.6, 1.4) >= defence * 0.5) {
+      const energy = Math.round(Math.min(60, 5 + sv.reserve * 0.4));
+      const matter = Math.round(8 + sv.pop * 0.6);
+      civ.energy += energy;
+      civ.matter += matter;
+      sv.reserve = Math.max(0, sv.reserve - energy);
+      sv.health = clamp(sv.health - 0.06, 0, 1);
+      sv.pop *= 0.96;
+      hurt(0, 1.5);
+      result = { ok: true, text: `Our warships raided ${sv.name} at ${sys.name}: +${energy} energy, +${matter} matter. Some of them died defending it.` };
+    } else {
+      hurt(1, 3.5);
+      result = { ok: false, text: `${sv.name} drove our raiders off at ${sys.name}. We took nothing, and our ships are hurt.` };
+    }
+  });
+  // what it costs, whatever happened
+  sv.disposition = Math.max(-100, sv.disposition - 35);
+  for (const o of Object.values(state.survivors)) if (o.alive && o.contact && o.id !== sv.id) o.disposition = Math.max(-100, o.disposition - 10);
+  civ.resolve = Math.max(0, civ.resolve - 3);
+  civ.dissent = Math.min(100, civ.dissent + 4);
+  state.battles.push({ systemId: sys.id, turn: state.turn, text: result.text });
+  log(state, result.text, 'combat', sys.id);
+  sendSignal(state, {
+    from: sv.id,
+    kind: 'raided',
+    distanceLy: 0,
+    title: `${sv.name} answers the raid`,
+    text: voice(sv, result.ok ? 'We thought you were the others who would make it. We were wrong about you. We will remember this for as long as we last.' : 'You came to take from the dying and could not even do that. We will remember this for as long as we last.', 'HOSTILE ACTION LOGGED. COUNTERPARTY RECLASSIFIED: PREDATOR. RECORD RETAINED.'),
+  });
+  return result;
 }
 
 /** The dark path: devour a failing survivor whole. */

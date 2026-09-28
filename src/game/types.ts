@@ -268,6 +268,8 @@ export interface Survivor {
   aidGiven: number;
   lastSent: number; // turn
   forkOf?: ThreadId;
+  /** The turn we last raided them (absent in older saves). */
+  raidedAt?: number;
 }
 
 export interface Mind {
