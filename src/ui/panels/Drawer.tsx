@@ -43,6 +43,7 @@ import { act, engine, following, notify, rev, selection, targeting, view } from 
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
 import { loreView } from '../screens/Story';
+import { siteValue } from '../../game/sim/sites';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 
@@ -787,6 +788,15 @@ function EffectLine({ fx }: { fx: BuildEffect }) {
 
 // ------------------------------------------------------------------ fleet
 
+/** What each kind of settler looks for first. */
+const SETTLE_BEST: Record<ThreadId, string> = {
+  kin: 'most livable first',
+  echoes: 'most power first',
+  chorus: 'most power first',
+  lattice: 'most matter first',
+  coldminds: 'longest-lasting first',
+};
+
 function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   void rev.value; // mutable game state: re-render on every change
   const mods = computeMods(s);
@@ -809,9 +819,9 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
     here && settleDef
       ? Object.values(s.bodies)
           .filter((b) => s.civ.known[b.systemId] === 2 && (!settleDef.inSystem || b.systemId === here.id) && !canSettle(s, b, settleDef.settles!.thread))
-          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), room: naturalKinRoom(b), hab: b.habitability * b.vitality }))
-          // Kin want the most habitable worlds first; other minds do not care, so nearest first
-          .sort((a, b) => Number(isBeacon(s, s.systems[b.b.systemId])) - Number(isBeacon(s, s.systems[a.b.systemId])) || (settleDef.settles!.thread === 'kin' ? b.hab - a.hab || b.room - a.room : 0) || a.ly - b.ly)
+          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), hab: b.habitability * b.vitality, v: siteValue(s, b, settleDef.settles!.thread) }))
+          // each kind of mind wants something different: Kin livable ground, Echoes power, the Lattice matter, Coldminds time
+          .sort((a, b) => Number(isBeacon(s, s.systems[b.b.systemId])) - Number(isBeacon(s, s.systems[a.b.systemId])) || b.v.score - a.v.score || a.ly - b.ly)
           .slice(0, 10)
       : [];
   const swarmHere = here ? Object.values(s.swarms).find((w) => w.systemId === here.id && !w.tamed) : null;
@@ -934,26 +944,23 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
             </div>
             {settleTargets.length > 0 && (
               <div class="section">
-                <h3>Where to settle <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>· {settleDef?.settles?.thread === 'kin' ? 'most habitable first' : 'nearest first'}</span></h3>
+                <h3>
+                  Where to settle{' '}
+                  <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }} data-tip={settleTargets[0]?.v.tip}>
+                    · {SETTLE_BEST[settleDef?.settles?.thread ?? 'kin']}
+                  </span>
+                </h3>
                 <div class="list">
-                  {settleTargets.map(({ b, ly, room, hab }) => (
+                  {settleTargets.map(({ b, ly, hab, v }) => (
                     <div key={b.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
                       <Icon name={bodyIcon(b.kind)} />
                       <span class="grow">
                         {isBeacon(s, s.systems[b.systemId]) && <span class="chip boon" style={{ marginRight: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                         {b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
                       </span>
-                      {settleDef?.settles?.thread === 'kin' && (
-                        <span class={`mono ${hab >= LIVING_WORLD ? 'good' : 'faint'}`} style={{ fontSize: '11px' }} data-tip="Habitable: habitability × vitality">
-                          {Math.round(hab * 100)}%
-                        </span>
-                      )}
-                      {settleDef?.settles?.thread === 'kin' &&
-                        (room > 0 ? (
-                          <span class="chip good" data-tip={`Room for ${room} Kin without building anything.`}>{room} room</span>
-                        ) : (
-                          <span class="chip" data-tip="Nothing lives here. The Kin will live in the dome they bring, and in any domes or warrens you build.">domes only</span>
-                        ))}
+                      <span class={`mono ${settleDef?.settles?.thread === 'kin' && hab >= LIVING_WORLD ? 'good' : ''}`} style={{ fontSize: '11px' }} data-tip={v.tip}>
+                        {v.label}
+                      </span>
                       <span class="mono faint" style={{ fontSize: '11px' }} data-tip={ly > 0 ? TRIP_TIP : ''}>{ly > 0 ? tripLabel(s, ly, mods) : 'here'}</span>
                     </div>
                   ))}

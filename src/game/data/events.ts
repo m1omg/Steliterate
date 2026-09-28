@@ -1,6 +1,7 @@
 import type { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
 import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '../sim/util';
+import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, digShelters, keepTimeWithFlare, sheltersNeeded } from '../sim/flare';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
@@ -233,8 +234,8 @@ export const EVENTS: EventDef[] = [
     bind: (s) => (hasTech(s, 'upload') ? {} : null),
     text: () => 'A dying poet has asked to be the first. The clinic is ready. Half the Commons calls it a door; the other half calls it a grave with a voice.',
     choices: [
-      { label: 'Let her go through', hint: '+1 Echo at the capital. Echoes standing +5, Kin −3.', run: (s) => { const c = capital(s); if (c) c.pops.echoes += 1; stand(s, 'echoes', 5); stand(s, 'kin', -3); } },
-      { label: 'Make it a public ceremony', hint: '+1 Echo. Accord −5, Resolve +3.', run: (s) => { const c = capital(s); if (c) c.pops.echoes += 1; accord(s, -5); res(s, 3); } },
+      { label: 'Let her go through', hint: '+1 Echo (it waits in the archive until there is substrate). Echoes standing +5, Kin −3.', run: (s) => { welcomeEchoes(s, 1); stand(s, 'echoes', 5); stand(s, 'kin', -3); } },
+      { label: 'Make it a public ceremony', hint: '+1 Echo (it waits in the archive until there is substrate). Accord −5, Resolve +3.', run: (s) => { welcomeEchoes(s, 1); accord(s, -5); res(s, 3); } },
       { label: 'Refuse her', hint: 'Kin standing +3, Echoes −4.', run: (s) => { stand(s, 'kin', 3); stand(s, 'echoes', -4); } },
     ],
   },
@@ -406,7 +407,7 @@ export const EVENTS: EventDef[] = [
     art: 'degenerate',
     text: (s, d) => `A passing star came close enough to ${s.systems[String(d.systemId)]?.name} to tear ${bodyById(s, d)?.name} out of its orbit. It is a rogue world now, falling away into the dark with our people on it.`,
     choices: [
-      { label: 'Evacuate what we can', hint: 'Energy −20. Half its people move to the capital.', run: (s, d) => { energy(s, -20); const b = bodyById(s, d); const c = b?.colonyId ? s.colonies[b.colonyId] : undefined; const cap = capital(s); if (c && cap && c.id !== cap.id) { for (const t of ['kin', 'echoes', 'chorus', 'lattice', 'coldminds'] as ThreadId[]) { const n = Math.floor(c.pops[t] / 2); c.pops[t] -= n; cap.pops[t] += n; } } } },
+      { label: 'Evacuate what we can', hint: 'Energy −20. Half its people move to the capital.', run: (s, d) => { energy(s, -20); const b = bodyById(s, d); const c = b?.colonyId ? s.colonies[b.colonyId] : undefined; const cap = capital(s); if (c && cap && c.id !== cap.id) { for (const t of ['kin', 'echoes', 'chorus', 'lattice', 'coldminds'] as ThreadId[]) { const n = Math.floor(c.pops[t] / 2); c.pops[t] -= n; if (t === 'echoes') welcomeEchoes(s, n); else cap.pops[t] += n; } } } },
       { label: 'They will live on their Hearth', hint: 'Resolve −2.', run: (s) => { res(s, -2); } },
     ],
   },
@@ -427,7 +428,7 @@ export const EVENTS: EventDef[] = [
         : `${b?.name} has spiralled in to the tidal limit of its dead star. ${models}`;
     },
     choices: [
-      { label: 'Evacuate the world and harvest the stream', hint: 'Its people move to the capital. Disk Skimmers can harvest the dead star.', run: (s, d) => { const b = bodyById(s, d); const c = b?.colonyId ? s.colonies[b.colonyId] : undefined; const cap = capital(s); if (b?.feeding) b.feeding.revealed = true; if (c && cap && c.id !== cap.id) { for (const t of ['kin', 'echoes', 'chorus', 'lattice', 'coldminds'] as ThreadId[]) { cap.pops[t] += c.pops[t]; c.pops[t] = 0; } cap.cryo += c.cryo; c.cryo = 0; } } },
+      { label: 'Evacuate the world and harvest the stream', hint: 'Its people move to the capital. Disk Skimmers can harvest the dead star.', run: (s, d) => { const b = bodyById(s, d); const c = b?.colonyId ? s.colonies[b.colonyId] : undefined; const cap = capital(s); if (b?.feeding) b.feeding.revealed = true; if (c && cap && c.id !== cap.id) { for (const t of ['kin', 'echoes', 'chorus', 'lattice', 'coldminds'] as ThreadId[]) { const n = c.pops[t]; c.pops[t] = 0; if (t === 'echoes') welcomeEchoes(s, n); else cap.pops[t] += n; } cap.cryo += c.cryo; c.cryo = 0; } } },
       { label: 'Stay and mine our own world as it falls', hint: 'Matter +80. Resolve −3.', run: (s, d) => { matter(s, 80); res(s, -3); const b = bodyById(s, d); if (b?.feeding) b.feeding.revealed = true; } },
     ],
   },
@@ -571,7 +572,7 @@ export const EVENTS: EventDef[] = [
     art: 'ruins',
     text: (s, d) => `The machines under ${bodyById(s, d)?.name} are still running, and still storing minds: thousands of archived people from a civilization that ended ages ago. They are not asleep. They are paused, mid-sentence.`,
     choices: [
-      { label: 'Run them again, as Echoes', hint: '+2 Echoes at the capital (needs substrate). They are strange to us.', ok: (s) => hasTech(s, 'mind_substrate'), run: (s, d) => { const c = capital(s); if (c) c.pops.echoes += 2; stand(s, 'echoes', -3); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'woken'; } },
+      { label: 'Run them again, as Echoes', hint: '+2 Echoes, wherever there is substrate (they wait in the archive until there is). They are strange to us.', ok: (s) => hasTech(s, 'mind_substrate'), run: (s, d) => { welcomeEchoes(s, 2); stand(s, 'echoes', -3); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'woken'; } },
       { label: 'Read their memories', hint: 'Insight +70.', run: (s, d) => { insight(s, 70); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
       { label: 'Let them finish their sentence and end', hint: 'Resolve +2.', run: (s, d) => { res(s, 2); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; } },
     ],
@@ -594,8 +595,7 @@ export const EVENTS: EventDef[] = [
           if (b?.relic) b.relic.state = 'woken';
           const r = rng.next();
           if (r < 0.45) {
-            const c = capital(s);
-            if (c) c.pops.echoes += 3;
+            welcomeEchoes(s, 3);
             insight(s, 120);
             log(s, 'The sleepers woke gently, thanked us, and asked to join us. They brought their long patience with them.', 'good');
             return 'They wake gently. Three of them ask to join you, and share what they learned sleeping through the ages.';

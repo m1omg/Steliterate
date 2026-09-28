@@ -3,6 +3,7 @@ import { DEMANDS, THREAD_DEFS } from '../../game/data/threads';
 import { TECH_BY_ID } from '../../game/data/techs';
 import { logTurnLength } from '../../game/eras';
 import { turnStep } from '../../game/sim/flare';
+import { archivedEchoes } from '../../game/sim/archive';
 import { charterAvailable, enactCharter } from '../../game/sim/actions';
 import { clockRange, computeMods, strainFor } from '../../game/sim/mods';
 import { demandMet } from '../../game/sim/society';
@@ -121,6 +122,11 @@ export function ThreadsModal({ s }: { s: GameState }) {
                 <span class="mono">{totals[t]}</span>
               </div>
               <div class="flavor" style={{ fontSize: '13px' }}>{d.blurb}</div>
+              {t === 'echoes' && archivedEchoes(s) > 0 && (
+                <span class="chip warn" data-tip="Echoes that came to us with no free substrate to run on. They wait, stored and costing nothing, and move in as soon as a Substrate Core has room.">
+                  {archivedEchoes(s)} waiting in the archive
+                </span>
+              )}
               {!d.conscious && <span class="chip" data-tip="The Lattice has no standing and no demand: it has never asked for anything. It cannot be persuaded, only maintained.">asks for nothing</span>}
               <dl class="kv">
                 <dt>Upkeep</dt>

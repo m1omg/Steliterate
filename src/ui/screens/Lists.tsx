@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { siteValue } from '../../game/sim/sites';
 import { ANOMALIES } from '../../game/data/events';
 import { bodyClimate } from '../../game/physics';
 import { LIVING_WORLD, naturalKinRoom } from '../../game/sim/fleets';
@@ -9,7 +10,7 @@ import { computeMods } from '../../game/sim/mods';
 import { tripLabel } from '../trip';
 import { project } from '../../game/sim/projection';
 import { colonies, distLy, popsOf } from '../../game/sim/util';
-import type { Body, Colony, Fleet, GameState } from '../../game/types';
+import type { Body, Colony, Fleet, GameState, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
@@ -227,7 +228,9 @@ export function goToSystem(id: string) {
   pivotToSystem(id);
 }
 
-type WorldSort = 'hab' | 'near' | 'room' | 'name';
+type WorldSort = 'hab' | 'near' | 'room' | 'name' | 'echoes' | 'lattice' | 'coldminds';
+/** Sorts that rank by what one kind of mind needs (see sites.ts). */
+const MIND_SORT: Partial<Record<WorldSort, ThreadId>> = { echoes: 'echoes', lattice: 'lattice', coldminds: 'coldminds' };
 
 /** Every charted world, best places to live first: what a settler would find there. */
 function WorldsList({ s }: { s: GameState }) {
@@ -243,15 +246,16 @@ function WorldsList({ s }: { s: GameState }) {
     .map((b) => {
       const sys = s.systems[b.systemId];
       const c = b.kind === 'gas_giant' || b.kind === 'ice_giant' ? null : bodyClimate(s, b);
-      return { b, sys, hab: b.habitability * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)) };
+      const mind = MIND_SORT[sort];
+      return { b, sys, hab: b.habitability * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)), v: mind ? siteValue(s, b, mind) : null };
     })
     .filter((r) => !findsOnly || r.finds.length > 0)
-    .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
+    .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (x.v && y.v ? y.v.score - x.v.score : sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
   // the same worlds, one line per star: its best world, its total room, what was found there
   const systems = [...new Set(rows.map((r) => r.sys.id))]
     .map((id) => {
       const rs = rows.filter((r) => r.sys.id === id);
-      const best = rs.reduce((a, r) => (r.hab > a.hab ? r : a), rs[0]);
+      const best = rs.reduce((a, r) => ((r.v && a.v ? r.v.score > a.v.score : r.hab > a.hab) ? r : a), rs[0]);
       return {
         sys: rs[0].sys,
         ly: rs[0].ly,
@@ -263,8 +267,16 @@ function WorldsList({ s }: { s: GameState }) {
         finds: [...new Set(rs.flatMap((r) => r.finds))],
       };
     })
-    .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (sort === 'hab' ? y.best.hab - x.best.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.sys.name.localeCompare(y.sys.name)) || x.ly - y.ly);
-  const sorts: [WorldSort, string][] = [['hab', 'Habitable'], ['room', 'Room'], ['near', 'Nearest'], ['name', 'Name']];
+    .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (x.best.v && y.best.v ? y.best.v.score - x.best.v.score : sort === 'hab' ? y.best.hab - x.best.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.sys.name.localeCompare(y.sys.name)) || x.ly - y.ly);
+  const sorts: [WorldSort, string, string][] = [
+    ['hab', 'Habitable', 'Best for Kin: habitability × vitality'],
+    ['room', 'Room', 'Most room for Kin without domes'],
+    ['echoes', 'Power', 'Best for Echoes and the Chorus: the energy a settlement there could collect each turn at the Tide'],
+    ['lattice', 'Matter', 'Best for the Lattice: the matter its mines, skimmers and lifters could raise each turn at the Tide'],
+    ['coldminds', 'Lasting', 'Best for Coldminds: the worlds that will last longest before falling into their dead stars'],
+    ['near', 'Nearest', 'Nearest to the capital'],
+    ['name', 'Name', 'Alphabetical'],
+  ];
   return (
     <>
       <div class="row wrap" style={{ gap: '4px', marginBottom: '6px' }}>
@@ -276,8 +288,8 @@ function WorldsList({ s }: { s: GameState }) {
             Systems
           </button>
         </div>
-        {sorts.map(([k, label]) => (
-          <button key={k} class={`btn small ghost ${sort === k ? 'on' : ''}`} onClick={() => setSort(k)}>
+        {sorts.map(([k, label, tip]) => (
+          <button key={k} class={`btn small ghost ${sort === k ? 'on' : ''}`} onClick={() => setSort(k)} data-tip={tip}>
             {label}
           </button>
         ))}
@@ -306,16 +318,22 @@ function WorldsList({ s }: { s: GameState }) {
                   {living ? ` · ${living} living` : ''} · best: {best.b.name} · {formatDistance(ly)}
                 </div>
               </span>
-              <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
-                <span class={best.hab >= LIVING_WORLD ? 'good' : best.hab > 0.05 ? '' : 'faint'} data-tip="Its most habitable world">{Math.round(best.hab * 100)}%</span>
-                <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room` : 'domes only'}</div>
-              </span>
+              {best.v ? (
+                <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }} data-tip={`${best.v.tip} (its best world)`}>
+                  {best.v.label}
+                </span>
+              ) : (
+                <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
+                  <span class={best.hab >= LIVING_WORLD ? 'good' : best.hab > 0.05 ? '' : 'faint'} data-tip="Its most habitable world">{Math.round(best.hab * 100)}%</span>
+                  <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room` : 'domes only'}</div>
+                </span>
+              )}
             </div>
           ))}
         </div>
       ) : (
         <div class="list">
-          {rows.map(({ b, sys, hab, room, c, ly, finds }) => (
+          {rows.map(({ b, sys, hab, room, c, ly, finds, v }) => (
             <div key={b.id} class="list-item world-row" onClick={() => goToBody(b)}>
               <span class="grow">
                 {b.name} <span class="faint">{bodyKindName(s, b)}</span>
@@ -330,10 +348,16 @@ function WorldsList({ s }: { s: GameState }) {
                   {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
                 </div>
               </span>
-              <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
-                <span class={hab >= LIVING_WORLD ? 'good' : hab > 0.05 ? '' : 'faint'}>{Math.round(hab * 100)}%</span>
-                <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
-              </span>
+              {v ? (
+                <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }} data-tip={v.tip}>
+                  {v.label}
+                </span>
+              ) : (
+                <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
+                  <span class={hab >= LIVING_WORLD ? 'good' : hab > 0.05 ? '' : 'faint'}>{Math.round(hab * 100)}%</span>
+                  <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
+                </span>
+              )}
             </div>
           ))}
         </div>

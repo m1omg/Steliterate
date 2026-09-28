@@ -44,6 +44,9 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
 - **Other civilizations**: once you have made contact, a warship parked at one of their stars
   can **Raid** them for part of their reserve. It costs you their trust, everyone else's
   good opinion, and some of your own people's; they may come back for it.
+- **Where to settle**: the Surveyed worlds list (W) sorts by what each kind of mind needs
+  (Habitable/Room for Kin, Power for Echoes, Matter for the Lattice, Lasting for Coldminds),
+  and each settler ship ranks its landing sites the same way.
 - **Research**: overflow and found knowledge carry into the next project. You can pause
   research to save the labs' power; only half of each turn's insight is kept while paused.
 - Watch the **Forecasts** (bottom left, closable) and the **Chronometer** (top): they tell

@@ -10,6 +10,7 @@ import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
+import { wakeArchivedEchoes } from './archive';
 import { flareData, scorched, turnStep } from './flare';
 import { firstSwarm, updateHunger } from './hunger';
 import { updateMinds } from './minds';
@@ -296,6 +297,8 @@ export function endTurn(state: GameState): TurnResult {
   // ------------------------------------------------ 4. growth, capacity, worlds
   scorchWorlds(state, state.years, step.years);
   declineWorlds(state);
+  // Echoes waiting in the archive move into any free substrate before anyone is counted
+  wakeArchivedEchoes(state);
   for (const c of colonies(state)) {
     const capc = capacity(state, c, mods);
     const b = state.bodies[c.bodyId];
