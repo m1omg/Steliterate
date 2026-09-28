@@ -3,6 +3,7 @@ import { THREAD_DEFS } from '../data/threads';
 import { hawkingLight, sourceLight } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
 import { THREADS } from '../types';
+import { scorched } from './flare';
 import { type Mods, strainFor, type Strain } from './mods';
 import { clamp, colonies, eraIndex } from './util';
 
@@ -19,6 +20,8 @@ export type Capacity = Record<ThreadId, number> & { cryo: number };
 export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number {
   const b = state.bodies[c.bodyId];
   if (!b || b.dissolved) return 0;
+  // a flaring star: nowhere on the surface is livable, not even the night side
+  if (scorched(state, b)) return 0;
   const base = Math.round(12 * b.habitability);
   let vit = b.vitality;
   if (mods.flags.has('hardy')) vit = Math.pow(vit, 0.6);

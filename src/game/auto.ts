@@ -2,7 +2,8 @@ import { EVENT_BY_ID } from './data/events';
 import { STRUCTURE_BY_ID } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
-import { logTurnLength, stepTime } from './eras';
+import { logTurnLength } from './eras';
+import { turnStep } from './sim/flare';
 import { sourceLight } from './physics';
 import {
   answerEvent,
@@ -231,7 +232,7 @@ function planFleets(state: GameState) {
 
 function planThreads(state: GameState) {
   const mods = computeMods(state);
-  const step = stepTime(state.era, state.years, state.eta, state.civ.pace, state.settings.length);
+  const step = turnStep(state);
   const logL = logTurnLength(step);
   const kinStrain = strainFor('kin', logL, mods).m;
   const echoStrain = strainFor('echoes', logL, mods).m;

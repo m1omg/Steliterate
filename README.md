@@ -75,7 +75,9 @@ node tools/process-art.mjs                             # grade art-src/*.png int
 
 Designed and built with Claude Code, with ideas and speculation notes from the co-designer.
 Painted plates generated with Krea (Nano Banana Pro) and Codex image generation; music for the
-Dusk and the Degenerate Age generated with ElevenLabs Music via Krea. Science after Adams &
+Dusk and the Degenerate Age generated with ElevenLabs Music via Krea. The Degenerate Age opens with
+Pachelbel's Canon in D (public domain), arranged and synthesised for the game by
+`tools/music/canon.py` in the spirit of Barry Leitch's 1991 Amiga version for Utopia. Science after Adams &
 Laughlin (1997), Dyson (1979), Krauss & Starkman (2000) and Krauss & Scherrer (2007); see the
 in-game Codex.
 

@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
-import { formatDistance, formatYears, logTurnLength, stepTime } from '../../game/eras';
+import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
+import { turnStep } from '../../game/sim/flare';
 import { answerSignal, devour, makeGesture, seize, sendAid } from '../../game/sim/actions';
 import { canConverse, voiceClock } from '../../game/sim/signals';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
@@ -70,7 +71,7 @@ export function SignalsModal({ s }: { s: GameState }) {
   const arrived = s.signals.filter((x) => x.arrivedTurn !== null);
   const openMsgs = arrived.filter((x) => !x.resolved && x.choices.length);
   const [tab, setTab] = useState<'messages' | 'others' | 'minds'>(openMsgs.length ? 'messages' : 'others');
-  const logL = logTurnLength(stepTime(s.era, s.years, s.eta, s.civ.pace, s.settings.length));
+  const logL = logTurnLength(turnStep(s));
   const my = voiceClock(s, logL);
   const cap = capital(s);
   const capSys = cap ? s.systems[cap.systemId] : s.systems[s.civ.homeSystemId];

@@ -1,4 +1,5 @@
-import { logTurnLength, stepTime } from '../eras';
+import { logTurnLength } from '../eras';
+import { turnStep } from './flare';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
@@ -28,7 +29,7 @@ export interface Projection {
 export function project(state: GameState, paceOverride?: number): Projection {
   const mods = computeMods(state);
   const pace = paceOverride ?? state.civ.pace;
-  const step = stepTime(state.era, state.years, state.eta, pace, state.settings.length);
+  const step = turnStep(state, pace);
   const logL = logTurnLength(step);
   const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: Math.pow(10, -pace), mods };
   const p: Projection = {

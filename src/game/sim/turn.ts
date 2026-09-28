@@ -1,6 +1,6 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
-import { eraOver, logTurnLength, stepTime } from '../eras';
+import { eraOver, logTurnLength } from '../eras';
 import { evolveUniverse, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
@@ -10,6 +10,7 @@ import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
+import { flareData, scorched, turnStep } from './flare';
 import { firstSwarm, updateHunger } from './hunger';
 import { updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
@@ -99,18 +100,41 @@ function declineWorlds(state: GameState) {
   }
 }
 
+/**
+ * A flaring star boils the seas of its worlds and strips their air. The damage follows the share
+ * of the flare this turn lives through, so it comes to the same whether it passes in one turn or six.
+ */
+function scorchWorlds(state: GameState, from: number, to: number) {
+  for (const b of Object.values(state.bodies)) {
+    if (b.dissolved || b.vitality <= 0 || !scorched(state, b)) continue;
+    const p = state.systems[b.systemId].primary;
+    const start = p.blueAt ?? from;
+    const end = p.whiteAt ?? to;
+    const share = end > start ? Math.max(0, Math.min(end, to) - Math.max(start, from)) / (end - start) : 1;
+    if (share <= 0) continue;
+    b.vitality = Math.max(0, b.vitality - 0.6 * share);
+    // the seas boil into steam, and the steam is broken up and lost to space
+    if (b.water) b.water *= 1 - 0.9 * share;
+    if (b.vitality <= 0) worldDies(state, b, true);
+  }
+}
+
 /** A living world that has lost its warmth freezes, or dries to bare rock. */
-function worldDies(state: GameState, b: Body) {
+function worldDies(state: GameState, b: Body, scorched = false) {
   if (!['eyeball', 'terran', 'super_earth'].includes(b.kind)) return;
   const was = b.kind;
-  b.kind = (b.water ?? 0) >= 0.1 ? 'ice' : 'barren';
+  b.kind = !scorched && (b.water ?? 0) >= 0.1 ? 'ice' : 'barren';
   b.habitability = b.kind === 'ice' ? 0.05 : 0;
   b.vitality = 0;
   if (!b.traits.includes('once_alive')) b.traits.push('once_alive');
   const mine = !!b.colonyId;
   const seen = (state.civ.known[b.systemId] ?? 0) === 2;
   if (mine || seen) {
-    const what = was === 'eyeball' ? 'Its sea has frozen from the terminator to the substellar point' : 'Its seas have frozen and its air has settled out as frost';
+    const what = scorched
+      ? 'Its seas boiled away under the flare and its air went with them'
+      : was === 'eyeball'
+        ? 'Its sea has frozen from the terminator to the substellar point'
+        : 'Its seas have frozen and its air has settled out as frost';
     log(state, `${b.name} has died. ${what}; it is ${b.kind === 'ice' ? 'an ice world' : 'bare rock'} now.`, mine ? 'bad' : 'info', b.systemId);
   }
 }
@@ -133,7 +157,8 @@ export function endTurn(state: GameState): TurnResult {
     }
   }
 
-  const step = stepTime(state.era, state.years, state.eta, civ.pace, state.settings.length);
+  // (a turn stops when one of our stars begins its last flare; see flare.ts)
+  const step = turnStep(state);
   const logL = logTurnLength(step);
   const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: Math.pow(10, -civ.pace), mods };
 
@@ -269,6 +294,7 @@ export function endTurn(state: GameState): TurnResult {
   discoverFromSurplus(state);
 
   // ------------------------------------------------ 4. growth, capacity, worlds
+  scorchWorlds(state, state.years, step.years);
   declineWorlds(state);
   for (const c of colonies(state)) {
     const capc = capacity(state, c, mods);
@@ -343,6 +369,14 @@ export function endTurn(state: GameState): TurnResult {
   state.turnLength = step.turnLength;
   state.turn++;
   state.eraTurn++;
+  // one of our stars has just begun its last flare (the turn stopped for it)
+  for (const sys of new Set(colonies(state).map((c) => state.systems[c.systemId]))) {
+    if (sys?.primary.kind === 'blue_dwarf' && sys.primary.blueAt === state.years) queueEvent(state, 'last_flare', flareData(state, sys));
+  }
+  if (civ.flags.flare_until && state.years >= civ.flags.flare_until) {
+    delete civ.flags.flare_until;
+    delete civ.flags.flare_step;
+  }
 
   // ------------------------------------------------ 8. signals, forecasts, events
   result.arrived = deliverSignals(state);

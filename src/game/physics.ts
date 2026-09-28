@@ -53,8 +53,14 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
   switch (p.kind) {
     case 'red_dwarf':
       return { light: p.lum, label: 'Red dwarf, main sequence', temperatureK: primaryTemperature(p, years, era), alive: null };
-    case 'blue_dwarf':
-      return { light: p.lum * 3, label: 'Blue dwarf: a red dwarf in its last bright phase', temperatureK: 8200, alive: null };
+    case 'blue_dwarf': {
+      // a few billion years of flare: a turn that outlasts it gets its share, then a young white dwarf
+      const from = p.blueAt ?? years;
+      const to = p.whiteAt ?? Infinity;
+      const overlap = Math.max(0, Math.min(to, years + L) - Math.max(from, years));
+      const share = L > 0 ? Math.min(1, overlap / L) : 1;
+      return { light: p.lum * (0.3 + 2.7 * share), label: 'Blue dwarf: a red dwarf in its last bright flare', temperatureK: 8200, alive: null };
+    }
     case 'white_dwarf': {
       if (era === 'dusk') {
         const age = p.whiteAt ? years - p.whiteAt : 1e13;

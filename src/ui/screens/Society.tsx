@@ -1,7 +1,8 @@
 import { CHARTERS, type CharterDef } from '../../game/data/charters';
 import { DEMANDS, THREAD_DEFS } from '../../game/data/threads';
 import { TECH_BY_ID } from '../../game/data/techs';
-import { logTurnLength, stepTime } from '../../game/eras';
+import { logTurnLength } from '../../game/eras';
+import { turnStep } from '../../game/sim/flare';
 import { charterAvailable, enactCharter } from '../../game/sim/actions';
 import { clockRange, computeMods, strainFor } from '../../game/sim/mods';
 import { demandMet } from '../../game/sim/society';
@@ -89,7 +90,7 @@ export function ThreadsModal({ s }: { s: GameState }) {
   void rev.value;
   const mods = computeMods(s);
   const totals = threadTotals(s);
-  const logL = logTurnLength(stepTime(s.era, s.years, s.eta, s.civ.pace, s.settings.length));
+  const logL = logTurnLength(turnStep(s));
   return (
     <ModalFrame title="Threads" eyebrow="The kinds of mind you are made of" icon="threads">
       <div class="row wrap" style={{ gap: '16px', marginBottom: '10px' }}>

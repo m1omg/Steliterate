@@ -26,7 +26,9 @@ export function updateForecasts(state: GameState) {
     const f: Omit<Forecast, 'uid'> = {
       kind: 'star',
       title: `${sys.name} ${ch.what}`,
-      text: `In about ${formatYears(ch.at - years)}.`,
+      text: ch.what.includes('brightens')
+        ? `In about ${formatYears(ch.at - years)}. For a few billion years it will be over a hundred times brighter, hot enough to boil the seas of its worlds.`
+        : `In about ${formatYears(ch.at - years)}.`,
       dueYears: ch.at,
       systemId: sid,
       severity: ch.what.includes('brightens') ? 'boon' : 'danger',

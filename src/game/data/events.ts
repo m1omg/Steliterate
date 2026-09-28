@@ -1,6 +1,7 @@
 import type { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
 import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '../sim/util';
+import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, digShelters, keepTimeWithFlare, sheltersNeeded } from '../sim/flare';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -40,6 +41,12 @@ const insight = (s: GameState, n: number) => {
   else c.flags.insight_bank = (c.flags.insight_bank ?? 0) + n;
 };
 const taint = (s: GameState, n: number) => (s.civ.taint = Math.max(0, Math.min(100, s.civ.taint + n)));
+
+function shelterNote(r: { built: number; missing: number }): string {
+  if (!r.built && !r.missing) return 'Everyone already has somewhere to go.';
+  const built = r.built ? `${r.built} night-side shelter${r.built === 1 ? ' is' : 's are'} being cut into the rock.` : 'We could not pay for a single shelter.';
+  return r.missing ? `${built} We could not pay for ${r.missing} more.` : built;
+}
 
 function homeworld(s: GameState): Body | undefined {
   return Object.values(s.bodies).find((b) => b.traits.includes('homeworld'));
@@ -282,6 +289,43 @@ export const EVENTS: EventDef[] = [
     choices: [
       { label: 'Study it', hint: 'Research toward Hunger Studies jumps ahead.', run: (s) => { s.civ.research.hunger_studies = (s.civ.research.hunger_studies ?? 0) + 50; } },
       { label: 'Arm the settlements', hint: 'Research toward Orbital Defence jumps ahead. Resolve −2.', run: (s) => { s.civ.research.orbital_defense = (s.civ.research.orbital_defense ?? 0) + 40; res(s, -2); } },
+    ],
+  },
+  {
+    id: 'last_flare',
+    title: 'The Last Flare',
+    art: 'flare',
+    text: (s, d) => {
+      const need = sheltersNeeded(s, String(d.systemId)).reduce((a, x) => a + x.n, 0);
+      const day = Number(d.day1) > 1000 ? 'hot enough to soften rock' : Number(d.day1) > 373 ? 'far past boiling' : 'hotter than anything we have known';
+      const night = Number(d.night1) > SCORCH_K
+        ? ` and even the night side, ${d.night0} K until now, will reach about ${d.night1} K. The seas will boil away. Nowhere on the surface will be livable while it lasts.`
+        : `. The night side, ${d.night0} K until now, will reach about ${d.night1} K: the only place on the surface anyone can bear.`;
+      const heat = d.world ? ` On ${d.world} that means about ${d.mean1} K on average instead of ${d.mean0} K: some ${d.day1} K under the fixed sun, ${day},${night}` : '';
+      const refuge = need > 0
+        ? ` Our only refuge is the night side: shelters cut into the rock and cooled by radiators, ${SHELTER_CAP} Kin to a shelter. We need ${need} (${need * SHELTER_MATTER} matter; we have ${Math.floor(s.civ.matter)}). Whoever the domes, cold berths and shelters cannot hold will not live through it.`
+        : ' Our domes and shelters already hold everyone who lives there.';
+      const pace = Number(d.clock)
+        ? ` At our pace the next turn alone would span ${d.next}: the whole flare would come and go inside it. Or we could quicken to the flare's own clock and live through it, ${FLARE_TURNS} turns of the brightest light we will ever see again.`
+        : ` At our pace it will burn for about ${d.turns} turns.`;
+      return `${d.star} has left the main sequence. It is not swelling into a giant as bigger stars did: it is shrinking and heating up into a blue dwarf, about ${d.ratio ?? 'a hundred'} times brighter than it was, and it will stay that way for about ${d.span} before it collapses into a white dwarf.${heat}${refuge}${pace}`;
+    },
+    choices: [
+      {
+        label: 'Dig in on the night side and keep time with the flare',
+        hint: `Emergency shelters now, as many as we can pay for. Then ${FLARE_TURNS} turns inside the flare: collectors there gather about three times the light, and we get those turns to build and prepare before the Last Light. The heat does the same harm either way; while it lasts, each settlement loses one Kin a turn that it cannot shelter.`,
+        ok: (_s, d) => Number(d.clock) === 1,
+        run: (s, d) => {
+          const r = digShelters(s, String(d.systemId));
+          keepTimeWithFlare(s, String(d.systemId));
+          return shelterNote(r) + ` We keep time with the flare now: ${FLARE_TURNS} turns, each about a sixth of it.`;
+        },
+      },
+      {
+        label: 'Dig in on the night side and let it pass',
+        hint: 'The same shelters, at our own pace. Late in the Dusk the flare is over within a turn: its heat strikes once, and there is next to nothing to harvest.',
+        run: (s, d) => shelterNote(digShelters(s, String(d.systemId))),
+      },
     ],
   },
   {

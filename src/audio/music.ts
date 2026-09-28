@@ -151,8 +151,16 @@ const TRACKS: Partial<Record<StyleKey, string>> = {
   dark: 'music/dark.mp3',
 };
 
+// Played once, before a style's own track, the first time that style comes up in a session.
+// The Degenerate Age opens with Pachelbel's Canon in D (public domain), arranged for the game:
+// see tools/music/canon.py.
+const INTROS: Partial<Record<StyleKey, string>> = {
+  degenerate: 'music/canon.mp3',
+};
+
 class Music {
   private layer: Layer | null = null;
+  private introsPlayed = new Set<StyleKey>();
   private era: EraId = 'dusk';
   private mood: Mood = 'menu';
   private step = 0;
@@ -310,9 +318,22 @@ class Music {
     const url = TRACKS[key];
     if (!a || !url) return;
     const el = new Audio();
-    el.src = url;
-    el.loop = true;
+    const intro = INTROS[key] && !this.introsPlayed.has(key) ? INTROS[key]! : null;
+    el.src = intro ?? url;
+    el.loop = !intro;
     el.preload = 'auto';
+    if (intro) {
+      this.introsPlayed.add(key);
+      // then the style's own track, looping (also if the intro is missing or fails)
+      const toMain = () => {
+        if (this.layer !== layer || el.loop) return;
+        el.src = url;
+        el.loop = true;
+        el.play().catch(() => {});
+      };
+      el.addEventListener('ended', toMain, { once: true });
+      el.addEventListener('error', toMain, { once: true });
+    }
     let src: MediaElementAudioSourceNode;
     try {
       src = a.ctx.createMediaElementSource(el);
