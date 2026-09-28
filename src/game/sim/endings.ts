@@ -41,16 +41,19 @@ function end(state: GameState, kind: Outcome['kind'], ending: string): Outcome {
   return state.outcome;
 }
 
-/** Check for any ending. `atLastHorizon` is set while crossing into the Dark Era. */
+/**
+ * Check for any ending. `atLastHorizon` is set while crossing into the Dark Era, a check before
+ * the turn's own at its end: despair is counted only in that one, so once a turn.
+ */
 export function checkEndings(state: GameState, atLastHorizon = false): Outcome | null {
   if (state.outcome) return state.outcome;
   const civ = state.civ;
   if (civ.taint >= 100) return end(state, 'dark', DARK_ENDING.ending);
   if (totalPops(state) <= 0) return end(state, 'defeat', 'Silence');
   if (civ.resolve <= 0) {
-    civ.flags.despair = (civ.flags.despair ?? 0) + 1;
-    if (civ.flags.despair >= 6) return end(state, 'defeat', 'The Will Fails');
-  } else civ.flags.despair = 0;
+    if (!atLastHorizon) civ.flags.despair = (civ.flags.despair ?? 0) + 1;
+    if ((civ.flags.despair ?? 0) >= 6) return end(state, 'defeat', 'The Will Fails');
+  } else if (!atLastHorizon) civ.flags.despair = 0;
   if (state.era === 'dark' && civ.continuity <= 0) return end(state, 'defeat', 'The Fade');
   if (atLastHorizon && (civ.works.aeon_seed ?? 0) >= workCost(state, 'aeon_seed') && workRequirementMet(state, 'aeon_seed')) return end(state, 'victory', WORK_BY_ID.aeon_seed.ending);
   for (const id of Object.keys(WORK_BY_ID)) {
