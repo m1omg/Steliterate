@@ -25,9 +25,10 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   out past the edge of a system to return to the galaxy. Click a planet to select it and
   double-click it (or tap it) to fly there: it stays in focus as it orbits until you pick
   another world or double-click the star. System and planet panels list the system's worlds,
-  one click each. Double-click a fleet (or tap it twice) to follow it. **V** switches the view:
-  Natural, Enhanced (light amplification for the dark ages) or Thermal (false colour by
-  temperature). Probes can **Auto-explore**: they keep charting the nearest unsurveyed star.
+  one click each. Double-click a fleet (or tap it twice) to follow it; **Centre** in its panel
+  keeps it in the middle of the map without zooming in. **V** switches the view: Natural,
+  Enhanced (light amplification for the dark ages) or Thermal (false colour by temperature).
+  Probes can **Auto-explore**: they keep charting the nearest unsurveyed star.
   Any ship charts the systems it reaches; probes are just cheap, far-sighted and can explore
   by themselves. A planet panel's Ruins row and its find chips reopen that survey report.
   A ship at the edge of the map spots the nearest unseen stars (probes three, other ships

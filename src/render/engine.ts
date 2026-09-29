@@ -24,6 +24,8 @@ export interface EngineEvents {
 export interface Followed {
   kind: 'body' | 'fleet';
   id: string;
+  /** Kept centred at the zoom the view had, not flown in close. */
+  keepZoom?: boolean;
 }
 
 /** Zooming the galaxy view closer than this dives into the system at the focus. */
@@ -368,14 +370,17 @@ export class Engine {
     this.setFollowed({ kind: 'body', id: bodyId });
   }
 
-  /** Fly to a fleet and keep it centred as it moves, in either view (like a planet). */
-  focusFleet(fleetId: string) {
+  /**
+   * Fly to a fleet and keep it centred as it moves, in either view (like a planet): close up, or
+   * with `keepZoom` at the zoom the view has now, so the map stays as far out as it is.
+   */
+  focusFleet(fleetId: string, keepZoom = false) {
     const view = this.view;
     // only in the view it was picked in: switching views lets go
     const at = () => (this.view !== view ? null : view === 'galaxy' ? this.galaxy.fleetPos(fleetId) : this.system.fleetPos(fleetId));
     if (!at()) return;
-    this.rig.flyToFollow(at, view === 'galaxy' ? 36 : 10, 1.1);
-    this.setFollowed({ kind: 'fleet', id: fleetId });
+    this.rig.flyToFollow(at, keepZoom ? this.rig.goalDistance : view === 'galaxy' ? 36 : 10, 1.1);
+    this.setFollowed({ kind: 'fleet', id: fleetId, keepZoom });
   }
 
   /** Stop following, and leave the camera where it is. */
@@ -388,7 +393,7 @@ export class Engine {
   followed: Followed | null = null;
 
   private setFollowed(f: Followed | null) {
-    if (f?.kind === this.followed?.kind && f?.id === this.followed?.id) return;
+    if (f?.kind === this.followed?.kind && f?.id === this.followed?.id && !!f?.keepZoom === !!this.followed?.keepZoom) return;
     this.followed = f;
     this.events.onFollow?.(f);
   }

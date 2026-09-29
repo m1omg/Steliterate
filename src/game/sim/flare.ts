@@ -81,6 +81,16 @@ export function flareClock(state: GameState): { turn: number; of: number; system
 }
 
 /**
+ * The settled star whose last flare cuts the coming turn short at this pace, if any: the turn
+ * stops the moment it leaves the main sequence, so a slower pace cannot take us past it.
+ */
+export function flareStop(state: GameState, pace = state.civ.pace): StarSystem | null {
+  const step = stepTime(state.era, state.years, state.eta, pace, state.settings.length);
+  if (state.era !== 'dusk' || !isFinite(step.years) || keepingTime(state)) return null;
+  return flareDue(state, state.years, step.years);
+}
+
+/**
  * The coming turn's time step. As the calendar's, except that a turn stops at the moment one of
  * our stars leaves the main sequence, and while we keep time with a flare its turns are pinned
  * to a sixth of it.

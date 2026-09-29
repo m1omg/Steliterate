@@ -55,7 +55,7 @@ export const targeting = signal<{ fleetId: string; order: 'move' | 'survey' } | 
 /** While choosing a destination on the map: the star under the pointer. */
 export const hoverStar = signal<string | null>(null);
 /** What the camera is following (set by the engine). */
-export const following = signal<{ kind: 'body' | 'fleet'; id: string } | null>(null);
+export const following = signal<{ kind: 'body' | 'fleet'; id: string; keepZoom?: boolean } | null>(null);
 export const settings = signal<Settings>(loadSettings());
 
 let engineRef: Engine | null = null;

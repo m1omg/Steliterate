@@ -843,6 +843,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   void rev.value; // mutable game state: re-render on every change
   const mods = computeMods(s);
   const here = f.at ? s.systems[f.at] : null;
+  const followingIt = following.value?.kind === 'fleet' && following.value.id === f.id;
   const settler = f.ships.find((x) => SHIP_BY_ID[x.cls]?.settles);
   const surveyor = f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey);
   const tender = f.ships.some((x) => SHIP_BY_ID[x.cls]?.tames);
@@ -911,8 +912,11 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
           {f.auto === 'explore' && <span class="chip neon" data-tip={`Exploring by itself: always the nearest unsurveyed star. It waits while the reserve is under ${EXPLORE_RESERVE} energy plus the launch.`}><Icon name="survey" /> exploring</span>}
         </div>
         <div class="row wrap" style={{ marginTop: '8px', gap: '4px' }}>
-          <button class={`btn small ${following.value?.kind === 'fleet' && following.value.id === f.id ? 'on' : ''}`} onClick={() => { sfx('click'); engine()?.focusFleet(f.id); }} data-tip="Keep the view on this fleet as it moves (or double-click it; tap it twice on a touchscreen).">
+          <button class={`btn small ${followingIt && !following.value?.keepZoom ? 'on' : ''}`} onClick={() => { sfx('click'); if (followingIt && !following.value?.keepZoom) engine()?.unfollow(); else engine()?.focusFleet(f.id); }} data-tip="Fly in close and keep the view on this fleet as it moves (or double-click it; tap it twice on a touchscreen). Click again to let go.">
             <Icon name="focus" /> Follow
+          </button>
+          <button class={`btn small ${followingIt && following.value?.keepZoom ? 'on' : ''}`} onClick={() => { sfx('click'); if (followingIt && following.value?.keepZoom) engine()?.unfollow(); else engine()?.focusFleet(f.id, true); }} data-tip="Put this fleet in the middle of the view and keep it there as it moves, without zooming in. Click again to let go.">
+            <Icon name="galaxy" /> Centre
           </button>
           {here && view.value === 'galaxy' && (
             <button class="btn small" onClick={() => pivotToSystem(here.id, true)} data-tip={`Step inside ${here.name} to see its worlds`}>

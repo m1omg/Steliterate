@@ -162,3 +162,9 @@ and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organizat
   have gone out. A civilization we never met leaves a hidden tomb. (107/300; 900 games: 325,
   against 358 without this change and 341 at `0815fe4`. Not the lost last transmissions:
   sending them always still gives 327.)
+- **Centre on a ship.** A fleet's panel has Centre beside Follow: it puts the fleet in the middle
+  of the view and keeps it there as it moves, at the zoom you have (Follow flies in close).
+  Clicking the lit button lets go, as the manual already said.
+- **Why pace stops mattering at a flare.** When a settled star is about to begin its last flare,
+  the Pace panel says the turn stops then, whatever the pace (a slower one cannot take you past
+  it); the manual says so too, and that the flare, not the pace, sets the length of its turns.
