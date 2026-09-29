@@ -30,6 +30,16 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 ## Open threads and pending decisions
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
+- **Living worlds around dead stars (29 Sep, asked, open):** in the Dusk a living world whose own
+  star has died keeps its vitality and room for Kin until the Last Light (`declineWorlds` in
+  `turn.ts`: `sunless` only after the Dusk or when rogue), e.g. a Terrestrial world at 8–19 K
+  with 30% vitality: about 33 a game, for about 22 turns each, at a median 21 K. Offered to the
+  player: such a world freezes within a few turns unless Orbital Lamps keep it warm (their text
+  already says so). Harness 121/300 against 123 (noise; 28 outcomes change, both ways); with the
+  autoplayer building Lamps, also 121. A 195 K climate rule is far too broad: 986 of 4,879 living
+  worlds start below it. Separately, living worlds are placed in a fixed band of orbits whatever
+  their red dwarf's brightness, so about 7 a game start at 82–195 K; changing that changes every
+  galaxy, so discuss first.
 - **Two sessions (28–29 Sep):** a second session reviewed the game on `claude/epic-wozniak-lyhulf`
   (stacked on `0815fe4`) and, at the player's word, fast-forwarded `claude/lucid-newton-30cbpk`
   to it. Pull before pushing; whichever session works next continues on that branch.
