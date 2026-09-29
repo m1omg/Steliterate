@@ -31,6 +31,11 @@ const GRADE = {
   survivor: NEUTRAL,
   swarm: NEUTRAL,
   swarm_tamed: COLD,
+  // the other peoples, by their way of life
+  way_garden: WARM,
+  way_upload: COLD,
+  way_chorus: VIOLET,
+  way_dormant: COLD,
   // survey discoveries
   vent_life: COLD,
   fossil_reactor: NEUTRAL,

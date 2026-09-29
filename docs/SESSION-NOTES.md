@@ -37,10 +37,16 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   rust explained, look before settling, nearby site ratings, the charter-book message). Next, as
   asked: rust and swarm feeding visible on the planets themselves (done, `07be759`); then Krea
   (the player topped it up: "use it for everything"): recorded tracks for the title, Black Hole
-  Age and Dark, and two swarm plates (done). **Pending, when Krea is topped up again:** one plate
-  per way of life of the other civilizations (garden, upload, chorus, dormant, lattice, fork),
-  about 111 units each at 2K with Nano Banana Pro (the balance was 0 after the tracks and the
-  two plates); prompts in the style of the others (painterly, dark, grainy, no text).
+  Age and Dark, and two swarm plates (done).
+- **29 Sep, "Go to town" (the player topped Krea up again: alien graphics, event plates, ship
+  sprites, more music):** done, plates for four ways of life (garden, upload, chorus, dormant),
+  second tracks for the Dusk, Degenerate and Black Hole ages (taking turns) and an ending theme.
+  The balance then read 0 again (INSUFFICIENT_BALANCE, 0 units available, 111 needed) though the
+  player said they topped up plentifully; they were told. **Pending, when Krea has credit:**
+  plates for the Tessellate (lattice; prompt in `DEV-NOTES.md`) and for a Fork; event plates for
+  the events that share era art; ship sprites for the classes that share the generic ones; a
+  second Dark track (prompt in `DEV-NOTES.md`); a recorded Canon as an option beside the
+  arranged one (prompt in `DEV-NOTES.md`).
 - **Two sessions (28–29 Sep):** a second session reviewed the game on `claude/epic-wozniak-lyhulf`
   (stacked on `0815fe4`) and, at the player's word, fast-forwarded `claude/lucid-newton-30cbpk`
   to it. Pull before pushing; whichever session works next continues on that branch.
@@ -59,9 +65,9 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 - **Collectors after the Stelliferous era:** collectors are already renamed for what they gather
   and yield only what their source gives. Ideas not built: dark collectors not counting toward
   signature; dismantling or repurposing collectors.
-- **Music via AI (not possible this session):** Krea's credits were exhausted, and Higgsfield's
-  audio tool is speech-only (it forbids general music). If Krea is topped up, an ElevenLabs
-  Music v2.5 version of the Canon could be generated. The prompt used is in `DEV-NOTES.md`.
+- **Music via AI:** Krea (ElevenLabs Music v2.5) made every recorded track since the first
+  session; Higgsfield's audio tool is speech-only (it forbids general music). An ElevenLabs
+  version of the Canon is still to be made; the prompt is in `DEV-NOTES.md`.
 - **Blue-dwarf visibility (offered, not built):** a distinct map marker for blue dwarfs.
 
 ## Found in the review of 28 Sep (verified)

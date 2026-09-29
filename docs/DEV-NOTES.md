@@ -61,6 +61,19 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).
   So is `art-src/` (ignored by git): the graded files in `public/art/` are the only copies of
   the plates and sprites, so new art needs new source images.
+- **Plates for the ways of life** (`public/art/way_<way>.webp`, 29 Sep, Nano Banana Pro at 2K,
+  16:9, about 111 Krea units each): garden, upload, chorus, dormant. `wayArt` in
+  `src/ui/labels.ts` picks the plate (the generic `survivor` where a way has none: lattice and
+  fork so far); shown in `Signals.tsx` cards and the system panel's Others section, once in
+  contact. The chorus came with painted letterbox bars, cropped (152 and 151 px of 1536) before
+  grading. Prompts in the style of the others: "A civilization …: <scene>. Painterly digital
+  painting, dark and grainy, muted <palette>, soft brushwork, cinematic composition. No text,
+  no letters, no signatures." Waiting for credit, the Tessellate's (from the Lattice's public
+  blurb only): "the whole surface of a dark, airless moon tiled in vast hexagonal plates of
+  machinery, an endless tessellation to the horizon, small tireless maintenance drones crawling
+  along the seams, repairing and rebuilding, pale yellow work-lights in regular rows, no people
+  anywhere, a dim dead star low in the black sky; orderly, patient, faintly uncanny; muted greys
+  and ochres with pale yellow accents".
 
 ## Gotchas
 
@@ -131,8 +144,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **`src/game/sim/economy.ts`:** Kin surface room is 0 when scorched and ≥5 when warm-thawed;
   Solar Arrays × insolation.
 - **`src/audio/music.ts`:**
-  - `TRACKS` (files in `public/music`: dusk, degenerate, canon; the others fall back to the
-    synth); `INTROS` (degenerate → canon, once per session, not when picked by hand).
+  - `TRACKS`: a list of files in `public/music` per age (title, dusk + dusk2, canon,
+    degenerate + degenerate2, blackhole + blackhole2, dark, outcome). A lone track loops;
+    several take turns, each fading out over its last `TRACK_CHANGE` (4 s, on `timeupdate`)
+    and in over 3 s; a file that fails to load passes to the next, once round the list. The
+    synth covers an age none of whose files load. `INTROS` (degenerate → canon, once per
+    session, not when picked by hand) plays before the list and flows into it without a fade.
   - `TRACK_CHOICES`, `setTrack`/`current`/`chosen` (Settings → Music track).
   - The synth hiss runs through `layer.hiss`, which fades when a recording plays.
   - `startLoaded` calls `music.setEra`.
@@ -175,6 +192,24 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   "a single low drone, a lonely distant tone every so often into a very long reverb, a trace of
   bit-crushed noise, long near-silences, no pulse". Each ends: "one steady texture, no build-up
   and no ending, so it loops seamlessly; no vocals, no choir".
+- **Second tracks and the ending** (29 Sep, the same model and settings). `loop-track.py` with
+  a crossfade of 0 only trims and levels, for tracks that take turns (the game fades between
+  them); the ending is looped with a 6 s crossfade (join 0.79, G minor). Levels are matched by
+  integrated loudness: `python3 tools/music/loudness.py public/music/*.mp3` (BS.1770-4; needs
+  scipy too). Dusk −12.7 (dusk2 −13.3, held back by the −1.5 dBFS peak limit), Degenerate
+  −14.7 (both), Black Hole −19.7 (both), Dark −19.3, title −14.2, ending −14.2, Canon −15.2.
+  The prompts, in short: dusk2, "about 84 BPM, D Dorian, a softly pulsing bass, a slow glassy
+  arpeggio, a soft kick and gated snare far back; wistful and purposeful, like working late
+  under a dying red sun" (it came out in A major); degenerate2, "about 64 BPM, E minor, triangle
+  pads, a sparse music-box arpeggio that comes and goes, bells, a low drone; contemplative,
+  lonely, strangely beautiful" (a drone on D♯); blackhole2, "about 48 BPM, a slowly breathing
+  sub drone, a low choir-like analog pad (synthesised), the metallic ring of struck plates, a
+  rotating shimmer like light bent around a horizon; awed rather than menacing" (a drone on D);
+  the ending, "the closing theme, whichever way it went; about 56 BPM, D major leaning
+  bittersweet toward B minor, a warm pad and a simple unhurried melody on a glassy lead; no
+  drums, no big climax". Not made (the balance ran out): dark2, "almost silence: a faint warm
+  drone that slowly changes colour, a single soft sine tone every so often like a lighthouse
+  very far away, answered long afterwards by another; still, lonely, gently hopeful".
 - **If Krea is topped up,** an AI Canon prompt could start from: "Instrumental. A slow, dark
   ambient synthwave arrangement of Johann Pachelbel's Canon in D (public domain) in the spirit of
   a 1991 Amiga tracker module: lo-fi sampled string pads and choir swells, notes swelling in and

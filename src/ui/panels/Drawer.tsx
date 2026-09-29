@@ -39,7 +39,7 @@ import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { FOCUS, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP } from '../labels';
+import { FOCUS, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP } from '../labels';
 import { act, engine, following, notify, rev, selection, targeting, view } from '../store';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
@@ -262,6 +262,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
         {survivor && (
           <div class="section">
             <h3>Others</h3>
+            {survivor.contact && <div class="drawer-plate" style={{ backgroundImage: `url(art/${wayArt(survivor.way)}.webp)` }} role="img" aria-label={`${survivor.name}: ${WAY_NAME[survivor.way] ?? ''}`} />}
             <div
               class={`row ${survivorHome ? 'list-item' : ''}`}
               style={{ fontSize: '13px' }}

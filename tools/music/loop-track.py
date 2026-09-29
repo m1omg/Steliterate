@@ -1,5 +1,8 @@
 # Make a generated track loop cleanly: trim its fade-in and fade-out, crossfade the end into the
 # start (equal power), set its level, and encode as the game's other tracks (MP3 192 kbps, 48 kHz).
+#   python3 tools/music/loop-track.py 'in.mp3|public/music/out.mp3|<RMS dBFS>|<crossfade s>' ...
+# A crossfade of 0 only trims and levels: for a track that plays in turn with others, which the
+# game fades out and in itself.
 import sys, miniaudio, numpy as np, lameenc
 def process(src, dst, target_rms_db, xfade_s):
     d = miniaudio.decode_file(src, output_format=miniaudio.SampleFormat.FLOAT32, nchannels=2, sample_rate=48000)
@@ -15,9 +18,12 @@ def process(src, dst, target_rms_db, xfade_s):
     tail = next((len(edb) - 1 - i for i in range(min(lim, len(edb))) if edb[len(edb) - 1 - i] >= med - 8), len(edb) - 1)
     y = x[head * hop:(tail + 1) * hop]
     L = int(xfade_s * sr)
-    t = np.linspace(0, 1, L)[:, None]
-    mix = y[-L:] * np.cos(t * np.pi / 2) + y[:L] * np.sin(t * np.pi / 2)
-    out = np.concatenate([y[L:-L], mix])
+    if L > 0:
+        t = np.linspace(0, 1, L)[:, None]
+        mix = y[-L:] * np.cos(t * np.pi / 2) + y[:L] * np.sin(t * np.pi / 2)
+        out = np.concatenate([y[L:-L], mix])
+    else:
+        out = y
     rms = np.sqrt(np.mean(out ** 2))
     gain = 10 ** (target_rms_db / 20) / rms
     peak = np.max(np.abs(out)) * gain

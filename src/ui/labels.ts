@@ -91,6 +91,10 @@ export const WAY_NAME: Record<string, string> = {
   fork: 'a Thread that left you',
 };
 
+/** The plate for each way of life (art/<name>.webp); the generic one where a way has none. */
+const WAY_ART: Record<string, string> = { garden: 'way_garden', upload: 'way_upload', chorus: 'way_chorus', dormant: 'way_dormant' };
+export const wayArt = (way: string) => WAY_ART[way] ?? 'survivor';
+
 /**
  * What kind of world a body is now. A living world is named for its warmth only while it has
  * some: once even its warmest ground is below FROZEN_K (its star dead, or too faint) it is

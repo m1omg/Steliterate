@@ -230,9 +230,20 @@ belongs to another organization.
   longer a swarm has fed at its star: dull pitted oxide, a haze on giants, a tint on belt rocks.
   While a swarm feeds there, each world it eats has harvesters circling low over it, sparks where
   they cut in, and a stream of motes carrying the harvest to the swarm's cloud. Rendering only.
-- **Recorded music for every age, and swarm plates** (Krea). Tracks for the title, the Black Hole
+- `1981611` **Recorded music for every age, and swarm plates** (Krea). Tracks for the title, the Black Hole
   Age and the Dark (ElevenLabs Music v2.5, made to loop by `tools/music/loop-track.py`) replace the
   synthesised fallbacks; the procedural score still covers any track that fails to load. The
   Hunger's panel shows a plate: a swarm stripping a world, or a tamed one at work (Nano Banana Pro,
   graded by `tools/process-art.mjs`). The Krea balance ran out before the plates for the other
   civilizations' six ways of life.
+- **Plates for the other peoples, second tracks and an ending theme** (Krea). A civilization we
+  have contacted shows a plate for its way of life on its Signals card and in its star's panel:
+  domed gardens under a red sun (clinging to biology), a moon cut into server spires (uploaded),
+  a web of linked habitats (merged into one mind), frosted cold-sleep halls with one keeper
+  awake (asleep). The Tessellate and any Fork show the generic plate until theirs are made. The
+  Long Dusk, the Degenerate Age and the Black Hole Age each have a second track, and an age's
+  tracks take turns: one fades out over its last 4 s, the next fades in over 3 s (a lone track
+  still loops). The ending has its own theme (G minor, looped; Settings → Music track → The
+  Ending). The new tracks are levelled to their age's first track by integrated loudness
+  (`tools/music/loudness.py`): Dusk −12.7 and −13.3 LUFS, Degenerate −14.7 and −14.7, Black
+  Hole −19.7 and −19.7, the ending −14.2 like the title. No rules change.

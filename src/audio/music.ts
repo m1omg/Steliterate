@@ -152,18 +152,26 @@ export const TRACK_CHOICES: { key: TrackKey; name: string }[] = [
   { key: 'degenerate', name: 'The Degenerate Age' },
   { key: 'blackhole', name: 'The Black Hole Age' },
   { key: 'dark', name: 'The Dark' },
+  { key: 'outcome', name: 'The Ending' },
 ];
 
-// Recorded tracks (generated instrumentals). Where one is missing or fails to load, the
+// Recorded tracks (generated instrumentals), in the order they play: where an age has more than
+// one, each gives way to the next as it ends, fading across. Where none will load, the
 // procedural score plays instead.
-const TRACKS: Partial<Record<TrackKey, string>> = {
-  canon: 'music/canon.mp3',
-  menu: 'music/title.mp3',
-  dusk: 'music/dusk.mp3',
-  degenerate: 'music/degenerate.mp3',
-  blackhole: 'music/blackhole.mp3',
-  dark: 'music/dark.mp3',
+const TRACKS: Partial<Record<TrackKey, string[]>> = {
+  canon: ['music/canon.mp3'],
+  menu: ['music/title.mp3'],
+  dusk: ['music/dusk.mp3', 'music/dusk2.mp3'],
+  degenerate: ['music/degenerate.mp3', 'music/degenerate2.mp3'],
+  blackhole: ['music/blackhole.mp3', 'music/blackhole2.mp3'],
+  dark: ['music/dark.mp3'],
+  outcome: ['music/outcome.mp3'],
 };
+
+/** How loud a recorded track plays (mastered tracks are much louder than the synth). */
+const TRACK_GAIN = 0.5;
+/** Seconds over which one track of an age fades out before the next begins. */
+const TRACK_CHANGE = 4;
 
 // Played once, before a style's own track, the first time that style comes up in a session.
 // The Degenerate Age opens with Pachelbel's Canon in D (public domain), arranged for the game:
@@ -351,26 +359,33 @@ class Music {
   /** Try the recorded track for this style; once it is actually playing, hush the synth. */
   private startTrack(layer: Layer, key: TrackKey) {
     const a = audio();
-    const url = TRACKS[key];
-    if (!a || !url) return;
+    const list = TRACKS[key];
+    if (!a || !list?.length) return;
     const el = new Audio();
     // the overture comes once, on its own, when the age begins (not when a track is picked by hand)
     const intro = !this.override && key !== 'canon' && INTROS[key as StyleKey] && !this.introsPlayed.has(key as StyleKey) ? INTROS[key as StyleKey]! : null;
-    el.src = intro ?? url;
-    el.loop = !intro;
+    if (intro) this.introsPlayed.add(key as StyleKey);
+    // one track loops; several play in turn (after the overture, if there is one)
+    let inIntro = !!intro;
+    let idx = 0;
+    let fails = 0;
+    let fading = false;
+    el.src = intro ?? list[0];
+    el.loop = !intro && list.length === 1;
     el.preload = 'auto';
-    if (intro) {
-      this.introsPlayed.add(key as StyleKey);
-      // then the style's own track, looping (also if the intro is missing or fails)
-      const toMain = () => {
-        if (this.layer !== layer || el.loop) return;
-        el.src = url;
-        el.loop = true;
-        el.play().catch(() => {});
-      };
-      el.addEventListener('ended', toMain, { once: true });
-      el.addEventListener('error', toMain, { once: true });
-    }
+    const advance = () => {
+      if (this.layer !== layer) return;
+      if (inIntro) inIntro = false;
+      else idx = (idx + 1) % list.length;
+      el.src = list[idx];
+      el.loop = list.length === 1;
+      el.play().catch(() => {});
+    };
+    el.addEventListener('ended', advance);
+    // a missing or broken file: try the next one, once round the list at most
+    el.addEventListener('error', () => {
+      if (inIntro || ++fails < list.length) advance();
+    });
     let src: MediaElementAudioSourceNode;
     try {
       src = a.ctx.createMediaElementSource(el);
@@ -381,12 +396,30 @@ class Music {
     gain.gain.value = 0;
     src.connect(gain).connect(a.music);
     layer.track = { el, gain };
+    // each track fades in as it starts (after a change too)
     el.addEventListener('playing', () => {
       if (this.layer !== layer) return;
+      fails = 0;
+      fading = false;
       const t = a.ctx.currentTime;
       gain.gain.cancelScheduledValues(t);
       gain.gain.setValueAtTime(gain.gain.value, t);
-      gain.gain.linearRampToValueAtTime(0.5, t + 3); // mastered tracks are much louder than the synth
+      gain.gain.linearRampToValueAtTime(TRACK_GAIN, t + 3);
+    });
+    // and, where another follows, fades out over its last seconds (on the audio clock)
+    el.addEventListener('timeupdate', () => {
+      if (this.layer !== layer || fading || el.loop || inIntro || !isFinite(el.duration)) return;
+      const left = el.duration - el.currentTime;
+      if (left > TRACK_CHANGE) return;
+      fading = true;
+      const t = a.ctx.currentTime;
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(gain.gain.value, t);
+      gain.gain.linearRampToValueAtTime(0, t + Math.max(0.3, left));
+    });
+    el.addEventListener('playing', () => {
+      if (this.layer !== layer) return;
+      const t = a.ctx.currentTime;
       layer.bus.gain.cancelScheduledValues(t);
       layer.bus.gain.setValueAtTime(layer.bus.gain.value, t);
       layer.bus.gain.linearRampToValueAtTime(0, t + 3);

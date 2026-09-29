@@ -7,7 +7,7 @@ import { canConverse, voiceClock } from '../../game/sim/signals';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
 import type { GameState, Signal } from '../../game/types';
 import { n0, pct, pow10 } from '../fmt';
-import { WAY_NAME } from '../labels';
+import { WAY_NAME, wayArt } from '../labels';
 import { act, rev } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
@@ -118,6 +118,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                 </div>
                 {sv.contact ? (
                   <>
+                    <div class="drawer-plate" style={{ backgroundImage: `url(art/${wayArt(sv.way)}.webp)` }} role="img" aria-label={`${sv.name}: ${WAY_NAME[sv.way]}`} />
                     <div class="dim" style={{ fontSize: '12px' }}>{sv.adjective}, {WAY_NAME[sv.way]}. {formatDistance(ly)} away.</div>
                     {sv.alive ? (
                       <>
