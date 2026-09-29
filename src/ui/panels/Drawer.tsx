@@ -310,29 +310,61 @@ function kelvin(k: number): string {
   return c > -120 && c < 200 ? `${n0(k)} K (${c > 0 ? '+' : ''}${n0(c)} °C)` : `${n0(k)} K`;
 }
 
-/** How good a charted star is for settling: its best world for this kind of settler, or none. */
-function BestSite({ s, sys, thread, measure }: { s: GameState; sys: StarSystem; thread: ThreadId; measure: ThreadId }) {
-  let best: { b: Body; v: SiteValue } | null = null;
-  for (const id of sys.bodies) {
-    const b = s.bodies[id];
-    if (!b || canSettle(s, b, thread)) continue;
-    const v = siteValue(s, b, measure);
-    if (!best || v.score > best.v.score) best = { b, v };
+/** The four needs a place can meet, in the order of the settle sorts: livable, power, matter, lasting. */
+const NEEDS: { thread: ThreadId; icon: IconName; what: string }[] = [
+  { thread: 'kin', icon: 'kin', what: 'Kin: livable ground and room without domes' },
+  { thread: 'echoes', icon: 'echoes', what: 'Echoes and the Chorus: power' },
+  { thread: 'lattice', icon: 'lattice', what: 'The Lattice: matter' },
+  { thread: 'coldminds', icon: 'coldminds', what: 'Coldminds: time before the world falls into its star' },
+];
+
+type StarSites = Partial<Record<ThreadId, { b: Body; v: SiteValue }>>;
+
+/** A charted star's best world for each kind of settler (none where they cannot settle). */
+function starSites(s: GameState, sys: StarSystem): StarSites {
+  const out: StarSites = {};
+  for (const n of NEEDS) {
+    for (const id of sys.bodies) {
+      const b = s.bodies[id];
+      if (!b || canSettle(s, b, n.thread)) continue;
+      const v = siteValue(s, b, n.thread);
+      if (!out[n.thread] || v.score > out[n.thread]!.v.score) out[n.thread] = { b, v };
+    }
   }
-  const who = THREAD_DEFS[thread].name;
-  if (!best) {
-    return (
-      <span class="faint" style={{ fontSize: '11px', marginLeft: '6px' }} data-tip={`Nowhere here that ${who} could settle.`}>
-        · no site
-      </span>
-    );
-  }
-  const dying = /freezing|cooling/.test(best.v.label);
-  const good = measure === 'kin' ? !dying && /room/.test(best.v.label) : best.v.score > 0;
+  return out;
+}
+
+/** How suitable a charted star is for each kind of settler: one short figure per need. */
+function SiteStrip({ s, sites, best, mine }: { s: GameState; sites: StarSites; best: Partial<Record<ThreadId, number>>; mine: ThreadId | null }) {
   return (
-    <span class={`mono ${dying ? 'warn' : good ? 'good' : 'faint'}`} style={{ fontSize: '11px', marginLeft: '6px' }} data-tip={`The best place here for ${who}: ${best.b.name} (${bodyKindName(s, best.b)}).\n${best.v.tip}`}>
-      · {best.v.label}
-    </span>
+    <div class="row wrap" style={{ gap: '10px', fontSize: '11px', marginTop: '1px', flexBasis: '100%', paddingLeft: '24px' }}>
+      {NEEDS.map((n) => {
+        const x = sites[n.thread];
+        const own = mine === n.thread || (mine === 'chorus' && n.thread === 'echoes');
+        if (!x) {
+          return (
+            <span key={n.thread} class="faint" style={{ opacity: own ? 1 : 0.8 }} data-tip={`${n.what}. Nowhere here they could settle.`}>
+              <Icon name={n.icon} /> none
+            </span>
+          );
+        }
+        const label = x.v.label;
+        const dying = /freezing|cooling/.test(label);
+        const short =
+          n.thread === 'kin'
+            ? dying ? (/cooling/.test(label) ? 'cooling' : 'freezing') : /room/.test(label) ? `${label.match(/(\d+) room/)?.[1] ?? ''} room` : 'domes'
+            : n.thread === 'coldminds'
+              ? label.replace(/^lasts /, '').replace(/ years?$/, '').replace('never falls in', '∞')
+              : (label.match(/[\d,.]+/)?.[0] ?? label);
+        // the best of the stars listed here, for this need (for Kin: room to live without domes)
+        const top = n.thread === 'kin' ? !dying && /room/.test(label) : (best[n.thread] ?? 0) > 0 && x.v.score >= 0.75 * best[n.thread]!;
+        return (
+          <span key={n.thread} class={`mono ${dying ? 'warn' : top ? 'good' : 'faint'}`} style={own ? { fontWeight: 600 } : undefined} data-tip={`${n.what}. The best place here: ${x.b.name} (${bodyKindName(s, x.b)}), ${label}.\n${x.v.tip}`}>
+            <Icon name={n.icon} /> {short}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -942,6 +974,14 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
       .sort((a, b) => (surveyor ? Number(s.civ.known[a.sys.id] === 2) - Number(s.civ.known[b.sys.id] === 2) : 0) || a.ly - b.ly)
       .slice(0, 10),
   ];
+  // how suitable each charted star nearby is for each kind of settler, and the best of them
+  const destSites: Record<string, StarSites> = {};
+  const destBest: Partial<Record<ThreadId, number>> = {};
+  for (const d of dests) {
+    if (s.civ.known[d.sys.id] !== 2) continue;
+    const sites = (destSites[d.sys.id] = starSites(s, d.sys));
+    for (const n of NEEDS) destBest[n.thread] = Math.max(destBest[n.thread] ?? 0, sites[n.thread]?.v.score ?? 0);
+  }
   const settleDef = settler ? SHIP_BY_ID[settler.cls] : null;
   // settlers are ranked for their own kind unless the player picks another measure
   const [settleSort, setSettleSort] = useState<SettleSort>('auto');
@@ -1129,18 +1169,19 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               )}
               <div class="list">
                 {dests.map(({ sys, ly }) => (
-                  <div key={sys.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, sys.id, 'move')) && sfx('select')}>
+                  <div key={sys.id} class="list-item" style={{ flexWrap: 'wrap' }} onClick={() => act((g) => orderFleet(g, f.id, sys.id, 'move')) && sfx('select')}>
                     <Icon name={primaryIcon(sys.primary.kind)} />
                     <span class="grow">
                       {sys.name}
                       {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                       {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip="A swarm is feeding there. It goes for most ships that stop at its star, where we have no settlement to fight beside them: a probe rarely comes back, and warships beat off only small swarms.">swarm</span>}
-                      {s.civ.known[sys.id] !== 2 ? <span class="faint" style={{ fontSize: '11px' }}> unsurveyed</span> : <BestSite s={s} sys={sys} thread={settleDef?.settles?.thread ?? 'kin'} measure={measure} />}
+                      {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '11px' }}> unsurveyed</span>}
                     </span>
                     <span class="mono faint" style={{ fontSize: '11px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>
                       {formatDistance(ly)} · {tripLabel(s, ly, mods)} · {n0(launchCost(s, f, ly, mods))}
                       <Icon name="energy" />
                     </span>
+                    {s.civ.known[sys.id] === 2 && <SiteStrip s={s} sites={destSites[sys.id]} best={destBest} mine={settleDef?.settles?.thread ?? null} />}
                   </div>
                 ))}
               </div>
