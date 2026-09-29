@@ -1,5 +1,5 @@
 import { SHIP_BY_ID } from '../../game/data/ships';
-import { formatYears, turnsUntil } from '../../game/eras';
+import { formatYears } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
 import { project, type Projection } from '../../game/sim/projection';
 import { setDormant, setPace, longSleep } from '../../game/sim/actions';
@@ -11,7 +11,7 @@ import type { IconName } from '../icons';
 import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
 import { goToColony, goToFleet } from '../screens/Lists';
 import { isIdleFleet } from '../../game/sim/fleets';
-import { flareClock, flareStop } from '../../game/sim/flare';
+import { flareClock, flareStop, turnsUntilYears } from '../../game/sim/flare';
 import { thermalRGB } from '../../render/shaders/bodies';
 import { ShipPrompt, shipPrompt } from './ShipPrompt';
 import { doEndTurn } from '../turnflow';
@@ -113,9 +113,10 @@ function BottomLeft({ s }: { s: GameState }) {
         shown.map((f) => {
           // turns at the pace you have chosen (the Tide figure too, when they differ)
           const due = isFinite(f.dueYears) && s.era !== 'dark';
-          const turns = due ? turnsUntil(s.era, s.years, f.dueYears, s.settings.length, s.civ.pace, 5000) : Infinity;
-          const tideTurns = due && s.civ.pace !== 0 ? turnsUntil(s.era, s.years, f.dueYears, s.settings.length, 0, 5000) : turns;
-          const tip = isFinite(turns) ? `${f.text}\n~${turns} turns at this pace${tideTurns !== turns && isFinite(tideTurns) ? ` (~${tideTurns} at the Tide)` : ''}.` : f.text;
+          // (as they will really fall: a flare's own clock and its first moment shorten them)
+          const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : Infinity;
+          const tideTurns = due && s.civ.pace !== 0 ? turnsUntilYears(s, f.dueYears, 0, 5000) : turns;
+          const tip = isFinite(turns) ? `${f.text}\n~${turns} turn${turns === 1 ? '' : 's'} at this pace${tideTurns !== turns && isFinite(tideTurns) ? ` (~${tideTurns} at the Tide)` : ''}.` : f.text;
           return (
             <div
               key={f.uid}
@@ -135,7 +136,7 @@ function BottomLeft({ s }: { s: GameState }) {
                 <div class="t">{f.title}</div>
                 <div class="faint" style={{ fontSize: '11px' }}>
                   {isFinite(f.dueYears) ? `in ${formatYears(f.dueYears - s.years)}` : 'now'}
-                  {isFinite(turns) ? ` · ~${turns} turns` : ''}
+                  {isFinite(turns) ? ` · ~${turns} turn${turns === 1 ? '' : 's'}` : ''}
                 </div>
               </div>
               <button

@@ -3,7 +3,8 @@ import { residentsOf } from './homes';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
-import { formatDistance, stepTime } from '../eras';
+import { formatDistance } from '../eras';
+import { stepTurns } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
 import { colonies, distLy, eraIndex, log, swarmSeenAt, uid, withRng } from './util';
@@ -31,18 +32,14 @@ export function launchCost(state: GameState, f: Fleet, ly: number, mods: Mods): 
 export function travelEstimate(state: GameState, ly: number, mods: Mods, pace = state.civ.pace): { turns: number; years: number } {
   const years = ly > 0 ? ly / mods.speed : 0;
   if (ly <= 0) return { turns: 1, years };
-  let y = state.years;
-  let eta = state.eta;
   let covered = 0;
-  for (let n = 1; n <= 999; n++) {
-    const step = stepTime(state.era, y, eta, pace, state.settings.length);
-    if (!isFinite(step.turnLength)) return { turns: n, years };
-    covered += mods.speed * step.turnLength;
-    if (covered >= ly) return { turns: n, years };
-    y = step.years;
-    eta = step.eta;
-  }
-  return { turns: 999, years };
+  // the turns as they will really fall: a flare's own clock and its first moment shorten them
+  const turns = stepTurns(state, pace, 999, (len) => {
+    if (!isFinite(len)) return true;
+    covered += mods.speed * len;
+    return covered >= ly;
+  });
+  return { turns: isFinite(turns) ? turns : 999, years };
 }
 
 /** How many turns a trip takes at the current pace (see travelEstimate). */

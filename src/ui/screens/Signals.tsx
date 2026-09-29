@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
-import { formatDistance, formatYears, logTurnLength, turnsUntil } from '../../game/eras';
-import { turnStep } from '../../game/sim/flare';
+import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
+import { turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { answerSignal, askForAid, devour, makeGesture, seize, sendAid } from '../../game/sim/actions';
 import { ASK_COOLDOWN, askBlocked } from '../../game/sim/survivors';
 import { canConverse, voiceClock } from '../../game/sim/signals';
@@ -151,7 +151,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                             const blocked = askBlocked(s, sv);
                             const cap = capital(s);
                             const d = cap ? distLy(s.systems[cap.systemId], s.systems[sv.homeSystemId]) : 0;
-                            const turns = isFinite(s.years) ? turnsUntil(s.era, s.years, s.years + 2 * d, s.settings.length, s.civ.pace) : 0;
+                            const turns = isFinite(s.years) ? turnsUntilYears(s, s.years + 2 * d, s.civ.pace) : 0;
                             const trip = d > 0 ? `${formatYears(2 * d)}${isFinite(turns) ? `, about ${turns} turn${turns === 1 ? '' : 's'} at your pace` : ''}` : 'no time';
                             const inFlight = s.signals.find((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null);
                             return (

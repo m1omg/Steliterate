@@ -1,6 +1,7 @@
 import { ERA_BY_ID, formatYears, turnsUntil } from '../eras';
 import { nextStellarChange } from '../physics';
 import type { Forecast, GameState } from '../types';
+import { turnsUntilYears } from './flare';
 import { colonies, protonFateKnown } from './util';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
@@ -8,7 +9,7 @@ import { colonies, protonFateKnown } from './util';
 
 export function forecastTurns(state: GameState, f: Forecast): number {
   if (state.era === 'dark') return Infinity;
-  return turnsUntil(state.era, state.years, f.dueYears, state.settings.length, 0);
+  return turnsUntilYears(state, f.dueYears, 0);
 }
 
 export function updateForecasts(state: GameState) {

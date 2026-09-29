@@ -111,6 +111,36 @@ export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
   return { years: end, eta: eta(end), turnLength: end - state.years };
 }
 
+/**
+ * The coming turns as they will really fall at this pace (turnStep, one after another): pinned
+ * to a flare while we keep time with one, and stopping when a settled star begins its own (which
+ * this assumes is let pass). `each` sees every turn and returns true once it has seen enough;
+ * the result is that turn's number, or Infinity. Estimates only: the state is not changed.
+ */
+export function stepTurns(state: GameState, pace: number, maxTurns: number, each: (turnLength: number, endYears: number) => boolean): number {
+  const sim: GameState = { ...state, civ: { ...state.civ, flags: { ...state.civ.flags } } };
+  for (let n = 1; n <= maxTurns; n++) {
+    const step = turnStep(sim, pace);
+    if (each(step.turnLength, step.years)) return n;
+    if (!isFinite(step.years)) return Infinity;
+    sim.years = step.years;
+    sim.eta = step.eta;
+    const f = sim.civ.flags;
+    if (f.flare_until && sim.years >= f.flare_until) {
+      delete f.flare_until;
+      delete f.flare_step;
+    }
+  }
+  return Infinity;
+}
+
+/** Turns until `target` years at this pace, counted as they will really fall (see stepTurns). */
+export function turnsUntilYears(state: GameState, target: number, pace = state.civ.pace, maxTurns = 400): number {
+  if (!isFinite(target)) return Infinity;
+  if (target <= state.years) return 0;
+  return stepTurns(state, pace, maxTurns, (_len, end) => end >= target);
+}
+
 /** What a flare does to one world: its temperatures before and during. */
 export function flareHeat(state: GameState, b: Body): { before: ReturnType<typeof bodyClimate>; during: ReturnType<typeof bodyClimate>; ratio: number } {
   const p = state.systems[b.systemId].primary;
