@@ -188,3 +188,10 @@ belongs to another organization.
   turn lasted 753 million years). Forecasts, trip estimates and a message's round trip now count
   the turns as they will fall: the flare's six, and the stop when a settled star begins to flare.
   "~1 turn" in the singular. (123/300: estimates only, all 300 games identical.)
+- `1a72718` **Worlds named for the heat they are in.** A flare heats an ice world to 435–1,219 K;
+  its panel still said "Ice world" and "ice on the night side" with that side above boiling. The
+  water line now follows the temperatures shown (steam even on the night side, or a sea left
+  there; an ice shell or icy rubble only while even the warmest ground is below freezing), and an
+  ice world or ice-shelled ocean with no ice left is a Steam world, Thawed ocean or Hot sea, as is
+  an eyeball world boiled to steam. In 40 games the water line or the name disagreed with the
+  temperatures 22,647 times; now never. (123/300: display only, all 300 games identical.)
