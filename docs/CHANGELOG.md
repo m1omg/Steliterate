@@ -230,3 +230,9 @@ belongs to another organization.
   longer a swarm has fed at its star: dull pitted oxide, a haze on giants, a tint on belt rocks.
   While a swarm feeds there, each world it eats has harvesters circling low over it, sparks where
   they cut in, and a stream of motes carrying the harvest to the swarm's cloud. Rendering only.
+- **Recorded music for every age, and swarm plates** (Krea). Tracks for the title, the Black Hole
+  Age and the Dark (ElevenLabs Music v2.5, made to loop by `tools/music/loop-track.py`) replace the
+  synthesised fallbacks; the procedural score still covers any track that fails to load. The
+  Hunger's panel shows a plate: a swarm stripping a world, or a tamed one at work (Nano Banana Pro,
+  graded by `tools/process-art.mjs`). The Krea balance ran out before the plates for the other
+  civilizations' six ways of life.

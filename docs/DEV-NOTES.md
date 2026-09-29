@@ -160,6 +160,21 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   D A Bm F#m G D G A, out-of-key energy, per-cycle RMS, and a spectrogram PNG.
 - **Existing tracks** (ElevenLabs Music v2.5 via Krea, `force_instrumental`): Dusk −12.7 LUFS,
   Degenerate −14.7 LUFS, 48 kHz, 192 kbps.
+- **Title, Black Hole Age and Dark** (29 Sep; same model, 180 s asked, `force_instrumental`), made
+  to loop with `tools/music/loop-track.py` (`pip install miniaudio numpy lameenc`; no ffmpeg
+  needed): it trims the fade-in and fade-out, crossfades the end into the start (equal power; 4, 6
+  and 8 s), sets the level (RMS −15, −18.7, −20.4 dBFS) and encodes 192 kbps, 48 kHz. Their joins
+  match to 0.85–0.91 (spectral similarity of the last and first two seconds). They came out in
+  F♯ minor, around B, and on a drone on A♯ (the synth score's keys are A minor, C♯ Phrygian and
+  A minor; it is silent while a track plays). The prompts, in short: title, "dark ambient
+  synthwave, about 74 BPM, worn analog pad over a sub drone, a slow glassy arpeggio with a slight
+  bit-crushed 12-bit texture like a 1991 Amiga soundtrack, a distant gated snare now and then,
+  tape hiss, melancholic but warm and inviting"; Black Hole Age, "very slow, about 50 BPM,
+  detuned sawtooth pads through a nearly closed filter, a sub-bass drone, rare distant bells, a
+  deep boom every half minute, faint crackle and bit-crushed grain, no drums or arpeggio"; Dark,
+  "a single low drone, a lonely distant tone every so often into a very long reverb, a trace of
+  bit-crushed noise, long near-silences, no pulse". Each ends: "one steady texture, no build-up
+  and no ending, so it loops seamlessly; no vocals, no choir".
 - **If Krea is topped up,** an AI Canon prompt could start from: "Instrumental. A slow, dark
   ambient synthwave arrangement of Johann Pachelbel's Canon in D (public domain) in the spirit of
   a 1991 Amiga tracker module: lo-fi sampled string pads and choir swells, notes swelling in and

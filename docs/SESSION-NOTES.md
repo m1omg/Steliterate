@@ -35,9 +35,12 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger
   fed). Stage 1 done (`b950f24`, `5d53356`: flare pacing, white dwarfs, cold worlds, relic engine,
   rust explained, look before settling, nearby site ratings, the charter-book message). Next, as
-  asked: rust and swarm feeding visible on the planets themselves; then Krea (the player topped
-  it up: "use it for everything"): recorded tracks for the menu, Black Hole Age and Dark (now
-  synth fallbacks), alien graphics, swarm and rust art.
+  asked: rust and swarm feeding visible on the planets themselves (done, `07be759`); then Krea
+  (the player topped it up: "use it for everything"): recorded tracks for the title, Black Hole
+  Age and Dark, and two swarm plates (done). **Pending, when Krea is topped up again:** one plate
+  per way of life of the other civilizations (garden, upload, chorus, dormant, lattice, fork),
+  about 111 units each at 2K with Nano Banana Pro (the balance was 0 after the tracks and the
+  two plates); prompts in the style of the others (painterly, dark, grainy, no text).
 - **Two sessions (28–29 Sep):** a second session reviewed the game on `claude/epic-wozniak-lyhulf`
   (stacked on `0815fe4`) and, at the player's word, fast-forwarded `claude/lucid-newton-30cbpk`
   to it. Pull before pushing; whichever session works next continues on that branch.

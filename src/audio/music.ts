@@ -146,12 +146,12 @@ export type TrackKey = StyleKey | 'canon';
 
 /** Tracks the player can pick by hand (Settings); null = automatic, following the age and the moment. */
 export const TRACK_CHOICES: { key: TrackKey; name: string }[] = [
-  { key: 'menu', name: 'Title (synthesised)' },
+  { key: 'menu', name: 'Title' },
   { key: 'dusk', name: 'The Long Dusk' },
   { key: 'canon', name: 'Canon in D (the Degenerate Age’s overture)' },
   { key: 'degenerate', name: 'The Degenerate Age' },
-  { key: 'blackhole', name: 'The Black Hole Age (synthesised)' },
-  { key: 'dark', name: 'The Dark (synthesised)' },
+  { key: 'blackhole', name: 'The Black Hole Age' },
+  { key: 'dark', name: 'The Dark' },
 ];
 
 // Recorded tracks (generated instrumentals). Where one is missing or fails to load, the

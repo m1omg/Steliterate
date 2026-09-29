@@ -29,6 +29,8 @@ const GRADE = {
   hunger: NEUTRAL,
   sleepers: COLD,
   survivor: NEUTRAL,
+  swarm: NEUTRAL,
+  swarm_tamed: COLD,
   // survey discoveries
   vent_life: COLD,
   fossil_reactor: NEUTRAL,

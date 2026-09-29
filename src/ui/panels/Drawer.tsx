@@ -1210,6 +1210,7 @@ function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
         </div>
       </div>
       <div class="drawer-body scroll">
+        <div class="drawer-plate" style={{ backgroundImage: `url(art/${sw.tamed ? 'swarm_tamed' : 'swarm'}.webp)` }} role="img" aria-label={sw.tamed ? 'A tamed swarm working in ordered rings' : 'A swarm stripping a world'} />
         <p class="flavor" style={{ margin: '0 0 8px' }}>
           {sw.tamed
             ? 'Its makers’ commands still work. For now it does what we say.'
