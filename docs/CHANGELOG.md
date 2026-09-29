@@ -134,8 +134,9 @@ https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Balance figures are "games th
 
 ## The review of 28 Sep (new session)
 
-On branch `claude/epic-wozniak-lyhulf`, stacked on `0815fe4`: not deployed (Pages builds `main`
-and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organization.
+On branch `claude/epic-wozniak-lyhulf`, stacked on `0815fe4`. Live since the player had
+`claude/lucid-newton-30cbpk` (which Pages builds, with `main`) fast-forwarded to it; the artifact
+belongs to another organization.
 
 - `231b7fb` **Handoff.** `npm run savecompat` with a 71-turn save regenerated from `551fb1a` in
   `tools/saves/`; `CLAUDE.md`; notes and design brought up to date. No game code.
@@ -182,3 +183,8 @@ and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organizat
   swarms we can see, and a ship's list of destinations marks them. (123/300; 900 games: 357,
   against 327. Blind to swarms, the autoplayer gets 116/300 and loses 0.31 ships a game; steering
   around them, 0.15.)
+- `a26c428` **Forecasts count the flare clock's turns.** Under a flare clock a forecast counted
+  turns at the pace as if the clock were not there ("in 4.5 billion years · ~1 turns" while each
+  turn lasted 753 million years). Forecasts, trip estimates and a message's round trip now count
+  the turns as they will fall: the flare's six, and the stop when a settled star begins to flare.
+  "~1 turn" in the singular. (123/300: estimates only, all 300 games identical.)
