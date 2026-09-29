@@ -11,7 +11,7 @@ import { queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
-import { flareData, scorched, turnStep } from './flare';
+import { flareData, livedShare, scorched, turnStep } from './flare';
 import { firstSwarm, swarmsHunt, updateHunger } from './hunger';
 import { updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
@@ -151,7 +151,7 @@ export function endTurn(state: GameState): TurnResult {
   // (a turn stops when one of our stars begins its last flare; see flare.ts)
   const step = turnStep(state);
   const logL = logTurnLength(step);
-  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: Math.pow(10, -civ.pace), mods };
+  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, civ.pace, step), mods };
 
   // ------------------------------------------------ 1. economy
   let eIn = 0;

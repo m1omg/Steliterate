@@ -32,7 +32,12 @@ export function primaryTemperature(p: Primary, years: number, era: EraId): numbe
     case 'dark_star':
       return 4200;
     case 'white_dwarf':
-      if (era === 'dusk') return p.whiteAt && years - p.whiteAt < 5e9 ? 12000 : 3800;
+      if (era === 'dusk') {
+        // from its light and its size (Stefan–Boltzmann): about the Earth's, larger for a lighter
+        // dwarf (R ∝ M^-1/3); about 12,000 K at the collapse, a few hundred K trillions of years on
+        const r = 0.0125 * Math.cbrt(0.6 / Math.min(1.4, Math.max(0.08, p.mass)));
+        return 5772 * Math.pow(primaryLuminosity(p, years, era) / (r * r), 0.25);
+      }
       return p.halo && years < 1e25 ? 63 : 20;
     case 'black_dwarf':
       return p.rekindle ? 300 : 5;
@@ -43,6 +48,31 @@ export function primaryTemperature(p: Primary, years: number, era: EraId): numbe
     default:
       return 0;
   }
+}
+
+/** A young white dwarf's light to collectors (red dwarf = 1): 0.45 at the collapse, fading as it cools. */
+const YOUNG_LIGHT = 0.45;
+const YOUNG_TAU = 1e9;
+/** No white dwarf in the Dusk gives less (a faint warmth near the end of its cooling). */
+const COLD_LIGHT = 0.02;
+
+/**
+ * A white dwarf's light to collectors, averaged over the ages from `a` to `b` years after its
+ * collapse (the value at `a` when b ≤ a): 0.45 × (1 + t / 1 Gyr)^-1.2, never below 0.02.
+ */
+export function youngDwarfLight(a: number, b: number): number {
+  const at = (t: number) => Math.max(COLD_LIGHT, YOUNG_LIGHT * Math.pow(1 + Math.max(0, t) / YOUNG_TAU, -1.2));
+  if (!(b > a)) return at(a);
+  // where it reaches the floor, and the integral of the fading part (a power law)
+  const floorAt = YOUNG_TAU * (Math.pow(YOUNG_LIGHT / COLD_LIGHT, 1 / 1.2) - 1);
+  const F = (t: number) => ((-YOUNG_LIGHT * YOUNG_TAU) / 0.2) * Math.pow(1 + t / YOUNG_TAU, -0.2);
+  const lo = Math.max(0, a);
+  let sum = Math.max(0, lo - a) * at(0);
+  const mid = Math.min(b, floorAt);
+  if (mid > lo) sum += F(mid) - F(lo);
+  const floorFrom = Math.max(lo, floorAt);
+  if (b > floorFrom) sum += COLD_LIGHT * (b - floorFrom);
+  return sum / (b - a);
 }
 
 /** The light a primary supplies, era-normalised, for the turn [years, years + L]. */
@@ -64,9 +94,9 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
     }
     case 'white_dwarf': {
       if (era === 'dusk') {
-        const age = p.whiteAt ? years - p.whiteAt : 1e13;
-        const young = p.whiteAt ? 0.45 * Math.pow(1 + Math.max(0, age) / 1e9, -1.2) : 0;
-        return { light: Math.max(0.02, young), label: p.whiteAt ? 'White dwarf, newly collapsed and cooling' : 'Old white dwarf, nearly cold', temperatureK: primaryTemperature(p, years, era), alive: null };
+        // averaged over the turn: a long one right after the collapse gets only its share of the glow
+        const light = p.whiteAt ? youngDwarfLight(years - p.whiteAt, years - p.whiteAt + Math.max(0, L)) : 0.02;
+        return { light, label: p.whiteAt ? 'White dwarf, newly collapsed and cooling' : 'Old white dwarf, nearly cold', temperatureK: primaryTemperature(p, years, era), alive: null };
       }
       if (era === 'degenerate') {
         const e = Math.log10(Math.max(1, years));
@@ -447,9 +477,9 @@ export function sunGone(state: GameState, b: Body): boolean {
  * the Dusk wears on (Magnetic Shields and Orbital Lamps slow it, overdrive hastens it).
  * `freeze`: without a sun a living world freezes within a few turns, 5% a turn (half that with
  * a Core Stimulator), unless Orbital Lamps keep it warm: after the Last Light, on a world cast
- * out of its system, or, for life on the surface, once its own star has died and even its
- * warmest ground has cooled below FROZEN_K (see sunGone; life under an ice shell, kept warm by
- * tides, lasts until the Last Light).
+ * out of its system, or, for life on the surface, once even its warmest ground is below FROZEN_K:
+ * its star dead and cooled (see sunGone), or too faint to warm it (no new game has such a world;
+ * older saves may). Life under an ice shell, kept warm by tides, lasts until the Last Light.
  */
 export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = b.colonyId ? state.colonies[b.colonyId] : undefined): { decline: number; freeze: number } {
   if (b.dissolved || b.vitality <= 0) return { decline: 0, freeze: 0 };
@@ -470,9 +500,30 @@ export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = 
     const cl = bodyClimate(state, b);
     return (cl.day ?? cl.mean) < FROZEN_K;
   };
-  const sunless = state.era !== 'dusk' || !!b.rogue || (sunGone(state, b) && cold());
+  const sunless = state.era !== 'dusk' || !!b.rogue || (SURFACE_LIFE.includes(b.kind) && cold());
   const freeze = sunless && !lampsOver(state, b, c) ? 0.05 * (core ? 0.5 : 1) : 0;
   return { decline, freeze };
+}
+
+/**
+ * A new galaxy's living worlds that are frozen hard even on their warmest ground (a dim red
+ * dwarf's outer band of orbits, a super-Earth brought close to a long-dead white dwarf) start as
+ * what they are: dead ice, or bare rock. Deterministic and after generation, so the galaxy's
+ * random draws, and everything else in it, stay as they were.
+ */
+export function frozenFromTheStart(state: GameState): number {
+  let n = 0;
+  for (const b of Object.values(state.bodies)) {
+    if (!SURFACE_LIFE.includes(b.kind) || b.vitality <= 0 || b.traits.includes('homeworld')) continue;
+    const c = bodyClimate(state, b);
+    if ((c.day ?? c.mean) >= FROZEN_K) continue;
+    b.kind = (b.water ?? 0) >= 0.1 ? 'ice' : 'barren';
+    b.habitability = b.kind === 'ice' ? 0.05 : 0;
+    b.vitality = 0;
+    b.decline = 0;
+    n++;
+  }
+  return n;
 }
 
 /**

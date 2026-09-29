@@ -1,4 +1,5 @@
 import { generateWorld } from './gen';
+import { frozenFromTheStart } from './physics';
 import { createColony, newFleet } from './sim/fleets';
 import { updateForecasts } from './sim/forecast';
 import { log, savableName } from './sim/util';
@@ -19,6 +20,7 @@ export function newGame(partial: Partial<GameSettings> = {}): GameState {
   const settings: GameSettings = { ...DEFAULT_SETTINGS, ...partial };
   settings.civName = savableName(settings.civName);
   const state = generateWorld(settings);
+  frozenFromTheStart(state);
   const home = state.systems[state.civ.homeSystemId];
   const hw = home.bodies.map((id) => state.bodies[id]).find((b) => b.traits.includes('homeworld'))!;
   const c = createColony(state, hw, { kin: 8 });

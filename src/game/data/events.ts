@@ -3,6 +3,7 @@ import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
 import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '../sim/util';
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, digShelters, keepTimeWithFlare, sheltersNeeded } from '../sim/flare';
+import { drawSwarmTo } from '../sim/hunger';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -551,7 +552,7 @@ export const EVENTS: EventDef[] = [
     art: 'ruins',
     text: (s, d) => `Beneath the ice of ${bodyById(s, d)?.name} lies an ancient reactor, shut down and sealed. Its fuel is still there.`,
     choices: [
-      { label: 'Restart it', hint: 'Energy +70. Its heat may be noticed.', run: (s, d, rng) => { energy(s, 70); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; if (rng.chance(0.3)) { const sys = b ? s.systems[b.systemId] : null; if (sys) sys.rust = Math.max(sys.rust ?? 0, 0.1); } } },
+      { label: 'Restart it', hint: 'Energy +70. Its heat may be noticed.', run: (s, d, rng) => { energy(s, 70); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; if (rng.chance(0.3)) { const sys = b ? s.systems[b.systemId] : null; const from = sys ? drawSwarmTo(s, sys.id) : null; if (sys && from) log(s, `The swarm at ${from.name} has turned toward the warmth of the engine at ${sys.name}.`, 'bad', sys.id); } } },
       { label: 'Take it apart', hint: 'Matter +55.', run: (s, d) => { matter(s, 55); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; } },
     ],
   },

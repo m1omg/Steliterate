@@ -155,6 +155,11 @@ export function swarmsHunt(state: GameState, mods: Mods) {
   });
 }
 
+/** How far a swarm looks, and goes, for its next meal (ly). */
+export function swarmReach(state: GameState): number {
+  return rangeLy(state);
+}
+
 function rangeLy(state: GameState): number {
   return state.era === 'dusk' ? 90 : state.era === 'degenerate' ? 4e5 : 1e9;
 }
@@ -321,6 +326,35 @@ function moveSwarm(state: GameState, sw: Swarm, rand: () => number, blackout: nu
   sw.systemId = null;
   sw.traveled = 0;
   sw.distance = distLy(from, best);
+}
+
+/**
+ * Something warm has been noticed at a star (a restarted relic engine): the nearest awake,
+ * untamed swarm within reach that is not already travelling turns toward it. Returns its star, or
+ * null if none is near enough. Takes no random draw.
+ */
+export function drawSwarmTo(state: GameState, systemId: string): StarSystem | null {
+  const to = state.systems[systemId];
+  if (!to || to.gone) return null;
+  const R = rangeLy(state);
+  let best: Swarm | null = null;
+  let bestD = Infinity;
+  for (const sw of Object.values(state.swarms)) {
+    if (!sw.awake || sw.tamed || !sw.systemId || sw.systemId === to.id) continue;
+    const d = distLy(state.systems[sw.systemId], to);
+    if (d <= R && d < bestD) {
+      best = sw;
+      bestD = d;
+    }
+  }
+  if (!best) return null;
+  const from = state.systems[best.systemId!];
+  best.from = from.id;
+  best.to = to.id;
+  best.systemId = null;
+  best.traveled = 0;
+  best.distance = bestD;
+  return from;
 }
 
 /** A Swarm Tender at the swarm's system calms and takes command of it. */

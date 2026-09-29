@@ -1,5 +1,5 @@
 import { logTurnLength } from '../eras';
-import { turnStep } from './flare';
+import { livedShare, turnStep } from './flare';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
@@ -31,7 +31,7 @@ export function project(state: GameState, paceOverride?: number): Projection {
   const pace = paceOverride ?? state.civ.pace;
   const step = turnStep(state, pace);
   const logL = logTurnLength(step);
-  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: Math.pow(10, -pace), mods };
+  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), mods };
   const p: Projection = {
     ctx,
     turnYears: step.turnLength,
@@ -64,7 +64,7 @@ export function project(state: GameState, paceOverride?: number): Projection {
   p.accord -= latticeAlienation(state, mods);
   p.researchDraw = researchDraw(state, p.insight);
   p.energyOut += p.researchDraw;
-  for (const t of THREADS) p.strain[t] = strainFor(t, logL, mods, -pace);
+  for (const t of THREADS) p.strain[t] = strainFor(t, logL, mods, Math.log10(ctx.paceFactor));
   return p;
 }
 

@@ -12,6 +12,12 @@ export function forecastTurns(state: GameState, f: Forecast): number {
   return turnsUntilYears(state, f.dueYears, 0);
 }
 
+/** Turns until `at` at the Tide, for deciding which warnings to show: in the Dusk as the turns will really fall (a flare's clock, its stops). */
+function tideTurnsTo(state: GameState, at: number, horizon: number): number {
+  if (state.era === 'dusk') return turnsUntilYears(state, at, 0, horizon + 1);
+  return turnsUntil(state.era === 'dark' ? 'blackhole' : state.era, state.years, at, state.settings.length);
+}
+
 export function updateForecasts(state: GameState) {
   const out: Forecast[] = [];
   const add = (f: Omit<Forecast, 'uid'>) => out.push({ ...f, uid: `${f.kind}:${f.systemId ?? ''}:${f.bodyId ?? ''}` });
@@ -39,7 +45,7 @@ export function updateForecasts(state: GameState) {
       systemId: sid,
       severity: ch.what.includes('brightens') ? 'boon' : 'danger',
     };
-    if (turnsUntil(state.era === 'dark' ? 'blackhole' : state.era, years, ch.at, state.settings.length) <= horizon) add(f);
+    if (tideTurnsTo(state, ch.at, horizon) <= horizon) add(f);
   }
 
   // worlds that will fall into dead stars
@@ -49,7 +55,7 @@ export function updateForecasts(state: GameState) {
     const sys = state.systems[b.systemId];
     const dead = ['white_dwarf', 'black_dwarf', 'neutron_star'].includes(sys.primary.kind) || state.era !== 'dusk';
     if (!dead || b.inspiralAt < years) continue;
-    if (turnsUntil(state.era === 'dark' ? 'blackhole' : state.era, years, b.inspiralAt, state.settings.length) > horizon) continue;
+    if (tideTurnsTo(state, b.inspiralAt, horizon) > horizon) continue;
     add({
       kind: 'inspiral',
       title: `${b.name} will reach its dead star’s tidal limit`,

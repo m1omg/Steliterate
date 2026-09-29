@@ -112,6 +112,22 @@ export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
 }
 
 /**
+ * The share of a Tide turn the coming turn lives, which its yields scale by: 10^-pace, as the
+ * calendar has it, except at a flare, which sets the length of the turn whatever the pace (so a
+ * slower pace would buy more without more time passing). While we keep time with a flare each of
+ * its turns is lived in full: one Tide turn. A turn cut short when a star begins to flare pays as
+ * one Tide turn at most. (Paying it only for the time it covers would still charge a whole turn's
+ * upkeep, which does not shrink with a short turn, for a fraction of its income.)
+ */
+export function livedShare(state: GameState, pace = state.civ.pace, step: TimeStep = turnStep(state, pace)): number {
+  const share = Math.pow(10, -pace);
+  if (state.era !== 'dusk' || !isFinite(step.turnLength)) return share;
+  if (keepingTime(state)) return 1;
+  const planned = stepTime(state.era, state.years, state.eta, pace, state.settings.length).turnLength;
+  return planned > 0 && step.turnLength < planned ? Math.min(share, 1) : share;
+}
+
+/**
  * The coming turns as they will really fall at this pace (turnStep, one after another): pinned
  * to a flare while we keep time with one, and stopping when a settled star begins its own (which
  * this assumes is let pass). `each` sees every turn and returns true once it has seen enough;
