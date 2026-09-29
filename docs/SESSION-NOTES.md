@@ -31,14 +31,13 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
-  freeze"), `7b52ab4`. Surface life whose star is dead freezes once even its warmest ground is
-  below 195 K; Orbital Lamps save it. A star-only rule was wrong twice over: 1,802 living
-  ice-shelled oceans a hundred games orbit brown dwarfs or nothing (life under the ice, warmed
-  by tides), and early in the Dusk (turns from 40 years, growing about 27% a turn) a fresh
-  white dwarf keeps a close world hot for up to about 30 turns. **Still open, discuss first:**
-  living worlds are placed in a fixed band of orbits whatever their red dwarf's brightness, so
-  about 7 a game start at 82–195 K (Frozen worlds, alive, their star burning); changing that
-  changes every galaxy.
+  freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
+- **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger
+  fed). Stage 1 done (`b950f24`, `5d53356`: flare pacing, white dwarfs, cold worlds, relic engine,
+  rust explained, look before settling, nearby site ratings, the charter-book message). Next, as
+  asked: rust and swarm feeding visible on the planets themselves; then Krea (the player topped
+  it up: "use it for everything"): recorded tracks for the menu, Black Hole Age and Dark (now
+  synth fallbacks), alien graphics, swarm and rust art.
 - **Two sessions (28–29 Sep):** a second session reviewed the game on `claude/epic-wozniak-lyhulf`
   (stacked on `0815fe4`) and, at the player's word, fast-forwarded `claude/lucid-newton-30cbpk`
   to it. Pull before pushing; whichever session works next continues on that branch.

@@ -208,3 +208,21 @@ belongs to another organization.
   terrestrial world or super-Earth is a Frozen world. The autoplayer lights Lamps over a
   freezing settlement. (122/300; 900 games: 358, against 357; 85 of 900 outcomes change, both
   ways. The refactor into `vitalityLoss` alone left all 300 games identical.)
+- `b950f24` **Flare pacing, young white dwarfs, cold worlds, the relic engine.** Flare turns paid by
+  the pace chosen though the flare sets their length (1,696 matter at Slow ×100 against 14 at the
+  Tide; the turn that stops for a flare paid 24,534 at Slow ×1000): a flare-clock turn now pays one
+  Tide turn whatever the pace, and the stop turn one at most. A white dwarf's light is averaged
+  over the turn (the first turn after a collapse got the newborn glow for 2.5 trillion years), and
+  its temperature follows its light (12,000 K at the collapse, about 600 K a trillion years on,
+  where it read 3,800 K). Living worlds generated below 195 K (about 10 a game) start as ice or
+  rock, with no random draw, so seeds are otherwise unchanged; any surface life that cold freezes.
+  A restarted relic engine can draw the nearest swarm (it only left a rust mark). (133/300; 900
+  games: 390, against 358. Reverting the pace and light fixes together gives 123/300; either alone
+  132. The autoplayer used to chase the flare bonus: 84 of 390 flare turns at a Slow pace in 40
+  games, now 16.)
+- `5d53356` **Look before settling.** Where to settle: a Look button turns the view to a site
+  without sending the ship, and each site warns of a swarm feeding there or within its reach; a
+  freezing or cooling world no longer ranks by the room it is about to lose. The Nearby list rates
+  each charted star's best site. Rust is explained (tooltip, manual); a boiled-dry eyeball world
+  is a Scorched world; a charter book full at nine no longer says it is full "until the Assembly
+  of Threads".

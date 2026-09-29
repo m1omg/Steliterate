@@ -215,9 +215,10 @@ the disagreement as real model uncertainty.
 * **Living worlds die without a sun.** Every body has water coverage and a temperature
   (equilibrium from its primary's luminosity, internal heat, a greenhouse term; tidally
   locked worlds have a day and a night value). After the Last Light, once a world goes rogue,
-  or once its own star has died and faded (even its warmest ground below 195 K; a white dwarf
+  or once even its warmest ground is below 195 K (its own star dead and faded: a white dwarf
   just collapsed is hot, and early in the Dusk it keeps a close world warm for many short
-  turns), an unwarmed living world freezes within a few turns and becomes an ice world
+  turns; no world is generated alive that cold), an unwarmed living world freezes within a few
+  turns and becomes an ice world
   (enough water) or bare rock, and the game says so. Life under an ice shell, warmed by tides,
   lasts until the Last Light. Orbital Lamps (fusion lamps in orbit) keep one alive and hold it
   at about 285 K; a Core Stimulator slows the cooling.
