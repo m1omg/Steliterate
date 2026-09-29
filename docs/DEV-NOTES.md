@@ -115,6 +115,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **`src/game/physics.ts`:** `insolation(state, body)` (inverse square vs the standard orbit;
   burning stars 0.031 AU × (M/0.1)^1.15, remnants the system's middle orbit; 0.05–2.5). Blue
   dwarf `sourceLight` follows the flare's share of the turn.
+  - `vitalityLoss(state, body, colony)`: what `declineWorlds` (`turn.ts`) takes each turn,
+    `decline` (settled worlds) and `freeze` (5%, half with a Core Stimulator, none under
+    Orbital Lamps): after the Dusk, when rogue, or `sunGone` (surface life, star not
+    `isStarLike`) and the warmest ground below `FROZEN_K` (195 K). `turnsToFreeze` steps it
+    as the turn does, in floating point, for the panel and the Record.
+  - `bodyClimate` holds a world under Orbital Lamps at `LAMP_K` (285 K) at least
+    (`starClimate` is the star's part); a floor, so it never adds to a flare.
 - **`src/game/sim/economy.ts`:** Kin surface room is 0 when scorched and ≥5 when warm-thawed;
   Solar Arrays × insolation.
 - **`src/audio/music.ts`:**
@@ -181,3 +188,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `3c56967` | 123 | swarms catch ships; 900 games: 357 (blind to swarms: 116/300) |
 | `a26c428` | 123 | estimates only: all 300 games identical to `3c56967` |
 | `1a72718` | 123 | display only: all 300 games identical |
+| `7b52ab4` | 122 | living worlds freeze when their own star dies; 900 games: 358, against 357; 85 of 900 outcomes change, both ways |

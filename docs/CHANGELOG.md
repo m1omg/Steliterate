@@ -195,3 +195,16 @@ belongs to another organization.
   ice world or ice-shelled ocean with no ice left is a Steam world, Thawed ocean or Hot sea, as is
   an eyeball world boiled to steam. In 40 games the water line or the name disagreed with the
   temperatures 22,647 times; now never. (123/300: display only, all 300 games identical.)
+- `7b52ab4` **Living worlds freeze when their own star dies.** In the Dusk a living world froze
+  only at the Last Light, so one whose star had died kept its life and its room for Kin at
+  8–19 K (about 33 a game, for about 22 turns each). Now surface life whose star is dead begins
+  to freeze once even its warmest ground is below 195 K: 5% of its vitality a turn, half with
+  a Core Stimulator, none under Orbital Lamps. A white dwarf just collapsed is hot, and early
+  in the Dusk it keeps a close world warm for up to about 30 turns; late in the Dusk its worlds
+  begin to freeze within a turn. Life under an ice shell lasts until the Last Light, as before.
+  The collapse forecast and the Record name our worlds that will freeze, the Record again when
+  one begins to, and the panel shows Cooling, then Freezing with the turns left. Orbital Lamps
+  hold their world at 285 K, so a world they keep alive no longer reads 8–19 K; a frozen
+  terrestrial world or super-Earth is a Frozen world. The autoplayer lights Lamps over a
+  freezing settlement. (122/300; 900 games: 358, against 357; 85 of 900 outcomes change, both
+  ways. The refactor into `vitalityLoss` alone left all 300 games identical.)
