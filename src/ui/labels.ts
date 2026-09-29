@@ -113,6 +113,12 @@ export function bodyKindNote(s: GameState, b: Body): string {
   return bodyKindName(s, b) !== BODY_NAME[b.kind] ? 'Once an eyeball world. Its star no longer warms it, and the sea on its day side has frozen over; what warmth is left comes from inside.' : '';
 }
 
+/** What the Deep is for: its panel shows no habitability, room or matter, which reads as empty. */
+export function deepNote(s: GameState): string {
+  const industry = s.era === 'dusk' && !s.civ.techs.includes('orbital_industry') ? ' and Orbital Industry' : '';
+  return `Orbital space around the star: no ground, water or rock, so nothing to live on or mine. Orbital Collectors work here, and some structures exist only here (the Dyson Swarm, the Stellar Lifter; later most power from dead stars and black holes): any settlement of ours in this system can build them. Minds on substrate live here as well as anywhere; Kin need Habitat Domes${industry}.`;
+}
+
 /**
  * In the Degenerate Age a collision star is the brightest thing for light-years around: every
  * list of places puts the ones on our map first.

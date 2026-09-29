@@ -171,3 +171,7 @@ and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organizat
 - `dde4e58` **Last transmissions always reach us.** A fading civilization we know sends its last
   transmission even if we cannot follow its clock: it is an archive, not a conversation (the
   player's choice). About 150 more insight a game in the harness. (111/300; 900 games: 327.)
+- **What the Deep is for.** Its panel read as empty (0% habitable, no room, no matter). It now
+  says what it holds: orbit (collectors, and the Dyson Swarm, Stellar Lifter and later power
+  sources that only live there, buildable by any settlement in the system), and minds on
+  substrate; Kin in domes (in the Dusk after Orbital Industry). The manual explains it too.

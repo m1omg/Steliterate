@@ -38,7 +38,7 @@ import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { FOCUS, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, isBeacon, BEACON_TIP } from '../labels';
+import { FOCUS, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP } from '../labels';
 import { act, engine, following, notify, rev, selection, targeting, view } from '../store';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
@@ -373,6 +373,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
         <WorldStrip s={s} sys={sys} current={b.id} />
       </div>
       <div class="drawer-body scroll">
+        {surveyed && b.kind === 'deep' && <p class="flavor">{deepNote(s)}</p>}
         {!surveyed ? (
           <p class="flavor">Not yet surveyed. Send any ship to learn what is here.</p>
         ) : (
