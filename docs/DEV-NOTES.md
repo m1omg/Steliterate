@@ -172,3 +172,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `a5debf5` | 121 | each crossing's protocols for that crossing only |
 | `fa5737d` | 121 | despair once a turn |
 | `eebeefa` | 107 | other civilizations fade on time; 900 games: 325, against 358 without it and 341 at `0815fe4` |
+| `dde4e58` | 111 | last transmissions always reach us; 900 games: 327 |

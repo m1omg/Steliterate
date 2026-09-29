@@ -30,6 +30,9 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 ## Open threads and pending decisions
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
+- **Two sessions (28–29 Sep):** a second session reviewed the game on `claude/epic-wozniak-lyhulf`
+  (stacked on `0815fe4`) and, at the player's word, fast-forwarded `claude/lucid-newton-30cbpk`
+  to it. Pull before pushing; whichever session works next continues on that branch.
 - **Checked in a fresh container (28 Sep, new session)** at `1e8a321` and again at `0815fe4`:
   typecheck; build (the same hashes as the live site); the full playtest (ALL CHECKS PASSED,
   30/144 Hz parity within 2e-15); the harness (114/300 both times, game for game identical);
@@ -52,6 +55,9 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 
 ## Found in the review of 28 Sep (verified)
 
+Decided (29 Sep): a fading civilization's last transmission always reaches us, as an archive that
+needs no conversation (the player chose it over losing it when we cannot follow their clock).
+
 All fixed, a commit each (see the CHANGELOG, "The review of 28 Sep"): the flare clock's seventh
 turn; the crossing protocols (Last Horizon Protocols did nothing, the others stacked); leptonic
 vaults on a black hole's planet; despair counted twice at the Last Horizon; the Long Sleep
@@ -60,11 +66,7 @@ inside a system; η in capitalised text; "__inf" names; the harness's flags.
 
 Still open:
 
-- **Other civilizations' last transmission (the player's call):** since they fade on time, many
-  now fade while we cannot follow their clock, and their last transmission is lost (181 insight
-  a game, against 252). Sending it always, as a one-way archive that needs no conversation, is
-  a one-line change (331 insight a game, 327/900; the conservative version gives 325/900).
-- **Balance after the fixes:** 325/900 survive, against 341 at `0815fe4` (within noise); the
+- **Balance after the fixes:** 327/900 survive, against 341 at `0815fe4` (within noise); the
   fading fix alone measured −33 in 900 games against the other fixes, cause not found.
 - **Harness blind spots** (also in DEV-NOTES): every victory is The Long Thought, and the
   autoplayer never tries the other Great Works, raids, asks for help, seizes or devours.
