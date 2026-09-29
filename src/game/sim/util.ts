@@ -24,6 +24,35 @@ export function swarmSeenAt(state: GameState, systemId: string): boolean {
   return !!state.civ.known[systemId] && Object.values(state.swarms).some((w) => w.systemId === systemId && w.awake && !w.tamed);
 }
 
+/**
+ * The nearest awake, untamed swarm we can see from a star, as the map shows them (at a star we
+ * know, or on its way between stars), and how far it is; null if we see none.
+ */
+export function nearestSwarmSeen(state: GameState, systemId: string): { ly: number; at: StarSystem | null; size: number } | null {
+  const here = state.systems[systemId];
+  if (!here) return null;
+  let best: { ly: number; at: StarSystem | null; size: number } | null = null;
+  for (const w of Object.values(state.swarms)) {
+    if (!w.awake || w.tamed) continue;
+    let p: { x: number; y: number; z: number } | null = null;
+    let at: StarSystem | null = null;
+    if (w.systemId) {
+      at = state.systems[w.systemId] ?? null;
+      if (!at || !state.civ.known[at.id]) continue;
+      p = at.phys;
+    } else if (w.from && w.to && state.systems[w.from] && state.systems[w.to]) {
+      const a = state.systems[w.from].phys;
+      const b = state.systems[w.to].phys;
+      const u = w.distance > 0 ? Math.min(1, w.traveled / w.distance) : 0;
+      p = { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, z: a.z + (b.z - a.z) * u };
+    }
+    if (!p) continue;
+    const ly = Math.hypot(here.phys.x - p.x, here.phys.y - p.y, here.phys.z - p.z);
+    if (!best || ly < best.ly) best = { ly, at, size: w.size };
+  }
+  return best;
+}
+
 /** A name the save format can keep: "__inf" and "__-inf" stand for ±Infinity there (save.ts). */
 export function savableName(name: string): string {
   return name === '__inf' || name === '__-inf' ? name.slice(1) : name;

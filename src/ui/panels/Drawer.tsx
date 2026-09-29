@@ -32,7 +32,8 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, distLy, hasCharter, hasTech, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { capital, distLy, hasCharter, hasTech, nearestSwarmSeen, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { swarmReach } from '../../game/sim/hunger';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
@@ -43,7 +44,7 @@ import { act, engine, following, notify, rev, selection, targeting, view } from 
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem } from '../screens/Lists';
 import { loreView } from '../screens/Story';
-import { siteValue } from '../../game/sim/sites';
+import { siteValue, type SiteValue } from '../../game/sim/sites';
 import { residentsOf, survivorPeople, survivorWorld } from '../../game/sim/homes';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
@@ -173,7 +174,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
         <div class="row wrap" style={{ marginTop: '6px' }}>
           <span class="chip"><Icon name={primaryIcon(sys.primary.kind)} /> {PRIMARY_NAME[sys.primary.kind]}</span>
           {known < 2 && <span class="chip warn">{known === 1 ? 'not surveyed' : 'unknown'}</span>}
-          {(sys.rust ?? 0) > 0.05 && <span class="chip danger">rust {pct(sys.rust ?? 0)}</span>}
+          {(sys.rust ?? 0) > 0.05 && <span class="chip danger" data-tip={rustTip(s, sys)}>rust {pct(sys.rust ?? 0)}</span>}
           {sys.beacon && <span class="chip neon">decoy beacon</span>}
           {sys.gone && <span class="chip danger">gone</span>}
         </div>
@@ -307,6 +308,66 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
 function kelvin(k: number): string {
   const c = k - 273.15;
   return c > -120 && c < 200 ? `${n0(k)} K (${c > 0 ? '+' : ''}${n0(c)} °C)` : `${n0(k)} K`;
+}
+
+/** How good a charted star is for settling: its best world for this kind of settler, or none. */
+function BestSite({ s, sys, thread, measure }: { s: GameState; sys: StarSystem; thread: ThreadId; measure: ThreadId }) {
+  let best: { b: Body; v: SiteValue } | null = null;
+  for (const id of sys.bodies) {
+    const b = s.bodies[id];
+    if (!b || canSettle(s, b, thread)) continue;
+    const v = siteValue(s, b, measure);
+    if (!best || v.score > best.v.score) best = { b, v };
+  }
+  const who = THREAD_DEFS[thread].name;
+  if (!best) {
+    return (
+      <span class="faint" style={{ fontSize: '11px', marginLeft: '6px' }} data-tip={`Nowhere here that ${who} could settle.`}>
+        · no site
+      </span>
+    );
+  }
+  const dying = /freezing|cooling/.test(best.v.label);
+  const good = measure === 'kin' ? !dying && /room/.test(best.v.label) : best.v.score > 0;
+  return (
+    <span class={`mono ${dying ? 'warn' : good ? 'good' : 'faint'}`} style={{ fontSize: '11px', marginLeft: '6px' }} data-tip={`The best place here for ${who}: ${best.b.name} (${bodyKindName(s, best.b)}).\n${best.v.tip}`}>
+      · {best.v.label}
+    </span>
+  );
+}
+
+/** Turn the view to a world (inside its system) without changing what is selected. */
+function lookAtWorld(systemId: string, bodyId: string) {
+  sfx('select');
+  view.value = 'system';
+  engine()?.showSystem(systemId, bodyId);
+}
+
+/** A warning on a place we might send people: a swarm feeding there, or one within its reach. */
+function SwarmNear({ s, systemId }: { s: GameState; systemId: string }) {
+  const near = nearestSwarmSeen(s, systemId);
+  const reach = swarmReach(s);
+  // (after the Dusk a swarm's reach is the whole galaxy; only the ones near enough to care matter)
+  if (!near || near.ly > Math.min(reach, 90)) return null;
+  if (near.ly < 0.5 && near.at?.id === systemId) {
+    return (
+      <span class="chip danger" style={{ marginLeft: '6px' }} data-tip="A swarm is feeding at this star. It goes for settlements here every turn until they drive it off, and for ships that stop here: a new settlement needs defences from the start.">
+        swarm here
+      </span>
+    );
+  }
+  const where = near.at ? `at ${near.at.name}` : 'on its way between stars';
+  return (
+    <span class={`chip ${near.ly <= 25 ? 'danger' : 'warn'}`} style={{ marginLeft: '6px' }} data-tip={`The nearest swarm we can see is ${formatDistance(near.ly)} away, ${where}: within its reach (a swarm looks up to ${formatDistance(reach)} away for its next meal). Swarms go for warmth and matter, the nearer the likelier, so a new settlement here may draw it.`}>
+      swarm {formatDistance(near.ly)}
+    </span>
+  );
+}
+
+/** What a star's rust means, and whether the Hunger is still at it. */
+function rustTip(s: GameState, sys: StarSystem): string {
+  const feeding = Object.values(s.swarms).some((w) => w.systemId === sys.id && w.awake && !w.tamed);
+  return `The Hunger's rust: how much a swarm has fed here. It builds while one eats (4% a turn, more for a bigger swarm) and never fades. The rust itself does no harm; the harm is what was eaten, the worlds' mineral richness and hydrogen, which never grow back. ${feeding ? 'A swarm is feeding here now.' : 'No swarm is feeding here now.'}`;
 }
 
 /** A living world without a sun: cooling as its dead star fades, or freezing, and how long it has. */
@@ -1038,7 +1099,11 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                       <span class="grow">
                         {isBeacon(s, s.systems[b.systemId]) && <span class="chip boon" style={{ marginRight: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                         {b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
+                        <SwarmNear s={s} systemId={b.systemId} />
                       </span>
+                      <button class="btn small ghost" style={{ padding: '1px 5px' }} onClick={(e) => { e.stopPropagation(); lookAtWorld(b.systemId, b.id); }} data-tip="Look at this world before sending the ship: the view turns to it, inside its system, and the ship waits for your order. Its star's panel (and the galaxy map) show what is around it.">
+                        <Icon name="focus" />
+                      </button>
                       <span class={`mono ${settleDef?.settles?.thread === 'kin' && hab >= LIVING_WORLD ? 'good' : ''}`} style={{ fontSize: '11px' }} data-tip={v.tip}>
                         {v.label}
                       </span>
@@ -1070,7 +1135,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                       {sys.name}
                       {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                       {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip="A swarm is feeding there. It goes for most ships that stop at its star, where we have no settlement to fight beside them: a probe rarely comes back, and warships beat off only small swarms.">swarm</span>}
-                      {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '11px' }}> unsurveyed</span>}
+                      {s.civ.known[sys.id] !== 2 ? <span class="faint" style={{ fontSize: '11px' }}> unsurveyed</span> : <BestSite s={s} sys={sys} thread={settleDef?.settles?.thread ?? 'kin'} measure={measure} />}
                     </span>
                     <span class="mono faint" style={{ fontSize: '11px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>
                       {formatDistance(ly)} · {tripLabel(s, ly, mods)} · {n0(launchCost(s, f, ly, mods))}

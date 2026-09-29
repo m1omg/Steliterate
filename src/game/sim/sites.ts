@@ -1,6 +1,6 @@
 import { STRUCTURES, structureLabel, type StructureDef } from '../data/structures';
 import { formatYears } from '../eras';
-import { bodyClimate, hawkingLight, insolation, sourceLight } from '../physics';
+import { bodyClimate, hawkingLight, insolation, lampsOver, sourceLight, sunGone, turnsToFreeze } from '../physics';
 import type { Body, GameState, ThreadId } from '../types';
 import { turnStep } from './flare';
 import { naturalKinRoom } from './fleets';
@@ -100,10 +100,21 @@ export function siteValue(state: GameState, b: Body, thread: ThreadId): SiteValu
     case 'kin': {
       const hab = b.habitability * b.vitality;
       const room = b.kind === 'gas_giant' ? 0 : naturalKinRoom(b);
+      const tip = 'Kin need livable ground: habitability × vitality, and room for Kin without building anything.';
+      // a world whose star has died is losing its life, and its room with it: no place to count on
+      const freezeIn = turnsToFreeze(state, b);
+      const cooling = !isFinite(freezeIn) && state.era === 'dusk' && sunGone(state, b) && !lampsOver(state, b);
+      if (room > 0 && (isFinite(freezeIn) || cooling)) {
+        return {
+          score: hab,
+          label: `${Math.round(hab * 100)}% · ${isFinite(freezeIn) ? `freezing, ${freezeIn} t` : 'cooling'}`,
+          tip: `${tip}\n${isFinite(freezeIn) ? `It is freezing: its ${room} room for Kin goes with its life in about ${freezeIn} turn${freezeIn === 1 ? '' : 's'}` : `Its star is dead: as the last light fades it will freeze, and its ${room} room for Kin with it`}, unless Orbital Lamps keep it warm.`,
+        };
+      }
       return {
         score: room * 10 + hab,
         label: room > 0 ? `${Math.round(hab * 100)}% · ${room} room` : `${Math.round(hab * 100)}% · domes`,
-        tip: 'Kin need livable ground: habitability × vitality, and room for Kin without building anything.',
+        tip,
       };
     }
     case 'echoes':

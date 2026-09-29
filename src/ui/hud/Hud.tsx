@@ -213,12 +213,12 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           </span>
         </div>
         {flare && (
-          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`We are keeping time with ${flare.system}'s last flare: each turn is a sixth of it, lived in full. Your pace takes over again when the star collapses into a white dwarf.`}>
+          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`We are keeping time with ${flare.system}'s last flare: each turn is a sixth of it, lived in full, and pays as one turn at the Tide whatever the pace. Your pace takes over again when the star collapses into a white dwarf.`}>
             Flare clock · turn {flare.turn} of {flare.of}
           </div>
         )}
         {flaring && (
-          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`${flaring.name} is about to leave the main sequence and begin its last flare. The turn stops the moment it does, whatever the pace (a slower one cannot take us past it), so we can decide how to meet the flare.`}>
+          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`${flaring.name} is about to leave the main sequence and begin its last flare. The turn stops the moment it does, whatever the pace (a slower one cannot take us past it, and the short turn pays as one turn at the Tide at most), so we can decide how to meet the flare.`}>
             Turn stops · {flaring.name} begins to flare
           </div>
         )}

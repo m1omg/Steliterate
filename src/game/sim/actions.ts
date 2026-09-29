@@ -214,8 +214,11 @@ export function charterAvailable(state: GameState, id: string): string | null {
   if (d.requiresCharter && !hasCharter(state, d.requiresCharter)) return `Requires ${CHARTER_BY_ID[d.requiresCharter]?.name}.`;
   if (d.excludes?.some((x) => hasCharter(state, x))) return 'Contradicts an existing charter.';
   if (state.civ.accord < d.cost) return `Needs ${d.cost} Accord.`;
-  const limit = hasTech(state, 'assembly_of_threads') ? 9 : 5;
-  if (state.civ.charters.filter((c) => !CHARTER_BY_ID[c]?.dark).length >= limit && !d.dark) return 'The book is full until the Assembly of Threads.';
+  const assembly = hasTech(state, 'assembly_of_threads');
+  const limit = assembly ? 9 : 5;
+  if (state.civ.charters.filter((c) => !CHARTER_BY_ID[c]?.dark).length >= limit && !d.dark) {
+    return assembly ? 'The book is full: nine laws, the most even the Assembly of Threads allows.' : 'The book is full: five laws, until the Assembly of Threads makes room for nine.';
+  }
   return null;
 }
 
