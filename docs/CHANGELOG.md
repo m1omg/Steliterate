@@ -171,11 +171,11 @@ and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organizat
 - `dde4e58` **Last transmissions always reach us.** A fading civilization we know sends its last
   transmission even if we cannot follow its clock: it is an archive, not a conversation (the
   player's choice). About 150 more insight a game in the harness. (111/300; 900 games: 327.)
-- **What the Deep is for.** Its panel read as empty (0% habitable, no room, no matter). It now
+- `b591f50` **What the Deep is for.** Its panel read as empty (0% habitable, no room, no matter). It now
   says what it holds: orbit (collectors, and the Dyson Swarm, Stellar Lifter and later power
   sources that only live there, buildable by any settlement in the system), and minds on
   substrate; Kin in domes (in the Dusk after Orbital Industry). The manual explains it too.
-- **Swarms catch ships.** A ship stopped at a star where a swarm is feeding, with no settlement
+- `3c56967` **Swarms catch ships.** A ship stopped at a star where a swarm is feeding, with no settlement
   of ours there, is attacked on 70% of turns (20% by a swarm still asleep, half that under
   Blackout). A warship may beat off a small swarm and salvage it; a probe caught by a grown one is
   lost, though its survey gets out first. Exploring probes and the autoplayer steer around the
