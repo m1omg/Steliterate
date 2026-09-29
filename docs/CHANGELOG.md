@@ -168,3 +168,6 @@ and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organizat
 - **Why pace stops mattering at a flare.** When a settled star is about to begin its last flare,
   the Pace panel says the turn stops then, whatever the pace (a slower one cannot take you past
   it); the manual says so too, and that the flare, not the pace, sets the length of its turns.
+- **Last transmissions always reach us.** A fading civilization we know sends its last
+  transmission even if we cannot follow its clock: it is an archive, not a conversation (the
+  player's choice). About 150 more insight a game in the harness. (111/300; 900 games: 327.)

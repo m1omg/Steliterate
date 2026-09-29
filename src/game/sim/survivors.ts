@@ -91,10 +91,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
           if (b) b.relic = { kind: 'tomb', state: sv.contact ? 'found' : 'hidden' };
         }
         if (!sv.contact) continue;
-        if (!talk) {
-          log(state, `${sv.name}’s lights have gone out. Whatever they said at the end, their clock and ours were too far apart for us to follow.`, 'bad', sv.homeSystemId);
-          continue;
-        }
+        // their last transmission is an archive, not a conversation: we can read it at our own pace
         sv.lastSent = state.turn;
         sendSignal(state, {
           from: sv.id,
