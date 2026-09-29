@@ -1,5 +1,5 @@
 import { ANOMALIES } from '../game/data/events';
-import { bodyClimate } from '../game/physics';
+import { FROZEN_K, SURFACE_LIFE, bodyClimate, isStarLike } from '../game/physics';
 import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
 import type { Body, BodyKind, Focus, GameState, PrimaryKind, StarSystem } from '../game/types';
 import type { IconName } from './icons';
@@ -92,17 +92,18 @@ export const WAY_NAME: Record<string, string> = {
 };
 
 /**
- * What kind of world a body is now. An eyeball world is one only while its star keeps a sea
- * liquid on its day side; once the star is dead it is simply frozen.
+ * What kind of world a body is now. A living world is named for its warmth only while it has
+ * some: once even its warmest ground is below FROZEN_K (its star dead, or too faint) it is
+ * simply a frozen world.
  */
 export function bodyKindName(s: GameState, b: Body): string {
   const sea = thawed(s, b);
   if (sea) return sea === 'warm' ? 'Thawed ocean' : 'Hot sea';
   const melt = waterChanged(s, b);
   if (melt) return melt === 'steam' ? 'Steam world' : melt === 'warm' ? 'Thawed ocean' : 'Hot sea';
-  if (b.kind === 'eyeball') {
+  if (SURFACE_LIFE.includes(b.kind)) {
     const c = bodyClimate(s, b);
-    if ((c.day ?? c.mean) < 195) return 'Frozen world';
+    if ((c.day ?? c.mean) < FROZEN_K) return 'Frozen world';
   }
   return BODY_NAME[b.kind];
 }
@@ -126,7 +127,7 @@ function waterChanged(s: GameState, b: Body): 'warm' | 'hot' | 'steam' | null {
 
 /** What a world was, for the notes on what it has become. */
 function onceWas(k: BodyKind): string {
-  const was: Partial<Record<BodyKind, string>> = { ice: 'an ice world', ocean_ice: 'an ice-shelled ocean', super_earth: 'a super-Earth', barren: 'bare rock' };
+  const was: Partial<Record<BodyKind, string>> = { eyeball: 'an eyeball world', ice: 'an ice world', ocean_ice: 'an ice-shelled ocean', super_earth: 'a super-Earth', barren: 'bare rock' };
   return was[k] ?? `a ${BODY_NAME[k].toLowerCase()}`;
 }
 
@@ -147,7 +148,10 @@ export function bodyKindNote(s: GameState, b: Body): string {
     if (melt !== 'steam') return `Once ${onceWas(b.kind)}. ${by} melted it into ${melt === 'warm' ? 'open ocean' : 'a hot, steaming sea'}.${again}`;
     return `Once ${onceWas(b.kind)}. ${by} boiled its ice into a sky of steam${night}.${again}`;
   }
-  return bodyKindName(s, b) !== BODY_NAME[b.kind] ? 'Once an eyeball world. Its star no longer warms it, and the sea on its day side has frozen over; what warmth is left comes from inside.' : '';
+  if (bodyKindName(s, b) !== 'Frozen world') return '';
+  const p = s.systems[b.systemId]?.primary;
+  const why = b.rogue ? 'It has no star' : !p || !isStarLike(p) ? 'Its star is dead' : 'Its star is too faint to warm it';
+  return `Once ${onceWas(b.kind)}. ${why}, and ${b.kind === 'eyeball' ? 'the sea on its day side has' : 'its seas have'} frozen over; what warmth is left comes from inside.`;
 }
 
 /** What the Deep is for: its panel shows no habitability, room or matter, which reads as empty. */

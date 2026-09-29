@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import { eraOver, logTurnLength } from '../eras';
-import { evolveUniverse, type EvolutionNote } from '../physics';
+import { SURFACE_LIFE, evolveUniverse, lampsOver, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { runCrossing } from './crossing';
@@ -76,27 +76,17 @@ function declineWorlds(state: GameState) {
   for (const b of Object.values(state.bodies)) {
     if (b.dissolved || b.vitality <= 0) continue;
     const c = byBody.get(b.id);
-    let mult = 1;
-    let warmed = false;
-    let core = false;
-    if (c) {
-      for (const [id, n] of Object.entries(c.structures)) {
-        const d = STRUCTURE_BY_ID[id];
-        if (!d || !n) continue;
-        if (d.declineMult) mult *= d.declineMult;
-        if (d.warms) warmed = true;
-        if (id === 'core_stimulator') core = true;
-      }
-      if (c.overdrive) mult *= 1.3;
+    const loss = vitalityLoss(state, b, c);
+    b.vitality = Math.max(0, b.vitality - loss.decline);
+    if (c && b.traits.includes('homeworld') && state.era === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
+    if (b.vitality > 0) b.vitality = Math.max(0, b.vitality - loss.freeze);
+    // one of ours begins to freeze, its dead star cooled at last: say so once (the Last Light
+    // says it for every world)
+    if (c && loss.freeze > 0 && b.vitality > 0 && state.era === 'dusk' && !b.rogue && !state.civ.flags[`frz_${b.id}`]) {
+      state.civ.flags[`frz_${b.id}`] = state.turn;
+      const n = turnsToFreeze(state, b, c);
+      log(state, `${b.name} has begun to freeze: its dead star no longer warms it. It dies in about ${n} turn${n === 1 ? '' : 's'} unless Orbital Lamps keep it warm.`, 'bad', b.systemId);
     }
-    if (c && b.decline > 0) {
-      const accel = state.era === 'dusk' ? Math.min(3, 1 + state.eraTurn * 0.02) : 3;
-      b.vitality = Math.max(0, b.vitality - b.decline * mult * accel);
-    }
-    if (c && b.traits.includes('homeworld') && state.era === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * (core ? 0.4 : 1));
-    // without a sun, a living world freezes within a few turns, unless someone keeps it warm
-    const sunless = state.era !== 'dusk' || !!b.rogue;
-    if (sunless && !warmed) b.vitality = Math.max(0, b.vitality - 0.05 * (core ? 0.5 : 1));
     if (b.vitality <= 0) worldDies(state, b);
   }
 }
@@ -122,7 +112,7 @@ function scorchWorlds(state: GameState, from: number, to: number) {
 
 /** A living world that has lost its warmth freezes, or dries to bare rock. */
 function worldDies(state: GameState, b: Body, scorched = false) {
-  if (!['eyeball', 'terran', 'super_earth'].includes(b.kind)) return;
+  if (!SURFACE_LIFE.includes(b.kind)) return;
   const was = b.kind;
   b.kind = !scorched && (b.water ?? 0) >= 0.1 ? 'ice' : 'barren';
   b.habitability = b.kind === 'ice' ? 0.05 : 0;
@@ -468,9 +458,17 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
       case 'blue':
         if (seen) log(state, `${sys.name} has left the main sequence. It is brightening into a blue dwarf, its final flare of life.`, mine ? 'good' : 'info', sys.id);
         break;
-      case 'white':
-        if (seen) log(state, `${sys.name} has collapsed into a white dwarf. Its light is going out.`, mine ? 'bad' : 'info', sys.id);
+      case 'white': {
+        if (!seen) break;
+        // our living worlds there will freeze as the light fades, unless something keeps them warm
+        const cold = colonies(state)
+          .filter((c) => c.systemId === sys.id)
+          .map((c) => state.bodies[c.bodyId])
+          .filter((b) => b && sunGone(state, b) && !lampsOver(state, b));
+        const warn = cold.length ? ` Whatever lives on ${cold.map((b) => b.name).join(' and ')} will freeze as it fades, unless Orbital Lamps keep it warm.` : '';
+        log(state, `${sys.name} has collapsed into a white dwarf. Its light is going out.${warn}`, mine ? 'bad' : 'info', sys.id);
         break;
+      }
       case 'collision':
         queueEvent(state, 'new_star', { systemId: sys.id });
         known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;

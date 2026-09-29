@@ -4,7 +4,7 @@ import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
 import { logTurnLength } from './eras';
 import { turnStep } from './sim/flare';
-import { sourceLight } from './physics';
+import { sourceLight, vitalityLoss } from './physics';
 import {
   answerEvent,
   answerSignal,
@@ -130,6 +130,8 @@ function planBuilds(state: GameState) {
       if (light > 0.3) plan.push('dyson_swarm', 'orbital_collector', 'ember_collector', 'solar_array');
       plan.push('disk_skimmer', 'accretion_engine', 'pulsar_brake', 'geothermal_tap', 'fusion_plant', 'decay_harvester');
     }
+    // its star has died: light Orbital Lamps while there is still life to keep
+    if (state.era === 'dusk' && b.vitality >= 0.2 && vitalityLoss(state, b, c).freeze > 0) plan.unshift('orbital_lamps');
     if (b.traits.includes('homeworld') && state.era === 'dusk') plan.push('mag_shield', 'comet_shepherd', 'core_stimulator');
     if (c.pops.kin >= capc.kin - 1 && state.era === 'dusk') plan.push('warrens', 'habitat_dome');
     if (hasTech(state, 'mind_substrate') && c.pops.echoes >= capc.echoes - 1) plan.push('substrate_core');

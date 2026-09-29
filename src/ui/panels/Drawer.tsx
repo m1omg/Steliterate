@@ -4,7 +4,7 @@ import { STRUCTURE_BY_ID, structureLabel } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
-import { bodyClimate, insolation, primaryTemperature, sourceLight, waterState } from '../../game/physics';
+import { FROZEN_K, bodyClimate, insolation, lampsOver, primaryTemperature, sourceLight, sunGone, turnsToFreeze, waterState } from '../../game/physics';
 import {
   absorb,
   buildableShips,
@@ -309,6 +309,27 @@ function kelvin(k: number): string {
   return c > -120 && c < 200 ? `${n0(k)} K (${c > 0 ? '+' : ''}${n0(c)} °C)` : `${n0(k)} K`;
 }
 
+/** A living world without a sun: cooling as its dead star fades, or freezing, and how long it has. */
+function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
+  const tip = `A living world whose star has died cools as the light fades. Once even its warmest ground is below ${FROZEN_K} K it freezes: 5% of its vitality a turn (half that with a Core Stimulator), and when none is left it is an ice world or bare rock. After the Last Light every living world freezes so, as does one cast out of its system. Orbital Lamps keep one warm and alive.`;
+  const n = turnsToFreeze(s, b, c);
+  if (isFinite(n)) {
+    return (
+      <>
+        <dt data-tip={tip}>Freezing</dt>
+        <dd class="mono bad" data-tip={tip}>{`dies in about ${n} turn${n === 1 ? '' : 's'}`}</dd>
+      </>
+    );
+  }
+  if (s.era !== 'dusk' || !sunGone(s, b) || lampsOver(s, b, c)) return null;
+  return (
+    <>
+      <dt data-tip={tip}>Cooling</dt>
+      <dd class="warn" data-tip={tip}>its star is dead</dd>
+    </>
+  );
+}
+
 /** Temperature and water rows for a world's key/value list. */
 function ClimateRows({ s, b }: { s: GameState; b: Body }) {
   if (b.kind === 'deep' || b.kind === 'gas_giant' || b.kind === 'ice_giant') return null;
@@ -318,7 +339,7 @@ function ClimateRows({ s, b }: { s: GameState; b: Body }) {
     <>
       <dt data-tip={tip}>Temperature</dt>
       <dd class="mono" data-tip={c.day !== undefined ? `Day side ${kelvin(c.day)}\nNight side ${kelvin(c.night!)}` : ''}>
-        {c.day !== undefined ? `${n0(c.night!)}–${n0(c.day)} K` : kelvin(c.mean)}
+        {c.day !== undefined && n0(c.day) !== n0(c.night!) ? `${n0(c.night!)}–${n0(c.day)} K` : kelvin(c.mean)}
       </dd>
       <dt>Water</dt>
       <dd style={{ fontSize: '12px' }}>{waterState(b, c)}</dd>
@@ -382,6 +403,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             <dd class="mono">{pct(b.habitability)}</dd>
             <dt>Vitality</dt>
             <dd class="mono">{pct(b.vitality)}</dd>
+            <FreezingRow s={s} b={b} />
             {b.kind !== 'deep' && b.kind !== 'gas_giant' && (
               <>
                 <dt data-tip="Kin the world holds by itself: about 12 × habitability × vitality, rounded down (a third of that on a rogue or feeding world). Below about 8% habitability × vitality there is no room, and Kin can live here only in domes, warrens or a Garden Ark.">Room for Kin</dt>
@@ -574,6 +596,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                     <span class="mono">{pct(b.vitality)}</span>
                   </div>
                 </dd>
+                <FreezingRow s={s} b={b} c={c} />
                 <ClimateRows s={s} b={b} />
                 <dt>Core heat</dt>
                 <dd class="mono">{pct(b.coreHeat)}</dd>

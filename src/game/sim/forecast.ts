@@ -1,5 +1,5 @@
 import { ERA_BY_ID, formatYears, turnsUntil } from '../eras';
-import { nextStellarChange } from '../physics';
+import { SURFACE_LIFE, lampsOver, nextStellarChange } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnsUntilYears } from './flare';
 import { colonies, protonFateKnown } from './util';
@@ -24,12 +24,17 @@ export function updateForecasts(state: GameState) {
     const sys = state.systems[sid];
     const ch = nextStellarChange(sys, years);
     if (!ch || !isFinite(ch.at)) continue;
+    // a collapsing star leaves our living worlds there to freeze
+    const freezing = sys.primary.kind === 'blue_dwarf'
+      ? colonies(state).filter((c) => c.systemId === sid).map((c) => state.bodies[c.bodyId]).filter((b) => b && SURFACE_LIFE.includes(b.kind) && b.vitality > 0 && !lampsOver(state, b))
+      : [];
+    const then = freezing.length ? ` Then whatever still lives on ${freezing.map((b) => b.name).join(' and ')} will freeze as its light fades, unless Orbital Lamps keep it warm.` : '';
     const f: Omit<Forecast, 'uid'> = {
       kind: 'star',
       title: `${sys.name} ${ch.what}`,
       text: ch.what.includes('brightens')
         ? `In about ${formatYears(ch.at - years)}. For a few billion years it will be over a hundred times brighter, hot enough to boil the seas of its worlds.`
-        : `In about ${formatYears(ch.at - years)}.`,
+        : `In about ${formatYears(ch.at - years)}.${then}`,
       dueYears: ch.at,
       systemId: sid,
       severity: ch.what.includes('brightens') ? 'boon' : 'danger',

@@ -1,5 +1,6 @@
+import { STRUCTURE_BY_ID } from './data/structures';
 import { hawkingTime } from './gen';
-import type { Body, EraId, GameState, Primary, StarSystem } from './types';
+import type { Body, Colony, EraId, GameState, Primary, StarSystem } from './types';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
 // share of a structure's nominal capture a source supports per Tide turn. Physical ratios
@@ -415,8 +416,91 @@ export interface BodyClimate {
   night?: number;
 }
 
+/** Orbital Lamps hold the world they light at about this temperature, day side and night side. */
+export const LAMP_K = 285;
+
+/** Does something in orbit keep this world warm (Orbital Lamps over its settlement)? */
+export function lampsOver(state: GameState, b: Body, c: Colony | undefined = b.colonyId ? state.colonies[b.colonyId] : undefined): boolean {
+  return !!c && Object.entries(c.structures).some(([id, n]) => n > 0 && !!STRUCTURE_BY_ID[id]?.warms);
+}
+
+/** The kinds with life on their surface: they freeze, or dry to bare rock, when they die. */
+export const SURFACE_LIFE: Body['kind'][] = ['eyeball', 'terran', 'super_earth'];
+
+/** Below this even a world's warmest ground is frozen hard: a frozen world, whatever it was. */
+export const FROZEN_K = 195;
+
+/**
+ * Surface life whose star has died (a remnant, or nothing): its light is fading, and once even
+ * its warmest ground is below FROZEN_K the world begins to freeze (vitalityLoss). A white dwarf
+ * just collapsed is still hot, and early in the Dusk, when turns are short, it keeps a close
+ * world warm for many of them.
+ */
+export function sunGone(state: GameState, b: Body): boolean {
+  if (!SURFACE_LIFE.includes(b.kind) || b.dissolved || b.vitality <= 0) return false;
+  const p = state.systems[b.systemId]?.primary;
+  return !p || !isStarLike(p);
+}
+
+/**
+ * Vitality a living world loses this turn. `decline`: a settled world's slow dying, sooner as
+ * the Dusk wears on (Magnetic Shields and Orbital Lamps slow it, overdrive hastens it).
+ * `freeze`: without a sun a living world freezes within a few turns, 5% a turn (half that with
+ * a Core Stimulator), unless Orbital Lamps keep it warm: after the Last Light, on a world cast
+ * out of its system, or, for life on the surface, once its own star has died and even its
+ * warmest ground has cooled below FROZEN_K (see sunGone; life under an ice shell, kept warm by
+ * tides, lasts until the Last Light).
+ */
+export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = b.colonyId ? state.colonies[b.colonyId] : undefined): { decline: number; freeze: number } {
+  if (b.dissolved || b.vitality <= 0) return { decline: 0, freeze: 0 };
+  let mult = 1;
+  let core = false;
+  if (c) {
+    for (const [id, n] of Object.entries(c.structures)) {
+      const d = STRUCTURE_BY_ID[id];
+      if (!d || !n) continue;
+      if (d.declineMult) mult *= d.declineMult;
+      if (id === 'core_stimulator') core = true;
+    }
+    if (c.overdrive) mult *= 1.3;
+  }
+  const accel = state.era === 'dusk' ? Math.min(3, 1 + state.eraTurn * 0.02) : 3;
+  const decline = c && b.decline > 0 ? b.decline * mult * accel : 0;
+  const cold = () => {
+    const cl = bodyClimate(state, b);
+    return (cl.day ?? cl.mean) < FROZEN_K;
+  };
+  const sunless = state.era !== 'dusk' || !!b.rogue || (sunGone(state, b) && cold());
+  const freeze = sunless && !lampsOver(state, b, c) ? 0.05 * (core ? 0.5 : 1) : 0;
+  return { decline, freeze };
+}
+
+/**
+ * Turns until a freezing world dies, stepped as declineWorlds takes them (decline, then cold,
+ * in floating point), at this turn's losses; Infinity if it is not freezing.
+ */
+export function turnsToFreeze(state: GameState, b: Body, c?: Colony): number {
+  const loss = vitalityLoss(state, b, c);
+  if (loss.freeze <= 0) return Infinity;
+  let v = b.vitality;
+  for (let n = 1; n <= 1000; n++) {
+    v = Math.max(0, v - loss.decline);
+    if (v > 0) v = Math.max(0, v - loss.freeze);
+    if (v <= 0) return n;
+  }
+  return Infinity;
+}
+
 /** Surface temperature: starlight (equilibrium, albedo 0.3), the world's own heat, a little greenhouse. */
 export function bodyClimate(state: GameState, b: Body): BodyClimate {
+  const c = starClimate(state, b);
+  if (!lampsOver(state, b)) return c;
+  // the lamps stand in for the sun where it falls short (they are no help against a flare)
+  const lit = (k: number) => Math.max(k, LAMP_K);
+  return c.day !== undefined ? { mean: lit(c.mean), day: lit(c.day), night: lit(c.night!) } : { mean: lit(c.mean) };
+}
+
+function starClimate(state: GameState, b: Body): BodyClimate {
   const sys = state.systems[b.systemId];
   const L = b.rogue ? 0 : primaryLuminosity(sys.primary, state.years, state.era);
   const a = Math.max(0.003, b.orbitAU);
