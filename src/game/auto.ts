@@ -29,7 +29,7 @@ import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle } from './sim/fleets';
-import { colonies, distLy, eraIndex, hasTech, threadTotals } from './sim/util';
+import { colonies, distLy, eraIndex, hasTech, swarmSeenAt, threadTotals } from './sim/util';
 import type { Body, Colony, GameState, ThreadId } from './types';
 
 // An autoplayer. It powers the balance harness, and can later back an in-game advisor.
@@ -199,7 +199,7 @@ function planFleets(state: GameState) {
       const target = Object.entries(civ.known)
         .filter(([, k]) => k === 1)
         .map(([id]) => state.systems[id])
-        .filter((s) => !s.gone && !Object.values(state.fleets).some((o) => o.to === s.id))
+        .filter((s) => !s.gone && !swarmSeenAt(state, s.id) && !Object.values(state.fleets).some((o) => o.to === s.id))
         .sort((a, b) => distLy(here, a) - distLy(here, b))[0];
       if (target && civ.energy > 20) orderFleet(state, f.id, target.id, 'survey');
     }

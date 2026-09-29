@@ -32,7 +32,7 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, distLy, hasCharter, hasTech, popsOf } from '../../game/sim/util';
+import { capital, distLy, hasCharter, hasTech, popsOf, swarmSeenAt } from '../../game/sim/util';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
@@ -1046,6 +1046,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                     <span class="grow">
                       {sys.name}
                       {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
+                      {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip="A swarm is feeding there. It goes for most ships that stop at its star, where we have no settlement to fight beside them: a probe rarely comes back, and warships beat off only small swarms.">swarm</span>}
                       {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '11px' }}> unsurveyed</span>}
                     </span>
                     <span class="mono faint" style={{ fontSize: '11px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>

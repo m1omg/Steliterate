@@ -175,3 +175,10 @@ and `claude/lucid-newton-30cbpk`), and the artifact belongs to another organizat
   says what it holds: orbit (collectors, and the Dyson Swarm, Stellar Lifter and later power
   sources that only live there, buildable by any settlement in the system), and minds on
   substrate; Kin in domes (in the Dusk after Orbital Industry). The manual explains it too.
+- **Swarms catch ships.** A ship stopped at a star where a swarm is feeding, with no settlement
+  of ours there, is attacked on 70% of turns (20% by a swarm still asleep, half that under
+  Blackout). A warship may beat off a small swarm and salvage it; a probe caught by a grown one is
+  lost, though its survey gets out first. Exploring probes and the autoplayer steer around the
+  swarms we can see, and a ship's list of destinations marks them. (123/300; 900 games: 357,
+  against 327. Blind to swarms, the autoplayer gets 116/300 and loses 0.31 ships a game; steering
+  around them, 0.15.)

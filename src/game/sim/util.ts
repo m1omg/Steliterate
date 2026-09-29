@@ -19,6 +19,11 @@ export function rngOf(state: GameState): Rng {
   return new Rng(state.rng);
 }
 
+/** A swarm we can see feeding at this star (as the map shows it): ships sent there are at risk. */
+export function swarmSeenAt(state: GameState, systemId: string): boolean {
+  return !!state.civ.known[systemId] && Object.values(state.swarms).some((w) => w.systemId === systemId && w.awake && !w.tamed);
+}
+
 /** A name the save format can keep: "__inf" and "__-inf" stand for ±Infinity there (save.ts). */
 export function savableName(name: string): string {
   return name === '__inf' || name === '__-inf' ? name.slice(1) : name;

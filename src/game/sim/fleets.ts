@@ -6,7 +6,7 @@ import { THREADS } from '../types';
 import { formatDistance, stepTime } from '../eras';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
-import { colonies, distLy, eraIndex, log, uid, withRng } from './util';
+import { colonies, distLy, eraIndex, log, swarmSeenAt, uid, withRng } from './util';
 
 // No faster-than-light travel. Fleets advance speed × turn length light-years per turn.
 // Early on a 10 ly hop takes several turns; later a whole province fits into one.
@@ -314,7 +314,8 @@ export function autoExplore(state: GameState, mods: Mods) {
     }
     const here = state.systems[f.at];
     const next = Object.values(state.systems)
-      .filter((x) => state.civ.known[x.id] === 1 && !x.gone && !claimed.has(x.id))
+      // never into a swarm we can see feeding there
+      .filter((x) => state.civ.known[x.id] === 1 && !x.gone && !claimed.has(x.id) && !swarmSeenAt(state, x.id))
       .map((x) => ({ x, ly: distLy(here, x) }))
       .sort((a, b) => a.ly - b.ly)[0];
     if (!next) {

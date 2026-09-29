@@ -93,6 +93,7 @@ export const MANUAL: CodexEntry[] = [
       'Echoes live on substrate, never on the land. Every settler ship brings its people’s first home (a Seedcore unfolds into a Substrate Core), and uploads need free substrate. Echoes that reach you through an event with nowhere to run wait in the archive, costing nothing, and move in as soon as a core has room (the Threads screen shows how many are waiting).',
       'The Slow Ones think on clocks of millions of years; you can only talk to them when your own clock comes close to theirs. The Unlit answer moved masses with moved masses: read their pattern and answer it with a gesture.',
       'The Hunger is a mindless swarm of harvesters. Light and heat draw it. Defend with Defense Grids and warships, hide under the Blackout charter, lure it with decoy beacons, or learn the Command Language and tame it. Taking its ways as your own raises Taint.',
+      'Swarms catch ships. A ship that stops at a star where a swarm is feeding, with no settlement of yours there to fight beside it, is attacked more often than not, turn after turn while it stays: a warship may beat off a small swarm and salvage what it kills, but a probe rarely comes back from a grown one. A swarm asleep in the dark strikes less often, and you cannot see it coming. Swarms you can see are marked in a ship’s list of destinations, and exploring probes steer around them; under the Blackout charter your ships are noticed half as often.',
     ],
   },
   {

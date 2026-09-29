@@ -94,6 +94,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `keepTimeWithFlare`, `flareClock`.
   - Constants: `FLARE_TURNS` 6; shelters 3 Kin, 10 matter, max 4.
   - The event is `last_flare` in `data/events.ts`; the structure is `night_shelter`.
+- **`src/game/sim/hunger.ts`, `swarmsHunt`:** swarms catch ships stopped at their star where we have
+  no settlement (`HUNT_AWAKE` 0.7, `HUNT_ASLEEP` 0.2 a turn, ×0.5 under Blackout; skipped on the
+  first-swarm turn and under Communion). It runs after `firstSwarm` and before `autoExplore`, so
+  arriving probes are at risk before they set off again. `swarmSeenAt` (util.ts) is what the map
+  shows: `autoExplore`, the autoplayer and the destination list's "swarm" chip use it.
 - **`src/game/sim/sites.ts`:** `powerParts`/`powerAt` (Hearth plus every buildable collector,
   arrays × insolation), `matterAt`, `lastsUntil`, `siteValue(state, body, thread)` →
   `{score, label, tip}`. Used by the settler lists and the Surveyed worlds sorts.

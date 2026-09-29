@@ -98,6 +98,63 @@ export function firstSwarm(state: GameState) {
 /** How close a ship must come to a swarm for the first one to notice it (ly). */
 const FIRST_SWARM_REACH = 60;
 
+/** Each turn, how likely a swarm is to go for a ship stopped in its system: awake, and asleep. */
+export const HUNT_AWAKE = 0.7;
+export const HUNT_ASLEEP = 0.2;
+
+/**
+ * Swarms catch ships. A ship stopped where a swarm sits, with no settlement of ours there to
+ * fight beside it, is often attacked: a warship may beat it off and salvage what it kills;
+ * anything else is torn apart unless the swarm is small. It runs as ships arrive, before
+ * exploring probes set off again, so a probe that surveys a swarm's star is at risk.
+ */
+export function swarmsHunt(state: GameState, mods: Mods) {
+  // the first swarm has its own moment (firstSwarm), and under Communion they take us for their own
+  if (state.flags.first_swarm === state.turn || hasCharter(state, 'communion_charter')) return;
+  const dark = mods.flags.has('charter:blackout') ? 0.5 : 1;
+  const settled = new Set(colonies(state).map((c) => c.systemId));
+  withRng(state, (rng) => {
+    for (const sw of Object.values(state.swarms)) {
+      if (!sw.systemId || sw.tamed || settled.has(sw.systemId)) continue;
+      const sys = state.systems[sw.systemId];
+      if (!sys || sys.gone) continue;
+      for (const f of Object.values(state.fleets)) {
+        if (f.at !== sys.id || !f.ships.length) continue;
+        if (!rng.chance((sw.awake ? HUNT_AWAKE : HUNT_ASLEEP) * dark)) continue;
+        const what = sw.awake ? 'The swarm' : 'Something asleep';
+        const k = f.order === 'fortify' ? FORTIFY_BONUS : 1;
+        const attack = f.ships.reduce((a, s) => a + (SHIP_BY_ID[s.cls]?.attack ?? 0) * k, 0);
+        if (attack > 0 && attack >= sw.size * 1.2 * rng.range(0.6, 1.1)) {
+          const lost = Math.min(sw.size, attack * 0.3);
+          sw.size -= lost;
+          state.civ.matter += lost * 2;
+          for (const s of f.ships) s.hp = Math.max(1, s.hp - rng.range(0, sw.size * 0.3));
+          log(state, `${what} at ${sys.name} came for ${f.name}, and ${f.name} beat it off (+${Math.round(lost * 2)} salvaged matter).`, 'combat', sys.id);
+          state.battles.push({ systemId: sys.id, turn: state.turn, text: `${f.name} beat off the swarm.` });
+          if (sw.size <= 0.4) {
+            delete state.swarms[sw.id];
+            log(state, `The swarm at ${sys.name} is broken.`, 'good', sys.id);
+            break;
+          }
+          continue;
+        }
+        // torn apart, unless the swarm is small
+        const before = f.ships.length;
+        for (const s of f.ships) s.hp -= rng.range(0.6, 1.2) * sw.size * 0.8;
+        f.ships = f.ships.filter((s) => s.hp > 0);
+        if (!f.ships.length) {
+          delete state.fleets[f.id];
+          log(state, `${what} at ${sys.name} caught ${f.name}. Nothing came back.`, 'combat', sys.id);
+        } else {
+          const gone = before - f.ships.length;
+          log(state, `${what} at ${sys.name} caught ${f.name}${gone ? `: ${gone} ship${gone === 1 ? '' : 's'} lost` : ''}. What is left is damaged, and still there.`, 'combat', sys.id);
+        }
+        state.battles.push({ systemId: sys.id, turn: state.turn, text: `The swarm caught ${f.name}.` });
+      }
+    }
+  });
+}
+
 function rangeLy(state: GameState): number {
   return state.era === 'dusk' ? 90 : state.era === 'degenerate' ? 4e5 : 1e9;
 }

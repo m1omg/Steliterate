@@ -12,7 +12,7 @@ import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, surv
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
 import { flareData, scorched, turnStep } from './flare';
-import { firstSwarm, updateHunger } from './hunger';
+import { firstSwarm, swarmsHunt, updateHunger } from './hunger';
 import { updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
 import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost } from './research';
@@ -345,6 +345,8 @@ export function endTurn(state: GameState): TurnResult {
   // look around before exploring ships set off again, so they scan every star they reach
   updateDetection(state, mods);
   firstSwarm(state);
+  // swarms go for ships that have just stopped at their star, before exploring probes move on
+  swarmsHunt(state, mods);
   autoExplore(state, mods);
   updateHunger(state, step.turnLength, mods);
   updateSurvivors(state, logL, mods, step.turnLength);
