@@ -466,13 +466,19 @@ export function waterState(b: Body, climate: BodyClimate): string {
   const w = b.water ?? 0;
   if (w <= 0.005) return 'none';
   const share = `${Math.round(w * 100)}%`;
-  if (b.kind === 'ocean_ice') return `${share}: a global ocean under the ice`;
-  if (b.kind === 'asteroids') return `${share}: ice in the rubble`;
+  // ice stays ice only while even the warmest ground is below freezing (a flare can melt it)
+  const warmest = climate.day ?? climate.mean;
+  if (b.kind === 'ocean_ice' && warmest < 273) return `${share}: a global ocean under the ice`;
+  if (b.kind === 'asteroids') return warmest < 273 ? `${share}: ice in the rubble` : `${share}: boiling off the rubble`;
   const liquidAt = (k: number) => k >= 273 && k < 373;
   if (climate.day !== undefined && climate.night !== undefined) {
     if (liquidAt(climate.day) && !liquidAt(climate.night)) return `${share}: open sea on the day side, ice beyond the terminator`;
     if (liquidAt(climate.day)) return `${share}: open water`;
-    if (climate.day >= 373) return `${share}: boiled off the day side, ice on the night side`;
+    if (climate.day >= 373) {
+      if (climate.night >= 373) return `${share}: steam, even on the night side`;
+      if (liquidAt(climate.night)) return `${share}: boiled off the day side, open sea on the night side`;
+      return `${share}: boiled off the day side, ice on the night side`;
+    }
     return `${share}: all frozen`;
   }
   if (liquidAt(climate.mean)) return `${share}: open water`;

@@ -1,6 +1,6 @@
 import { ANOMALIES } from '../game/data/events';
 import { bodyClimate } from '../game/physics';
-import { THAW_ROOM, thawed } from '../game/sim/flare';
+import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
 import type { Body, BodyKind, Focus, GameState, PrimaryKind, StarSystem } from '../game/types';
 import type { IconName } from './icons';
 
@@ -98,6 +98,8 @@ export const WAY_NAME: Record<string, string> = {
 export function bodyKindName(s: GameState, b: Body): string {
   const sea = thawed(s, b);
   if (sea) return sea === 'warm' ? 'Thawed ocean' : 'Hot sea';
+  const melt = waterChanged(s, b);
+  if (melt) return melt === 'steam' ? 'Steam world' : melt === 'warm' ? 'Thawed ocean' : 'Hot sea';
   if (b.kind === 'eyeball') {
     const c = bodyClimate(s, b);
     if ((c.day ?? c.mean) < 195) return 'Frozen world';
@@ -105,11 +107,46 @@ export function bodyKindName(s: GameState, b: Body): string {
   return BODY_NAME[b.kind];
 }
 
+/**
+ * A world named for its ice or its sea when neither is left: an ice world or ice-shelled ocean
+ * with no ice anywhere, melted into open sea, a hot sea or steam by whatever warms it (a flare,
+ * a helium star, a white dwarf still hot from its collapse; a locked world may keep a hot sea on
+ * its night side), or an eyeball world boiled to steam even on its night side. A flare's thaw is
+ * `thawed`, which comes first.
+ */
+function waterChanged(s: GameState, b: Body): 'warm' | 'hot' | 'steam' | null {
+  if (b.dissolved || (b.water ?? 0) <= 0.005) return null;
+  if (b.kind !== 'ice' && b.kind !== 'ocean_ice' && b.kind !== 'eyeball') return null;
+  const c = bodyClimate(s, b);
+  const coldest = c.night ?? c.mean;
+  if (b.kind === 'eyeball') return coldest >= 373 ? 'steam' : null;
+  if (coldest < 273) return null;
+  return c.mean >= 373 ? 'steam' : c.mean > SCORCH_K ? 'hot' : 'warm';
+}
+
+/** What a world was, for the notes on what it has become. */
+function onceWas(k: BodyKind): string {
+  const was: Partial<Record<BodyKind, string>> = { ice: 'an ice world', ocean_ice: 'an ice-shelled ocean', super_earth: 'a super-Earth', barren: 'bare rock' };
+  return was[k] ?? `a ${BODY_NAME[k].toLowerCase()}`;
+}
+
 /** A longer note on the kind, for tooltips: what it was, when that has changed. */
 export function bodyKindNote(s: GameState, b: Body): string {
   const sea = thawed(s, b);
-  if (sea === 'warm') return `Once ${BODY_NAME[b.kind].toLowerCase()}. Its star's last flare has melted it into open ocean under a thin, steamy sky: room for ${THAW_ROOM} Kin by the water without domes, for as long as the flare lasts. When the star collapses it will freeze again.`;
-  if (sea === 'hot') return `Once ${BODY_NAME[b.kind].toLowerCase()}. Its star's last flare has melted it into a hot, steaming sea, too hot to live by. When the star collapses it will freeze again.`;
+  if (sea === 'warm') return `Once ${onceWas(b.kind)}. Its star's last flare has melted it into open ocean under a thin, steamy sky: room for ${THAW_ROOM} Kin by the water without domes, for as long as the flare lasts. When the star collapses it will freeze again.`;
+  if (sea === 'hot') return `Once ${onceWas(b.kind)}. Its star's last flare has melted it into a hot, steaming sea, too hot to live by. When the star collapses it will freeze again.`;
+  const melt = waterChanged(s, b);
+  if (melt) {
+    const c = bodyClimate(s, b);
+    const flare = s.systems[b.systemId]?.primary.kind === 'blue_dwarf';
+    const by = flare ? `Its star's last flare has` : 'Its star has';
+    const night = c.night === undefined ? '' : c.night < 373 ? ', with a hot sea left only on its night side' : ', even on its night side';
+    // an eyeball world is alive: the flare is killing it (scorched), not thawing it for a while
+    if (b.kind === 'eyeball') return `Once an eyeball world. ${by} boiled its seas into a sky of steam${night}${flare ? ': nowhere on its surface is livable while the flare lasts' : ''}.`;
+    const again = flare ? ' When the star collapses it will freeze again.' : '';
+    if (melt !== 'steam') return `Once ${onceWas(b.kind)}. ${by} melted it into ${melt === 'warm' ? 'open ocean' : 'a hot, steaming sea'}.${again}`;
+    return `Once ${onceWas(b.kind)}. ${by} boiled its ice into a sky of steam${night}.${again}`;
+  }
   return bodyKindName(s, b) !== BODY_NAME[b.kind] ? 'Once an eyeball world. Its star no longer warms it, and the sea on its day side has frozen over; what warmth is left comes from inside.' : '';
 }
 
