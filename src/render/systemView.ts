@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { bodyClimate, diskLight, primaryTemperature } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
-import type { Body, GameState, StarSystem, Survivor } from '../game/types';
+import type { Body, GameState, StarSystem, Survivor, Swarm } from '../game/types';
 import { radialTexture, type Pickable } from './galaxyView';
 import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, STAR_FRAG, STAR_VERT, VIEW_MODE, thermalRGB } from './shaders/bodies';
 import { blackbody } from './shaders/noise';
@@ -28,7 +28,9 @@ export class SystemView {
   systemId: string | null = null;
   pickables: Pickable[] = [];
   private starMat: THREE.ShaderMaterial | null = null;
-  private rockMats: { mat: THREE.MeshBasicMaterial; tempK: number }[] = [];
+  private rockMats: { mat: THREE.MeshBasicMaterial; tempK: number; rust: number }[] = [];
+  /** Motes of a feeding swarm on the worlds it is eating: they follow their world round its orbit. */
+  private eatMotes: { mat: THREE.ShaderMaterial; rig: PlanetRig }[] = [];
   private glowMats: THREE.ShaderMaterial[] = [];
   private diskMats: THREE.ShaderMaterial[] = [];
   private planets: PlanetRig[] = [];
@@ -88,6 +90,7 @@ export class SystemView {
     this.dysonSpin = [];
     this.swarm = null;
     this.swarmMat = null;
+    this.eatMotes = [];
     this.habitats = [];
     this.sleepLights = [];
     this.fleets = new THREE.Group();
@@ -272,7 +275,7 @@ export class SystemView {
     let mat: THREE.ShaderMaterial | null = null;
     if (b.kind === 'asteroids') {
       mesh = asteroidBelt(orbitR, hashSeed(b.id), b.richness);
-      this.rockMats.push({ mat: mesh.material as THREE.MeshBasicMaterial, tempK: bodyClimate(state, b).mean });
+      this.rockMats.push({ mat: mesh.material as THREE.MeshBasicMaterial, tempK: bodyClimate(state, b).mean, rust: sys.rust ?? 0 });
       this.applyViewMode();
       this.group.add(mesh);
       this.planets.push({ body: b, pivot, mesh, mat: null, speed: 0.02 / Math.pow(orbitR / 20, 1.5), phase: b.phase, radius: orbitR, extra: [] });
@@ -281,6 +284,7 @@ export class SystemView {
     }
     const col = state.colonies[b.colonyId ?? ''];
     const climate = bodyClimate(state, b);
+    const eating = feedingSwarm(state, sys);
     const pops = col ? col.pops.kin + col.pops.echoes + col.pops.chorus + col.pops.lattice + col.pops.coldminds : 0;
     // another civilization that lives on the surface: their cities, in their own colour
     const other = sv ? othersColor(sv) : null;
@@ -304,6 +308,7 @@ export class SystemView {
         uSubstellar: { value: new THREE.Vector3(-1, 0, 0) },
         uRust: { value: sys.rust ?? 0 },
         uFeeding: { value: b.feeding ? 1 : 0 },
+        uEaten: { value: eating ? Math.min(1, 0.4 + eating.size / 12) : 0 },
         uViewMode: VIEW_MODE,
         // an eyeball stays one only while its star keeps a sea liquid on the day side
         uEye: { value: eyeStrength(b, climate) },
@@ -354,6 +359,7 @@ export class SystemView {
     this.group.add(pivot);
     const speed = b.rogue ? 0.004 : 0.25 / Math.pow(orbitR / 12, 1.5);
     this.planets.push({ body: b, pivot, mesh, mat, speed, phase: b.phase, radius: orbitR, extra });
+    if (eating) this.addFeedingMotes(this.planets[this.planets.length - 1], eating, size);
     this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos: mesh.position.clone(), radius: size });
   }
 
@@ -463,6 +469,88 @@ export class SystemView {
     }
   }
 
+  /** Where a swarm's main cloud hangs in the system view. */
+  private swarmCenter(): THREE.Vector3 {
+    return new THREE.Vector3(this.primaryRadius * 5, 2, this.primaryRadius * 3);
+  }
+
+  /**
+   * A swarm eating a world: a haze of harvesters circling low over it, and a thin stream of
+   * them carrying the harvest off to the swarm's cloud. Drawn in world space, following the world
+   * (update() moves uFrom), animated on elapsed time.
+   */
+  private addFeedingMotes(rig: PlanetRig, sw: Swarm, size: number) {
+    const rng = new Rng(hashSeed(sw.id + rig.body.id));
+    const shell = Math.round(90 + sw.size * 18);
+    const stream = Math.round(40 + sw.size * 8);
+    const pos: number[] = [];
+    const params: number[] = [];
+    const axes: number[] = [];
+    for (let i = 0; i < shell + stream; i++) {
+      pos.push(0, 0, 0);
+      params.push(rng.range(0, 100), rng.range(1.12, 1.7), rng.range(0.3, 0.9), i < shell ? 0 : 1);
+      axes.push(rng.range(-1, 1), rng.range(-1, 1), rng.range(-1, 1));
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('aParams', new THREE.Float32BufferAttribute(params, 4));
+    g.setAttribute('aAxis', new THREE.Float32BufferAttribute(axes, 3));
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: /* glsl */ `
+        attribute vec4 aParams;
+        attribute vec3 aAxis;
+        uniform float uTime;
+        uniform vec3 uFrom;
+        uniform vec3 uTo;
+        uniform float uSize;
+        varying float vFlick;
+        varying float vAlpha;
+        void main() {
+          float t = uTime * aParams.z + aParams.x;
+          vec3 pos;
+          if (aParams.w < 0.5) {
+            // circling low over the surface, each on its own tilted orbit
+            vec3 ax = normalize(aAxis + vec3(0.0, 0.001, 0.0));
+            vec3 u = normalize(cross(ax, vec3(0.3, 1.0, 0.2)));
+            vec3 v = cross(ax, u);
+            pos = uFrom + (u * cos(t) + v * sin(t)) * uSize * aParams.y;
+            vAlpha = 0.9;
+          } else {
+            // carried off to the swarm, wandering a little on the way
+            float f = fract(t * 0.05);
+            vec3 d = uTo - uFrom;
+            float len = length(d);
+            vec3 side = normalize(cross(d, vec3(0.0, 1.0, 0.0)) + vec3(0.0001));
+            float bow = 1.0 - abs(f * 2.0 - 1.0);
+            pos = mix(uFrom, uTo, f) + side * sin(f * 9.0 + aParams.x) * len * 0.04 * bow + vec3(0.0, sin(f * 7.0 + aParams.x * 1.7), 0.0) * len * 0.02 * bow;
+            vAlpha = smoothstep(0.0, 0.08, f) * (1.0 - smoothstep(0.85, 1.0, f)) * 0.8;
+          }
+          vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = clamp(70.0 / -mv.z, 1.0, 4.0);
+          vFlick = 0.5 + 0.5 * sin(uTime * 6.0 + aParams.x * 23.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uColor;
+        varying float vFlick;
+        varying float vAlpha;
+        void main() {
+          if (length(gl_PointCoord - 0.5) > 0.5) discard;
+          vec3 col = mix(vec3(0.05, 0.035, 0.03), uColor, step(0.8, vFlick));
+          gl_FragColor = vec4(col, vAlpha);
+        }
+      `,
+      uniforms: { uTime: { value: 0 }, uFrom: { value: new THREE.Vector3() }, uTo: { value: this.swarmCenter() }, uSize: { value: size }, uColor: { value: new THREE.Color('#d0502c') } },
+      transparent: true,
+      depthWrite: false,
+    });
+    const pts = new THREE.Points(g, mat);
+    pts.frustumCulled = false;
+    this.group.add(pts);
+    this.eatMotes.push({ mat, rig });
+  }
+
   private buildSwarm(state: GameState, sys: StarSystem) {
     const sw = Object.values(state.swarms).find((s) => s.systemId === sys.id && (s.awake || s.tamed));
     if (!sw) return;
@@ -504,7 +592,7 @@ export class SystemView {
           gl_FragColor = vec4(col, 0.85);
         }
       `,
-      uniforms: { uTime: { value: 0 }, uCenter: { value: new THREE.Vector3(this.primaryRadius * 5, 2, this.primaryRadius * 3) }, uColor: { value: new THREE.Color(sw.tamed ? '#4fe3d1' : '#c0482c') } },
+      uniforms: { uTime: { value: 0 }, uCenter: { value: this.swarmCenter() }, uColor: { value: new THREE.Color(sw.tamed ? '#4fe3d1' : '#c0482c') } },
       transparent: true,
       depthWrite: false,
     });
@@ -528,7 +616,11 @@ export class SystemView {
   applyViewMode() {
     for (const r of this.rockMats) {
       if (VIEW_MODE.value === 2) r.mat.color.setRGB(...thermalRGB(r.tempK)).multiplyScalar(0.8);
-      else r.mat.color.set(VIEW_MODE.value === 1 ? '#6a625c' : '#2e2926');
+      else {
+        r.mat.color.set(VIEW_MODE.value === 1 ? '#6a625c' : '#2e2926');
+        // the Hunger's rust on the rocks, as on the worlds
+        if (r.rust > 0.001) r.mat.color.lerp(new THREE.Color(VIEW_MODE.value === 1 ? '#8a3c1c' : '#4a1f10'), Math.min(0.75, 0.2 + r.rust * 0.6));
+      }
     }
   }
 
@@ -560,6 +652,11 @@ export class SystemView {
       pr.mesh.getWorldPosition(world);
       const p = pick(`body:${pr.body.id}`);
       if (p) p.pos.copy(world);
+      for (const m of this.eatMotes) {
+        if (m.rig !== pr) continue;
+        m.mat.uniforms.uFrom.value.copy(world);
+        m.mat.uniforms.uTime.value = t;
+      }
       if (pr.mat) {
         pr.mat.uniforms.uTime.value = t;
         const toSun = world.clone().multiplyScalar(-1).normalize();
@@ -634,6 +731,11 @@ export function eyeStrength(b: Body, climate: { mean: number; day?: number }): n
   if (b.kind !== 'eyeball') return 0;
   const t = Math.min(1, Math.max(0, ((climate.day ?? climate.mean) - 150) / 90));
   return t * t * (3 - 2 * t);
+}
+
+/** A swarm of the Hunger eating the worlds of this star now (awake, untamed, not in transit). */
+function feedingSwarm(state: GameState, sys: StarSystem): Swarm | null {
+  return Object.values(state.swarms).find((w) => w.systemId === sys.id && w.awake && !w.tamed) ?? null;
 }
 
 function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Color; power: number } {

@@ -141,6 +141,7 @@ export const PLANET_FRAG = /* glsl */ `
   uniform vec3 uSubstellar;   // object-space point facing the star (tidally locked worlds)
   uniform float uRust;        // the Hunger eating it
   uniform float uFeeding;     // being torn into a stream
+  uniform float uEaten;       // a swarm of the Hunger feeding on it now, by its size (0..1)
   varying vec3 vNormal;
   varying vec3 vObj;
   varying vec3 vWorldN;
@@ -193,9 +194,21 @@ export const PLANET_FRAG = /* glsl */ `
         clouds = smoothstep(0.1, 0.55, fbm(p * 3.0 + vec3(uTime * 0.02, uSeed, 0.0))) * alive * 0.8;
       }
     }
-    // the Hunger's rust
-    float rust = uRust * smoothstep(0.2, 0.6, fbm3(p * 5.0 + uSeed * 3.0));
-    albedo = mix(albedo, vec3(0.36, 0.14, 0.07), rust);
+    // the Hunger's rust: patches that spread the longer a swarm has fed here (it never fades),
+    // dull oxide pitted where the harvesters bored in; on a giant, a thinner brown haze
+    float rustN = fbm3(p * 5.0 + uSeed * 3.0) + 0.3 * snoise(p * 16.0 + uSeed);
+    float giant = (uKind == 3 || uKind == 4) ? 0.5 : 1.0;
+    float rustCover = uRust > 0.001 ? smoothstep(0.55 - 0.9 * uRust, 0.68 - 0.85 * uRust, rustN) * giant : 0.0;
+    float pits = smoothstep(0.35, 0.85, snoise(p * 38.0 + uSeed * 5.0));
+    vec3 rustCol = mix(vec3(0.24, 0.085, 0.04), vec3(0.47, 0.2, 0.08), smoothstep(-0.4, 0.6, snoise(p * 11.0 + uSeed)));
+    rustCol = mix(rustCol, vec3(0.08, 0.035, 0.025), pits * 0.7);
+    float rust = rustCover * (0.65 + 0.35 * uRust);
+    albedo = mix(albedo, rustCol, rust);
+    spec *= 1.0 - rust;
+    clouds *= 1.0 - 0.6 * rust;
+    // a swarm eating it now: scattered sparks where the harvesters cut in, most of them in the
+    // rust, coming and going on elapsed time
+    float cut = uEaten > 0.0 ? smoothstep(0.86, 0.99, snoise(p * 30.0 + vec3(0.0, uTime * 0.6, uSeed))) * max(rustCover, 0.3) : 0.0;
 
     vec3 n = normalize(vWorldN);
     float ndl = dot(n, normalize(uSunDir));
@@ -260,6 +273,7 @@ export const PLANET_FRAG = /* glsl */ `
     col += atmo * rim * (0.08 + 0.55 * uVitality) * (0.03 + 0.97 * smoothstep(-0.3, 0.35, ndl)) * uSunPower;
     // being torn apart: glowing streaks
     col += vec3(1.0, 0.55, 0.3) * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))) * 0.8;
+    if (uEaten > 0.0) col += vec3(1.0, 0.36, 0.12) * uEaten * cut * (0.75 + 0.25 * sin(uTime * 9.0 + rustN * 31.0)) * 1.3;
     float toViewer = max(0.0, dot(normalize(vNormal), normalize(vView)));
     if (uViewMode == 1) {
       // light amplification: a soft fill from the viewer, so dark worlds show their ground
@@ -271,6 +285,7 @@ export const PLANET_FRAG = /* glsl */ `
       float T = mix(uTempNight, uTempDay, warmSide);
       T = max(T, 290.0 * uLights * smoothstep(cityLo - 0.1, cityLo + 0.15, detail * 0.5 + 0.5));
       T = max(T, 900.0 * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))));
+      T = max(T, 700.0 * uEaten * cut);
       col = thermal(T) * (0.5 + 0.5 * toViewer) * (0.9 + 0.2 * detail);
     }
     gl_FragColor = vec4(col, 1.0);
