@@ -226,3 +226,7 @@ belongs to another organization.
   each charted star for every kind of settler (`27dae58`: Kin room, power, matter, time). Rust is explained (tooltip, manual); a boiled-dry eyeball world
   is a Scorched world; a charter book full at nine no longer says it is full "until the Assembly
   of Threads".
+- `5332440` **Rust and feeding swarms on the worlds.** Rust (still permanent) spreads over a world the
+  longer a swarm has fed at its star: dull pitted oxide, a haze on giants, a tint on belt rocks.
+  While a swarm feeds there, each world it eats has harvesters circling low over it, sparks where
+  they cut in, and a stream of motes carrying the harvest to the swarm's cloud. Rendering only.
