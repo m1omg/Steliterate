@@ -138,6 +138,10 @@ interface Layer {
   silenced: boolean; // a recorded track is playing instead
   track: { el: HTMLAudioElement; gain: GainNode } | null;
   hiss: GainNode | null; // the synth's tape hiss: part of the synth, so it goes when a recording plays
+  hushAt: number; // audio-clock time at which the fading synth stops scheduling notes (0 = none)
+  synthUntil: number; // audio-clock time at which a synthesized piece gives way to the next (0 = none)
+  onSynthEnd: (() => void) | null;
+  intro: boolean; // the overture is playing
 }
 
 type StyleKey = keyof typeof STYLES;
@@ -155,23 +159,37 @@ export const TRACK_CHOICES: { key: TrackKey; name: string }[] = [
   { key: 'outcome', name: 'The Ending' },
 ];
 
-// Recorded tracks (generated instrumentals), in the order they play: where an age has more than
-// one, each gives way to the next as it ends, fading across. Where none will load, the
-// procedural score plays instead.
-const TRACKS: Partial<Record<TrackKey, string[]>> = {
-  canon: ['music/canon.mp3'],
-  menu: ['music/title.mp3'],
-  dusk: ['music/dusk.mp3', 'music/dusk2.mp3'],
-  degenerate: ['music/degenerate.mp3', 'music/degenerate2.mp3'],
-  blackhole: ['music/blackhole.mp3', 'music/blackhole2.mp3'],
-  dark: ['music/dark.mp3'],
-  outcome: ['music/outcome.mp3'],
+/** One piece an age can play: a recorded track (generated instrumental), or, with no file, the synthesized score. */
+export interface Piece {
+  id: string;
+  name: string;
+  url?: string;
+}
+
+// What each age can play, in order. The player chooses which (Settings → Playlist); the chosen
+// ones take turns, each fading across to the next, and a lone one loops. By default the
+// recordings play and the synthesized score stands by for any that will not load.
+export const PIECES: Record<TrackKey, Piece[]> = {
+  menu: [{ id: 'title', name: 'Recorded', url: 'music/title.mp3' }, { id: 'menu.synth', name: 'Synthesized' }],
+  dusk: [{ id: 'dusk', name: 'Recorded I', url: 'music/dusk.mp3' }, { id: 'dusk2', name: 'Recorded II', url: 'music/dusk2.mp3' }, { id: 'dusk.synth', name: 'Synthesized' }],
+  canon: [{ id: 'canon', name: 'Arranged', url: 'music/canon.mp3' }],
+  degenerate: [{ id: 'degenerate', name: 'Recorded I', url: 'music/degenerate.mp3' }, { id: 'degenerate2', name: 'Recorded II', url: 'music/degenerate2.mp3' }, { id: 'degenerate.synth', name: 'Synthesized' }],
+  blackhole: [{ id: 'blackhole', name: 'Recorded I', url: 'music/blackhole.mp3' }, { id: 'blackhole2', name: 'Recorded II', url: 'music/blackhole2.mp3' }, { id: 'blackhole.synth', name: 'Synthesized' }],
+  dark: [{ id: 'dark', name: 'Recorded', url: 'music/dark.mp3' }, { id: 'dark.synth', name: 'Synthesized' }],
+  outcome: [{ id: 'outcome', name: 'Recorded', url: 'music/outcome.mp3' }, { id: 'outcome.synth', name: 'Synthesized' }],
 };
+
+/** Whether the player has a piece in its age's rotation (recordings are in unless taken out). */
+export function pieceOn(prefs: Record<string, boolean> | undefined, p: Piece): boolean {
+  return prefs?.[p.id] ?? !!p.url;
+}
 
 /** How loud a recorded track plays (mastered tracks are much louder than the synth). */
 const TRACK_GAIN = 0.5;
 /** Seconds over which one track of an age fades out before the next begins. */
 const TRACK_CHANGE = 4;
+/** Seconds a synthesized piece plays before the next piece of its age, about a recording's length. */
+const SYNTH_SPAN = 170;
 
 // Played once, before a style's own track, the first time that style comes up in a session.
 // The Degenerate Age opens with Pachelbel's Canon in D (public domain), arranged for the game:
@@ -185,6 +203,8 @@ class Music {
   private layerKey: TrackKey | null = null;
   private override: TrackKey | null = null;
   private introsPlayed = new Set<StyleKey>();
+  private prefs: Record<string, boolean> = {};
+  private overture = true;
   private era: EraId = 'dusk';
   private mood: Mood = 'menu';
   private step = 0;
@@ -233,6 +253,29 @@ class Music {
 
   get chosen(): TrackKey | null {
     return this.override;
+  }
+
+  /**
+   * The player's playlist: which pieces each age plays (piece id → on; see pieceOn) and whether
+   * the Canon opens the Degenerate Age. What is playing changes at once if it is affected.
+   */
+  setPlaylist(prefs: Record<string, boolean>, overture: boolean) {
+    const key = this.styleKey();
+    const before = this.rotation(key).map((p) => p.id).join();
+    const cutIntro = this.layer?.intro && this.overture && !overture;
+    this.prefs = { ...prefs };
+    this.overture = overture;
+    if (this.layer && (cutIntro || this.rotation(key).map((p) => p.id).join() !== before)) {
+      this.layerKey = null;
+      this.apply();
+    }
+  }
+
+  /** The pieces a style plays in turn: the chosen ones, or the synthesized score if none is chosen. */
+  private rotation(key: TrackKey): Piece[] {
+    const all = PIECES[key];
+    const on = all.filter((p) => pieceOn(this.prefs, p));
+    return on.length ? on : [all.find((p) => !p.url) ?? all[0]];
   }
 
   private styleKey(): TrackKey {
@@ -349,43 +392,30 @@ class Music {
       src.start(t);
       persistent.push(src);
     }
-    const layer: Layer = { style, bus, arpIn, wobble, persistent, silenced: false, track: null, hiss: hissOut };
+    const layer: Layer = { style, bus, arpIn, wobble, persistent, silenced: false, track: null, hiss: hissOut, hushAt: 0, synthUntil: 0, onSynthEnd: null, intro: false };
     this.layer = layer;
     this.step = 0;
     this.next = t + 0.1;
     this.startTrack(layer, this.styleKey());
   }
 
-  /** Try the recorded track for this style; once it is actually playing, hush the synth. */
+  /**
+   * Play the style's pieces in turn, after the overture if one is due. A recording fades in as it
+   * starts and hushes the synth under it; a synthesized piece brings the synth back for
+   * SYNTH_SPAN seconds (for good, if it is the only piece). A lone recording loops.
+   */
   private startTrack(layer: Layer, key: TrackKey) {
     const a = audio();
-    const list = TRACKS[key];
-    if (!a || !list?.length) return;
-    const el = new Audio();
+    if (!a) return;
+    const list = this.rotation(key);
     // the overture comes once, on its own, when the age begins (not when a track is picked by hand)
-    const intro = !this.override && key !== 'canon' && INTROS[key as StyleKey] && !this.introsPlayed.has(key as StyleKey) ? INTROS[key as StyleKey]! : null;
+    const overture = INTROS[key as StyleKey];
+    const intro = !this.override && key !== 'canon' && this.overture && overture && !this.introsPlayed.has(key as StyleKey) ? overture : null;
+    // nothing recorded to play: the synthesized score, as it is
+    if (!intro && !list.some((p) => p.url)) return;
     if (intro) this.introsPlayed.add(key as StyleKey);
-    // one track loops; several play in turn (after the overture, if there is one)
-    let inIntro = !!intro;
-    let idx = 0;
-    let fails = 0;
-    let fading = false;
-    el.src = intro ?? list[0];
-    el.loop = !intro && list.length === 1;
+    const el = new Audio();
     el.preload = 'auto';
-    const advance = () => {
-      if (this.layer !== layer) return;
-      if (inIntro) inIntro = false;
-      else idx = (idx + 1) % list.length;
-      el.src = list[idx];
-      el.loop = list.length === 1;
-      el.play().catch(() => {});
-    };
-    el.addEventListener('ended', advance);
-    // a missing or broken file: try the next one, once round the list at most
-    el.addEventListener('error', () => {
-      if (inIntro || ++fails < list.length) advance();
-    });
     let src: MediaElementAudioSourceNode;
     try {
       src = a.ctx.createMediaElementSource(el);
@@ -396,50 +426,92 @@ class Music {
     gain.gain.value = 0;
     src.connect(gain).connect(a.music);
     layer.track = { el, gain };
-    // each track fades in as it starts (after a change too)
+    let idx = 0;
+    let fails = 0;
+    let fading = false;
+    const ramp = (p: AudioParam, to: number, s: number) => {
+      const t = a.ctx.currentTime;
+      p.cancelScheduledValues(t);
+      p.setValueAtTime(p.value, t);
+      p.linearRampToValueAtTime(to, t + s);
+    };
+    // the synth comes back for a synthesized piece, or when nothing recorded will play
+    const wakeSynth = (span: number) => {
+      el.pause();
+      ramp(gain.gain, 0, 0.5);
+      if (layer.silenced) {
+        layer.silenced = false;
+        this.next = a.ctx.currentTime + 0.05;
+      }
+      layer.hushAt = 0;
+      ramp(layer.bus.gain, 1, 3);
+      if (layer.hiss) ramp(layer.hiss.gain, 1, 3);
+      layer.synthUntil = span > 0 ? a.ctx.currentTime + span : 0;
+    };
+    const play = (p: Piece) => {
+      if (!p.url) return wakeSynth(list.length > 1 ? SYNTH_SPAN : 0);
+      layer.synthUntil = 0;
+      el.src = p.url;
+      el.loop = list.length === 1;
+      el.play().catch(() => {});
+    };
+    const advance = () => {
+      if (this.layer !== layer) return;
+      if (layer.intro) layer.intro = false;
+      else idx = (idx + 1) % list.length;
+      play(list[idx]);
+    };
+    layer.onSynthEnd = advance;
+    el.addEventListener('ended', advance);
+    // a missing or broken file: the next piece, once round at most, and then the synth
+    el.addEventListener('error', () => {
+      if (this.layer !== layer) return;
+      if (layer.intro || ++fails < list.length) advance();
+      else wakeSynth(0);
+    });
+    // each recording fades in as it starts, and the synth fades out under it
     el.addEventListener('playing', () => {
       if (this.layer !== layer) return;
       fails = 0;
       fading = false;
-      const t = a.ctx.currentTime;
-      gain.gain.cancelScheduledValues(t);
-      gain.gain.setValueAtTime(gain.gain.value, t);
-      gain.gain.linearRampToValueAtTime(TRACK_GAIN, t + 3);
+      ramp(gain.gain, TRACK_GAIN, 3);
+      if (!layer.silenced && !layer.hushAt) {
+        ramp(layer.bus.gain, 0, 3);
+        if (layer.hiss) ramp(layer.hiss.gain, 0, 3);
+        layer.hushAt = a.ctx.currentTime + 3.2;
+      }
     });
-    // and, where another follows, fades out over its last seconds (on the audio clock)
+    // where another piece follows, a recording fades out over its last seconds (on the audio clock)
     el.addEventListener('timeupdate', () => {
-      if (this.layer !== layer || fading || el.loop || inIntro || !isFinite(el.duration)) return;
+      if (this.layer !== layer || fading || el.loop || layer.intro || !isFinite(el.duration)) return;
       const left = el.duration - el.currentTime;
       if (left > TRACK_CHANGE) return;
       fading = true;
-      const t = a.ctx.currentTime;
-      gain.gain.cancelScheduledValues(t);
-      gain.gain.setValueAtTime(gain.gain.value, t);
-      gain.gain.linearRampToValueAtTime(0, t + Math.max(0.3, left));
+      ramp(gain.gain, 0, Math.max(0.3, left));
     });
-    el.addEventListener('playing', () => {
-      if (this.layer !== layer) return;
-      const t = a.ctx.currentTime;
-      layer.bus.gain.cancelScheduledValues(t);
-      layer.bus.gain.setValueAtTime(layer.bus.gain.value, t);
-      layer.bus.gain.linearRampToValueAtTime(0, t + 3);
-      if (layer.hiss) {
-        layer.hiss.gain.cancelScheduledValues(t);
-        layer.hiss.gain.setValueAtTime(layer.hiss.gain.value, t);
-        layer.hiss.gain.linearRampToValueAtTime(0, t + 3);
-      }
-      window.setTimeout(() => (layer.silenced = true), 3200);
-    }, { once: true });
-    el.play().catch(() => {
-      /* missing file or blocked: the procedural score carries on */
-    });
+    if (intro) {
+      layer.intro = true;
+      el.src = intro;
+      el.play().catch(() => {});
+    } else play(list[0]);
   }
 
   private tick() {
     const a = audio();
     const L = this.layer;
-    if (!a || !L || L.silenced) return;
+    if (!a || !L) return;
     const now = a.ctx.currentTime;
+    // the synth's fade under a recording is done: stop scheduling its notes
+    if (L.hushAt && now >= L.hushAt) {
+      L.hushAt = 0;
+      L.silenced = true;
+    }
+    // a synthesized piece has had its turn
+    if (L.synthUntil && now >= L.synthUntil) {
+      L.synthUntil = 0;
+      L.onSynthEnd?.();
+    }
+    if (L.silenced) return;
     if (this.next < now - 0.2) this.next = now + 0.05; // fell behind (tab was asleep): skip, don't burst
     const stepDur = 60 / L.style.bpm / 4;
     while (this.next < now + 0.3) {

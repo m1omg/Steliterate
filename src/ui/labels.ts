@@ -91,8 +91,8 @@ export const WAY_NAME: Record<string, string> = {
   fork: 'a Thread that left you',
 };
 
-/** The plate for each way of life (art/<name>.webp); the generic one where a way has none. */
-const WAY_ART: Record<string, string> = { garden: 'way_garden', upload: 'way_upload', chorus: 'way_chorus', dormant: 'way_dormant' };
+/** The plate for each way of life (art/<name>.webp); the generic one for any way added without one. */
+const WAY_ART: Record<string, string> = { garden: 'way_garden', upload: 'way_upload', chorus: 'way_chorus', dormant: 'way_dormant', lattice: 'way_lattice', fork: 'way_fork' };
 export const wayArt = (way: string) => WAY_ART[way] ?? 'survivor';
 
 /**

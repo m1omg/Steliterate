@@ -21,6 +21,8 @@ export interface EventDef {
   id: string;
   title: string;
   art: 'dusk' | 'degenerate' | 'blackhole' | 'dark' | 'flare' | 'ruins' | 'hunger' | 'sleepers' | 'survivor' | 'slow' | `finds/${string}`;
+  /** Its own painting, art/events/<plate>.webp, shown over `art` (which stays as the fallback). */
+  plate?: string;
   eras?: EraId[];
   weight?: number; // random pool weight (0 or undefined = scripted only)
   once?: boolean;
@@ -71,6 +73,7 @@ export const EVENTS: EventDef[] = [
     id: 'dynamo_fails',
     title: 'The Dynamo Falters',
     art: 'dusk',
+    plate: 'dynamo_fails',
     eras: ['dusk'],
     once: true,
     text: (s) =>
@@ -85,6 +88,7 @@ export const EVENTS: EventDef[] = [
     id: 'first_night',
     title: 'Counting the Dark',
     art: 'dusk',
+    plate: 'first_night',
     eras: ['dusk'],
     once: true,
     text: () =>
@@ -119,6 +123,7 @@ export const EVENTS: EventDef[] = [
     id: 'last_rain',
     title: 'The Last Rain',
     art: 'dusk',
+    plate: 'last_rain',
     eras: ['dusk'],
     once: true,
     weight: 10,
@@ -136,6 +141,7 @@ export const EVENTS: EventDef[] = [
     id: 'sea_freezes',
     title: 'The Sea Freezes Over',
     art: 'dusk',
+    plate: 'sea_freezes',
     eras: ['dusk'],
     once: true,
     weight: 10,
@@ -154,6 +160,7 @@ export const EVENTS: EventDef[] = [
     id: 'who_sleeps_first',
     title: 'Who Sleeps First',
     art: 'dusk',
+    plate: 'who_sleeps_first',
     eras: ['dusk', 'degenerate'],
     weight: 5,
     bind: (s) => {
@@ -171,6 +178,7 @@ export const EVENTS: EventDef[] = [
     id: 'mantle_settles',
     title: 'The Mantle Settles',
     art: 'dusk',
+    plate: 'mantle_settles',
     eras: ['dusk'],
     weight: 4,
     bind: (s) => {
@@ -201,6 +209,7 @@ export const EVENTS: EventDef[] = [
     id: 'comet',
     title: 'A Wandering Comet',
     art: 'dusk',
+    plate: 'comet',
     eras: ['dusk'],
     weight: 3,
     text: () => 'A long-period comet is falling through the home system, full of ices from the old outer dark.',
@@ -213,6 +222,7 @@ export const EVENTS: EventDef[] = [
     id: 'prophet_of_stillness',
     title: 'The Prophet of Stillness',
     art: 'dusk',
+    plate: 'prophet_of_stillness',
     eras: ['dusk', 'degenerate'],
     weight: 3,
     once: true,
@@ -229,6 +239,7 @@ export const EVENTS: EventDef[] = [
     id: 'first_upload',
     title: 'The First Upload',
     art: 'dusk',
+    plate: 'first_upload',
     eras: ['dusk'],
     once: true,
     weight: 12,
@@ -366,6 +377,7 @@ export const EVENTS: EventDef[] = [
     id: 'new_star',
     title: 'A New Star',
     art: 'degenerate',
+    plate: 'new_star',
     text: (s, d) =>
       `Two brown dwarfs in ${s.systems[String(d.systemId)]?.name} collided and merged, and the merged body is heavy enough to burn hydrogen. A small red star has lit where there was none. It will shine for trillions of years, which in this age is not long. Whoever reaches it first will feast.`,
     choices: [
@@ -377,6 +389,7 @@ export const EVENTS: EventDef[] = [
     id: 'white_fire',
     title: 'White Fire',
     art: 'degenerate',
+    plate: 'white_fire',
     text: (s, d) =>
       `Two white dwarfs in ${s.systems[String(d.systemId)]?.name} spiralled together and merged. The remnant is burning helium: a small, blue-white, furious star that will last only a few hundred million years. To slow minds it is a flash. To fast ones it is a feast. How fast will we choose to live while it lasts?`,
     choices: [
@@ -388,6 +401,7 @@ export const EVENTS: EventDef[] = [
     id: 'supernova',
     title: 'Supernova',
     art: 'degenerate',
+    plate: 'supernova',
     text: (s, d) =>
       `The merged remnant in ${s.systems[String(d.systemId)]?.name} was too heavy to live. It detonated as a thermonuclear supernova, for a few weeks outshining everything left in the Coalescence. Its light lit up shapes in the dark our instruments had never seen.`,
     choices: [{ label: 'Chart everything it showed us', hint: 'Insight +80; nearby systems revealed.', run: (s, d) => { insight(s, 80); const c = s.systems[String(d.systemId)]; if (c) for (const o of Object.values(s.systems)) if (Math.hypot(o.phys.x - c.phys.x, o.phys.y - c.phys.y, o.phys.z - c.phys.z) < 20000) s.civ.known[o.id] = Math.max(s.civ.known[o.id] ?? 0, 1) as 1 | 2; } }],
@@ -396,6 +410,7 @@ export const EVENTS: EventDef[] = [
     id: 'cast_out',
     title: 'Cast Out',
     art: 'degenerate',
+    plate: 'cast_out',
     text: (s, d) => `${s.systems[String(d.systemId)]?.name} has been flung out of the Coalescence by the slow chaos of a galaxy that is coming apart. Our settlement there is drifting into the void, getting farther from everyone forever.`,
     choices: [
       { label: 'Send them everything they need', hint: 'Energy −30, Matter −30. Resolve +3.', run: (s) => { energy(s, -30); matter(s, -30); res(s, 3); } },
@@ -406,6 +421,7 @@ export const EVENTS: EventDef[] = [
     id: 'unmoored',
     title: 'Unmoored',
     art: 'degenerate',
+    plate: 'unmoored',
     text: (s, d) => `A passing star came close enough to ${s.systems[String(d.systemId)]?.name} to tear ${bodyById(s, d)?.name} out of its orbit. It is a rogue world now, falling away into the dark with our people on it.`,
     choices: [
       { label: 'Evacuate what we can', hint: 'Energy −20. Half its people move to the capital.', run: (s, d) => { energy(s, -20); const b = bodyById(s, d); const c = b?.colonyId ? s.colonies[b.colonyId] : undefined; const cap = capital(s); if (c && cap && c.id !== cap.id) { for (const t of ['kin', 'echoes', 'chorus', 'lattice', 'coldminds'] as ThreadId[]) { const n = Math.floor(c.pops[t] / 2); c.pops[t] -= n; if (t === 'echoes') welcomeEchoes(s, n); else cap.pops[t] += n; } } } },
@@ -416,6 +432,7 @@ export const EVENTS: EventDef[] = [
     id: 'world_falls',
     title: 'A World Falls',
     art: 'degenerate',
+    plate: 'world_falls',
     text: (s, d) => {
       const b = bodyById(s, d);
       const hw = b?.traits.includes('homeworld');
@@ -464,6 +481,7 @@ export const EVENTS: EventDef[] = [
     id: 'final_burst',
     title: 'The Last Burst',
     art: 'blackhole',
+    plate: 'final_burst',
     text: (s, d) => `The black hole at ${s.systems[String(d.systemId)]?.name} has finished evaporating. In its last second it gave back, as a burst of gamma rays and particles, what was left of everything it ever swallowed.`,
     choices: [{ label: 'Record it', hint: 'Its light is gone.', run: () => {} }],
   },

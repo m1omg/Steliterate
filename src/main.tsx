@@ -111,6 +111,7 @@ window.addEventListener('resize', () => applyUiScale(settings.value.uiScale));
 // Sound: allowed only after the first gesture.
 installUnlock();
 setVolumes(settings.value.music, settings.value.sfx);
+music.setPlaylist(settings.value.playlist, settings.value.overture);
 music.start();
 
 // Behind the menu, the Coalescence of a preview world turns slowly.

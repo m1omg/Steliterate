@@ -12,8 +12,11 @@ const OUT = 'public/art/ships';
 const SIZE = 256;
 const PAD = 0.06; // empty margin around the hull, as a share of the sprite
 
-// ship name -> source file
-const SHIPS = { settler: 'ark.png', probe: 'probe.png', war: 'warden.png', other: 'hauler.png' };
+// ship name (FleetLook in src/game/data/ships.ts) -> source file
+const SHIPS = {
+  settler: 'ark.png', probe: 'probe.png', war: 'warden.png', other: 'hauler.png',
+  lighter: 'lighter.png', seedcore: 'seedcore.png', spore: 'spore.png', vaultship: 'vaultship.png', aegis: 'aegis.png', tender: 'tender.png',
+};
 
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -29,13 +32,30 @@ for (const [name, file] of Object.entries(SHIPS)) {
   }
   const { data, info } = await sharp(src).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width: w, height: h } = info;
+  // the background is the dark region connected to the edges; dark parts inside the hull stay solid
+  const DARK = 46;
+  const bright = (i) => Math.max(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+  const outside = new Uint8Array(w * h);
+  const stack = [];
+  for (let x = 0; x < w; x++) stack.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
+  while (stack.length) {
+    const i = stack.pop();
+    if (outside[i] || bright(i) >= DARK) continue;
+    outside[i] = 1;
+    const x = i % w;
+    if (x > 0) stack.push(i - 1);
+    if (x < w - 1) stack.push(i + 1);
+    if (i >= w) stack.push(i - w);
+    if (i < w * (h - 1)) stack.push(i + w);
+  }
   const rgba = Buffer.alloc(w * h * 4);
   let x0 = w, y0 = h, x1 = 0, y1 = 0;
   for (let i = 0; i < w * h; i++) {
     const r = data[i * 3], g = data[i * 3 + 1], b = data[i * 3 + 2];
-    // the background is flat black: brightness is coverage
+    // over the flat black background, brightness is coverage (the anti-aliased edge)
     const m = Math.max(r, g, b);
-    const a = smooth(10, 46, m);
+    const a = outside[i] ? smooth(10, DARK, m) : 1;
     // un-premultiply the anti-aliased edge so it does not carry a dark fringe
     const k = a > 0.02 ? Math.min(1 / a, 4) : 0;
     rgba[i * 4] = Math.min(255, r * k);
@@ -58,8 +78,12 @@ for (const [name, file] of Object.entries(SHIPS)) {
     left: Math.max(0, -left), top: Math.max(0, -top),
     right: Math.max(0, left + side - w), bottom: Math.max(0, top + side - h),
   };
-  await sharp(rgba, { raw: { width: w, height: h, channels: 4 } })
+  // pad first, in its own pass: in one pipeline sharp would crop before it pads
+  const padded = await sharp(rgba, { raw: { width: w, height: h, channels: 4 } })
     .extend({ ...ext, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  await sharp(padded.data, { raw: { width: padded.info.width, height: padded.info.height, channels: 4 } })
     .extract({ left: left + ext.left, top: top + ext.top, width: side, height: side })
     .resize(SIZE, SIZE, { kernel: 'lanczos3' })
     .png({ compressionLevel: 9 })

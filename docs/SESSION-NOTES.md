@@ -42,11 +42,15 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   sprites, more music):** done, plates for four ways of life (garden, upload, chorus, dormant),
   second tracks for the Dusk, Degenerate and Black Hole ages (taking turns) and an ending theme.
   The balance then read 0 again (INSUFFICIENT_BALANCE, 0 units available, 111 needed) though the
-  player said they topped up plentifully; they were told. **Pending, when Krea has credit:**
-  plates for the Tessellate (lattice; prompt in `DEV-NOTES.md`) and for a Fork; event plates for
-  the events that share era art; ship sprites for the classes that share the generic ones; a
-  second Dark track (prompt in `DEV-NOTES.md`); a recorded Canon as an option beside the
-  arranged one (prompt in `DEV-NOTES.md`).
+  player said they topped up plentifully; they were told.
+- **29 Sep, "get Codex running" (the player has a ChatGPT subscription; images only):** done, with
+  Codex's built-in image tool: the Tessellate and Fork plates, 16 event plates and six ship
+  hulls (how, in `DEV-NOTES.md`). Claude Code's auto mode blocked running Codex as "creating
+  unsafe agents" and would not let the session add its own permission rule ("self-modification");
+  the player added `Bash(codex exec *)` themselves. Then, as asked: a Playlist setting, where
+  each age plays any mix of its recordings and the synthesized score. **Pending, for Krea
+  (music):** a second Dark track and a recorded Canon beside the arranged one (prompts in
+  `DEV-NOTES.md`).
 - **Two sessions (28–29 Sep):** a second session reviewed the game on `claude/epic-wozniak-lyhulf`
   (stacked on `0815fe4`) and, at the player's word, fast-forwarded `claude/lucid-newton-30cbpk`
   to it. Pull before pushing; whichever session works next continues on that branch.

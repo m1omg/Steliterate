@@ -236,7 +236,7 @@ belongs to another organization.
   Hunger's panel shows a plate: a swarm stripping a world, or a tamed one at work (Nano Banana Pro,
   graded by `tools/process-art.mjs`). The Krea balance ran out before the plates for the other
   civilizations' six ways of life.
-- **Plates for the other peoples, second tracks and an ending theme** (Krea). A civilization we
+- `8d40caa` **Plates for the other peoples, second tracks and an ending theme** (Krea). A civilization we
   have contacted shows a plate for its way of life on its Signals card and in its star's panel:
   domed gardens under a red sun (clinging to biology), a moon cut into server spires (uploaded),
   a web of linked habitats (merged into one mind), frosted cold-sleep halls with one keeper
@@ -247,3 +247,16 @@ belongs to another organization.
   Ending). The new tracks are levelled to their age's first track by integrated loudness
   (`tools/music/loudness.py`): Dusk −12.7 and −13.3 LUFS, Degenerate −14.7 and −14.7, Black
   Hole −19.7 and −19.7, the ending −14.2 like the title. No rules change.
+- **Event plates, ship hulls, the last two peoples, and a playlist** (images by Codex's built-in
+  image tool, on the player's ChatGPT subscription). Sixteen events that showed their era's
+  general painting now have their own, over it: the dynamo failing, the census of the dark,
+  the last rain, the sea freezing, the mantle settling, the comet, the cryo hall, the prophet,
+  the first upload, the new star, the white fire, the supernova, a system cast out, a world
+  unmoored, a world falling into its dead star, and a black hole's last burst. The Tessellate
+  and the Forks have their own plates. The System Lighter, Seedcore, Lattice Spore, Vault Ship,
+  Aegis and Swarm Tender each show their own hull on the map and in the lists, where they
+  borrowed the Ark's, the Warden's or the hauler's. Settings → Playlist: each age plays any mix
+  of its recordings and the game's own synthesized score, in turn (a synthesized piece plays for
+  about a recording's length, 170 s), and the Canon can be left out of the Degenerate Age's
+  opening. Fixed: saved settings (volumes, graphics, interface size) were ignored on every load
+  since `9ca1edc`; they now come back. No rules change.

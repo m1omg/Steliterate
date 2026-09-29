@@ -61,19 +61,48 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).
   So is `art-src/` (ignored by git): the graded files in `public/art/` are the only copies of
   the plates and sprites, so new art needs new source images.
-- **Plates for the ways of life** (`public/art/way_<way>.webp`, 29 Sep, Nano Banana Pro at 2K,
-  16:9, about 111 Krea units each): garden, upload, chorus, dormant. `wayArt` in
-  `src/ui/labels.ts` picks the plate (the generic `survivor` where a way has none: lattice and
-  fork so far); shown in `Signals.tsx` cards and the system panel's Others section, once in
-  contact. The chorus came with painted letterbox bars, cropped (152 and 151 px of 1536) before
-  grading. Prompts in the style of the others: "A civilization …: <scene>. Painterly digital
-  painting, dark and grainy, muted <palette>, soft brushwork, cinematic composition. No text,
-  no letters, no signatures." Waiting for credit, the Tessellate's (from the Lattice's public
-  blurb only): "the whole surface of a dark, airless moon tiled in vast hexagonal plates of
-  machinery, an endless tessellation to the horizon, small tireless maintenance drones crawling
-  along the seams, repairing and rebuilding, pale yellow work-lights in regular rows, no people
-  anywhere, a dim dead star low in the black sky; orderly, patient, faintly uncanny; muted greys
-  and ochres with pale yellow accents".
+- **Plates for the ways of life** (`public/art/way_<way>.webp`): garden, upload, chorus and
+  dormant (29 Sep, Nano Banana Pro via Krea at 2K, 16:9, about 111 units each); lattice (the
+  Tessellate) and fork (Codex, below). `wayArt` in `src/ui/labels.ts` picks the plate (the
+  generic `survivor` for any way added without one); shown in `Signals.tsx` cards and the system
+  panel's Others section, once in contact. The chorus came with painted letterbox bars, cropped
+  (152 and 151 px of 1536) before grading; the Tessellate's painted signature is softened
+  (`SOFTEN` in `tools/process-art.mjs`). Prompts in the style of the others: "A civilization …:
+  <scene>. Painterly digital painting, dark and grainy, muted <palette>, soft brushwork,
+  cinematic composition. No text, no letters, no signatures." The Tessellate's came from the
+  Lattice's public blurb only: "the whole surface of a dark, airless moon tiled in vast
+  hexagonal plates of machinery … maintenance drones crawling along the seams … no people
+  anywhere … a dim brown dwarf, a dull, faint red-brown disc".
+- **Event plates** (`public/art/events/<plate>.webp`, 29 Sep, Codex): an event with `plate` in
+  `src/game/data/events.ts` shows its own painting over its era's (`Plate` in `Story.tsx`; the
+  era's stays underneath as the fallback). 16 so far: the Dusk's dynamo_fails, first_night,
+  last_rain, sea_freezes, mantle_settles, comet, who_sleeps_first, prophet_of_stillness,
+  first_upload; the Degenerate Age's new_star, white_fire, supernova, cast_out, unmoored,
+  world_falls; the Black Hole Age's final_burst. `node tools/process-art.mjs events` grades
+  `art-src/events/*.png`. Left on their era's art on purpose: events whose picture would give
+  something away (the Lattice's, the stranger minds', the Dark's), and abstract ones. Checked by
+  eye: the comet's tail must point away from its sun (the first try pointed it back toward it);
+  the Prophet's banner emblem looked like a known game logo and is softened.
+- **Ship hulls** (`public/art/ships/<look>.png`): `fleetLook` in `src/game/data/ships.ts` picks
+  one per fleet (its heaviest warship, else its first settler, else its tender); `lookRole`
+  keeps the map glow by role. The Ark ('settler'), Probe, Warden ('war') and hauler ('other')
+  are from Higgsfield; the System Lighter, Seedcore, Lattice Spore, Vault Ship, Aegis and Swarm
+  Tender from Codex (29 Sep). `tools/process-sprites.mjs` cuts them from flat black: only the
+  dark region connected to the edges is background, so dark parts inside a hull stay solid.
+- **Codex for images** (29 Sep; the player has a ChatGPT subscription, so it needs no credit):
+  `npm install -g @openai/codex` (if the platform binary is missing, reinstall with
+  `--include=optional`), then `codex login --device-auth` and the player enters the code at
+  auth.openai.com/codex/device (the login lives in `~/.codex/`, so a new container needs it
+  again). Run each batch as one plain command, which the player's permission rule
+  `Bash(codex exec *)` covers:
+  `codex exec --skip-git-repo-check -s workspace-write -C <scratch dir> -i <style ref> -o <last.txt> - < prompt.txt`
+  (the prompt comes from stdin: `-`; put `-i` before `-o`, or `-i` takes the `-` as a second
+  image). The prompt asks for one built-in image call per file and a file name for each; Codex
+  saves to `~/.codex/generated_images/…` and copies them over. About a minute an image, two
+  batches at a time. A graded plate of ours attached as a style reference (`-i`) keeps the
+  painted look (without one the result looks like a 3D render); the era's plate for its events.
+  Sprites: "square, one ship from directly above, bow up, flat pure black background", with the
+  four old hulls attached.
 
 ## Gotchas
 
@@ -144,14 +173,23 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **`src/game/sim/economy.ts`:** Kin surface room is 0 when scorched and ≥5 when warm-thawed;
   Solar Arrays × insolation.
 - **`src/audio/music.ts`:**
-  - `TRACKS`: a list of files in `public/music` per age (title, dusk + dusk2, canon,
-    degenerate + degenerate2, blackhole + blackhole2, dark, outcome). A lone track loops;
-    several take turns, each fading out over its last `TRACK_CHANGE` (4 s, on `timeupdate`)
-    and in over 3 s; a file that fails to load passes to the next, once round the list. The
-    synth covers an age none of whose files load. `INTROS` (degenerate → canon, once per
-    session, not when picked by hand) plays before the list and flows into it without a fade.
+  - `PIECES`: what each age can play, in order: its recordings in `public/music` (title, dusk +
+    dusk2, canon, degenerate + degenerate2, blackhole + blackhole2, dark, outcome) and its
+    synthesized score (a piece with no `url`). The player's playlist (Settings → Playlist,
+    `settings.playlist`: piece id → on; `pieceOn` gives the default, recordings on and the synth
+    off) picks the `rotation`; `music.setPlaylist` is called at start-up and on every change,
+    and restarts the music at once if the current age's rotation changed. A lone piece loops;
+    several take turns: a recording fades out over its last `TRACK_CHANGE` (4 s, on
+    `timeupdate`) and in over 3 s, hushing the synth under it (`layer.hushAt`); a synthesized
+    piece brings the synth back for `SYNTH_SPAN` (170 s, on the audio clock: `layer.synthUntil`,
+    checked in `tick`). A file that fails to load passes to the next piece, once round, then to
+    the synth. `INTROS` (degenerate → canon, once per session, not when picked by hand, and not
+    with Canon first off: `settings.overture`) plays before the rotation.
   - `TRACK_CHOICES`, `setTrack`/`current`/`chosen` (Settings → Music track).
   - The synth hiss runs through `layer.hiss`, which fades when a recording plays.
+  - `src/ui/store.ts`: `UI_SCALES` must stay above `settings`, because `loadSettings` reads it
+    when `settings` is created. From `9ca1edc` to 29 Sep it sat below: the read threw, the
+    `catch` returned the defaults, and saved settings were silently ignored on every load.
   - `startLoaded` calls `music.setEra`.
 - **`src/render/systemView.ts`:** other civilizations: `residents` from `survivorWorld`;
   surface civs set the planet shader's `uLights`/`uDev`/`uNeon` and the new `uCityCol` (sodium

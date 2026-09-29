@@ -31,12 +31,33 @@ export const SHIPS: ShipDef[] = [
 
 export const SHIP_BY_ID: Record<string, ShipDef> = Object.fromEntries(SHIPS.map((s) => [s.id, s]));
 
-export type FleetLook = 'settler' | 'probe' | 'war' | 'other';
+/** A painted hull in public/art/ships/<look>.png (the Ark is 'settler', the Warden 'war'). */
+export type FleetLook = 'settler' | 'probe' | 'war' | 'other' | 'lighter' | 'seedcore' | 'spore' | 'vaultship' | 'aegis' | 'tender';
 
-/** Which painted hull stands for a fleet on the map and in the lists. */
+const HULL: Record<string, FleetLook> = {
+  ark: 'settler',
+  lighter: 'lighter',
+  seedcore: 'seedcore',
+  spore: 'spore',
+  vaultship: 'vaultship',
+  warden: 'war',
+  aegis: 'aegis',
+  tender: 'tender',
+};
+
+/** Which painted hull stands for a fleet on the map and in the lists: its heaviest warship, else its first settler, else its tender. */
 export function fleetLook(classes: string[]): FleetLook {
-  if (classes.some((c) => c === 'warden' || c === 'aegis')) return 'war';
-  if (classes.some((c) => SHIP_BY_ID[c]?.settles)) return 'settler';
+  if (classes.includes('aegis')) return HULL.aegis;
+  if (classes.includes('warden')) return 'war';
+  const settler = classes.find((c) => SHIP_BY_ID[c]?.settles);
+  if (settler) return HULL[settler] ?? 'settler';
   if (classes.length > 0 && classes.every((c) => c === 'probe')) return 'probe';
+  if (classes.includes('tender')) return HULL.tender;
   return 'other';
+}
+
+/** What a hull is for, which sets the colour of its glow on the map. */
+export function lookRole(look: FleetLook): 'war' | 'settler' | 'other' {
+  if (look === 'war' || look === 'aegis') return 'war';
+  return look === 'settler' || look === 'lighter' || look === 'seedcore' || look === 'spore' || look === 'vaultship' ? 'settler' : 'other';
 }

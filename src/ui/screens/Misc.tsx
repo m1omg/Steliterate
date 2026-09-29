@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { music, TRACK_CHOICES, type TrackKey } from '../../audio/music';
+import { music, PIECES, pieceOn, TRACK_CHOICES, type Piece, type TrackKey } from '../../audio/music';
 import { ERA_BY_ID } from '../../game/eras';
 import { deleteSlot, exportCode, hasSave, listSlots, loadGame, loadSlot, readSave, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
 import { offerFile, pickTextFile } from '../download';
@@ -101,6 +101,7 @@ export function SettingsModal() {
     const next = { ...st, ...patch };
     saveSettings(next);
     setVolumes(next.music, next.sfx);
+    if (patch.playlist || patch.overture !== undefined) music.setPlaylist(next.playlist, next.overture);
     if (patch.quality) engine()?.setQuality(patch.quality);
     if (patch.uiScale) applyUiScale(patch.uiScale);
   };
@@ -126,6 +127,7 @@ export function SettingsModal() {
           <input id="vol-music" type="range" min="0" max="1" step="0.05" value={st.music} onInput={(e) => set({ music: Number((e.target as HTMLInputElement).value) })} />
         </div>
         <MusicTrackField />
+        <PlaylistField playlist={st.playlist} overture={st.overture} set={set} />
         <div class="field">
           <label for="vol-sfx">Sound effects {Math.round(st.sfx * 100)}%</label>
           <input id="vol-sfx" type="range" min="0" max="1" step="0.05" value={st.sfx} onInput={(e) => set({ sfx: Number((e.target as HTMLInputElement).value) })} onChange={() => sfx('click')} />
@@ -202,6 +204,49 @@ function MusicTrackField() {
       <div class="faint" style={{ fontSize: '11px', marginTop: '3px' }}>
         {chosen ? `Playing ${playing} until you choose Automatic again.` : `Now: ${playing}.`}
       </div>
+    </div>
+  );
+}
+
+/** Which pieces each age plays in turn: its recordings, the synthesized score, or any mix. */
+function PlaylistField({ playlist, overture, set }: { playlist: Record<string, boolean>; overture: boolean; set: (patch: { playlist?: Record<string, boolean>; overture?: boolean }) => void }) {
+  const toggle = (key: TrackKey, p: Piece) => {
+    const now = pieceOn(playlist, p);
+    if (now && PIECES[key].filter((q) => pieceOn(playlist, q)).length === 1) {
+      notify('Each age needs at least one piece to play.');
+      return;
+    }
+    set({ playlist: { ...playlist, [p.id]: !now } });
+    sfx('click');
+  };
+  return (
+    <div class="field">
+      <label>Playlist</label>
+      <div class="col" style={{ gap: '6px' }}>
+        {TRACK_CHOICES.filter((t) => t.key !== 'canon').map((t) => (
+          <div key={t.key} class="row wrap" style={{ gap: '4px' }}>
+            <span class="grow" style={{ fontSize: '12.5px', minWidth: '140px' }}>{t.name}</span>
+            {PIECES[t.key].map((p) => {
+              const on = pieceOn(playlist, p);
+              return (
+                <button key={p.id} class={`btn small ${on ? 'primary' : ''}`} aria-pressed={on} data-tip={p.url ? 'A recorded track (a generated instrumental).' : 'The game’s own score, synthesized as it plays.'} onClick={() => toggle(t.key, p)}>
+                  {p.name}
+                </button>
+              );
+            })}
+            {t.key === 'degenerate' && (
+              <button class={`btn small ${overture ? 'primary' : ''}`} aria-pressed={overture} data-tip="Pachelbel’s Canon in D, once, as the Degenerate Age begins." onClick={() => {
+                  set({ overture: !overture });
+                  sfx('click');
+                }}
+              >
+                Canon first
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <div class="faint" style={{ fontSize: '11px', marginTop: '3px' }}>Each age plays the pieces lit here in turn, fading from one to the next; a lone piece repeats.</div>
     </div>
   );
 }

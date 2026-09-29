@@ -17,7 +17,9 @@ import { pivotToSystem } from './Lists';
 import { Icon } from '../Icon';
 import { ModalFrame } from './Frame';
 
-// Art plates live in art/<name>.webp. Until one exists the plate is a graded gradient.
+// Art plates live in art/<name>.webp. Until one exists the plate is a graded gradient. An event
+// with a painting of its own (art/events/<plate>.webp) shows it over its era's, which stays
+// underneath in case it fails to load.
 const ART_TINT: Record<string, string> = {
   dusk: '#3a1a10',
   degenerate: '#141c2c',
@@ -31,14 +33,15 @@ const ART_TINT: Record<string, string> = {
   slow: '#161a28',
 };
 
-export function Plate({ art, height = 220 }: { art: string; height?: number }) {
+export function Plate({ art, plate, height = 220 }: { art: string; plate?: string; height?: number }) {
   const tint = ART_TINT[art] ?? '#15141a';
+  const own = plate ? `url(art/events/${plate}.webp), ` : '';
   return (
     <div
       class="event-art"
       style={{
         height: `${height}px`,
-        backgroundImage: `url(art/${art}.webp), radial-gradient(ellipse at 70% 40%, ${tint}, #050507 75%)`,
+        backgroundImage: `${own}url(art/${art}.webp), radial-gradient(ellipse at 70% 40%, ${tint}, #050507 75%)`,
       }}
       aria-hidden="true"
     />
@@ -116,7 +119,7 @@ export function LoreModal({ s }: { s: GameState }) {
   return (
     <div class="modal-wrap" onClick={(e) => e.target === e.currentTarget && close()}>
       <div class="modal panel narrow event" role="dialog" aria-modal="true" aria-label={def.title}>
-        <Plate art={def.art} />
+        <Plate art={def.art} plate={def.plate} />
         <div class="modal-body scroll" style={{ marginTop: '-60px', position: 'relative' }}>
           <div class="eyebrow">Survey report · {b.name}, {s.systems[b.systemId]?.name}</div>
           <h1 class="event-title">{def.title}</h1>
@@ -165,7 +168,7 @@ export function EventModal({ s }: { s: GameState }) {
   return (
     <div class="modal-wrap">
       <div class="modal panel narrow event" role="dialog" aria-modal="true" aria-label={def.title}>
-        <Plate art={def.art} />
+        <Plate art={def.art} plate={def.plate} />
         <div class="modal-body scroll" style={{ marginTop: '-60px', position: 'relative' }}>
           <div class="eyebrow">{ERA_BY_ID[s.era].name} · turn {s.turn}</div>
           <h1 class="event-title">{def.title}</h1>

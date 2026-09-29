@@ -2,13 +2,14 @@
 // film grain and a vignette, exported as webp at 1600 px wide.
 //   node tools/process-art.mjs            (reads art-src/*.png, writes public/art/*.webp)
 //   node tools/process-art.mjs finds      (reads art-src/anom/*.png, writes public/art/finds/*.webp)
+//   node tools/process-art.mjs events     (reads art-src/events/*.png, writes public/art/events/*.webp)
 import sharp from 'sharp';
 import { mkdirSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-const SET = process.argv[2] === 'finds' ? 'finds' : 'plates';
-const SRC = SET === 'finds' ? 'art-src/anom' : 'art-src';
-const OUT = SET === 'finds' ? 'public/art/finds' : 'public/art';
+const SET = ['finds', 'events'].includes(process.argv[2]) ? process.argv[2] : 'plates';
+const SRC = { finds: 'art-src/anom', events: 'art-src/events', plates: 'art-src' }[SET];
+const OUT = { finds: 'public/art/finds', events: 'public/art/events', plates: 'public/art' }[SET];
 const WIDTH = 1600;
 
 // per-plate grade: channel gains and lifts (0..255)
@@ -36,6 +37,25 @@ const GRADE = {
   way_upload: COLD,
   way_chorus: VIOLET,
   way_dormant: COLD,
+  way_lattice: NEUTRAL,
+  way_fork: NEUTRAL,
+  // events with a painting of their own, by the age they come in
+  dynamo_fails: WARM,
+  first_night: WARM,
+  last_rain: WARM,
+  sea_freezes: WARM,
+  mantle_settles: WARM,
+  comet: WARM,
+  who_sleeps_first: WARM,
+  prophet_of_stillness: WARM,
+  first_upload: WARM,
+  new_star: COLD,
+  white_fire: COLD,
+  supernova: COLD,
+  cast_out: COLD,
+  unmoored: COLD,
+  world_falls: COLD,
+  final_burst: VIOLET,
   // survey discoveries
   vent_life: COLD,
   fossil_reactor: NEUTRAL,
@@ -57,6 +77,8 @@ const SOFTEN = {
   survivor: [{ x: 0.58, y: 0.0, w: 0.2, h: 0.24 }],
   warm_rogue: [{ x: 0.89, y: 0.86, w: 0.1, h: 0.13 }], // painted signatures
   fossil_reactor: [{ x: 0.92, y: 0.9, w: 0.075, h: 0.1 }],
+  way_lattice: [{ x: 0.0, y: 0.95, w: 0.07, h: 0.05 }],
+  prophet_of_stillness: [{ x: 0.3, y: 0.1, w: 0.1, h: 0.24 }, { x: 0.83, y: 0.1, w: 0.1, h: 0.24 }], // a banner emblem too like a known logo
 };
 
 function grain(w, h, amount) {

@@ -33,6 +33,10 @@ export interface Settings {
   sfx: number;
   quality: Quality;
   uiScale: number;
+  /** Music playlist: piece id → in its age's rotation (unset: recordings in, the synthesized score out). */
+  playlist: Record<string, boolean>;
+  /** The Canon opens the Degenerate Age. */
+  overture: boolean;
 }
 
 export const game = signal<GameState | null>(null);
@@ -56,6 +60,16 @@ export const targeting = signal<{ fleetId: string; order: 'move' | 'survey' } | 
 export const hoverStar = signal<string | null>(null);
 /** What the camera is following (set by the engine). */
 export const following = signal<{ kind: 'body' | 'fleet'; id: string; keepZoom?: boolean } | null>(null);
+
+/** Interface sizes on offer; the whole UI layer is zoomed by the chosen factor. */
+export const UI_SCALES = [
+  { v: 0.85, label: 'Small' },
+  { v: 1, label: 'Normal' },
+  { v: 1.2, label: 'Large' },
+  { v: 1.4, label: 'Huge' },
+];
+
+// (after UI_SCALES, which loadSettings reads: before it, the read threw and the saved settings were ignored)
 export const settings = signal<Settings>(loadSettings());
 
 let engineRef: Engine | null = null;
@@ -98,16 +112,8 @@ export function autosave() {
   if (g) saveGame(g, true);
 }
 
-/** Interface sizes on offer; the whole UI layer is zoomed by the chosen factor. */
-export const UI_SCALES = [
-  { v: 0.85, label: 'Small' },
-  { v: 1, label: 'Normal' },
-  { v: 1.2, label: 'Large' },
-  { v: 1.4, label: 'Huge' },
-];
-
 function loadSettings(): Settings {
-  const d: Settings = { music: 0.7, sfx: 0.7, quality: 'high', uiScale: 1 };
+  const d: Settings = { music: 0.7, sfx: 0.7, quality: 'high', uiScale: 1, playlist: {}, overture: true };
   try {
     const t = localStorage.getItem('steliterate.settings');
     const s: Settings = t ? { ...d, ...JSON.parse(t) } : d;

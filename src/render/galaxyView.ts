@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { fleetLook, type FleetLook } from '../game/data/ships';
+import { fleetLook, lookRole, type FleetLook } from '../game/data/ships';
 import { diskLight, primaryTemperature } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
@@ -461,12 +461,12 @@ export class GalaxyView {
       }
       let anim = this.fleetAnim.get(f.id);
       const kind = fleetLook(f.ships.map((s) => s.cls));
-      const war = kind === 'war';
+      const role = lookRole(kind);
       const star = f.at ? new THREE.Vector3(state.systems[f.at].pos.x, state.systems[f.at].pos.y, state.systems[f.at].pos.z) : null;
       const dest = f.to ? new THREE.Vector3(state.systems[f.to].pos.x, state.systems[f.to].pos.y, state.systems[f.to].pos.z) : null;
       if (!anim || anim.kind !== kind) {
         if (anim) this.fleetGroup.remove(anim.mesh);
-        const mesh = fleetGlyph(kind, war ? '#ffc98f' : kind === 'settler' ? '#9ff5e6' : '#bfe9ff');
+        const mesh = fleetGlyph(kind, role === 'war' ? '#ffc98f' : role === 'settler' ? '#9ff5e6' : '#bfe9ff');
         this.fleetGroup.add(mesh);
         mesh.position.copy(p);
         anim = { from: p.clone(), to: p.clone(), t0: now, mesh, kind, star, dest, phase: (hashId(f.id) % 628) / 100, pick: null };
