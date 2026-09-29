@@ -223,6 +223,6 @@ belongs to another organization.
 - `5d53356` **Look before settling.** Where to settle: a Look button turns the view to a site
   without sending the ship, and each site warns of a swarm feeding there or within its reach; a
   freezing or cooling world no longer ranks by the room it is about to lose. The Nearby list rates
-  each charted star's best site. Rust is explained (tooltip, manual); a boiled-dry eyeball world
+  each charted star for every kind of settler (`27dae58`: Kin room, power, matter, time). Rust is explained (tooltip, manual); a boiled-dry eyeball world
   is a Scorched world; a charter book full at nine no longer says it is full "until the Assembly
   of Threads".
