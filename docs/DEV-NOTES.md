@@ -218,6 +218,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     is on offer); `KindIcon` (icons in `KIND_ICON`, colours in `.kind-<kind>` in
     `styles.css`) marks build rows, the queue and the built-structure chips, which sort by
     kind. Ships in the queue get the fleet icon.
+  - Toasts: `notify(text, kind, action?)` in `store.ts`; an `action` ({ label, tip, run }) puts
+    a button on the toast (`App.tsx`, `.toast-act`) and keeps it up 12 s. `turnflow.ts` gives
+    "Survey complete" a Look (selects the system, `pivotToSystem(id, true)`) and "Living world
+    found" a Look (`goToBody`).
   - `Signals.tsx`: Ask for help.
   - `Misc.tsx`: `MusicTrackField`, `startLoaded` music.
   - `Lists.tsx`: Surveyed worlds sorts.

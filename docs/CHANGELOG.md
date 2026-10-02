@@ -278,3 +278,7 @@ belongs to another organization.
   overdrive. The ways of the Hunger cannot be repealed (they take no room in the book). Saves are
   unchanged in shape (a repeal is remembered in `civ.flags`); the autoplayer never repeals, and
   the harness gives 133 of 300, the same games as before.
+- **Look from the survey message** (2 Oct, as asked). "Survey complete" now has a Look button that
+  goes into the surveyed system with its panel open (the first one, when several finish in one
+  turn), and "Living world found" one that goes to that world. A message with a button stays up
+  12 s instead of 4.5. Interface only.

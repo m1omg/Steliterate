@@ -2,7 +2,8 @@ import { SHIP_BY_ID } from '../game/data/ships';
 import { endTurn } from '../game/sim/turn';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
-import { autosave, busy, bump, engine, game, modal, notify } from './store';
+import { autosave, busy, bump, engine, game, modal, notify, selection } from './store';
+import { goToBody, pivotToSystem } from './screens/Lists';
 import { TECH_BY_ID } from '../game/data/techs';
 import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
 import { shipQueue } from './hud/ShipPrompt';
@@ -69,14 +70,26 @@ export function doEndTurn() {
   const living = surveyed.flatMap((id) => livingWorlds(s, id));
   if (living.length) {
     const b = living.sort((x, y) => y.habitability * y.vitality - x.habitability * x.vitality)[0];
-    notify(`Living world found: ${b.name} in ${s.systems[b.systemId].name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b)} Kin${living.length > 1 ? ` (and ${living.length - 1} more)` : ''}.`, 'good');
+    notify(`Living world found: ${b.name} in ${s.systems[b.systemId].name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b)} Kin${living.length > 1 ? ` (and ${living.length - 1} more)` : ''}.`, 'good', {
+      label: 'Look',
+      tip: `Go to ${b.name}`,
+      run: () => goToBody(b),
+    });
     for (const w of living) engine()?.ping(w.systemId, '#b8f5a0');
     sfx('good');
   }
   if (surveyed.length) {
     const sys = s.systems[surveyed[0]];
     const worlds = sys.bodies.filter((b) => s.bodies[b] && !s.bodies[b].dissolved && s.bodies[b].kind !== 'deep').length;
-    notify(`Survey complete: ${sys.name}, ${worlds} world${worlds === 1 ? '' : 's'}${surveyed.length > 1 ? `, and ${surveyed.length - 1} more system${surveyed.length > 2 ? 's' : ''}` : ''}.`, 'good');
+    notify(`Survey complete: ${sys.name}, ${worlds} world${worlds === 1 ? '' : 's'}${surveyed.length > 1 ? `, and ${surveyed.length - 1} more system${surveyed.length > 2 ? 's' : ''}` : ''}.`, 'good', {
+      label: 'Look',
+      tip: `Look inside ${sys.name}: its worlds, and what the survey found`,
+      // inside the system, with its panel listing the worlds
+      run: () => {
+        selection.value = { kind: 'system', id: sys.id };
+        pivotToSystem(sys.id, true);
+      },
+    });
     sfx('signal');
   } else if (detected.length) notify(`${detected.length} new star${detected.length === 1 ? '' : 's'} on the map.`, 'info');
   const newSettlers = Object.values(s.fleets).filter((f) => !fleetsBefore.has(f.id) && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));

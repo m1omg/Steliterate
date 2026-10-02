@@ -50,6 +50,8 @@ export interface Toast {
   id: number;
   text: string;
   kind: 'info' | 'bad' | 'good';
+  /** A button on the toast, such as Look; a toast with one stays up longer, to leave time to press it. */
+  action?: { label: string; tip?: string; run: () => void };
 }
 export const toasts = signal<Toast[]>([]);
 let toastId = 0;
@@ -86,12 +88,12 @@ export function bump() {
   if (g && engineRef) engineRef.setState(g);
 }
 
-export function notify(text: string, kind: 'info' | 'bad' | 'good' = 'info') {
+export function notify(text: string, kind: 'info' | 'bad' | 'good' = 'info', action?: Toast['action']) {
   // the same message twice in a row is one message
   if (toasts.value.some((t) => t.text === text)) return;
-  const t: Toast = { id: ++toastId, text, kind };
+  const t: Toast = { id: ++toastId, text, kind, action };
   toasts.value = [...toasts.value, t].slice(-3);
-  window.setTimeout(() => dismissToast(t.id), kind === 'bad' ? 6000 : 4500);
+  window.setTimeout(() => dismissToast(t.id), action ? 12000 : kind === 'bad' ? 6000 : 4500);
 }
 
 /** Run a game action; show its error if any, refresh otherwise. */

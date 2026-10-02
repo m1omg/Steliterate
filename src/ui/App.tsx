@@ -12,6 +12,7 @@ import { SignalsModal } from './screens/Signals';
 import { FleetsModal, SettlementsModal } from './screens/Lists';
 import { CrossingScreen, EraIntro, EventModal, LoreModal, OutcomeScreen, eventResult, loreView } from './screens/Story';
 import { TipLayer } from './Tip';
+import { Icon } from './Icon';
 import { dismissToast, game, hoverStar, modal, rev, screen, targeting, toasts } from './store';
 import { SHIP_BY_ID } from '../game/data/ships';
 import { formatDistance } from '../game/eras';
@@ -37,6 +38,19 @@ function Toasts() {
       {list.map((t) => (
         <div key={t.id} class={`toast panel ${t.kind}`} onClick={() => dismissToast(t.id)}>
           {t.text}
+          {t.action && (
+            <button
+              class="btn small toast-act"
+              data-tip={t.action.tip}
+              onClick={(e) => {
+                e.stopPropagation();
+                dismissToast(t.id);
+                t.action!.run();
+              }}
+            >
+              <Icon name="system" /> {t.action.label}
+            </button>
+          )}
         </div>
       ))}
     </div>
