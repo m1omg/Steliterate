@@ -303,3 +303,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `1a72718` | 123 | display only: all 300 games identical |
 | `7b52ab4` | 122 | living worlds freeze when their own star dies; 900 games: 358, against 357; 85 of 900 outcomes change, both ways |
 | `b950f24` | 133 | flare turns pay by the time lived, young white dwarfs averaged, cold worlds start frozen, relic draws swarms; 900 games: 390 (358); pace and light fixes reverted: 123 |
+| `55ff2da` | 133 | charters can be repealed; the autoplayer never repeals: all 300 games identical to `30c3c7f` |

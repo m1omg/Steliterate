@@ -268,7 +268,7 @@ belongs to another organization.
   kind at a time (the choice stays across settlements). Each kind has its own coloured icon,
   on the build rows, in the queue (ships get the fleet icon) and on the Overview's
   structures, which are now sorted by kind. Interface only: no rules change.
-- **Charters can be repealed** (2 Oct; the player had filled all nine places in the book during
+- `55ff2da` **Charters can be repealed** (2 Oct; the player had filled all nine places in the book during
   the Stelliferous era, so the rest stayed out of reach). In the Charters screen a law in force
   has Repeal…, and then a confirmation that says what the repeal does. A repeal costs the law's
   Accord again, turns every Thread's opinion of it around (those it pleased lose that standing,
