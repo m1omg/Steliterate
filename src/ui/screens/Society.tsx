@@ -4,7 +4,8 @@ import { TECH_BY_ID } from '../../game/data/techs';
 import { logTurnLength } from '../../game/eras';
 import { turnStep } from '../../game/sim/flare';
 import { archivedEchoes } from '../../game/sim/archive';
-import { charterAvailable, enactCharter } from '../../game/sim/actions';
+import { useState } from 'preact/hooks';
+import { charterAvailable, enactCharter, REPEAL_DISSENT, repealAvailable, repealCharter } from '../../game/sim/actions';
 import { clockRange, computeMods, strainFor } from '../../game/sim/mods';
 import { demandMet } from '../../game/sim/society';
 import { hasCharter, threadTotals } from '../../game/sim/util';
@@ -34,8 +35,17 @@ function Stances({ d }: { d: CharterDef }) {
   );
 }
 
+/** What repealing a charter does to each Thread's standing: its stances turned around. */
+function repealSummary(d: CharterDef): string {
+  const parts = Object.entries(d.stances)
+    .filter(([, v]) => v)
+    .map(([t, v]) => `${THREAD_DEFS[t as ThreadId].name} ${v! > 0 ? '−' : '+'}${Math.abs(v!)}`);
+  return [...parts, `dissent +${REPEAL_DISSENT}`].join(', ');
+}
+
 export function ChartersModal({ s }: { s: GameState }) {
   void rev.value;
+  const [confirming, setConfirming] = useState<string | null>(null);
   const open = s.civ.techs.includes('the_long_record');
   const light = CHARTERS.filter((c) => !c.dark);
   const dark = CHARTERS.filter((c) => c.dark);
@@ -43,6 +53,9 @@ export function ChartersModal({ s }: { s: GameState }) {
   const card = (d: CharterDef) => {
     const enacted = hasCharter(s, d.id);
     const err = enacted ? null : charterAvailable(s, d.id);
+    const repealErr = enacted ? repealAvailable(s, d.id) : null;
+    const repealedAt = s.civ.flags[`repealed_${d.id}`];
+    const asking = confirming === d.id && enacted && !repealErr;
     return (
       <div key={d.id} class={`card ${enacted ? 'enacted' : ''} ${d.dark ? 'dark' : ''}`}>
         <div class="row">
@@ -52,33 +65,64 @@ export function ChartersModal({ s }: { s: GameState }) {
         <div class="flavor" style={{ fontSize: '13px' }}>{d.desc}</div>
         <div style={{ fontSize: '12px' }}>{d.effect}</div>
         <Stances d={d} />
-        {enacted ? (
-          <span class="good" style={{ fontSize: '12px' }}><Icon name="check" /> Enacted. It cannot be revoked.</span>
+        {enacted && d.dark ? (
+          <span class="good" style={{ fontSize: '12px' }}><Icon name="check" /> Enacted. There is no undoing it.</span>
+        ) : enacted ? (
+          <div class="col" style={{ gap: '6px' }}>
+            <div class="row" style={{ gap: '6px' }}>
+              <span class="good grow" style={{ fontSize: '12px' }}><Icon name="check" /> In force.</span>
+              {!asking && (
+                <button class="btn small" disabled={!!repealErr} data-tip={repealErr ?? `Strike it from the book (${d.cost} accord). Standing turns around: ${repealSummary(d)}. What it did once stays done.`} onClick={() => setConfirming(d.id)}>
+                  Repeal…
+                </button>
+              )}
+            </div>
+            {asking && (
+              <div class="row wrap" style={{ gap: '6px' }}>
+                <button
+                  class="btn small danger"
+                  data-tip={`${repealSummary(d)}. What it did once stays done.`}
+                  onClick={() => {
+                    if (act((g) => repealCharter(g, d.id))) sfx('bad');
+                    setConfirming(null);
+                  }}
+                >
+                  Repeal for {d.cost} accord
+                </button>
+                <button class="btn small ghost" onClick={() => setConfirming(null)}>Keep it</button>
+              </div>
+            )}
+          </div>
         ) : (
-          <button
-            class={`btn small ${d.dark ? 'danger' : ''}`}
-            disabled={!!err}
-            data-tip={err ?? (d.dark ? 'There is no coming back from this.' : 'Charters are permanent.')}
-            onClick={() => act((g) => enactCharter(g, d.id)) && sfx(d.dark ? 'bad' : 'good')}
-          >
-            {err && (d.tech && !s.civ.techs.includes(d.tech)) ? `Needs ${TECH_BY_ID[d.tech]?.name}` : 'Enact'}
-          </button>
+          <>
+            <button
+              class={`btn small ${d.dark ? 'danger' : ''}`}
+              disabled={!!err}
+              data-tip={err ?? (d.dark ? 'There is no coming back from this.' : 'It stays in force until you repeal it.')}
+              onClick={() => act((g) => enactCharter(g, d.id)) && sfx(d.dark ? 'bad' : 'good')}
+            >
+              {err && (d.tech && !s.civ.techs.includes(d.tech)) ? `Needs ${TECH_BY_ID[d.tech]?.name}` : repealedAt !== undefined ? 'Enact again' : 'Enact'}
+            </button>
+            {repealedAt !== undefined && <span class="faint" style={{ fontSize: '11px' }}>Repealed in turn {repealedAt}.{d.id === 'salvage_the_dead' ? ' Its first windfall will not come again.' : ''}</span>}
+          </>
         )}
       </div>
     );
   };
+  const inBook = s.civ.charters.filter((c) => !CHARTERS.find((x) => x.id === c)?.dark).length;
+  const room = s.civ.techs.includes('assembly_of_threads') ? 9 : 5;
   return (
-    <ModalFrame title="Charters" eyebrow={`The book of laws · ${n0(s.civ.accord)} accord`} icon="doctrines">
+    <ModalFrame title="Charters" eyebrow={`The book of laws · ${inBook} of ${room} written · ${n0(s.civ.accord)} accord`} icon="doctrines">
       {!open && <p class="warn">Research The Long Record to begin writing Charters.</p>}
       <p class="dim" style={{ fontSize: '12px', marginTop: 0 }}>
-        Laws are permanent. Each Thread has an opinion: approval raises its standing, opposition lowers it. A Thread whose standing stays very low may leave.
+        A law stays in force until you repeal it. Each Thread has an opinion: approval raises its standing, opposition lowers it, and a repeal turns those opinions around and reopens the argument (dissent +{REPEAL_DISSENT}), for as much Accord as the law cost. What a law did once stays done. The book holds {room} laws{room === 5 ? ' (nine with the Assembly of Threads)' : ''}. A Thread whose standing stays very low may leave.
       </p>
       <div class="cards">{light.map(card)}</div>
       {showDark && (
         <div class="section">
           <h3 class="bad">The ways of the Hunger</h3>
           <p class="dim" style={{ fontSize: '12px', marginTop: 0 }}>
-            Survive the way the swarms survive: by eating what is left. Each step brings plenty now and closes some endings. At 100 Taint there is no one left inside.
+            Survive the way the swarms survive: by eating what is left. Each step brings plenty now and closes some endings, and none can be repealed. They take no room in the book. At 100 Taint there is no one left inside.
           </p>
           <div class="cards">{dark.map(card)}</div>
         </div>

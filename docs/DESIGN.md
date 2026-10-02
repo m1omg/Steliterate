@@ -130,10 +130,14 @@ range, **standing** (0 to 100) and a rotating **demand**.
   civilization gives up (*The Will Fails*). **Dissent** is how much the Threads disagree;
   above 40 it slows work. A Thread with very low standing and high dissent **forks** away and
   becomes one of the other minds.
-* **Charters** are permanent, morally loaded laws (about 20): *Cold Sleep Lottery*, *Upload at
+* **Charters** are morally loaded laws (about 20): *Cold Sleep Lottery*, *Upload at
   Death*, *Sanctity of Flesh*, *Abandon the Surface*, *The Right to Stop*, *Merge Consent*,
   *Child Quotas*, *Sanctuary*, *Salvage the Dead*, *Blackout*, *Rationing*, *Overdrive
-  Protocols* and more. Each Thread approves or opposes each one.
+  Protocols* and more. Each Thread approves or opposes each one. The book holds five (nine with
+  the Assembly of Threads). A law stays in force until it is **repealed** (since 2 Oct, at the
+  player's request: a full book left later laws out of reach for good): a repeal costs the law's
+  Accord again, turns every Thread's stance around and adds a little dissent; what a law did
+  once stays done, and a windfall does not come twice. The ways of the Hunger cannot be undone.
 
 ---
 

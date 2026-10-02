@@ -35,6 +35,12 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   found nothing new: both branches at `a16f928`, PR m1omg/Steliterate#1 without comments).
 - **2 Oct, kinds of structure** ("a UI friendly way of distinguishing building types … the list
   is becoming very long"): done, interface only (`CHANGELOG.md`).
+- **2 Oct, Charters can be repealed** ("without breaking saves and my playthrough … no law can
+  ever be revoked … I used my quota of laws already in the Stelliferous era"): done. This
+  reverses the design's "permanent laws"; the weight is kept by the cost (the law's Accord again,
+  every Thread's stance turned around, dissent +3) and by one-time effects staying done. The
+  ways of the Hunger stay irreversible. Tested on the player's own turn-77 save (their book was
+  full at nine); the harness is game for game unchanged (the autoplayer never repeals).
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

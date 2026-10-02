@@ -172,6 +172,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   most 1 on a turn cut short by a flare's start.
 - **`src/game/sim/economy.ts`:** Kin surface room is 0 when scorched and ≥5 when warm-thawed;
   Solar Arrays × insolation.
+- **Charters (`src/game/sim/actions.ts`):** `charterAvailable` (the book holds 5 light laws, 9
+  with the Assembly of Threads; dark ones take no room), `enactCharter`, and since 2 Oct
+  `repealAvailable` / `repealCharter`: a repeal costs the law's Accord again, subtracts its
+  `stances`, adds `REPEAL_DISSENT` (3) and records `civ.flags.repealed_<id>` = turn, so
+  enacting it again skips what it does once (Salvage the Dead's 40 matter and free-energy drain);
+  repealing the Overdrive Protocols takes every Hearth off overdrive. Dark charters cannot be
+  repealed. Every charter effect is a live `hasCharter` / `charter:<id>` check, so a repeal
+  needs nothing else; Thread demands that ask for a law (Right to Stop, Merge Consent) open
+  again. The autoplayer never repeals, so the harness is unchanged by it. UI: `ChartersModal`
+  in `Society.tsx` (Repeal…, then Repeal for N accord / Keep it).
 - **`src/audio/music.ts`:**
   - `PIECES`: what each age can play, in order: its recordings in `public/music` (title, dusk +
     dusk2, canon, degenerate + degenerate2, blackhole + blackhole2, dark, outcome) and its

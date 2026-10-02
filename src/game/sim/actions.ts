@@ -12,7 +12,7 @@ import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
 import { devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { eraIndex, hasCharter, hasTech, log, savableName, uid } from './util';
+import { colonies, eraIndex, hasCharter, hasTech, log, savableName, uid } from './util';
 
 export type ActionResult = string | null; // error message or null on success
 
@@ -227,17 +227,54 @@ export function enactCharter(state: GameState, id: string): ActionResult {
   if (err) return err;
   const d = CHARTER_BY_ID[id];
   const civ = state.civ;
+  // a law written again after a repeal: what it does once was done the first time
+  const again = civ.flags[`repealed_${id}`] !== undefined;
   civ.accord -= d.cost;
   civ.charters.push(id);
   for (const [t, v] of Object.entries(d.stances)) civ.standing[t as keyof typeof civ.standing] = Math.max(0, Math.min(100, civ.standing[t as keyof typeof civ.standing] + (v ?? 0)));
   if (d.resolve) civ.resolve = Math.max(0, Math.min(100, civ.resolve + d.resolve));
   if (d.dissent) civ.dissent = Math.max(0, Math.min(100, civ.dissent + d.dissent));
   if (d.taint) civ.taint = Math.min(100, civ.taint + d.taint);
-  if (id === 'consume_the_dead' || id === 'salvage_the_dead') state.gfe = Math.max(0.05, state.gfe - 0.01);
+  if (!again && (id === 'consume_the_dead' || id === 'salvage_the_dead')) state.gfe = Math.max(0.05, state.gfe - 0.01);
   // stripping what is already dead and in reach pays at once
-  if (id === 'salvage_the_dead') civ.matter += 40;
+  if (!again && id === 'salvage_the_dead') civ.matter += 40;
   if (id === 'consume_the_dead') civ.matter += hasCharter(state, 'salvage_the_dead') ? 80 : 120;
-  log(state, `Charter enacted: ${d.name}.`, d.dark ? 'bad' : 'event');
+  log(state, `Charter ${again ? 're-enacted' : 'enacted'}: ${d.name}.`, d.dark ? 'bad' : 'event');
+  return null;
+}
+
+/** How much a repeal unsettles people: unmaking a law reopens the argument it settled. */
+export const REPEAL_DISSENT = 3;
+
+/** Why a charter cannot be repealed now, or null. The ways of the Hunger cannot be undone. */
+export function repealAvailable(state: GameState, id: string): string | null {
+  const d = CHARTER_BY_ID[id];
+  if (!d) return 'Unknown charter.';
+  if (!hasCharter(state, id)) return 'Not in force.';
+  if (d.dark) return 'There is no undoing this.';
+  if (state.civ.accord < d.cost) return `Repealing it needs ${d.cost} Accord.`;
+  return null;
+}
+
+/**
+ * Strike a law from the book. It takes as much agreement as writing it did; every Thread's
+ * opinion of it is turned around (those it pleased lose that standing, those it hurt get theirs
+ * back), and the argument it settled opens again. What it did once stays done: windfalls are
+ * not repaid and will not come again, and what people went through is not undone.
+ */
+export function repealCharter(state: GameState, id: string): ActionResult {
+  const err = repealAvailable(state, id);
+  if (err) return err;
+  const d = CHARTER_BY_ID[id];
+  const civ = state.civ;
+  civ.accord -= d.cost;
+  civ.charters = civ.charters.filter((c) => c !== id);
+  for (const [t, v] of Object.entries(d.stances)) civ.standing[t as keyof typeof civ.standing] = Math.max(0, Math.min(100, civ.standing[t as keyof typeof civ.standing] - (v ?? 0)));
+  civ.dissent = Math.min(100, civ.dissent + REPEAL_DISSENT);
+  civ.flags[`repealed_${id}`] = state.turn;
+  // without the Protocols no Hearth may run past its rating
+  if (id === 'overdrive_protocols') for (const c of colonies(state)) c.overdrive = false;
+  log(state, `Charter repealed: ${d.name}.`, 'event');
   return null;
 }
 

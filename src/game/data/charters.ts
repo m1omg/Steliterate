@@ -1,6 +1,7 @@
 import type { EraId, ThreadId } from '../types';
 
-// The book of Charters: irreversible laws. Every Thread has an opinion.
+// The book of Charters: laws in force until repealed (repealCharter); the ways of the Hunger
+// (`dark`) cannot be undone. Every Thread has an opinion.
 
 export interface CharterDef {
   id: string;

@@ -260,7 +260,7 @@ belongs to another organization.
   about a recording's length, 170 s), and the Canon can be left out of the Degenerate Age's
   opening. Fixed: saved settings (volumes, graphics, interface size) were ignored on every load
   since `9ca1edc`; they now come back. No rules change.
-- **Kinds of structure** (2 Oct; the player: the list "is becoming very long"). Every structure
+- `30c3c7f` **Kinds of structure** (2 Oct; the player: the list "is becoming very long"). Every structure
   has a kind, worked out from what it does: energy (13 of the 44), storage (4), matter (4),
   industry (2), insight (2), accord (1), people (13: room for each kind of mind, cold sleep, the
   conversions, continuity), the world (4: shields, lamps, core heat, volatiles) and defence (1).
@@ -268,3 +268,13 @@ belongs to another organization.
   kind at a time (the choice stays across settlements). Each kind has its own coloured icon,
   on the build rows, in the queue (ships get the fleet icon) and on the Overview's
   structures, which are now sorted by kind. Interface only: no rules change.
+- **Charters can be repealed** (2 Oct; the player had filled all nine places in the book during
+  the Stelliferous era, so the rest stayed out of reach). In the Charters screen a law in force
+  has Repeal…, and then a confirmation that says what the repeal does. A repeal costs the law's
+  Accord again, turns every Thread's opinion of it around (those it pleased lose that standing,
+  those it hurt get theirs back) and adds 3 dissent; the law's ongoing effects stop at once,
+  and Thread demands it answered open again. What it did once stays done: enacted again, Salvage
+  the Dead pays no second windfall. Repealing the Overdrive Protocols takes every Hearth off
+  overdrive. The ways of the Hunger cannot be repealed (they take no room in the book). Saves are
+  unchanged in shape (a repeal is remembered in `civ.flags`); the autoplayer never repeals, and
+  the harness gives 133 of 300, the same games as before.
