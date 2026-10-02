@@ -199,6 +199,15 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `Story.tsx`: `LoreModal`, `loreView`, `worldFinds`.
   - `Drawer.tsx`: Raid button, settler list sorts, Sunlight row, resident lines, Ruins "Read
     again", find chips.
+  - Kinds of structure: `structureKind` in `src/game/data/structures.ts` derives one from
+    what a structure does (the first of energy, matter, storage, insight, accord, industry,
+    defence, world; anything else is people: room, cold sleep, conversions, continuity), so a
+    new structure needs no list; `STRUCTURE_KINDS` gives the order, names and tips. In
+    `Drawer.tsx`, `BuildTab` groups the build list under kind headings, with a filter row
+    (`buildKind`, a signal, so the choice holds across settlements; hidden when only one kind
+    is on offer); `KindIcon` (icons in `KIND_ICON`, colours in `.kind-<kind>` in
+    `styles.css`) marks build rows, the queue and the built-structure chips, which sort by
+    kind. Ships in the queue get the fleet icon.
   - `Signals.tsx`: Ask for help.
   - `Misc.tsx`: `MusicTrackField`, `startLoaded` music.
   - `Lists.tsx`: Surveyed worlds sorts.

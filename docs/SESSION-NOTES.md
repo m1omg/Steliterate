@@ -30,6 +30,11 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 ## Open threads and pending decisions
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
+- **The player works from more than one session.** Before changing anything, fetch every branch
+  and compare with `origin/claude/lucid-newton-30cbpk` (they asked for this check on 2 Oct; it
+  found nothing new: both branches at `a16f928`, PR m1omg/Steliterate#1 without comments).
+- **2 Oct, kinds of structure** ("a UI friendly way of distinguishing building types … the list
+  is becoming very long"): done, interface only (`CHANGELOG.md`).
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

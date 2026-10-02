@@ -108,6 +108,35 @@ export const STRUCTURES: StructureDef[] = [
 
 export const STRUCTURE_BY_ID: Record<string, StructureDef> = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));
 
+/** What a structure is mainly for, to group and filter the build list by. */
+export type StructureKind = 'energy' | 'storage' | 'matter' | 'industry' | 'insight' | 'accord' | 'people' | 'world' | 'defence';
+
+/** The kinds, in the order the build list shows them. */
+export const STRUCTURE_KINDS: { id: StructureKind; name: string; tip: string }[] = [
+  { id: 'energy', name: 'Energy', tip: 'Collect or make energy: arrays, taps, plants, engines and harvesters.' },
+  { id: 'storage', name: 'Storage', tip: 'Hold energy for later: vaults, rings and burst catchers.' },
+  { id: 'matter', name: 'Matter', tip: 'Raise matter: mines, skimmers and lifters.' },
+  { id: 'industry', name: 'Industry', tip: 'Industry builds a settlement’s queue: foundries, and the shipyard that builds ships.' },
+  { id: 'insight', name: 'Insight', tip: 'Insight drives research: archives and relic digs.' },
+  { id: 'accord', name: 'Accord', tip: 'Accord buys Charters; resolve is the will to go on.' },
+  { id: 'people', name: 'People', tip: 'Room for each kind of people, cold sleep, the ways from one kind into another, and minds kept whole.' },
+  { id: 'world', name: 'World', tip: 'Keep a living world alive: shields, lamps, core heat and fresh volatiles.' },
+  { id: 'defence', name: 'Defence', tip: 'Against swarms and raids.' },
+];
+
+/** A structure's kind, from what it does: the first of these that it yields. */
+export function structureKind(d: StructureDef): StructureKind {
+  if (d.energy) return 'energy';
+  if (d.matterYield || d.hydrogenYield || d.lift) return 'matter';
+  if (d.reserveCap || d.burstCap) return 'storage';
+  if (d.insight) return 'insight';
+  if (d.accord || d.resolve) return 'accord';
+  if (d.industry) return 'industry';
+  if (d.defense) return 'defence';
+  if (d.warms || d.declineMult !== undefined || d.coreHeatBonus || d.vitalityOnce) return 'world';
+  return 'people'; // room, cold sleep, conversions, continuity
+}
+
 // Light-fed structures take the name of what they actually gather where they stand: a solar
 // array around a dead star is not solar any more. (The ids, and so the saves, stay the same;
 // what they yield has always followed the light the source really gives.)

@@ -247,7 +247,7 @@ belongs to another organization.
   Ending). The new tracks are levelled to their age's first track by integrated loudness
   (`tools/music/loudness.py`): Dusk −12.7 and −13.3 LUFS, Degenerate −14.7 and −14.7, Black
   Hole −19.7 and −19.7, the ending −14.2 like the title. No rules change.
-- **Event plates, ship hulls, the last two peoples, and a playlist** (images by Codex's built-in
+- `a16f928` **Event plates, ship hulls, the last two peoples, and a playlist** (images by Codex's built-in
   image tool, on the player's ChatGPT subscription). Sixteen events that showed their era's
   general painting now have their own, over it: the dynamo failing, the census of the dark,
   the last rain, the sea freezing, the mantle settling, the comet, the cryo hall, the prophet,
@@ -260,3 +260,11 @@ belongs to another organization.
   about a recording's length, 170 s), and the Canon can be left out of the Degenerate Age's
   opening. Fixed: saved settings (volumes, graphics, interface size) were ignored on every load
   since `9ca1edc`; they now come back. No rules change.
+- **Kinds of structure** (2 Oct; the player: the list "is becoming very long"). Every structure
+  has a kind, worked out from what it does: energy (13 of the 44), storage (4), matter (4),
+  industry (2), insight (2), accord (1), people (13: room for each kind of mind, cold sleep, the
+  conversions, continuity), the world (4: shields, lamps, core heat, volatiles) and defence (1).
+  The Build tab groups its list under a heading for each kind, and a row of buttons shows one
+  kind at a time (the choice stays across settlements). Each kind has its own coloured icon,
+  on the build rows, in the queue (ships get the fleet icon) and on the Overview's
+  structures, which are now sorted by kind. Interface only: no rules change.

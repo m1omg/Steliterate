@@ -1,6 +1,7 @@
+import { signal } from '@preact/signals';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
-import { STRUCTURE_BY_ID, structureLabel } from '../../game/data/structures';
+import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
@@ -728,9 +729,12 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
               <h3>Structures</h3>
               <div class="row wrap" style={{ gap: '4px' }}>
                 {Object.entries(c.structures)
-                  .filter(([, n]) => n > 0)
+                  .filter(([id, n]) => n > 0 && STRUCTURE_BY_ID[id])
+                  // grouped by kind, as in the build list
+                  .sort(([a], [b]) => KIND_ORDER.indexOf(structureKind(STRUCTURE_BY_ID[a])) - KIND_ORDER.indexOf(structureKind(STRUCTURE_BY_ID[b])))
                   .map(([id, n]) => (
                     <span key={id} class="chip" data-tip={structureLabel(id, sys).desc}>
+                      <KindIcon id={id} />
                       {structureLabel(id, sys).name}
                       {n > 1 ? ` ×${n}` : ''}
                     </span>
@@ -806,16 +810,45 @@ function selectFleet(f: Fleet) {
   engine()?.select(f.id);
 }
 
+/** The icon for each kind of structure; its colour comes from `.kind-<kind>` in styles.css. */
+const KIND_ICON: Record<StructureKind, IconName> = { energy: 'energy', storage: 'reserve', matter: 'matter', industry: 'industry', insight: 'insight', accord: 'accord', people: 'kin', world: 'planet', defence: 'shield' };
+const KIND_ORDER = STRUCTURE_KINDS.map((k) => k.id);
+
+/** A structure's kind, as a small coloured icon in front of its name. */
+function KindIcon({ id }: { id: string }) {
+  const def = STRUCTURE_BY_ID[id];
+  if (!def) return null;
+  const k = structureKind(def);
+  return (
+    <span class={`kind-icon kind-${k}`}>
+      <Icon name={KIND_ICON[k]} />
+    </span>
+  );
+}
+
+/** Which kind of structure the build list shows (kept while moving between settlements). */
+const buildKind = signal<StructureKind | 'all'>('all');
+
 function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: number }) {
   void rev.value; // mutable game state: re-render on every change
   const [kind, setKind] = useState<'structure' | 'ship'>('structure');
   const rc = rushCost(s, c.id);
   let acc = 0;
   const ctx = project(s).ctx;
-  const list: { id: string; name: string; desc: string; error: string | null | undefined; cost: ReturnType<typeof buildCost>; count: number; fx?: BuildEffect }[] =
+  type Item = { id: string; name: string; desc: string; error: string | null | undefined; cost: ReturnType<typeof buildCost>; count: number; fx?: BuildEffect; sk?: StructureKind };
+  const list: Item[] =
     kind === 'structure'
-      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId]), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx) }))
+      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId]), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx), sk: structureKind(x.def) }))
       : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: x.def.desc, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
+  // structures come grouped by kind, and can be narrowed to one kind
+  const present = STRUCTURE_KINDS.filter((k) => list.some((x) => x.sk === k.id));
+  const only = kind === 'structure' && buildKind.value !== 'all' && present.some((k) => k.id === buildKind.value) ? buildKind.value : null;
+  const groups: { k: (typeof STRUCTURE_KINDS)[number] | null; items: Item[] }[] =
+    kind === 'structure' ? present.filter((k) => !only || k.id === only).map((k) => ({ k, items: list.filter((x) => x.sk === k.id) })) : [{ k: null, items: list }];
+  const pick = (k: StructureKind | 'all') => {
+    buildKind.value = k;
+    sfx('click');
+  };
   return (
     <>
       <div class="section" style={{ marginTop: 0 }}>
@@ -828,7 +861,16 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
           return (
             <div key={q.uid} class="queue-item">
               <div class="row">
-                <span class="grow">{q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId]).name : def?.name ?? q.key}</span>
+                <span class="grow">
+                  {q.kind === 'structure' ? (
+                    <KindIcon id={q.key} />
+                  ) : (
+                    <span class="kind-icon">
+                      <Icon name="fleet" />
+                    </span>
+                  )}
+                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId]).name : def?.name ?? q.key}
+                </span>
                 <span class="mono faint" style={{ fontSize: '11px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
                 <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>
                 <button class="btn ghost small" aria-label="Move down" data-tip="Build this later (move down the queue)" disabled={i === c.queue.length - 1} onClick={() => act((g) => moveQueued(g, c.id, q.uid, 1))}>▼</button>
@@ -851,35 +893,55 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
           <button class={`btn small ${kind === 'structure' ? 'primary' : ''}`} onClick={() => setKind('structure')}>Structures</button>
           <button class={`btn small ${kind === 'ship' ? 'primary' : ''}`} onClick={() => setKind('ship')}>Ships</button>
         </div>
+        {kind === 'structure' && present.length > 1 && (
+          <div class="kind-chips" role="group" aria-label="Show structures of one kind">
+            <button class={`btn small ${!only ? 'primary' : ''}`} aria-pressed={!only} data-tip={`Every kind (${list.length} here)`} onClick={() => pick('all')}>
+              All
+            </button>
+            {present.map((k) => (
+              <button key={k.id} class={`btn small kind-${k.id} ${only === k.id ? 'primary' : ''}`} aria-pressed={only === k.id} data-tip={`${k.tip}\n${list.filter((x) => x.sk === k.id).length} here`} onClick={() => pick(k.id)}>
+                <Icon name={KIND_ICON[k.id]} /> {k.name}
+              </button>
+            ))}
+          </div>
+        )}
         <div class="list-head">
           <span>{kind === 'structure' ? 'Click to queue · what one more adds here, per turn' : 'Click to queue'}</span>
           <span>Cost</span>
         </div>
         <div class="list">
-          {list.map((x) => (
-            <div
-              key={x.id}
-              class={`list-item build ${x.error ? 'disabled' : ''}`}
-              data-tip={`${x.name}\n${x.desc}${x.error ? `\n${x.error}` : ''}`}
-              onClick={() => {
-                if (x.error) return;
-                if (act((g) => queueBuild(g, c.id, kind, x.id))) sfx('build');
-              }}
-            >
-              <span class="grow">
-                {x.name}
-                {x.count > 0 && <span class="faint"> ×{x.count}</span>}
-                {x.fx && <EffectLine fx={x.fx} />}
-                <div class="build-desc">{x.desc}</div>
-                {x.error && <div class="faint" style={{ fontSize: '11px' }}>{x.error}</div>}
-              </span>
-              <span class="mono faint build-cost" data-tip={`Costs ${x.cost.industry} industry (the settlement's work)${x.cost.matter > 0 ? `, ${x.cost.matter} matter up front` : ''}${x.cost.energy > 0 ? `, ${x.cost.energy} energy` : ''}`}>
-                <span>{x.cost.industry} <Icon name="industry" /> ind</span>
-                {x.cost.matter > 0 && <span>{x.cost.matter} <Icon name="matter" /> mat</span>}
-                {x.cost.energy > 0 && <span>{x.cost.energy} <Icon name="energy" /> en</span>}
-              </span>
-            </div>
-          ))}
+          {groups.map((grp) => [
+            grp.k && !only && (
+              <div key={`h-${grp.k.id}`} class={`build-group kind-${grp.k.id}`} data-tip={grp.k.tip}>
+                <Icon name={KIND_ICON[grp.k.id]} /> {grp.k.name}
+              </div>
+            ),
+            ...grp.items.map((x) => (
+              <div
+                key={x.id}
+                class={`list-item build ${x.error ? 'disabled' : ''}`}
+                data-tip={`${x.name}\n${x.desc}${x.error ? `\n${x.error}` : ''}`}
+                onClick={() => {
+                  if (x.error) return;
+                  if (act((g) => queueBuild(g, c.id, kind, x.id))) sfx('build');
+                }}
+              >
+                <span class="grow">
+                  {x.sk && <KindIcon id={x.id} />}
+                  {x.name}
+                  {x.count > 0 && <span class="faint"> ×{x.count}</span>}
+                  {x.fx && <EffectLine fx={x.fx} />}
+                  <div class="build-desc">{x.desc}</div>
+                  {x.error && <div class="faint" style={{ fontSize: '11px' }}>{x.error}</div>}
+                </span>
+                <span class="mono faint build-cost" data-tip={`Costs ${x.cost.industry} industry (the settlement's work)${x.cost.matter > 0 ? `, ${x.cost.matter} matter up front` : ''}${x.cost.energy > 0 ? `, ${x.cost.energy} energy` : ''}`}>
+                  <span>{x.cost.industry} <Icon name="industry" /> ind</span>
+                  {x.cost.matter > 0 && <span>{x.cost.matter} <Icon name="matter" /> mat</span>}
+                  {x.cost.energy > 0 && <span>{x.cost.energy} <Icon name="energy" /> en</span>}
+                </span>
+              </div>
+            )),
+          ])}
         </div>
       </div>
     </>
