@@ -54,11 +54,21 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   flare with the turns getting shorter as in taking less time"): done. New stars light at the end
   of their turn; A New Star and White Fire offer to keep time (six turns, each lived in full, one
   star at a time; why one at a time: a new star lights about as often as one goes out). Made
-  opt-in, like the flare, rather than automatic. **Open question for the player:** with the
-  autoplayer keeping time with every star (about 12 a game) the harness went from 133 to 167 of
-  300, victories from 18 to 117, and the Degenerate Age from 44 turns to 127. Offered to limit
-  it: only new stars in a cluster where we have a settlement (17–26% of brown dwarfs, so about
-  3–5 clocks a game), or fewer turns per star. Not done unless they ask.
+  opt-in, like the flare, rather than automatic (`4fe2404`). With the autoplayer keeping time with
+  every star (about 12 a game) the harness went from 133 to 167 of 300, victories from 18 to
+  117, and the Degenerate Age from 44 turns to 127.
+- **3 Oct, then priced** (the player: "a bit of a cheap shot … every time you can keep pace, even
+  when you're deep in the degenerate era"). Their decisions, in order: a civilization whose next
+  turn is more than 100× the star's life is too slow ("turns too long for the star", chosen over
+  a rule by pace setting); no energy boost for slow civilizations from afar (the physics check:
+  at light-years the star's light is far too thin, see CHANGELOG), but every new star is "a
+  resolve and insight boosting event for even slow cold civs" (Study it / Watch the flash); and
+  yet "if a slow civilization has enough energy reserves, they can keep pace with even the much
+  shorter lived stars, white fire should be costing some energy for everybody … a one-time
+  energy payment … the balance may need to be tuned". Built: free within 100×, then 250 energy a
+  tenfold, at most a full store (tuned over eight harness runs; the aim was the Degenerate Age
+  back under about 70 turns). Result 147 of 300 (52 victories, age 68 turns); the free in-tune
+  clocks alone give 146. If they want it harsher: fewer turns per paid clock, or a lower free band.
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

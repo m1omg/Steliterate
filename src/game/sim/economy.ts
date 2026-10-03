@@ -44,17 +44,7 @@ export function capacity(state: GameState, c: Colony, mods: Mods): Capacity {
   return cap;
 }
 
-export function reserveCapacity(state: GameState, mods: Mods): number {
-  let cap = 100;
-  for (const c of colonies(state)) {
-    for (const [id, n] of Object.entries(c.structures)) {
-      const d = STRUCTURE_BY_ID[id];
-      if (!d || !n) continue;
-      cap += ((d.reserveCap ?? 0) + (d.burstCap ?? 0)) * n;
-    }
-  }
-  return cap * mods.reserveMult;
-}
+export { reserveCapacity } from './storage';
 
 /** Resolve and dissent scale what everyone manages to do. */
 export function moraleMultiplier(state: GameState): number {

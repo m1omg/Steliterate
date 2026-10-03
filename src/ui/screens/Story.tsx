@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { SHIP_BY_ID } from '../../game/data/ships';
-import { EVENT_BY_ID } from '../../game/data/events';
+import { EVENT_BY_ID, choiceHint } from '../../game/data/events';
 import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
 import { ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
@@ -176,8 +176,10 @@ export function EventModal({ s }: { s: GameState }) {
           <div class="col" style={{ gap: '6px', marginTop: '12px' }}>
             {def.choices.map((c, i) => {
               let ok = true;
+              let hint = '';
               try {
                 ok = !c.ok || c.ok(s, p.data);
+                hint = choiceHint(c, s, p.data);
               } catch {
                 ok = false;
               }
@@ -195,7 +197,7 @@ export function EventModal({ s }: { s: GameState }) {
                   }}
                 >
                   <span>{c.label}</span>
-                  {c.hint && <span class="h">{c.hint}</span>}
+                  {hint && <span class="h">{hint}</span>}
                 </button>
               );
             })}

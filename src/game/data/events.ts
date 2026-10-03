@@ -2,7 +2,7 @@ import type { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
 import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '../sim/util';
 import { welcomeEchoes } from '../sim/archive';
-import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, turnsUntilYears } from '../sim/flare';
+import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { formatYears, stepTime } from '../eras';
 import { drawSwarmTo } from '../sim/hunger';
 
@@ -13,7 +13,8 @@ export type EventData = Record<string, string | number>;
 
 export interface EventChoice {
   label: string;
-  hint?: string;
+  /** What it does; computed when it depends on the moment (a price, say). See choiceHint. */
+  hint?: string | ((s: GameState, d: EventData) => string);
   ok?: (s: GameState, d: EventData) => boolean;
   run: (s: GameState, d: EventData, rng: Rng) => string | void;
 }
@@ -53,7 +54,15 @@ function shelterNote(r: { built: number; missing: number }): string {
   return r.missing ? `${built} We could not pay for ${r.missing} more.` : built;
 }
 
-/** How long a new star will burn, and what keeping time with it would mean (see flare.ts). */
+/** A choice's hint as it reads now (some depend on the moment, such as a price). */
+export function choiceHint(c: EventChoice, s: GameState, d: EventData): string {
+  return typeof c.hint === 'function' ? c.hint(s, d) : (c.hint ?? '');
+}
+
+const TENFOLDS = ['', 'ten', 'a hundred', 'a thousand', 'ten thousand', 'a hundred thousand', 'a million', 'ten million', 'a hundred million', 'a billion', 'ten billion', 'a hundred billion', 'a trillion', 'ten trillion', 'a hundred trillion', 'a quadrillion'];
+const timesOver = (orders: number) => (orders < 1 ? 'about as long as' : `more than ${TENFOLDS[Math.min(TENFOLDS.length - 1, Math.floor(orders))]} times`);
+
+/** How long a new star will burn, and what keeping time with it would take (see flare.ts). */
 function newStarTiming(s: GameState, d: EventData): string {
   const sys = s.systems[String(d.systemId)];
   const p = sys?.primary;
@@ -65,17 +74,40 @@ function newStarTiming(s: GameState, d: EventData): string {
   const kept = starClock(s);
   if (kept?.systemId === sys.id) return ` It will burn for about ${left}, and we are keeping time with it.`;
   if (kept) return ` It will burn for about ${left}. We are already keeping time with ${kept.system}: at our pace this one burns for ${about}.`;
-  if (starClockOffer(s, sys)) {
-    const next = formatYears(stepTime(s.era, s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
-    return ` It will burn for about ${left}, and at our pace the next turn alone would span ${next}: ${turns <= 1 ? 'it would come and go inside it' : `it would last only ${about}`}. Or we could keep time with it, ${STAR_TURNS} turns of its light.`;
-  }
-  return ` It will burn for about ${left}: at our pace, ${about}.`;
+  const t = starClockTerms(s, sys);
+  if (t.brief) return ` It will burn for about ${left}: so brief, this late in the age, that no clock of ours could count its turns.`;
+  if (!t.possible) return ` It will burn for about ${left}: at our pace, ${about}.`;
+  const next = formatYears(stepTime(s.era, s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
+  if (t.cost === 0) return ` It will burn for about ${left}, and at our pace the next turn alone would span ${next}: ${turns <= 1 ? 'it would come and go inside it' : `it would last only ${about}`}. We are close enough to its pace to keep time with it, ${STAR_TURNS} turns of its light, at no cost.`;
+  const have = Math.floor(s.civ.energy);
+  return ` It will burn for about ${left}, and at our pace the next turn alone would span ${next}, ${timesOver(t.orders)} its whole life. To keep time with it, ${STAR_TURNS} turns of its light, our minds must quicken that far: ${t.cost} energy, once (${have >= t.cost ? `we have ${have}` : `more than the ${have} we have`}).`;
+}
+
+/** The last words of A New Star: a feast for whoever can keep up with it. */
+function newStarClose(s: GameState, d: EventData): string {
+  return starClockOffer(s, s.systems[String(d.systemId)]) ? 'Whoever reaches it first will feast.' : 'Faster minds would feast on it; we can watch, and learn.';
+}
+
+function keepTimeHint(s: GameState, d: EventData): string {
+  const sys = s.systems[String(d.systemId)];
+  const t = starClockTerms(s, sys);
+  const price = !t.possible ? (t.brief ? 'Too brief for any clock of ours.' : 'Not needed or not possible now.') : t.cost === 0 ? 'Free: we are in tune with it.' : `${t.cost} energy, once${s.civ.energy < t.cost ? `: more than we have` : ''}.`;
+  return `${price} Then ${STAR_TURNS} turns while it burns, each a sixth of what is left of its life whatever the pace, each lived in full as one turn at the Tide. Then our own pace again.`;
 }
 
 function keepTimeNote(s: GameState, d: EventData): string {
   const name = s.systems[String(d.systemId)]?.name ?? 'the new star';
-  if (!keepTimeWithStar(s, String(d.systemId))) return `${name} no longer needs us to keep time with it.`;
-  return `We keep time with ${name} now: ${STAR_TURNS} turns, each about ${formatYears(s.civ.flags.star_step)}, until it burns out.`;
+  const paid = keepTimeWithStar(s, String(d.systemId));
+  if (paid === null) return `We could not keep time with ${name} after all.`;
+  return `${paid > 0 ? `We spent ${paid} energy to quicken to it. ` : ''}We keep time with ${name} now: ${STAR_TURNS} turns, each about ${formatYears(s.civ.flags.star_step)}, until it burns out.`;
+}
+
+/** What anyone learns from a new star, however slow: a fresh star in a dead galaxy. */
+const STAR_INSIGHT = 25;
+const STAR_RESOLVE = 2;
+function studyStar(s: GameState) {
+  insight(s, STAR_INSIGHT);
+  res(s, STAR_RESOLVE);
 }
 
 function homeworld(s: GameState): Body | undefined {
@@ -405,17 +437,18 @@ export const EVENTS: EventDef[] = [
     art: 'degenerate',
     plate: 'new_star',
     text: (s, d) =>
-      `Two brown dwarfs in ${s.systems[String(d.systemId)]?.name} collided and merged, and the merged body is heavy enough to burn hydrogen. A small red star has lit where there was none.${newStarTiming(s, d)} Whoever reaches it first will feast.`,
+      `Two brown dwarfs in ${s.systems[String(d.systemId)]?.name} collided and merged, and the merged body is heavy enough to burn hydrogen. A small red star has lit where there was none.${newStarTiming(s, d)} ${newStarClose(s, d)}`,
     choices: [
       {
         label: 'Race for it, and keep time with it',
-        hint: `Its system is revealed and charted, and our turns follow the star: ${STAR_TURNS} while it burns, each a sixth of what is left of its life whatever the pace, each lived in full as one turn at the Tide. Time to reach it and build. Then our own pace again.`,
+        hint: (s, d) => `Its system is revealed and charted, and our turns follow the star. ${keepTimeHint(s, d)}`,
         ok: (s, d) => starClockOffer(s, s.systems[String(d.systemId)]),
         run: (s, d) => {
           s.civ.known[String(d.systemId)] = 2;
           return keepTimeNote(s, d);
         },
       },
+      { label: 'Study it', hint: `Insight +${STAR_INSIGHT}: a merger seen as it happens, a fresh star in a dead galaxy. Resolve +${STAR_RESOLVE}: a new light, however brief.`, run: (s) => studyStar(s) },
       { label: 'Race for it at our own pace', hint: 'Its system is revealed and charted.', run: (s, d) => { s.civ.known[String(d.systemId)] = 2; } },
       { label: 'Tell the others', hint: 'Every survivor you know recovers a little. Their trust grows.', run: (s) => { for (const sv of Object.values(s.survivors)) if (sv.alive && sv.contact) { sv.health = Math.min(1, sv.health + 0.08); sv.disposition += 8; } } },
     ],
@@ -430,11 +463,11 @@ export const EVENTS: EventDef[] = [
     choices: [
       {
         label: 'Keep time with it',
-        hint: `${STAR_TURNS} turns while it burns, each a sixth of what is left of its life whatever the pace, each lived in full as one turn at the Tide. Then our own pace again.`,
+        hint: (s, d) => keepTimeHint(s, d),
         ok: (s, d) => starClockOffer(s, s.systems[String(d.systemId)]),
         run: (s, d) => keepTimeNote(s, d),
       },
-      { label: 'Let it pass', hint: 'Our pace stays our own. What cannot be stored is lost.', run: () => {} },
+      { label: 'Watch the flash', hint: `Insight +${STAR_INSIGHT}: the physics of a merger, seen as it happens. Resolve +${STAR_RESOLVE}. Our pace stays our own; what cannot be stored is lost.`, run: (s) => studyStar(s) },
     ],
   },
   {

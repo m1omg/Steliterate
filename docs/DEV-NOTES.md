@@ -140,13 +140,22 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     (the star's `diesAt`) and `star_step` (what was left of its life ÷ `STAR_TURNS`, 6). While
     `starTurnsLeft` ≥ 1, `turnStep` (Degenerate Age) ends each turn at `star_until − step × (left −
     1)`, counted back from the end so rounding can neither add a turn nor stall one, whatever the
-    pace, and `livedShare` is 1. `starClockOffer`: a burning collision or helium star, no clock
-    running (one at a time, or clocks would pass from star to star and hold the age still), a
-    step of at least `STAR_STEP_MIN` (1e-12) of the age (doubles), and fewer than six turns of
-    life at our pace. `clearStarClock` runs in `stepTurns` and after each turn; `starClock` feeds
-    the Pace panel chip and the Collision stars tab. New stars light at the end of their turn
-    (`physics.ts`: `born = to`, the old draw still made). Events: `newStarTiming`,
-    `keepTimeNote` in `data/events.ts`.
+    pace, and `livedShare` is 1. `starClockTerms` (what it would take, at the current pace):
+    `possible` needs a burning collision or helium star, no clock running (one at a time, or
+    clocks would pass from star to star and hold the age still), a step of at least
+    `STAR_STEP_MIN` (1e-13) of the age (doubles; `brief` when not: helium stars after about
+    η 20.5), and fewer than six turns of life at our pace; `orders` = log10(next turn ÷ life
+    left); `cost` = 0 within `STAR_FREE` (2) tenfolds, then `STAR_ORDER_COST` (250) a tenfold,
+    at most the full storage (`reserveCapacity`, now in `sim/storage.ts` so flare.ts can read it
+    without a cycle through economy.ts, which re-exports it). `starClockOffer` = possible and
+    affordable; `keepTimeWithStar` takes the price and returns it (or null). `clearStarClock`
+    runs in `stepTurns` and after each turn; `starClock` feeds the Pace panel chip and the
+    Collision stars tab. New stars light at the end of their turn (`physics.ts`: `born = to`,
+    the old draw still made). Events (`data/events.ts`): `newStarTiming`, `newStarClose`,
+    `keepTimeHint`, `keepTimeNote`, `studyStar` (Study it / Watch the flash: insight +25,
+    resolve +2). A choice's `hint` may be a function of the moment: read it with `choiceHint`
+    (the event window and the autoplayer do). The autoplayer (`clockTooDear` in `auto.ts`) pays
+    for a clock only while half its store would remain.
 - **`src/game/sim/hunger.ts`, `swarmsHunt`:** swarms catch ships stopped at their star where we have
   no settlement (`HUNT_AWAKE` 0.7, `HUNT_ASLEEP` 0.2 a turn, ×0.5 under Blackout; skipped on the
   first-swarm turn and under Communion). It runs after `firstSwarm` and before `autoExplore`, so
@@ -333,4 +342,5 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `b950f24` | 133 | flare turns pay by the time lived, young white dwarfs averaged, cold worlds start frozen, relic draws swarms; 900 games: 390 (358); pace and light fixes reverted: 123 |
 | `55ff2da` | 133 | charters can be repealed; the autoplayer never repeals: all 300 games identical to `30c3c7f` |
 | `7d0806d` | 133 | Systems window: interface and labels only, all 300 games identical to `55ff2da` |
-| new-star clock | 167 | keep time with new stars, like a flare; the autoplayer keeps time with every one it can (about 12 a game): Degenerate Age 127 turns on average (44), games 276 (183), victories 117 (18); 74 games now survive, 40 no longer |
+| `4fe2404` | 167 | keep time with new stars, like a flare, free; the autoplayer keeps time with every one it can (about 12 a game): Degenerate Age 127 turns on average (44), games 276 (183), victories 117 (18); 74 games now survive, 40 no longer |
+| priced new-star clock | 147 | free within 100× of the next turn, then 250 energy a tenfold, at most a full store; Study/Watch +25 insight, +2 resolve; the autoplayer pays only while half its store would remain (2.3 free and 1.9 paid clocks a game, mean price 541): Degenerate Age 68 turns, victories 52. Variants, 300 games each (survive, victories, Degenerate turns): Study/Watch only 130/26/45; free in-tune clocks only 146/44/55; 100 a tenfold 165/79/88; 150 160/67/79; 400 154/55/61; uncapped 20, 40, 60: 161/106/114, 171/98/104, 163/81/99 |

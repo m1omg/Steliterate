@@ -300,7 +300,7 @@ belongs to another organization.
   "burning again": they never burned hydrogen until they merged. The A New Star and White Fire
   events still describe such stars as burning (left for the player to decide). Interface and
   labels only: the harness gives the same 300 games (133).
-- **New stars burn for six short turns, like the flare** (3 Oct; the player: "make them burn for a
+- `4fe2404` **New stars burn for six short turns, like the flare** (3 Oct; the player: "make them burn for a
   few turns like the flare with the turns getting shorter as in taking less time"). A collision
   star or a helium star now lights as the turn it forms in ends, so it is always seen alight (a
   bend: the two may have met at any moment of that turn; the draw that placed its birth inside the
@@ -319,3 +319,28 @@ belongs to another organization.
   127 turns on average instead of 44 and a game 276 instead of 183; 167 of 300 survive instead of
   133, with 117 victories instead of 18 (74 games now survive, 40 no longer do). In 20 games every
   collision star was seen burning, 217 of 352 for the full six turns.
+- **Keeping time with a new star has a price, unless we are in tune with it** (3 Oct; the player
+  found the free clock "a bit of a cheap shot … every time you can keep pace, even when you're
+  deep in the degenerate era", and wanted a civilization that is too slow unable to catch the
+  moment, yet able to "keep pace with even the much shorter lived stars" with enough energy
+  reserves, for "a one-time energy payment"; White Fire "should be costing some energy for
+  everybody"). Measured first: collision stars light through the first two thirds of the age
+  (turns 3–31 of about 45), and the typical one lives a fifty-thousandth of a Tide turn; helium
+  stars live about a ten-billionth. Keeping time is now free while our next turn is within a
+  hundredfold of what is left of the star's life (2.3 stars a game at the Tide, all in the first
+  13 turns); beyond, our minds must quicken to it: 250 energy, once, for each further tenfold,
+  never more than a full store. A quicker pace pays less, a slower one more, and a White Fire
+  usually costs all the energy we hold. The price shows in the event and on its button, and the
+  choice is shut when we cannot pay. New choices for anyone, however slow: A New Star's Study it
+  and White Fire's Watch the flash (which replaces Let it pass), each Insight +25 and Resolve +2.
+  Asked whether a new star's light from light-years away could feed a slow civilization instead:
+  no. At 10 ly it is 4×10⁻¹² W/m², against 6×10⁻³ for collectors 100,000 km from a 60 K black
+  dwarf, and over a 10¹⁷-year turn a star 5 ly away adds a twenty-millionth of that dwarf's
+  output; only in the star's own system would its light outweigh an ember's. The calendar's limit
+  for a clock turn is now a ten-trillionth of the age (it was a trillionth), so helium stars can be
+  kept up to about η 20.5. The storage cap moved to `sim/storage.ts`. The autoplayer pays only
+  while half its store would remain. Balance (300 games): 147 survive, 52 victories, a Degenerate
+  Age of 68 turns, against 167 / 117 / 127 with free clocks and 133 / 18 / 44 before any clock.
+  Of the rise, Study and Watch alone give none (130 / 26 / 45) and the free in-tune clocks most
+  (146 / 44 / 55); at 100, 150 and 400 a tenfold it was 165, 160 and 154 (ages 88, 79, 61), and
+  at 20, 40 and 60 without the cap 161, 171 and 163 (114, 104 and 99 turns).

@@ -1,9 +1,9 @@
-import { EVENT_BY_ID } from './data/events';
+import { EVENT_BY_ID, choiceHint } from './data/events';
 import { STRUCTURE_BY_ID } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
 import { logTurnLength } from './eras';
-import { turnStep } from './sim/flare';
+import { starClockTerms, turnStep } from './sim/flare';
 import { sourceLight, vitalityLoss } from './physics';
 import {
   answerEvent,
@@ -272,6 +272,13 @@ function planSignals(state: GameState) {
   if (dark.stage >= 2 && dark.stage < 5 && civ.energy > 80 && civ.matter > 40) makeGesture(state, patternAnswer(dark.lastPattern));
 }
 
+/** Pay to keep time with a new star only while half the store would remain afterwards. */
+function clockTooDear(state: GameState, defId: string, choice: number, systemId: string): boolean {
+  if ((defId !== 'new_star' && defId !== 'white_fire') || choice !== 0) return false;
+  const cost = starClockTerms(state, state.systems[systemId]).cost;
+  return cost > 0 && state.civ.energy - cost < 0.5 * reserveCapacity(state, computeMods(state));
+}
+
 function planEvents(state: GameState) {
   for (const p of [...state.pending]) {
     const def = EVENT_BY_ID[p.defId];
@@ -280,7 +287,8 @@ function planEvents(state: GameState) {
     for (let i = 0; i < def.choices.length && !done; i++) {
       const ch = def.choices[i];
       if (ch.ok && !ch.ok(state, p.data)) continue;
-      if (/Taint|Devour|Strip/.test(ch.label + (ch.hint ?? ''))) continue;
+      if (/Taint|Devour|Strip/.test(ch.label + choiceHint(ch, state, p.data))) continue;
+      if (clockTooDear(state, p.defId, i, String(p.data.systemId))) continue;
       done = answerEvent(state, p.uid, i).ok;
     }
     if (!done) answerEvent(state, p.uid, def.choices.length - 1);

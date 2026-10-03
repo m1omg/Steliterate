@@ -2,6 +2,8 @@ import { STRUCTURE_BY_ID } from '../data/structures';
 import { eta, formatYears, stepTime, type TimeStep } from '../eras';
 import { bodyClimate, primaryLuminosity } from '../physics';
 import type { Body, Colony, GameState, StarSystem } from '../types';
+import { computeMods } from './mods';
+import { reserveCapacity } from './storage';
 import { colonies } from './util';
 
 // A red dwarf's last flare. At the end of its life a red dwarf does not swell into a giant: it
@@ -94,12 +96,20 @@ export function flareStop(state: GameState, pace = state.civ.pace): StarSystem |
 // trillion years and a helium star (two white dwarfs merged) for a few hundred million, while a
 // turn here soon spans trillions of years: such a star would light and go out between two turns.
 // So each lights as its turn ends (physics.ts), and we may keep time with one, as with a flare:
-// its life in STAR_TURNS turns, whatever the pace, each lived in full. One star at a time: a new
+// its life in STAR_TURNS turns, whatever the pace, each lived in full. That is free while our
+// next turn is within a hundredfold of its life (we are in tune with it); beyond, our minds must
+// quicken that far, which costs energy, once, for every further tenfold, but never more than a
+// full store: whoever has filled theirs can keep time with anything. So a slow civilization pays
+// more, a quick one less, and a White Fire costs everyone something. One star at a time: a new
 // star lights about as often as one goes out, so a clock that passed from star to star would
 // hold the age still.
 
 /** Turns a new star burns when we keep time with it (as many as a flare). */
 export const STAR_TURNS = 6;
+/** Within this many tenfolds of our next turn (a hundredfold) a new star is in tune: free. */
+export const STAR_FREE = 2;
+/** Energy, once, for each further tenfold our minds must quicken to keep time with a new star. */
+export const STAR_ORDER_COST = 250;
 
 /**
  * Turns left on the new star's clock, this one included (0: none running). Counted back from its
@@ -127,35 +137,55 @@ export function clearStarClock(state: GameState) {
 
 /**
  * A clock turn must be long enough for the calendar to tell it apart: years are doubles, good
- * to about 16 digits, so a step shorter than a trillionth of the age would round away.
+ * to about 16 digits, so a step under a ten-trillionth of the age (a few hundred units in the
+ * last place) would blur, and a little finer it would round away. Past about η 20 a helium star
+ * is that brief: it can only be watched.
  */
-const STAR_STEP_MIN = 1e-12;
+const STAR_STEP_MIN = 1e-13;
 
 function isNewStar(sys: StarSystem): boolean {
   return sys.primary.kind === 'collision_star' || sys.primary.kind === 'helium_star';
 }
 
 /**
- * Could we keep time with this new star? While it burns, and no other clock runs, and only where
- * it would do something: at our pace it would burn for fewer turns than keeping time gives.
+ * What keeping time with this new star would ask of us at our pace. `possible`: it burns, no
+ * other clock runs, the calendar can count its turns (`brief` when it cannot), and at our pace it
+ * would burn for fewer turns than keeping time gives. `orders`: how many tenfolds our next turn
+ * exceeds what is left of its life. `cost`: the energy that takes, once: nothing within STAR_FREE
+ * tenfolds, STAR_ORDER_COST for each further one, and at most our whole storage.
  */
-export function starClockOffer(state: GameState, sys: StarSystem | undefined): boolean {
+export function starClockTerms(state: GameState, sys: StarSystem | undefined): { possible: boolean; brief: boolean; orders: number; cost: number } {
+  const none = { possible: false, brief: false, orders: 0, cost: 0 };
   const p = sys?.primary;
-  if (!sys || !p || state.era !== 'degenerate' || sys.gone || !isNewStar(sys) || keepingStarTime(state)) return false;
-  if (!p.diesAt || p.diesAt <= state.years) return false;
+  if (!sys || !p || state.era !== 'degenerate' || sys.gone || !isNewStar(sys) || keepingStarTime(state)) return none;
+  if (!p.diesAt || p.diesAt <= state.years) return none;
   const left = p.diesAt - state.years;
-  if (left / STAR_TURNS < state.years * STAR_STEP_MIN) return false;
+  if (left / STAR_TURNS < state.years * STAR_STEP_MIN) return { ...none, brief: true };
   const next = stepTime(state.era, state.years, state.eta, state.civ.pace, state.settings.length).turnLength;
-  return left < next * STAR_TURNS;
+  if (left >= next * STAR_TURNS) return none;
+  const orders = Math.log10(next / left);
+  const full = Math.floor(reserveCapacity(state, computeMods(state)));
+  return { possible: true, brief: false, orders, cost: Math.min(full, Math.ceil(STAR_ORDER_COST * Math.max(0, orders - STAR_FREE))) };
 }
 
-/** Keep time with a new star until it burns out: its remaining life in STAR_TURNS turns. */
-export function keepTimeWithStar(state: GameState, systemId: string): boolean {
+/** Could we keep time with this new star now: possible, and its price within our reserve? */
+export function starClockOffer(state: GameState, sys: StarSystem | undefined): boolean {
+  const t = starClockTerms(state, sys);
+  return t.possible && state.civ.energy >= t.cost;
+}
+
+/**
+ * Keep time with a new star until it burns out: its remaining life in STAR_TURNS turns, the price
+ * paid now. Returns the energy paid, or null if it cannot be done.
+ */
+export function keepTimeWithStar(state: GameState, systemId: string): number | null {
   const sys = state.systems[systemId];
-  if (!starClockOffer(state, sys)) return false;
+  const t = starClockTerms(state, sys);
+  if (!t.possible || state.civ.energy < t.cost) return null;
+  state.civ.energy -= t.cost;
   state.civ.flags.star_until = sys.primary.diesAt!;
   state.civ.flags.star_step = (sys.primary.diesAt! - state.years) / STAR_TURNS;
-  return true;
+  return t.cost;
 }
 
 /** Are we keeping time with a new star? Which of its turns comes next (1-based), and whose. */
