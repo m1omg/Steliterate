@@ -4,6 +4,9 @@ import * as THREE from 'three';
 // 1 - exp(-k * dt) smoothing and flights use elapsed seconds, so the camera behaves the
 // same at 30, 60 or 240 Hz.
 
+/** How far (CSS px) a pinch's midpoint may drift before it counts as a two-finger drag. */
+const PINCH_SLACK = 24;
+
 export class OrbitRig {
   camera: THREE.PerspectiveCamera;
   target = new THREE.Vector3();
@@ -23,6 +26,12 @@ export class OrbitRig {
   private pointers = new Map<number, { x: number; y: number }>();
   private dragMode: 'rotate' | 'pan' | null = null;
   private pinchDist = 0;
+  // this gesture's pinch: how far its midpoint has drifted and its spread changed, and
+  // whether the drift has started to count as a drag (see pinchPan)
+  private pinching = false;
+  private pinchDrift = new THREE.Vector2();
+  private pinchSpread = 0;
+  private pinchPanning = false;
   private moved = 0;
   onClick: ((x: number, y: number, pointerType: string) => void) | null = null;
   /** The world point a zoom at this screen position should head toward (null: the centre). */
@@ -31,8 +40,13 @@ export class OrbitRig {
   onZoomIntent: ((requested: number) => void) | null = null;
   onHover: ((x: number, y: number) => void) | null = null;
   autoYaw = 0; // slow cinematic drift (radians per second)
-  /** Something to keep centred (a planet on its orbit). Cleared when the player pans. */
+  /** Something to keep centred (a planet on its orbit). Panning slides the view around it. */
   follow: (() => THREE.Vector3 | null) | null = null;
+  /**
+   * The view was put on something on purpose (a picked star, a system's star, a followed world):
+   * zooming keeps it in the middle instead of heading for the pointer, until the player pans.
+   */
+  centred = false;
   /** Where the view sits relative to what it follows: panning moves this, not the focus. */
   private followOffset = new THREE.Vector3();
   private followOffsetGoal = new THREE.Vector3();
@@ -62,10 +76,12 @@ export class OrbitRig {
     this.distance = this.goalDistance = distance;
     this.flight = null;
     this.follow = null;
+    this.centred = true;
   }
 
   flyTo(target: THREE.Vector3, distance: number, duration = 1.1) {
     this.follow = null;
+    this.centred = true;
     this.flight = { from: this.target.clone(), to: target.clone(), fromD: this.distance, toD: distance, t: 0, dur: Math.max(0.05, duration) };
   }
 
@@ -75,6 +91,7 @@ export class OrbitRig {
     if (!now) return;
     this.flight = { from: this.target.clone(), to: now.clone(), fromD: this.distance, toD: distance, t: 0, dur: Math.max(0.05, duration) };
     this.follow = fn;
+    this.centred = true;
     this.followOffset.set(0, 0, 0);
     this.followOffsetGoal.set(0, 0, 0);
   }
@@ -88,6 +105,10 @@ export class OrbitRig {
       const [a, b] = [...this.pointers.values()];
       this.pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
       this.dragMode = 'pan';
+      this.pinching = true;
+      this.pinchDrift.set(0, 0);
+      this.pinchSpread = 0;
+      this.pinchPanning = false;
     }
   };
 
@@ -105,22 +126,32 @@ export class OrbitRig {
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (this.pinchDist > 0) this.userZoom(this.pinchDist / Math.max(1, d), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      if (this.pinchDist > 0) {
+        this.pinchSpread += Math.abs(d - this.pinchDist);
+        this.userZoom(this.pinchDist / Math.max(1, d), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      }
       this.pinchDist = d;
-      this.pan(dx * 0.5, dy * 0.5);
+      this.pinchPan(dx * 0.5, dy * 0.5);
       return;
     }
     if (this.dragMode === 'rotate') {
       this.goalYaw -= dx * 0.005;
       this.goalPitch = THREE.MathUtils.clamp(this.goalPitch + dy * 0.004, 0.08, 1.52);
       this.flight = null;
-    } else if (this.dragMode === 'pan') this.pan(dx, dy);
+    } else if (this.dragMode === 'pan') {
+      // the last finger of a pinch, still on the glass: the same gesture
+      if (this.pinching) this.pinchPan(dx, dy);
+      else this.pan(dx, dy);
+    }
   };
 
   private up = (e: PointerEvent) => {
     if (this.pointers.has(e.pointerId) && this.pointers.size === 1 && this.moved < 6) this.onClick?.(e.clientX, e.clientY, e.pointerType);
     this.pointers.delete(e.pointerId);
-    if (this.pointers.size === 0) this.dragMode = null;
+    if (this.pointers.size === 0) {
+      this.dragMode = null;
+      this.pinching = false;
+    }
     this.pinchDist = 0;
   };
 
@@ -130,13 +161,16 @@ export class OrbitRig {
     this.userZoom(k, e.clientX, e.clientY);
   };
 
-  /** A zoom from the wheel or a pinch: heads toward what is under the pointer, then reports. */
+  /**
+   * A zoom from the wheel or a pinch, then reports. While the view is centred on something it
+   * stays in the middle; roaming free, the zoom heads toward what is under the pointer.
+   */
   private userZoom(k: number, x: number, y: number) {
     const requested = this.goalDistance * k;
     const before = this.goalDistance;
     this.zoomBy(k);
-    const anchor = this.zoomAnchor?.(x, y);
-    if (anchor && !this.follow) {
+    const anchor = this.follow || this.centred ? null : this.zoomAnchor?.(x, y);
+    if (anchor) {
       // keep the anchored point where it is on screen: move the focus by the share the
       // distance actually changed (nothing once the zoom is clamped)
       const f = 1 - this.goalDistance / before;
@@ -164,6 +198,26 @@ export class OrbitRig {
     }
     this.goalTarget.addScaledVector(right, -dx * s).addScaledVector(fwd, -dy * s);
     this.flight = null;
+    this.centred = false;
+  }
+
+  /**
+   * A pinch's midpoint always drifts a little. While the view is centred on something, that
+   * drift waits until it is clearly a two-finger drag (further than PINCH_SLACK, and further
+   * than the fingers have opened or closed), so a pinch alone never nudges the focus aside.
+   * Then the whole drift pans at once and the view tracks the fingers until they lift.
+   */
+  private pinchPan(dx: number, dy: number) {
+    if (!this.pinchPanning && (this.follow || this.centred)) {
+      this.pinchDrift.x += dx;
+      this.pinchDrift.y += dy;
+      const drift = this.pinchDrift.length();
+      if (drift < PINCH_SLACK || drift < this.pinchSpread) return;
+      this.pinchPanning = true;
+      dx = this.pinchDrift.x;
+      dy = this.pinchDrift.y;
+    }
+    this.pan(dx, dy);
   }
 
   update(dt: number) {

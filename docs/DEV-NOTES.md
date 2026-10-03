@@ -259,6 +259,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     when `settings` is created. From `9ca1edc` to 29 Sep it sat below: the read threw, the
     `catch` returned the defaults, and saved settings were silently ignored on every load.
   - `startLoaded` calls `music.setEra`.
+- **`src/render/camera.ts`:** `OrbitRig.centred` is set by `jump`, `flyTo` and `flyToFollow`
+  (every caller puts the view on something on purpose) and cleared by a pan that is not sliding
+  around a followed thing. While it or `follow` holds, `userZoom` ignores `zoomAnchor` and zooms
+  about the middle, and `pinchPan` holds a pinch's midpoint drift back until it is clearly a
+  drag (`PINCH_SLACK` 24 px, and more than the pinch's spread has changed). A new caller that
+  moves the camera without meaning to centre on anything should clear `centred` afterwards. The
+  playtest checks that a centred star stays in the middle under the wheel.
 - **`src/render/systemView.ts`:** other civilizations: `residents` from `survivorWorld`;
   surface civs set the planet shader's `uLights`/`uDev`/`uNeon` and the new `uCityCol` (sodium
   for ours); `addHabitats` builds flotilla / ring-station / lattice by way, `habitats` and

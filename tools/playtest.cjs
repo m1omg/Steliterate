@@ -224,6 +224,26 @@ async function toEra(p, era) {
     console.log(`  max relative difference ${diff.toExponential(2)} (tolerance ${tol})`);
     if (!(diff < tol)) fail(`refresh-rate parity at ${seconds}s: difference ${diff}`);
   }
+  // ---------------------------------------------------------------- zoom keeps the focus centred
+  // a centred star stays in the middle when the wheel turns with the pointer off to one side
+  const slid = await p.evaluate(() => {
+    const e = window.__stel.engine();
+    e.stop();
+    const s = window.__stel.state();
+    e.focusGalaxyOn(s.civ.homeSystemId, 150, true);
+    const el = e.renderer.domElement;
+    const r = el.getBoundingClientRect();
+    const turn = (dy) => el.dispatchEvent(new WheelEvent('wheel', { deltaY: dy, clientX: r.left + r.width * 0.2, clientY: r.top + r.height * 0.25, bubbles: true, cancelable: true }));
+    for (let i = 0; i < 5; i++) {
+      turn(120);
+      e.frame(1 / 30);
+    }
+    for (let i = 0; i < 90; i++) e.frame(1 / 30);
+    const v = e.galaxy.pickables.find((x) => x.kind === 'system' && x.id === s.civ.homeSystemId).pos.clone().project(e.camera);
+    return Math.hypot((v.x * r.width) / 2, (v.y * r.height) / 2);
+  });
+  console.log(`zoom: the centred capital sits ${slid.toFixed(2)} px off the middle after five wheel turns`);
+  if (!(slid < 1)) fail(`zoom: the centred capital slid ${slid.toFixed(1)} px off the middle`);
   if (p.errors.length) fail(`parity page errors: ${p.errors.join('; ')}`);
   await browser.close();
   console.log(failures ? `${failures} failure(s)` : 'ALL CHECKS PASSED');

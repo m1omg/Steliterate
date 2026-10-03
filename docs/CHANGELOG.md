@@ -437,3 +437,16 @@ belongs to another organization.
   and beyond tenfold in the Dark Era (where Quick ×100 used to give Quick ×10's turn at a
   hundredth of the yield). The Tide is always open; the pace you are on stays marked even when
   greyed, and returns when it can. Interface only: all 300 harness games identical.
+- **Zoom keeps what is in focus in the middle** (3 Oct; the player: zooming in and out of
+  objects in focus, "they don't zoom out centered in the screen, but they instead go to the
+  side"). On the galaxy map a clicked star is centred, but the wheel and the pinch still zoomed
+  toward the pointer, which usually rests where the star was clicked, so the star slid toward it
+  or away; a wheel turn during the short centring flight bent where it ended. On touch, every
+  pinch also panned by the drift of the two fingers' midpoint, which nudged a followed world
+  aside. Now, while the view is centred on something (a clicked or listed star, a system's star,
+  a followed world or fleet), zooming keeps it in the middle, and a pinch pans only when it is
+  clearly a two-finger drag (its midpoint has moved more than 24 px and more than the pinch has
+  opened or closed). Once you pan the map yourself, the wheel heads for the pointer again, as
+  before. While a star is centred, the wheel no longer heads for a different star under the
+  pointer: click that star (it becomes the centre, and zooming in enters it), double-click it,
+  or pan first. Camera only: no rules, saves or seeds touched.
