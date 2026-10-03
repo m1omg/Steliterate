@@ -206,7 +206,7 @@ window.addEventListener('keydown', (e) => {
     modal.value = open === target ? null : { kind: target };
     return;
   }
-  // W: the list of every surveyed world (a tab of the Settlements window)
+  // W: the list of every surveyed world (a tab of the Systems window)
   if (key === 'w' && (!open || Object.values(SCREEN_KEYS).includes(open as never) || open === 'save' || open === 'settings')) {
     e.preventDefault();
     sfx('click');

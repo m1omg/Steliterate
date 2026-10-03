@@ -167,10 +167,13 @@ export function deepNote(s: GameState): string {
 
 /**
  * In the Degenerate Age a collision star is the brightest thing for light-years around: every
- * list of places puts the ones on our map first.
+ * list of places puts the ones on our map first, while they burn. (One that lit and went out
+ * within the last turn keeps the name until the turn ends, without light.)
  */
 export function isBeacon(s: GameState, sys: StarSystem): boolean {
-  return s.era === 'degenerate' && sys.primary.kind === 'collision_star' && !sys.gone && (s.civ.known[sys.id] ?? 0) > 0;
+  return s.era === 'degenerate' && sys.primary.kind === 'collision_star' && !sys.gone && (s.civ.known[sys.id] ?? 0) > 0 && (sys.primary.diesAt ?? 0) > s.years;
 }
 
-export const BEACON_TIP = 'A collision star: two dead stars that merged and caught fire again. In the Degenerate Age nothing else nearby shines like it.';
+export const BEACON_TIP = 'A collision star: two brown dwarfs, each too small to burn hydrogen, collided, and the merged body is heavy enough to burn it. In the Degenerate Age nothing else nearby shines like it.';
+
+export const SWARM_TIP = 'A swarm is feeding there. It goes for most ships that stop at its star, where we have no settlement to fight beside them: a probe rarely comes back, and warships beat off only small swarms.';

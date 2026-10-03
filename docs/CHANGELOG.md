@@ -278,7 +278,25 @@ belongs to another organization.
   overdrive. The ways of the Hunger cannot be repealed (they take no room in the book). Saves are
   unchanged in shape (a repeal is remembered in `civ.flags`); the autoplayer never repeals, and
   the harness gives 133 of 300, the same games as before.
-- **Look from the survey message** (2 Oct, as asked). "Survey complete" now has a Look button that
+- `c622a14` **Look from the survey message** (2 Oct, as asked). "Survey complete" now has a Look button that
   goes into the surveyed system with its panel open (the first one, when several finish in one
   turn), and "Living world found" one that goes to that world. A message with a button stays up
   12 s instead of 4.5. Interface only.
+- **Systems, and a tab for the collision stars** (3 Oct; the player asked for Settlements to become
+  Systems, with "a separate category in the menu for collision stars in the degenerate era
+  because they're precious"). Settlements on the rail is now Systems (S still opens it): Our
+  settlements and Surveyed worlds as before, and in the Degenerate Age a third tab, Collision
+  stars, with every one on our map, the longest-burning first: the light a collector there gets
+  this turn, the turns it has left at this pace and the years, and whether it is settled,
+  unsurveyed, has a swarm feeding or people living there; a click goes to it. W now also
+  switches an open Systems window to Surveyed worlds (it did nothing while the window was open).
+  Found on the way: a Degenerate Age turn often outlasts a collision star's whole life (one to
+  ten trillion years). In 20 autoplayed games 228 lit, and 203 had already gone out, inside
+  the turn they lit in, before anyone could see them; 25 were seen burning, 20 of them for one
+  turn only. Such a star kept its name until the next turn, so the map gave it a ✦, every list
+  put it first, and its panel showed "Burns until" with a date already past. Now the ✦, the
+  lists and the tab count only stars that still burn; the tab lists the others apart, without
+  light, and their panel says they are out. The tip no longer calls brown dwarfs dead stars
+  "burning again": they never burned hydrogen until they merged. The A New Star and White Fire
+  events still describe such stars as burning (left for the player to decide). Interface and
+  labels only: the harness gives the same 300 games (133).

@@ -1,21 +1,22 @@
 import { useState } from 'preact/hooks';
 import { siteValue } from '../../game/sim/sites';
 import { ANOMALIES } from '../../game/data/events';
-import { bodyClimate } from '../../game/physics';
+import { bodyClimate, sourceLight } from '../../game/physics';
 import { LIVING_WORLD, naturalKinRoom } from '../../game/sim/fleets';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
-import { formatDistance } from '../../game/eras';
+import { formatDistance, formatYears } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
 import { tripLabel } from '../trip';
 import { project } from '../../game/sim/projection';
-import { colonies, distLy, popsOf } from '../../game/sim/util';
-import type { Body, Colony, Fleet, GameState, ThreadId } from '../../game/types';
+import { turnStep, turnsUntilYears } from '../../game/sim/flare';
+import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
+import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
-import { signed } from '../fmt';
+import { n1, signed } from '../fmt';
 import { Icon } from '../Icon';
-import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, BEACON_TIP } from '../labels';
-import { engine, modal, rev, selection, targeting, view } from '../store';
+import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
+import { engine, modal, rev, selection, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
 
@@ -135,21 +136,40 @@ export function FleetsModal({ s }: { s: GameState }) {
   );
 }
 
-export function SettlementsModal({ s, tab }: { s: GameState; tab?: 'worlds' }) {
+/**
+ * The Systems window: our settlements, every surveyed world, and in the Degenerate Age the
+ * collision stars. The open tab lives in the modal itself, so S and W open (and close) the right one.
+ */
+export function SystemsModal({ s, tab }: { s: GameState; tab?: SystemsTab }) {
   void rev.value;
-  const [which, setWhich] = useState<'ours' | 'worlds'>(tab ?? 'ours');
+  const degenerate = s.era === 'degenerate';
+  const which = tab === 'beacons' && !degenerate ? undefined : tab;
+  const show = (t?: SystemsTab) => (modal.value = { kind: 'settlements', tab: t });
   const surveyedCount = Object.values(s.bodies).filter((b) => s.civ.known[b.systemId] === 2 && !b.dissolved && b.kind !== 'deep').length;
+  const burning = degenerate ? Object.values(s.systems).filter((x) => isBeacon(s, x)).length : 0;
   const tabs = (
-    <div class="row" style={{ gap: '4px', marginBottom: '8px' }}>
-      <button class={`btn small ${which === 'ours' ? 'primary' : ''}`} onClick={() => setWhich('ours')}>Our settlements</button>
-      <button class={`btn small ${which === 'worlds' ? 'primary' : ''}`} onClick={() => setWhich('worlds')}>Surveyed worlds <span class="mono faint">{surveyedCount}</span></button>
+    <div class="row wrap" style={{ gap: '4px', marginBottom: '8px' }}>
+      <button class={`btn small ${!which ? 'primary' : ''}`} onClick={() => show()}>Our settlements</button>
+      <button class={`btn small ${which === 'worlds' ? 'primary' : ''}`} onClick={() => show('worlds')}>Surveyed worlds <span class="mono faint">{surveyedCount}</span></button>
+      {degenerate && (
+        <button class={`btn small ${which === 'beacons' ? 'primary' : ''}`} onClick={() => show('beacons')} data-tip={`${BEACON_TIP} Every one on our map, and how long each will burn.`}>
+          ✦ Collision stars <span class={`mono ${burning ? 'boon' : 'faint'}`}>{burning}</span>
+        </button>
+      )}
     </div>
   );
   if (which === 'worlds')
     return (
-      <ModalFrame title="Surveyed worlds" eyebrow="Every world a probe has charted" icon="planet" narrow>
+      <ModalFrame title="Systems" eyebrow="Surveyed worlds: every world a probe has charted" icon="planet" narrow>
         {tabs}
         <WorldsList s={s} />
+      </ModalFrame>
+    );
+  if (which === 'beacons')
+    return (
+      <ModalFrame title="Systems" eyebrow={`Collision stars: ${burning ? `${burning} burning on our map` : 'none burning on our map'}`} icon="red_dwarf" narrow>
+        {tabs}
+        <BeaconsList s={s} />
       </ModalFrame>
     );
   const p = project(s);
@@ -161,7 +181,7 @@ export function SettlementsModal({ s, tab }: { s: GameState; tab?: 'worlds' }) {
   }
   const total = colonies(s).reduce((a, c) => a + popsOf(c) + c.cryo, 0);
   return (
-    <ModalFrame title="Settlements" eyebrow={`${colonies(s).length} settlements in ${bySystem.size} system${bySystem.size === 1 ? '' : 's'} · ${total} people`} icon="colony" narrow>
+    <ModalFrame title="Systems" eyebrow={`Our settlements: ${colonies(s).length} in ${bySystem.size} system${bySystem.size === 1 ? '' : 's'} · ${total} people`} icon="colony" narrow>
       {tabs}
       {[...bySystem.entries()].map(([sid, cs]) => {
         const sys = s.systems[sid];
@@ -360,6 +380,114 @@ function WorldsList({ s }: { s: GameState }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * The Degenerate Age's collision stars on our map, the longest-burning first: how long each has
+ * left at this pace, what its light is worth, and who is there. Turns in this age can outlast a
+ * collision star's whole life, so many light and go out within one; those keep the name until the
+ * turn ends and are listed apart, without light.
+ */
+function BeaconsList({ s }: { s: GameState }) {
+  void rev.value;
+  const cap = colonies(s).find((c) => c.id === s.civ.capitalId);
+  const home = s.systems[cap?.systemId ?? s.civ.homeSystemId];
+  const ours = new Set(colonies(s).map((c) => c.systemId));
+  const L = turnStep(s).turnLength;
+  const stars = Object.values(s.systems).filter((x) => x.primary.kind === 'collision_star' && !x.gone && (s.civ.known[x.id] ?? 0) > 0);
+  const burning = stars
+    .filter((x) => isBeacon(s, x))
+    .map((sys) => {
+      const dies = sys.primary.diesAt ?? s.years;
+      return { sys, left: dies - s.years, turns: turnsUntilYears(s, dies), light: sourceLight(s, sys, s.years, isFinite(L) ? L : 0).light, ly: distLy(home, sys) };
+    })
+    .sort((a, b) => b.left - a.left || a.ly - b.ly);
+  const out = stars
+    .filter((x) => !isBeacon(s, x))
+    .map((sys) => ({ sys, life: (sys.primary.diesAt ?? 0) - (sys.primary.bornAt ?? Infinity), ly: distLy(home, sys) }))
+    .sort((a, b) => a.ly - b.ly);
+  const worldsOf = (sys: StarSystem) => sys.bodies.filter((id) => s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind !== 'deep').length;
+  const others = (sys: StarSystem) => (s.civ.known[sys.id] === 2 ? Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id)) : undefined);
+  const chipGap = { marginLeft: '6px' };
+  return (
+    <>
+      {burning.length === 0 ? (
+        <p class="dim">
+          {s.eta >= 23
+            ? 'No collision star is burning on our map, and no more will light: brown-dwarf collisions stopped lighting new stars at η 23.'
+            : 'No collision star is burning on our map. Now and then two brown dwarfs, each too small to burn hydrogen, collide and merge into a body heavy enough to burn it: a small red star that shines for one to ten trillion years. While one burns it heads every list of destinations, and its name shows on the galaxy map with a ✦.'}
+        </p>
+      ) : (
+        <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>
+          Small red stars lit by colliding brown dwarfs: in this age nothing else nearby shines like them, and none lasts. The longest-burning first.
+        </p>
+      )}
+      <div class="list">
+        {burning.map(({ sys, left, turns, light, ly }) => {
+          const known = s.civ.known[sys.id] ?? 0;
+          const worlds = worldsOf(sys);
+          const v = others(sys);
+          return (
+            <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
+              <span class="grow">
+                <span class="boon">✦</span> {sys.name} <span class="faint">{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
+                {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
+                {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
+                {swarmSeenAt(s, sys.id) && <span class="chip danger" style={chipGap} data-tip={SWARM_TIP}>swarm</span>}
+                {v && (
+                  <span class="chip" style={{ ...chipGap, color: v.color, borderColor: v.color }} data-tip={v.contact ? `${v.name} live there` : 'Someone lives there'}>
+                    {v.contact ? v.name : 'someone lives there'}
+                  </span>
+                )}
+                <div class="faint" style={{ fontSize: '11px' }}>
+                  {known === 2 ? `${worlds} world${worlds === 1 ? '' : 's'}` : 'worlds not charted'} · {formatDistance(ly)} · {formatYears(left)} of light left
+                </div>
+              </span>
+              <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '84px' }}>
+                <span class="good" data-tip="How much a light collector here gathers this turn compared with its rating.">×{light < 1 ? light.toFixed(2) : n1(light)} light</span>
+                <div
+                  class={turns <= 1 ? 'warn' : 'faint'}
+                  style={{ fontSize: '11px' }}
+                  data-tip={`${
+                    turns <= 1
+                      ? 'At this pace it goes out during this turn, so collectors catch its light for only part of it.'
+                      : isFinite(turns)
+                        ? `At this pace it gives light for ${turns} turns, counting this one, and goes out during the last of them.`
+                        : 'At this pace it burns for longer than we can foresee.'
+                  } ${formatYears(left)} of light left.`}
+                >
+                  {turns <= 1 ? 'goes out this turn' : isFinite(turns) ? `${turns} turns left` : 'many turns left'}
+                </div>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      {out.length > 0 && (
+        <div class="section" style={{ marginTop: '10px' }}>
+          <h3>
+            Already out <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>· lit and went out within the last turn</span>
+          </h3>
+          <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>
+            The last turn spanned {formatYears(s.turnLength)}, longer than {out.length === 1 ? 'this star' : 'these stars'} burned. Their light is gone; at the end of this turn each settles into a white dwarf. A quicker pace (shorter turns) catches more of them alight.
+          </p>
+          <div class="list">
+            {out.map(({ sys, life, ly }) => (
+              <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
+                <span class="grow faint">
+                  {sys.name} <span>{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
+                  <div style={{ fontSize: '11px' }}>
+                    {life > 0 ? `burned for ${formatYears(life)} · ` : ''}{formatDistance(ly)}
+                  </div>
+                </span>
+                <span class="mono faint" style={{ fontSize: '11px' }}>out</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </>

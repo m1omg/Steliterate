@@ -7,10 +7,12 @@ import type { GameState } from '../game/types';
 // `rev` bumps after every change so components re-render.
 
 export type Screen = 'menu' | 'setup' | 'game';
+/** The Systems window's tabs past the first (our settlements): surveyed worlds, collision stars. */
+export type SystemsTab = 'worlds' | 'beacons';
 export type Modal =
   | { kind: 'research' }
   | { kind: 'fleets' }
-  | { kind: 'settlements'; tab?: 'worlds' }
+  | { kind: 'settlements'; tab?: SystemsTab }
   | { kind: 'charters' }
   | { kind: 'threads' }
   | { kind: 'signals' }

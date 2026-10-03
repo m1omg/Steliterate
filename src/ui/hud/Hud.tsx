@@ -68,7 +68,7 @@ function Rail({ s }: { s: GameState }) {
   return (
     <nav class="rail panel" aria-label="Civilization">
       <RailBtn icon="research" label={`Research${s.civ.researching ? '' : ': nothing chosen'}`} short="Research" on={m === 'research'} badge={s.civ.researching ? 0 : 1} onClick={() => (modal.value = { kind: 'research' })} />
-      <RailBtn icon="colony" label="Settlements" short="Settle" wide="Settlements" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
+      <RailBtn icon="colony" label={`Systems: our settlements and every surveyed world${s.era === 'degenerate' ? ', and the collision stars' : ''}`} short="Systems" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
       <RailBtn icon="fleet" label="Fleets" short="Fleets" on={m === 'fleets'} badge={readySettlers} onClick={() => (modal.value = { kind: 'fleets' })} />
       <RailBtn icon="threads" label="Threads: the kinds of mind you are made of" short="Threads" on={m === 'threads'} onClick={() => (modal.value = { kind: 'threads' })} />
       <RailBtn icon="doctrines" label="Charters: the book of laws" short="Laws" wide="Charters" on={m === 'charters'} onClick={() => (modal.value = { kind: 'charters' })} />

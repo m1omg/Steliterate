@@ -224,7 +224,20 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     found" a Look (`goToBody`).
   - `Signals.tsx`: Ask for help.
   - `Misc.tsx`: `MusicTrackField`, `startLoaded` music.
-  - `Lists.tsx`: Surveyed worlds sorts.
+  - `Lists.tsx`: Surveyed worlds sorts. `SystemsModal` (the rail's Systems, key S; the modal kind
+    is still `'settlements'`): Our settlements, Surveyed worlds (`tab: 'worlds'`, key W) and in
+    the Degenerate Age Collision stars (`tab: 'beacons'`, `BeaconsList`: light this turn from
+    `sourceLight`, turns left from `turnsUntilYears`, the longest-burning first, the ones
+    already out apart). The tab lives in `modal.value`, not in component state, so W can switch
+    an open window (it did nothing before 3 Oct).
+  - Collision stars: a Degenerate Age turn often outlasts a whole collision star (1–10 trillion
+    years), so most light and go out inside the turn they light in (20 autoplayed games: 228 lit,
+    203 already out when first seen, 25 seen burning, 20 of those for one turn only). Until the
+    next turn's `evolveUniverse` such a star keeps `kind: 'collision_star'` with `diesAt` in the
+    past. `isBeacon` (labels.ts) and the map's ✦ (`burning` in `engine.ts`) count only those with
+    `diesAt > years`; `sourceLight`'s label and the panel's "Burnt out at" say so. Helium stars
+    (80–300 million years) are always out before they are seen. The A New Star and White Fire
+    events still speak of such stars as burning (open question for the player, 3 Oct).
   - `Hud.tsx`: flare clock chip.
   - `Society.tsx`: archive chip.
 
@@ -308,3 +321,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `7b52ab4` | 122 | living worlds freeze when their own star dies; 900 games: 358, against 357; 85 of 900 outcomes change, both ways |
 | `b950f24` | 133 | flare turns pay by the time lived, young white dwarfs averaged, cold worlds start frozen, relic draws swarms; 900 games: 390 (358); pace and light fixes reverted: 123 |
 | `55ff2da` | 133 | charters can be repealed; the autoplayer never repeals: all 300 games identical to `30c3c7f` |
+| Systems window | 133 | interface and labels only: all 300 games identical to `55ff2da` |

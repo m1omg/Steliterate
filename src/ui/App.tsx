@@ -9,7 +9,7 @@ import { CodexModal, LogModal, SaveModal, SettingsModal } from './screens/Misc';
 import { MainMenu, Setup } from './screens/Menu';
 import { ResearchModal } from './screens/Research';
 import { SignalsModal } from './screens/Signals';
-import { FleetsModal, SettlementsModal } from './screens/Lists';
+import { FleetsModal, SystemsModal } from './screens/Lists';
 import { CrossingScreen, EraIntro, EventModal, LoreModal, OutcomeScreen, eventResult, loreView } from './screens/Story';
 import { TipLayer } from './Tip';
 import { Icon } from './Icon';
@@ -75,7 +75,7 @@ function ModalHost({ s }: { s: GameState | null }) {
     case 'fleets':
       return <FleetsModal s={s} />;
     case 'settlements':
-      return <SettlementsModal s={s} tab={m.tab} />;
+      return <SystemsModal s={s} tab={m.tab} />;
     case 'charters':
       return <ChartersModal s={s} />;
     case 'threads':

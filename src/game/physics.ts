@@ -129,12 +129,15 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       const dies = p.diesAt ?? years;
       const overlap = Math.max(0, Math.min(dies, years + L) - Math.max(born, years));
       const frac = L > 0 ? Math.min(1, overlap / L) : 0;
+      // (display only) a turn can outlast the whole of such a star: it may already be out
       const label =
-        p.kind === 'collision_star'
-          ? 'Collision star: two brown dwarfs merged and ignited hydrogen'
-          : p.kind === 'helium_star'
-            ? 'Helium star: two white dwarfs merged and ignited helium'
-            : 'Helium giant: a merger remnant burning its last shells, blindingly bright';
+        dies <= years
+          ? `${p.kind === 'collision_star' ? 'Collision star' : p.kind === 'helium_star' ? 'Helium star' : 'Helium giant'}, already out: it lit and burnt out within a single turn, and is settling into a white dwarf`
+          : p.kind === 'collision_star'
+            ? 'Collision star: two brown dwarfs merged and ignited hydrogen'
+            : p.kind === 'helium_star'
+              ? 'Helium star: two white dwarfs merged and ignited helium'
+              : 'Helium giant: a merger remnant burning its last shells, blindingly bright';
       return { light: base * frac * (0.5 + 0.5 * gfe), label, temperatureK: primaryTemperature(p, years, era), alive: [born, dies] };
     }
     case 'black_hole':

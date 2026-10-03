@@ -42,7 +42,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Your homeworld',
-    text: 'Open your settlement: click the homeworld on the map, or use Settlements (S) on the rail.',
+    text: 'Open your settlement: click the homeworld on the map, or use Systems (S) on the rail.',
     target: '.rail > button:nth-child(2)',
     done: (s) => {
       const sel = selection.value;

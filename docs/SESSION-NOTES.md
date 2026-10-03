@@ -41,6 +41,22 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   every Thread's stance turned around, dissent +3) and by one-time effects staying done. The
   ways of the Hunger stay irreversible. Tested on the player's own turn-77 save (their book was
   full at nine); the harness is game for game unchanged (the autoplayer never repeals).
+- **2 Oct, a Look button on "Survey complete":** done (`c622a14`), and on "Living world found".
+- **3 Oct, the Systems window** ("adjust the settlement button so it's systems button … a separate
+  category in the menu for collision stars in the degenerate era because they're precious"):
+  done, interface only. The branch check found nothing new (both branches at `c622a14`). The
+  player's turn-77 save is at η 14.00, just short of the Degenerate Age, so they will meet
+  collision stars soon. **Open question for the player:** most collision stars light and go out
+  inside a single turn (in 20 autoplayed games, 203 of 228 had gone out before they could be
+  seen; 25 were seen burning, most for one turn), and helium stars always do. The A New Star
+  event still promises "whoever reaches it first will feast", and White Fire's "Quicken while it
+  burns" cannot help. Options offered, none built:
+  - a new star sets the clock for the next turns, as the flare clock does, so it burns through
+    several of them;
+  - a star lights at the end of the turn it forms in, so each burns for at least one turn;
+  - only the event texts change, to say when the star has already gone out.
+
+  The first two are rules changes and need the harness.
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

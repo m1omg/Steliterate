@@ -526,10 +526,15 @@ export class Engine {
           .filter((x) => x.dd < d * 1.1)
           .sort((a, b) => a.dd - b.dd)
           .slice(0, 36);
-        // in the Degenerate Age every collision star on the map keeps its name showing
+        // in the Degenerate Age every collision star on the map keeps its name showing while it
+        // burns (one that lit and went out within the last turn has no light left to mark)
+        const burning = (id: string) => {
+          const pr = state.systems[id]?.primary;
+          return state.era === 'degenerate' && pr?.kind === 'collision_star' && (pr.diesAt ?? 0) > state.years;
+        };
         if (state.era === 'degenerate') {
           for (const p of this.galaxy.pickables) {
-            if (p.kind !== 'system' || state.systems[p.id]?.primary.kind !== 'collision_star' || cand.some((c) => c.p.id === p.id)) continue;
+            if (p.kind !== 'system' || !burning(p.id) || cand.some((c) => c.p.id === p.id)) continue;
             cand.push({ p, dd: 0 });
           }
         }
@@ -546,7 +551,7 @@ export class Engine {
             items.push({ text: `◈ ${sv.name}`, pos: p.pos, cls: 'others', w: 4, color: sv.color });
             continue;
           }
-          if (state.era === 'degenerate' && s.primary.kind === 'collision_star') {
+          if (burning(p.id)) {
             items.push({ text: `✦ ${s.name}`, pos: p.pos, cls: 'beacon', w: 5 });
             continue;
           }
