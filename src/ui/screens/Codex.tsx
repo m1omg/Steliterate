@@ -49,7 +49,7 @@ export const CODEX: CodexEntry[] = [
     body: [
       'After the Last Light, the galaxy is made of stellar corpses: white dwarfs, neutron stars, brown dwarfs and black holes.',
       'Embers: white dwarfs capture dark matter particles, which annihilate inside them and keep them warm. Adams & Laughlin estimate a few trillionths of the Sun’s luminosity (about 10¹⁵ W) and a temperature of around 63 K, for as long as the halo lasts (to roughly η 25). In the game the Unlit, the dark-matter minds, have something to say about that.',
-      'Collision stars: when two brown dwarfs collide they can merge into a red dwarf that burns for trillions of years. About a hundred such stars shine in a galaxy at any time between η 15 and 23.',
+      'Collision stars: when two brown dwarfs collide they can merge into a red dwarf that burns for trillions of years. About a hundred such stars shine in a galaxy at any time from η 15 until the galaxy itself evaporates (around η 19 to 21): brown dwarfs meet only while it holds together.',
       'Merger stars: two white dwarfs that spiral together can ignite as a short-lived, very bright helium-burning star, or explode as a type Ia supernova.',
       'Galactic evaporation: close encounters slowly fling most remnants out of the galaxy (η 19–20). Some fall into the central black hole instead.',
     ],

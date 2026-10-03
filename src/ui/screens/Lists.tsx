@@ -418,8 +418,8 @@ function BeaconsList({ s }: { s: GameState }) {
     <>
       {burning.length === 0 ? (
         <p class="dim">
-          {s.eta >= 23
-            ? 'No collision star is burning on our map, and no more will light: brown-dwarf collisions stopped lighting new stars at η 23.'
+          {s.eta >= 21
+            ? 'No collision star is burning on our map, and no more will light: the galaxy has evaporated, and brown dwarfs no longer meet.'
             : 'No collision star is burning on our map. Now and then two brown dwarfs, each too small to burn hydrogen, collide and merge into a body heavy enough to burn it: a small red star that shines for one to ten trillion years. While one burns it heads every list of destinations, and its name shows on the galaxy map with a ✦.'}
         </p>
       ) : (

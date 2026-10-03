@@ -248,7 +248,7 @@ export const MILESTONES: Milestone[] = [
   { at: 14, label: 'Last Light', detail: 'The last ordinary stars leave the main sequence; star formation ends.' },
   { at: 15, label: 'Stripped worlds', detail: 'Close stellar passes have torn most planets from their stars.' },
   { at: 19.5, label: 'Galactic evaporation', detail: 'Most remnants are flung out of the galaxy; a minority falls into the central black hole.' },
-  { at: 23, label: 'Last collision stars', detail: 'Brown-dwarf collisions stop lighting new stars.' },
+  { at: 21, label: 'Last collision stars', detail: 'The galaxy has evaporated: brown dwarfs no longer meet, and no new collision stars light. (Merging white-dwarf pairs need no galaxy and still flare until about η 25.)' },
   { at: 25, label: 'Embers fade', detail: 'The dark-matter halo is spent; white dwarfs are no longer warmed by WIMP annihilation.' },
   { at: 37, label: 'Proton decay?', detail: 'If protons decay (lifetime unknown, above 10³⁴ years), ordinary matter dissolves by η ≈ 39.' },
   { at: 69, label: 'Stellar holes evaporate', detail: 'Black holes of a few to tens of solar masses finish evaporating.' },

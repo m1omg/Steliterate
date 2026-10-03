@@ -69,6 +69,12 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   tenfold, at most a full store (tuned over eight harness runs; the aim was the Degenerate Age
   back under about 70 turns). Result 147 of 300 (52 victories, age 68 turns); the free in-tune
   clocks alone give 146. If they want it harsher: fewer turns per paid clock, or a lower free band.
+- **3 Oct, collision stars end with the galaxy** (asked; they had not reached that far in their own
+  game): done, collisions taper over the evaporation (η 18.4–21) and stop; helium mergers go on.
+  Offered a one-turn "harvest the flash" for paid clocks (their phrase: "more like harvesting an
+  explosion rather than something where you can settle" for slow civilizations); they chose to
+  keep six turns. They thought the price might need to be 100 or more: it is 250 (capped at a full
+  store), and the harness puts us at 140 of 300.
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

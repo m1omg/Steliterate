@@ -151,7 +151,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     affordable; `keepTimeWithStar` takes the price and returns it (or null). `clearStarClock`
     runs in `stepTurns` and after each turn; `starClock` feeds the Pace panel chip and the
     Collision stars tab. New stars light at the end of their turn (`physics.ts`: `born = to`,
-    the old draw still made). Events (`data/events.ts`): `newStarTiming`, `newStarClose`,
+    the old draw still made). Brown-dwarf collisions need a bound galaxy: `bound` in
+    `evolveUniverse` tapers their rate from 1 at η 18.4 to 0 at 21 (helium-star mergers go on to
+    η 25). Events (`data/events.ts`): `newStarTiming`, `newStarClose`,
     `keepTimeHint`, `keepTimeNote`, `studyStar` (Study it / Watch the flash: insight +25,
     resolve +2). A choice's `hint` may be a function of the moment: read it with `choiceHint`
     (the event window and the autoplayer do). The autoplayer (`clockTooDear` in `auto.ts`) pays
@@ -343,4 +345,5 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `55ff2da` | 133 | charters can be repealed; the autoplayer never repeals: all 300 games identical to `30c3c7f` |
 | `7d0806d` | 133 | Systems window: interface and labels only, all 300 games identical to `55ff2da` |
 | `4fe2404` | 167 | keep time with new stars, like a flare, free; the autoplayer keeps time with every one it can (about 12 a game): Degenerate Age 127 turns on average (44), games 276 (183), victories 117 (18); 74 games now survive, 40 no longer |
-| priced new-star clock | 147 | free within 100× of the next turn, then 250 energy a tenfold, at most a full store; Study/Watch +25 insight, +2 resolve; the autoplayer pays only while half its store would remain (2.3 free and 1.9 paid clocks a game, mean price 541): Degenerate Age 68 turns, victories 52. Variants, 300 games each (survive, victories, Degenerate turns): Study/Watch only 130/26/45; free in-tune clocks only 146/44/55; 100 a tenfold 165/79/88; 150 160/67/79; 400 154/55/61; uncapped 20, 40, 60: 161/106/114, 171/98/104, 163/81/99 |
+| `d005b05` | 147 | free within 100× of the next turn, then 250 energy a tenfold, at most a full store; Study/Watch +25 insight, +2 resolve; the autoplayer pays only while half its store would remain (2.3 free and 1.9 paid clocks a game, mean price 541): Degenerate Age 68 turns, victories 52. Variants, 300 games each (survive, victories, Degenerate turns): Study/Watch only 130/26/45; free in-tune clocks only 146/44/55; 100 a tenfold 165/79/88; 150 160/67/79; 400 154/55/61; uncapped 20, 40, 60: 161/106/114, 171/98/104, 163/81/99 |
+| collisions end with the galaxy | 140 | brown-dwarf collisions taper over the evaporation (η 18.4–21) and stop after; 52 victories, Degenerate Age 67 turns; 241 games end as at `d005b05` |

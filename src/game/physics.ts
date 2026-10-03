@@ -293,7 +293,11 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
   // met: it is seen alight, and we may keep time with it (flare.ts). The draw that used to place
   // its birth inside the turn is still made, so every later draw stays where it was.
   if (state.era === 'degenerate') {
-    const collisionRate = e < 23 ? Math.min(0.6, L / 4e12) * state.gfe : 0;
+    // Brown dwarfs meet only in a bound galaxy: as it evaporates (η 18.4 to 21, below) their
+    // collisions grow rarer, and once it has, they stop. Helium stars come from white-dwarf pairs
+    // that spiral together by their own gravitational waves, galaxy or not: those go on to η 25.
+    const bound = e < 18.4 ? 1 : e < 21 ? (21 - e) / 2.6 : 0;
+    const collisionRate = Math.min(0.6, L / 4e12) * state.gfe * bound;
     if (rand() < collisionRate) {
       const bds = systems.filter((s) => s.primary.kind === 'brown_dwarf' && !s.gone && !s.ejected);
       if (bds.length) {

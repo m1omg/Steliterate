@@ -319,7 +319,7 @@ belongs to another organization.
   127 turns on average instead of 44 and a game 276 instead of 183; 167 of 300 survive instead of
   133, with 117 victories instead of 18 (74 games now survive, 40 no longer do). In 20 games every
   collision star was seen burning, 217 of 352 for the full six turns.
-- **Keeping time with a new star has a price, unless we are in tune with it** (3 Oct; the player
+- `d005b05` **Keeping time with a new star has a price, unless we are in tune with it** (3 Oct; the player
   found the free clock "a bit of a cheap shot … every time you can keep pace, even when you're
   deep in the degenerate era", and wanted a civilization that is too slow unable to catch the
   moment, yet able to "keep pace with even the much shorter lived stars" with enough energy
@@ -344,3 +344,15 @@ belongs to another organization.
   Of the rise, Study and Watch alone give none (130 / 26 / 45) and the free in-tune clocks most
   (146 / 44 / 55); at 100, 150 and 400 a tenfold it was 165, 160 and 154 (ages 88, 79, 61), and
   at 20, 40 and 60 without the cap 161, 171 and 163 (114, 104 and 99 turns).
+- **Collision stars end with the galaxy** (3 Oct; the player: "collision stars should stop
+  happening after the death (gravitational relaxation) of the galaxy"). Brown dwarfs meet only in a
+  bound galaxy: their collisions now grow rarer as it evaporates (η 18.4 to 21) and stop once it
+  has. They used to go on at the full rate until η 23 among the brown dwarfs not yet thrown out:
+  37% of collision stars lit during or after the evaporation, 15% after it. Helium stars come from
+  white-dwarf pairs that spiral together by their own gravitational waves, galaxy or not, and still
+  light until η 25. The chronometer's Last collision stars moves from η 23 to 21, and the Codex and
+  the Collision stars tab say why. In 30 games: 10.7 collision stars a game, none after η 21, and
+  5.7 helium stars. Asked whether a slow civilization that pays should only harvest the flash (one
+  turn) rather than get time to settle, the player kept the six turns; the price stays 250 energy a
+  tenfold, capped at a full store (they suggested 100 or more). Balance: 140 of 300 survive (52
+  victories), a Degenerate Age of 67 turns; 241 of the 300 games end as before.
