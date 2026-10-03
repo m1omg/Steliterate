@@ -82,10 +82,14 @@ export function matterAt(state: GameState, b: Body): number {
   return m * gfe;
 }
 
-/** The cosmic year this world is lost to us (falls into its dead star), or Infinity. */
+/**
+ * The cosmic year this world is lost to us (falls into its dead star), or Infinity: never for a
+ * rogue world, flung loose from its star, which has none to fall into.
+ */
 export function lastsUntil(b: Body): number {
   if (b.dissolved) return 0;
-  return b.feeding ? b.feeding.start : (b.inspiralAt ?? Infinity);
+  if (b.feeding) return b.feeding.start;
+  return b.rogue ? Infinity : (b.inspiralAt ?? Infinity);
 }
 
 export interface SiteValue {

@@ -514,3 +514,11 @@ belongs to another organization.
   Degenerate Age of 68 turns (300 games: 148 / 58 / 68), against 447 / 136 / 68 before the
   boiling and 430 / 145 / 68 with it alone; 620 of the 900 games end as they did before the
   boiling.
+- **Rogue worlds never fall in** (3 Oct; the player: "It still displays spiral in time even for
+  rogue planets. I don't think that's correct."). A world flung loose from its star kept the
+  gravitational-wave fall-in date it had while it orbited, but that inspiral needs a bound orbit:
+  a rogue world has no star to fall into (the rules already knew it; only the display did not).
+  Its panel now says "Falls inward: never: adrift", its Coldminds "Lasting" reads "never falls
+  in" (they rank it first), and, of the same mistake, its Orbit reads "none: adrift" and it no
+  longer wears a "Tidally locked" chip. Display only: all 300 harness games identical (148 / 58 /
+  68).

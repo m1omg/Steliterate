@@ -431,6 +431,32 @@ function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
   );
 }
 
+/** A world's traits as shown: a rogue world is no longer locked to any star. */
+function shownTraits(b: Body): string[] {
+  return b.rogue ? b.traits.filter((t) => t !== 'tidally_locked') : b.traits;
+}
+
+/** When a world reaches its dead star's tidal limit: never for a rogue world, which has no star to fall into. */
+function FallsInwardRow({ b }: { b: Body }) {
+  if (!b.inspiralAt || !isFinite(b.inspiralAt)) return null;
+  if (b.rogue) {
+    const tip = 'Flung loose from its star, it drifts on its own: it has no star to fall into.';
+    return (
+      <>
+        <dt data-tip={tip}>Falls inward</dt>
+        <dd data-tip={tip}>never: adrift</dd>
+      </>
+    );
+  }
+  const tip = "When gravitational-wave orbital decay brings it to its dead star's tidal limit.";
+  return (
+    <>
+      <dt data-tip={tip}>Falls inward</dt>
+      <dd class="mono">{formatYears(b.inspiralAt)}</dd>
+    </>
+  );
+}
+
 /** A world its new star is boiling away (or its giant swallowing): gone as this turn ends. */
 function BoilingRow({ s, b }: { s: GameState; b: Body }) {
   const boil = boilingAway(s, b);
@@ -496,7 +522,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
           </div>
         )}
         <div class="row wrap" style={{ marginTop: '6px' }}>
-          {b.traits.map((t) =>
+          {shownTraits(b).map((t) =>
             EVENT_BY_ID[`anom_${t}`] ? (
               <button key={t} class="chip lore" data-tip={`${TRAIT_NAME[t]?.[1] ?? ''}\nClick to read the survey report again.`} onClick={() => { sfx('open'); loreView.value = { defId: `anom_${t}`, bodyId: b.id }; }}>
                 <Icon name="relic" /> {TRAIT_NAME[t]?.[0] ?? t}
@@ -505,7 +531,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
               <span key={t} class="chip" data-tip={TRAIT_NAME[t]?.[1] ?? ''}>{TRAIT_NAME[t]?.[0] ?? t}</span>
             ),
           )}
-          {b.rogue && <span class="chip warn" data-tip="Stripped from its star by a close stellar pass. Only its own heat is left.">rogue</span>}
+          {b.rogue && <span class="chip warn" data-tip="Flung loose from its star, usually by a close stellar pass: only its own heat is left, and it has no star to fall into.">rogue</span>}
           {b.feeding && <span class="chip boon" data-tip="Being torn apart by its dead star; the debris stream heats the star.">feeding its star</span>}
         </div>
         <WorldStrip s={s} sys={sys} current={b.id} />
@@ -542,15 +568,10 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
               </>
             )}
             <dt>Orbit</dt>
-            <dd class="mono">{b.kind === 'deep' ? '—' : `${b.orbitAU < 0.1 ? b.orbitAU.toFixed(3) : n1(b.orbitAU)} AU`}</dd>
+            <dd class="mono">{b.kind === 'deep' ? '—' : b.rogue ? 'none: adrift' : `${b.orbitAU < 0.1 ? b.orbitAU.toFixed(3) : n1(b.orbitAU)} AU`}</dd>
             <dt>Mass</dt>
             <dd class="mono">{b.massEarth >= 10 ? n0(b.massEarth) : n1(b.massEarth)} M⊕</dd>
-            {b.inspiralAt && isFinite(b.inspiralAt) && (
-              <>
-                <dt data-tip="When gravitational-wave orbital decay brings it to its dead star's tidal limit.">Falls inward</dt>
-                <dd class="mono">{formatYears(b.inspiralAt)}</dd>
-              </>
-            )}
+            <FallsInwardRow b={b} />
             {b.relic && b.relic.state !== 'hidden' && (
               <>
                 <dt>Ruins</dt>
@@ -629,7 +650,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
         <h2>{c.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
           {isCap && <span class="chip neon">capital</span>}
-          {b.traits.map((tr) => (
+          {shownTraits(b).map((tr) => (
             <span key={tr} class="chip" data-tip={TRAIT_NAME[tr]?.[1] ?? ''}>{TRAIT_NAME[tr]?.[0] ?? tr}</span>
           ))}
           {c.starving > 0 && <span class="chip danger">starving</span>}
@@ -725,12 +746,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                     <dd class="mono bad">{pct(c.damage)}</dd>
                   </>
                 )}
-                {b.inspiralAt && isFinite(b.inspiralAt) && (
-                  <>
-                    <dt>Falls inward</dt>
-                    <dd class="mono">{formatYears(b.inspiralAt)}</dd>
-                  </>
-                )}
+                <FallsInwardRow b={b} />
               </dl>
             </div>
             <ExpandSection s={s} c={c} />
