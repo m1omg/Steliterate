@@ -48,17 +48,17 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   player is several turns into the Degenerate Age (they said so on 3 Oct): the turn-77 file
   they uploaded on 29 Sep (η 14.00) is an old snapshot, not their current game, which lives in
   their browser. Ask for an export before reasoning about their game's state.
-  **Open question for the player:** most collision stars light and go out
-  inside a single turn (in 20 autoplayed games, 203 of 228 had gone out before they could be
-  seen; 25 were seen burning, most for one turn), and helium stars always do. The A New Star
-  event still promises "whoever reaches it first will feast", and White Fire's "Quicken while it
-  burns" cannot help. Options offered, none built:
-  - a new star sets the clock for the next turns, as the flare clock does, so it burns through
-    several of them;
-  - a star lights at the end of the turn it forms in, so each burns for at least one turn;
-  - only the event texts change, to say when the star has already gone out.
-
-  The first two are rules changes and need the harness.
+  Most collision stars used to light and go out inside a single turn (in 20 autoplayed games,
+  203 of 228 had gone out before they could be seen), and helium stars always did.
+- **3 Oct, new stars keep time like the flare** (asked: "make them burn for a few turns like the
+  flare with the turns getting shorter as in taking less time"): done. New stars light at the end
+  of their turn; A New Star and White Fire offer to keep time (six turns, each lived in full, one
+  star at a time; why one at a time: a new star lights about as often as one goes out). Made
+  opt-in, like the flare, rather than automatic. **Open question for the player:** with the
+  autoplayer keeping time with every star (about 12 a game) the harness went from 133 to 167 of
+  300, victories from 18 to 117, and the Degenerate Age from 44 turns to 127. Offered to limit
+  it: only new stars in a cluster where we have a settlement (17–26% of brown dwarfs, so about
+  3–5 clocks a game), or fewer turns per star. Not done unless they ask.
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

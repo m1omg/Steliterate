@@ -33,7 +33,7 @@ export function travelEstimate(state: GameState, ly: number, mods: Mods, pace = 
   const years = ly > 0 ? ly / mods.speed : 0;
   if (ly <= 0) return { turns: 1, years };
   let covered = 0;
-  // the turns as they will really fall: a flare's own clock and its first moment shorten them
+  // the turns as they will really fall: a flare's or a new star's own clock, and a flare's first moment, shorten them
   const turns = stepTurns(state, pace, 999, (len) => {
     if (!isFinite(len)) return true;
     covered += mods.speed * len;

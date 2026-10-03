@@ -11,7 +11,7 @@ import type { IconName } from '../icons';
 import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
 import { goToColony, goToFleet } from '../screens/Lists';
 import { isIdleFleet } from '../../game/sim/fleets';
-import { flareClock, flareStop, turnsUntilYears } from '../../game/sim/flare';
+import { flareClock, flareStop, starClock, turnsUntilYears } from '../../game/sim/flare';
 import { thermalRGB } from '../../render/shaders/bodies';
 import { ShipPrompt, shipPrompt } from './ShipPrompt';
 import { doEndTurn } from '../turnflow';
@@ -179,6 +179,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
   const civ = s.civ;
   const flare = flareClock(s);
   const flaring = flare ? null : flareStop(s);
+  const star = starClock(s);
   const paces: number[] = [];
   for (let x = mods.paceMax; x >= mods.paceMin; x--) paces.push(x);
   const idle = colonies(s).filter((c) => c.queue.length === 0);
@@ -220,6 +221,11 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
         {flaring && (
           <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`${flaring.name} is about to leave the main sequence and begin its last flare. The turn stops the moment it does, whatever the pace (a slower one cannot take us past it, and the short turn pays as one turn at the Tide at most), so we can decide how to meet the flare.`}>
             Turn stops · {flaring.name} begins to flare
+          </div>
+        )}
+        {star && (
+          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`We are keeping time with the new star at ${star.system}: each turn is a sixth of what was left of its life, lived in full, and pays as one turn at the Tide whatever the pace. Your pace takes over again when it burns out.`}>
+            Star clock · {star.system} · turn {star.turn} of {star.of}
           </div>
         )}
         <div class="opts">

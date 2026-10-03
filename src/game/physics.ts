@@ -288,14 +288,18 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
     }
   }
 
-  // Degenerate Age: collisions and mergers light rare, short stars
+  // Degenerate Age: collisions and mergers light rare, short stars. A turn here can outlast such
+  // a star's whole life, so (a bend) each lights as its turn ends, whenever in the turn the two
+  // met: it is seen alight, and we may keep time with it (flare.ts). The draw that used to place
+  // its birth inside the turn is still made, so every later draw stays where it was.
   if (state.era === 'degenerate') {
     const collisionRate = e < 23 ? Math.min(0.6, L / 4e12) * state.gfe : 0;
     if (rand() < collisionRate) {
       const bds = systems.filter((s) => s.primary.kind === 'brown_dwarf' && !s.gone && !s.ejected);
       if (bds.length) {
         const s = bds[Math.floor(rand() * bds.length)];
-        const born = from + rand() * L;
+        rand();
+        const born = to;
         s.primary.kind = 'collision_star';
         s.primary.mass = 0.1;
         s.primary.bornAt = born;
@@ -308,7 +312,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
       const wds = systems.filter((s) => (s.primary.kind === 'white_dwarf' || s.primary.kind === 'black_dwarf') && !s.gone);
       if (wds.length) {
         const s = wds[Math.floor(rand() * wds.length)];
-        const born = from + rand() * L;
+        rand();
+        const born = to;
         if (rand() < 0.1) {
           // super-Chandrasekhar merger: a Type Ia supernova
           notes.push({ systemId: s.id, kind: 'supernova' });

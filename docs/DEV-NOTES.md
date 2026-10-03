@@ -119,7 +119,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Harness blind spots:** the autoplayer never raids, asks for aid or picks tracks, so those
   never move the harness. Every victory it reaches is The Long Thought: the other Great Works
   never move it either. It does answer the flare event with choice 0 (keep time with the
-  flare).
+  flare), and keeps time with every new star it can (choice 0 of A New Star and White Fire).
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
 - The user dislikes long blocking waits. Prefer background runs and report when done.
@@ -136,6 +136,17 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `keepTimeWithFlare`, `flareClock`.
   - Constants: `FLARE_TURNS` 6; shelters 3 Kin, 10 matter, max 4.
   - The event is `last_flare` in `data/events.ts`; the structure is `night_shelter`.
+  - **The new-star clock** (3 Oct), the same file: `keepTimeWithStar` sets `civ.flags.star_until`
+    (the star's `diesAt`) and `star_step` (what was left of its life ÷ `STAR_TURNS`, 6). While
+    `starTurnsLeft` ≥ 1, `turnStep` (Degenerate Age) ends each turn at `star_until − step × (left −
+    1)`, counted back from the end so rounding can neither add a turn nor stall one, whatever the
+    pace, and `livedShare` is 1. `starClockOffer`: a burning collision or helium star, no clock
+    running (one at a time, or clocks would pass from star to star and hold the age still), a
+    step of at least `STAR_STEP_MIN` (1e-12) of the age (doubles), and fewer than six turns of
+    life at our pace. `clearStarClock` runs in `stepTurns` and after each turn; `starClock` feeds
+    the Pace panel chip and the Collision stars tab. New stars light at the end of their turn
+    (`physics.ts`: `born = to`, the old draw still made). Events: `newStarTiming`,
+    `keepTimeNote` in `data/events.ts`.
 - **`src/game/sim/hunger.ts`, `swarmsHunt`:** swarms catch ships stopped at their star where we have
   no settlement (`HUNT_AWAKE` 0.7, `HUNT_ASLEEP` 0.2 a turn, ×0.5 under Blackout; skipped on the
   first-swarm turn and under Communion). It runs after `firstSwarm` and before `autoExplore`, so
@@ -231,13 +242,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     already out apart). The tab lives in `modal.value`, not in component state, so W can switch
     an open window (it did nothing before 3 Oct).
   - Collision stars: a Degenerate Age turn often outlasts a whole collision star (1–10 trillion
-    years), so most light and go out inside the turn they light in (20 autoplayed games: 228 lit,
-    203 already out when first seen, 25 seen burning, 20 of those for one turn only). Until the
-    next turn's `evolveUniverse` such a star keeps `kind: 'collision_star'` with `diesAt` in the
-    past. `isBeacon` (labels.ts) and the map's ✦ (`burning` in `engine.ts`) count only those with
-    `diesAt > years`; `sourceLight`'s label and the panel's "Burnt out at" say so. Helium stars
-    (80–300 million years) are always out before they are seen. The A New Star and White Fire
-    events still speak of such stars as burning (open question for the player, 3 Oct).
+    years). Until 3 Oct a new star's birth fell anywhere in its turn, so most lit and went out
+    inside it (20 autoplayed games: 228 lit, 203 already out when first seen); since the
+    new-star clock they light as the turn ends. A star from before that can still sit with
+    `kind: 'collision_star'` and `diesAt` in the past until the next turn's `evolveUniverse`:
+    `isBeacon` (labels.ts) and the map's ✦ (`burning` in `engine.ts`) count only those with
+    `diesAt > years`; `sourceLight`'s label, the panel's "Burnt out at" and the tab's Already out
+    say so.
   - `Hud.tsx`: flare clock chip.
   - `Society.tsx`: archive chip.
 
@@ -321,4 +332,5 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `7b52ab4` | 122 | living worlds freeze when their own star dies; 900 games: 358, against 357; 85 of 900 outcomes change, both ways |
 | `b950f24` | 133 | flare turns pay by the time lived, young white dwarfs averaged, cold worlds start frozen, relic draws swarms; 900 games: 390 (358); pace and light fixes reverted: 123 |
 | `55ff2da` | 133 | charters can be repealed; the autoplayer never repeals: all 300 games identical to `30c3c7f` |
-| Systems window | 133 | interface and labels only: all 300 games identical to `55ff2da` |
+| `7d0806d` | 133 | Systems window: interface and labels only, all 300 games identical to `55ff2da` |
+| new-star clock | 167 | keep time with new stars, like a flare; the autoplayer keeps time with every one it can (about 12 a game): Degenerate Age 127 turns on average (44), games 276 (183), victories 117 (18); 74 games now survive, 40 no longer |

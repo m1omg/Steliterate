@@ -282,7 +282,7 @@ belongs to another organization.
   goes into the surveyed system with its panel open (the first one, when several finish in one
   turn), and "Living world found" one that goes to that world. A message with a button stays up
   12 s instead of 4.5. Interface only.
-- **Systems, and a tab for the collision stars** (3 Oct; the player asked for Settlements to become
+- `7d0806d` **Systems, and a tab for the collision stars** (3 Oct; the player asked for Settlements to become
   Systems, with "a separate category in the menu for collision stars in the degenerate era
   because they're precious"). Settlements on the rail is now Systems (S still opens it): Our
   settlements and Surveyed worlds as before, and in the Degenerate Age a third tab, Collision
@@ -300,3 +300,22 @@ belongs to another organization.
   "burning again": they never burned hydrogen until they merged. The A New Star and White Fire
   events still describe such stars as burning (left for the player to decide). Interface and
   labels only: the harness gives the same 300 games (133).
+- **New stars burn for six short turns, like the flare** (3 Oct; the player: "make them burn for a
+  few turns like the flare with the turns getting shorter as in taking less time"). A collision
+  star or a helium star now lights as the turn it forms in ends, so it is always seen alight (a
+  bend: the two may have met at any moment of that turn; the draw that placed its birth inside the
+  turn is still made, so every later draw is unchanged). Its event offers to keep time with it, as
+  the Last Flare does: what is left of its life in six turns, whatever the pace, each lived in full
+  and paying as one turn at the Tide. The Pace panel counts them ("Star clock · name · turn 2 of
+  6"), the Collision stars tab marks the star, and the forecasts and trip estimates count the
+  short turns. A New Star: Race for it, and keep time with it (the system is charted too); Race
+  for it at our own pace; Tell the others. White Fire: Keep time with it, or Let it pass (its
+  "Quicken while it burns", pace +1, could not catch a star already gone). One star at a time: a
+  new star lights about as often as one goes out, so a clock passed from star to star would hold
+  the age still. A clock turn must be at least a trillionth of the age, or the calendar's
+  doubles round it away (a first version stalled games at 10^23 years for exactly that): late in
+  the age a helium star is too brief to keep time with. Saves: two optional `civ.flags`. Balance:
+  the autoplayer keeps time with every new star it can, about 12 a game, so the Degenerate Age runs
+  127 turns on average instead of 44 and a game 276 instead of 183; 167 of 300 survive instead of
+  133, with 117 victories instead of 18 (74 games now survive, 40 no longer do). In 20 games every
+  collision star was seen burning, 217 of 352 for the full six turns.

@@ -11,7 +11,7 @@ import { queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
-import { flareData, livedShare, scorched, turnStep } from './flare';
+import { clearStarClock, flareData, livedShare, scorched, turnStep } from './flare';
 import { firstSwarm, swarmsHunt, updateHunger } from './hunger';
 import { updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
@@ -373,6 +373,8 @@ export function endTurn(state: GameState): TurnResult {
     delete civ.flags.flare_until;
     delete civ.flags.flare_step;
   }
+  // the new star we kept time with has burned out: our own pace again
+  clearStarClock(state);
 
   // ------------------------------------------------ 8. signals, forecasts, events
   result.arrived = deliverSignals(state);

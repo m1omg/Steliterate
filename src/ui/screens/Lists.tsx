@@ -9,7 +9,7 @@ import { formatDistance, formatYears } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
 import { tripLabel } from '../trip';
 import { project } from '../../game/sim/projection';
-import { turnStep, turnsUntilYears } from '../../game/sim/flare';
+import { starClock, turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
 import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
@@ -410,6 +410,7 @@ function BeaconsList({ s }: { s: GameState }) {
     .filter((x) => !isBeacon(s, x))
     .map((sys) => ({ sys, life: (sys.primary.diesAt ?? 0) - (sys.primary.bornAt ?? Infinity), ly: distLy(home, sys) }))
     .sort((a, b) => a.ly - b.ly);
+  const kept = starClock(s);
   const worldsOf = (sys: StarSystem) => sys.bodies.filter((id) => s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind !== 'deep').length;
   const others = (sys: StarSystem) => (s.civ.known[sys.id] === 2 ? Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id)) : undefined);
   const chipGap = { marginLeft: '6px' };
@@ -435,6 +436,11 @@ function BeaconsList({ s }: { s: GameState }) {
             <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
               <span class="grow">
                 <span class="boon">✦</span> {sys.name} <span class="faint">{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
+                {kept?.systemId === sys.id && (
+                  <span class="chip neon" style={chipGap} data-tip={`We are keeping time with it: turn ${kept.turn} of ${kept.of}, each a sixth of what was left of its life, whatever the pace.`}>
+                    keeping time
+                  </span>
+                )}
                 {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
                 {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
                 {swarmSeenAt(s, sys.id) && <span class="chip danger" style={chipGap} data-tip={SWARM_TIP}>swarm</span>}
@@ -473,7 +479,7 @@ function BeaconsList({ s }: { s: GameState }) {
             Already out <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>· lit and went out within the last turn</span>
           </h3>
           <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>
-            The last turn spanned {formatYears(s.turnLength)}, longer than {out.length === 1 ? 'this star' : 'these stars'} burned. Their light is gone; at the end of this turn each settles into a white dwarf. A quicker pace (shorter turns) catches more of them alight.
+            The last turn spanned {formatYears(s.turnLength)}, longer than {out.length === 1 ? 'this star' : 'these stars'} burned. Their light is gone; at the end of this turn each settles into a white dwarf.
           </p>
           <div class="list">
             {out.map(({ sys, life, ly }) => (

@@ -85,7 +85,7 @@ years, with no faster-than-light travel.
 * **Light-speed contact.** Every message travels at the speed of light. A plea can arrive
   after its sender is already dead.
 
-Typical standard game: 90 to 140 Dusk turns, 40 to 70 in the Degenerate Age, 30 to 50 in the
+Typical standard game: 90 to 140 Dusk turns, 40 to 70 in the Degenerate Age (over a hundred if you keep time with every new star), 30 to 50 in the
 Black Hole Age, about 20 in the Dark Era.
 
 ### Tempo: the clock of the mind
@@ -167,7 +167,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | Age | Sources |
 |---|---|
 | Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase (about 174× as luminous; about 3× the light per turn for collectors while you keep time with it); geothermal (declining); fusion |
-| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. **Collision stars** from brown dwarfs (η 15 to 23). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova). Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting** |
+| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. **Collision stars** from brown dwarfs (η 15 to 23). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova). A turn soon outlasts either kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full; one star at a time. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting** |
 | Black Hole | Penrose (finite spin), Hawking collectors (rising as holes shrink), final bursts, accretion only if protons are stable |
 | Dark | The reserve; a trickle of speculative horizon siphoning |
 

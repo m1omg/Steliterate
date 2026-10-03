@@ -90,13 +90,97 @@ export function flareStop(state: GameState, pace = state.civ.pace): StarSystem |
   return flareDue(state, state.years, step.years);
 }
 
+// New stars of the Degenerate Age. A collision star (two brown dwarfs merged) burns for one to ten
+// trillion years and a helium star (two white dwarfs merged) for a few hundred million, while a
+// turn here soon spans trillions of years: such a star would light and go out between two turns.
+// So each lights as its turn ends (physics.ts), and we may keep time with one, as with a flare:
+// its life in STAR_TURNS turns, whatever the pace, each lived in full. One star at a time: a new
+// star lights about as often as one goes out, so a clock that passed from star to star would
+// hold the age still.
+
+/** Turns a new star burns when we keep time with it (as many as a flare). */
+export const STAR_TURNS = 6;
+
+/**
+ * Turns left on the new star's clock, this one included (0: none running). Counted back from its
+ * end rather than added up from its start, so that rounding can neither add a turn nor stall one:
+ * a few hundred million years is a sliver of 10^20.
+ */
+function starTurnsLeft(state: GameState): number {
+  const f = state.civ.flags;
+  if (!f.star_until || !f.star_step) return 0;
+  return Math.max(0, Math.round((f.star_until - state.years) / f.star_step));
+}
+
+function keepingStarTime(state: GameState): boolean {
+  return starTurnsLeft(state) >= 1;
+}
+
+/** The clock has run out (or its numbers no longer make sense): forget it. */
+export function clearStarClock(state: GameState) {
+  const f = state.civ.flags;
+  if ((f.star_until || f.star_step) && !keepingStarTime(state)) {
+    delete f.star_until;
+    delete f.star_step;
+  }
+}
+
+/**
+ * A clock turn must be long enough for the calendar to tell it apart: years are doubles, good
+ * to about 16 digits, so a step shorter than a trillionth of the age would round away.
+ */
+const STAR_STEP_MIN = 1e-12;
+
+function isNewStar(sys: StarSystem): boolean {
+  return sys.primary.kind === 'collision_star' || sys.primary.kind === 'helium_star';
+}
+
+/**
+ * Could we keep time with this new star? While it burns, and no other clock runs, and only where
+ * it would do something: at our pace it would burn for fewer turns than keeping time gives.
+ */
+export function starClockOffer(state: GameState, sys: StarSystem | undefined): boolean {
+  const p = sys?.primary;
+  if (!sys || !p || state.era !== 'degenerate' || sys.gone || !isNewStar(sys) || keepingStarTime(state)) return false;
+  if (!p.diesAt || p.diesAt <= state.years) return false;
+  const left = p.diesAt - state.years;
+  if (left / STAR_TURNS < state.years * STAR_STEP_MIN) return false;
+  const next = stepTime(state.era, state.years, state.eta, state.civ.pace, state.settings.length).turnLength;
+  return left < next * STAR_TURNS;
+}
+
+/** Keep time with a new star until it burns out: its remaining life in STAR_TURNS turns. */
+export function keepTimeWithStar(state: GameState, systemId: string): boolean {
+  const sys = state.systems[systemId];
+  if (!starClockOffer(state, sys)) return false;
+  state.civ.flags.star_until = sys.primary.diesAt!;
+  state.civ.flags.star_step = (sys.primary.diesAt! - state.years) / STAR_TURNS;
+  return true;
+}
+
+/** Are we keeping time with a new star? Which of its turns comes next (1-based), and whose. */
+export function starClock(state: GameState): { turn: number; of: number; system: string; systemId: string | null } | null {
+  const f = state.civ.flags;
+  const left = starTurnsLeft(state);
+  if (left < 1) return null;
+  const sys = Object.values(state.systems).find((s) => isNewStar(s) && s.primary.diesAt === f.star_until);
+  return { turn: Math.max(1, STAR_TURNS - left + 1), of: STAR_TURNS, system: sys?.name ?? 'the new star', systemId: sys?.id ?? null };
+}
+
 /**
  * The coming turn's time step. As the calendar's, except that a turn stops at the moment one of
  * our stars leaves the main sequence, and while we keep time with a flare its turns are pinned
- * to a sixth of it.
+ * to a sixth of it. While we keep time with a new star (Degenerate Age) its turns are a sixth of
+ * what was left of its life, whatever the pace, the last ending as it burns out.
  */
 export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
   const step = stepTime(state.era, state.years, state.eta, pace, state.settings.length);
+  const left = state.era === 'degenerate' && isFinite(step.years) ? starTurnsLeft(state) : 0;
+  if (left >= 1) {
+    const f = state.civ.flags;
+    const end = left === 1 ? f.star_until : f.star_until - f.star_step * (left - 1);
+    if (end > state.years) return { years: end, eta: eta(end), turnLength: end - state.years };
+  }
   if (state.era !== 'dusk' || !isFinite(step.years)) return step;
   let end = step.years;
   const f = state.civ.flags;
@@ -117,10 +201,12 @@ export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
  * slower pace would buy more without more time passing). While we keep time with a flare each of
  * its turns is lived in full: one Tide turn. A turn cut short when a star begins to flare pays as
  * one Tide turn at most. (Paying it only for the time it covers would still charge a whole turn's
- * upkeep, which does not shrink with a short turn, for a fraction of its income.)
+ * upkeep, which does not shrink with a short turn, for a fraction of its income.) A turn kept
+ * with a new star is lived in full in the same way.
  */
 export function livedShare(state: GameState, pace = state.civ.pace, step: TimeStep = turnStep(state, pace)): number {
   const share = Math.pow(10, -pace);
+  if (state.era === 'degenerate' && keepingStarTime(state)) return 1;
   if (state.era !== 'dusk' || !isFinite(step.turnLength)) return share;
   if (keepingTime(state)) return 1;
   const planned = stepTime(state.era, state.years, state.eta, pace, state.settings.length).turnLength;
@@ -129,9 +215,10 @@ export function livedShare(state: GameState, pace = state.civ.pace, step: TimeSt
 
 /**
  * The coming turns as they will really fall at this pace (turnStep, one after another): pinned
- * to a flare while we keep time with one, and stopping when a settled star begins its own (which
- * this assumes is let pass). `each` sees every turn and returns true once it has seen enough;
- * the result is that turn's number, or Infinity. Estimates only: the state is not changed.
+ * to a flare or a new star while we keep time with one, and stopping when a settled star begins
+ * its own flare (which this assumes is let pass). `each` sees every turn and returns true once it
+ * has seen enough; the result is that turn's number, or Infinity. Estimates only: the state is
+ * not changed.
  */
 export function stepTurns(state: GameState, pace: number, maxTurns: number, each: (turnLength: number, endYears: number) => boolean): number {
   const sim: GameState = { ...state, civ: { ...state.civ, flags: { ...state.civ.flags } } };
@@ -146,6 +233,7 @@ export function stepTurns(state: GameState, pace: number, maxTurns: number, each
       delete f.flare_until;
       delete f.flare_step;
     }
+    clearStarClock(sim);
   }
   return Infinity;
 }
