@@ -539,7 +539,11 @@ export const EVENTS: EventDef[] = [
     title: 'Cast Out',
     art: 'degenerate',
     plate: 'cast_out',
-    text: (s, d) => `${s.systems[String(d.systemId)]?.name} has been flung out of the Coalescence by the slow chaos of a galaxy that is coming apart. Our settlement there is drifting into the void, getting farther from everyone forever.`,
+    text: (s, d) => {
+      const sys = s.systems[String(d.systemId)];
+      const ember = sys && sys.primary.kind === 'white_dwarf' && sys.primary.halo;
+      return `${sys?.name} has been flung out of the Coalescence by the slow chaos of a galaxy that is coming apart. Our settlement there is drifting into the void, getting farther from everyone forever.${ember ? ' The dark matter that kept its star warm stays behind: as it climbs away, its ember will dim and go out.' : ''}`;
+    },
     choices: [
       { label: 'Send them everything they need', hint: 'Energy −30, Matter −30. Resolve +3.', run: (s) => { energy(s, -30); matter(s, -30); res(s, 3); } },
       { label: 'They are on their own now', hint: 'Resolve −4.', run: (s) => { res(s, -4); } },

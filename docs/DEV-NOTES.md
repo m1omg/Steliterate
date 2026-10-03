@@ -180,6 +180,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     system id. The Systems window takes `send` (a stationed fleet's id): `sendFromSystems(s, f)`
     opens it (collision stars first while any burn), `SendButton` orders a move and shows the
     fleet. Opened from the fleet panel's More in Systems… (`.more-dests`) and the ship prompt.
+  - **Cast-out embers** (3 Oct): `Primary.haloLeft` (optional) is the year a halo white dwarf
+    left the galaxy: set when evaporation ejects it, and at the start of any turn for an ejected
+    one without it (older saves; other ways out). `emberShare` multiplies by `1 − (η − η_left)`,
+    so the warmth is gone a decade on and the dwarf turns black. `settleScore` uses `emberShare`.
+  - **Quickening during a star clock** (3 Oct): `starSplit(state, pace)` is `STAR_SPLIT` (10) with
+    `quickening` at pace ≥ 1 (if a tenth of the step is still at least `STAR_STEP_MIN` of the age),
+    else 1. `starTurnsLeft` counts in those steps, `ceil(x − 1e-6)` (a turn that starts between
+    steps runs to the next one), `turnStep` ends turns on them, `livedShare` is `1/split`.
+    `keepingStarTime` is now "the clock's end is still ahead" (by more than a millionth of a
+    step), so a split clock is not cleared early. `starClock` gives `split`; `of` is 6 × split.
 - **`src/game/sim/hunger.ts`, `swarmsHunt`:** swarms catch ships stopped at their star where we have
   no settlement (`HUNT_AWAKE` 0.7, `HUNT_ASLEEP` 0.2 a turn, ×0.5 under Blackout; skipped on the
   first-swarm turn and under Communion). It runs after `firstSwarm` and before `autoExplore`, so
@@ -371,3 +381,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | collisions end with the galaxy | 140 | brown-dwarf collisions taper over the evaporation (η 18.4–21) and stop after; 52 victories, Degenerate Age 67 turns; 241 games end as at `d005b05` |
 | white dwarfs cool | 135 | unwarmed white dwarfs cool to 5 K by η 16.7 and turn black; 900 games 425 / 159 victories / 68 Degenerate turns, against 432 / 159 / 68 at `6d734aa`; cast-out embers going cold (not shipped) 430 / 145 / 64 |
 | follow a new star on | 153 | a second star's clock after the first, never below 250 energy; Study charts; 59 victories, Degenerate Age 77 turns; 900 games 453 / 166 / 77. Variants (300): no follow-on 146 / 54 / 67; free chaining at the fresh price 152 / 72 / 87 (900: 461 / 214 / 88); one follow-on per chain 149 / 68 / 80; floor and one per chain 150 / 55 / 73 |
+| cast-out embers dim; Quickening splits clocks | 144 | 44 victories, Degenerate Age 68 turns; 900 games 447 / 136 / 68 (the dimming alone 448 / 144 / 71) |

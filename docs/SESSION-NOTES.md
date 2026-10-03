@@ -83,9 +83,10 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   5 K white dwarf was not one: no reason, so now it is). Embers unchanged except that their
   shown temperature falls during the halo's fade. They asked how long embers last (they know
   Adams & Laughlin's point that the WIMPs run out): η 22 to 25 is the right order, but a dwarf
-  cast out of the galaxy leaves the halo. **Pending decision:** they chose to test that first;
-  cast-out embers going cold give 900 games 430 / 145 victories / 64 Degenerate turns against
-  425 / 159 / 68. Not shipped; ask them (patch: clear `halo` when a system is ejected).
+  cast out of the galaxy leaves the halo. They chose to test that first, then (shown 430 / 145 /
+  64 against 425 / 159 / 68 for going cold at once): "It goes cold but of course gradually, not
+  right away." Done: it dims over a decade of η (told plainly that the slow part is the leaving,
+  not its own heat, which lasts a sliver of a turn).
 - **3 Oct, following a new star on, and more** (from a turn-93 screenshot while keeping time with
   one star: the text mixed "too slow" with "not needed"; "should have an option to extend the
   fast time period"; "observing but not revealing on map doesnt make sense but i dunno how to make
@@ -95,9 +96,14 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   see CHANGELOG); Study it charts the system and Race for it at our own pace went (it only
   charted); the Record names the system; Send buttons in the Systems window. If they want it
   stricter: one follow-on per chain (300 games 150 / 55 / 73).
-- **3 Oct, open: "quickening tech should let you slow even slower than collision star pace."**
-  Not built: it touches the pace and strain rules. Ask what they mean (pace buttons that work
-  during a star clock, or a pace range reaching below a collision star's turns) before building.
+- **3 Oct, "quickening tech should let you slow even slower than collision star pace."** Asked:
+  they chose pace buttons that work during a star clock (over a wider pace range). Done: with
+  Quickening, Quick ×10 splits each clock turn into ten, each lived as a tenth (same light, ten
+  times the turns and upkeep). Capped at ×10 (Quick ×100 does the same there); say so if they
+  want ×100 to mean 600 turns.
+- **3 Oct, "why are worlds around collision stars always hot?"** Physics, not a bug: brown
+  dwarfs' worlds orbit at 0.004–0.05 AU and a collision star is temperate near 0.034 AU (see
+  CHANGELOG). Offered nothing to change; the bend is that the worlds survive the collision.
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

@@ -42,6 +42,7 @@ npm run savecompat                       # "SAVE COMPAT OK"
 npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; count in DEV-NOTES
 ```
 
-Balance reference: 153 of 300 standard competent games survive with white dwarfs cooling and new
-stars that can be followed on, 3 Oct (900 games: 453; noise ±12; 140 before those; 133 at
-`b950f24`, before any new-star clock, 900 games: 390; 114 before the fixes of the 28 Sep review).
+Balance reference: 144 of 300 standard competent games survive (44 victories, a Degenerate Age of 68
+turns) with cooling white dwarfs, dimming cast-out embers, follow-on new-star clocks and Quickening
+splitting them, 3 Oct (900 games: 447; noise ±12; 140 before these; 133 at `b950f24`, before any
+new-star clock, 900 games: 390; 114 before the fixes of the 28 Sep review).

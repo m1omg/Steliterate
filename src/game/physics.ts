@@ -45,12 +45,18 @@ export function dwarfGlow(years: number): number {
 /**
  * The share of its dark-matter warmth an ember (a white dwarf in the halo) still has: all of it
  * to η 22, then less as the halo runs out, none by η 25. Its light follows this share; its
- * temperature the fourth root of it.
+ * temperature the fourth root of it. One cast out of the galaxy (`haloLeft`) leaves the halo
+ * behind and dims over the next tenfold of years, to nothing. (Its own stored heat would last
+ * only some 10^11 to 10^13 years, a sliver of a turn this late: what is slow is the leaving, a
+ * climb through the thinning outer halo over about a relaxation time, 10^19 to 10^20 years. The
+ * game starts the dimming when it is cast out; really it would begin a little before.)
  */
 export function emberShare(p: Primary, years: number): number {
   if (!p.halo || p.kind !== 'white_dwarf') return 0;
   const e = Math.log10(Math.max(1, years));
-  return e < 22 ? 1 : Math.max(0, (25 - e) / 3);
+  const halo = e < 22 ? 1 : Math.max(0, (25 - e) / 3);
+  if (p.haloLeft === undefined) return halo;
+  return halo * Math.max(0, 1 - (e - Math.log10(Math.max(1, p.haloLeft))));
 }
 
 /** A white dwarf’s radius in Suns: about the Earth’s at 0.6 M☉, larger for a lighter one (R ∝ M^-1/3). */
@@ -151,7 +157,12 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
         const ember = emberShare(p, years);
         const temperatureK = primaryTemperature(p, years, era);
         if (ember > 0) {
-          const label = ember < 1 ? 'Ember, fading: the dark matter that warms it is running out' : 'Ember: a white dwarf warmed by dark matter annihilating inside it (about 63 K)';
+          const label =
+            p.haloLeft !== undefined
+              ? 'Ember, dimming: cast out of the galaxy, it has left behind the dark matter that warmed it'
+              : ember < 1
+                ? 'Ember, fading: the dark matter that warms it is running out'
+                : 'Ember: a white dwarf warmed by dark matter annihilating inside it (about 63 K)';
           return { light: (0.05 + ember) * gf + rek, label, temperatureK, alive: null };
         }
         // no dark matter warms it: from ×0.05 at 20 K to a black dwarf's ×0.01 at 5 K, as its light falls
@@ -259,6 +270,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
   for (const sys of systems) {
     if (sys.gone) continue;
     const p = sys.primary;
+    // an ember outside the galaxy has left its halo (cast out before this was kept, or by other means)
+    if (sys.ejected && p.halo && p.kind === 'white_dwarf' && p.haloLeft === undefined) p.haloLeft = from;
     // main-sequence endings
     if (p.kind === 'red_dwarf' && p.blueAt && to >= p.blueAt) {
       p.kind = 'blue_dwarf';
@@ -406,6 +419,7 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
             notes.push({ systemId: s.id, kind: 'swallowed' });
           } else {
             s.ejected = true;
+            if (s.primary.halo && s.primary.kind === 'white_dwarf') s.primary.haloLeft = to;
             notes.push({ systemId: s.id, kind: 'ejected' });
           }
         }

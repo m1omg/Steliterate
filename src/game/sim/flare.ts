@@ -4,7 +4,7 @@ import { bodyClimate, primaryLuminosity } from '../physics';
 import type { Body, Colony, GameState, StarSystem } from '../types';
 import { computeMods } from './mods';
 import { reserveCapacity } from './storage';
-import { colonies } from './util';
+import { colonies, hasTech } from './util';
 
 // A red dwarf's last flare. At the end of its life a red dwarf does not swell into a giant: it
 // heats up and shrinks into a blue dwarf for a few billion years, a few hundred times brighter
@@ -116,19 +116,36 @@ export const STAR_ORDER_COST = 250;
 /** The least it costs to carry the clock on from one new star to the next (still capped at a full store). */
 export const STAR_FOLLOW_MIN = 250;
 
+/** With Quickening, Quick ×10 also works while we keep time: each of the clock's turns splits into this many. */
+export const STAR_SPLIT = 10;
+
 /**
- * Turns left on the new star's clock, this one included (0: none running). Counted back from its
- * end rather than added up from its start, so that rounding can neither add a turn nor stall one:
- * a few hundred million years is a sliver of 10^20.
+ * How many turns each of the new star's clock turns splits into at this pace: STAR_SPLIT with
+ * Quickening at a quick pace (each lived as that share of a Tide turn, so the star gives the same
+ * light over more turns, each paying its upkeep), else 1. Never finer than the calendar can count.
  */
-function starTurnsLeft(state: GameState): number {
+function starSplit(state: GameState, pace: number): number {
   const f = state.civ.flags;
-  if (!f.star_until || !f.star_step) return 0;
-  return Math.max(0, Math.round((f.star_until - state.years) / f.star_step));
+  if (pace < 1 || !f.star_step || !hasTech(state, 'quickening')) return 1;
+  return f.star_step / STAR_SPLIT >= state.years * STAR_STEP_MIN ? STAR_SPLIT : 1;
 }
 
+/**
+ * Turns left on the new star's clock at this pace, this one included (0: none running). Counted
+ * back from its end rather than added up from its start, so that rounding can neither add a turn
+ * nor stall one (a few hundred million years is a sliver of 10^20); a turn that starts between
+ * two of its steps (the pace changed under Quickening) runs to the next one.
+ */
+function starTurnsLeft(state: GameState, pace = state.civ.pace): number {
+  const f = state.civ.flags;
+  if (!keepingStarTime(state)) return 0;
+  return Math.max(1, Math.ceil((f.star_until - state.years) / (f.star_step / starSplit(state, pace)) - 1e-6));
+}
+
+/** A clock runs until the year its star burns out (every turn of it ends exactly on a sixth, or a sixtieth, counted back from there). */
 function keepingStarTime(state: GameState): boolean {
-  return starTurnsLeft(state) >= 1;
+  const f = state.civ.flags;
+  return !!f.star_until && !!f.star_step && f.star_until - state.years > f.star_step * 1e-6;
 }
 
 /**
@@ -244,15 +261,17 @@ export function keepTimeWithStar(state: GameState, systemId: string): number | n
  * Are we keeping time with a new star? Which of its turns comes next (1-based), how many are left
  * (this one included), whose, and which star we follow on to after it, if any.
  */
-export function starClock(state: GameState): { turn: number; of: number; left: number; system: string; systemId: string | null; next: string | null; nextId: string | null } | null {
+export function starClock(state: GameState): { turn: number; of: number; split: number; left: number; system: string; systemId: string | null; next: string | null; nextId: string | null } | null {
   const f = state.civ.flags;
   const left = starTurnsLeft(state);
   if (left < 1) return null;
+  const split = starSplit(state, state.civ.pace);
   const sys = Object.values(state.systems).find((s) => isNewStar(s) && s.primary.diesAt === f.star_until);
   const after = f.star_next ? Object.values(state.systems).find((s) => isNewStar(s) && s.primary.diesAt === f.star_next) : undefined;
   return {
-    turn: Math.max(1, STAR_TURNS - left + 1),
-    of: STAR_TURNS,
+    turn: Math.max(1, STAR_TURNS * split - left + 1),
+    of: STAR_TURNS * split,
+    split,
     left,
     system: sys?.name ?? 'the new star',
     systemId: sys?.id ?? null,
@@ -265,14 +284,15 @@ export function starClock(state: GameState): { turn: number; of: number; left: n
  * The coming turn's time step. As the calendar's, except that a turn stops at the moment one of
  * our stars leaves the main sequence, and while we keep time with a flare its turns are pinned
  * to a sixth of it. While we keep time with a new star (Degenerate Age) its turns are a sixth of
- * what was left of its life, whatever the pace, the last ending as it burns out.
+ * what was left of its life, whatever the pace, the last ending as it burns out; with Quickening
+ * at a quick pace each of those splits into STAR_SPLIT.
  */
 export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
   const step = stepTime(state.era, state.years, state.eta, pace, state.settings.length);
-  const left = state.era === 'degenerate' && isFinite(step.years) ? starTurnsLeft(state) : 0;
+  const left = state.era === 'degenerate' && isFinite(step.years) ? starTurnsLeft(state, pace) : 0;
   if (left >= 1) {
     const f = state.civ.flags;
-    const end = left === 1 ? f.star_until : f.star_until - f.star_step * (left - 1);
+    const end = left === 1 ? f.star_until : f.star_until - (f.star_step / starSplit(state, pace)) * (left - 1);
     if (end > state.years) return { years: end, eta: eta(end), turnLength: end - state.years };
   }
   if (state.era !== 'dusk' || !isFinite(step.years)) return step;
@@ -296,11 +316,11 @@ export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
  * its turns is lived in full: one Tide turn. A turn cut short when a star begins to flare pays as
  * one Tide turn at most. (Paying it only for the time it covers would still charge a whole turn's
  * upkeep, which does not shrink with a short turn, for a fraction of its income.) A turn kept
- * with a new star is lived in full in the same way.
+ * with a new star is lived in full in the same way, or as a tenth of one when Quickening splits it.
  */
 export function livedShare(state: GameState, pace = state.civ.pace, step: TimeStep = turnStep(state, pace)): number {
   const share = Math.pow(10, -pace);
-  if (state.era === 'degenerate' && keepingStarTime(state)) return 1;
+  if (state.era === 'degenerate' && keepingStarTime(state)) return 1 / starSplit(state, pace);
   if (state.era !== 'dusk' || !isFinite(step.turnLength)) return share;
   if (keepingTime(state)) return 1;
   const planned = stepTime(state.era, state.years, state.eta, pace, state.settings.length).turnLength;

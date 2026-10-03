@@ -52,7 +52,7 @@ export const CODEX: CodexEntry[] = [
       'Black dwarfs: a white dwarf that no dark matter warms keeps cooling. The game follows Mestel’s law (its light falls as t⁻¹·⁴): about 20 K as the age opens, about 9 K by η 16 and 5 K by η 16.7, when the game calls it a black dwarf. Nothing happens to it at 5 K but the name. A real one would go on cooling, faster once its core has crystallised, and is probably colder than 20 K already when the age begins. An ember joins them as the halo runs out, its warmth fading from η 22.',
       'Collision stars: when two brown dwarfs collide they can merge into a red dwarf that burns for trillions of years. About a hundred such stars shine in a galaxy at any time from η 15 until the galaxy itself evaporates (around η 19 to 21): brown dwarfs meet only while it holds together.',
       'Merger stars: two white dwarfs that spiral together can ignite as a short-lived, very bright helium-burning star, or explode as a type Ia supernova.',
-      'Galactic evaporation: close encounters slowly fling most remnants out of the galaxy (η 19–20). Some fall into the central black hole instead.',
+      'Galactic evaporation: close encounters slowly fling most remnants out of the galaxy (η 19–20). Some fall into the central black hole instead. An ember flung out leaves behind the dark matter that warmed it: it dims over about a tenfold of years as it climbs away, then goes out (in the game from the moment it is cast out; really its orbit widens, and the dimming begins, a little before).',
     ],
   },
   {

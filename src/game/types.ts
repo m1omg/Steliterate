@@ -74,6 +74,7 @@ export interface Primary {
   bornAt?: number; // collision / merger stars
   diesAt?: number; // collision / merger stars burn out
   halo?: boolean; // white dwarf warmed by dark-matter capture in the Degenerate Age
+  haloLeft?: number; // the year such a dwarf was cast out of the galaxy: its warmth dims over the next decade of η
   spin: number; // extractable rotational energy left (energy units)
   spinMax: number;
   evaporateAt?: number; // black holes: Hawking evaporation (cosmic year)

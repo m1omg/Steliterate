@@ -407,3 +407,25 @@ belongs to another organization.
   41 of 91 Degenerate turns on a clock); with the floor, 1.7 a game at 311 energy on average, 34
   of 82 turns on a clock; adding one follow-on per chain, 300 games, 150 / 55 / 73; without any
   follow-on 146 / 54 / 67. The Study change alone moves nothing measurable.
+- **Cast-out embers dim; Quickening works during a star clock** (3 Oct, the player's decisions:
+  an ember flung out of the galaxy "goes cold but of course gradually, not right away"; and
+  Quickening should let the pace buttons work while keeping time). An ember cast out by the
+  evaporation (or any other way) records the year (`haloLeft`) and dims over the next tenfold of
+  years, one decade of η (about two turns at the Tide), then turns black. The bend, plainly: its
+  own stored heat would last only some 10^11 to 10^13 years, a sliver of one of these turns; what
+  is slow is the leaving, a climb through the thinning outer halo over about a relaxation time
+  (10^19 to 10^20 years), and the game starts the dimming at the Cast Out event where really it
+  would begin a little before. Its panel says "Ember, dimming"; the Cast Out event and the Codex
+  say why. The autoplayer now scores a system +2 only while its ember is warm (it valued spent
+  ones). With Quickening, Quick ×10 also works while we keep time with a new star: each of the
+  clock's six turns splits into ten, each lived as a tenth of a Tide turn, so the star gives the
+  same light over sixty turns and every turn pays its upkeep (never finer than the calendar can
+  count; the Pace chip counts "of 60"). A turn that begins between two clock steps (the pace
+  changed) now runs to the next step rather than to the nearest. Balance, 900 games: 447 survive,
+  136 victories, a Degenerate Age of 68 turns (300 games: 144 / 44 / 68), against 453 / 166 / 77
+  before; the dimming alone gives 448 / 144 / 71. Asked why worlds around collision stars are
+  always hot: brown dwarfs' worlds orbit very close (0.004 to about 0.05 AU; in one galaxy 29
+  worlds, median 0.009 AU), and a collision star (about 0.1 M☉, 1.2 × 10^-3 L☉) is temperate only
+  near 0.034 AU, so most of them (23 of the 29) end up above boiling, a few temperate, the
+  outermost frozen. That is the inverse-square law; the bend is that they keep their orbits
+  through the collision, which would really scatter or swallow such close worlds.
