@@ -480,7 +480,9 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
         break;
       case 'giant':
-        if (seen) log(state, `The merger star at ${sys.name} has swollen into a helium giant, blindingly bright and very brief.`, 'info', sys.id);
+        // blindingly bright and very brief: as with any new star, we may keep time with it (a flash)
+        queueEvent(state, 'helium_giant', { systemId: sys.id });
+        known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
         break;
       case 'supernova':
         for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'a supernova');

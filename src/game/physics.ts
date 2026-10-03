@@ -264,7 +264,10 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       const born = p.bornAt ?? years;
       const dies = p.diesAt ?? years;
       const overlap = Math.max(0, Math.min(dies, years + L) - Math.max(born, years));
-      const frac = L > 0 ? Math.min(1, overlap / L) : 0;
+      // a flash we keep time with is lived in full in its light, even where the calendar's shortest
+      // turn outlasts the star (a bend: past about η 18.1 a giant's 120,000 years are too few to count)
+      const flash = state.civ?.flags.star_flash === dies && dies > years;
+      const frac = flash ? 1 : L > 0 ? Math.min(1, overlap / L) : 0;
       // (display only) a turn can outlast the whole of such a star: it may already be out
       const label =
         dies <= years
@@ -366,13 +369,13 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
     }
     if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant') && p.diesAt && to >= p.diesAt) {
       if (p.kind === 'helium_star' && (p.mass >= 0.9 || rand() < 0.3) && !sys.primary.rekindle) {
-        // massive merger remnants swell into a brief, brilliant helium giant
+        // massive merger remnants swell into a brief, brilliant helium giant. Like every new star
+        // it lights as the turn ends (it would have lit and gone out inside it): it shines through
+        // the next turn, which can be quickened to it (flare.ts), and burns out as that one ends
         p.kind = 'helium_giant';
-        p.bornAt = p.diesAt;
-        p.diesAt = p.diesAt + GIANT_LIFE;
+        p.bornAt = to;
+        p.diesAt = to + GIANT_LIFE;
         notes.push({ systemId: sys.id, kind: 'giant' });
-        // (it lit inside this turn, so it shone in it too)
-        if (shoneDuring(p, from, to)) shone.push('helium_giant');
       } else {
         p.kind = p.kind === 'collision_star' ? 'white_dwarf' : 'white_dwarf';
         p.halo = false;

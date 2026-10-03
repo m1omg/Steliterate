@@ -495,3 +495,22 @@ belongs to another organization.
   belts evaporated and 41 worlds swallowed; 20 of our settlements lost so, in 7 games. Balance,
   900 games: 430 survive, 145 victories, a Degenerate Age of 68 turns (300 games: 146 / 54 / 69),
   against 447 / 136 / 68; 614 of the 900 games end exactly as before.
+- **Helium giants shine through a turn of their own, and can be caught in a flash** (3 Oct; the
+  player, of a giant drawn blazing that gave no light: "if I hurry up, I should be able to at
+  least gather one turn of light"; asked, they chose to catch the flash). A helium star that
+  swelled into a giant had it lit inside the same turn, so its whole 120,000-year life was over
+  before anyone could look (it then lingered a turn, already out). Now a giant lights as its turn
+  ends, as every new star does, shines through the next one and burns out as that ends; it comes
+  with an event, A Helium Giant, which names the worlds it will swallow. A star too brief for a
+  clock of six turns (every giant from about η 17.3, and late in the age a helium star) can now
+  be caught in one turn: keep time with it and that turn ends as it burns out, lived in full in
+  its light, for the clock's price (usually most of a full store); the Pace panel says "Star flash
+  · X · one turn", and every pace but the Tide is greyed. Past about η 18.1 even that one turn
+  cannot end with the star, since the calendar counts no shorter turn than a ten-trillionth of
+  the age: the flash turn is then that long, and the star's light still counts in full (a bend).
+  A new star that burns out inside the coming turn says so in its panel: "burns 120,000 years of
+  a 10^18.4-year turn". Over 150 harness games: 407 giants, each with its event; the autoplayer
+  caught 10 flashes (about 690 energy each). Balance, 900 games: 444 survive, 152 victories, a
+  Degenerate Age of 68 turns (300 games: 148 / 58 / 68), against 447 / 136 / 68 before the
+  boiling and 430 / 145 / 68 with it alone; 620 of the 900 games end as they did before the
+  boiling.

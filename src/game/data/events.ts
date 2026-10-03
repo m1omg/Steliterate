@@ -70,12 +70,13 @@ function newStarTiming(s: GameState, d: EventData): string {
   const sys = s.systems[String(d.systemId)];
   const p = sys?.primary;
   if (!sys || !p?.diesAt) return '';
-  if (sys.gone || p.diesAt <= s.years || (p.kind !== 'collision_star' && p.kind !== 'helium_star')) return ' It has already burned out: in this age a turn can outlast a whole star.';
-  const left = formatYears(p.diesAt - s.years);
+  if (sys.gone || p.diesAt <= s.years || (p.kind !== 'collision_star' && p.kind !== 'helium_star' && p.kind !== 'helium_giant')) return ' It has already burned out: in this age a turn can outlast a whole star.';
+  // (two figures: this late a few hundred years is below what the calendar can tell apart)
+  const left = formatYears(Number((p.diesAt - s.years).toPrecision(2)));
   const turns = turnsUntilYears(s, p.diesAt);
   const about = isFinite(turns) ? `about ${turnsWord(turns)}` : 'longer than we can foresee';
   const kept = starClock(s);
-  if (kept?.systemId === sys.id) return ` It will burn for about ${left}, and we are keeping time with it.`;
+  if (kept?.systemId === sys.id) return ` It will burn for about ${left}, and we are ${kept.flash ? 'catching its flash' : 'keeping time with it'}.`;
   const t = starClockTerms(s, sys);
   if (kept) {
     // our turns are already quickened to another star: this one burns out within them, or outlasts them
@@ -89,6 +90,13 @@ function newStarTiming(s: GameState, d: EventData): string {
     if (t.floor) return `${lead} To carry our quickened pace on to it, ${STAR_TURNS} more turns of its light: ${t.cost} energy, once (${purse}), the least it ever costs to pass our clock from one star to the next.`;
     const then = formatYears(stepTime(s.era, t.from, eta(t.from), s.civ.pace, s.settings.length).turnLength);
     return `${lead} At our own pace the turn after that would span ${then}, ${timesOver(t.orders)} what will be left of its life. To follow it on, ${STAR_TURNS} more turns of its light, our minds must stay quickened: ${t.cost} energy, once (${purse}).`;
+  }
+  if (t.flash) {
+    const next = formatYears(stepTime(s.era, s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
+    const have = Math.floor(s.civ.energy);
+    const purse = have >= t.cost ? `we have ${have}` : `more than the ${have} we have`;
+    const end = t.flashUntil === p.diesAt ? 'that ends as it burns out' : 'as short as our calendar can count, though it outlasts the star';
+    return ` It will burn for about ${left}, and at our pace the next turn alone would span ${next}, ${timesOver(t.orders)} its whole life: too brief for a clock of ${STAR_TURNS} turns. But we can catch its flash: one turn ${end}, lived in full in its light, ${t.cost === 0 ? 'at no cost' : `for ${t.cost} energy, once (${purse})`}.`;
   }
   if (t.brief) return ` It will burn for about ${left}: so brief, this late in the age, that no clock of ours could count its turns.`;
   if (!t.possible) return ` It will burn for about ${left}: at our pace, ${about}.`;
@@ -135,6 +143,7 @@ function keepTimeHint(s: GameState, d: EventData): string {
     }
   }
   const price = t.cost === 0 ? 'Free: we are in tune with it.' : `${t.cost} energy, once${s.civ.energy < t.cost ? ': more than we have' : ''}.`;
+  if (t.flash) return `${price} Then one turn, ${t.flashUntil === sys?.primary.diesAt ? 'ending as it burns out' : 'as short as our calendar can count'}, lived in full in its light as one turn at the Tide, whatever the pace. Then our own pace again.`;
   const start = t.after ? `Once the clock of ${t.after} runs out, ${STAR_TURNS}` : `Then ${STAR_TURNS}`;
   return `${price} ${start} turns while it burns, each a sixth of what is left of its life whatever the pace, each lived in full as one turn at the Tide. Then our own pace again.`;
 }
@@ -146,6 +155,7 @@ function keepTimeNote(s: GameState, d: EventData): string {
   if (paid === null) return `We could not keep time with ${name} after all.`;
   const spent = paid > 0 ? `We spent ${paid} energy to stay quick for it. ` : '';
   if (was) return `${spent}When the clock of ${was.system} runs out, in ${turnsWord(was.left)}, we keep time with ${name}: ${STAR_TURNS} more turns, until it burns out.`;
+  if (s.civ.flags.star_flash) return `${paid > 0 ? `We spent ${paid} energy to quicken to it. ` : ''}We catch the flash of ${name}: one turn of ${formatYears(s.civ.flags.star_step)}, lived in its light.`;
   return `${paid > 0 ? `We spent ${paid} energy to quicken to it. ` : ''}We keep time with ${name} now: ${STAR_TURNS} turns, each about ${formatYears(s.civ.flags.star_step)}, until it burns out.`;
 }
 
@@ -172,10 +182,12 @@ function boilNote(s: GameState, d: EventData): string {
   if (!doomed.length) return '';
   const giant = sys.primary.kind === 'helium_giant';
   if (s.civ.known[sys.id] !== 2) return giant ? ' The worlds closest to it will be swallowed.' : ' Any world close to it will boil away.';
-  const names = doomed.map((b) => b.name);
-  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+  const list = (bs: Body[]) => (bs.length > 1 ? `${bs.slice(0, -1).map((b) => b.name).join(', ')} and ${bs[bs.length - 1].name}` : bs[0].name);
+  const swallowed = doomed.filter((b) => boilingAway(s, b) === 'swallowed');
+  const boiled = doomed.filter((b) => boilingAway(s, b) === 'boils');
+  const what = [swallowed.length ? `swallow ${list(swallowed)}` : '', boiled.length ? `${giant ? 'evaporate' : 'boil away'} ${list(boiled)}` : ''].filter(Boolean).join(' and ');
   const ours = doomed.some((b) => b.colonyId && s.colonies[b.colonyId]);
-  return ` ${giant ? 'It will swallow' : 'Its light will boil away'} ${list} as this turn ends${ours ? ': three in four of our people there can get off to the Deep' : ''}.`;
+  return ` ${giant ? 'It will' : 'Its light will'} ${what} as this turn ends${ours ? ': three in four of our people there can get off to the Deep' : ''}.`;
 }
 
 function homeworld(s: GameState): Body | undefined {
@@ -538,6 +550,28 @@ export const EVENTS: EventDef[] = [
         },
       },
       { label: 'Watch the flash', hint: `Insight +${STAR_INSIGHT}: the physics of a merger, seen as it happens. Resolve +${STAR_RESOLVE}. ${STAR_WORLDS} Our pace stays our own; what cannot be stored is lost.`, run: (s, d) => studyStar(s, d) },
+    ],
+  },
+  {
+    id: 'helium_giant',
+    title: 'A Helium Giant',
+    art: 'degenerate',
+    plate: 'white_fire',
+    text: (s, d) => {
+      const sys = s.systems[String(d.systemId)];
+      return `The merger star at ${sys?.name} has burned through the helium in its core and swollen into a giant: some 25 times the Sun’s size and a thousand times as bright, for about 120,000 years.${boilNote(s, d)}${newStarTiming(s, d)}${starClockOffer(s, sys) ? ' Will we live in its light while it lasts?' : ''}`;
+    },
+    choices: [
+      {
+        label: 'Keep time with it',
+        hint: (s, d) => (starClockTerms(s, s.systems[String(d.systemId)]).possible ? `Its system is charted, and our turns follow the star. ${keepTimeHint(s, d)}` : keepTimeHint(s, d)),
+        ok: (s, d) => starClockOffer(s, s.systems[String(d.systemId)]),
+        run: (s, d) => {
+          s.civ.known[String(d.systemId)] = 2;
+          return keepTimeNote(s, d);
+        },
+      },
+      { label: 'Watch it swell', hint: `Insight +${STAR_INSIGHT}: the last stage of a merger star, seen as it happens. Resolve +${STAR_RESOLVE}. ${STAR_WORLDS} Our pace stays our own; what cannot be stored is lost.`, run: (s, d) => studyStar(s, d) },
     ],
   },
   {

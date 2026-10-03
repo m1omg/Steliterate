@@ -274,7 +274,7 @@ function planSignals(state: GameState) {
 
 /** Pay to keep time with a new star only while half the store would remain afterwards. */
 function clockTooDear(state: GameState, defId: string, choice: number, systemId: string): boolean {
-  if ((defId !== 'new_star' && defId !== 'white_fire') || choice !== 0) return false;
+  if ((defId !== 'new_star' && defId !== 'white_fire' && defId !== 'helium_giant') || choice !== 0) return false;
   const cost = starClockTerms(state, state.systems[systemId]).cost;
   return cost > 0 && state.civ.energy - cost < 0.5 * reserveCapacity(state, computeMods(state));
 }

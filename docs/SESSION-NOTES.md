@@ -111,8 +111,11 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   about saves: no save change was needed), "swallowed too" inside a giant, and to catch the
   flash. Mid-plan: centred objects slid aside when zooming. Done: zoom keeps what is centred in
   the middle (`9eea773`); every light draws worlds as hot or wet as they are, display only
-  (`0c5c02f`); worlds boil away and giants swallow (900 games 430 / 145 / 68 against 447 / 136 /
-  68: a real but small cost, 20 of our settlements per 150 games).
+  (`0c5c02f`); worlds boil away and giants swallow (`4d4fc7d`; 900 games 430 / 145 / 68 against
+  447 / 136 / 68: a real but small cost, 20 of our settlements per 150 games); giants shine
+  through a turn of their own with an event, and a star too brief for six turns can be caught in
+  one (a flash; 900 games 444 / 152 / 68). The flash's bend past η 18.1 (the shortest countable
+  turn outlasts the giant, its light still counted in full) is stated in the CHANGELOG.
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

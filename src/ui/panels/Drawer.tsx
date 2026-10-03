@@ -225,7 +225,13 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
         <p class="flavor" style={{ margin: '8px 0' }}>{src.label}.</p>
         <dl class="kv">
           <dt>Light for collectors</dt>
-          <dd class="mono" data-tip="How much a light collector here gathers compared with its rating.">{src.light > 0 ? `×${n1(src.light)}` : 'none'}</dd>
+          {src.alive && src.alive[1] > s.years && src.alive[1] < s.years + p.turnYears && s.civ.flags.star_flash !== src.alive[1] ? (
+            <dd class="mono warn" data-tip="It burns out within the coming turn, so collectors catch its light only for that sliver of it. Keeping time with it (one turn, a flash, when it is too brief for more) lives the turn in its light.">
+              {`burns ${formatYears(src.alive[1] - s.years)} of a ${formatYears(p.turnYears)} turn`}
+            </dd>
+          ) : (
+            <dd class="mono" data-tip="How much a light collector here gathers compared with its rating.">{src.light > 0 ? `×${n1(src.light)}` : 'none'}</dd>
+          )}
           {T > 0 && (
             <>
               <dt>Surface</dt>

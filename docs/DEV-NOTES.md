@@ -167,6 +167,18 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     no clock (`this`, `waiting`, `inside`, `unneeded`, `brief`, `gone`), for the event texts.
     `starClock` also gives `left`, `next` and `nextId` (Pace chip "then …", tab chip "next").
     Study it / Watch the flash chart the system (`studyStar(s, d)`); keeping time charts it.
+  - **Helium giants and the flash** (3 Oct): a giant is born at `to` (`bornAt = to`, `diesAt = to +
+    GIANT_LIFE`), so it shines through the next turn and converts as that ends; the `'giant'`
+    note queues the event `helium_giant` (Keep time with it / Watch it swell). `isNewStar`
+    includes giants. When six turns would be too brief and no clock runs, `starClockTerms`
+    offers a flash (`flash`, `flashUntil`): one turn ending at `diesAt`, or at `years · (1 +
+    STAR_STEP_MIN)` once that is later (past about η 18.1), priced like a clock. `keepTimeWithStar`
+    sets `star_until`/`star_step` for that one turn and `civ.flags.star_flash` = the star's
+    `diesAt`; `sourceLight` then counts the star's light in full for the turn (a bend where the
+    turn outlasts it), `starSplit` returns 1, `starClock` finds the star by `star_flash` and
+    reads turn 1 of 1 with `flash`, and `clearStarClock` deletes `star_flash`. The Pace chip says
+    "Star flash · X · one turn"; the system panel's light row says "burns X of a Y turn" for a
+    new star that will burn out inside the coming turn (unless it is the flash).
   - **White dwarf cooling** (3 Oct, `physics.ts`): `coldDwarfK(years)` (20 K at 1e15, Mestel
     T ∝ t^-0.35, clamped 5–20 K), `DWARF_COLD_AT` (5.2e16, where it reaches 5 K), `dwarfGlow`
     (light share by T⁴, 1 → 0), `emberShare(p, years)` (1 to η 22, linear to 0 at 25; 0 off the
@@ -412,3 +424,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | follow a new star on | 153 | a second star's clock after the first, never below 250 energy; Study charts; 59 victories, Degenerate Age 77 turns; 900 games 453 / 166 / 77. Variants (300): no follow-on 146 / 54 / 67; free chaining at the fresh price 152 / 72 / 87 (900: 461 / 214 / 88); one follow-on per chain 149 / 68 / 80; floor and one per chain 150 / 55 / 73 |
 | cast-out embers dim; Quickening splits clocks | 144 | 44 victories, Degenerate Age 68 turns; 900 games 447 / 136 / 68 (the dimming alone 448 / 144 / 71) |
 | worlds boil away near helium stars | 146 | rock past 3,000 K and rubble past 1,600 K boil under a helium star, a giant swallows inside 0.116 AU; 54 victories, Degenerate Age 69 turns; 900 games 430 / 145 / 68 (614 of 900 end as before); per 150 games about 458 worlds boiled, 72 belts, 41 swallowed, 20 of ours lost |
+| giants light at turn end; catch the flash | 148 | a giant shines through the turn after its birth (its event offers a flash: one turn in its light), swallowing then; 58 victories, Degenerate Age 68 turns; 900 games 444 / 152 / 68 against 447 / 136 / 68 before the boiling (620 of 900 end as then); per 150 games 407 giant events, 10 flashes taken by the autoplayer (about 690 energy each) |

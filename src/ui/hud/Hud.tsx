@@ -184,6 +184,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
   for (let x = mods.paceMax; x >= mods.paceMin; x--) paces.push(x);
   // why a pace would change nothing now (its button is greyed out)
   const paceWhy = (x: number): string => {
+    if (star?.flash) return `Not now: we are catching the flash of ${star.system}, one turn whatever the pace. Our own pace returns when it is out.`;
     if (star) {
       if (x < 0) return `Not now: we keep time with ${star.system}, and its clock sets our turns. Our own pace returns when it burns out.`;
       return hasTech(s, 'quickening') ? `Not now: Quick ×10 is as finely as the clock of ${star.system} can be split.` : `Not now: we keep time with ${star.system}, and its clock sets our turns. Quickening would let Quick ×10 split each into ten.`;
@@ -239,11 +240,9 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           <div
             class="chip neon"
             style={{ margin: '4px 0 2px', whiteSpace: 'normal', flexWrap: 'wrap' }}
-            data-tip={`We are keeping time with the new star at ${star.system}: ${star.split > 1 ? `Quick ×10 splits each of its turns, a sixth of what was left of its life, into ten, each lived as a tenth of a turn at the Tide.` : `each turn is a sixth of what was left of its life, lived in full, and pays as one turn at the Tide whatever the pace.${hasTech(s, 'quickening') ? ' With Quickening, Quick ×10 would split each into ten.' : ''}`} ${star.next ? `When it burns out we follow ${star.next} on, six more turns.` : 'Your pace takes over again when it burns out.'}`}
+            data-tip={star.flash ? `We are catching the flash of ${star.system}: one turn, lived in full in its light, and paid as one turn at the Tide whatever the pace. Your pace takes over again when it is out.` : `We are keeping time with the new star at ${star.system}: ${star.split > 1 ? `Quick ×10 splits each of its turns, a sixth of what was left of its life, into ten, each lived as a tenth of a turn at the Tide.` : `each turn is a sixth of what was left of its life, lived in full, and pays as one turn at the Tide whatever the pace.${hasTech(s, 'quickening') ? ' With Quickening, Quick ×10 would split each into ten.' : ''}`} ${star.next ? `When it burns out we follow ${star.next} on, six more turns.` : 'Your pace takes over again when it burns out.'}`}
           >
-            <span>
-              Star clock · {star.system} · turn {star.turn} of {star.of}
-            </span>
+            <span>{star.flash ? `Star flash · ${star.system} · one turn` : `Star clock · ${star.system} · turn ${star.turn} of ${star.of}`}</span>
             {star.next && <span>then {star.next}</span>}
           </div>
         )}
