@@ -45,8 +45,10 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 - **3 Oct, the Systems window** ("adjust the settlement button so it's systems button … a separate
   category in the menu for collision stars in the degenerate era because they're precious"):
   done, interface only. The branch check found nothing new (both branches at `c622a14`). The
-  player's turn-77 save is at η 14.00, just short of the Degenerate Age, so they will meet
-  collision stars soon. **Open question for the player:** most collision stars light and go out
+  player is several turns into the Degenerate Age (they said so on 3 Oct): the turn-77 file
+  they uploaded on 29 Sep (η 14.00) is an old snapshot, not their current game, which lives in
+  their browser. Ask for an export before reasoning about their game's state.
+  **Open question for the player:** most collision stars light and go out
   inside a single turn (in 20 autoplayed games, 203 of 228 had gone out before they could be
   seen; 25 were seen burning, most for one turn), and helium stars always do. The A New Star
   event still promises "whoever reaches it first will feast", and White Fire's "Quicken while it
