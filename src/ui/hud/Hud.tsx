@@ -11,7 +11,7 @@ import type { IconName } from '../icons';
 import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
 import { goToColony, goToFleet } from '../screens/Lists';
 import { isIdleFleet } from '../../game/sim/fleets';
-import { flareClock, flareStop, starClock, turnsUntilYears } from '../../game/sim/flare';
+import { flareClock, flareStop, paceMatters, starClock, turnsUntilYears } from '../../game/sim/flare';
 import { thermalRGB } from '../../render/shaders/bodies';
 import { ShipPrompt, shipPrompt } from './ShipPrompt';
 import { doEndTurn } from '../turnflow';
@@ -182,6 +182,18 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
   const star = starClock(s);
   const paces: number[] = [];
   for (let x = mods.paceMax; x >= mods.paceMin; x--) paces.push(x);
+  // why a pace would change nothing now (its button is greyed out)
+  const paceWhy = (x: number): string => {
+    if (star) {
+      if (x < 0) return `Not now: we keep time with ${star.system}, and its clock sets our turns. Our own pace returns when it burns out.`;
+      return hasTech(s, 'quickening') ? `Not now: Quick ×10 is as finely as the clock of ${star.system} can be split.` : `Not now: we keep time with ${star.system}, and its clock sets our turns. Quickening would let Quick ×10 split each into ten.`;
+    }
+    if (flare) return `Not now: we keep time with ${flare.system}’s last flare, and it sets our turns.`;
+    const stop = flareStop(s, x);
+    if (stop && x < 0) return `Not now: the turn stops when ${stop.name} begins its last flare, whatever the pace.`;
+    if (s.era === 'dark') return x > 0 ? 'Not in this age: a turn cannot be quickened further.' : 'Not in this age: a turn cannot be slowed further.';
+    return `Not now: the turn would be the same as at ${PACE_LABEL[x > 0 ? x - 1 : x + 1]}.`;
+  };
   const idle = colonies(s).filter((c) => c.queue.length === 0);
   const unanswered = s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
   const readySettlers = Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
@@ -236,22 +248,28 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           </div>
         )}
         <div class="opts">
-          {paces.map((x) => (
-            <button
-              key={x}
-              class={`btn small ${civ.pace === x ? 'primary' : ''}`}
-              data-tip={
-                x > 0
-                  ? `Quicken ×${Math.pow(10, x)}: shorter turns, more turns to act while a source lasts. Energy per turn drops ${Math.pow(10, x)}×; minds that cannot hurry idle.`
-                  : x < 0
-                    ? `Slow ×${Math.pow(10, -x)}: longer turns. ${Math.pow(10, -x)}× the energy per turn, but the universe moves on faster between your decisions.`
-                    : 'The Tide: the natural pace of this age.'
-              }
-              onClick={() => act((g) => setPace(g, x))}
-            >
-              {PACE_LABEL[x] ?? `${x}`}
-            </button>
-          ))}
+          {paces.map((x) => {
+            const open = paceMatters(s, x);
+            return (
+              <button
+                key={x}
+                class={`btn small pace-opt ${civ.pace === x ? 'primary' : ''} ${open ? '' : 'disabled'}`}
+                aria-disabled={!open}
+                data-tip={
+                  !open
+                    ? paceWhy(x)
+                    : x > 0
+                      ? `Quicken ×${Math.pow(10, x)}: shorter turns, more turns to act while a source lasts. Energy per turn drops ${Math.pow(10, x)}×; minds that cannot hurry idle.`
+                      : x < 0
+                        ? `Slow ×${Math.pow(10, -x)}: longer turns. ${Math.pow(10, -x)}× the energy per turn, but the universe moves on faster between your decisions.`
+                        : 'The Tide: the natural pace of this age.'
+                }
+                onClick={() => open && act((g) => setPace(g, x))}
+              >
+                {PACE_LABEL[x] ?? `${x}`}
+              </button>
+            );
+          })}
         </div>
         <div class="row" style={{ marginTop: '6px' }}>
           <button class={`btn small ${civ.dormant ? 'on' : ''}`} data-tip="Dormancy: sleep through the coming turns. Upkeep falls to a tenth; nothing is built or learned; energy is still collected." onClick={() => act((g) => setDormant(g, !g.civ.dormant))}>

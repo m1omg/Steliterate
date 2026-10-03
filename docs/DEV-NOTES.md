@@ -190,6 +190,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     steps runs to the next one), `turnStep` ends turns on them, `livedShare` is `1/split`.
     `keepingStarTime` is now "the clock's end is still ahead" (by more than a millionth of a
     step), so a split clock is not cleared early. `starClock` gives `split`; `of` is 6 × split.
+  - **Greyed paces** (3 Oct): `paceMatters(state, pace)` in `flare.ts` compares the coming turn
+    (`turnStep`: length and η) with the next pace toward the Tide; the Pace panel greys a pace
+    that changes nothing (class `disabled`, `aria-disabled`, so its tooltip still shows; clicks
+    ignored) and `paceWhy` says why. `setPace` itself still allows any pace in range.
 - **`src/game/sim/hunger.ts`, `swarmsHunt`:** swarms catch ships stopped at their star where we have
   no settlement (`HUNT_AWAKE` 0.7, `HUNT_ASLEEP` 0.2 a turn, ×0.5 under Blackout; skipped on the
   first-swarm turn and under Communion). It runs after `firstSwarm` and before `autoExplore`, so

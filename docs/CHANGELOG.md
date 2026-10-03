@@ -429,3 +429,11 @@ belongs to another organization.
   near 0.034 AU, so most of them (23 of the 29) end up above boiling, a few temperate, the
   outermost frozen. That is the inverse-square law; the bend is that they keep their orbits
   through the collision, which would really scatter or swallow such close worlds.
+- **Impossible paces greyed out** (3 Oct; the player: "make the 100x, hell, every impossible
+  speed, greyed out in situation when its not possible"). A pace button is greyed (and its
+  tooltip says why) when it would give the same turn as the next pace toward the Tide: during a
+  new star's clock (all but the Tide, or the Tide and Quick ×10 with Quickening), slower than a
+  flare's sixth while we keep time with it, slower than a flare that will cut the turn short,
+  and beyond tenfold in the Dark Era (where Quick ×100 used to give Quick ×10's turn at a
+  hundredth of the yield). The Tide is always open; the pace you are on stays marked even when
+  greyed, and returns when it can. Interface only: all 300 harness games identical.

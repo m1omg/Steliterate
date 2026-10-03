@@ -310,6 +310,21 @@ export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
 }
 
 /**
+ * Would this pace change the coming turn, against the next pace toward the Tide? Not when a new
+ * star's clock or a flare sets the turn, a flare cuts it short whatever the pace, or the age's
+ * calendar will stretch or shrink it no further (the Dark Era's, beyond tenfold): then choosing
+ * it changes nothing now but, at most, how little of the turn is booked as lived, so its button
+ * is greyed out. The Tide always can.
+ */
+export function paceMatters(state: GameState, pace: number): boolean {
+  if (pace === 0) return true;
+  const a = turnStep(state, pace);
+  const b = turnStep(state, pace > 0 ? pace - 1 : pace + 1);
+  const close = (x: number, y: number) => x === y || Math.abs(x - y) <= 1e-9 * Math.max(Math.abs(x), Math.abs(y));
+  return !(close(a.turnLength, b.turnLength) && close(a.eta, b.eta));
+}
+
+/**
  * The share of a Tide turn the coming turn lives, which its yields scale by: 10^-pace, as the
  * calendar has it, except at a flare, which sets the length of the turn whatever the pace (so a
  * slower pace would buy more without more time passing). While we keep time with a flare each of
