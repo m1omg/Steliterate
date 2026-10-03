@@ -1,7 +1,7 @@
 import { ERA_BY_ID, formatYears, turnsUntil } from '../eras';
-import { SURFACE_LIFE, lampsOver, nextStellarChange } from '../physics';
+import { SURFACE_LIFE, boilingAway, lampsOver, nextStellarChange } from '../physics';
 import type { Forecast, GameState } from '../types';
-import { turnsUntilYears } from './flare';
+import { turnStep, turnsUntilYears } from './flare';
 import { colonies, protonFateKnown } from './util';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
@@ -64,6 +64,23 @@ export function updateForecasts(state: GameState) {
       bodyId: b.id,
       systemId: b.systemId,
       severity: 'warn',
+    });
+  }
+
+  // worlds of ours a new star will boil away (or its giant swallow) as this turn ends
+  for (const c of colonies(state)) {
+    const b = state.bodies[c.bodyId];
+    const boil = b ? boilingAway(state, b) : null;
+    if (!b || !boil) continue;
+    const L = turnStep(state, state.civ.pace).turnLength;
+    add({
+      kind: 'boil',
+      title: boil === 'swallowed' ? `${b.name} will be swallowed by its star` : `${b.name} will boil away`,
+      text: `${boil === 'swallowed' ? 'Its star is swelling into a giant over it.' : 'Its new star is too hot for it: the rock itself will boil off into space.'} It is gone as this turn ends: three in four of the people there will get off to the Deep, the rest will be lost.`,
+      dueYears: isFinite(L) ? years + L : Infinity,
+      bodyId: b.id,
+      systemId: b.systemId,
+      severity: 'danger',
     });
   }
 

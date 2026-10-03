@@ -1,5 +1,5 @@
 import { ANOMALIES } from '../game/data/events';
-import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, isStarLike } from '../game/physics';
+import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, boilingAway, isStarLike } from '../game/physics';
 import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
 import type { Body, BodyKind, Focus, GameState, PrimaryKind, StarSystem } from '../game/types';
 import type { IconName } from './icons';
@@ -101,6 +101,8 @@ export const wayArt = (way: string) => WAY_ART[way] ?? 'survivor';
  * simply a frozen world.
  */
 export function bodyKindName(s: GameState, b: Body): string {
+  const boil = boilingAway(s, b);
+  if (boil) return boil === 'swallowed' ? 'Being swallowed' : b.kind === 'asteroids' ? 'Vaporising rubble' : 'Boiling away';
   const sea = thawed(s, b);
   if (sea) return sea === 'warm' ? 'Thawed ocean' : 'Hot sea';
   const melt = waterChanged(s, b);
@@ -149,6 +151,13 @@ function onceWas(k: BodyKind): string {
 
 /** A longer note on the kind, for tooltips: what it was, when that has changed. */
 export function bodyKindNote(s: GameState, b: Body): string {
+  const boil = boilingAway(s, b);
+  const what = b.kind === 'asteroids' ? 'An asteroid belt' : `Once ${onceWas(b.kind)}`;
+  if (boil === 'swallowed') return `${what}. Its star is swelling into a helium giant some 25 times the Sun’s size, and this world orbits inside it: it is swallowed as this turn ends.`;
+  if (boil) {
+    const by = s.systems[b.systemId]?.primary.kind === 'helium_giant' ? 'Its star has swollen into a helium giant, a thousand times as bright as the Sun' : 'Its new star, a helium star burning at 42,000 K, pours out ultraviolet';
+    return `${what}. ${by}: ${b.kind === 'asteroids' ? 'the rubble is evaporating' : 'its ground is past 3,000 K, and the rock vapour is stripped off into space'}. It is gone as this turn ends.`;
+  }
   const sea = thawed(s, b);
   if (sea === 'warm') return `Once ${onceWas(b.kind)}. Its star's last flare has melted it into open ocean under a thin, steamy sky: room for ${THAW_ROOM} Kin by the water without domes, for as long as the flare lasts. When the star collapses it will freeze again.`;
   if (sea === 'hot') return `Once ${onceWas(b.kind)}. Its star's last flare has melted it into a hot, steaming sea, too hot to live by. When the star collapses it will freeze again.`;

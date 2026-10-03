@@ -82,6 +82,56 @@ export function shownKind(p: Primary, years: number): PrimaryKind {
 /** Rock melts: above this a dry world’s warmest ground is a crust over glowing magma (basalt erupts at 1,370 to 1,520 K). */
 export const LAVA_K = 1500;
 
+/** New stars’ light in Suns: a helium star (42,000 K), and the giant some of them swell into (6,500 K). */
+export const NEW_STAR_LUM = { helium_star: 30, helium_giant: 1000 } as const;
+/** A helium giant burns about 120,000 years. */
+export const GIANT_LIFE = 1.2e5;
+/**
+ * About 45% of a 42,000 K helium star’s light is ionising ultraviolet. It strips the rock vapour
+ * off a molten world long before the star dies: a world whose warmest ground passes this is
+ * boiled away. (Rock vapour reaches 0.18 bar at 3,000 K and 1 bar near 3,350 K.)
+ */
+export const ROCK_BOIL_K = 3000;
+/** Rubble evaporates sooner (laboratory rates for forsterite): an asteroid belt goes at this mean temperature. */
+export const RUBBLE_BOIL_K = 1600;
+/** Under a giant’s softer light, with little ultraviolet, rubble lasts its 120,000 years up to this. */
+export const RUBBLE_GIANT_K = 1800;
+/** A helium giant’s radius, about 25 R☉ (1,000 L☉ at 6,500 K): every world inside it is swallowed. */
+export const GIANT_RADIUS_AU = 0.116;
+
+type NewStar = keyof typeof NEW_STAR_LUM;
+
+/**
+ * Would this new star boil the world away while it burns? Under a helium star a world goes once
+ * its warmest ground passes ROCK_BOIL_K, rubble once its mean passes RUBBLE_BOIL_K. Gas and ice
+ * giants are spared (a bend: real ones would lose much of their gas to the ultraviolet). Under a
+ * helium giant everything inside its radius is swallowed, giants too; outside it only rubble
+ * evaporates, and the rest outlast its 120,000 years as lava worlds. Worlds that only steam keep
+ * their water (another bend). The Deep, rogue worlds and worlds already falling in are spared.
+ */
+export function boilsUnder(state: GameState, b: Body, kind: NewStar): boolean {
+  if (b.kind === 'deep' || b.dissolved || b.rogue || b.feeding || !(b.orbitAU > 0)) return false;
+  const giant = kind === 'helium_giant';
+  if (giant && b.orbitAU <= GIANT_RADIUS_AU) return true;
+  if (b.kind === 'gas_giant' || b.kind === 'ice_giant') return false;
+  const c = starClimate(state, b, NEW_STAR_LUM[kind]);
+  if (b.kind === 'asteroids') return c.mean >= (giant ? RUBBLE_GIANT_K : RUBBLE_BOIL_K);
+  return !giant && (c.day ?? c.mean) >= ROCK_BOIL_K;
+}
+
+/** A world its new star is boiling away (or its giant swallowing), gone as the coming turn ends. */
+export function boilingAway(state: GameState, b: Body): 'boils' | 'swallowed' | null {
+  const p = state.systems[b.systemId]?.primary;
+  if (!p || (p.kind !== 'helium_star' && p.kind !== 'helium_giant') || newStarOut(p, state.years)) return null;
+  if (!boilsUnder(state, b, p.kind)) return null;
+  return p.kind === 'helium_giant' && b.orbitAU <= GIANT_RADIUS_AU ? 'swallowed' : 'boils';
+}
+
+/** Did this new star burn during some part of [from, to]? */
+function shoneDuring(p: Primary, from: number, to: number): p is Primary & { kind: NewStar } {
+  return (p.kind === 'helium_star' || p.kind === 'helium_giant') && (p.bornAt ?? -Infinity) < to && (p.diesAt ?? Infinity) > from;
+}
+
 /** Blackbody-ish surface temperature by primary kind and state (used for colours and text). */
 export function primaryTemperature(p: Primary, years: number, era: EraId): number {
   if (newStarOut(p, years)) return coldDwarfK(years);
@@ -218,7 +268,7 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       // (display only) a turn can outlast the whole of such a star: it may already be out
       const label =
         dies <= years
-          ? `${p.kind === 'collision_star' ? 'Collision star' : p.kind === 'helium_star' ? 'Helium star' : 'Helium giant'}, already out: it lit and burnt out within a single turn, and is settling into a white dwarf`
+          ? `${p.kind === 'collision_star' ? 'Collision star' : p.kind === 'helium_star' ? 'Helium star' : 'Helium giant'}, already out: it lit and burnt out within a single turn, and is settling into ${shownKind(p, years) === 'black_dwarf' ? 'a cold, dark dwarf' : 'a white dwarf'}`
           : p.kind === 'collision_star'
             ? 'Collision star: two brown dwarfs merged and ignited hydrogen'
             : p.kind === 'helium_star'
@@ -276,8 +326,11 @@ export interface EvolutionNote {
     | 'ejected'
     | 'swallowed'
     | 'evaporated'
-    | 'dissolved';
+    | 'dissolved'
+    | 'boiled';
   bodyId?: string;
+  /** (boiled) inside a giant's own radius, rather than boiled by its light */
+  swallowed?: boolean;
 }
 
 /** Advance every primary and body to cosmic year `to` (from `from`). Returns what happened. */
@@ -302,6 +355,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
       p.halo = rand() < 0.6;
       notes.push({ systemId: sys.id, kind: 'white' });
     }
+    // the new star that shone during this turn, before its death below rewrites it
+    const shone: NewStar[] = shoneDuring(p, from, to) ? [p.kind] : [];
     // short-lived stars
     if (p.kind === 'dark_star' && p.diesAt && to >= p.diesAt) {
       p.kind = 'black_dwarf';
@@ -314,8 +369,10 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         // massive merger remnants swell into a brief, brilliant helium giant
         p.kind = 'helium_giant';
         p.bornAt = p.diesAt;
-        p.diesAt = p.diesAt + 1.2e5;
+        p.diesAt = p.diesAt + GIANT_LIFE;
         notes.push({ systemId: sys.id, kind: 'giant' });
+        // (it lit inside this turn, so it shone in it too)
+        if (shoneDuring(p, from, to)) shone.push('helium_giant');
       } else {
         p.kind = p.kind === 'collision_star' ? 'white_dwarf' : 'white_dwarf';
         p.halo = false;
@@ -373,6 +430,15 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         };
         b.vitality = 0;
         notes.push({ systemId: sys.id, kind: rekindle ? 'rekindle' : 'feeding', bodyId: b.id });
+      }
+    }
+    // a new star boils away the worlds too close to it, and a giant swallows those inside it
+    for (const k of shone) {
+      for (const bid of sys.bodies) {
+        const b = state.bodies[bid];
+        if (!b || !boilsUnder(state, b, k)) continue;
+        b.dissolved = true;
+        notes.push({ systemId: sys.id, kind: 'boiled', bodyId: b.id, swallowed: k === 'helium_giant' && b.orbitAU <= GIANT_RADIUS_AU });
       }
     }
   }
@@ -522,9 +588,8 @@ export function primaryLuminosity(p: Primary, years: number, era: EraId): number
     case 'blue_dwarf':
       return Math.min(0.4, 2 * m); // a red dwarf's last bright phase, about a third of the Sun at peak
     case 'helium_star':
-      return 30;
     case 'helium_giant':
-      return 1000;
+      return NEW_STAR_LUM[p.kind];
     case 'dark_star':
       return 1;
     case 'white_dwarf': {
@@ -662,9 +727,10 @@ export function bodyClimate(state: GameState, b: Body): BodyClimate {
   return c.day !== undefined ? { mean: lit(c.mean), day: lit(c.day), night: lit(c.night!) } : { mean: lit(c.mean) };
 }
 
-function starClimate(state: GameState, b: Body): BodyClimate {
+/** A world's climate without Orbital Lamps: under its star's light today, or under `lum` Suns. */
+export function starClimate(state: GameState, b: Body, lum?: number): BodyClimate {
   const sys = state.systems[b.systemId];
-  const L = b.rogue ? 0 : primaryLuminosity(sys.primary, state.years, state.era);
+  const L = b.rogue ? 0 : (lum ?? primaryLuminosity(sys.primary, state.years, state.era));
   const a = Math.max(0.003, b.orbitAU);
   const tEq = L > 0 ? 278 * Math.pow(L, 0.25) * Math.pow(0.7, 0.25) / Math.sqrt(a) : 0;
   const tInt = 40 * b.coreHeat;

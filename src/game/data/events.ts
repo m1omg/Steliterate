@@ -4,6 +4,7 @@ import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime } from '../eras';
+import { boilingAway } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
@@ -162,6 +163,20 @@ function studyStar(s: GameState, d: EventData) {
   s.civ.known[String(d.systemId)] = 2;
 }
 const STAR_WORLDS = 'In its light we find its worlds, by their shadows as they cross it: its system is charted.';
+
+/** The worlds a new star will boil away (or its giant swallow) as this turn ends: named once its system is charted. */
+function boilNote(s: GameState, d: EventData): string {
+  const sys = s.systems[String(d.systemId)];
+  if (!sys) return '';
+  const doomed = sys.bodies.map((id) => s.bodies[id]).filter((b): b is Body => !!b && !!boilingAway(s, b));
+  if (!doomed.length) return '';
+  const giant = sys.primary.kind === 'helium_giant';
+  if (s.civ.known[sys.id] !== 2) return giant ? ' The worlds closest to it will be swallowed.' : ' Any world close to it will boil away.';
+  const names = doomed.map((b) => b.name);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+  const ours = doomed.some((b) => b.colonyId && s.colonies[b.colonyId]);
+  return ` ${giant ? 'It will swallow' : 'Its light will boil away'} ${list} as this turn ends${ours ? ': three in four of our people there can get off to the Deep' : ''}.`;
+}
 
 function homeworld(s: GameState): Body | undefined {
   return Object.values(s.bodies).find((b) => b.traits.includes('homeworld'));
@@ -511,7 +526,7 @@ export const EVENTS: EventDef[] = [
     art: 'degenerate',
     plate: 'white_fire',
     text: (s, d) =>
-      `Two white dwarfs in ${s.systems[String(d.systemId)]?.name} spiralled together and merged. The remnant is burning helium: a small, blue-white, furious star.${newStarTiming(s, d)} To slow minds it is a flash. To fast ones it is a feast.${starClockOffer(s, s.systems[String(d.systemId)]) ? ' How fast will we choose to live while it lasts?' : ''}`,
+      `Two white dwarfs in ${s.systems[String(d.systemId)]?.name} spiralled together and merged. The remnant is burning helium: a small, blue-white, furious star.${boilNote(s, d)}${newStarTiming(s, d)} To slow minds it is a flash. To fast ones it is a feast.${starClockOffer(s, s.systems[String(d.systemId)]) ? ' How fast will we choose to live while it lasts?' : ''}`,
     choices: [
       {
         label: 'Keep time with it',

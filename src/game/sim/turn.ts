@@ -502,10 +502,20 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
           const b = state.bodies[n.bodyId];
           if (b?.colonyId) {
             const c = state.colonies[b.colonyId];
-            if (c) evacuate(state, c);
+            if (c) evacuate(state, c, 'its world finished falling into its star');
           }
           if (seen) log(state, `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
           state.civ.energy += colonized.has(sys.id) ? 20 : 0;
+        }
+        break;
+      case 'boiled':
+        if (n.bodyId) {
+          const b = state.bodies[n.bodyId];
+          if (seen) log(state, n.swallowed ? `${b?.name} was swallowed by the swelling giant at ${sys.name}.` : `${b?.name} boiled away in the heat of the new star at ${sys.name}.`, mine ? 'bad' : 'info', sys.id);
+          if (b?.colonyId) {
+            const c = state.colonies[b.colonyId];
+            if (c) evacuate(state, c, n.swallowed ? 'its world was swallowed by its star' : 'its world boiled away');
+          }
         }
         break;
       case 'ejected':
@@ -538,8 +548,8 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
   }
 }
 
-/** A world falls into its star: whoever can get off is caught by the habitats of the Deep. */
-function evacuate(state: GameState, c: Colony) {
+/** A world is lost (it falls into its star, or boils away): whoever can get off is caught by the habitats of the Deep. */
+function evacuate(state: GameState, c: Colony, reason: string) {
   const sys = state.systems[c.systemId];
   const deep = sys.bodies.map((id) => state.bodies[id]).find((b) => b && b.kind === 'deep' && !b.dissolved);
   const saved: Partial<Record<(typeof THREADS)[number], number>> = {};
@@ -550,7 +560,7 @@ function evacuate(state: GameState, c: Colony) {
   }
   const cryo = Math.floor(c.cryo * 0.75);
   const orbital = Object.entries(c.structures).filter(([id]) => STRUCTURE_BY_ID[id]?.bodies?.includes('deep'));
-  destroyColony(state, c, 'its world finished falling into its star');
+  destroyColony(state, c, reason);
   if (!deep || n + cryo <= 0) return;
   let host = deep.colonyId ? state.colonies[deep.colonyId] : null;
   if (!host) {

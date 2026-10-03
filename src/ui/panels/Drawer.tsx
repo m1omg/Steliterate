@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
-import { FROZEN_K, bodyClimate, insolation, lampsOver, primaryTemperature, sourceLight, sunGone, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, bodyClimate, boilingAway, insolation, lampsOver, primaryTemperature, sourceLight, sunGone, turnsToFreeze, waterState } from '../../game/physics';
 import {
   absorb,
   buildableShips,
@@ -425,6 +425,22 @@ function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
   );
 }
 
+/** A world its new star is boiling away (or its giant swallowing): gone as this turn ends. */
+function BoilingRow({ s, b }: { s: GameState; b: Body }) {
+  const boil = boilingAway(s, b);
+  if (!boil) return null;
+  const tip =
+    boil === 'swallowed'
+      ? 'A helium giant swells to some 25 times the Sun’s size (0.116 AU). Every world orbiting inside it is swallowed, gas giants too.'
+      : 'A helium star pours out ultraviolet: a world whose warmest ground passes 3,000 K has its rock vapour stripped off into space, and rubble evaporates from 1,600 K (from 1,800 K under a giant). Gas and ice giants are spared. Our people there get off to the Deep, three in four.';
+  return (
+    <>
+      <dt data-tip={tip}>{boil === 'swallowed' ? 'Swallowed' : 'Boiling away'}</dt>
+      <dd class="mono bad" data-tip={tip}>gone as this turn ends</dd>
+    </>
+  );
+}
+
 /** Temperature and water rows for a world's key/value list. */
 function ClimateRows({ s, b }: { s: GameState; b: Body }) {
   if (b.kind === 'deep' || b.kind === 'gas_giant' || b.kind === 'ice_giant') return null;
@@ -499,6 +515,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             <dt>Vitality</dt>
             <dd class="mono">{pct(b.vitality)}</dd>
             <FreezingRow s={s} b={b} />
+            <BoilingRow s={s} b={b} />
             {b.kind !== 'deep' && b.kind !== 'gas_giant' && (
               <>
                 <dt data-tip="Kin the world holds by itself: about 12 × habitability × vitality, rounded down (a third of that on a rogue or feeding world). Below about 8% habitability × vitality there is no room, and Kin can live here only in domes, warrens or a Garden Ark.">Room for Kin</dt>
@@ -692,6 +709,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                   </div>
                 </dd>
                 <FreezingRow s={s} b={b} c={c} />
+                <BoilingRow s={s} b={b} />
                 <ClimateRows s={s} b={b} />
                 <dt>Core heat</dt>
                 <dd class="mono">{pct(b.coreHeat)}</dd>

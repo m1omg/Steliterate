@@ -104,6 +104,15 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 - **3 Oct, "why are worlds around collision stars always hot?"** Physics, not a bug: brown
   dwarfs' worlds orbit at 0.004–0.05 AU and a collision star is temperate near 0.034 AU (see
   CHANGELOG). Offered nothing to change; the bend is that the worlds survive the collision.
+- **3 Oct, inaccuracies from four screenshots, and zoom.** An ice-shelled ocean said "open sea"
+  but was drawn as ice; worlds by helium stars "should be either evaporated or at least lava or
+  gas"; a giant drawn blazing gave no light ("if I hurry up, I should be able to at least gather
+  one turn of light"). Asked, they chose: "boil away when hot enough unless a gas giant" (worried
+  about saves: no save change was needed), "swallowed too" inside a giant, and to catch the
+  flash. Mid-plan: centred objects slid aside when zooming. Done: zoom keeps what is centred in
+  the middle (`9eea773`); every light draws worlds as hot or wet as they are, display only
+  (`0c5c02f`); worlds boil away and giants swallow (900 games 430 / 145 / 68 against 447 / 136 /
+  68: a real but small cost, 20 of our settlements per 150 games).
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger

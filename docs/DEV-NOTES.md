@@ -273,6 +273,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `uLocked` come from `systemView.ts` (eyeballs count as locked). Every new block is gated on
   `uTempDay`, so ordinary worlds render exactly as before: check with a pixel comparison of the
   homeworld when touching it. Hot belts glow in `applyViewMode`, on the same curves.
+- **Boiling (`physics.ts`):** `boilsUnder(state, b, kind)` judges a world by `starClimate` under
+  `NEW_STAR_LUM[kind]`; `boilingAway` asks whether its star burns now. `evolveUniverse` notes the
+  new star that shone during the turn (`shoneDuring`) before its death rewrites the primary, and
+  after the per-body draws dissolves what it boils, with a `'boiled'` note (`swallowed` for a
+  giant's inside). No draws of its own, so that turn's sequence stands; later turns shift.
+  `turn.ts` evacuates a colony there (`evacuate(state, c, reason)`), `canSettle` refuses a doomed
+  world (so the autoplayer never settles one), and `siteValue`, the forecasts, the labels and
+  White Fire's text all read `boilingAway`.
 - **`shownKind` / `newStarOut` (`physics.ts`):** a new star whose `diesAt` has passed is drawn,
   and its temperature and luminosity read, as the cold dwarf it becomes when the turn ends. Use
   `shownKind` wherever a kind picks a look.
@@ -403,3 +411,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | white dwarfs cool | 135 | unwarmed white dwarfs cool to 5 K by η 16.7 and turn black; 900 games 425 / 159 victories / 68 Degenerate turns, against 432 / 159 / 68 at `6d734aa`; cast-out embers going cold (not shipped) 430 / 145 / 64 |
 | follow a new star on | 153 | a second star's clock after the first, never below 250 energy; Study charts; 59 victories, Degenerate Age 77 turns; 900 games 453 / 166 / 77. Variants (300): no follow-on 146 / 54 / 67; free chaining at the fresh price 152 / 72 / 87 (900: 461 / 214 / 88); one follow-on per chain 149 / 68 / 80; floor and one per chain 150 / 55 / 73 |
 | cast-out embers dim; Quickening splits clocks | 144 | 44 victories, Degenerate Age 68 turns; 900 games 447 / 136 / 68 (the dimming alone 448 / 144 / 71) |
+| worlds boil away near helium stars | 146 | rock past 3,000 K and rubble past 1,600 K boil under a helium star, a giant swallows inside 0.116 AU; 54 victories, Degenerate Age 69 turns; 900 games 430 / 145 / 68 (614 of 900 end as before); per 150 games about 458 worlds boiled, 72 belts, 41 swallowed, 20 of ours lost |

@@ -4,6 +4,7 @@ import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
 import { formatDistance } from '../eras';
+import { boilingAway } from '../physics';
 import { stepTurns } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
@@ -141,7 +142,7 @@ export function survey(state: GameState, systemId: string) {
   state.civ.known[systemId] = 2;
   for (const bid of sys.bodies) {
     const b = state.bodies[bid];
-    if (b.relic && b.relic.state === 'hidden') {
+    if (b.relic && b.relic.state === 'hidden' && !b.dissolved) {
       b.relic.state = 'found';
       state.pending.push({ uid: uid(state, 'ev'), defId: `relic_${b.relic.kind}`, data: { bodyId: b.id, systemId } });
     }
@@ -168,6 +169,8 @@ export function survey(state: GameState, systemId: string) {
 export function canSettle(state: GameState, b: Body, thread: ThreadId): string | null {
   if (b.colonyId) return 'Already settled.';
   if (b.dissolved) return 'Nothing is left of it.';
+  const boil = boilingAway(state, b);
+  if (boil) return boil === 'swallowed' ? 'Its star is swelling over it: it will be swallowed as this turn ends.' : 'Its new star will boil it away as this turn ends.';
   if (b.kind === 'gas_giant' && thread === 'kin') return 'Kin cannot live on a gas giant.';
   if (b.kind === 'deep' && thread === 'kin' && eraIndex(state.era) === 0 && !state.civ.techs.includes('orbital_industry')) return 'Kin need Orbital Industry to live in the Deep.';
   const sys = state.systems[b.systemId];

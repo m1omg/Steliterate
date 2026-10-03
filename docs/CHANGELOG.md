@@ -472,3 +472,26 @@ belongs to another organization.
   shows the opening map and the homeworld unchanged in all three lights. The Dusk flare's day side
   (about 1,290 K) now glows faint orange under its steam, as the flare's own text ("hot enough to
   soften rock") says it should.
+- **Worlds boil away near helium stars; a giant swallows what orbits inside it** (3 Oct; the
+  player: worlds around helium stars "should be either evaporated or at least lava or gas", and,
+  asked, "boil away when hot enough unless a gas giant" and "swallowed too"). About 45% of a
+  42,000 K helium star's light is ionising ultraviolet: it strips the rock vapour off a molten
+  world long before the star dies. So as each turn a helium star shines in ends, every world
+  whose warmest ground passes 3,000 K under it boils away (rock vapour reaches 0.18 bar at
+  3,000 K and 1 bar near 3,350 K), and rubble goes from a mean of 1,600 K (laboratory rates for
+  forsterite). A helium giant (1,000 L☉ at 6,500 K) is about 25 times the Sun's size, 0.116 AU:
+  everything orbiting inside it is swallowed, gas giants too; outside it only rubble evaporates
+  (from 1,800 K under its softer light), and the rest outlast its 120,000 years as lava worlds.
+  A settlement on a world that goes is evacuated as for a world that falls into its star: three
+  in four of its people get off to the Deep. White Fire names the worlds the star will boil, a
+  forecast warns of ours, a doomed world's panel and name say "Boiling away" (or "Being
+  swallowed", "Vaporising rubble"), and nobody can settle it. Relics are no longer found on
+  worlds that are gone. Bends, plainly: gas and ice giants are spared outside a giant (real ones
+  would lose much of their gas to the ultraviolet); worlds that only steam keep their water; and
+  a world boils within the turn its star first shines on it, however short that turn. Collision
+  stars never come near (at most about 850 K on their worlds). Old saves: worlds round a burning
+  helium star boil on the next turn; a giant already out (from before this change) boils nothing
+  and converts. Over 150 harness games: 811 helium stars and 400 giants, 458 worlds boiled, 72
+  belts evaporated and 41 worlds swallowed; 20 of our settlements lost so, in 7 games. Balance,
+  900 games: 430 survive, 145 victories, a Degenerate Age of 68 turns (300 games: 146 / 54 / 69),
+  against 447 / 136 / 68; 614 of the 900 games end exactly as before.

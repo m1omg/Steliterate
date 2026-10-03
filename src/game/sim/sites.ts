@@ -1,6 +1,6 @@
 import { STRUCTURES, structureLabel, type StructureDef } from '../data/structures';
 import { formatYears } from '../eras';
-import { bodyClimate, hawkingLight, insolation, lampsOver, sourceLight, sunGone, turnsToFreeze } from '../physics';
+import { bodyClimate, boilingAway, hawkingLight, insolation, lampsOver, sourceLight, sunGone, turnsToFreeze } from '../physics';
 import type { Body, GameState, ThreadId } from '../types';
 import { turnStep } from './flare';
 import { naturalKinRoom } from './fleets';
@@ -96,6 +96,14 @@ export interface SiteValue {
 
 /** How good a world is for settlers of one kind, with a short label and why. */
 export function siteValue(state: GameState, b: Body, thread: ThreadId): SiteValue {
+  const boil = boilingAway(state, b);
+  if (boil) {
+    return {
+      score: -1,
+      label: boil === 'swallowed' ? 'swallowed this turn' : 'boils away this turn',
+      tip: boil === 'swallowed' ? 'Its star is swelling into a giant over it: the world is swallowed as this turn ends.' : 'Its new star is boiling it away: it is gone as this turn ends.',
+    };
+  }
   switch (thread) {
     case 'kin': {
       const hab = b.habitability * b.vitality;
