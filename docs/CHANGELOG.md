@@ -450,3 +450,25 @@ belongs to another organization.
   before. While a star is centred, the wheel no longer heads for a different star under the
   pointer: click that star (it becomes the centre, and zooming in enters it), double-click it,
   or pan first. Camera only: no rules, saves or seeds touched.
+- **Worlds look as hot or wet as they are** (3 Oct; from the player's screenshots: an
+  ice-shelled ocean whose text says "open sea on the day side" drawn as a plain ice ball, a world
+  reading 476 to 5,550 K beside a helium star drawn as grey rock, and a helium giant drawn blazing
+  while "already out" with no light to give). The planet shader picked a world's look from its
+  kind alone; temperature reached it only in Thermal view. Now every light follows the climate,
+  ground by ground (day side to night side on a locked world): ice melts into open sea from about
+  270 K (everywhere on an ice-shelled ocean; on an ice world in its low ground, as far as its
+  water reaches), seas go up as a veil of steam past boiling and leave pale, salt-crusted floor,
+  rock glows dull red from about 800 K (the Draper point), turns to a dark basalt crust cracked
+  with glowing lava from 1,400 to 1,700 K (basalt erupts at 1,370 to 1,520 K), becomes a sea of
+  magma past about 3,000 K and hazes its limb with boiling rock from 2,600 K; a giant too hot for
+  its clouds glows dully, and hot rubble glows like hot rock. Terrestrial worlds had been drawn
+  frozen whatever their warmth since `8aa21ed`; they are seas and continents again, all round
+  when they turn (their cities spread over them rather than along a terminator ring). Labels
+  follow: "Lava world" for a dry world whose warmest ground is past 1,500 K, and terrestrial
+  worlds can now be "Scorched" or "Steam" worlds as eyeballs could. A new star whose life a turn
+  outlasted (a helium giant, which lights and burns out inside one long turn) is drawn, and its
+  temperature and light read, as the cold dwarf it is becoming until it converts as the turn
+  ends. Display only: the 300 harness games are identical (144 / 44 / 68), and a pixel comparison
+  shows the opening map and the homeworld unchanged in all three lights. The Dusk flare's day side
+  (about 1,290 K) now glows faint orange under its steam, as the flare's own text ("hot enough to
+  soften rock") says it should.

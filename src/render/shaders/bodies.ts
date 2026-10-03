@@ -119,14 +119,16 @@ export const PLANET_VERT = /* glsl */ `
   }
 `;
 
-// kind: 0 rocky, 1 eyeball (tidally locked, substellar sea), 2 ice, 3 gas giant, 4 ice giant, 5 ocean-ice
+// kind: 0 rocky, 1 sea and land (an eyeball, or a terrestrial world), 2 ice, 3 gas giant, 4 ice giant, 5 ocean-ice
 export const PLANET_FRAG = /* glsl */ `
   ${NOISE_GLSL}
   ${THERMAL_GLSL}
   uniform int uViewMode;
-  uniform float uEye;         // eyeball worlds: how much their star still shapes them (0 once it is dead)
+  uniform float uEye;         // sea-and-land worlds: how much their star still keeps a sea liquid (0 once frozen over)
   uniform float uTempDay;     // K (the same as uTempNight unless tidally locked)
   uniform float uTempNight;
+  uniform float uWater;       // the share of the surface its water would cover (an ice world's melt fills its low ground)
+  uniform float uLocked;      // 1: one face to its star for ever (tidally locked, or an eyeball); 0: turning, warmed all round
   uniform float uTime;
   uniform float uSeed;
   uniform int uKind;
@@ -154,13 +156,32 @@ export const PLANET_FRAG = /* glsl */ `
     return mix(mix(a, b, smoothstep(-0.3, 0.2, h)), c, smoothstep(0.25, 0.7, h + s * 0.2));
   }
 
+  // the colour of ground glowing by its own heat, a blackbody fit: dull red at the Draper point
+  // (about 800 K), orange by 1,500 K, yellow-white by 3,000 K
+  vec3 heatColor(float T) {
+    float t = clamp(T, 1000.0, 6600.0) / 100.0;
+    float g = clamp((99.4708 * log(t) - 161.1196) / 255.0, 0.0, 1.0);
+    float b = t <= 19.0 ? 0.0 : clamp((138.5177 * log(t - 10.0) - 305.0448) / 255.0, 0.0, 1.0);
+    return mix(vec3(0.55, 0.05, 0.02), vec3(1.0, g, b), smoothstep(780.0, 1150.0, T));
+  }
+
+  // how brightly it glows: faint at 1,000 K, never past the bloom threshold below about 2,500 K
+  float heatGlow(float T) {
+    return 0.25 * smoothstep(780.0, 1500.0, T) + 0.75 * smoothstep(1500.0, 3600.0, T) + 0.6 * smoothstep(3600.0, 6000.0, T);
+  }
+
   void main() {
     vec3 p = vObj;
     float h = fbm(p * 2.4 + uSeed);
     float detail = fbm3(p * 9.0 + uSeed * 1.7);
+    // where the star is (for a locked world, for ever), and how warm the ground is here: the day
+    // side's temperature facing it, the night side's beyond the terminator
+    float facing = dot(p, normalize(uSubstellar));
+    float T = mix(uTempNight, uTempDay, smoothstep(-0.25, 0.6, facing));
     vec3 albedo;
     float spec = 0.0;
     float clouds = 0.0;
+    float steam = 0.0; // a veil of boiled-off water
     if (uKind == 3 || uKind == 4) {
       float lat = p.y + 0.12 * fbm3(p * 3.0 + vec3(uSeed, uTime * 0.01, 0.0));
       float bands = sin(lat * (uKind == 3 ? 22.0 : 12.0) + fbm3(vec3(lat * 4.0, uSeed, uTime * 0.02)) * 2.5);
@@ -172,26 +193,48 @@ export const PLANET_FRAG = /* glsl */ `
       albedo *= 0.85 + 0.15 * detail;
       if (uKind == 5) albedo = mix(albedo, vec3(0.42, 0.52, 0.6), smoothstep(0.1, 0.5, detail) * 0.4);
       spec = 0.25;
+      if (uTempDay > 263.0) {
+        // warmed past freezing, the ice melts into open sea: everywhere on an ice-shelled ocean,
+        // and on an ice world in its low ground, as far as its water reaches (bare rock above);
+        // past boiling it goes up as a veil of steam
+        float melt = smoothstep(263.0, 283.0, T);
+        float level = -0.6 + 1.2 * uWater;
+        float wet = uKind == 5 ? 1.0 : 1.0 - smoothstep(level - 0.05, level + 0.05, h);
+        vec3 sea = mix(vec3(0.035, 0.09, 0.13), vec3(0.05, 0.12, 0.16), smoothstep(-0.6, 0.6, h));
+        albedo = mix(albedo, mix(rockPalette(h, detail) * 0.8, sea, wet), melt);
+        spec = mix(spec, 0.7 * wet, melt);
+        steam = smoothstep(363.0, 383.0, T);
+      }
     } else {
       albedo = rockPalette(h, detail);
       if (uKind == 1) {
-        // an eyeball world: a sea and green-brown land facing the sun, ice everywhere else. The eye
-        // is its star's doing (uEye): once the star is dead the sea freezes over and the world is
-        // one ice shell, the old sea only a smoother, darker plain under it
-        float facing = dot(p, normalize(uSubstellar));
+        // a sea and green-brown land where the star keeps it warm: on an eyeball (or any locked
+        // world) only the face toward it, ice everywhere else; on a turning world, all round. The
+        // sea is its star's doing (uEye): once the star is dead the sea freezes over and the world
+        // is one ice shell, the old sea only a smoother, darker plain under it
         float land = smoothstep(0.02, 0.12, h + 0.05);
         vec3 living = mix(vec3(0.05, 0.12, 0.16), mix(vec3(0.16, 0.2, 0.1), vec3(0.3, 0.26, 0.18), detail * 0.5 + 0.5), land);
         vec3 frozen = mix(vec3(0.6, 0.64, 0.7), vec3(0.82, 0.85, 0.9), smoothstep(-0.2, 0.3, detail));
-        float warmZone = smoothstep(0.25 - 0.55 * uVitality, 0.75 - 0.35 * uVitality, facing);
+        float warmZone = uLocked > 0.5 ? smoothstep(0.25 - 0.55 * uVitality, 0.75 - 0.35 * uVitality, facing) : 1.0;
         float alive = warmZone * smoothstep(0.02, 0.35, uVitality) * uEye;
         albedo = mix(frozen, living, alive);
-        // a dried-out eye while the star still burns: grey, dust-dry land facing it
+        // dried out while the star still burns: grey, dust-dry land where it is warm
         albedo = mix(albedo, rockPalette(h, detail) * 0.8, (1.0 - smoothstep(0.0, 0.4, uVitality)) * warmZone * 0.7 * uEye);
         // the star gone: ice everywhere, a little darker and smoother over the old sea
-        float oldSea = smoothstep(0.3, 0.7, facing) * (1.0 - land);
+        float oldSea = (uLocked > 0.5 ? smoothstep(0.3, 0.7, facing) : 1.0) * (1.0 - land);
         albedo = mix(albedo, mix(frozen * (0.92 + 0.08 * detail), vec3(0.48, 0.53, 0.6), oldSea * 0.55), 1.0 - uEye);
         spec = (1.0 - land) * alive * 0.7;
         clouds = smoothstep(0.1, 0.55, fbm(p * 3.0 + vec3(uTime * 0.02, uSeed, 0.0))) * alive * 0.8;
+        if (uTempDay > 363.0) {
+          // too hot for a sea: past boiling it is gone, leaving pale, salt-crusted sea floor and
+          // dry land under a veil of steam
+          float boil = smoothstep(363.0, 383.0, T);
+          vec3 dry = mix(vec3(0.6, 0.58, 0.52) * (0.85 + 0.15 * detail), rockPalette(h, detail) * 0.85, land);
+          albedo = mix(albedo, dry, boil);
+          spec *= 1.0 - boil;
+          clouds *= 1.0 - boil;
+          steam = boil;
+        }
       }
     }
     // the Hunger's rust: patches that spread the longer a swarm has fed here (it never fades),
@@ -206,6 +249,19 @@ export const PLANET_FRAG = /* glsl */ `
     albedo = mix(albedo, rustCol, rust);
     spec *= 1.0 - rust;
     clouds *= 1.0 - 0.6 * rust;
+    // hot rock: from about 1,500 K the ground is lava, a dark basalt crust split by glowing cracks
+    // (the glow itself is added after the lighting)
+    float lava = 0.0;
+    if ((uKind == 0 || uKind == 1) && uTempDay > 1300.0) {
+      lava = smoothstep(1400.0, 1700.0, T);
+      float crust = mix(0.05, 0.09, smoothstep(-0.4, 0.6, detail));
+      albedo = mix(albedo, vec3(crust, crust * 0.9, crust * 0.85), lava);
+      spec *= 1.0 - lava;
+      clouds *= 1.0 - lava;
+      steam *= 1.0 - lava;
+    }
+    // boiled-off water hangs over the world as a veil of steam
+    if (steam > 0.0) clouds = max(clouds, steam * (0.55 + 0.4 * fbm(p * 2.2 + vec3(uTime * 0.015, uSeed, 0.0))));
     // a swarm eating it now: scattered sparks where the harvesters cut in, most of them in the
     // rust, coming and going on elapsed time
     float cut = uEaten > 0.0 ? smoothstep(0.86, 0.99, snoise(p * 30.0 + vec3(0.0, uTime * 0.6, uSeed))) * max(rustCover, 0.3) : 0.0;
@@ -223,6 +279,26 @@ export const PLANET_FRAG = /* glsl */ `
     // leaving everything below the knee exactly as it was
     vec3 over = max(col - 0.55, 0.0);
     col = min(col, vec3(0.55)) + over / (1.0 + over * 1.8);
+    // hot ground glows by its own heat, by day and by night: from about 800 K a dull red all over;
+    // as lava, in the cracks and pools of its crust; from about 3,000 K a sea of magma, its limb
+    // hazed by boiling rock. A giant too hot for its clouds glows dully from below.
+    if (uTempDay > 780.0) {
+      vec3 hc = heatColor(T);
+      float g = heatGlow(T);
+      if (uKind == 3 || uKind == 4) {
+        col += hc * g * 0.35 * smoothstep(1000.0, 1600.0, T) * (0.75 + 0.25 * detail);
+      } else if (uKind == 0 || uKind == 1) {
+        float n = snoise(p * 7.0 + vec3(uSeed, uTime * 0.012, -uTime * 0.008));
+        float cracks = smoothstep(0.82, 0.97, 1.0 - abs(n));
+        float pools = smoothstep(0.45, 0.8, fbm3(p * 3.2 + uSeed * 2.3));
+        float molten = smoothstep(2200.0, 3000.0, T);
+        float spread = mix(1.0, 0.15 + 1.6 * max(cracks, pools * 0.7), lava);
+        spread = mix(spread, 0.8 + 0.4 * pools, molten);
+        col += hc * g * spread;
+        float limb = pow(1.0 - max(0.0, dot(normalize(vNormal), normalize(vView))), 2.5);
+        col += hc * smoothstep(2600.0, 3600.0, T) * limb * 0.9;
+      }
+    }
     // settlements: warm sodium with a few neon strips
     float night = smoothstep(0.08, -0.25, ndl);
     // around a dead star there is no day side: it is night everywhere
@@ -236,10 +312,9 @@ export const PLANET_FRAG = /* glsl */ `
     float cityMask = smoothstep(cityLo, cityLo + 0.2, detail * 0.5 + 0.5 + blocks) * uLights;
     float neonCell = step(0.965, fract(sin(dot(floor(p * 60.0), vec3(12.9, 78.2, 37.7))) * 43758.5)) * fineAA;
     vec3 cityCol = mix(uCityCol, uNeon, neonCell);
-    if (uKind == 1) {
+    if (uKind == 1 && uLocked > 0.5) {
       // a tidally locked world is lived on along its terminator and the edge of the day side:
       // the night side is ice. Cities spread along the ring as the settlement grows.
-      float facing = dot(p, normalize(uSubstellar));
       // (the cities stay where they were built, on the old terminator, even after the star dies)
       float ring = smoothstep(-0.3 + 0.1 * (1.0 - uDev), -0.08, facing) * (1.0 - smoothstep(0.25 + 0.15 * uDev, 0.5 + 0.15 * uDev, facing));
       float sprawl = smoothstep(0.78 - 0.4 * uDev, 0.95 - 0.3 * uDev, detail * 0.5 + 0.5 + blocks * 1.2);
@@ -281,12 +356,10 @@ export const PLANET_FRAG = /* glsl */ `
     } else if (uViewMode == 2) {
       // thermal: what the world radiates, not what it reflects. Day and night sides of a locked
       // world, and the warmth of wherever people live
-      float warmSide = smoothstep(-0.25, 0.6, dot(p, normalize(uSubstellar)));
-      float T = mix(uTempNight, uTempDay, warmSide);
-      T = max(T, 290.0 * uLights * smoothstep(cityLo - 0.1, cityLo + 0.15, detail * 0.5 + 0.5));
-      T = max(T, 900.0 * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))));
-      T = max(T, 700.0 * uEaten * cut);
-      col = thermal(T) * (0.5 + 0.5 * toViewer) * (0.9 + 0.2 * detail);
+      float tv = max(T, 290.0 * uLights * smoothstep(cityLo - 0.1, cityLo + 0.15, detail * 0.5 + 0.5));
+      tv = max(tv, 900.0 * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))));
+      tv = max(tv, 700.0 * uEaten * cut);
+      col = thermal(tv) * (0.5 + 0.5 * toViewer) * (0.9 + 0.2 * detail);
     }
     gl_FragColor = vec4(col, 1.0);
   }

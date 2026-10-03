@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { bodyClimate, diskLight, dwarfGlow, emberShare, primaryTemperature } from '../game/physics';
+import { bodyClimate, diskLight, dwarfGlow, emberShare, primaryTemperature, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
 import type { Body, GameState, StarSystem, Survivor, Swarm } from '../game/types';
@@ -164,7 +164,9 @@ export class SystemView {
       this.primaryRadius = r;
       this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: r });
     };
-    switch (p.kind) {
+    // (a new star already out is drawn as the cold dwarf it is becoming)
+    const kind = shownKind(p, state.years);
+    switch (kind) {
       case 'red_dwarf':
       case 'collision_star':
         addStar(5, col.clone().lerp(new THREE.Color('#ff4a14'), 0.55), 1.0, 0, 0.68);
@@ -212,16 +214,16 @@ export class SystemView {
         break;
       case 'black_hole':
       case 'smbh': {
-        const r = p.kind === 'smbh' ? 6 : 2.6;
+        const r = kind === 'smbh' ? 6 : 2.6;
         const hole = new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), new THREE.MeshBasicMaterial({ color: '#000000' }));
         this.group.add(hole);
         this.primaryRadius = r;
         this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: r });
         addGlow(r * 6, new THREE.Color('#ffd2a8'), 0.0, 0, 1.0);
         const fed = Object.values(state.colonies).some((c) => c.systemId === sys.id && ((c.structures.accretion_engine ?? 0) > 0 || (c.structures.penrose_harvester ?? 0) > 0));
-        const shine = diskLight(p.kind, state.era, state.years);
-        const heat = fed ? 1.0 : p.kind === 'smbh' ? Math.min(0.75, 0.12 + shine * 0.4) : 0.18;
-        this.addDisk(r * 1.6, r * (p.kind === 'smbh' ? 9 : 6), heat);
+        const shine = diskLight(kind, state.era, state.years);
+        const heat = fed ? 1.0 : kind === 'smbh' ? Math.min(0.75, 0.12 + shine * 0.4) : 0.18;
+        this.addDisk(r * 1.6, r * (kind === 'smbh' ? 9 : 6), heat);
         break;
       }
       default:
@@ -313,10 +315,13 @@ export class SystemView {
         uFeeding: { value: b.feeding ? 1 : 0 },
         uEaten: { value: eating ? Math.min(1, 0.4 + eating.size / 12) : 0 },
         uViewMode: VIEW_MODE,
-        // an eyeball stays one only while its star keeps a sea liquid on the day side
+        // a sea and land stay so only while the star keeps the sea liquid (on the day side if locked)
         uEye: { value: eyeStrength(b, climate) },
         uTempDay: { value: climate.day ?? climate.mean },
         uTempNight: { value: climate.night ?? climate.mean },
+        uWater: { value: b.water ?? 0 },
+        // an eyeball is one face to its star by definition; any other world only if it is locked
+        uLocked: { value: b.kind === 'eyeball' || b.traits.includes('tidally_locked') ? 1 : 0 },
       },
     });
     mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 64, 48), mat);
@@ -623,6 +628,8 @@ export class SystemView {
         r.mat.color.set(VIEW_MODE.value === 1 ? '#6a625c' : '#2e2926');
         // the Hunger's rust on the rocks, as on the worlds
         if (r.rust > 0.001) r.mat.color.lerp(new THREE.Color(VIEW_MODE.value === 1 ? '#8a3c1c' : '#4a1f10'), Math.min(0.75, 0.2 + r.rust * 0.6));
+        // rubble hot enough glows by its own heat, as hot worlds do
+        if (r.tempK > 780) r.mat.color.add(heatColor(r.tempK).multiplyScalar(heatGlow(r.tempK)));
       }
     }
   }
@@ -729,11 +736,29 @@ export class SystemView {
   }
 }
 
-/** How much an eyeball world is still an eyeball: 1 while its star keeps the day side warm, 0 frozen over. */
+/**
+ * How much a sea-and-land world (an eyeball, or a terrestrial world) still has its sea: 1 while
+ * its star keeps the (day side's) ground warm, 0 frozen over.
+ */
 export function eyeStrength(b: Body, climate: { mean: number; day?: number }): number {
-  if (b.kind !== 'eyeball') return 0;
+  if (b.kind !== 'eyeball' && b.kind !== 'terran') return 0;
   const t = Math.min(1, Math.max(0, ((climate.day ?? climate.mean) - 150) / 90));
   return t * t * (3 - 2 * t);
+}
+
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+/** The colour of ground glowing by its own heat (the planet shader's heatColor): dull red near 800 K, orange by 1,500 K. */
+function heatColor(T: number): THREE.Color {
+  return new THREE.Color(0.55, 0.05, 0.02).lerp(new THREE.Color(...blackbody(Math.max(1000, T))), smooth(780, 1150, T));
+}
+
+/** How brightly it glows (the planet shader's heatGlow). */
+function heatGlow(T: number): number {
+  return 0.25 * smooth(780, 1500, T) + 0.75 * smooth(1500, 3600, T) + 0.6 * smooth(3600, 6000, T);
 }
 
 /** A swarm of the Hunger eating the worlds of this star now (awake, untamed, not in transit). */
@@ -743,27 +768,28 @@ function feedingSwarm(state: GameState, sys: StarSystem): Swarm | null {
 
 function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Color; power: number } {
   const p = sys.primary;
+  const k = shownKind(p, state.years);
   const temp = primaryTemperature(p, state.years, state.era);
   const c = new THREE.Color(...blackbody(Math.max(1500, temp)));
   let power = 1.4;
-  if (p.kind === 'blue_dwarf' || p.kind === 'helium_star' || p.kind === 'helium_giant') power = 2;
-  if (p.kind === 'white_dwarf') power = state.era === 'dusk' ? 1.1 : p.rekindle ? 0.3 : 0.03 + 0.09 * Math.max(dwarfGlow(state.years), emberShare(p, state.years));
-  if (p.kind === 'black_dwarf') power = p.rekindle ? 0.3 : 0.03;
-  if (p.kind === 'brown_dwarf') power = 0.12;
-  if (p.kind === 'neutron_star') power = 0.3;
-  if (p.kind === 'black_hole' || p.kind === 'smbh' || p.kind === 'void' || p.kind === 'rogue') {
+  if (k === 'blue_dwarf' || k === 'helium_star' || k === 'helium_giant') power = 2;
+  if (k === 'white_dwarf') power = state.era === 'dusk' ? 1.1 : p.rekindle ? 0.3 : 0.03 + 0.09 * Math.max(dwarfGlow(state.years), emberShare(p, state.years));
+  if (k === 'black_dwarf') power = p.rekindle ? 0.3 : 0.03;
+  if (k === 'brown_dwarf') power = 0.12;
+  if (k === 'neutron_star') power = 0.3;
+  if (k === 'black_hole' || k === 'smbh' || k === 'void' || k === 'rogue') {
     c.set('#8a7aa8');
     power = 0.05;
-    if (p.kind === 'black_hole' || p.kind === 'smbh') {
+    if (k === 'black_hole' || k === 'smbh') {
       // lit by the disk: warm light, as strong as what the collectors get
-      const shine = diskLight(p.kind, state.era, state.years);
+      const shine = diskLight(k, state.era, state.years);
       if (shine > 0.05) {
         c.set('#ffd6b0');
         power = Math.min(1.4, 0.1 + shine * 0.85);
       }
     }
   }
-  if (p.kind === 'dark_star') {
+  if (k === 'dark_star') {
     c.set('#ffcfa0');
     power = 1.3;
   }

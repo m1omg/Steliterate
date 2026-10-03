@@ -266,6 +266,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   drag (`PINCH_SLACK` 24 px, and more than the pinch's spread has changed). A new caller that
   moves the camera without meaning to centre on anything should clear `centred` afterwards. The
   playtest checks that a centred star stays in the middle under the wheel.
+- **`src/render/shaders/bodies.ts` (`PLANET_FRAG`):** a world's look follows the local
+  temperature `T` (night to day by `facing`), hoisted to the top of `main`: seas and steam for
+  kinds 1, 2 and 5, `heatColor`/`heatGlow` for hot rock (added after the highlight roll-off, so
+  night sides glow), lava from 1,400 K, magma and a vapour limb from about 2,600 K. `uWater` and
+  `uLocked` come from `systemView.ts` (eyeballs count as locked). Every new block is gated on
+  `uTempDay`, so ordinary worlds render exactly as before: check with a pixel comparison of the
+  homeworld when touching it. Hot belts glow in `applyViewMode`, on the same curves.
+- **`shownKind` / `newStarOut` (`physics.ts`):** a new star whose `diesAt` has passed is drawn,
+  and its temperature and luminosity read, as the cold dwarf it becomes when the turn ends. Use
+  `shownKind` wherever a kind picks a look.
 - **`src/render/systemView.ts`:** other civilizations: `residents` from `survivorWorld`;
   surface civs set the planet shader's `uLights`/`uDev`/`uNeon` and the new `uCityCol` (sodium
   for ours); `addHabitats` builds flotilla / ring-station / lattice by way, `habitats` and

@@ -1,6 +1,6 @@
 import { STRUCTURE_BY_ID } from './data/structures';
 import { hawkingTime } from './gen';
-import type { Body, Colony, EraId, GameState, Primary, StarSystem } from './types';
+import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
 // share of a structure's nominal capture a source supports per Tide turn. Physical ratios
@@ -64,8 +64,27 @@ function dwarfRadius(p: Primary): number {
   return 0.0125 * Math.cbrt(0.6 / Math.min(1.4, Math.max(0.08, p.mass)));
 }
 
+/**
+ * A new star (collision star, helium star or helium giant) whose life ended before `years`: a
+ * turn outlasted it, and it turns into a white dwarf as the turn ends. Until then it is drawn,
+ * and its temperature and light read, as that remnant.
+ */
+export function newStarOut(p: Primary, years: number): boolean {
+  return (p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant') && p.diesAt !== undefined && p.diesAt <= years;
+}
+
+/** The kind a primary is shown as: an already-out new star as the cold white (or black) dwarf it is becoming. */
+export function shownKind(p: Primary, years: number): PrimaryKind {
+  if (!newStarOut(p, years)) return p.kind;
+  return years >= DWARF_COLD_AT ? 'black_dwarf' : 'white_dwarf';
+}
+
+/** Rock melts: above this a dry world’s warmest ground is a crust over glowing magma (basalt erupts at 1,370 to 1,520 K). */
+export const LAVA_K = 1500;
+
 /** Blackbody-ish surface temperature by primary kind and state (used for colours and text). */
 export function primaryTemperature(p: Primary, years: number, era: EraId): number {
+  if (newStarOut(p, years)) return coldDwarfK(years);
   switch (p.kind) {
     case 'red_dwarf':
       return 2700 + (p.mass - 0.08) * 6000;
@@ -492,6 +511,10 @@ export const LAST_LIGHT_YEARS = LAST_LIGHT;
  */
 export function primaryLuminosity(p: Primary, years: number, era: EraId): number {
   const m = Math.max(0.01, p.mass);
+  if (newStarOut(p, years)) {
+    const r = dwarfRadius(p);
+    return Math.pow(coldDwarfK(years) / 5772, 4) * r * r;
+  }
   switch (p.kind) {
     case 'red_dwarf':
     case 'collision_star':

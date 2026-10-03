@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { fleetLook, lookRole, type FleetLook } from '../game/data/ships';
-import { diskLight, dwarfGlow, emberShare, primaryTemperature } from '../game/physics';
+import { diskLight, dwarfGlow, emberShare, primaryTemperature, shownKind } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
 import { Rng, hashSeed } from '../game/rng';
@@ -401,7 +401,7 @@ export class GalaxyView {
       const [r, g, b] = this.viewMode === 2 ? thermalRGB(nodeTemperature(s, state)) : nodeColor(s, state);
       pos.push(s.pos.x, s.pos.y, s.pos.z);
       col.push(r, g, b);
-      size.push(nodeSize(s));
+      size.push(nodeSize(s, state));
       st.push(colonized.has(s.id) ? 1 : 0, s.rust ?? 0, (hashSeed(s.id) % 1000) / 159, known[s.id] === 2 ? 1 : 0.7);
       const alive = known[s.id] === 2 && livingWorlds(state, s.id).length > 0;
       if (alive) this.living.add(s.id);
@@ -619,14 +619,15 @@ export class GalaxyView {
 
 /** A primary's surface (or, for holes, its disk's) temperature for the thermal view, in K. */
 function nodeTemperature(s: StarSystem, state: GameState): number {
-  const k = s.primary.kind;
+  const k = shownKind(s.primary, state.years);
   if (k === 'black_hole' || k === 'smbh') return 2.7 + 900 * diskLight(k, state.era, state.years);
   if (k === 'void' || k === 'rogue') return 3;
   return primaryTemperature(s.primary, state.years, state.era);
 }
 
 function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
-  const k = s.primary.kind;
+  // (a new star already out shows as the cold dwarf it is becoming)
+  const k = shownKind(s.primary, state.years);
   if (k === 'black_hole' || k === 'smbh') return [0.62, 0.52, 1.0];
   if (k === 'void' || k === 'rogue') return [0.35, 0.36, 0.42];
   if (k === 'brown_dwarf') return [0.62, 0.3, 0.28];
@@ -645,8 +646,8 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   return [r * boost, g * boost, b * boost];
 }
 
-function nodeSize(s: StarSystem): number {
-  switch (s.primary.kind) {
+function nodeSize(s: StarSystem, state: GameState): number {
+  switch (shownKind(s.primary, state.years)) {
     case 'smbh':
       return 11;
     case 'helium_giant':
