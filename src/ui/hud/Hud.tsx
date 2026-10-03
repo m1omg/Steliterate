@@ -224,8 +224,15 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           </div>
         )}
         {star && (
-          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`We are keeping time with the new star at ${star.system}: each turn is a sixth of what was left of its life, lived in full, and pays as one turn at the Tide whatever the pace. Your pace takes over again when it burns out.`}>
-            Star clock · {star.system} · turn {star.turn} of {star.of}
+          <div
+            class="chip neon"
+            style={{ margin: '4px 0 2px', whiteSpace: 'normal', flexWrap: 'wrap' }}
+            data-tip={`We are keeping time with the new star at ${star.system}: each turn is a sixth of what was left of its life, lived in full, and pays as one turn at the Tide whatever the pace. ${star.next ? `When it burns out we follow ${star.next} on, six more turns.` : 'Your pace takes over again when it burns out.'}`}
+          >
+            <span>
+              Star clock · {star.system} · turn {star.turn} of {star.of}
+            </span>
+            {star.next && <span>then {star.next}</span>}
           </div>
         )}
         <div class="opts">

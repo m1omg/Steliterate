@@ -7,7 +7,9 @@ import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
-import { tripLabel } from '../trip';
+import { TRIP_TIP, tripLabel } from '../trip';
+import { orderFleet } from '../../game/sim/actions';
+import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
@@ -16,7 +18,7 @@ import { THREADS } from '../../game/types';
 import { n1, signed } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
-import { engine, modal, rev, selection, targeting, view, type SystemsTab } from '../store';
+import { act, engine, modal, rev, selection, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
 
@@ -136,15 +138,50 @@ export function FleetsModal({ s }: { s: GameState }) {
   );
 }
 
+/** Open the Systems window to choose where a stationed ship goes: collision stars first while any burn. */
+export function sendFromSystems(s: GameState, f: Fleet) {
+  sfx('click');
+  const burning = s.era === 'degenerate' && Object.values(s.systems).some((x) => isBeacon(s, x));
+  modal.value = { kind: 'settlements', tab: burning ? 'beacons' : 'worlds', send: f.id };
+}
+
+/** In the Systems window opened from a ship: send it to this star (the fleet's panel then shows the order). */
+function SendButton({ s, f, sys }: { s: GameState; f: Fleet; sys: StarSystem }) {
+  if (f.at === sys.id)
+    return (
+      <span class="chip" style={{ marginLeft: '6px' }}>
+        {f.name} is here
+      </span>
+    );
+  const from = s.systems[f.at!];
+  const trip = tripLabel(s, distLy(from, sys), computeMods(s));
+  return (
+    <button
+      class="btn small primary send-here"
+      style={{ padding: '1px 6px', marginLeft: '6px', whiteSpace: 'nowrap' }}
+      data-tip={`Send ${f.name} to ${sys.name}.\n${TRIP_TIP}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (act((g) => orderFleet(g, f.id, sys.id, 'move'))) goToFleet(s, s.fleets[f.id] ?? f);
+      }}
+    >
+      Send · {trip}
+    </button>
+  );
+}
+
 /**
  * The Systems window: our settlements, every surveyed world, and in the Degenerate Age the
  * collision stars. The open tab lives in the modal itself, so S and W open (and close) the right one.
+ * Opened from a ship (`send`), every star in it can be its destination.
  */
-export function SystemsModal({ s, tab }: { s: GameState; tab?: SystemsTab }) {
+export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab; send?: string }) {
   void rev.value;
   const degenerate = s.era === 'degenerate';
   const which = tab === 'beacons' && !degenerate ? undefined : tab;
-  const show = (t?: SystemsTab) => (modal.value = { kind: 'settlements', tab: t });
+  const f = send ? s.fleets[send] : undefined;
+  const sending = f?.at ? f : undefined;
+  const show = (t?: SystemsTab) => (modal.value = { kind: 'settlements', tab: t, send: sending?.id });
   const surveyedCount = Object.values(s.bodies).filter((b) => s.civ.known[b.systemId] === 2 && !b.dissolved && b.kind !== 'deep').length;
   const burning = degenerate ? Object.values(s.systems).filter((x) => isBeacon(s, x)).length : 0;
   const tabs = (
@@ -156,20 +193,28 @@ export function SystemsModal({ s, tab }: { s: GameState; tab?: SystemsTab }) {
           ✦ Collision stars <span class={`mono ${burning ? 'boon' : 'faint'}`}>{burning}</span>
         </button>
       )}
+      {sending && (
+        <div class="row" style={{ gap: '6px', width: '100%', marginTop: '4px', fontSize: '12px' }}>
+          <span class="grow neon">Where should {sending.name} go? Send it to any star on these lists.</span>
+          <button class="btn small ghost" onClick={() => (modal.value = { kind: 'settlements', tab: which })} data-tip="Keep the window open without choosing a destination">
+            Just browse
+          </button>
+        </div>
+      )}
     </div>
   );
   if (which === 'worlds')
     return (
       <ModalFrame title="Systems" eyebrow="Surveyed worlds: every world a probe has charted" icon="planet" narrow>
         {tabs}
-        <WorldsList s={s} />
+        <WorldsList s={s} send={sending} />
       </ModalFrame>
     );
   if (which === 'beacons')
     return (
       <ModalFrame title="Systems" eyebrow={`Collision stars: ${burning ? `${burning} burning on our map` : 'none burning on our map'}`} icon="red_dwarf" narrow>
         {tabs}
-        <BeaconsList s={s} />
+        <BeaconsList s={s} send={sending} />
       </ModalFrame>
     );
   const p = project(s);
@@ -187,8 +232,11 @@ export function SystemsModal({ s, tab }: { s: GameState; tab?: SystemsTab }) {
         const sys = s.systems[sid];
         return (
           <div key={sid} class="section" style={{ marginTop: '6px' }}>
-            <h3>
-              {sys.name} <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>{PRIMARY_NAME[sys.primary.kind]}</span>
+            <h3 class="row" style={{ gap: '4px' }}>
+              <span class="grow">
+                {sys.name} <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>{PRIMARY_NAME[sys.primary.kind]}</span>
+              </span>
+              {sending && <SendButton s={s} f={sending} sys={sys} />}
             </h3>
             <div class="list">
               {cs.map((c) => {
@@ -253,7 +301,7 @@ type WorldSort = 'hab' | 'near' | 'room' | 'name' | 'echoes' | 'lattice' | 'cold
 const MIND_SORT: Partial<Record<WorldSort, ThreadId>> = { echoes: 'echoes', lattice: 'lattice', coldminds: 'coldminds' };
 
 /** Every charted world, best places to live first: what a settler would find there. */
-function WorldsList({ s }: { s: GameState }) {
+function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
   void rev.value;
   const [sort, setSort] = useState<WorldSort>('hab');
   const [open, setOpen] = useState(true);
@@ -348,6 +396,7 @@ function WorldsList({ s }: { s: GameState }) {
                   <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room` : 'domes only'}</div>
                 </span>
               )}
+              {send && <SendButton s={s} f={send} sys={sys} />}
             </div>
           ))}
         </div>
@@ -378,6 +427,7 @@ function WorldsList({ s }: { s: GameState }) {
                   <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
                 </span>
               )}
+              {send && <SendButton s={s} f={send} sys={sys} />}
             </div>
           ))}
         </div>
@@ -392,7 +442,7 @@ function WorldsList({ s }: { s: GameState }) {
  * collision star's whole life, so many light and go out within one; those keep the name until the
  * turn ends and are listed apart, without light.
  */
-function BeaconsList({ s }: { s: GameState }) {
+function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
   void rev.value;
   const cap = colonies(s).find((c) => c.id === s.civ.capitalId);
   const home = s.systems[cap?.systemId ?? s.civ.homeSystemId];
@@ -441,6 +491,11 @@ function BeaconsList({ s }: { s: GameState }) {
                     keeping time
                   </span>
                 )}
+                {kept?.nextId === sys.id && (
+                  <span class="chip neon" style={chipGap} data-tip={`When the clock of ${kept.system} runs out, in ${kept.left} turn${kept.left === 1 ? '' : 's'}, we keep time with this one: six turns.`}>
+                    next
+                  </span>
+                )}
                 {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
                 {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
                 {swarmSeenAt(s, sys.id) && <span class="chip danger" style={chipGap} data-tip={SWARM_TIP}>swarm</span>}
@@ -469,6 +524,7 @@ function BeaconsList({ s }: { s: GameState }) {
                   {turns <= 1 ? 'goes out this turn' : isFinite(turns) ? `${turns} turns left` : 'many turns left'}
                 </div>
               </span>
+              {send && <SendButton s={s} f={send} sys={sys} />}
             </div>
           );
         })}
@@ -479,7 +535,7 @@ function BeaconsList({ s }: { s: GameState }) {
             Already out <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>· lit and went out within the last turn</span>
           </h3>
           <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>
-            The last turn spanned {formatYears(s.turnLength)}, longer than {out.length === 1 ? 'this star' : 'these stars'} burned. Their light is gone; at the end of this turn each settles into a white dwarf.
+            The last turn spanned {formatYears(s.turnLength)}, longer than {out.length === 1 ? 'this star' : 'these stars'} burned. Their light is gone; at the end of this turn each settles into {s.years >= DWARF_COLD_AT ? 'a black dwarf: this late in the age a turn outlasts its cooling' : 'a white dwarf'}.
           </p>
           <div class="list">
             {out.map(({ sys, life, ly }) => (

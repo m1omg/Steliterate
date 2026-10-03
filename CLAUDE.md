@@ -42,6 +42,6 @@ npm run savecompat                       # "SAVE COMPAT OK"
 npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; count in DEV-NOTES
 ```
 
-Balance reference: 140 of 300 standard competent games survive with the priced new-star clock and
-collisions ending with the galaxy, 3 Oct (noise ±12; 133 at `b950f24`, before any new-star clock,
-900 games: 390; 114 before the fixes of the 28 Sep review).
+Balance reference: 153 of 300 standard competent games survive with white dwarfs cooling and new
+stars that can be followed on, 3 Oct (900 games: 453; noise ±12; 140 before those; 133 at
+`b950f24`, before any new-star clock, 900 games: 390; 114 before the fixes of the 28 Sep review).

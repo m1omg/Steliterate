@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { bodyClimate, diskLight, primaryTemperature } from '../game/physics';
+import { bodyClimate, diskLight, dwarfGlow, emberShare, primaryTemperature } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
 import type { Body, GameState, StarSystem, Survivor, Swarm } from '../game/types';
@@ -191,9 +191,12 @@ export class SystemView {
           addStar(1.6, col, 0.1, 0, 3);
           addGlow(20, col, 1.1);
         } else {
-          const ember = p.halo && state.eta < 25;
-          addStar(1.6, ember ? new THREE.Color('#6d4a52') : new THREE.Color('#3a3a44'), 0.15, 0, 0.9);
-          if (ember) addGlow(14, new THREE.Color('#8a4f4a'), 0.35);
+          // greying toward a black dwarf as it cools; an ember keeps a dull red warmth while the halo lasts
+          const ember = emberShare(p, state.years);
+          const glow = dwarfGlow(state.years);
+          const surface = new THREE.Color('#2a2628').lerp(new THREE.Color('#3a3a44'), glow).lerp(new THREE.Color('#6d4a52'), ember);
+          addStar(1.6, surface, 0.15, 0, 0.6 + 0.3 * Math.max(glow, ember));
+          if (ember > 0) addGlow(14, new THREE.Color('#8a4f4a'), 0.35 * ember);
         }
         break;
       case 'black_dwarf':
@@ -744,7 +747,7 @@ function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Co
   const c = new THREE.Color(...blackbody(Math.max(1500, temp)));
   let power = 1.4;
   if (p.kind === 'blue_dwarf' || p.kind === 'helium_star' || p.kind === 'helium_giant') power = 2;
-  if (p.kind === 'white_dwarf') power = state.era === 'dusk' ? 1.1 : 0.12;
+  if (p.kind === 'white_dwarf') power = state.era === 'dusk' ? 1.1 : p.rekindle ? 0.3 : 0.03 + 0.09 * Math.max(dwarfGlow(state.years), emberShare(p, state.years));
   if (p.kind === 'black_dwarf') power = p.rekindle ? 0.3 : 0.03;
   if (p.kind === 'brown_dwarf') power = 0.12;
   if (p.kind === 'neutron_star') power = 0.3;

@@ -85,7 +85,7 @@ years, with no faster-than-light travel.
 * **Light-speed contact.** Every message travels at the speed of light. A plea can arrive
   after its sender is already dead.
 
-Typical standard game: 90 to 140 Dusk turns, 40 to 70 in the Degenerate Age (over a hundred if you keep time with every new star), 30 to 50 in the
+Typical standard game: 90 to 140 Dusk turns, 40 to 80 in the Degenerate Age (over a hundred if you keep time with every new star), 30 to 50 in the
 Black Hole Age, about 20 in the Dark Era.
 
 ### Tempo: the clock of the mind
@@ -167,7 +167,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | Age | Sources |
 |---|---|
 | Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase (about 174× as luminous; about 3× the light per turn for collectors while you keep time with it); geothermal (declining); fusion |
-| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova). A turn soon outlasts either kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full; one star at a time; free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting** |
+| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. The others cool by Mestel's law from 20 K to 5 K by η 16.7 and are then black dwarfs. **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova). A turn soon outlasts either kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full; one clock at a time, though a star that outlasts it can be followed on (priced from our own pace, never below 250 energy); free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve, which charts its system. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting** |
 | Black Hole | Penrose (finite spin), Hawking collectors (rising as holes shrink), final bursts, accretion only if protons are stable |
 | Dark | The reserve; a trickle of speculative horizon siphoning |
 
@@ -314,9 +314,13 @@ stop them from talking.
   ([arXiv:astro-ph/9701131](https://arxiv.org/abs/astro-ph/9701131)): end of star formation
   at η ≈ 14; blue dwarfs; brown-dwarf collision stars (about 100 per galaxy, η 15 until the galaxy evaporates, about 21);
   galactic evaporation at 10^19 to 10^20 years; WIMP-heated white dwarfs (about 4×10^-12 L☉,
-  63 K); proton decay for 30 < η < 40 (about 400 W per white dwarf); Hawking evaporation
+  63 K, fading from η 22 as the halo runs out); proton decay for 30 < η < 40 (about 400 W per white dwarf); Hawking evaporation
   `t ≈ 2×10^67 (M/M☉)^3` years; positronium forms near η 85 and decays near η 141.
 * Adams, Laughlin & Graves (2004), *Red dwarfs and the end of the main sequence*.
+* Mestel (1952), *On the theory of white dwarf stars*, MNRAS 112, 583: the cooling law
+  L ∝ t^-7/5. The game cools unwarmed white dwarfs by it in the Degenerate Age, from 20 K at η 15
+  to 5 K at η 16.7, when it calls them black dwarfs (a real one, its core crystallised, cools
+  faster, and would go on below 5 K).
 * Dyson (1979), *Time without end*, Rev. Mod. Phys. 51, 447: slowing minds; iron stars by
   about 10^1500 years; tunnelling collapse at 10^(10^26) to 10^(10^76) years.
 * Krauss & Starkman (2000), *Life, the universe, and nothing*, ApJ 531, 22.

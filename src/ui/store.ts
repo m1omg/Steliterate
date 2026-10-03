@@ -12,7 +12,7 @@ export type SystemsTab = 'worlds' | 'beacons';
 export type Modal =
   | { kind: 'research' }
   | { kind: 'fleets' }
-  | { kind: 'settlements'; tab?: SystemsTab }
+  | { kind: 'settlements'; tab?: SystemsTab; send?: string }
   | { kind: 'charters' }
   | { kind: 'threads' }
   | { kind: 'signals' }

@@ -356,3 +356,54 @@ belongs to another organization.
   turn) rather than get time to settle, the player kept the six turns; the price stays 250 energy a
   tenfold, capped at a full store (they suggested 100 or more). Balance: 140 of 300 survive (52
   victories), a Degenerate Age of 67 turns; 241 of the 300 games end as before.
+- **White dwarfs keep cooling** (3 Oct; the player: "the ones that capture the WIMP particles …
+  should stay at 63K yes but the rest should continue cooling though I don't want to break the
+  game"). In the Degenerate Age a white dwarf no dark matter warms sat at 20 K and ×0.05 for the
+  whole age. It now cools by Mestel's law (L ∝ t^-1.4, so T ∝ t^-0.35): 20 K at η 15, about 9 K
+  at η 16, 5 K at η 16.7 (5.2 × 10^16 years), when it becomes a black dwarf. The player asked why
+  a 5 K white dwarf was not simply a black dwarf: no reason, only the name changes, so now it is.
+  Its light to collectors falls with T⁴ from ×0.05 (times the galaxy's free energy, as before) to
+  the black dwarf's ×0.01; its luminosity for planet climates follows its temperature and size
+  (2.3 × 10^-14 L☉ at 20 K, 8.8 × 10^-17 at 5 K, against a flat 10^-15; worlds there move by at
+  most about a kelvin). Embers keep 63 K and exactly their light. While the halo thins (η 22 to
+  25) their shown temperature now falls with their warmth (T ∝ share^¼: 53 K at half, 35 K at a
+  tenth) where it read 63 K to the end, and a spent ember turns black at η 25 (was 25.5). A
+  rekindled white dwarf reads 300 K and shows orange on the map, as a rekindled black dwarf does.
+  Unwarmed dwarfs grey toward the black-dwarf look as they cool (map colour; surface, glow and
+  light in the system view). Plains of Glass can be found at black dwarfs too (the glass stays
+  whatever the star becomes). The Codex gains a Black dwarfs entry. Bends, plainly: the 20 K start
+  (a real dwarf this old is probably colder already); Mestel's law is gentler than real cooling
+  once the core crystallises; 5 K and ×0.01 are floors the game keeps (a real one would go on
+  cooling); and the light falls fivefold where the physics says 256-fold. Asked how long the embers
+  last: the game's η 22 to 25 is the right order (at about 10^15 W an ember eats some 350 tonnes of
+  dark matter a year, and a galaxy's white dwarfs would need around 10^25 years to eat its halo),
+  but a white dwarf flung out of the galaxy leaves the halo, and the game keeps it warm. Tested,
+  not shipped: cast-out embers losing their warmth, 900 games 430 survive, 145 victories, a
+  Degenerate Age of 64 turns, against 425 / 159 / 68 without; the player decides. Balance of the
+  cooling itself, 900 games: 425 / 159 / 68 against 432 / 159 / 68 at `6d734aa` (300 games: 135 /
+  53 / 67 against 140 / 52 / 67).
+- **Following a new star on; Study charts it; the Record names it; ships from the Systems
+  window** (3 Oct, from the player's screenshot of turn 93, keeping time with one star when
+  another lit: "the text half reflects a civ too slow, half it not being necessary to keep pace,
+  should have an option to extend the fast time period"; "observing but not revealing on map
+  doesnt make sense but i dunno how to make the choices balanced"; "record should say collision
+  star name"; "the selection of stars to go with spaceships should offer the systems menu if one
+  wants to see more not just nearby stars"). While we keep time with one new star, another that
+  outlasts it can be followed on: its six turns begin as the first clock runs out, priced as a
+  fresh clock would be then, from our own pace, and never below 250 energy (still at most a full
+  store). One may wait at a time; the Pace panel's chip says "then …" and the Collision stars tab
+  marks it "next". The event says plainly why there is no clock: we keep time with it already,
+  another star waits, it burns out within our clock (or inside one of its turns: one clock at a
+  time), our turns are short enough to see it burn, or it is too brief to count; "Faster minds
+  would feast on it" only when it will burn for less than two of our turns and we cannot keep
+  time. Study it and Watch the flash now chart the system ("in its light we find its worlds, by
+  their shadows as they cross it"), so Race for it at our own pace, which only charted it, is
+  gone; keeping time with a White Fire charts it too. The Record names the system of every event
+  about one ("A New Star (BD 26·347): Study it.") and links to it. A ship's Nearby list has More
+  in Systems…, and the ship prompt From Systems…: the Systems window opens with a Send button and
+  the trip on every star in it, any tab. Balance, 900 games: 453 survive, 166 victories, a
+  Degenerate Age of 77 turns (the cooling alone: 425 / 159 / 68). Chained freely at the fresh
+  price the follow-on gave 461 / 214 / 88 (2.8 follow-ons a game, chains of up to six stars,
+  41 of 91 Degenerate turns on a clock); with the floor, 1.7 a game at 311 energy on average, 34
+  of 82 turns on a clock; adding one follow-on per chain, 300 games, 150 / 55 / 73; without any
+  follow-on 146 / 54 / 67. The Study change alone moves nothing measurable.

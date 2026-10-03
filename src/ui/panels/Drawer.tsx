@@ -43,7 +43,7 @@ import type { IconName } from '../icons';
 import { FOCUS, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
 import { act, engine, following, notify, rev, selection, targeting, view } from '../store';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
-import { pickOnMap, pivotToSystem } from '../screens/Lists';
+import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { loreView } from '../screens/Story';
 import { siteValue, type SiteValue } from '../../game/sim/sites';
 import { residentsOf, survivorPeople, survivorWorld } from '../../game/sim/homes';
@@ -1217,13 +1217,18 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               </div>
             )}
             <div class="section">
-              <h3>
-                Nearby{' '}
-                {surveyor && (
-                  <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
-                    · {dests.some((d) => s.civ.known[d.sys.id] !== 2) ? 'unsurveyed first' : 'all charted'}
-                  </span>
-                )}
+              <h3 class="row" style={{ gap: '4px' }}>
+                <span class="grow">
+                  Nearby{' '}
+                  {surveyor && (
+                    <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                      · {dests.some((d) => s.civ.known[d.sys.id] !== 2) ? 'unsurveyed first' : 'all charted'}
+                    </span>
+                  )}
+                </span>
+                <button class="btn small ghost more-dests" style={{ textTransform: 'none', letterSpacing: 0 }} onClick={() => sendFromSystems(s, f)} data-tip="Choose from the Systems window: our settlements, every surveyed world and the collision stars, near or far.">
+                  More in Systems…
+                </button>
               </h3>
               {surveyor && !dests.some((d) => s.civ.known[d.sys.id] !== 2) && (
                 <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>

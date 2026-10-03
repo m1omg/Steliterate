@@ -158,6 +158,28 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     resolve +2). A choice's `hint` may be a function of the moment: read it with `choiceHint`
     (the event window and the autoplayer do). The autoplayer (`clockTooDear` in `auto.ts`) pays
     for a clock only while half its store would remain.
+  - **Following on** (3 Oct): while a clock runs, `starClockTerms` prices a star that outlasts it
+    as a fresh clock at `from` = `star_until`, at our own pace, never below `STAR_FOLLOW_MIN`
+    (250; `floor` says the floor set it) and still capped at a full store; `after` names the star
+    it follows. `keepTimeWithStar` then sets `civ.flags.star_next` (the queued star's `diesAt`)
+    instead of the clock; `clearStarClock`, when the clock has run out, starts the queued one
+    (`stepTurns` calls it too, so forecasts follow). One waits at a time. `why` says why there is
+    no clock (`this`, `waiting`, `inside`, `unneeded`, `brief`, `gone`), for the event texts.
+    `starClock` also gives `left`, `next` and `nextId` (Pace chip "then …", tab chip "next").
+    Study it / Watch the flash chart the system (`studyStar(s, d)`); keeping time charts it.
+  - **White dwarf cooling** (3 Oct, `physics.ts`): `coldDwarfK(years)` (20 K at 1e15, Mestel
+    T ∝ t^-0.35, clamped 5–20 K), `DWARF_COLD_AT` (5.2e16, where it reaches 5 K), `dwarfGlow`
+    (light share by T⁴, 1 → 0), `emberShare(p, years)` (1 to η 22, linear to 0 at 25; 0 off the
+    halo or not a white dwarf), `dwarfRadius`. Unwarmed Degenerate white dwarfs: T =
+    `coldDwarfK`, light 0.01 + (0.05·gf − 0.01)·glow + rek, L = (T/5772)⁴ r²; embers T = max(cold,
+    63·share^¼), L = max(cold, 4e-12·share), light unchanged. `evolveUniverse` turns a non-Dusk
+    white dwarf black once `to ≥ DWARF_COLD_AT` and `emberShare` is 0 (replaces the η 25.5 rule).
+    Rekindled white dwarfs read 300 K. `galaxyView` `nodeColor` and `systemView` blend by glow
+    and share. Tested and not shipped: cast-out embers losing `halo` (see CHANGELOG).
+  - **Record and Systems window** (3 Oct): `resolveEvent` logs `Title (System): choice.` with the
+    system id. The Systems window takes `send` (a stationed fleet's id): `sendFromSystems(s, f)`
+    opens it (collision stars first while any burn), `SendButton` orders a move and shows the
+    fleet. Opened from the fleet panel's More in Systems… (`.more-dests`) and the ship prompt.
 - **`src/game/sim/hunger.ts`, `swarmsHunt`:** swarms catch ships stopped at their star where we have
   no settlement (`HUNT_AWAKE` 0.7, `HUNT_ASLEEP` 0.2 a turn, ×0.5 under Blackout; skipped on the
   first-swarm turn and under Communion). It runs after `firstSwarm` and before `autoExplore`, so
@@ -347,3 +369,5 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | `4fe2404` | 167 | keep time with new stars, like a flare, free; the autoplayer keeps time with every one it can (about 12 a game): Degenerate Age 127 turns on average (44), games 276 (183), victories 117 (18); 74 games now survive, 40 no longer |
 | `d005b05` | 147 | free within 100× of the next turn, then 250 energy a tenfold, at most a full store; Study/Watch +25 insight, +2 resolve; the autoplayer pays only while half its store would remain (2.3 free and 1.9 paid clocks a game, mean price 541): Degenerate Age 68 turns, victories 52. Variants, 300 games each (survive, victories, Degenerate turns): Study/Watch only 130/26/45; free in-tune clocks only 146/44/55; 100 a tenfold 165/79/88; 150 160/67/79; 400 154/55/61; uncapped 20, 40, 60: 161/106/114, 171/98/104, 163/81/99 |
 | collisions end with the galaxy | 140 | brown-dwarf collisions taper over the evaporation (η 18.4–21) and stop after; 52 victories, Degenerate Age 67 turns; 241 games end as at `d005b05` |
+| white dwarfs cool | 135 | unwarmed white dwarfs cool to 5 K by η 16.7 and turn black; 900 games 425 / 159 victories / 68 Degenerate turns, against 432 / 159 / 68 at `6d734aa`; cast-out embers going cold (not shipped) 430 / 145 / 64 |
+| follow a new star on | 153 | a second star's clock after the first, never below 250 energy; Study charts; 59 victories, Degenerate Age 77 turns; 900 games 453 / 166 / 77. Variants (300): no follow-on 146 / 54 / 67; free chaining at the fresh price 152 / 72 / 87 (900: 461 / 214 / 88); one follow-on per chain 149 / 68 / 80; floor and one per chain 150 / 55 / 73 |

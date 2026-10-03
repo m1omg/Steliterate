@@ -9,7 +9,7 @@ import type { Fleet, GameState } from '../../game/types';
 import { Icon } from '../Icon';
 import { BEACON_TIP, isBeacon } from '../labels';
 import { act, rev } from '../store';
-import { goToFleet, pickOnMap, pivotToSystem } from '../screens/Lists';
+import { goToFleet, pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { sfx } from '../../audio/sfx';
 import { researchPrompt } from './ResearchPrompt';
 
@@ -118,6 +118,13 @@ export function ShipPrompt({ s }: { s: GameState }) {
         )}
         <button class="btn small" onClick={() => pickOnMap(f)} data-tip="Pick any star on the galaxy map as its destination">
           <Icon name="move" /> Choose on map
+        </button>
+        <button
+          class="btn small"
+          data-tip="Choose from the Systems window: our settlements, every surveyed world and the collision stars, near or far"
+          onClick={() => sendFromSystems(s, f)}
+        >
+          <Icon name="system" /> From Systems…
         </button>
         <button class="btn small ghost" onClick={() => pivotToSystem(here.id, true)} data-tip={`Step inside ${here.name} to see its worlds`}>
           <Icon name="system" /> Look inside

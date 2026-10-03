@@ -48,7 +48,9 @@ export function resolveEvent(state: GameState, eventUid: string, choiceIndex: nu
   if (choice.ok && !choice.ok(state, p.data)) return { ok: false, text: 'That is not possible now.' };
   const out = withRng(state, (rng) => choice.run(state, p.data, rng));
   state.pending.splice(idx, 1);
-  log(state, `${def.title}: ${choice.label}.`, 'event');
+  // name the star the event was about, and let the entry show it
+  const sys = p.data.systemId !== undefined ? state.systems[String(p.data.systemId)] : undefined;
+  log(state, `${def.title}${sys ? ` (${sys.name})` : ''}: ${choice.label}.`, 'event', sys?.id);
   // remember what we chose at a discovery, so its report can be read again with the world
   const at = p.data.bodyId !== undefined ? state.bodies[String(p.data.bodyId)] : undefined;
   if (at && /^(relic|anom)_/.test(p.defId)) (at.lore ??= {})[p.defId] = choice.label;

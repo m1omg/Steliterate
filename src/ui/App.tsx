@@ -75,7 +75,7 @@ function ModalHost({ s }: { s: GameState | null }) {
     case 'fleets':
       return <FleetsModal s={s} />;
     case 'settlements':
-      return <SystemsModal s={s} tab={m.tab} />;
+      return <SystemsModal s={s} tab={m.tab} send={m.send} />;
     case 'charters':
       return <ChartersModal s={s} />;
     case 'threads':

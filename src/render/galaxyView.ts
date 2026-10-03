@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { fleetLook, lookRole, type FleetLook } from '../game/data/ships';
-import { diskLight, primaryTemperature } from '../game/physics';
+import { diskLight, dwarfGlow, emberShare, primaryTemperature } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
 import { Rng, hashSeed } from '../game/rng';
@@ -632,7 +632,14 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   if (k === 'brown_dwarf') return [0.62, 0.3, 0.28];
   if (k === 'black_dwarf') return s.primary.rekindle ? [0.9, 0.45, 0.25] : [0.3, 0.3, 0.34];
   const tK = primaryTemperature(s.primary, state.years, state.era);
-  if (k === 'white_dwarf' && state.era !== 'dusk') return s.primary.halo && state.eta < 25 ? [0.55, 0.62, 0.8] : [0.35, 0.37, 0.45];
+  if (k === 'white_dwarf' && state.era !== 'dusk') {
+    // greying toward a black dwarf as it cools; an ember blue-white while the halo warms it
+    if (s.primary.rekindle) return [0.9, 0.45, 0.25];
+    const g = dwarfGlow(state.years);
+    const e = emberShare(s.primary, state.years);
+    const cold = [0.3 + 0.05 * g, 0.3 + 0.07 * g, 0.34 + 0.11 * g];
+    return [cold[0] + (0.55 - cold[0]) * e, cold[1] + (0.62 - cold[1]) * e, cold[2] + (0.8 - cold[2]) * e];
+  }
   const [r, g, b] = blackbody(Math.max(1800, tK));
   const boost = k === 'red_dwarf' || k === 'collision_star' ? 1.0 : 1.2;
   return [r * boost, g * boost, b * boost];

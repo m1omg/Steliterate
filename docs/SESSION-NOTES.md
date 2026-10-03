@@ -7,7 +7,9 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 ## How the player (m1omg) likes to work
 
 - **Spoilers:** keep answers about the game spoiler-light. Never spoil the Lattice's story or
-  ending, or the stranger minds met later.
+  ending, or the stranger minds met later. Since 3 Oct: say nothing about the Black Hole Age or
+  later ages unless asked ("I intentionally didn't read the black hole part since I hadn't reached
+  it yet. I want to be a bit of surprise").
 - **Design taste:** likes surprises and non-standard 4X design. The fourth X is **Endure**
   (explore, expand, exploit, endure). Predetermined events every game are not wanted; variety
   and chance are.
@@ -75,6 +77,27 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   explosion rather than something where you can settle" for slow civilizations); they chose to
   keep six turns. They thought the price might need to be 100 or more: it is 250 (capped at a full
   store), and the harness puts us at 140 of 300.
+- **3 Oct, white dwarfs keep cooling** (asked, in plan mode: embers "should stay at 63K yes but the
+  rest should continue cooling though I don't want to break the game"): done. Unwarmed dwarfs
+  cool by Mestel's law from 20 K to 5 K by η 16.7 and then become black dwarfs (they asked why a
+  5 K white dwarf was not one: no reason, so now it is). Embers unchanged except that their
+  shown temperature falls during the halo's fade. They asked how long embers last (they know
+  Adams & Laughlin's point that the WIMPs run out): η 22 to 25 is the right order, but a dwarf
+  cast out of the galaxy leaves the halo. **Pending decision:** they chose to test that first;
+  cast-out embers going cold give 900 games 430 / 145 victories / 64 Degenerate turns against
+  425 / 159 / 68. Not shipped; ask them (patch: clear `halo` when a system is ejected).
+- **3 Oct, following a new star on, and more** (from a turn-93 screenshot while keeping time with
+  one star: the text mixed "too slow" with "not needed"; "should have an option to extend the
+  fast time period"; "observing but not revealing on map doesnt make sense but i dunno how to make
+  the choices balanced"; "record should say collision star name"; ships should be able to pick
+  from the Systems window). Done: a star that outlasts the one we keep time with can be followed
+  on (fresh price from our own pace, never below 250; freely chained it made the game much easier,
+  see CHANGELOG); Study it charts the system and Race for it at our own pace went (it only
+  charted); the Record names the system; Send buttons in the Systems window. If they want it
+  stricter: one follow-on per chain (300 games 150 / 55 / 73).
+- **3 Oct, open: "quickening tech should let you slow even slower than collision star pace."**
+  Not built: it touches the pace and strain rules. Ask what they mean (pace buttons that work
+  during a star clock, or a pace range reaching below a collision star's turns) before building.
 - **Living worlds around dead stars (29 Sep): done** at the player's word ("yes, make them
   freeze"), `7b52ab4`; cold-generated living worlds fixed too (`b950f24`, "fix all the things").
 - **29 Sep, "fix all the things but rust stays":** rust stays permanent (a scar where the Hunger
