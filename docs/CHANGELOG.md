@@ -522,3 +522,8 @@ belongs to another organization.
   in" (they rank it first), and, of the same mistake, its Orbit reads "none: adrift" and it no
   longer wears a "Tidally locked" chip. Display only: all 300 harness games identical (148 / 58 /
   68).
+- **Tamed swarms look tamed on the galaxy map** (4 Oct; the player: "are the swarms supposed to
+  stay red on the galactic map because in the solar system they're blue"). The map drew every
+  swarm's motes with one red; each mote now carries whether its swarm answers to us, and a
+  tamed swarm's flash the system view's teal. The rust ring a swarm leaves where it fed stays
+  red, as before. Display only.

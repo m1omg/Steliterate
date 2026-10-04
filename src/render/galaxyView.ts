@@ -132,9 +132,11 @@ const NODE_FRAG = /* glsl */ `
 const SWARM_VERT = /* glsl */ `
   attribute vec3 aCenter;
   attribute vec4 aParams; // x: phase, y: radius, z: speed, w: size of swarm
+  attribute float aTamed; // 1 for a swarm that answers to us
   uniform float uTime;
   uniform float uPixel;
   varying float vFlick;
+  varying float vTamed;
   // murmuration: every mote follows the same few slow waves, so the flock moves as one
   void main() {
     float t = uTime * aParams.z;
@@ -150,18 +152,21 @@ const SWARM_VERT = /* glsl */ `
     gl_Position = projectionMatrix * mv;
     gl_PointSize = clamp(2.2 * uPixel * (1.0 + 30.0 / max(6.0, -mv.z)), 1.0, 6.0 * uPixel);
     vFlick = 0.5 + 0.5 * sin(uTime * 5.0 + p * 31.0);
+    vTamed = aTamed;
   }
 `;
 
 const SWARM_FRAG = /* glsl */ `
   uniform vec3 uColor;
+  uniform vec3 uTamedColor;
   uniform float uOpacity;
   varying float vFlick;
+  varying float vTamed;
   void main() {
     vec2 c = gl_PointCoord - 0.5;
     if (length(c) > 0.5) discard;
-    // dark motes, catching dull red light now and then
-    vec3 col = mix(vec3(0.05, 0.03, 0.03), uColor, step(0.82, vFlick));
+    // dark motes, catching dull red light now and then (a tamed swarm's, the system view's teal)
+    vec3 col = mix(vec3(0.05, 0.03, 0.03), mix(uColor, uTamedColor, vTamed), step(0.82, vFlick));
     gl_FragColor = vec4(col, uOpacity * (0.55 + 0.45 * vFlick));
   }
 `;
@@ -230,7 +235,7 @@ export class GalaxyView {
     this.swarmMat = new THREE.ShaderMaterial({
       vertexShader: SWARM_VERT,
       fragmentShader: SWARM_FRAG,
-      uniforms: { uTime: { value: 0 }, uPixel: { value: 1 }, uColor: { value: new THREE.Color('#c0482c') }, uOpacity: { value: 0.9 } },
+      uniforms: { uTime: { value: 0 }, uPixel: { value: 1 }, uColor: { value: new THREE.Color('#c0482c') }, uTamedColor: { value: new THREE.Color('#4fe3d1') }, uOpacity: { value: 0.9 } },
       transparent: true,
       depthWrite: false,
     });
@@ -507,6 +512,7 @@ export class GalaxyView {
     }
     const centers: number[] = [];
     const params: number[] = [];
+    const tamed: number[] = [];
     const pos: number[] = [];
     for (const sw of Object.values(state.swarms)) {
       if (!sw.awake && !sw.tamed) continue;
@@ -529,6 +535,7 @@ export class GalaxyView {
         centers.push(c.x, c.y, c.z);
         pos.push(c.x, c.y, c.z);
         params.push(Math.random() * 100, rad * (0.4 + Math.random() * 0.8), 0.4 + Math.random() * 0.25, sw.size);
+        tamed.push(sw.tamed ? 1 : 0);
       }
     }
     if (!centers.length) return;
@@ -536,6 +543,7 @@ export class GalaxyView {
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('aCenter', new THREE.Float32BufferAttribute(centers, 3));
     g.setAttribute('aParams', new THREE.Float32BufferAttribute(params, 4));
+    g.setAttribute('aTamed', new THREE.Float32BufferAttribute(tamed, 1));
     this.swarmPts = new THREE.Points(g, this.swarmMat);
     this.swarmPts.frustumCulled = false;
     this.group.add(this.swarmPts);
