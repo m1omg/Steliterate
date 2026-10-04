@@ -527,3 +527,10 @@ belongs to another organization.
   swarm's motes with one red; each mote now carries whether its swarm answers to us, and a
   tamed swarm's flash the system view's teal. The rust ring a swarm leaves where it fed stays
   red, as before. Display only.
+- **Removing a queued build hands back everything paid** (4 Oct; the player: "even when you queue
+  a building and then you cancel your selection, you don't get the upfront cost back"). Removing
+  an item from a build queue returned half the materials, at that day's price. It now returns all
+  of what was paid when it was queued, recorded on the item (`QueueItem.paid`, optional: an item
+  from an older save comes back at today's full price); the industry already put into it is still
+  lost. The autoplayer removes queued items only to make room for re-encoding before the protons
+  go. Balance, 300 games: 148 survive, 58 victories, a Degenerate Age of 68 turns (unchanged).

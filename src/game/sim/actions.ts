@@ -93,7 +93,7 @@ export function queueBuild(state: GameState, colonyId: string, kind: 'structure'
   if (c.queue.length >= 6) return 'The queue is full.';
   state.civ.matter -= cost.matter;
   state.civ.energy -= cost.energy;
-  c.queue.push({ uid: uid(state, 'q'), kind, key, progress: 0, cost: cost.industry });
+  c.queue.push({ uid: uid(state, 'q'), kind, key, progress: 0, cost: cost.industry, paid: { matter: cost.matter, energy: cost.energy } });
   return null;
 }
 
@@ -127,11 +127,13 @@ export function removeQueued(state: GameState, colonyId: string, qid: string): A
   const i = c.queue.findIndex((q) => q.uid === qid);
   if (i < 0) return 'Not in the queue.';
   const q = c.queue[i];
+  // everything paid up front comes back (the work already put in does not); an item queued
+  // before this was recorded is refunded at today's price
   const def = q.kind === 'structure' ? STRUCTURE_BY_ID[q.key] : SHIP_BY_ID[q.key];
-  if (def) {
-    const cost = buildCost(state, def, q.kind === 'ship');
-    state.civ.matter += cost.matter * 0.5;
-    state.civ.energy += cost.energy * 0.5;
+  const paid = q.paid ?? (def ? buildCost(state, def, q.kind === 'ship') : null);
+  if (paid) {
+    state.civ.matter += paid.matter;
+    state.civ.energy += paid.energy;
   }
   c.queue.splice(i, 1);
   return null;

@@ -146,6 +146,8 @@ export interface QueueItem {
   key: string;
   progress: number;
   cost: number;
+  /** What was paid up front when it was queued, all of it handed back if it is removed (older saves: absent). */
+  paid?: { matter: number; energy: number };
 }
 
 export interface YieldLine {

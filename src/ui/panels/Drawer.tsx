@@ -914,7 +914,7 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
                 <span class="mono faint" style={{ fontSize: '11px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
                 <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>
                 <button class="btn ghost small" aria-label="Move down" data-tip="Build this later (move down the queue)" disabled={i === c.queue.length - 1} onClick={() => act((g) => moveQueued(g, c.id, q.uid, 1))}>▼</button>
-                <button class="btn ghost small" aria-label="Remove" data-tip="Remove (half the materials come back)" onClick={() => act((g) => removeQueued(g, c.id, q.uid))}>
+                <button class="btn ghost small" aria-label="Remove" data-tip="Remove: everything paid up front comes back (work already done here is lost)" onClick={() => act((g) => removeQueued(g, c.id, q.uid))}>
                   <Icon name="close" />
                 </button>
               </div>
