@@ -541,3 +541,16 @@ belongs to another organization.
   quakes crack the settlement's hearth instead (hearth damage +30%, healing 2% a turn out of
   overdrive). Being pulled loose is unchanged. Balance, 300 games: 148 / 58 / 68 (unchanged: the
   autoplayer never answers them).
+- **Spare work and a Matter focus** (4 Oct; the player: "instead of producing a building … you
+  could … produce matter instead of energy. But it should be also tailored to the realities").
+  A settlement with nothing queued has always turned its spare industry into matter (0.1 a point;
+  a little energy once the protons are gone), unannounced. Its panel now has **Spare work**:
+  Recycle (that, unchanged: matter is conserved, and reusing it needs nothing new), Study
+  (insight), Tend (energy from its own collectors and hearth, at most a quarter more than they
+  make: nothing to tend, nothing gained) or Morale (resolve). Each turns spare industry into
+  about as much as the others, a tenth of what a building of that kind makes, so the choice is
+  what you need, not more of it; the panel shows what it is making. Focus gains **Matter** (+25%
+  matter from mines, skimmers and lifters; energy, industry, insight and accord −10%); the other
+  focuses leave matter alone, as before. Balance, 300 games: 148 survive, 58 victories, a
+  Degenerate Age of 68 turns (identical). Variants with every settlement on one choice: Study 152,
+  Tend 147, Morale 150 (all within noise); mining settlements on Matter 133.

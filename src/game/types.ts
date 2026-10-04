@@ -2,7 +2,9 @@
 
 export type EraId = 'dusk' | 'degenerate' | 'blackhole' | 'dark';
 export type ThreadId = 'kin' | 'echoes' | 'chorus' | 'lattice' | 'coldminds';
-export type Focus = 'balanced' | 'energy' | 'industry' | 'insight' | 'accord';
+export type Focus = 'balanced' | 'energy' | 'matter' | 'industry' | 'insight' | 'accord';
+/** What a settlement does with industry it has nothing to build with (see sim/spare.ts). */
+export type SpareWork = 'salvage' | 'study' | 'tend' | 'morale';
 export type ProtonFate = 'decays' | 'stable' | 'unknown';
 export type EpochLength = 'brief' | 'standard' | 'vast';
 export type Difficulty = 'gentle' | 'standard' | 'harsh';
@@ -182,6 +184,7 @@ export interface Colony {
   structures: Record<string, number>;
   queue: QueueItem[];
   focus: Focus;
+  spare?: SpareWork; // absent: salvage (recycling), as every settlement did before the choice
   overdrive: boolean;
   damage: number; // 0..1 hearth damage from overdrive / attacks
   starving: number; // turns in energy deficit

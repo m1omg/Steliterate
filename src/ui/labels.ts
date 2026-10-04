@@ -1,7 +1,8 @@
 import { ANOMALIES } from '../game/data/events';
 import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, boilingAway, isStarLike } from '../game/physics';
 import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
-import type { Body, BodyKind, Focus, GameState, PrimaryKind, StarSystem } from '../game/types';
+import type { Body, BodyKind, Focus, GameState, PrimaryKind, SpareWork, StarSystem } from '../game/types';
+import { SPARE_RATE, TEND_SHARE, salvageIsMatter } from '../game/sim/spare';
 import type { IconName } from './icons';
 
 export const PRIMARY_NAME: Record<PrimaryKind, string> = {
@@ -76,11 +77,29 @@ export const TRAIT_NAME: Record<string, [string, string]> = {
 
 export const FOCUS: { id: Focus; name: string; tip: string }[] = [
   { id: 'balanced', name: 'Balanced', tip: 'No particular emphasis.' },
-  { id: 'energy', name: 'Energy', tip: 'Energy +25%, everything else −10%.' },
-  { id: 'industry', name: 'Industry', tip: 'Industry +30%, everything else −10%.' },
-  { id: 'insight', name: 'Insight', tip: 'Insight +30%, everything else −10%.' },
-  { id: 'accord', name: 'Accord', tip: 'Accord +40%, everything else −10%.' },
+  { id: 'energy', name: 'Energy', tip: 'Energy +25%; industry, insight and accord −10%.' },
+  { id: 'matter', name: 'Matter', tip: 'Matter raised by mines, skimmers and lifters +25%; energy, industry, insight and accord −10%.' },
+  { id: 'industry', name: 'Industry', tip: 'Industry +30%; energy, insight and accord −10%.' },
+  { id: 'insight', name: 'Insight', tip: 'Insight +30%; energy, industry and accord −10%.' },
+  { id: 'accord', name: 'Accord', tip: 'Accord +40%; energy, industry and insight −10%.' },
 ];
+
+/** What an idle settlement can do with its spare industry, and what each point of it makes. */
+export function spareChoices(state: GameState): { id: SpareWork; name: string; tip: string }[] {
+  const late = !salvageIsMatter(state);
+  return [
+    {
+      id: 'salvage',
+      name: 'Recycle',
+      tip: late
+        ? `Reclaim what is left of our decaying matter as power: energy +${SPARE_RATE.salvageLate} per point of spare industry.`
+        : `Reuse the matter we already have (matter is conserved, and far easier to reuse than energy): matter +${SPARE_RATE.salvage} per point of spare industry.`,
+    },
+    { id: 'study', name: 'Study', tip: `Instruments, surveys and experiments: insight +${SPARE_RATE.study} per point of spare industry.` },
+    { id: 'tend', name: 'Tend', tip: `Upkeep crews get more out of this settlement’s own collectors and hearth: energy +${SPARE_RATE.tend} per point of spare industry, but never more than a ${TEND_SHARE === 0.25 ? 'quarter' : `${TEND_SHARE * 100}%`} more than they make. Nothing where there is nothing to tend.` },
+    { id: 'morale', name: 'Morale', tip: `Shared works, gatherings and memorials: resolve +${SPARE_RATE.morale} per point of spare industry.` },
+  ];
+}
 
 export const WAY_NAME: Record<string, string> = {
   garden: 'clinging to biology',

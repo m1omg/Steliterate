@@ -5,6 +5,7 @@ import { SURFACE_LIFE, evolveUniverse, lampsOver, sunGone, turnsToFreeze, vitali
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { runCrossing } from './crossing';
+import { spareYield } from './spare';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
@@ -29,8 +30,8 @@ export interface TurnResult {
   wasted: number;
 }
 
-/** Industry drives the build queue; leftover becomes salvage. */
-function applyIndustry(state: GameState, c: Colony, industry: number, mods: Mods) {
+/** Industry drives the build queue; leftover goes to the settlement's spare work. Returns the insight it made. */
+function applyIndustry(state: GameState, c: Colony, industry: number, energyMade: number, mods: Mods): number {
   let left = Math.max(industry, c.queue[0] && c.queue[0].progress >= c.queue[0].cost - 0.01 ? 0.01 : 0);
   let guard = 0;
   while (left > 0 && c.queue.length && guard++ < 8) {
@@ -64,11 +65,13 @@ function applyIndustry(state: GameState, c: Colony, industry: number, mods: Mods
       }
     }
   }
-  if (left > 0 && !c.queue.length && !state.civ.dormant) {
-    if (!state.protonsDecay || state.era === 'dusk' || state.era === 'degenerate') state.civ.matter += left * 0.1;
-    else state.civ.energy += left * 0.05;
-  }
   void mods;
+  if (!(left > 0) || c.queue.length || state.civ.dormant) return 0;
+  const y = spareYield(state, c, left, energyMade);
+  state.civ.matter += y.matter;
+  state.civ.energy += y.energy;
+  if (y.resolve) state.civ.resolve = clamp(state.civ.resolve + y.resolve, 0, 100);
+  return y.insight;
 }
 
 function declineWorlds(state: GameState) {
@@ -188,7 +191,7 @@ export function endTurn(state: GameState): TurnResult {
       const d = STRUCTURE_BY_ID[id];
       if (d?.gfeDrain && n) state.gfe = Math.max(0.05, state.gfe - d.gfeDrain * n * ctx.paceFactor);
     }
-    applyIndustry(state, c, t.y.industry, mods);
+    insight += applyIndustry(state, c, t.y.industry, t.y.energy, mods);
   }
   eIn += jointIncome(state) * ctx.paceFactor;
   eOut += researchDraw(state, insight);

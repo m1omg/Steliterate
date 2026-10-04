@@ -2,7 +2,7 @@ import { CHARTER_BY_ID, CHARTERS } from '../data/charters';
 import { SHIP_BY_ID, SHIPS, type ShipDef } from '../data/ships';
 import { STRUCTURE_BY_ID, STRUCTURES, type StructureDef } from '../data/structures';
 import { WORK_BY_ID } from '../data/works';
-import type { Colony, Focus, GameState } from '../types';
+import type { Colony, Focus, GameState, SpareWork } from '../types';
 import { capacity } from './economy';
 import { workRequirementMet } from './endings';
 import { resolveEvent } from './events';
@@ -153,6 +153,14 @@ export function setFocus(state: GameState, colonyId: string, focus: Focus): Acti
   const c = state.colonies[colonyId];
   if (!c) return 'No such settlement.';
   c.focus = focus;
+  return null;
+}
+
+export function setSpare(state: GameState, colonyId: string, spare: SpareWork): ActionResult {
+  const c = state.colonies[colonyId];
+  if (!c) return 'No such settlement.';
+  if (spare === 'salvage') delete c.spare;
+  else c.spare = spare;
   return null;
 }
 

@@ -24,11 +24,13 @@ import {
   rushBuild,
   rushCost,
   setFocus,
+  setSpare,
   tame,
   toggleOverdrive,
   type Conversion,
 } from '../../game/sim/actions';
 import { capacity } from '../../game/sim/economy';
+import { spareYield } from '../../game/sim/spare';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
@@ -40,7 +42,7 @@ import { THREADS } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { FOCUS, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
+import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
 import { act, engine, following, notify, rev, selection, targeting, view } from '../store';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
@@ -765,6 +767,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                 </button>
               )}
             </div>
+            <SpareSection s={s} c={c} />
             <div class="section">
               <h3>Structures</h3>
               <div class="row wrap" style={{ gap: '4px' }}>
@@ -1302,6 +1305,30 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
 }
 
 // ------------------------------------------------------------------ swarm
+
+/** What the settlement does with its industry when nothing is queued. */
+function SpareSection({ s, c }: { s: GameState; c: Colony }) {
+  const choices = spareChoices(s);
+  const on = c.spare ?? 'salvage';
+  const ind = c.last?.industry ?? 0;
+  const y = spareYield(s, c, ind, c.last?.energy ?? 0);
+  const made = [y.matter && `+${n1(y.matter)} matter`, y.energy && `+${n1(y.energy)} energy`, y.insight && `+${n1(y.insight)} insight`, y.resolve && `+${y.resolve.toFixed(2)} resolve`].filter(Boolean).join(', ');
+  return (
+    <div class="section">
+      <h3 data-tip="What this settlement does with its industry when there is nothing in its build queue. Each choice turns spare industry into about as much as the others: a tenth of what a building of that kind would make.">Spare work</h3>
+      <div class="seg">
+        {choices.map((x) => (
+          <button key={x.id} class={`btn small ${on === x.id ? 'primary' : ''}`} data-tip={x.tip} onClick={() => act((g) => setSpare(g, c.id, x.id))}>
+            {x.name}
+          </button>
+        ))}
+      </div>
+      <div class="faint" style={{ fontSize: '11px', marginTop: '4px' }}>
+        {c.queue.length ? 'Used when nothing is queued here.' : `Nothing queued: about ${n1(ind)} spare industry a turn${made ? `, making ${made}` : ', making nothing here'}.`}
+      </div>
+    </div>
+  );
+}
 
 function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
   void rev.value; // mutable game state: re-render on every change

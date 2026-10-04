@@ -62,9 +62,9 @@ export interface ColonyTurn {
   depletion: number; // matter extracted from the body's finite deposits
 }
 
-function focusMul(c: Colony, key: 'energy' | 'industry' | 'insight' | 'accord'): number {
+function focusMul(c: Colony, key: 'energy' | 'matter' | 'industry' | 'insight' | 'accord'): number {
   if (c.focus === 'balanced') return 1;
-  if (c.focus === key) return key === 'accord' ? 1.4 : key === 'energy' ? 1.25 : 1.3;
+  if (c.focus === key) return key === 'accord' ? 1.4 : key === 'energy' || key === 'matter' ? 1.25 : 1.3;
   return 0.9;
 }
 
@@ -201,7 +201,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     if (d.hydrogenYield) mt += d.hydrogenYield * n * body.hydrogen * gfeMatter;
     if (d.lift) mt += d.lift * n * gfeMatter;
     if (mt) {
-      mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1);
+      // only its own focus touches matter: the others leave it as it was
+      mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1);
       depletion += (d.matterYield || d.hydrogenYield ? mt : 0);
       if (!state.protonsDecay || eraIndex(state.era) < 2) matter += mt;
     }
