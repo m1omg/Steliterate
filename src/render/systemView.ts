@@ -607,7 +607,8 @@ export class SystemView {
     this.swarm = new THREE.Points(g, this.swarmMat);
     this.swarm.frustumCulled = false;
     this.group.add(this.swarm);
-    this.pickables.push({ kind: 'swarm', id: sw.id, pos: (this.swarmMat.uniforms.uCenter.value as THREE.Vector3).clone() });
+    // a click anywhere on its cloud picks it (motes spread about 6 + 0.6·size units around the centre)
+    this.pickables.push({ kind: 'swarm', id: sw.id, pos: (this.swarmMat.uniforms.uCenter.value as THREE.Vector3).clone(), radius: (6 + sw.size * 0.6) * 1.2 });
   }
 
   private buildFleets(state: GameState, sys: StarSystem) {

@@ -28,6 +28,8 @@ export interface Followed {
   keepZoom?: boolean;
 }
 
+/** How a click on a swarm's cloud scores against things near the pointer (0 = right on it, 1 = at the edge of reach). */
+const SWARM_HAZE = 0.5;
 /** Zooming the galaxy view closer than this dives into the system at the focus. */
 const ENTER_ZOOM = 12;
 /** How far past a system view's widest zoom the player must push to leave it (log scale). */
@@ -472,9 +474,11 @@ export class Engine {
       const disc = p.radius ? (p.radius * pxPerUnit) / Math.max(1e-3, depth) : 0;
       const within = Math.max(reach, disc + 4);
       if (d > within) continue;
-      // inside a disc, the nearer body wins (it is in front); otherwise the closest to the pointer
+      // inside a disc, the nearer body wins (it is in front); otherwise the closest to the pointer.
+      // A swarm's cloud is only a haze: anywhere on it picks the swarm, but a star or ship right
+      // under the pointer (within half the reach) still wins over it.
       const inside = disc > 0 && d <= disc + 4;
-      const score = inside ? -1 : d / within;
+      const score = inside ? (p.kind === 'swarm' ? SWARM_HAZE : -1) : d / within;
       if (score < bestScore || (inside && score === bestScore && depth < bestDepth)) {
         bestScore = score;
         bestDepth = depth;

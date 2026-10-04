@@ -244,6 +244,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   Solar Arrays × insolation. Focus: Matter (+25%) touches only matter raised by mines, skimmers
   and lifters; no other focus touches matter (the −10% applies to energy, industry, insight and
   accord).
+- **Picking (`Engine.pickAt`, `src/render/engine.ts`):** a pickable with `radius` counts anywhere
+  on its disc; a body's disc wins outright (score −1), but a swarm's cloud (`radius` 1.2× its
+  drawn spread, in both views) only scores `SWARM_HAZE` (0.5), so a star, ship or world within half
+  the reach of the pointer (8 px on the galaxy map, 13 px in a system) still wins over the haze.
 - **`src/game/sim/accord.ts`:** accord's uses beyond charters, in the Threads window: Rally
   (resolve +3, 80 accord), Calm (dissent −4, 60), Hear them (one Thread's standing +5, 50). Each
   once a turn; the price doubles per use (`acc_<use>_heat` in `civ.flags`, `acc_hear_<thread>`

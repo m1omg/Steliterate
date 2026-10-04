@@ -574,3 +574,8 @@ belongs to another organization.
   Only a settlement with nothing queued and nothing chosen is called idle, and the reminder opens
   its Build tab; the Systems list says what each is working on. Interface only: the rules and the
   harness are unchanged.
+- **A swarm can be clicked anywhere on its cloud** (4 Oct; the player: "It shows me it on the map,
+  but I cannot really click it"). A swarm was picked only at one point just above its star, so on
+  the galaxy map the star nearly always won. Now a click anywhere on its cloud picks it, on the map
+  and inside a system; a star, ship or world right under the pointer still wins. (A star's panel
+  also lists its swarms under In orbit.) Interface only.

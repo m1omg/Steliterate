@@ -528,9 +528,10 @@ export class GalaxyView {
         c = new THREE.Vector3(a.pos.x + (b.pos.x - a.pos.x) * u, a.pos.y + (b.pos.y - a.pos.y) * u, a.pos.z + (b.pos.z - a.pos.z) * u);
       }
       if (!c) continue;
-      this.pickables.push({ kind: 'swarm', id: sw.id, pos: c.clone() });
       const n = Math.round(80 + sw.size * 30);
       const rad = 2.5 + Math.sqrt(sw.size) * 1.6;
+      // a click anywhere on its cloud picks it (the star it hangs over still wins right on the star)
+      this.pickables.push({ kind: 'swarm', id: sw.id, pos: c.clone(), radius: rad * 1.2 });
       for (let i = 0; i < n; i++) {
         centers.push(c.x, c.y, c.z);
         pos.push(c.x, c.y, c.z);
