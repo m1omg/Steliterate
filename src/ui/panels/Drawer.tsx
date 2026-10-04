@@ -742,7 +742,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                 <dd class="mono">{pct(b.coreHeat)}</dd>
                 {c.damage > 0.01 && (
                   <>
-                    <dt data-tip="Damage to the settlement's hearth from overdrive and attacks.">Hearth damage</dt>
+                    <dt data-tip="Damage to the settlement's hearth from overdrive, attacks and quakes. It heals by 2% a turn when not in overdrive.">Hearth damage</dt>
                     <dd class="mono bad">{pct(c.damage)}</dd>
                   </>
                 )}

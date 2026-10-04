@@ -201,8 +201,14 @@ function misread(state: GameState, rand: () => number) {
   const b = state.bodies[c.bodyId];
   const r = rand();
   if (r < 0.45) {
-    b.vitality = Math.max(0, b.vitality - 0.1);
-    log(state, `Their reply shook ${b.name}. Quakes, lost air, a thinner sky.`, 'bad', c.systemId);
+    if (b.vitality > 0) {
+      b.vitality = Math.max(0, b.vitality - 0.1);
+      log(state, `Their reply shook ${b.name}. Quakes, lost air, a thinner sky.`, 'bad', c.systemId);
+    } else {
+      // a world with no life left to lose: the quakes crack the settlement's hearth instead
+      c.damage = Math.min(1, c.damage + 0.3);
+      log(state, b.kind === 'deep' ? `Their reply wrenched ${c.name}: its hearth is cracked.` : `Their reply shook ${b.name}. Quakes cracked the hearth at ${c.name}.`, 'bad', c.systemId);
+    }
   } else if (r < 0.8) {
     const alive = (['kin', 'echoes', 'lattice', 'chorus', 'coldminds'] as const).filter((t) => c.pops[t] > 0);
     if (alive.length) c.pops[alive[Math.floor(rand() * alive.length)]]--;

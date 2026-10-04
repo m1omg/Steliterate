@@ -534,3 +534,10 @@ belongs to another organization.
   from an older save comes back at today's full price); the industry already put into it is still
   lost. The autoplayer removes queued items only to make room for re-encoding before the protons
   go. Balance, 300 games: 148 survive, 58 victories, a Degenerate Age of 68 turns (unchanged).
+- **A halo quake on a lifeless world cracks the hearth** (4 Oct; the player: "when it happens in
+  the Black Hole era, there is nothing to lose really"). A misread answer to the Unlit can shake a
+  settlement's world, costing it 10% of its life; but every settled world is lifeless by the time
+  they answer, so it did nothing. A world with life left still loses it; on one without, the
+  quakes crack the settlement's hearth instead (hearth damage +30%, healing 2% a turn out of
+  overdrive). Being pulled loose is unchanged. Balance, 300 games: 148 / 58 / 68 (unchanged: the
+  autoplayer never answers them).
