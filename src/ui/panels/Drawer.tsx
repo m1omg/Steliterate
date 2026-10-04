@@ -30,7 +30,7 @@ import {
   type Conversion,
 } from '../../game/sim/actions';
 import { capacity } from '../../game/sim/economy';
-import { spareYield } from '../../game/sim/spare';
+import { spareYield, type SpareYield } from '../../game/sim/spare';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
@@ -43,7 +43,7 @@ import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
-import { act, engine, following, notify, rev, selection, targeting, view } from '../store';
+import { act, engine, following, notify, openBuildFor, rev, selection, targeting, view } from '../store';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { loreView } from '../screens/Story';
@@ -629,6 +629,13 @@ const CONVERSIONS: { id: Conversion; label: string; icon: 'upload' | 'merge' | '
 function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   void rev.value; // mutable game state: re-render on every change
   const [tab, setTab] = useState<'overview' | 'build'>('overview');
+  // the idle-settlements reminder opens the Build tab, where a settlement is given work
+  const wantBuild = openBuildFor.value;
+  useEffect(() => {
+    if (wantBuild !== c.id) return;
+    setTab('build');
+    openBuildFor.value = null;
+  }, [wantBuild, c.id]);
   const b = s.bodies[c.bodyId];
   const sys = s.systems[c.systemId];
   const mods = computeMods(s);
@@ -767,7 +774,6 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                 </button>
               )}
             </div>
-            <SpareSection s={s} c={c} />
             <div class="section">
               <h3>Structures</h3>
               <div class="row wrap" style={{ gap: '4px' }}>
@@ -786,7 +792,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
             </div>
           </>
         ) : (
-          <BuildTab s={s} c={c} industry={y?.industry ?? 0} />
+          <BuildTab s={s} c={c} industry={y?.industry ?? 0} energyMade={y?.energy ?? 0} />
         )}
       </div>
     </>
@@ -872,7 +878,7 @@ function KindIcon({ id }: { id: string }) {
 /** Which kind of structure the build list shows (kept while moving between settlements). */
 const buildKind = signal<StructureKind | 'all'>('all');
 
-function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: number }) {
+function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; industry: number; energyMade: number }) {
   void rev.value; // mutable game state: re-render on every change
   const [kind, setKind] = useState<'structure' | 'ship'>('structure');
   const rc = rushCost(s, c.id);
@@ -896,7 +902,7 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
     <>
       <div class="section" style={{ marginTop: 0 }}>
         <h3>Queue <span class="mono faint" style={{ letterSpacing: 0 }}>{n1(industry)} industry/turn</span></h3>
-        {c.queue.length === 0 && <div class="faint" style={{ fontSize: '12px' }}>Idle. Choose something below.</div>}
+        {c.queue.length === 0 && <WorkingOn s={s} c={c} industry={industry} energyMade={energyMade} />}
         {c.queue.map((q, i) => {
           const def = q.kind === 'structure' ? STRUCTURE_BY_ID[q.key] : SHIP_BY_ID[q.key];
           acc += q.cost - q.progress;
@@ -931,6 +937,7 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
           </button>
         )}
       </div>
+      <SpareChoice s={s} c={c} industry={industry} energyMade={energyMade} />
       <div class="section">
         <div class="row" style={{ gap: '4px', marginBottom: '6px' }}>
           <button class={`btn small ${kind === 'structure' ? 'primary' : ''}`} onClick={() => setKind('structure')}>Structures</button>
@@ -988,6 +995,50 @@ function BuildTab({ s, c, industry }: { s: GameState; c: Colony; industry: numbe
         </div>
       </div>
     </>
+  );
+}
+
+/** What a turn of spare work makes, in words ("+1.0 insight a turn"), or null for nothing. */
+function spareMade(y: SpareYield): string | null {
+  const parts = [y.matter && `+${n1(y.matter)} matter`, y.energy && `+${n1(y.energy)} energy`, y.insight && `+${n1(y.insight)} insight`, y.resolve && `+${y.resolve.toFixed(2)} resolve`].filter(Boolean);
+  return parts.length ? `${parts.join(', ')} a turn` : null;
+}
+
+/** With nothing queued: what the settlement is working on instead, and what it makes. */
+function WorkingOn({ s, c, industry, energyMade }: { s: GameState; c: Colony; industry: number; energyMade: number }) {
+  const work = spareChoices(s).find((x) => x.id === (c.spare ?? 'salvage'))!;
+  const made = spareMade(spareYield(s, c, industry, energyMade));
+  return (
+    <div style={{ fontSize: '12px' }}>
+      <div class="faint">Nothing queued.</div>
+      <div data-tip={work.tip}>
+        Working on: <b>{work.name}</b>
+        {c.spare ? '' : ' (by default: choose below)'} · {made ?? 'nothing comes of it here'}
+      </div>
+    </div>
+  );
+}
+
+/** What the settlement works on whenever its queue is empty: the alternative to building. */
+function SpareChoice({ s, c, industry, energyMade }: { s: GameState; c: Colony; industry: number; energyMade: number }) {
+  const on = c.spare ?? 'salvage';
+  return (
+    <div class="section">
+      <h3 data-tip="What this settlement works on whenever its build queue is empty, instead of building. Each choice turns its industry into about as much as the others: a tenth of what a building of that kind would make. To switch to it now, remove what is queued (everything paid up front comes back).">
+        When nothing is queued
+      </h3>
+      <div class="seg">
+        {spareChoices(s).map((x) => {
+          const made = spareMade(spareYield(s, c, industry, energyMade, x.id));
+          return (
+            <button key={x.id} class={`btn small ${on === x.id && c.spare ? 'primary' : ''}`} data-tip={`${x.tip}\nHere: ${made ?? 'nothing'}.`} onClick={() => act((g) => setSpare(g, c.id, x.id)) && sfx('click')}>
+              {x.name}
+            </button>
+          );
+        })}
+      </div>
+      {c.queue.length > 0 && <div class="faint" style={{ fontSize: '11px', marginTop: '4px' }}>Starts once the queue is done.</div>}
+    </div>
   );
 }
 
@@ -1305,30 +1356,6 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
 }
 
 // ------------------------------------------------------------------ swarm
-
-/** What the settlement does with its industry when nothing is queued. */
-function SpareSection({ s, c }: { s: GameState; c: Colony }) {
-  const choices = spareChoices(s);
-  const on = c.spare ?? 'salvage';
-  const ind = c.last?.industry ?? 0;
-  const y = spareYield(s, c, ind, c.last?.energy ?? 0);
-  const made = [y.matter && `+${n1(y.matter)} matter`, y.energy && `+${n1(y.energy)} energy`, y.insight && `+${n1(y.insight)} insight`, y.resolve && `+${y.resolve.toFixed(2)} resolve`].filter(Boolean).join(', ');
-  return (
-    <div class="section">
-      <h3 data-tip="What this settlement does with its industry when there is nothing in its build queue. Each choice turns spare industry into about as much as the others: a tenth of what a building of that kind would make.">Spare work</h3>
-      <div class="seg">
-        {choices.map((x) => (
-          <button key={x.id} class={`btn small ${on === x.id ? 'primary' : ''}`} data-tip={x.tip} onClick={() => act((g) => setSpare(g, c.id, x.id))}>
-            {x.name}
-          </button>
-        ))}
-      </div>
-      <div class="faint" style={{ fontSize: '11px', marginTop: '4px' }}>
-        {c.queue.length ? 'Used when nothing is queued here.' : `Nothing queued: about ${n1(ind)} spare industry a turn${made ? `, making ${made}` : ', making nothing here'}.`}
-      </div>
-    </div>
-  );
-}
 
 function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
   void rev.value; // mutable game state: re-render on every change

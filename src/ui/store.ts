@@ -59,6 +59,8 @@ export const toasts = signal<Toast[]>([]);
 let toastId = 0;
 export const busy = signal(false);
 /** A fleet waiting for the player to pick its destination on the map. */
+/** Open this settlement's Build tab when its panel next shows (from the idle-settlements reminder). */
+export const openBuildFor = signal<string | null>(null);
 export const targeting = signal<{ fleetId: string; order: 'move' | 'survey' } | null>(null);
 /** While choosing a destination on the map: the star under the pointer. */
 export const hoverStar = signal<string | null>(null);

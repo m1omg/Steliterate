@@ -17,8 +17,8 @@ import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../..
 import { THREADS } from '../../game/types';
 import { n1, signed } from '../fmt';
 import { Icon } from '../Icon';
-import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
-import { act, engine, modal, rev, selection, targeting, view, type SystemsTab } from '../store';
+import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, spareChoices, BEACON_TIP, SWARM_TIP } from '../labels';
+import { act, engine, modal, openBuildFor, rev, selection, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
 
@@ -244,13 +244,21 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                 const net = y ? y.energy - y.energyUpkeep : 0;
                 const b = s.bodies[c.bodyId];
                 return (
-                  <div key={c.id} class="list-item" onClick={() => goToColony(c)}>
+                  <div
+                    key={c.id}
+                    class="list-item"
+                    onClick={() => {
+                      // an idle settlement opens where it can be given something to do
+                      if (!c.queue.length && !c.spare) openBuildFor.value = c.id;
+                      goToColony(c);
+                    }}
+                  >
                     <span class="grow">
                       {c.name}
                       {s.civ.capitalId === c.id && <span class="chip neon" style={{ marginLeft: '6px' }}>capital</span>}
                       {c.starving > 0 && <span class="chip danger" style={{ marginLeft: '6px' }}>starving</span>}
                       <div class="faint" style={{ fontSize: '11px' }}>
-                        {bodyKindName(s, b)} · {c.queue.length ? `building ${c.queue.length}` : <span class="warn">idle</span>}
+                        {bodyKindName(s, b)} · {c.queue.length ? `building ${c.queue.length}` : c.spare ? `working: ${spareChoices(s).find((x) => x.id === c.spare)?.name.toLowerCase()}` : <span class="warn">idle</span>}
                       </div>
                     </span>
                     <span class="row" style={{ gap: '6px', fontSize: '12px' }}>

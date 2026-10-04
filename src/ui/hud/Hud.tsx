@@ -8,7 +8,7 @@ import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
+import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, openBuildFor, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
 import { goToColony, goToFleet } from '../screens/Lists';
 import { isIdleFleet } from '../../game/sim/fleets';
 import { flareClock, flareStop, paceMatters, starClock, turnsUntilYears } from '../../game/sim/flare';
@@ -195,13 +195,26 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
     if (s.era === 'dark') return x > 0 ? 'Not in this age: a turn cannot be quickened further.' : 'Not in this age: a turn cannot be slowed further.';
     return `Not now: the turn would be the same as at ${PACE_LABEL[x > 0 ? x - 1 : x + 1]}.`;
   };
-  const idle = colonies(s).filter((c) => c.queue.length === 0);
+  // nothing queued and no work chosen for when nothing is (such a settlement only recycles)
+  const idle = colonies(s).filter((c) => c.queue.length === 0 && !c.spare);
   const unanswered = s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
   const readySettlers = Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
   // things worth a look before ending the turn; each one takes you there
   const todo: { text: string; tip: string; go: () => void }[] = [];
   if (!civ.researching) todo.push({ text: 'Research paused', tip: 'Nothing is being researched. Open the research web.', go: () => (modal.value = { kind: 'research' }) });
-  if (idle.length) todo.push({ text: `${idle.length} idle settlement${idle.length > 1 ? 's' : ''}`, tip: idle.map((c) => c.name).join(', '), go: () => (idle.length === 1 ? goToColony(idle[0]) : (modal.value = { kind: 'settlements' })) });
+  if (idle.length)
+    todo.push({
+      text: `${idle.length} idle settlement${idle.length > 1 ? 's' : ''}`,
+      tip: `${idle.map((c) => c.name).join(', ')}\nNothing queued, and nothing chosen to work on instead: their spare industry is only recycled into matter. In a settlement’s Build tab, queue something or choose what it works on when nothing is queued.`,
+      go: () => {
+        if (idle.length > 1) {
+          modal.value = { kind: 'settlements' };
+          return;
+        }
+        openBuildFor.value = idle[0].id;
+        goToColony(idle[0]);
+      },
+    });
   if (readySettlers.length) todo.push({ text: `${readySettlers.length} settler${readySettlers.length > 1 ? 's' : ''} waiting`, tip: 'Choose a world to settle.', go: () => (modal.value = { kind: 'fleets' }) });
   const idleShips = Object.values(s.fleets).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
   if (idleShips.length) todo.push({ text: `${idleShips.length} ship${idleShips.length > 1 ? 's' : ''} idle`, tip: `${idleShips.map((f) => f.name).join(', ')}. Click to go to the next one; Fortify or Hold stops the asking.`, go: () => nextIdleShip(s, idleShips) });

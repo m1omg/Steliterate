@@ -252,8 +252,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   Commons 1, charters 0.25 a turn, Lattice resentment 0.125 a Lattice), so it is something to
   choose how to spend. The autoplayer (`planAccord`) keeps 30 for the next law and rallies under
   40 resolve, calms over 40 dissent, hears the lowest Thread under 35.
-- **`src/game/sim/spare.ts`:** what an idle settlement (empty queue) does with leftover industry,
-  `Colony.spare` (absent = Recycle, the old salvage, unchanged to the bit). `SPARE_RATE`: Recycle
+- **`src/game/sim/spare.ts`:** what a settlement with an empty queue does with leftover industry,
+  `Colony.spare` (absent = Recycle, the old salvage, unchanged to the bit; chosen in the Build tab,
+  under When nothing is queued; only a settlement with an empty queue and no choice is "idle" in
+  the HUD reminder, which opens its Build tab via `openBuildFor` in `store.ts`). `SPARE_RATE`: Recycle
   0.1 matter (0.05 energy once the protons are gone), Study 0.1 insight, Tend 0.13 energy capped
   at `TEND_SHARE` (a quarter) of what the settlement makes, Morale 0.01 resolve; each a tenth of
   a building of that kind per point of industry (Foundry 3 industry, Archive Spire 3 insight,

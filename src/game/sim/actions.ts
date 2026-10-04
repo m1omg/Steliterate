@@ -159,8 +159,7 @@ export function setFocus(state: GameState, colonyId: string, focus: Focus): Acti
 export function setSpare(state: GameState, colonyId: string, spare: SpareWork): ActionResult {
   const c = state.colonies[colonyId];
   if (!c) return 'No such settlement.';
-  if (spare === 'salvage') delete c.spare;
-  else c.spare = spare;
+  c.spare = spare;
   return null;
 }
 

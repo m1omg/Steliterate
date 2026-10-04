@@ -1,4 +1,4 @@
-import type { Colony, GameState } from '../types';
+import type { Colony, GameState, SpareWork } from '../types';
 
 // What a settlement does with industry it has nothing to build with. Every choice turns it into
 // about as much as recycling does (a tenth of what a building of that kind makes per point of
@@ -30,11 +30,14 @@ export function salvageIsMatter(state: GameState): boolean {
   return !state.protonsDecay || state.era === 'dusk' || state.era === 'degenerate';
 }
 
-/** What `spare` points of idle industry make at this settlement, which made `energyMade` this turn. */
-export function spareYield(state: GameState, c: Colony, spare: number, energyMade: number): SpareYield {
+/**
+ * What `spare` points of idle industry make at this settlement, which made `energyMade` this turn:
+ * with its own choice of work, or with `work` to ask what another choice would make.
+ */
+export function spareYield(state: GameState, c: Colony, spare: number, energyMade: number, work?: SpareWork): SpareYield {
   const y: SpareYield = { matter: 0, energy: 0, insight: 0, resolve: 0 };
   if (!(spare > 0)) return y;
-  switch (c.spare ?? 'salvage') {
+  switch (work ?? c.spare ?? 'salvage') {
     case 'salvage':
       if (salvageIsMatter(state)) y.matter = spare * SPARE_RATE.salvage;
       else y.energy = spare * SPARE_RATE.salvageLate;

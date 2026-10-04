@@ -565,3 +565,12 @@ belongs to another organization.
   Saves keep their shape (the counters live in `civ.flags`); a game in progress keeps its banked
   accord. Balance, 300 games: 151 survive, 58 victories, a Degenerate Age of 68 turns, The Will
   Fails 63 (was 148 / 58 / 68, 70); 900 games 452 / 152 / 68 (was 444 / 152 / 68).
+- **Choose what to work on instead of building, in the Build tab** (4 Oct; the player: "it still
+  doesn't let me focus on a given thing instead of producing a building or a ship"). The choice
+  of spare work sat in the Overview tab, while the Build tab still said "Idle. Choose something
+  below." and the reminder still counted such settlements as idle. It now lives in the Build tab,
+  under the queue, as **When nothing is queued** (Recycle, Study, Tend, Morale, each with what it
+  would make here); with nothing queued the queue reads "Working on: Study · +1 insight a turn".
+  Only a settlement with nothing queued and nothing chosen is called idle, and the reminder opens
+  its Build tab; the Systems list says what each is working on. Interface only: the rules and the
+  harness are unchanged.
