@@ -554,3 +554,14 @@ belongs to another organization.
   focuses leave matter alone, as before. Balance, 300 games: 148 survive, 58 victories, a
   Degenerate Age of 68 turns (identical). Variants with every settlement on one choice: Study 152,
   Tend 147, Morale 150 (all within noise); mining settlements on Matter 133.
+- **Accord holds the Threads together** (4 Oct; the player: "I never had even a hint of a shortage
+  of Accord, but resolve is constantly going down … Accord can both have more uses and be a way to
+  support resolve"). Accord only bought laws, so it filled to its 999 cap. The Threads window now
+  spends it: **Rally** (resolve +3, 80 accord), **Calm** (dissent −4, 60) and **Hear them** (one
+  Thread's standing +5, 50). Each once a turn; its price doubles with every use and eases back over
+  about ten turns, so a full purse lasts but cannot be spent at once. Making accord useful made the
+  game easier (first prices: 170 of 300 survive), and no price alone undid it while accord was so
+  plentiful, so its income is halved at every source; it is now something to choose how to spend.
+  Saves keep their shape (the counters live in `civ.flags`); a game in progress keeps its banked
+  accord. Balance, 300 games: 151 survive, 58 victories, a Degenerate Age of 68 turns, The Will
+  Fails 63 (was 148 / 58 / 68, 70); 900 games 452 / 152 / 68 (was 444 / 152 / 68).

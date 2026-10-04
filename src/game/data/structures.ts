@@ -60,7 +60,7 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'habitat_dome', name: 'Habitat Domes', desc: 'Sealed domes and pressure halls. Warm, crowded, always humming.', era: 'dusk', cost: 40, matter: 15, max: 5, cap: { kin: 3 }, upkeep: 1, signature: 1 }),
   S({ id: 'night_shelter', name: 'Night-side Shelters', desc: 'Emergency habitats cut into the rock of the night side while the star flares, cooled by great radiator fins. Cramped and loud, but alive. Only while a star is in its last flare.', era: 'dusk', cost: 20, matter: 10, max: 4, primaries: ['blue_dwarf'], cap: { kin: 3 }, upkeep: 0.6, signature: 0.3 }),
   S({ id: 'archive_spire', name: 'Archive Spire', desc: 'Observatory, library and argument hall in one tower.', era: 'dusk', cost: 40, matter: 10, max: 2, insight: 3, signature: 0.5 }),
-  S({ id: 'commons', name: 'The Commons', desc: 'Where people gather to decide how to go on.', era: 'dusk', cost: 35, matter: 5, max: 1, accord: 2, resolve: 0.3, signature: 0.5 }),
+  S({ id: 'commons', name: 'The Commons', desc: 'Where people gather to decide how to go on.', era: 'dusk', cost: 35, matter: 5, max: 1, accord: 1, resolve: 0.3, signature: 0.5 }),
   S({ id: 'shipyard', name: 'Shipyard', desc: 'Slips, cranes and a long queue of repairs.', era: 'dusk', cost: 40, matter: 20, max: 1, industry: 1, signature: 1 }),
   S({ id: 'reserve_vault', name: 'Energy Vault', desc: 'Superconducting rings holding charge against lean years.', era: 'dusk', tech: 'energy_storage', cost: 40, matter: 20, max: 4, reserveCap: 80, signature: 0.3 }),
   S({ id: 'foundry', name: 'Orbital Foundry', desc: 'Furnaces in orbit, fed by the belts.', era: 'dusk', tech: 'orbital_industry', cost: 50, matter: 20, max: 2, industry: 3, signature: 1 }),

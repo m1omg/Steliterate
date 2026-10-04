@@ -244,6 +244,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   Solar Arrays × insolation. Focus: Matter (+25%) touches only matter raised by mines, skimmers
   and lifters; no other focus touches matter (the −10% applies to energy, industry, insight and
   accord).
+- **`src/game/sim/accord.ts`:** accord's uses beyond charters, in the Threads window: Rally
+  (resolve +3, 80 accord), Calm (dissent −4, 60), Hear them (one Thread's standing +5, 50). Each
+  once a turn; the price doubles per use (`acc_<use>_heat` in `civ.flags`, `acc_hear_<thread>`
+  per Thread) and eases by 0.1 of a doubling a turn (`coolAccord`, after `updateSociety`). Accord
+  income was halved at its sources to pay for them (Thread rates 0.3 / 0.1 / 0.5 / 0 / 0.15,
+  Commons 1, charters 0.25 a turn, Lattice resentment 0.125 a Lattice), so it is something to
+  choose how to spend. The autoplayer (`planAccord`) keeps 30 for the next law and rallies under
+  40 resolve, calms over 40 dissent, hears the lowest Thread under 35.
 - **`src/game/sim/spare.ts`:** what an idle settlement (empty queue) does with leftover industry,
   `Colony.spare` (absent = Recycle, the old salvage, unchanged to the bit). `SPARE_RATE`: Recycle
   0.1 matter (0.05 energy once the protons are gone), Study 0.1 insight, Tend 0.13 energy capped
@@ -433,5 +441,6 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | follow a new star on | 153 | a second star's clock after the first, never below 250 energy; Study charts; 59 victories, Degenerate Age 77 turns; 900 games 453 / 166 / 77. Variants (300): no follow-on 146 / 54 / 67; free chaining at the fresh price 152 / 72 / 87 (900: 461 / 214 / 88); one follow-on per chain 149 / 68 / 80; floor and one per chain 150 / 55 / 73 |
 | cast-out embers dim; Quickening splits clocks | 144 | 44 victories, Degenerate Age 68 turns; 900 games 447 / 136 / 68 (the dimming alone 448 / 144 / 71) |
 | worlds boil away near helium stars | 146 | rock past 3,000 K and rubble past 1,600 K boil under a helium star, a giant swallows inside 0.116 AU; 54 victories, Degenerate Age 69 turns; 900 games 430 / 145 / 68 (614 of 900 end as before); per 150 games about 458 worlds boiled, 72 belts, 41 swallowed, 20 of ours lost |
+| accord uses; accord income halved (4 Oct) | 151 | 58 victories, Degenerate Age 68 turns, The Will Fails 63 (70 before); 900 games 452 / 152 / 68 against 444 / 152 / 68. Tuning (300; survive, Will Fails): uses at the first prices (Rally +5 for 40, Calm −6 for 30, Hear +8 for 25) 170 / 46; prices ×2 164 / 53, ×4 159 / 61; Rally alone 161 / 46, Calm alone 154, Hear alone 157; bank capped at 200 169; income halved 162 (prices ×2 158); gains ×0.4 157–158; income halved and no uses 146 (neutral) |
 | spare work; Matter focus (4 Oct) | 148 | identical to the bit with Recycle as everyone's default. Variants (300, every settlement on one choice): Study 152 / 57 / 68, Tend 147 / 58 / 69, Morale 150 / 59 / 68; mining settlements on the Matter focus 133 / 47 / 69 (on Industry 153 / 54 / 71). The autoplayer is rarely idle (0.1 to 0.6 idle settlements a turn), so this mostly checks nothing breaks |
 | giants light at turn end; catch the flash | 148 | a giant shines through the turn after its birth (its event offers a flash: one turn in its light), swallowing then; 58 victories, Degenerate Age 68 turns; 900 games 444 / 152 / 68 against 447 / 136 / 68 before the boiling (620 of 900 end as then); per 150 games 407 giant events, 10 flashes taken by the autoplayer (about 690 energy each) |

@@ -8,6 +8,7 @@ import { useState } from 'preact/hooks';
 import { charterAvailable, enactCharter, REPEAL_DISSENT, repealAvailable, repealCharter } from '../../game/sim/actions';
 import { clockRange, computeMods, strainFor } from '../../game/sim/mods';
 import { demandMet } from '../../game/sim/society';
+import { ACCORD_USES, accordCheck, accordCost, spendAccord, type AccordUse } from '../../game/sim/accord';
 import { hasCharter, threadTotals } from '../../game/sim/util';
 import type { GameState, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
@@ -131,6 +132,17 @@ export function ChartersModal({ s }: { s: GameState }) {
   );
 }
 
+/** Spend accord on one of its uses; greyed out, with the reason, when it cannot be done. */
+function AccordButton({ s, use, t, label, tip }: { s: GameState; use: AccordUse; t?: ThreadId; label: string; tip: string }) {
+  const err = accordCheck(s, use, t);
+  const cost = accordCost(s, use, t);
+  return (
+    <button class="btn small" disabled={!!err} data-tip={`${tip} ${cost} accord now; the price doubles with each use and eases back over about ten turns.${err ? `\n${err}` : ''}`} onClick={() => act((g) => spendAccord(g, use, t)) && sfx('click')}>
+      {label} · {cost}
+    </button>
+  );
+}
+
 export function ThreadsModal({ s }: { s: GameState }) {
   void rev.value;
   const mods = computeMods(s);
@@ -148,6 +160,13 @@ export function ThreadsModal({ s }: { s: GameState }) {
         <div data-tip="The length of the coming turn, as log₁₀ years. Each Thread thinks at its own clock; the gap is tempo strain.">
           <span class="eyebrow">This age's tempo</span> <span class="mono">{pow10(logL)} yr per turn</span>
         </div>
+      </div>
+      <div class="row wrap" style={{ gap: '6px', marginBottom: '12px', alignItems: 'center' }}>
+        <span class="eyebrow" data-tip="The Threads' goodwill toward one another. Beyond writing laws, it can be spent here: each use once a turn, its price doubling with every use and easing back over about ten turns.">
+          Accord {n0(s.civ.accord)}
+        </span>
+        <AccordButton s={s} use="rally" label={`Rally: resolve +${ACCORD_USES.rally.gain}`} tip="Gather the Threads and remind one another why we go on." />
+        <AccordButton s={s} use="calm" label={`Calm: dissent −${ACCORD_USES.calm.gain}`} tip="Long talks across the Threads, until the argument cools." />
       </div>
       <div class="cards">
         {THREADS.map((t) => {
@@ -197,6 +216,7 @@ export function ThreadsModal({ s }: { s: GameState }) {
                     </div>
                   )}
                   {s.civ.lowStanding[t] > 0 && totals[t] > 0 && <div class="bad" style={{ fontSize: '12px' }}>Talking of leaving ({s.civ.lowStanding[t]} turns).</div>}
+                  {totals[t] > 0 && <AccordButton s={s} use="hear" t={t} label={`Hear them: standing +${ACCORD_USES.hear.gain}`} tip={`Give ${d.name} a full hearing before the other Threads.`} />}
                 </>
               )}
             </div>

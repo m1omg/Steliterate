@@ -31,6 +31,15 @@ import { availableTechs, techCost } from './sim/research';
 import { canSettle } from './sim/fleets';
 import { colonies, distLy, eraIndex, hasTech, swarmSeenAt, threadTotals } from './sim/util';
 import type { Body, Colony, GameState, ThreadId } from './types';
+import { THREADS } from './types';
+import { THREAD_DEFS } from './data/threads';
+import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
+
+// when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
+const ACCORD_KEEP = 30;
+const ACCORD_RALLY_BELOW = 40;
+const ACCORD_CALM_ABOVE = 40;
+const ACCORD_HEAR_BELOW = 35;
 
 // An autoplayer. It powers the balance harness, and can later back an in-game advisor.
 
@@ -254,6 +263,17 @@ function planCharters(state: GameState) {
   for (const id of order) if (!charterAvailable(state, id)) enactCharter(state, id);
 }
 
+/** Spend accord beyond what the next law might cost: on resolve when it runs low, on dissent when it runs high, and on the Thread most out of sorts. */
+function planAccord(state: GameState) {
+  const civ = state.civ;
+  const keep = ACCORD_KEEP;
+  const can = (use: AccordUse, t?: ThreadId) => !accordCheck(state, use, t) && civ.accord - accordCost(state, use, t) >= keep;
+  if (civ.resolve < ACCORD_RALLY_BELOW && can('rally')) spendAccord(state, 'rally');
+  if (civ.dissent > ACCORD_CALM_ABOVE && can('calm')) spendAccord(state, 'calm');
+  const low = THREADS.filter((t) => THREAD_DEFS[t].conscious && civ.standing[t] < ACCORD_HEAR_BELOW).sort((a, b) => civ.standing[a] - civ.standing[b])[0];
+  if (low && can('hear', low)) spendAccord(state, 'hear', low);
+}
+
 function planSignals(state: GameState) {
   const civ = state.civ;
   for (const s of state.signals) {
@@ -348,6 +368,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planEvents(state);
   pickResearch(state);
   planCharters(state);
+  planAccord(state);
   planThreads(state);
   planBuilds(state);
   planFleets(state);

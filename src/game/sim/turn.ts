@@ -6,6 +6,7 @@ import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '.
 import { THREADS } from '../types';
 import { runCrossing } from './crossing';
 import { spareYield } from './spare';
+import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
@@ -330,6 +331,7 @@ export function endTurn(state: GameState): TurnResult {
   // Consume the Dead: nothing is buried any more
   if (popsLost > 0 && hasCharter(state, 'consume_the_dead')) civ.matter += popsLost * 4;
   updateSociety(state, logL, popsLost, starving);
+  coolAccord(state);
   if (civ.wakeBonus > 0 && !civ.dormant) civ.wakeBonus--;
 
   // ------------------------------------------------ 6. fleets, hazards, other minds

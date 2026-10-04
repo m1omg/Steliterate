@@ -232,7 +232,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   industry *= ctx.mods.industryMult * focusMul(c, 'industry');
   insight *= ctx.mods.insightMult * focusMul(c, 'insight');
   accord *= focusMul(c, 'accord');
-  if (flags.has('charters')) accord += dormant ? 0 : 0.5;
+  if (flags.has('charters')) accord += dormant ? 0 : 0.25;
 
   const y: YieldBreakdown = {
     energy,
@@ -257,5 +257,5 @@ export function latticeAlienation(state: GameState, mods: Mods): number {
     conscious += c.pops.kin + c.pops.echoes + c.pops.chorus + c.pops.coldminds;
   }
   if (lattice + conscious === 0) return 0;
-  return 0.25 * lattice * Math.min(1, conscious / Math.max(1, lattice + conscious) * 2);
+  return 0.125 * lattice * Math.min(1, conscious / Math.max(1, lattice + conscious) * 2);
 }

@@ -63,7 +63,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         </div>
         <span class="l">Insight</span>
       </div>
-      <div class="res" data-tip={`Accord ${n0(civ.accord)}: spent on Charters.\n${signed(p.accord)} per turn`} onClick={() => (modal.value = { kind: 'charters' })} style={{ cursor: 'pointer' }}>
+      <div class="res" data-tip={`Accord ${n0(civ.accord)}: spent on Charters, and in Threads to rally resolve, calm dissent or hear out one Thread.\n${signed(p.accord)} per turn`} onClick={() => (modal.value = { kind: 'charters' })} style={{ cursor: 'pointer' }}>
         <Icon name="accord" size="lg" />
         <span class="v phos">{n0(civ.accord)}</span>
         <span class={`d mono ${p.accord >= 0 ? 'good' : 'bad'}`}>{signed(p.accord)}</span>

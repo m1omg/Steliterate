@@ -31,7 +31,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Energy first',
-    text: 'Energy is the master resource: the big number is your reserve, the small one what the next turn adds or costs. Matter builds things, insight drives research, accord buys laws. Hover over any figure for its breakdown.',
+    text: 'Energy is the master resource: the big number is your reserve, the small one what the next turn adds or costs. Matter builds things, insight drives research, accord buys laws and holds the Threads together. Hover over any figure for its breakdown.',
     target: '.resources',
   },
   {
