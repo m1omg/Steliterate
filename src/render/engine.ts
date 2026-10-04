@@ -1,0 +1,597 @@
+import * as THREE from 'three';
+import { residentsOf } from '../game/sim/homes';
+import { ERA_BY_ID } from '../game/eras';
+import type { GameState } from '../game/types';
+import { OrbitRig } from './camera';
+import { GalaxyView, type Pickable } from './galaxyView';
+import { createPost, type PostChain } from './post';
+import { SystemView } from './systemView';
+import { VIEW_MODE } from './shaders/bodies';
+
+export type ViewKind = 'galaxy' | 'system';
+export type Quality = 'low' | 'medium' | 'high';
+
+export interface EngineEvents {
+  onPick: (p: Pickable | null, view: ViewKind, pointerType?: string) => void;
+  onHover: (p: Pickable | null, x: number, y: number) => void;
+  onEnterSystem: (systemId: string) => void;
+  /** Zoomed out past the edge of a system: back to the galaxy. */
+  onLeaveSystem?: () => void;
+  /** The camera started or stopped following a world or a fleet. */
+  onFollow?: (f: Followed | null) => void;
+}
+
+export interface Followed {
+  kind: 'body' | 'fleet';
+  id: string;
+  /** Kept centred at the zoom the view had, not flown in close. */
+  keepZoom?: boolean;
+}
+
+/** Zooming the galaxy view closer than this dives into the system at the focus. */
+const ENTER_ZOOM = 12;
+/** How far past a system view's widest zoom the player must push to leave it (log scale). */
+const LEAVE_PUSH = Math.log(1.5);
+
+interface Label {
+  el: HTMLDivElement;
+  used: boolean;
+}
+
+// One renderer, two scenes. The loop measures real elapsed time; nothing depends on how
+// often the browser asks for frames.
+
+export class Engine {
+  renderer: THREE.WebGLRenderer;
+  camera: THREE.PerspectiveCamera;
+  rig: OrbitRig;
+  galaxyScene = new THREE.Scene();
+  systemScene = new THREE.Scene();
+  galaxy = new GalaxyView();
+  system = new SystemView();
+  post: PostChain;
+  view: ViewKind = 'galaxy';
+  private last = 0;
+  private now = 0;
+  private fade = 0;
+  private fadeTarget = 0;
+  private pendingSwitch: (() => void) | null = null;
+  private state: GameState | null = null;
+  private labels: Label[] = [];
+  private labelLayer: HTMLDivElement;
+  private running = false;
+  private galaxyCam = { target: new THREE.Vector3(), distance: 220, yaw: 0.6, pitch: 0.85 };
+  private leavePush = 0;
+  private focusY: number | null = null;
+  /** The browser took the GPU away (a phone backgrounding the page, a driver reset). */
+  contextLost = false;
+  /** Lost: true when the picture goes, false when it is back. 'stuck' if it will not come back. */
+  onContextChange: ((state: 'lost' | 'restored' | 'stuck') => void) | null = null;
+  private lostTimer = 0;
+  private viewShift = 0;
+  quality: Quality = 'high';
+  private tint = new THREE.Color(1, 0.94, 0.88);
+  private tintGoal = new THREE.Color(1, 0.94, 0.88);
+  timeScale = 1;
+  showLabels = true;
+
+  constructor(private host: HTMLElement, private events: EngineEvents) {
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer.setClearColor('#030306');
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
+    host.appendChild(this.renderer.domElement);
+    this.renderer.domElement.className = 'stage-canvas';
+    this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 30000);
+    this.rig = new OrbitRig(this.camera, this.renderer.domElement);
+    this.galaxyScene.background = new THREE.Color('#020204');
+    this.systemScene.background = new THREE.Color('#020204');
+    this.galaxyScene.add(this.galaxy.group);
+    this.systemScene.add(this.system.group);
+    this.post = createPost(this.renderer, this.galaxyScene, this.camera);
+    this.labelLayer = document.createElement('div');
+    this.labelLayer.className = 'label-layer';
+    host.appendChild(this.labelLayer);
+    this.rig.onClick = (x, y, type) => this.click(x, y, type);
+    this.rig.zoomAnchor = (x, y) => (this.view === 'galaxy' ? this.zoomAnchorAt(x, y) : null);
+    this.rig.onZoomIntent = (requested) => this.zoomIntent(requested);
+    this.rig.onHover = (x, y) => this.events.onHover(this.pickAt(x, y), x, y);
+    window.addEventListener('resize', this.resize);
+    // Phones drop the GPU context when the page goes to the background. three.js asks for it
+    // back; hide the dead canvas meanwhile (some browsers paint it white), rebuild on return,
+    // and if it never comes back, say so.
+    const canvas = this.renderer.domElement;
+    canvas.addEventListener('webglcontextlost', () => {
+      this.contextLost = true;
+      canvas.style.visibility = 'hidden';
+      this.onContextChange?.('lost');
+      this.watchLost();
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      this.contextLost = false;
+      window.clearTimeout(this.lostTimer);
+      this.galaxy.invalidate();
+      if (this.state) this.setState(this.state);
+      this.resize();
+      canvas.style.visibility = '';
+      this.onContextChange?.('restored');
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      this.resize();
+      if (this.contextLost) this.watchLost();
+    });
+    this.renderer.domElement.addEventListener('dblclick', (e) => {
+      const p = this.pickAt(e.clientX, e.clientY);
+      if (p?.kind === 'fleet') return this.focusFleet(p.id);
+      if (!p || p.kind !== 'system') return;
+      if (this.view === 'galaxy') this.events.onEnterSystem(p.id);
+      // with a mouse one click only selects; a double-click flies to the world, or back out to the whole system
+      else if (p.id.startsWith('body:')) this.focusBody(p.id.slice(5));
+      else this.frameSystem();
+    });
+    this.resize();
+  }
+
+  /** While visible and still lost: nudge the browser, then give up and report. */
+  private watchLost() {
+    window.clearTimeout(this.lostTimer);
+    if (document.visibilityState !== 'visible') return;
+    this.lostTimer = window.setTimeout(() => {
+      if (!this.contextLost || document.visibilityState !== 'visible') return;
+      try {
+        this.renderer.forceContextRestore();
+      } catch {
+        // no WEBGL_lose_context: nothing to nudge
+      }
+      this.lostTimer = window.setTimeout(() => {
+        if (this.contextLost && document.visibilityState === 'visible') this.onContextChange?.('stuck');
+      }, 3000);
+    }, 1500);
+  }
+
+  setQuality(q: Quality) {
+    this.quality = q;
+    this.resize();
+    this.post.bloom.enabled = q !== 'low';
+  }
+
+  private pixelRatio(): number {
+    const cap = this.quality === 'low' ? 1 : this.quality === 'medium' ? 1.5 : 2;
+    return Math.min(window.devicePixelRatio || 1, cap);
+  }
+
+  resize = () => {
+    const w = this.host.clientWidth || window.innerWidth;
+    const h = this.host.clientHeight || window.innerHeight;
+    const pr = this.pixelRatio();
+    this.renderer.setPixelRatio(pr);
+    this.renderer.setSize(w, h);
+    this.camera.aspect = w / Math.max(1, h);
+    this.camera.updateProjectionMatrix();
+    this.post.setSize(w, h, pr);
+    this.galaxy.setPixelRatio(pr);
+  };
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this.last = performance.now();
+    const loop = (ts: number) => {
+      if (!this.running) return;
+      requestAnimationFrame(loop);
+      const dt = Math.min(0.1, Math.max(0, (ts - this.last) / 1000));
+      this.last = ts;
+      this.frame(dt * this.timeScale);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  stop() {
+    this.running = false;
+  }
+
+  /** Advance everything by dt seconds of real time and draw. Public so tests can drive it. */
+  frame(dt: number) {
+    this.now += dt;
+    // crossfade between views, time-based
+    const k = 1 - Math.exp(-9 * dt);
+    this.fade += (this.fadeTarget - this.fade) * k;
+    if (this.pendingSwitch && this.fade > 0.97) {
+      const fn = this.pendingSwitch;
+      this.pendingSwitch = null;
+      fn();
+      this.fadeTarget = 0;
+    }
+    this.tint.lerp(this.tintGoal, 1 - Math.exp(-1.5 * dt));
+    // slide the picture so the focus sits where the UI asked (phones: above an open panel)
+    const el = this.renderer.domElement;
+    const w = el.clientWidth || window.innerWidth;
+    const h = el.clientHeight || window.innerHeight;
+    const shiftGoal = this.focusY === null ? 0 : h / 2 - this.focusY;
+    this.viewShift += (shiftGoal - this.viewShift) * (1 - Math.exp(-8 * dt));
+    if (Math.abs(this.viewShift) > 0.5) this.camera.setViewOffset(w, h, 0, this.viewShift, w, h);
+    else if (this.camera.view) this.camera.clearViewOffset();
+    const u = this.post.finish.uniforms;
+    u.uTime.value = this.now;
+    u.uFade.value = this.fade;
+    u.uTint.value.copy(this.tint);
+    if (this.view === 'galaxy') this.galaxy.update(dt, this.now, this.camera, this.rig.distance);
+    else this.system.update(dt, this.camera, this.rig.distance);
+    // the rig moves after the scene so a followed planet is centred on this frame's position
+    this.rig.update(dt);
+    if (this.followed && !this.rig.follow) this.setFollowed(null);
+    this.post.composer.render(dt);
+    this.updateLabels();
+  }
+
+  /** Feed a fresh game state. Rebuilds what changed. */
+  setState(state: GameState) {
+    this.state = state;
+    const era = ERA_BY_ID[state.era];
+    this.galaxy.setPalette(era.accent, era.neon);
+    this.system.neon.set(era.neon);
+    this.tintGoal.set(state.era === 'dusk' ? '#fff0e2' : state.era === 'degenerate' ? '#e6eeff' : state.era === 'blackhole' ? '#ece6ff' : '#e2e4e8');
+    this.post.finish.uniforms.uGrain.value = state.era === 'dark' ? 0.06 : 0.035;
+    this.galaxy.sync(state, this.now);
+    if (this.view === 'system' && this.system.systemId) {
+      // a system that is gone, or one this game never had (a save from another game was loaded), sends us back out
+      const sys = state.systems[this.system.systemId];
+      if (!sys || sys.gone) this.showGalaxy();
+      else this.system.build(state, this.system.systemId);
+    }
+  }
+
+  /** In the galaxy view: make a star the centre the view turns and zooms around, at the same zoom. */
+  centreOn(systemId: string) {
+    if (this.view !== 'galaxy' || this.rig.follow) return;
+    this.focusGalaxyOn(systemId, this.rig.goalDistance, false, 0.6);
+  }
+
+  focusGalaxyOn(systemId: string, distance = 160, instant = false, duration = 1.2) {
+    const s = this.state?.systems[systemId];
+    if (!s) return;
+    const t = new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z);
+    if (instant) this.rig.jump(t, distance);
+    else this.rig.flyTo(t, distance, duration);
+  }
+
+  showSystem(systemId: string, focusBodyId?: string) {
+    if (!this.state) return;
+    const go = () => {
+      if (this.view === 'galaxy') {
+        // (entered by zooming in: come back a little further out, to see the neighbourhood)
+        this.galaxyCam = { target: this.rig.goalTarget.clone(), distance: Math.max(this.rig.goalDistance, 36), yaw: this.rig.goalYaw, pitch: this.rig.goalPitch };
+      }
+      this.leavePush = 0;
+      this.view = 'system';
+      this.system.build(this.state!, systemId);
+      this.post.setScene(this.systemScene, this.camera);
+      this.rig.minDistance = 4;
+      this.rig.maxDistance = 600;
+      this.rig.jump(new THREE.Vector3(0, 0, 0), 150);
+      this.rig.goalPitch = this.rig.pitch = 0.5;
+      this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.4);
+      if (focusBodyId) {
+        this.system.selectedBody = focusBodyId;
+        this.focusBody(focusBodyId);
+      }
+    };
+    this.fadeTarget = 1;
+    this.pendingSwitch = go;
+  }
+
+  /**
+   * Back to the galaxy, centred on focusId if given, else on the system just left (at the zoom
+   * the galaxy was seen from before), so the view never comes back off-centre.
+   */
+  showGalaxy(focusId?: string, distance?: number, instant = false) {
+    const go = () => {
+      const from = this.system.systemId;
+      this.view = 'galaxy';
+      this.post.setScene(this.galaxyScene, this.camera);
+      this.rig.minDistance = 6;
+      this.rig.maxDistance = 9000;
+      this.rig.jump(this.galaxyCam.target, this.galaxyCam.distance);
+      this.rig.goalYaw = this.rig.yaw = this.galaxyCam.yaw;
+      this.rig.goalPitch = this.rig.pitch = this.galaxyCam.pitch;
+      this.system.systemId = null;
+      const at = focusId ?? from;
+      if (at) this.focusGalaxyOn(at, distance ?? this.galaxyCam.distance, true);
+    };
+    if (this.view === 'galaxy') {
+      if (focusId) this.focusGalaxyOn(focusId, distance ?? this.rig.goalDistance, instant);
+      return;
+    }
+    this.fadeTarget = 1;
+    this.pendingSwitch = go;
+  }
+
+  /** Mark what is selected. `fly` (the default) also brings a picked world into focus in the system view. */
+  select(id: string | null, fly = true) {
+    this.galaxy.selected = id && !id.startsWith('body:') ? id : null;
+    const was = this.system.selectedBody;
+    this.system.selectedBody = id?.startsWith('body:') ? id.slice(5) : id;
+    if (this.view !== 'system' || !fly) return;
+    if (id?.startsWith('body:')) this.focusBody(id.slice(5));
+    else if (id && was && this.rig.follow) {
+      // picked the star (or something else): let go of the planet and see the whole system
+      this.frameSystem();
+    }
+    // nothing picked (a click on empty space): the followed world stays in focus
+  }
+
+  /**
+   * Where on screen (CSS px from the top) the centre of the view should sit; null for the
+   * middle. On a phone the selection panel covers the lower half, so the view slides up.
+   */
+  setFocusY(y: number | null) {
+    this.focusY = y;
+  }
+
+  /** Mark a discovery on the galaxy map. */
+  ping(systemId: string, color = '#9ff5e6') {
+    if (this.state) this.galaxy.ping(this.state, systemId, color, this.now);
+  }
+
+  /** In the system view: step back to see the whole system (lets go of any followed world). */
+  frameSystem() {
+    if (this.view !== 'system') return;
+    this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.0);
+  }
+
+  /** 0 natural light, 1 enhanced (light amplification), 2 thermal (false colour by temperature). */
+  get viewMode() {
+    return VIEW_MODE.value;
+  }
+
+  set viewMode(m: number) {
+    VIEW_MODE.value = m;
+    // enhanced opens the exposure up as well as lifting the dark
+    this.renderer.toneMappingExposure = m === 1 ? 1.4 : 1.05;
+    this.galaxy.setViewMode(m);
+    this.system.applyViewMode();
+    if (this.state) this.galaxy.sync(this.state, this.now);
+  }
+
+  get orbitsPaused() {
+    return this.system.orbitsPaused;
+  }
+
+  set orbitsPaused(v: boolean) {
+    this.system.orbitsPaused = v;
+  }
+
+  /** In the system view: fly to a planet and keep it in the middle of the screen. */
+  focusBody(bodyId: string) {
+    const f = this.system.bodyFocus(bodyId);
+    if (!f) return;
+    this.rig.flyToFollow(() => this.system.bodyFocus(bodyId)?.pos ?? null, Math.max(9, f.radius * 7), 1.1);
+    this.setFollowed({ kind: 'body', id: bodyId });
+  }
+
+  /**
+   * Fly to a fleet and keep it centred as it moves, in either view (like a planet): close up, or
+   * with `keepZoom` at the zoom the view has now, so the map stays as far out as it is.
+   */
+  focusFleet(fleetId: string, keepZoom = false) {
+    const view = this.view;
+    // only in the view it was picked in: switching views lets go
+    const at = () => (this.view !== view ? null : view === 'galaxy' ? this.galaxy.fleetPos(fleetId) : this.system.fleetPos(fleetId));
+    if (!at()) return;
+    this.rig.flyToFollow(at, keepZoom ? this.rig.goalDistance : view === 'galaxy' ? 36 : 10, 1.1);
+    this.setFollowed({ kind: 'fleet', id: fleetId, keepZoom });
+  }
+
+  /** Stop following, and leave the camera where it is. */
+  unfollow() {
+    this.rig.follow = null;
+    this.setFollowed(null);
+  }
+
+  /** What the camera is following, if anything. */
+  followed: Followed | null = null;
+
+  private setFollowed(f: Followed | null) {
+    if (f?.kind === this.followed?.kind && f?.id === this.followed?.id && !!f?.keepZoom === !!this.followed?.keepZoom) return;
+    this.followed = f;
+    this.events.onFollow?.(f);
+  }
+
+  private click(x: number, y: number, pointerType?: string) {
+    const p = this.pickAt(x, y);
+    this.events.onPick(p, this.view, pointerType);
+  }
+
+  /** Zoom toward the star under the pointer, or else the point on the galactic plane there. */
+  private zoomAnchorAt(x: number, y: number): THREE.Vector3 | null {
+    const p = this.pickAt(x, y);
+    if (p && p.kind === 'system') return p.pos.clone();
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, this.camera);
+    const hit = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.rig.goalTarget.y), new THREE.Vector3());
+    // a grazing ray would fling the focus far away: only trust nearby points
+    return hit && hit.distanceTo(this.rig.goalTarget) < this.rig.goalDistance * 3 ? hit : null;
+  }
+
+  /** The system the galaxy view is focused on, if the camera is close to one. */
+  private systemAtFocus(): string | null {
+    const t = this.rig.goalTarget;
+    const reach = Math.max(2.5, this.rig.goalDistance * 0.45);
+    let best: string | null = null;
+    let bestD = reach;
+    for (const p of this.galaxy.pickables) {
+      if (p.kind !== 'system') continue;
+      const d = p.pos.distanceTo(t) * (p.id === this.galaxy.selected ? 0.5 : 1); // the selected star wins ties
+      if (d < bestD) {
+        bestD = d;
+        best = p.id;
+      }
+    }
+    return best;
+  }
+
+  private zoomIntent(requested: number) {
+    if (this.pendingSwitch || !this.state) return;
+    if (this.view === 'galaxy') {
+      if (this.rig.goalDistance > ENTER_ZOOM) return;
+      const id = this.systemAtFocus();
+      if (id) this.events.onEnterSystem(id);
+      return;
+    }
+    // in a system: pushing on past the widest view goes back out to the galaxy
+    const max = this.rig.maxDistance;
+    if (requested > max && this.rig.goalDistance >= max * 0.999) this.leavePush += Math.log(requested / max);
+    else if (requested < this.rig.goalDistance) this.leavePush = 0;
+    if (this.leavePush > LEAVE_PUSH) {
+      this.leavePush = 0;
+      this.events.onLeaveSystem?.();
+    }
+  }
+
+  pickAt(x: number, y: number): Pickable | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const list = this.view === 'galaxy' ? this.galaxy.pickables : this.system.pickables;
+    const reach = this.view === 'galaxy' ? 16 : 26;
+    // pixels per world unit at distance 1, for the size of a body on screen
+    const pxPerUnit = rect.height / 2 / Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    let best: Pickable | null = null;
+    let bestScore = Infinity;
+    let bestDepth = Infinity;
+    const v = new THREE.Vector3();
+    for (const p of list) {
+      v.copy(p.pos).project(this.camera);
+      if (v.z > 1) continue;
+      const sx = rect.left + ((v.x + 1) / 2) * rect.width;
+      const sy = rect.top + ((1 - v.y) / 2) * rect.height;
+      const d = Math.hypot(sx - x, sy - y) - (p.kind === 'fleet' ? 4 : 0);
+      // a world seen up close is a big disc: anywhere on it counts, not just near its centre
+      const depth = this.camera.position.distanceTo(p.pos);
+      const disc = p.radius ? (p.radius * pxPerUnit) / Math.max(1e-3, depth) : 0;
+      const within = Math.max(reach, disc + 4);
+      if (d > within) continue;
+      // inside a disc, the nearer body wins (it is in front); otherwise the closest to the pointer
+      const inside = disc > 0 && d <= disc + 4;
+      const score = inside ? -1 : d / within;
+      if (score < bestScore || (inside && score === bestScore && depth < bestDepth)) {
+        bestScore = score;
+        bestDepth = depth;
+        best = p;
+      }
+    }
+    return best;
+  }
+
+  /** Where an object is on screen (for tooltips and anchored UI). */
+  screenOf(pos: THREE.Vector3): { x: number; y: number; visible: boolean } {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const v = pos.clone().project(this.camera);
+    return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height, visible: v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1 };
+  }
+
+  private label(i: number): Label {
+    while (this.labels.length <= i) {
+      const el = document.createElement('div');
+      el.className = 'map-label';
+      this.labelLayer.appendChild(el);
+      this.labels.push({ el, used: false });
+    }
+    return this.labels[i];
+  }
+
+  private updateLabels() {
+    const state = this.state;
+    for (const l of this.labels) l.used = false;
+    if (!state || this.fade > 0.3 || !this.showLabels) {
+      for (const l of this.labels) l.el.style.display = 'none';
+      return;
+    }
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const items: { text: string; pos: THREE.Vector3; cls: string; w: number; color?: string }[] = [];
+    if (this.view === 'galaxy') {
+      const d = this.rig.distance;
+      if (d > 700) {
+        for (const p of state.provinces) {
+          if (p.kind === 'halo' || p.kind === 'void') continue;
+          items.push({ text: p.name, pos: new THREE.Vector3(p.pos.x, p.pos.y + 40, p.pos.z), cls: 'province', w: 10 });
+        }
+        for (const r of state.regions) if (r.kind === 'outlier' || r.kind === 'globular') items.push({ text: r.name, pos: new THREE.Vector3(r.pos.x, r.pos.y + 20, r.pos.z), cls: 'province', w: 9 });
+      } else {
+        const colonized = new Set(Object.values(state.colonies).map((c) => c.systemId));
+        const cand = this.galaxy.pickables
+          .filter((p) => p.kind === 'system')
+          .map((p) => ({ p, dd: p.pos.distanceTo(this.rig.target) }))
+          .filter((x) => x.dd < d * 1.1)
+          .sort((a, b) => a.dd - b.dd)
+          .slice(0, 36);
+        // in the Degenerate Age every collision star on the map keeps its name showing while it
+        // burns (one that lit and went out within the last turn has no light left to mark)
+        const burning = (id: string) => {
+          const pr = state.systems[id]?.primary;
+          return state.era === 'degenerate' && pr?.kind === 'collision_star' && (pr.diesAt ?? 0) > state.years;
+        };
+        if (state.era === 'degenerate') {
+          for (const p of this.galaxy.pickables) {
+            if (p.kind !== 'system' || !burning(p.id) || cand.some((c) => c.p.id === p.id)) continue;
+            cand.push({ p, dd: 0 });
+          }
+        }
+        // other civilizations we have heard from keep their name on the map, in their colour
+        const others = new Map(Object.values(state.survivors).filter((v) => v.contact && v.alive).map((v) => [v.homeSystemId, v]));
+        for (const p of this.galaxy.pickables) {
+          if (p.kind === 'system' && others.has(p.id) && !cand.some((c) => c.p.id === p.id)) cand.push({ p, dd: 0 });
+        }
+        for (const { p } of cand) {
+          const s = state.systems[p.id];
+          const mine = colonized.has(p.id);
+          const sv = others.get(p.id);
+          if (sv) {
+            items.push({ text: `◈ ${sv.name}`, pos: p.pos, cls: 'others', w: 4, color: sv.color });
+            continue;
+          }
+          if (burning(p.id)) {
+            items.push({ text: `✦ ${s.name}`, pos: p.pos, cls: 'beacon', w: 5 });
+            continue;
+          }
+          items.push({ text: s.name, pos: p.pos, cls: mine ? 'mine' : this.galaxy.living.has(p.id) ? 'living' : state.civ.known[p.id] === 2 ? 'surveyed' : 'seen', w: mine ? 3 : this.galaxy.living.has(p.id) ? 2 : 1 });
+        }
+      }
+    } else if (this.system.systemId) {
+      for (const p of this.system.pickables) {
+        if (!p.id.startsWith('body:')) continue;
+        const b = state.bodies[p.id.slice(5)];
+        if (!b) continue;
+        const name = b.kind === 'deep' ? 'The Deep' : b.name;
+        const lift = new THREE.Vector3(0, b.size + 1.2, 0);
+        // a world another civilization lives on carries their name, in their colour
+        const sv = residentsOf(state, b);
+        if (sv && sv.contact) {
+          items.push({ text: `${name} · ◈ ${sv.name}`, pos: p.pos.clone().add(lift), cls: 'others', w: 3, color: sv.color });
+          continue;
+        }
+        items.push({ text: name, pos: p.pos.clone().add(lift), cls: b.colonyId ? 'mine' : 'body', w: 2 });
+      }
+    }
+    let i = 0;
+    const placed: { x: number; y: number }[] = [];
+    items.sort((a, b) => b.w - a.w);
+    for (const it of items) {
+      const v = it.pos.clone().project(this.camera);
+      if (v.z > 1 || Math.abs(v.x) > 1.05 || Math.abs(v.y) > 1.05) continue;
+      const x = ((v.x + 1) / 2) * rect.width;
+      const y = ((1 - v.y) / 2) * rect.height;
+      if (placed.some((q) => Math.abs(q.x - x) < 70 && Math.abs(q.y - y) < 14)) continue;
+      placed.push({ x, y });
+      const l = this.label(i++);
+      l.used = true;
+      if (l.el.textContent !== it.text) l.el.textContent = it.text;
+      l.el.className = `map-label ${it.cls}`;
+      l.el.style.color = it.color ?? '';
+      l.el.style.display = 'block';
+      l.el.style.transform = `translate(${Math.round(x + 9)}px, ${Math.round(y - 8)}px)`;
+    }
+    for (const l of this.labels) if (!l.used) l.el.style.display = 'none';
+  }
+}
