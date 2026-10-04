@@ -663,8 +663,9 @@ export const EVENTS: EventDef[] = [
     title: 'The Last Burst',
     art: 'blackhole',
     plate: 'final_burst',
-    text: (s, d) => `The black hole at ${s.systems[String(d.systemId)]?.name} has finished evaporating. In its last second it gave back, as a burst of gamma rays and particles, what was left of everything it ever swallowed.`,
-    choices: [{ label: 'Record it', hint: 'Its light is gone.', run: () => {} }],
+    text: (s, d) =>
+      `The black hole at ${s.systems[String(d.systemId)]?.name} has finished evaporating. In its last second it gave back, as a burst of gamma rays and particles, what was left of everything it ever swallowed. As it shrank, its hold on what circled it faded to nothing: our settlements there drift on, everything we built with them, with no hole left to draw on.${Object.values(s.colonies).some((c) => c.systemId === String(d.systemId) && (c.structures.horizon_vault ?? 0) > 0) ? ' The charge our Horizon Vaults kept in its spin went with it.' : ''}`,
+    choices: [{ label: 'Record it', hint: 'Its light is gone; what we built there stays.', run: () => {} }],
   },
   {
     id: 'horizon_whispers',

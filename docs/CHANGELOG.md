@@ -579,3 +579,18 @@ belongs to another organization.
   the galaxy map the star nearly always won. Now a click anywhere on its cloud picks it, on the map
   and inside a system; a star, ship or world right under the pointer still wins. (A star's panel
   also lists its swarms under In orbit.) Interface only.
+- **Settlements outlive their black hole** (4 Oct; the player: "when a black hole evaporates,
+  suddenly everything around it disappears, even when I had storage rings and everything on it.
+  That's a mistake"). An evaporating hole wiped its system off the map and destroyed every
+  settlement there that was not decay-proof. A hole loses its mass so slowly that the orbits
+  around it widen until nothing holds them, and its final burst, huge by that age's standards
+  (about 2×10²² J in the last second), is under a tenth of a joule a square metre 1 AU out. Now its
+  worlds drift on as rogue worlds, settlements keep every structure (Burst Catchers still bank the
+  burst), and only an empty system is gone. What lived on the hole goes with it: its spin, Hawking
+  light and glow, and Horizon Vaults (which keep their charge in its spin) hold nothing. The
+  Last Horizon now does the same to the holes it removes, which also ends a phantom: settlements
+  there, and decay-proof vaults at any evaporated hole, had gone on drawing its spin and Hawking
+  light. The forecast and the Last Burst event say what happens; the Codex gives the numbers.
+  Balance, 300 games: 150 survive, 54 victories, a Degenerate Age of 68 turns (was 151 / 58 / 68);
+  900 games 431 / 146 / 68 (was 452 / 152 / 68). Keeping the phantom energy would have made it
+  461 / 156 / 68: the game is a little harder for losing it, which the player accepted.

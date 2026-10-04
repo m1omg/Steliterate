@@ -77,7 +77,7 @@ export const CODEX: CodexEntry[] = [
     id: 'blackhole',
     title: 'III. The Black Hole Age',
     body: [
-      'Once matter is gone or locked away, black holes are the last sources. They lose mass through Hawking radiation, slowly at first and then faster: a black hole of mass M lasts about 2×10⁶⁷ (M / M☉)³ years, ending in a bright final burst.',
+      'Once matter is gone or locked away, black holes are the last sources. They lose mass through Hawking radiation, slowly at first and then faster: a black hole of mass M lasts about 2×10⁶⁷ (M / M☉)³ years, ending in a bright final burst. Until near the end a stellar hole radiates less than a billion-billion-billionth of a watt, so its last second, about 2×10²² joules (its last year, nearly 10²⁵), dwarfs everything it gave before: a prize for whoever catches it close in. Spread over the distance its worlds orbit it harms nothing: a world 1 AU out gets under a tenth of a joule on each square metre, what Earth gets from the Sun in a twentieth of a millisecond. As the hole shrinks, its hold on what circles it fades, and its worlds drift free.',
       'A spinning black hole also stores rotational energy that can in principle be tapped (the Penrose process). In the game it is a finite reservoir.',
       'Around η 85, electrons and positrons can pair into positronium atoms larger than today’s observable universe.',
     ],

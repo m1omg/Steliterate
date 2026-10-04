@@ -3,6 +3,7 @@ import { STRUCTURE_BY_ID } from '../data/structures';
 import { TECH_BY_ID } from '../data/techs';
 import type { Colony, CrossingReport, EraId, GameState } from '../types';
 import { THREADS } from '../types';
+import { evaporateHole } from '../physics';
 import { capacity, reserveCapacity } from './economy';
 import { destroyColony } from './fleets';
 import type { Mods } from './mods';
@@ -212,12 +213,8 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
       civ.energy *= 0.6;
     } else if (from === 'blackhole') {
       // ---------------------------------------------------------------- The Last Horizon
-      for (const s of Object.values(state.systems)) {
-        if (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') {
-          s.primary.kind = 'void';
-          s.gone = true;
-        }
-      }
+      // every hole left goes as one would on its own (physics.ts): its worlds drift loose, what we built stays
+      for (const s of Object.values(state.systems)) if (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') evaporateHole(state, s);
       lines.push({ text: 'The Heart, the last and largest black hole, has evaporated. Nothing in the universe is making light any more.', kind: 'info' });
       const prep = Math.min(1, civ.energy / Math.max(200, reserveCapacity(state, mods) * 0.5));
       // what the crossing costs: Continuity short of 100, and energy (the protocols halve both)

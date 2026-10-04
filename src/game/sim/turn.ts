@@ -539,8 +539,9 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
           state.civ.energy += 250 * catchers;
           log(state, `Burst Catchers at ${sys.name} caught the black hole’s final burst.`, 'good', sys.id);
         }
+        // its worlds drift loose and what we built there stays (physics.ts): nothing is lost with it
         if (mine) queueEvent(state, 'final_burst', { systemId: sys.id });
-        for (const c of colonies(state)) if (c.systemId === sys.id && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) destroyColony(state, c, 'its black hole evaporated');
+        else if (seen) log(state, `The black hole at ${sys.name} has evaporated in a final burst. Whatever orbited it drifts loose.`, 'info', sys.id);
         break;
       }
       case 'dissolved':

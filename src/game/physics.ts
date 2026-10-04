@@ -304,7 +304,7 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
 
 /** Hawking power available to collectors (Black Hole Era), rising as the hole shrinks. */
 export function hawkingLight(p: Primary, years: number): number {
-  if (!p.evaporateAt || years >= p.evaporateAt) return 0;
+  if ((p.kind !== 'black_hole' && p.kind !== 'smbh') || !p.evaporateAt || years >= p.evaporateAt) return 0;
   const f = Math.min(0.999, years / p.evaporateAt);
   const base = p.kind === 'smbh' ? 0.004 : p.mass > 1000 ? 0.04 : 0.35;
   return Math.min(25, base * Math.pow(1 - f, -2 / 3));
@@ -539,13 +539,36 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
     for (const s of systems) {
       const p = s.primary;
       if ((p.kind === 'black_hole' || p.kind === 'smbh') && p.evaporateAt && to >= p.evaporateAt && !s.gone) {
-        p.kind = 'void';
-        s.gone = true;
+        evaporateHole(state, s);
         notes.push({ systemId: s.id, kind: 'evaporated' });
       }
     }
   }
   return notes;
+}
+
+/**
+ * A black hole has evaporated. It lost its mass so slowly that the orbits around it widened as it
+ * shrank (a ∝ 1/M) until nothing held them: its worlds drift on as rogue worlds, and what was
+ * built on them stays. Its spin, its Hawking light and any glow around it are gone. The final
+ * burst, huge by this age's standards, is spread too thin at the distances worlds orbit to harm
+ * them (Burst Catchers close in bank some of it). The system is gone only if nothing is left in it.
+ */
+export function evaporateHole(state: GameState, s: StarSystem) {
+  const p = s.primary;
+  p.kind = 'void';
+  p.lum = 0;
+  p.spin = 0;
+  p.spinMax = 0;
+  p.rekindle = undefined;
+  let left = Object.values(state.colonies).some((c) => c.systemId === s.id);
+  for (const bid of s.bodies) {
+    const b = state.bodies[bid];
+    if (!b || b.dissolved || b.kind === 'deep') continue;
+    b.rogue = true;
+    left = true;
+  }
+  s.gone = !left;
 }
 
 function growHeart(p: Primary, dm: number) {

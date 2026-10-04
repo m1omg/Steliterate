@@ -42,8 +42,9 @@ npm run savecompat                       # "SAVE COMPAT OK"
 npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; count in DEV-NOTES
 ```
 
-Balance reference: 151 of 300 standard competent games survive (58 victories, a Degenerate Age of 68
-turns) with accord's uses (Rally, Calm, Hear them) and accord income halved, 4 Oct (900 games: 452;
-noise ±12; 148 before, 900 games: 444, with worlds boiling away near helium stars and helium giants
+Balance reference: 150 of 300 standard competent games survive (54 victories, a Degenerate Age of 68
+turns) with settlements that outlive their black hole and nothing drawn from a hole once it is
+gone, 4 Oct (900 games: 431, 146 victories; noise ±12; 151 before, 900 games: 452, with accord's
+uses and accord income halved; 148 before that, 900 games: 444, with worlds boiling away near helium stars and helium giants
 that shine through a turn of their own; 144 before these, 900 games: 447; 140 before cooling white dwarfs and follow-on clocks; 133 at `b950f24`, before any
 new-star clock, 900 games: 390; 114 before the fixes of the 28 Sep review).
