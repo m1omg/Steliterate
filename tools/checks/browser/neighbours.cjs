@@ -1,6 +1,6 @@
-// Browser check: living neighbours, phase 0. In Signals, Send says how long the beam takes to reach
-// them; once sent, their card shows the energy on its way; Seize asks first, and Not now changes
-// nothing.
+// Browser check: living neighbours. In Signals, Send says how long the beam takes to reach them;
+// once sent, their card shows the energy on its way; Seize asks first, and Not now changes nothing;
+// a pact can be proposed from the card, and waits for their answer.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('neighbours', { seed: 1000 });
@@ -45,5 +45,25 @@ run(async () => {
   await page.waitForTimeout(300);
   const after = await page.evaluate((id) => ({ alive: window.__stel.state().survivors[id].alive, bar: !!document.querySelector('.confirm-heavy') }), sv.id);
   check(after.alive && !after.bar, 'Not now changes nothing');
+  // pacts: propose one, and see it waiting for their answer
+  await page.evaluate((id) => {
+    const s = window.__stel.state();
+    const v = s.survivors[id];
+    v.disposition = 40;
+    s.civ.accord = 300;
+    window.__stel.refresh();
+  }, sv.id);
+  await page.waitForTimeout(300);
+  const propose = card.locator('.pacts .row', { hasText: 'Mutual Aid' }).locator('button');
+  const ptip = await propose.getAttribute('data-tip');
+  check(/^(Propose it: 30 accord now, back if they decline\. Our proposal reaches them in .*|Cannot propose it: Our clocks are too far apart to agree on anything\.)$/.test(ptip ?? ''), `Propose says what it costs and how long the answer takes (${ptip?.slice(0, 90)})`);
+  if (/^Propose it/.test(ptip ?? '')) {
+    await propose.click();
+    await page.waitForTimeout(400);
+    const row = await card.locator('.pacts .row', { hasText: 'Mutual Aid' }).textContent();
+    const acc = await page.evaluate(() => window.__stel.state().civ.accord);
+    check(/proposed: waiting for their answer/.test(row ?? '') && acc === 270, `proposed: it waits for their answer (accord ${acc})`);
+    await ck.shot('pact-proposed.png');
+  }
   await finish('NEIGHBOURS UI', ck);
 });

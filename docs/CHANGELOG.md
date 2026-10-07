@@ -756,3 +756,30 @@ at once". Built in phases, each with its checks and harness numbers.
   Balance, 300 games: 136 survive, 52 victories, a Degenerate Age of 71 turns (was 129 / 47 / 69);
   900 games 406 / 146 / 69 (was 400 / 142 / 69); by fate decay 175 of 450, stable 154 of 239,
   curvature 77 of 211. 430 of 900 games play as before.
+- **Phase 1, pacts.** Three pacts, proposed from a civilization's card in Signals (a new Pacts
+  row) or offered by them when they think well of us (over 30):
+  - **Mutual Aid:** whichever of us is in trouble, the other beams help unasked, at most once in
+    six turns each way. We send 15 to 50 energy when their health is under 0.35 and we hold more
+    than 30% of our reserve; they send up to 60 when our reserve is under 15% and falling, and it
+    reaches us after the light of our trouble has reached them and their beam has come back. A
+    partner in Mutual Aid no longer needs to ask.
+  - **Shared Watch:** we see what they see (their stars are eyes on the Hunger for us), we stand
+    half a point stronger against a swarm for each partner, and a swarm at their stars hurts them
+    30% less. Eyes and a little strength, never a shield.
+  - **Open Archives:** 0.5 + 0.02 × their people × health insight a turn, and every ten turns their
+    notes on what we are researching, worth 30% of it.
+
+  A proposal crosses at the speed of light and they weigh it when it arrives: Mutual Aid needs
+  their goodwill at 10, Shared Watch 20, Open Archives 0 (the Tessellate enters any agreement
+  15 sooner; a civilization in trouble takes Mutual Aid 15 sooner; no one binds itself to us
+  with Taint 60 or more). Their answer takes as long again to come back. A pact costs accord, the
+  Threads' consent to bind us: 30 for the first, and every pact in force or proposed makes the
+  next 1.6 times dearer; a refusal gives it back. Ending a pact is heard: −25 with them and −10
+  with everyone else, each when the light reaches them; a civilization whose goodwill falls
+  below −10 renounces every pact with us. The autoplayer proposes and accepts pacts while it
+  keeps 30 accord in hand.
+  Balance, 300 games: 138 survive, 50 victories, a Degenerate Age of 69 turns (was 136 / 52 / 71);
+  900 games 440 / 150 / 69 (was 406 / 146 / 69); by fate decay 190 of 450, stable 145 of 239,
+  curvature 105 of 211. Fewer games end in the Black Hole Age or fade in the Dark. 792 of 900
+  games sign at least one pact: a game averages 1.2 Mutual Aid, 1.4 Open Archives and 0.9 Shared
+  Watch. Also: a proposal is weighed once, even in deep time, where every light has arrived.

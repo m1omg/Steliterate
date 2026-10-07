@@ -38,6 +38,7 @@ import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
 import { DEGENERATE_END, MATTER_END, calendarEra, fateKnown, fateOf, inAge, matterGone } from './fate';
 import { FLOW_ETA, flowAhead, flowing, keeping } from './sim/flow';
+import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost, proposePact } from './sim/pacts';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
@@ -344,6 +345,17 @@ function planAccord(state: GameState) {
   if (low && can('hear', low)) spendAccord(state, 'hear', low);
 }
 
+/** Pacts: propose one a turn to a neighbour who thinks well enough of us, while accord allows. */
+function planPacts(state: GameState) {
+  const civ = state.civ;
+  for (const sv of Object.values(state.survivors)) {
+    const kind = PACT_KINDS.find((k) => !hasPact(sv, k) && sv.disposition >= PACTS[k].need);
+    if (!kind || pactBlocked(state, sv, kind) !== null) continue;
+    if (civ.accord < pactCost(state) + ACCORD_KEEP) return;
+    if (proposePact(state, sv.id, kind) === null) return;
+  }
+}
+
 function planSignals(state: GameState) {
   const civ = state.civ;
   for (const s of state.signals) {
@@ -351,6 +363,7 @@ function planSignals(state: GameState) {
     let choice = s.choices[s.choices.length - 1].id;
     if (s.kind === 'aid') choice = civ.energy > Number(s.data.ask) * 3 ? 'give' : 'refuse';
     if (s.kind === 'refugees') choice = 'accept';
+    if (s.kind === 'pact_offer') choice = civ.accord >= pactCost(state) + ACCORD_KEEP ? 'accept' : 'decline';
     if (s.kind === 'joint') choice = civ.matter > 120 ? 'join' : 'decline';
     if (s.kind === 'trade') choice = civ.matter > 150 ? 'trade' : 'decline';
     if (s.kind === 'slow_first') choice = 'math';
@@ -438,6 +451,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planEvents(state);
   pickResearch(state);
   planCharters(state);
+  planPacts(state);
   planAccord(state);
   planThreads(state);
   planFlow(state);

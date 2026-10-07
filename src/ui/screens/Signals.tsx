@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
-import { answerSignal, askForAid, devour, makeGesture, seize, sendAid } from '../../game/sim/actions';
+import { answerSignal, askForAid, breakPact, devour, makeGesture, proposeAPact, seize, sendAid } from '../../game/sim/actions';
+import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
 import { ASK_COOLDOWN, askBlocked, inStep } from '../../game/sim/survivors';
 import { canConverse, voiceClock } from '../../game/sim/signals';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
@@ -193,6 +194,39 @@ export function SignalsModal({ s }: { s: GameState }) {
                               Devour
                             </button>
                           )}
+                        </div>
+                        <div class="pacts">
+                          <div class="eyebrow" style={{ marginTop: '8px' }} data-tip="Proposed and answered at the speed of light, so a pact takes the round trip to seal. Each costs accord, the Threads' consent to bind us, and every pact in force makes the next dearer. Breaking one is heard everywhere.">
+                            Pacts
+                          </div>
+                          {PACT_KINDS.map((k) => {
+                            const on = hasPact(sv, k);
+                            const waiting = sv.proposal?.kind === k;
+                            const why = pactBlocked(s, sv, k);
+                            return (
+                              <div key={k} class="row" style={{ gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+                                <span class={`grow ${on ? 'good' : 'dim'}`} style={{ fontSize: '12px' }} data-tip={PACTS[k].desc}>
+                                  {PACTS[k].name}
+                                  {on ? ` · since turn ${sv.pacts?.[k]}` : waiting ? ' · proposed: waiting for their answer' : ''}
+                                </span>
+                                {on ? (
+                                  <button class="btn small" data-tip="End it. They hear of it first and worst, everyone else when the light reaches them." onClick={() => act((g) => breakPact(g, sv.id, k)) && sfx('bad')}>
+                                    End
+                                  </button>
+                                ) : (
+                                  !waiting && (
+                                    <button
+                                      class={`btn small pact-propose ${why ? 'disabled' : ''}`}
+                                      data-tip={why ? `Cannot propose it: ${why}` : `Propose it: ${pactCost(s)} accord now, back if they decline. Our proposal reaches them in ${formatYears(ly)}, and their answer comes back as long again.`}
+                                      onClick={() => !why && act((g) => proposeAPact(g, sv.id, k)) && sfx('signal')}
+                                    >
+                                      Propose · {pactCost(s)}
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                         {armed?.endsWith(`:${sv.id}`) && (
                           <div class="row wrap confirm-heavy" style={{ gap: '6px', alignItems: 'center' }}>

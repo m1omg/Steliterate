@@ -296,7 +296,14 @@ export interface Survivor {
   beams?: { at: number; energy: number; known: boolean; plea?: boolean }[];
   /** What they will hear of us when its light reaches them (cosmic years), and how it will change how they feel. */
   news?: { at: number; delta: number; what: string }[];
+  /** Pacts in force between us: the turn each was sealed. */
+  pacts?: Partial<Record<PactKind, number>>;
+  /** A pact we proposed, crossing to them (cosmic years it arrives), and the accord it cost. */
+  proposal?: { kind: PactKind; at: number; cost: number; answered?: boolean };
 }
+
+/** Mutual Aid, Shared Watch, Open Archives. */
+export type PactKind = 'aid' | 'watch' | 'archives';
 
 export interface Mind {
   id: string;

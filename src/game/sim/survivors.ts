@@ -1,6 +1,7 @@
 import { sourceLight } from '../physics';
 import { SHIP_BY_ID } from '../data/ships';
-import type { GameState, Survivor, ThreadId } from '../types';
+import type { GameState, PactKind, Survivor, ThreadId } from '../types';
+import { acceptOffer, hasPact, theirPacts, weighProposal } from './pacts';
 import { createColony, isWarFleet } from './fleets';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
@@ -19,7 +20,8 @@ import { flowing } from './flow';
 
 const WAY_DRAIN: Record<Survivor['way'], number> = { garden: 1.5, upload: 0.8, chorus: 0.9, dormant: 0.55, lattice: 0.7, fork: 1 };
 
-function voice(sv: Survivor, human: string, protocol: string): string {
+/** How they speak: in words, or (the Tessellate) in protocol. */
+export function voice(sv: Survivor, human: string, protocol: string): string {
   return sv.way === 'lattice' ? protocol : human;
 }
 
@@ -30,8 +32,13 @@ function distanceTo(state: GameState, sv: Survivor): number {
   return a && b ? distLy(a, b) : 0;
 }
 
+/** How far their home is from our capital, in light-years (the light-time of anything between us). */
+export function distanceToThem(state: GameState, sv: Survivor): number {
+  return distanceTo(state, sv);
+}
+
 /** When light sent now arrives `ly` light-years away (at once in deep time, where a turn outlasts any crossing). */
-function lightAt(state: GameState, ly: number): number {
+export function lightAt(state: GameState, ly: number): number {
   return isFinite(state.years) ? state.years + Math.max(0, ly) : state.years;
 }
 
@@ -73,8 +80,9 @@ export function spreadNews(state: GameState, fromSystemId: string, delta: number
   }
 }
 
-/** Beams and news whose light has reached them. */
+/** Beams, news and proposals whose light has reached them. */
 function reachThem(state: GameState, sv: Survivor) {
+  if (sv.proposal && !sv.proposal.answered && arrived(state, sv.proposal.at)) weighProposal(state, sv);
   if (sv.beams?.length) {
     for (const b of sv.beams.filter((x) => arrived(state, x.at))) {
       sv.health = Math.min(1, sv.health + (b.plea ? 0.12 + b.energy / 600 : b.energy / 400));
@@ -229,8 +237,13 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       if (!sv.contact) continue;
       if (state.turn - sv.lastSent < 5 || !talk) continue;
 
-      // what do they need, and how do they feel about us
-      if (sv.health < 0.45 && rng.chance(0.55)) {
+      // pacts: they offer one, or renounce them all
+      if (theirPacts(state, sv, () => rng.next())) {
+        sv.lastSent = state.turn;
+        continue;
+      }
+      // what do they need, and how do they feel about us (with Mutual Aid help comes unasked)
+      if (sv.health < 0.45 && !hasPact(sv, 'aid') && rng.chance(0.55)) {
         const ask = Math.round(20 + (1 - sv.health) * 50);
         sv.lastSent = state.turn;
         sendSignal(state, {
@@ -369,6 +382,13 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         civ.flags.refugees = (civ.flags.refugees ?? 0) + came;
         log(state, came < n ? `${came} of ${n} refugees from ${sv.name} found room among us; the rest stay with their own.` : `${n} refugees from ${sv.name} have joined us.`, 'good', cap.systemId);
       } else if (sv) sv.disposition -= 8;
+      break;
+    }
+    case 'pact_offer': {
+      if (choice === 'accept' && sv) {
+        const err = acceptOffer(state, sv, String(sig.data.pact) as PactKind);
+        if (err) return err;
+      }
       break;
     }
     case 'joint': {

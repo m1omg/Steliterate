@@ -37,6 +37,8 @@ function defenseAt(state: GameState, systemId: string, mods: Mods): number {
     for (const s of f.ships) d += (SHIP_BY_ID[s.cls]?.attack ?? 0) * k;
   }
   if (mods.flags.has('charter:wardens_oath')) d *= 1.5;
+  // Shared Watch: a partner's warning, and a little of their strength (never a shield)
+  for (const sv of Object.values(state.survivors)) if (sv.alive && sv.pacts?.watch !== undefined) d += 0.5;
   return d;
 }
 
@@ -286,9 +288,9 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
           state.battles.push({ systemId: sys.id, turn: state.turn, text: 'The swarm broke through.' });
         }
       }
-      // survivors suffer too
+      // survivors suffer too (less, with our watch beside theirs)
       for (const sv of Object.values(state.survivors)) {
-        if (sv.alive && sv.systems.includes(sys.id)) sv.health = Math.max(0, sv.health - 0.012 * sw.size);
+        if (sv.alive && sv.systems.includes(sys.id)) sv.health = Math.max(0, sv.health - 0.012 * sw.size * (sv.pacts?.watch !== undefined ? 0.7 : 1));
       }
 
       // bud

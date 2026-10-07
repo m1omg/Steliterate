@@ -332,6 +332,18 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   newcomers where there is room (capital first; Kin overflow into berths) and returns how many came.
   `forkHome` in `society.ts`: the nearest known star no one lives at. Signals keeps a heavy
   choice (Seize, Devour) armed until confirmed.
+  Pacts (`src/game/sim/pacts.ts`): `Survivor.pacts` (kind → turn sealed) and
+  `Survivor.proposal` (`{ kind, at, cost, answered? }`). `proposePact` spends `pactCost` accord
+  (`PACT_BASE` 30 × `PACT_RISE` 1.6ⁿ, n = pacts in force or proposed) and times the proposal with
+  `lightAt`; `reachThem` calls `weighProposal` when it arrives, which answers with a
+  `pact_answer` signal (it takes the distance back) and marks the proposal `answered`; at the
+  signal's arrival `turn.ts` calls `answerArrived`, which seals it or refunds. `theirPacts` (their
+  turn in `updateSurvivors`): renounce all below −10 (`pact_ended`), offer one above 30
+  (`pact_offer`, 12% a turn). `pactsTurn` (after `updateSurvivors`): Mutual Aid both ways
+  (`pact_aid_out_<id>` / `pact_aid_in_<id>` in `civ.flags`, `AID_EVERY` 6; theirs is an
+  `aid_answer` signal over twice the distance) and Open Archives (`NOTES_EVERY` 10). Shared
+  Watch: `updateDetection` eyes, `defenseAt` +0.5 a partner, a swarm's harm to a partner ×0.7.
+  Autoplayer: `planPacts`, and `pact_offer` in `planSignals`, both keeping `ACCORD_KEEP`.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -553,3 +565,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | taking structures apart (7 Oct) | 135 | 48 victories, Degenerate Age 69 turns; 900 games 406 / 143 / 69 (386 / 142 / 69 before). By fate: decay 179 / 450, stable 144 / 239, curvature 83 / 211. The autoplayer takes apart a collector whose source is gone for good when matter is under 40: 5.6 a game, 170 matter (30 games). Letting it take apart idle Decay Harvesters too: 404 / 143 |
 | the Long Flow (7 Oct) | 129 | 47 victories, Degenerate Age 69 turns; 900 games 400 / 142 / 69 (406 / 143 / 69 before); decay games identical. By fate: stable 140 / 239, curvature 81 / 211. Chosen, 300 each: stable 184 / 119 / 56, curvature 106 / 57 / 88. The autoplayer taking apart the dearest things at unmanned places, collectors included: 399 / 142 |
 | neighbours, phase 0: honesty (work branch) | 136 | 52 victories, Degenerate Age 71 turns; 900 games 406 / 146 / 69 (400 / 142 / 69 before); by fate decay 175 / 450, stable 154 / 239, curvature 77 / 211; 430 of 900 games as before |
+| neighbours, phase 1: pacts (work branch) | 138 | 50 victories, Degenerate Age 69 turns; 900 games 440 / 150 / 69 (406 / 146 / 69 before); by fate decay 190 / 450, stable 145 / 239, curvature 105 / 211; fewer end in the Black Hole Age or fade in the Dark. 792 of 900 games sign a pact (a game: 1.2 Mutual Aid, 1.4 Open Archives, 0.9 Shared Watch) |

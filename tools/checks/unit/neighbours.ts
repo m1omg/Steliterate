@@ -8,7 +8,8 @@ import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
 import { sendAid, devour } from '../../../src/game/sim/actions';
 import { askBlocked, inStep, resolveSurvivorSignal, updateSurvivors } from '../../../src/game/sim/survivors';
-import { sendSignal, voiceClock } from '../../../src/game/sim/signals';
+import { deliverSignals, sendSignal, voiceClock } from '../../../src/game/sim/signals';
+import { acceptOffer, answerArrived, endPact, hasPact, pactBlocked, pactCost, pactsTurn, proposePact, theirPacts } from '../../../src/game/sim/pacts';
 import { computeMods } from '../../../src/game/sim/mods';
 import { capacity } from '../../../src/game/sim/economy';
 import { turnStep } from '../../../src/game/sim/flare';
@@ -171,6 +172,69 @@ const later = (s: GameState, years: number) => {
   fork(s, 'echoes');
   const fk = Object.values(s.survivors).find((x) => !ids.has(x.id));
   check(!!fk && fk.homeSystemId !== s.civ.homeSystemId && fk.homeSystemId !== cap.systemId && !Object.values(s.colonies).some((c) => c.systemId === fk.homeSystemId), `a fork with no settlement goes to a star of its own (${fk ? s.systems[fk.homeSystemId].name : 'none'})`);
+}
+// ================================================================ phase 1: pacts
+{
+  const s = game(30);
+  const sv = first(s);
+  sv.clock = voiceClock(s, logTurnLength(turnStep(s)));
+  sv.disposition = 40;
+  sv.health = 0.8;
+  s.civ.accord = 500;
+  const d = ly(s, sv);
+  check(pactCost(s) === 30, `the first pact costs 30 accord (${pactCost(s)})`);
+  check(proposePact(s, sv.id, 'aid') === null && s.civ.accord === 470 && !!sv.proposal && Math.abs(sv.proposal.at - (s.years + d)) < 1e-6, 'proposing Mutual Aid spends it, and the proposal sets out at light speed');
+  check(pactCost(s) === 48 && pactBlocked(s, sv, 'archives') === 'Our proposal of Mutual Aid is still crossing to them, or their answer is.', `the next is dearer (${pactCost(s)}), and one proposal at a time`);
+  later(s, d * 1.01);
+  const n = s.signals.length;
+  theirTurn(s);
+  const answer = s.signals.slice(n).find((x) => x.kind === 'pact_answer');
+  check(!!answer && Number(answer.data.yes) === 1 && Math.abs(answer.arriveYears - (s.years + d)) < 1e-6, 'it reaches them, they agree, and their answer sets out back');
+  check(!hasPact(sv, 'aid'), 'not yet in force: the answer is still on its way');
+  const n2 = s.signals.length;
+  theirTurn(s);
+  check(!s.signals.slice(n2).some((x) => x.kind === 'pact_answer'), 'they answer once, not every turn the answer is on its way');
+  later(s, d * 1.01);
+  for (const x of deliverSignals(s)) if (x.kind === 'pact_answer') answerArrived(s, x.from, x.data);
+  check(hasPact(sv, 'aid') && !sv.proposal, 'when their answer arrives, Mutual Aid is in force');
+  // a refusal gives the accord back
+  sv.disposition = -5;
+  const acc = s.civ.accord;
+  proposePact(s, sv.id, 'watch');
+  later(s, d * 1.01);
+  theirTurn(s);
+  later(s, d * 1.01);
+  for (const x of deliverSignals(s)) if (x.kind === 'pact_answer') answerArrived(s, x.from, x.data);
+  check(!hasPact(sv, 'watch') && s.civ.accord === acc, `wary of us, they decline Shared Watch, and the accord comes back (${s.civ.accord})`);
+  // Mutual Aid, both ways
+  sv.disposition = 40;
+  sv.health = 0.2;
+  s.civ.energy = 1000;
+  pactsTurn(s);
+  check(s.civ.energy < 1000 && !!sv.beams?.some((b) => b.plea), `they are failing: help goes to them unasked (${1000 - s.civ.energy} energy)`);
+  sv.health = 0.8;
+  s.civ.energy = 1;
+  s.civ.flags.last_energy_net = -5;
+  const m = s.signals.length;
+  pactsTurn(s);
+  const help = s.signals.slice(m).find((x) => x.kind === 'aid_answer');
+  check(!!help && Number(help.data.energy) > 0 && Math.abs(help.arriveYears - (s.years + 2 * d)) < 1e-6, `we are failing: their help comes, after they see it and their beam crosses back (${help?.data.energy})`);
+  // Open Archives
+  acceptOffer(s, sv, 'archives');
+  check(hasPact(sv, 'archives'), 'an offered pact accepted is in force at once');
+  const r = s.civ.researching;
+  const before = r ? s.civ.research[r] ?? 0 : s.civ.flags.insight_bank ?? 0;
+  pactsTurn(s);
+  const after = r ? s.civ.research[r] ?? 0 : s.civ.flags.insight_bank ?? 0;
+  check(after > before, `Open Archives: a little insight every turn (+${(after - before).toFixed(2)})`);
+  // breaking one is heard
+  const others = Object.values(s.survivors).filter((x) => x.alive && x.id !== sv.id);
+  check(endPact(s, sv.id, 'archives') === null && !hasPact(sv, 'archives') && sv.news?.some((x) => x.delta === -25) === true && others.every((o) => o.news?.some((x) => x.delta === -10)), 'breaking a pact: they hear it first and worst, everyone else when the light arrives');
+  // they renounce what they no longer believe in
+  sv.disposition = -15;
+  sv.lastSent = -99;
+  const k = s.signals.length;
+  check(theirPacts(s, sv, () => 0.5) && !hasPact(sv, 'aid') && s.signals.slice(k).some((x) => x.kind === 'pact_ended'), 'turned against us, they renounce every pact');
 }
 void clone;
 done('NEIGHBOURS');

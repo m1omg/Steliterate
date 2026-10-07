@@ -6,6 +6,7 @@ import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '.
 import { THREADS } from '../types';
 import { greatEvaporation, runCrossing } from './crossing';
 import { theLongFlow } from './flow';
+import { answerArrived, pactsTurn } from './pacts';
 import { spareYield } from './spare';
 import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
@@ -360,6 +361,7 @@ export function endTurn(state: GameState): TurnResult {
   autoExplore(state, mods);
   updateHunger(state, step.turnLength, mods);
   updateSurvivors(state, logL, mods, step.turnLength);
+  pactsTurn(state);
   updateMinds(state, logL, mods);
 
   // ------------------------------------------------ 7. the universe moves on
@@ -401,6 +403,8 @@ export function endTurn(state: GameState): TurnResult {
   // ------------------------------------------------ 8. signals, forecasts, events
   result.arrived = deliverSignals(state);
   for (const s of result.arrived) {
+    // a pact's answer: sealed, or our accord back
+    if (s.kind === 'pact_answer') answerArrived(state, s.from, s.data);
     // help we asked for, arriving by beam with their answer
     if (s.kind === 'aid_answer' && Number(s.data.energy) > 0) {
       civ.energy += Number(s.data.energy);

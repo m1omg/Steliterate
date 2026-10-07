@@ -45,9 +45,13 @@ for (const strategy of strategies) {
         );
       }
     }
-    // each neighbour: alive or its fate, and +N for every star it settled beyond its first
+    // each neighbour: alive or its fate, +N for every star it settled beyond its first, and the
+    // pacts in force or once sealed with it (a: Mutual Aid, r: Open Archives, w: Shared Watch)
     const sv = Object.values(state.survivors)
-      .map((s) => `${s.adjective}:${s.alive ? 'alive' : s.fate}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}`)
+      .map((s) => {
+        const pacts = (['aid', 'archives', 'watch'] as const).filter((k) => s.pacts?.[k] !== undefined).map((k) => (k === 'archives' ? 'r' : k[0])).join('');
+        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}`;
+      })
       .join(' ');
     console.log(
       `seed ${seed}: ${state.outcome ? `${state.outcome.kind.toUpperCase()} "${state.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,

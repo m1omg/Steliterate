@@ -22,8 +22,13 @@ run(async () => {
       if (s.civ.researching === 'proton_question') s.civ.researching = null;
       s.civ.flags.insight_bank = 0;
     };
-    for (let i = 0; i < 80 && !s.outcome && s.eta < 24; i++) {
-      window.__stel.endTurns(3);
+    // a turn at a time: this turn and the last one below must stay short of η 30, where the
+    // neutron stars would tell (the autoplayer goes slow here, and a slow turn is long)
+    let prev = s.eta;
+    for (let i = 0; i < 240 && !s.outcome && s.eta < 24; i++) {
+      if (s.eta + 2 * Math.max(s.eta - prev, 0.5) >= 29.5) break;
+      prev = s.eta;
+      window.__stel.endTurns(1);
       blind();
     }
     // one more turn with nothing found out, so the forecasts are drawn without the answer
@@ -33,7 +38,7 @@ run(async () => {
     return { eta: s.eta, era: s.era };
   });
   await page.waitForTimeout(600);
-  check(at.era === 'degenerate' && at.eta > 24 && at.eta < 30, `the Degenerate Age, η ${at.eta.toFixed(2)}, the fate unknown`);
+  check(at.era === 'degenerate' && at.eta > 22 && at.eta < 30, `the Degenerate Age, η ${at.eta.toFixed(2)}, the fate unknown`);
   const chrono = await page.evaluate(() => {
     const c = document.querySelector('.chrono');
     const unsure = [...c.querySelectorAll('.eyebrow')].find((x) => x.textContent.trim() === 'II → III ?');

@@ -4,7 +4,8 @@ import { formatYears } from '../eras';
 import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, hasOnceEffect, structureLabel, type StructureDef } from '../data/structures';
 import { THREAD_DEFS } from '../data/threads';
 import { WORK_BY_ID } from '../data/works';
-import type { Colony, Focus, GameState, SpareWork } from '../types';
+import type { Colony, Focus, GameState, PactKind, SpareWork } from '../types';
+import { endPact, proposePact } from './pacts';
 import { THREADS } from '../types';
 import { capacity } from './economy';
 import { workRequirementMet } from './endings';
@@ -484,6 +485,16 @@ export function askForAid(state: GameState, survivorId: string): ActionResult {
 
 export function devour(state: GameState, survivorId: string): ActionResult {
   return devourSurvivor(state, survivorId);
+}
+
+/** Propose a pact; its answer comes back at the speed of light. */
+export function proposeAPact(state: GameState, survivorId: string, kind: PactKind): ActionResult {
+  return proposePact(state, survivorId, kind);
+}
+
+/** Break a pact: everyone will hear of it. */
+export function breakPact(state: GameState, survivorId: string, kind: PactKind): ActionResult {
+  return endPact(state, survivorId, kind);
 }
 
 /** Beam energy to another civilization: it reaches them, and helps, when the light does. */

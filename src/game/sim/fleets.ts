@@ -246,6 +246,11 @@ const SCAN_LOCAL = 2000;
 export function updateDetection(state: GameState, mods: Mods) {
   const eyes = [
     ...colonies(state).map((c) => ({ sys: state.systems[c.systemId], range: mods.detect })),
+    // Shared Watch: the stars our partners watch, we see too
+    ...Object.values(state.survivors)
+      .filter((sv) => sv.alive && sv.pacts?.watch !== undefined)
+      .flatMap((sv) => sv.systems.map((id) => ({ sys: state.systems[id], range: mods.detect })))
+      .filter((e) => !!e.sys),
     ...Object.values(state.fleets)
       .filter((f) => f.at)
       .map((f) => ({ sys: state.systems[f.at!], range: mods.detect * (canSurvey(f) ? 3 : 1) })),

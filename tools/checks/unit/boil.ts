@@ -57,6 +57,7 @@ function testStar(kind: 'helium_star' | 'helium_giant', not: string[]): StarSyst
 
 // ---------------------------------------------------------------- under a helium star (30 L☉)
 const he = testStar('helium_star', []);
+he.ejected = true; // outside the galaxy: no close passes fling its test worlds away first
 const deep = s.bodies[he.bodies.find((id) => s.bodies[id].kind === 'deep')!];
 const molten = world(he, 'barren', 0.023, true); // 471 to 5,494 K
 const rubble = world(he, 'asteroids', 0.1225); // mean about 1,700 K
