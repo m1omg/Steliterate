@@ -1,5 +1,5 @@
 import { SHIP_BY_ID } from '../data/ships';
-import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
+import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
 import { ERA_BY_ID, logTurnLength, tideLength } from '../eras';
 import { SURFACE_LIFE, evolveUniverse, lampsOver, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
@@ -47,15 +47,22 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
       if (item.kind === 'structure') {
         const d = STRUCTURE_BY_ID[item.key];
         c.structures[item.key] = (c.structures[item.key] ?? 0) + 1;
-        if (d?.vitalityOnce) {
-          const b = state.bodies[c.bodyId];
-          b.vitality = Math.min(1, b.vitality + d.vitalityOnce);
+        // what a building does once, it does the first time: one taken apart here and built again does not repeat it
+        const again = dismantledKey(c.id, item.key);
+        if ((state.civ.flags[again] ?? 0) > 0) {
+          state.civ.flags[again]--;
+          if (state.civ.flags[again] <= 0) delete state.civ.flags[again];
+        } else {
+          if (d?.vitalityOnce) {
+            const b = state.bodies[c.bodyId];
+            b.vitality = Math.min(1, b.vitality + d.vitalityOnce);
+          }
+          if (d?.coreHeatBonus) {
+            const b = state.bodies[c.bodyId];
+            b.coreHeat = Math.min(1, b.coreHeat + d.coreHeatBonus);
+          }
+          if (item.key === 'confluence_node') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
         }
-        if (d?.coreHeatBonus) {
-          const b = state.bodies[c.bodyId];
-          b.coreHeat = Math.min(1, b.coreHeat + d.coreHeatBonus);
-        }
-        if (item.key === 'confluence_node') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
         log(state, `${c.name}: ${item.kind === 'structure' ? structureLabel(item.key, state.systems[c.systemId]).name : d?.name ?? item.key} complete.`, 'good', c.systemId);
       } else {
         const def = SHIP_BY_ID[item.key];

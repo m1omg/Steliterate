@@ -165,6 +165,8 @@ export interface YieldLine {
   industry?: number;
   insight?: number;
   accord?: number;
+  /** the structure on this line, a collector with nothing to gather */
+  idle?: string;
 }
 
 export interface YieldBreakdown {

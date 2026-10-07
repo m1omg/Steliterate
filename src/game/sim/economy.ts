@@ -228,7 +228,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     energyUpkeep += up;
     // a collector with nothing to collect says so, rather than vanishing from the list
     const idle = !!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion';
-    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${idle ? ': nothing to gather' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc });
+    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${idle ? ': nothing to gather' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
   }
   if (matterBurn > 0) lines.push({ label: 'Fuel burned', matter: -matterBurn });
 

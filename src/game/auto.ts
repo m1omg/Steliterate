@@ -1,5 +1,5 @@
 import { EVENT_BY_ID, choiceHint } from './data/events';
-import { STRUCTURE_BY_ID } from './data/structures';
+import { STRUCTURE_BY_ID, type EnergyMode } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
 import { logTurnLength } from './eras';
@@ -11,6 +11,8 @@ import {
   buildCost,
   charterAvailable,
   convert,
+  dismantle,
+  dismantleTerms,
   enactCharter,
   makeGesture,
   orderFleet,
@@ -103,6 +105,28 @@ function tryBuild(state: GameState, c: Colony, ids: string[]): boolean {
 /** The fate of matter we plan for: the one we know, or, not knowing yet, the worst (decay, the soonest end). */
 function plannedFate(state: GameState): Fate {
   return fateKnown(state) ? fateOf(state) : 'decay';
+}
+
+/** Collectors whose source, once it gives nothing, never gives again: a star gone cold, a spent core or spin, a hole gone. */
+const GONE_FOR_GOOD: EnergyMode[] = ['light', 'geo', 'spin', 'hawking', 'rekindle'];
+
+/**
+ * Short of matter, take apart one collector that gathers nothing (arrays under a star gone cold, a
+ * tap on a spent core): the matter it cost comes back. One a turn, keeping energy in hand.
+ */
+function planDismantle(state: GameState) {
+  const civ = state.civ;
+  if (matterGone(state) || civ.matter >= 40) return;
+  const pr = project(state);
+  for (const c of colonies(state)) {
+    for (const l of pr.perColony[c.id]?.y.lines ?? []) {
+      const d = l.idle ? STRUCTURE_BY_ID[l.idle] : undefined;
+      // only where the source is gone for good: decay and curvature harvesters wait for their time
+      if (!d?.matter || !d.energy || !GONE_FOR_GOOD.includes(d.energy.mode)) continue;
+      if (civ.energy < dismantleTerms(state, d).cost + 40) return;
+      if (dismantle(state, c.id, d.id) === null) return;
+    }
+  }
 }
 
 function planBuilds(state: GameState) {
@@ -388,6 +412,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planCharters(state);
   planAccord(state);
   planThreads(state);
+  planDismantle(state);
   planBuilds(state);
   planFleets(state);
   planSignals(state);

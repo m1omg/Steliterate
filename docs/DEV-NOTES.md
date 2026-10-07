@@ -63,8 +63,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   that isn't tainted.
 - **Checks** (`tools/checks/`, since 7 Oct; before then they lived in the ephemeral scratchpad):
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
-    cold-energy, cooling, evap, fates, flash, focus, follow, old-saves, pace, quake, quick, refund,
-    repeal, rogue, spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    cold-energy, cooling, dismantle, evap, fates, flash, focus, follow, old-saves, pace, quake,
+    quick, refund, repeal, rogue, spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -294,6 +294,18 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     Curvature Collector: `curvature_collector`, tech `curvature_harvest` (`needsCurvature`).
   - Texts by fate: `ageIntro`, `crossingName`, `milestonesFor`, `deepMilestonesFor` (`eras.ts`);
     `proton_answer` has three answers.
+- **Taking structures apart (`src/game/sim/actions.ts`, 7 Oct):** `dismantleTerms` (the matter back
+  at today's `buildCost`, so energy once matter is gone; the work a fifth of `d.cost` in energy,
+  at least 5), `dismantleCheck` (people or sleepers left without room by `capacity` on the colony
+  with one fewer, the last Shipyard while ships are queued, energy) and `dismantle`. Once-only
+  effects (`hasOnceEffect` in `data/structures.ts`: `vitalityOnce`, `coreHeatBonus`, a Confluence
+  Node's count) are skipped on completion while `civ.flags[dismantledKey(colony, id)]` counts one
+  taken apart there (`applyIndustry` in `turn.ts` uses one up). A swarm or an overdrive accident
+  that wrecks a building leaves no mark, so rebuilding it repeats its effect, as before. The
+  economy marks a collector with nothing to gather on its yield line (`YieldLine.idle`); the
+  autoplayer's `planDismantle` takes one of those apart a turn when matter is under 40, only
+  where the source is gone for good (`GONE_FOR_GOOD`: light, geo, spin, hawking, rekindle). The
+  panel's × (Overview, Structures) arms a confirm line.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -512,3 +524,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | survivors' health stops at zero; checks in the repo (7 Oct) | 149 | 55 victories, Degenerate Age 68 turns; 5 of 300 games play out differently: help sent right after a crossing or a swarm (Tell the others, aid) no longer first fills a negative |
 | honest cooling; core heat fades; the dark keeps cold minds for half (7 Oct) | 128 | 40 victories, Degenerate Age 68 turns; 900 games 397 / 119 / 67. Steps: no light floors 137 / 55; core heat ×0.5 a turn 106 / 31, with the dark-sky discount 126 / 36; ×0.8 (kept) 128 / 40; ×0.9 134 / 39. The Fade 9 → 28 per 300: core heat had lasted into the Dark |
 | three fates of matter; ages by warmth (7 Oct) | 124 | 52 victories, Degenerate Age 70 turns; 900 games 386 / 142 / 69 (397 / 119 / 67 before); decay games identical line for line. By fate in the 900: decay 163 / 450 (4 victories), stable 143 / 239 (89), curvature 80 / 211 (49). Chosen, 300 each: decay 110 / 7 / 68, stable 184 / 114 / 55, curvature 113 / 65 / 89 (98 / 56 with the autoplayer preparing for the Great Evaporation from η 78 rather than 62) |
+| taking structures apart (7 Oct) | 135 | 48 victories, Degenerate Age 69 turns; 900 games 406 / 143 / 69 (386 / 142 / 69 before). By fate: decay 179 / 450, stable 144 / 239, curvature 83 / 211. The autoplayer takes apart a collector whose source is gone for good when matter is under 40: 5.6 a game, 170 matter (30 games). Letting it take apart idle Decay Harvesters too: 404 / 143 |

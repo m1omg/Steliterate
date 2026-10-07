@@ -1,8 +1,10 @@
 import { CHARTER_BY_ID, CHARTERS } from '../data/charters';
 import { SHIP_BY_ID, SHIPS, type ShipDef } from '../data/ships';
-import { STRUCTURE_BY_ID, STRUCTURES, type StructureDef } from '../data/structures';
+import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, hasOnceEffect, structureLabel, type StructureDef } from '../data/structures';
+import { THREAD_DEFS } from '../data/threads';
 import { WORK_BY_ID } from '../data/works';
 import type { Colony, Focus, GameState, SpareWork } from '../types';
+import { THREADS } from '../types';
 import { capacity } from './economy';
 import { workRequirementMet } from './endings';
 import { resolveEvent } from './events';
@@ -102,6 +104,55 @@ export function queueBuild(state: GameState, colonyId: string, kind: 'structure'
   state.civ.matter -= cost.matter;
   state.civ.energy -= cost.energy;
   c.queue.push({ uid: uid(state, 'q'), kind, key, progress: 0, cost: cost.industry, paid: { matter: cost.matter, energy: cost.energy } });
+  return null;
+}
+
+/**
+ * Taking a structure apart: what comes back (the matter it cost at today's price, or its energy
+ * once matter is gone) and what the work costs in energy (a fifth of its industry cost, at least
+ * 5). The work that built it is lost, so building and taking apart never pays.
+ */
+export function dismantleTerms(state: GameState, d: StructureDef): { matter: number; energy: number; cost: number } {
+  const back = buildCost(state, d, false);
+  return { matter: back.matter, energy: back.energy, cost: Math.max(5, Math.round(d.cost / 5)) };
+}
+
+/** Why one of these cannot be taken apart at this settlement now, or null if it can. */
+export function dismantleCheck(state: GameState, c: Colony, id: string): string | null {
+  const d = STRUCTURE_BY_ID[id];
+  const n = c.structures[id] ?? 0;
+  if (!d || n <= 0) return 'There is none here.';
+  // whoever lives in it needs somewhere else to live
+  const mods = computeMods(state);
+  const now = capacity(state, c, mods);
+  const after = capacity(state, { ...c, structures: { ...c.structures, [id]: n - 1 } }, mods);
+  const homeless = THREADS.filter((t) => after[t] < now[t] && c.pops[t] > after[t]);
+  if (homeless.length) return `It houses ${homeless.map((t) => THREAD_DEFS[t].name).join(' and ')} who would have nowhere else to live here.`;
+  if (after.cryo < now.cryo && c.cryo > after.cryo) return 'Its sleepers would have nowhere else to sleep here.';
+  if (id === 'shipyard' && n === 1 && c.queue.some((q) => q.kind === 'ship')) return 'The ships in the queue are built in it.';
+  const t = dismantleTerms(state, d);
+  if (state.civ.energy < t.cost) return `Taking it apart needs ${t.cost} energy.`;
+  return null;
+}
+
+/** Take one structure apart at a settlement. */
+export function dismantle(state: GameState, colonyId: string, id: string): ActionResult {
+  const c = state.colonies[colonyId];
+  if (!c) return 'No such settlement.';
+  const err = dismantleCheck(state, c, id);
+  if (err) return err;
+  const d = STRUCTURE_BY_ID[id];
+  const t = dismantleTerms(state, d);
+  c.structures[id]--;
+  if (c.structures[id] <= 0) delete c.structures[id];
+  state.civ.energy += t.energy - t.cost;
+  state.civ.matter += t.matter;
+  if (hasOnceEffect(d)) {
+    const k = dismantledKey(c.id, id);
+    state.civ.flags[k] = (state.civ.flags[k] ?? 0) + 1;
+  }
+  const back = t.matter ? `, ${t.matter} matter back` : t.energy ? `, ${t.energy} energy back` : '';
+  log(state, `${c.name}: ${structureLabel(id, state.systems[c.systemId]).name} taken apart${back}, for ${t.cost} energy.`, 'info', c.systemId);
   return null;
 }
 

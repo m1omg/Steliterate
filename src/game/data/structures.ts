@@ -127,6 +127,19 @@ export const STRUCTURE_KINDS: { id: StructureKind; name: string; tip: string }[]
 ];
 
 /** A structure's kind, from what it does: the first of these that it yields. */
+/** Does building this do something once, at that settlement, beyond what it does while it stands? */
+export function hasOnceEffect(d: StructureDef): boolean {
+  return !!(d.vitalityOnce || d.coreHeatBonus || d.id === 'confluence_node');
+}
+
+/**
+ * The civ.flags counter of these taken apart at a settlement and not built again yet: one built
+ * again does not repeat what the first did once (so taking apart and rebuilding never farms it).
+ */
+export function dismantledKey(colonyId: string, id: string): string {
+  return `dismantled_${colonyId}_${id}`;
+}
+
 export function structureKind(d: StructureDef): StructureKind {
   if (d.energy) return 'energy';
   if (d.matterYield || d.hydrogenYield || d.lift) return 'matter';

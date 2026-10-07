@@ -148,8 +148,17 @@ range, **standing** (0 to 100) and a rotating **demand**.
 * **The Hearth.** Every settlement has its own small power core fed by what is local:
   starlight, core heat, or a black hole's spin. It can be **overdriven** under the Overdrive
   Protocols charter for more energy, at the cost of damage and a brighter signature.
+* **The Hearth** runs on stored fuel and salvage where nothing local is left: a little, never
+  nothing (a floor; the panel says so).
 * **Matter** is mined from finite deposits and used for construction, fusion and accretion.
-  After the Great Decay (if protons decay) construction is paid in energy.
+  Once matter is gone (the Great Decay, or the Great Evaporation) construction is paid in energy.
+* **Taking structures apart.** Any structure gives back the matter it cost (its energy, once
+  matter is gone), for a fifth of its industry cost in energy (at least 5); the work that built
+  it is lost, so building and taking apart never pays. Refused while it houses people or sleepers
+  with nowhere else to go there, or while ships in the queue need the Shipyard. What a building
+  does once when finished (Volatile Shepherding's water, a Core Stimulator's heat, a new
+  Confluence Node for the Chorus's wish) it does only the first time at a settlement. Matter is
+  conserved; dead collectors are a mine of it.
 * **Insight** drives research and the Great Works; **Accord** buys Charters; **Industry**
   drives each settlement's build queue.
 * Housing costs upkeep only for the share of it that is lived in.

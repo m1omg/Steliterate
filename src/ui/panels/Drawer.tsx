@@ -13,6 +13,9 @@ import {
   buildCost,
   convert,
   disbandFleet,
+  dismantle,
+  dismantleCheck,
+  dismantleTerms,
   moveQueued,
   orderFleet,
   setAutoExplore,
@@ -642,6 +645,12 @@ const CONVERSIONS: { id: Conversion; label: string; icon: 'upload' | 'merge' | '
 function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   void rev.value; // mutable game state: re-render on every change
   const [tab, setTab] = useState<'overview' | 'build'>('overview');
+  // a structure about to be taken apart, waiting for a yes (brought into view: the panel scrolls)
+  const [armed, setArmed] = useState<string | null>(null);
+  const armRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (armed) armRef.current?.scrollIntoView({ block: 'center' });
+  }, [armed]);
   // the idle-settlements reminder opens the Build tab, where a settlement is given work
   const wantBuild = openBuildFor.value;
   useEffect(() => {
@@ -794,14 +803,45 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                   .filter(([id, n]) => n > 0 && STRUCTURE_BY_ID[id])
                   // grouped by kind, as in the build list
                   .sort(([a], [b]) => KIND_ORDER.indexOf(structureKind(STRUCTURE_BY_ID[a])) - KIND_ORDER.indexOf(structureKind(STRUCTURE_BY_ID[b])))
-                  .map(([id, n]) => (
-                    <span key={id} class="chip" data-tip={structureLabel(id, sys).desc}>
-                      <KindIcon id={id} />
-                      {structureLabel(id, sys).name}
-                      {n > 1 ? ` ×${n}` : ''}
-                    </span>
-                  ))}
+                  .map(([id, n]) => {
+                    const why = dismantleCheck(s, c, id);
+                    return (
+                      <span key={id} class={`chip ${armed === id ? 'warn' : ''}`} data-tip={structureLabel(id, sys).desc}>
+                        <KindIcon id={id} />
+                        {structureLabel(id, sys).name}
+                        {n > 1 ? ` ×${n}` : ''}
+                        <button
+                          class={`dismantle ${why ? 'off' : ''}`}
+                          aria-label={`Take apart ${structureLabel(id, sys).name}`}
+                          data-tip={why ? `Cannot take it apart: ${why}` : `Take one apart: ${dismantleBack(dismantleTerms(s, STRUCTURE_BY_ID[id]))}.`}
+                          onClick={() => !why && setArmed(armed === id ? null : id)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
               </div>
+              {armed && (c.structures[armed] ?? 0) > 0 && (
+                <div ref={armRef} class="row wrap dismantle-confirm" style={{ gap: '6px', marginTop: '6px', alignItems: 'center' }}>
+                  <span class="dim">
+                    Take apart one {structureLabel(armed, sys).name}? {dismantleBack(dismantleTerms(s, STRUCTURE_BY_ID[armed]))}. The work that built it is lost.
+                  </span>
+                  <button
+                    class="btn small danger"
+                    onClick={() => {
+                      const id = armed;
+                      setArmed(null);
+                      if (act((g) => dismantle(g, c.id, id))) sfx('click');
+                    }}
+                  >
+                    Take apart
+                  </button>
+                  <button class="btn small" onClick={() => setArmed(null)}>
+                    Keep it
+                  </button>
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -874,6 +914,12 @@ function selectFleet(f: Fleet) {
 
 /** The icon for each kind of structure; its colour comes from `.kind-<kind>` in styles.css. */
 const KIND_ICON: Record<StructureKind, IconName> = { energy: 'energy', storage: 'reserve', matter: 'matter', industry: 'industry', insight: 'insight', accord: 'accord', people: 'kin', world: 'planet', defence: 'shield' };
+/** What taking one apart gives back, and what it costs: "+20 matter back, for 6 energy". */
+function dismantleBack(t: { matter: number; energy: number; cost: number }): string {
+  const back = t.matter ? `+${t.matter} matter back` : t.energy ? `+${t.energy} energy back` : 'nothing comes back';
+  return `${back}, for ${t.cost} energy`;
+}
+
 const KIND_ORDER = STRUCTURE_KINDS.map((k) => k.id);
 
 /** A structure's kind, as a small coloured icon in front of its name. */

@@ -690,3 +690,19 @@ neighbours. Plan agreed 7 Oct; parts land one at a time.
     the Great Evaporation as many turns ahead as for the Great Decay). Stable matter is the
     kindest fate; curvature games trade endurance for victories (more time with matter), and
     lose most at the Great Evaporation and in the Dark that follows soon after.
+- **Any structure can be taken apart** (the player: "dismantle for mass … at an energy cost").
+  The × on a structure in a settlement's Overview says what comes back and what it costs, asks,
+  and takes one apart: the matter it cost comes back (its energy, once matter is gone), for a
+  fifth of its industry cost in energy, at least 5; the work that built it is lost. Not while it
+  houses people or sleepers with nowhere else to go there, or while ships in the queue need the
+  Shipyard. What a building does once when finished (Volatile Shepherding's water, a Core
+  Stimulator's heat, a new Confluence Node for the Chorus's wish) it does the first time only at
+  a settlement, so taking apart and rebuilding farms nothing. The autoplayer, short of matter
+  (under 40), takes apart one collector a turn whose source is gone for good (a star gone cold, a
+  spent core, a hole gone): in 30 games 5.6 a game, 170 matter back (Geothermal Taps most,
+  then infrared and glow collectors at cold stars and ember collectors after the halo).
+  Balance, 300 games: 135 survive, 48 victories, a Degenerate Age of 69 turns (was 124 / 52 / 70);
+  900 games 406 / 143 / 69 (was 386 / 142 / 69). By fate in the 900: decay 179 of 450 (163
+  before), stable 144 of 239 (143), curvature 83 of 211 (80). Matter given back helps most where
+  it runs out soonest, before the Great Decay. (Taking Decay Harvesters apart before they started
+  gathering, then building them again, was a waste the autoplayer no longer makes.)
