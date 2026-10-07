@@ -63,8 +63,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   that isn't tainted.
 - **Checks** (`tools/checks/`, since 7 Oct; before then they lived in the ephemeral scratchpad):
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
-    cold-energy, cooling, dismantle, evap, fates, flash, focus, follow, old-saves, pace, quake,
-    quick, refund, repeal, rogue, spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, old-saves, pace,
+    quake, quick, refund, repeal, rogue, spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -306,6 +306,21 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   autoplayer's `planDismantle` takes one of those apart a turn when matter is under 40, only
   where the source is gone for good (`GONE_FOR_GOOD`: light, geo, spin, hawking, rekindle). The
   panel's × (Overview, Structures) arms a confirm line.
+- **The Long Flow (`src/game/sim/flow.ts`, 7 Oct):** `FLOW_ETA` 65. `theLongFlow` runs in step 7
+  of the turn, after `evolveUniverse`, with the η the turn ends at: the first time (`flowAhead`:
+  not decay, matter not gone) it sets `civ.flags.flowed`, marks `relic.flowed` on every relic not
+  kept by a Relic Excavation with someone awake (a hidden one stays hidden, and a survey no longer
+  finds it), and queues `long_flow` with the count of found ruins lost. Then, while `flowing`
+  (flowed and matter not gone), each settlement `keeping()` calls 'unmanned' loses `nextToFlow`
+  (cheapest by industry cost, Cryo Halls last, never `decayProof`), the sleepers beyond the
+  remaining berths with a Cryo Hall, and is destroyed once empty. `keeping`: Kin or Lattice →
+  'kept'; any Echo, Chorus or Coldmind whose `strainFor(...).clock` is under 65 → 'kept'; minds
+  all slower → 'watched' (`FLOW_WATCH` 1.5 on their upkeep in `colonyTurn`); no one awake →
+  'unmanned'. `FLOW_DORMANT` 0.3 replaces dormancy's 0.1 (The Long Watch's 0.05 stays). Survivors
+  of the `dormant` way drain ×2 while flowing. `relic_dig` gives no insight on a flowed ruin and
+  cannot be built on one. Display: `uFlow` in `PLANET_FRAG` (relief and detail settle; city
+  patterns keep `cityDetail`), `asteroidBelt(..., round)` (icosahedron detail 1); the panel's
+  "flowing away" / "keeping watch" chips. Autoplayer: `planFlow`.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -525,3 +540,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | honest cooling; core heat fades; the dark keeps cold minds for half (7 Oct) | 128 | 40 victories, Degenerate Age 68 turns; 900 games 397 / 119 / 67. Steps: no light floors 137 / 55; core heat ×0.5 a turn 106 / 31, with the dark-sky discount 126 / 36; ×0.8 (kept) 128 / 40; ×0.9 134 / 39. The Fade 9 → 28 per 300: core heat had lasted into the Dark |
 | three fates of matter; ages by warmth (7 Oct) | 124 | 52 victories, Degenerate Age 70 turns; 900 games 386 / 142 / 69 (397 / 119 / 67 before); decay games identical line for line. By fate in the 900: decay 163 / 450 (4 victories), stable 143 / 239 (89), curvature 80 / 211 (49). Chosen, 300 each: decay 110 / 7 / 68, stable 184 / 114 / 55, curvature 113 / 65 / 89 (98 / 56 with the autoplayer preparing for the Great Evaporation from η 78 rather than 62) |
 | taking structures apart (7 Oct) | 135 | 48 victories, Degenerate Age 69 turns; 900 games 406 / 143 / 69 (386 / 142 / 69 before). By fate: decay 179 / 450, stable 144 / 239, curvature 83 / 211. The autoplayer takes apart a collector whose source is gone for good when matter is under 40: 5.6 a game, 170 matter (30 games). Letting it take apart idle Decay Harvesters too: 404 / 143 |
+| the Long Flow (7 Oct) | 129 | 47 victories, Degenerate Age 69 turns; 900 games 400 / 142 / 69 (406 / 143 / 69 before); decay games identical. By fate: stable 140 / 239, curvature 81 / 211. Chosen, 300 each: stable 184 / 119 / 56, curvature 106 / 57 / 88. The autoplayer taking apart the dearest things at unmanned places, collectors included: 399 / 142 |

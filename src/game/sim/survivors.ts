@@ -9,6 +9,7 @@ import { survivorWorld } from './homes';
 import { formatDistance, formatYears } from '../eras';
 import { capital, clamp, distLy, hasCharter, log, withRng } from './util';
 import { calendarEra } from '../fate';
+import { flowing } from './flow';
 
 // Fellow survivors: other young civilizations facing the same end. Simulated lightly: their
 // fate follows the same physics, and they talk to you across light-years.
@@ -46,6 +47,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       drain *= WAY_DRAIN[sv.way] / (0.5 + state.gfe * 0.5);
       // gardens live on living worlds: once proton decay takes hold (η 37.5) those worlds are dissolving
       if (sv.way === 'garden' && state.protonsDecay && state.eta > 37.5) drain *= 1.4;
+      // sleepers through the ages must wake to mend their vaults once solid matter flows
+      if (sv.way === 'dormant' && flowing(state)) drain *= 2;
       sv.health = clamp(sv.health - drain + rng.range(-0.004, 0.006), 0, 1);
       sv.pop = Math.max(0, sv.pop * (0.98 + sv.health * 0.03));
 

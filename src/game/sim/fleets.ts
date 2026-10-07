@@ -143,7 +143,7 @@ export function survey(state: GameState, systemId: string) {
   state.civ.known[systemId] = 2;
   for (const bid of sys.bodies) {
     const b = state.bodies[bid];
-    if (b.relic && b.relic.state === 'hidden' && !b.dissolved) {
+    if (b.relic && b.relic.state === 'hidden' && !b.relic.flowed && !b.dissolved) {
       b.relic.state = 'found';
       state.pending.push({ uid: uid(state, 'ev'), defId: `relic_${b.relic.kind}`, data: { bodyId: b.id, systemId } });
     }

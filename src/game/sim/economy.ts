@@ -7,6 +7,7 @@ import { THAW_ROOM, scorched, thawed } from './flare';
 import { type Mods, strainFor, type Strain } from './mods';
 import { clamp, colonies, eraIndex } from './util';
 import { calendarEra, fateOf, matterGone } from '../fate';
+import { FLOW_DORMANT, FLOW_WATCH, flowing, keeping } from './flow';
 
 export interface TurnContext {
   years: number; // start of the coming turn
@@ -103,7 +104,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
 
   // ---- populations
   const strain = {} as Record<ThreadId, Strain>;
-  const upkeepScale = dormant ? (flags.has('charter:the_long_watch') ? 0.05 : 0.1) : 1;
+  // after the Long Flow even a sleeping civilization must wake its watchers to mend (unless someone is always awake)
+  const flowNow = flowing(state);
+  const upkeepScale = dormant ? (flags.has('charter:the_long_watch') ? 0.05 : flowNow ? FLOW_DORMANT : 0.1) : 1;
+  // minds that all think slower than the flow keep watchers awake between their thoughts
+  const watch = flowNow && keeping(c, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor)) === 'watched' ? FLOW_WATCH : 1;
   // machines and sleepers run for the whole of a slowed turn; only minds can slow themselves down
   const slowTime = Math.max(1, pf);
   for (const t of THREADS) {
@@ -117,14 +122,14 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const ind = n * d.industry * o;
     const ins = n * d.insight * o;
     const acc = n * d.accord * o;
-    const eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * (t === 'coldminds' && darkSky ? 0.5 : 1);
+    const eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1);
     const mUp = n * d.matterUpkeep * upkeepScale;
     industry += ind;
     insight += ins;
     accord += acc;
     energyUpkeep += eUp;
     matterUpkeep += mUp;
-    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
+    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
   }
   if (c.cryo > 0) {
     const cu = c.cryo * 0.08 * (flags.has('charter:cold_sleep_lottery') ? 0.5 : 1) * slowTime;
@@ -218,7 +223,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
       if (!matterGone(state)) matter += mt;
     }
     const ind = (d.industry ?? 0) * n * out;
-    const ins = (d.insight ?? 0) * n * out;
+    // a Relic Excavation has nothing to work once its ruin has flowed into smooth lumps
+    const ins = d.id === 'relic_dig' && body.relic?.flowed ? 0 : (d.insight ?? 0) * n * out;
     const acc = (d.accord ?? 0) * n * out;
     const up = (d.upkeep ?? 0) * n * upkeepScale * slowTime * (d.cap || d.cryoCap ? occupancy(d) : 1) * (id === 'cold_vault' && darkSky ? 0.5 : 1);
     energy += e;

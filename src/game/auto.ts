@@ -37,6 +37,7 @@ import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
 import { DEGENERATE_END, MATTER_END, calendarEra, fateKnown, fateOf, inAge, matterGone } from './fate';
+import { FLOW_ETA, flowAhead, flowing, keeping } from './sim/flow';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
@@ -105,6 +106,33 @@ function tryBuild(state: GameState, c: Colony, ids: string[]): boolean {
 /** The fate of matter we plan for: the one we know, or, not knowing yet, the worst (decay, the soonest end). */
 function plannedFate(state: GameState): Fate {
   return fateKnown(state) ? fateOf(state) : 'decay';
+}
+
+/**
+ * The Long Flow, from a few turns before it: at a settlement no one keeps, wake a sleeper (one
+ * awake keeps everything). With no one to wake, take apart what would flow and gives no power,
+ * the dearest first, while its matter can still come back, never with energy we need; collectors
+ * there go on gathering until they flow.
+ */
+function planFlow(state: GameState) {
+  if (!flowing(state) && !(flowAhead(state) && fateKnown(state) && state.eta > FLOW_ETA - 3)) return;
+  const civ = state.civ;
+  const mods = computeMods(state);
+  const logL = logTurnLength(turnStep(state, civ.pace));
+  const spare = reserveCapacity(state, mods) * 0.3;
+  for (const c of colonies(state)) {
+    if (keeping(c, logL, mods) !== 'unmanned') continue;
+    if (c.cryo > 0 && convert(state, c.id, 'thaw') === null) continue;
+    const ids = Object.keys(c.structures).filter((id) => {
+      const d = STRUCTURE_BY_ID[id];
+      return (c.structures[id] ?? 0) > 0 && d && !d.decayProof && !d.energy && !d.reserveCap && id !== 'cryo_hall' && d.matter > 0;
+    });
+    ids.sort((a, b) => STRUCTURE_BY_ID[b].matter - STRUCTURE_BY_ID[a].matter || a.localeCompare(b));
+    for (const id of ids) {
+      if (civ.energy < dismantleTerms(state, STRUCTURE_BY_ID[id]).cost + spare) break;
+      if (dismantle(state, c.id, id) === null) break;
+    }
+  }
 }
 
 /** Collectors whose source, once it gives nothing, never gives again: a star gone cold, a spent core or spin, a hole gone. */
@@ -412,6 +440,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planCharters(state);
   planAccord(state);
   planThreads(state);
+  planFlow(state);
   planDismantle(state);
   planBuilds(state);
   planFleets(state);

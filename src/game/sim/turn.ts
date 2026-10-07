@@ -5,6 +5,7 @@ import { SURFACE_LIFE, evolveUniverse, lampsOver, sunGone, turnsToFreeze, vitali
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { greatEvaporation, runCrossing } from './crossing';
+import { theLongFlow } from './flow';
 import { spareYield } from './spare';
 import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
@@ -366,6 +367,8 @@ export function endTurn(state: GameState): TurnResult {
   const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
   result.notes = notes;
   handleNotes(state, notes);
+  // from 10^65 years solid matter flows: what no one is awake to mend runs into smooth lumps
+  theLongFlow(state, step.eta, logL, mods, Math.log10(ctx.paceFactor));
   if (calendarEra(state) === 'dark') {
     // Continuity: every cycle risks a little of the pattern
     let decay = 2.2;

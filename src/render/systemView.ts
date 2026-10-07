@@ -7,6 +7,7 @@ import { radialTexture, type Pickable } from './galaxyView';
 import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, STAR_FRAG, STAR_VERT, VIEW_MODE, thermalRGB } from './shaders/bodies';
 import { blackbody } from './shaders/noise';
 import { calendarEra } from '../game/fate';
+import { flowing } from '../game/sim/flow';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -279,7 +280,7 @@ export class SystemView {
     let mesh: THREE.Mesh;
     let mat: THREE.ShaderMaterial | null = null;
     if (b.kind === 'asteroids') {
-      mesh = asteroidBelt(orbitR, hashSeed(b.id), b.richness);
+      mesh = asteroidBelt(orbitR, hashSeed(b.id), b.richness, flowing(state));
       this.rockMats.push({ mat: mesh.material as THREE.MeshBasicMaterial, tempK: bodyClimate(state, b).mean, rust: sys.rust ?? 0 });
       this.applyViewMode();
       this.group.add(mesh);
@@ -314,6 +315,8 @@ export class SystemView {
         uRust: { value: sys.rust ?? 0 },
         uFeeding: { value: b.feeding ? 1 : 0 },
         uEaten: { value: eating ? Math.min(1, 0.4 + eating.size / 12) : 0 },
+        // the Long Flow: the ground has run smooth
+        uFlow: { value: flowing(state) ? 1 : 0 },
         uViewMode: VIEW_MODE,
         // a sea and land stay so only while the star keeps the sea liquid (on the day side if locked)
         uEye: { value: eyeStrength(b, climate) },
@@ -816,10 +819,11 @@ function backgroundStars(): THREE.Points {
   return new THREE.Points(g, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.8, depthWrite: false, map: radialTexture() }));
 }
 
-function asteroidBelt(r: number, seed: number, richness: number): THREE.Mesh {
+/** A belt of rocks: jagged, or, after the Long Flow, every stone slumped into a smooth sphere. */
+function asteroidBelt(r: number, seed: number, richness: number, round = false): THREE.Mesh {
   const rng = new Rng(seed);
   const n = 700;
-  const geo = new THREE.IcosahedronGeometry(0.12, 0);
+  const geo = new THREE.IcosahedronGeometry(0.12, round ? 1 : 0);
   const inst = new THREE.InstancedMesh(geo, withNearFade(new THREE.MeshBasicMaterial({ color: '#2e2926' })), n);
   const m = new THREE.Matrix4();
   for (let i = 0; i < n; i++) {

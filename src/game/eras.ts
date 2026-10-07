@@ -283,8 +283,12 @@ const FATE_MILESTONES: Record<Fate | 'unknown', Milestone[]> = {
     { at: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
     { at: 141, label: 'Positronium decays', detail: 'The last bound atoms annihilate into photons.' },
   ],
-  stable: [{ at: 30, label: 'The Last Warmth', detail: 'The neutron stars, the last things warm of their own accord, cool below the faint glow of the black holes. The Degenerate Age ends; nothing dissolves.' }],
+  stable: [
+    { at: 30, label: 'The Last Warmth', detail: 'The neutron stars, the last things warm of their own accord, cool below the faint glow of the black holes. The Degenerate Age ends; nothing dissolves.' },
+    { at: 65, label: 'The Long Flow', detail: 'Even iron, at the absolute zero, tunnels out of its place: every solid flows, like a liquid too slow to see. What no one is awake to mend runs into smooth lumps, and every world and stone slumps into a sphere (Dyson 1979).' },
+  ],
   curvature: [
+    { at: 65, label: 'The Long Flow', detail: 'Even iron, at the absolute zero, tunnels out of its place: every solid flows, like a liquid too slow to see. What no one is awake to mend runs into smooth lumps, and every world and stone slumps into a sphere (Dyson 1979).' },
     { at: 68, label: 'Neutron stars burst', detail: 'Curvature radiation: at a tenth of a Sun each neutron star bursts. The Degenerate Age ends.' },
     { at: 82, label: 'White dwarfs fade', detail: 'Space has turned their mass into particles: the heaviest are gone near η 78.5, a typical one near 82, the lightest by 85.' },
     { at: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
@@ -295,6 +299,7 @@ const FATE_MILESTONES: Record<Fate | 'unknown', Milestone[]> = {
   unknown: [
     { at: 30, label: 'The Last Warmth?', detail: 'If matter is stable, the Degenerate Age ends about here: the neutron stars cool below the black holes, and nothing else happens.' },
     { at: 37, label: 'Proton decay?', detail: 'If protons decay (lifetime unknown, above 10³⁴ years), ordinary matter dissolves by η ≈ 39.' },
+    { at: 65, label: 'Long Flow?', detail: 'If matter lasts this long (if protons do not decay), even iron flows from about here: what no one is awake to mend runs into smooth lumps.' },
     { at: 68, label: 'Neutron stars burst?', detail: 'If space itself slowly unmakes matter (curvature radiation), the neutron stars burst about here, and the dwarfs and worlds follow by η 90.' },
     { at: 89.5, label: 'Great Evaporation?', detail: 'If curvature radiation is real, the last ordinary matter is gone by about here.' },
   ],

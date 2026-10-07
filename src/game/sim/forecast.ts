@@ -1,8 +1,10 @@
-import { ERA_BY_ID, formatYears, turnsUntil } from '../eras';
+import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
 import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, dwarfFadeEta, lampsOver, nextStellarChange } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
 import { colonies, protonFateKnown } from './util';
+import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
+import { computeMods } from './mods';
 import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf } from '../fate';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
@@ -117,6 +119,20 @@ export function updateForecasts(state: GameState) {
       if (!isFinite(at) || at <= state.eta) continue;
       if (k === 'neutron_star') add({ kind: 'burst', title: `${sys.name} will burst`, text: 'Its neutron star, its mass given to the curvature of space, will burst at a tenth of a Sun: our settlements here will be lost with it. Move what can be moved.', dueYears: Math.pow(10, at), systemId: sid, severity: 'danger' });
       else add({ kind: 'fade', title: `${sys.name} will fade`, text: 'Space is turning its dwarf’s mass into particles; when it is gone its worlds drift loose, and our settlements stay, with nothing there to warm them.', dueYears: Math.pow(10, at), systemId: sid, severity: 'warn' });
+    }
+  }
+
+  // the Long Flow, if matter lasts that long: whatever no one is awake to mend flows away
+  if (known && flowAhead(state)) add({ kind: 'flow', title: 'The Long Flow', text: 'From about 10⁶⁵ years even iron flows, its atoms tunnelling out of place: whatever no one is awake to mend runs into smooth lumps. A settlement with no one awake loses a structure a turn, Cryo Halls last, their sleepers with them; minds that think more slowly than the flow keep watchers awake, at half again their upkeep; ruins no one is digging are lost.', dueYears: Math.pow(10, FLOW_ETA), severity: 'warn' });
+  if (flowing(state) || (known && flowAhead(state))) {
+    const step = turnStep(state, state.civ.pace);
+    const logL = logTurnLength(step);
+    const mods = computeMods(state);
+    const near = flowing(state) || tideTurnsTo(state, Math.pow(10, FLOW_ETA), 10) <= 10;
+    for (const c of near ? colonies(state) : []) {
+      if (keeping(c, logL, mods) !== 'unmanned' || !nextToFlow(c)) continue;
+      const due = flowing(state) ? (isFinite(step.turnLength) ? years + step.turnLength : Infinity) : Math.pow(10, FLOW_ETA);
+      add({ kind: 'flowing', title: flowing(state) ? `${c.name} is flowing away` : `${c.name} will flow away`, text: 'No one is awake there to mend it: a structure a turn will run into smooth lumps, the cheapest first, Cryo Halls last, and their sleepers with them. Wake someone, send someone, or take apart what is worth keeping.', dueYears: due, systemId: c.systemId, bodyId: c.bodyId, severity: 'danger' });
     }
   }
 

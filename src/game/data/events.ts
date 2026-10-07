@@ -685,6 +685,19 @@ export const EVENTS: EventDef[] = [
     ],
   },
 
+  {
+    id: 'long_flow',
+    title: 'The Long Flow',
+    art: 'blackhole',
+    once: true,
+    text: (_s, d) =>
+      `Ten to the sixty-five years. At the absolute zero an atom still slips out of its place now and then, tunnelling through what holds it: in iron, about once in that long. From now on every solid flows, like a liquid too slow for anyone to see. Whatever no one is awake to mend runs into smooth lumps${Number(d.ruins) > 0 ? `: the ${Number(d.ruins) === 1 ? 'ruin' : `${d.ruins} ruins`} we found and never dug among them` : ''}. Every world, and every stone in the belts, is slumping into a sphere. It was always happening, far too slowly to notice; our turns have grown long enough to see it. Kin, the Lattice and any mind that thinks faster than the flow keep a settlement whole. Minds that think more slowly must keep watchers awake between their thoughts, and a place where no one is awake at all will flow away.`,
+    choices: [
+      { label: 'Set the watches', hint: 'Resolve +2.', run: (s) => { res(s, 2); } },
+      { label: 'Study the flowing iron', hint: 'Insight +60.', run: (s) => { insight(s, 60); } },
+    ],
+  },
+
   // ============================================================ Black Hole Age
   {
     id: 'final_burst',

@@ -78,6 +78,16 @@ export const CODEX: CodexEntry[] = [
     ],
   },
   {
+    id: 'flow',
+    title: 'The Long Flow',
+    body: [
+      'Freeman Dyson (1979) worked out that a solid is a liquid on a long enough time scale, even at the absolute zero. Now and then an atom tunnels out of its place, through the barrier its neighbours make; the time for it goes as e^S × 10⁻¹⁴ seconds, with S ≈ 27·√A for an atom of mass number A. For iron that is about 10⁶⁵ years. On longer times every rock and every machine creeps, and a body of any size, a world or a stone in a belt, slowly runs into a smooth sphere.',
+      'It is happening now, far too slowly to see (today heat makes things creep far faster). What decides whether it matters is how fast you think: from η 65 a turn lasts some 10⁶⁶ years, so whatever no one tends flows within one of our turns. Kin, the Lattice (it mends itself) and any mind that thinks faster than once in 10⁶⁵ years keep a settlement whole. Minds that think more slowly see their own vaults flow between two thoughts: they keep watchers awake, at half again their upkeep. A settlement where no one is awake, only sleepers or no one, loses a structure a turn, the cheapest first and the Cryo Halls last, with their sleepers. A sleeping civilization, ours or another, must wake its watchers to mend. Ruins no one is digging run into smooth lumps, and what they held is lost.',
+      'It comes only if matter lasts that long: if it is stable, or under curvature radiation until the Great Evaporation. Structures of leptonic substrate are not made of atoms, and do not flow.',
+      'Where the game bends it: the formula is crude, and lighter atoms go much sooner by it (carbon after some 10¹⁹ years, oxygen 10²⁵, silicon 10⁴⁰), so most rock would flow long before iron does. The game takes one date, iron’s, the stuff of machines and the last of the common solids to go.',
+    ],
+  },
+  {
     id: 'blackhole',
     title: 'III. The Black Hole Age',
     body: [

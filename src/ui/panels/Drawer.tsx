@@ -4,7 +4,7 @@ import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
-import { formatDistance, formatYears } from '../../game/eras';
+import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { FROZEN_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, sourceLight, sunGone, turnsToFreeze, waterState } from '../../game/physics';
 import {
   absorb,
@@ -55,6 +55,8 @@ import { residentsOf, survivorPeople, survivorWorld } from '../../game/sim/homes
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 import { calendarEra } from '../../game/fate';
+import { flowing, keeping, nextToFlow } from '../../game/sim/flow';
+import { turnStep } from '../../game/sim/flare';
 
 export function Drawer({ s }: { s: GameState }) {
   void rev.value;
@@ -210,7 +212,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                       <span class="grow">
                         {c ? c.name : b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}</span>
                       </span>
-                      {b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls="accent" />}
+                      {b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls={b.relic.flowed ? '' : 'accent'} />}
                       {survivor && survivorHome?.id === b.id && (
                         <span data-tip={`${survivor.contact ? survivor.name : 'Someone'} live${survivor.contact ? '' : 's'} here`} style={{ width: '9px', height: '9px', background: survivor.color, display: 'inline-block' }} />
                       )}
@@ -594,7 +596,8 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
               <>
                 <dt>Ruins</dt>
                 <dd>
-                  {EVENT_BY_ID[`relic_${b.relic.kind}`]?.title ?? b.relic.kind} · {b.relic.state}{' '}
+                  {EVENT_BY_ID[`relic_${b.relic.kind}`]?.title ?? b.relic.kind} · {b.relic.state}
+                  {b.relic.flowed ? ', since flowed into smooth lumps' : ''}{' '}
                   <button class="btn ghost small" style={{ marginLeft: '4px' }} data-tip="Read the survey report again, and what we chose." onClick={() => { sfx('open'); loreView.value = { defId: `relic_${b.relic!.kind}`, bodyId: b.id }; }}>
                     <Icon name="relic" /> Read again
                   </button>
@@ -667,6 +670,8 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   const y = t?.y;
   const isCap = s.civ.capitalId === c.id;
   const eNet = y ? y.energy - y.energyUpkeep : 0;
+  // after the Long Flow: who keeps this place whole
+  const keep = flowing(s) ? keeping(c, logTurnLength(turnStep(s, s.civ.pace)), mods) : 'kept';
   const lineTip = (key: 'energy' | 'matter' | 'industry' | 'insight' | 'accord') =>
     (y?.lines ?? [])
       .filter((l) => (l[key] ?? 0) !== 0)
@@ -685,6 +690,8 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
             <span key={tr} class="chip" data-tip={TRAIT_NAME[tr]?.[1] ?? ''}>{TRAIT_NAME[tr]?.[0] ?? tr}</span>
           ))}
           {c.starving > 0 && <span class="chip danger">starving</span>}
+          {keep === 'unmanned' && nextToFlow(c) && <span class="chip danger" data-tip="No one is awake here to mend it against the Long Flow: a structure a turn runs into smooth lumps, the cheapest first, Cryo Halls last, with their sleepers. One awake Kin, a Lattice process or a mind that thinks faster than the flow would keep it whole.">flowing away</span>}
+          {keep === 'watched' && <span class="chip warn" data-tip="Everyone here thinks more slowly than the Long Flow, so they keep watchers awake between their thoughts: half again their upkeep.">keeping watch</span>}
           {c.overdrive && <span class="chip warn">overdrive</span>}
           {b.rogue && <span class="chip warn">rogue</span>}
         </div>

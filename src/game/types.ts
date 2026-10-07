@@ -109,6 +109,8 @@ export interface StarSystem {
 export interface Relic {
   kind: 'archive' | 'engine' | 'sleepers' | 'tomb' | 'ghosts';
   state: 'hidden' | 'found' | 'studied' | 'woken' | 'spent';
+  /** run into smooth lumps in the Long Flow, with no one digging there (a hidden one is lost unfound) */
+  flowed?: boolean;
 }
 
 export interface Feeding {

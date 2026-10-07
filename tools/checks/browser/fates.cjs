@@ -44,9 +44,9 @@ run(async () => {
     };
   });
   check(chrono.hatched && /no one knows yet/.test(chrono.unsure ?? ''), 'the timeline hatches where the age may end, “II → III ?”, and says why');
-  const asked = ['The Last Warmth?', 'Proton decay?', 'Neutron stars burst?', 'Great Evaporation?'];
+  const asked = ['The Last Warmth?', 'Proton decay?', 'Long Flow?', 'Neutron stars burst?', 'Great Evaporation?'];
   check(asked.every((l) => chrono.tips.includes(l)), `its dates are questions (${chrono.tips.filter((t) => t.endsWith('?')).join(', ')})`);
-  const told = ['The Great Decay', 'The Last Warmth', 'Neutron stars burst', 'The Great Evaporation', 'White dwarfs fade', 'Positronium forms'];
+  const told = ['The Great Decay', 'The Last Warmth', 'The Long Flow', 'Neutron stars burst', 'The Great Evaporation', 'White dwarfs fade', 'Positronium forms'];
   check(!told.some((l) => chrono.tips.includes(l)), 'and no fate’s own milestone shows');
   check(chrono.tips.includes('The end of the Degenerate Age?'), 'the forecast pin asks too');
   await page.locator('.chrono').screenshot({ path: path.join(ck.out, 'unknown-chronometer.png') });

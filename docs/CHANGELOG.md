@@ -706,3 +706,31 @@ neighbours. Plan agreed 7 Oct; parts land one at a time.
   before), stable 144 of 239 (143), curvature 83 of 211 (80). Matter given back helps most where
   it runs out soonest, before the Great Decay. (Taking Decay Harvesters apart before they started
   gathering, then building them again, was a waste the autoplayer no longer makes.)
+- **The Long Flow** (the player: "it's actually going on right now. It's just so slow that we
+  never notice it … the timestep of the civ in question may determine if its a threat to their
+  own integrity vs just something affecting the environment very slowly"; chosen: once, at 10⁶⁵,
+  with unexcavated relics lost, unmanned structures flowing, worlds smoothing into spheres and
+  sleeping aliens at risk). If matter lasts that long (stable, or curvature radiation until the
+  Great Evaporation), at η 65 even iron flows, its atoms tunnelling out of place (Dyson 1979).
+  - Who keeps a settlement: Kin, the Lattice, or any mind thinking faster than once in 10⁶⁵
+    years. Minds that all think more slowly keep watchers awake between their thoughts, at half
+    again their upkeep (still cheaper than the tempo strain of thinking faster than they can). A
+    settlement where no one is awake, only sleepers or no one, loses a structure a turn, the
+    cheapest first and Cryo Halls last, their sleepers with them, until it is gone; the panel
+    says "flowing away" and a forecast names it. Leptonic structures are not atoms and never flow.
+  - Sleeping costs 0.3 of upkeep instead of 0.1, unless The Long Watch keeps someone awake (0.05
+    as before). Ruins no one is digging run into smooth lumps, found or not (a manned Relic
+    Excavation keeps its ruin). Neighbours who sleep through the ages fade twice as fast.
+  - An event, The Long Flow; a forecast from the moment the fate is known; a milestone at η 65 on
+    the timeline ("Long Flow?" while the fate is unknown); a Codex entry with the physics and the
+    bend (by the same crude formula lighter atoms go far sooner; the game takes iron's date). On
+    screen every world's ground runs smooth and the stones of the belts turn round.
+  - The autoplayer, from three turns before, wakes a sleeper where no one is awake and takes
+    apart what would flow and gives no power, never with energy it needs.
+  - Balance, 300 games: 129 survive, 47 victories, a Degenerate Age of 69 turns (was 135 / 48 /
+    69); 900 games 400 / 142 / 69 (was 406 / 143 / 69). Decay games are as before, line for line.
+    By fate in the 900: stable 140 of 239 (144 before), curvature 81 of 211 (83). Chosen, 300
+    each: stable 184 / 119 / 56, curvature 106 / 57 / 88. The cost is outposts nobody keeps, whose
+    collectors fed a dwindling civilization, and watchers' upkeep at settlements of slow minds;
+    with the autoplayer taking apart the dearest things first, power collectors included, it was
+    399 / 142.

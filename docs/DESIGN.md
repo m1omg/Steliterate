@@ -214,6 +214,16 @@ to the Black Hole Age's Tide at 10^40 years (η 39) whatever the fate (`calendar
   before it (white dwarfs η 78.5 to 85 by mass, brown dwarfs η 87), their worlds drifting loose.
 * **The Last Horizon:** the last supermassive black holes evaporate.
 
+**The Long Flow** (η 65, stable and curvature fates, until the Great Evaporation; `sim/flow.ts`).
+Not a crossing but a change in the world: from 10^65 years even iron flows (Dyson 1979), so a
+solid is a slow liquid. Whether it matters depends on how fast a mind thinks, the player's idea:
+Kin, the Lattice (self-maintaining) and any mind thinking faster than once in 10^65 years keep a
+settlement whole; minds that all think more slowly keep watchers awake (half again their upkeep);
+a settlement where no one is awake loses a structure a turn, cheapest first, Cryo Halls last with
+their sleepers; leptonic structures never flow. Sleeping costs 0.3 of upkeep instead of 0.1 unless
+The Long Watch; ruins no one is digging run into smooth lumps; sleeping neighbours fade twice as
+fast; worlds and the stones of the belts run into smooth spheres on screen.
+
 **The fate of matter** is a setting: *protons decay*, *stable*, *curvature radiation*, or
 *unknown*. Unknown is one draw (the same single draw as ever, so no galaxy changes): decay half
 the time, curvature and stable a quarter each. It is learned from The Proton Question or, near
@@ -358,7 +368,11 @@ stop them from talking.
 * Landauer (1961): erasing a bit costs at least kT ln 2, so computing is cheaper in the cold (the
   game halves Coldminds' and Cold Vaults' upkeep under a dark sky).
 * Dyson (1979), *Time without end*, Rev. Mod. Phys. 51, 447: slowing minds; iron stars by
-  about 10^1500 years; tunnelling collapse at 10^(10^26) to 10^(10^76) years.
+  about 10^1500 years; tunnelling collapse at 10^(10^26) to 10^(10^76) years; solids are liquid on
+  long enough times even at zero temperature, an atom tunnelling out of place in about
+  e^S × 10^-14 s with S ≈ 27·√A, about 10^65 years for iron (the Long Flow). Bend: by the same crude
+  formula lighter atoms go far sooner (carbon about 10^19 years, oxygen 10^25, silicon 10^40), so
+  most rock would flow before iron; the game takes iron's one date.
 * Falcke, Wondrak & van Suijlekom (2024), *An upper limit to the lifetime of stellar remnants
   from gravitational pair production* ([arXiv:2410.14734](https://arxiv.org/abs/2410.14734)):
   curvature radiation from bodies without a horizon, τ ≈ 3.4×10^68 yr × (ρ / 3.3×10^14 g cm^-3)^-3/2.
