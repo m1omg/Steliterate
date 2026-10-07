@@ -7,6 +7,7 @@ import { THREADS } from '../types';
 import { greatEvaporation, runCrossing } from './crossing';
 import { theLongFlow } from './flow';
 import { answerArrived, pactsTurn } from './pacts';
+import { warTurn } from './war';
 import { spareYield } from './spare';
 import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
@@ -362,6 +363,7 @@ export function endTurn(state: GameState): TurnResult {
   updateHunger(state, step.turnLength, mods);
   updateSurvivors(state, logL, mods, step.turnLength);
   pactsTurn(state);
+  withRng(state, (rng) => warTurn(state, () => rng.next()));
   updateMinds(state, logL, mods);
 
   // ------------------------------------------------ 7. the universe moves on

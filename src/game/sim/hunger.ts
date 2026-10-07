@@ -5,6 +5,8 @@ import { FORTIFY_BONUS, destroyColony, signatureOf } from './fleets';
 import type { Mods } from './mods';
 import { colonies, distLy, hasCharter, log, uid, withRng } from './util';
 import { queueEvent } from './events';
+import { foughtFor, theirWarmth } from './claims';
+import { warHeat } from './war';
 import { calendarEra } from '../fate';
 
 // The Hunger: harvesters left running by a civilization that died long ago. Its makers built
@@ -137,8 +139,10 @@ export function swarmsHunt(state: GameState, mods: Mods) {
           if (sw.size <= 0.4) {
             delete state.swarms[sw.id];
             log(state, `The swarm at ${sys.name} is broken.`, 'good', sys.id);
+            foughtFor(state, sys.id, true);
             break;
           }
+          foughtFor(state, sys.id, false);
           continue;
         }
         // torn apart, unless the swarm is small
@@ -312,11 +316,13 @@ function moveSwarm(state: GameState, sw: Swarm, rand: () => number, blackout: nu
   const R = rangeLy(state);
   let best: StarSystem | null = null;
   let bestScore = 0;
+  const heat = warHeat(state);
   for (const s of Object.values(state.systems)) {
     if (s.id === from.id || s.gone) continue;
     const d = distLy(from, s);
     if (d > R) continue;
-    const sig = signatureOf(state, s.id) * blackout;
+    // our warmth (which a Blackout hides), any other civilization's, and the heat of a war
+    const sig = signatureOf(state, s.id) * blackout + theirWarmth(state, s.id) + (heat.get(s.id) ?? 0);
     const score = ((sig + systemMatter(state, s) * 0.8 + (s.beacon ? 25 : 0)) / (1 + d / 25)) * (0.7 + rand() * 0.6);
     if (score > bestScore) {
       bestScore = score;

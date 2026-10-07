@@ -304,6 +304,14 @@ export interface Survivor {
   exodusAsked?: number;
   /** Coming to us: they set out when our answer reaches them (cosmic years) and arrive at `at`; `n` of them. */
   exodus?: { leaves: number; at: number; n: number };
+  /** Settlers of theirs on the way to a new star, arriving at `at` (cosmic years). */
+  claim?: { systemId: string; at: number };
+  /** When they settled each star beyond their first (cosmic years): we see it when its light reaches us. */
+  claimedAt?: Record<string, number>;
+  /** Warships we promised against a swarm at one of their stars, when, and whether ours have fought there since. */
+  promised?: { systemId: string; turn: number; kept?: boolean };
+  /** At war with us: since which turn, and how many turns in a row our warships have held their first star. */
+  war?: { since: number; siege: number };
 }
 
 /** Mutual Aid, Shared Watch, Open Archives. */

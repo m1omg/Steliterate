@@ -7,6 +7,7 @@ import { WORK_BY_ID } from '../data/works';
 import type { Colony, Focus, GameState, PactKind, SpareWork } from '../types';
 import { endPact, proposePact } from './pacts';
 import { sanctuaryHeard } from './refuge';
+import { declareWar, makePeace } from './war';
 import { THREADS } from '../types';
 import { capacity } from './economy';
 import { workRequirementMet } from './endings';
@@ -499,6 +500,14 @@ export function proposeAPact(state: GameState, survivorId: string, kind: PactKin
 /** Break a pact: everyone will hear of it. */
 export function breakPact(state: GameState, survivorId: string, kind: PactKind): ActionResult {
   return endPact(state, survivorId, kind);
+}
+
+export function goToWar(state: GameState, survivorId: string): ActionResult {
+  return declareWar(state, survivorId);
+}
+
+export function peace(state: GameState, survivorId: string): ActionResult {
+  return makePeace(state, survivorId);
 }
 
 /** Beam energy to another civilization: it reaches them, and helps, when the light does. */

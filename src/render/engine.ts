@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { residentsOf } from '../game/sim/homes';
+import { residentsSeen } from '../game/sim/claims';
 import { ERA_BY_ID } from '../game/eras';
 import type { GameState } from '../game/types';
 import { OrbitRig } from './camera';
@@ -571,7 +571,7 @@ export class Engine {
         const name = b.kind === 'deep' ? 'The Deep' : b.name;
         const lift = new THREE.Vector3(0, b.size + 1.2, 0);
         // a world another civilization lives on carries their name, in their colour
-        const sv = residentsOf(state, b);
+        const sv = residentsSeen(state, b);
         if (sv && sv.contact) {
           items.push({ text: `${name} · ◈ ${sv.name}`, pos: p.pos.clone().add(lift), cls: 'others', w: 3, color: sv.color });
           continue;

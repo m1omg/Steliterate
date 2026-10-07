@@ -64,7 +64,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Checks** (`tools/checks/`, since 7 Oct; before then they lived in the ephemeral scratchpad):
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
-    old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -357,6 +357,30 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `sanctuary`, ±10), `sanctuaryTrust` after the Taint ceiling (+0.5 a turn to
   `SANCTUARY_TRUST` 25, not below 0 and not while the news is on its way). Autoplayer: takes
   every exodus.
+  Expansion (`src/game/sim/claims.ts`): `expand` (their turn, after the drain) sends settlers
+  (`Survivor.claim`, `CLAIM_CHANCE` 0.06 a turn, health over 0.5, pop 12, at most `MAX_CLAIMS` 3)
+  to `claimTarget`: the nearest star within `CLAIM_REACH` 100 ly that `suits` their way and is
+  not `taken` (ours, another's, or another's target); on arrival at `CLAIM_SPEED` 0.02 c it joins
+  `sv.systems` with `claimedAt` (cosmic years), unless taken meanwhile. `claimEase` divides their
+  drain. `seenThere` / `starsSeen` / `residentsSeen` show a star of theirs only once the light of
+  their arrival reaches our capital (the map's `aOthers` attribute in `galaxyView.ts`, a dashed
+  ring; the panels; the card's Stars row), while `residentsOf` (no delay) still blocks settling
+  their world. `theirWarmth` adds 0.1 × pop × health to a star's pull in `moveSwarm`.
+  `askAgainstHunger` (`swarm_plea`, `PLEA_EVERY` 10 via `swarm_plea_<id>` in `civ.flags`),
+  `promiseHelp` (`Survivor.promised`), `judgePromise` after `PROMISE_TURNS` 10, and `foughtFor`
+  (called by `swarmsHunt` when our ships beat off or break a swarm). Autoplayer: refuses pleas.
+  War (`src/game/sim/war.ts`): `Survivor.war` (`since`, `siege`). `declareWar` (`WAR_ACCORD` 60,
+  resolve −5, dissent +8, standing −3 or −1 with a `warCause`: a fork, or two raids on us within
+  `RAID_SPAN` 20 turns, remembered by `raidedUs` as `raid_last_<id>` / `raid_prev_<id>`), ends
+  pacts through `endPact`, news −40 to them and −15 (−5) to the others, `civ.flags.wars` counts.
+  `warTurn` (after `pactsTurn`): dissent +0.5 a turn (+0.2 with a cause); warships at their first
+  star hold the siege (`BLOCKADE` 0.03 of their health, their fire on our ships), else it resets.
+  `warDefence` grows `ARMING` 15% a turn of war. `seizeSurvivor` needs `seizeBlocked` null (war,
+  warships, `SIEGE_TURNS` 3) and wins a roll (attack × 0.6–1.4 against their defence); a fork
+  comes back whole without Taint. `warHeat` (capital +8, a siege +10) and `inCoalition` (hostile
+  below −20 while we fight anyone: raids at 0.5). At war: no pacts, offers, asking, aid pleas,
+  refugees, trade, joint income, exodus or swarm pleas. Strategy 'warlike' (`planWar`) wages the
+  wars with a cause, for the harness only.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -578,5 +602,6 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | taking structures apart (7 Oct) | 135 | 48 victories, Degenerate Age 69 turns; 900 games 406 / 143 / 69 (386 / 142 / 69 before). By fate: decay 179 / 450, stable 144 / 239, curvature 83 / 211. The autoplayer takes apart a collector whose source is gone for good when matter is under 40: 5.6 a game, 170 matter (30 games). Letting it take apart idle Decay Harvesters too: 404 / 143 |
 | the Long Flow (7 Oct) | 129 | 47 victories, Degenerate Age 69 turns; 900 games 400 / 142 / 69 (406 / 143 / 69 before); decay games identical. By fate: stable 140 / 239, curvature 81 / 211. Chosen, 300 each: stable 184 / 119 / 56, curvature 106 / 57 / 88. The autoplayer taking apart the dearest things at unmanned places, collectors included: 399 / 142 |
 | neighbours, phase 0: honesty (work branch) | 136 | 52 victories, Degenerate Age 71 turns; 900 games 406 / 146 / 69 (400 / 142 / 69 before); by fate decay 175 / 450, stable 154 / 239, curvature 77 / 211; 430 of 900 games as before |
+| neighbours, phases 3 and 4: expansion, war (work branch) | 144 | 55 victories, Degenerate Age 68 turns; 900 games 396 / 158 / 68 (426 / 162 / 70 before); by fate decay 169 / 450, stable 145 / 239, curvature 82 / 211. Without the Hunger smelling them 410 / 167, without expansion 409 / 150. War does not change the autoplayer's games (identical); the 'warlike' strategy: 21 wars, 397 / 158 / 68, its war games 14 survive against 13 in peace |
 | neighbours, phase 2: refuge (work branch) | 147 | 57 victories, Degenerate Age 68 turns; 900 games 426 / 162 / 70 (440 / 150 / 69 before); by fate decay 177 / 450, stable 156 / 239, curvature 93 / 211. Of 2,906 neighbours 714 were saved and 326 absorbed, in 710 of 900 games |
 | neighbours, phase 1: pacts (work branch) | 138 | 50 victories, Degenerate Age 69 turns; 900 games 440 / 150 / 69 (406 / 146 / 69 before); by fate decay 190 / 450, stable 145 / 239, curvature 105 / 211; fewer end in the Black Hole Age or fade in the Dark. 792 of 900 games sign a pact (a game: 1.2 Mutual Aid, 1.4 Open Archives, 0.9 Shared Watch) |

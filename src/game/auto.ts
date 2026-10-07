@@ -39,6 +39,9 @@ import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/acco
 import { DEGENERATE_END, MATTER_END, calendarEra, fateKnown, fateOf, inAge, matterGone } from './fate';
 import { FLOW_ETA, flowAhead, flowing, keeping } from './sim/flow';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost, proposePact } from './sim/pacts';
+import { WAR_ACCORD, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
+import { raidStrength, seizeSurvivor } from './sim/survivors';
+import { SHIP_BY_ID } from './data/ships';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
@@ -48,7 +51,8 @@ const ACCORD_HEAR_BELOW = 35;
 
 // An autoplayer. It powers the balance harness, and can later back an in-game advisor.
 
-export type Strategy = 'competent' | 'passive';
+/** 'warlike' plays as 'competent', and also wages the wars worth waging (for the harness: does war pay?). */
+export type Strategy = 'competent' | 'passive' | 'warlike';
 
 const TECH_PRIORITY = [
   'energy_storage', 'magnetospherics', 'the_long_record', 'orbital_collectors', 'survey_optics', 'mind_substrate', 'fusion_drives', 'hardy_lineages',
@@ -356,6 +360,31 @@ function planPacts(state: GameState) {
   }
 }
 
+/**
+ * War, for the 'warlike' strategy only: against our own people who left us, or a neighbour who
+ * keeps raiding us, with warships enough to outmatch them. Build Wardens, declare, bring them to
+ * the siege, take the star when the siege allows; make peace if it drags on.
+ */
+function planWar(state: GameState) {
+  const civ = state.civ;
+  const cap = civ.capitalId ? state.colonies[civ.capitalId] : colonies(state)[0];
+  if (!cap) return;
+  const warships = Object.values(state.fleets).filter((f) => f.ships.some((x) => (SHIP_BY_ID[x.cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[x.cls]?.settles));
+  const strength = warships.reduce((a, f) => a + f.ships.reduce((b, x) => b + (SHIP_BY_ID[x.cls]?.attack ?? 0), 0), 0);
+  for (const sv of Object.values(state.survivors)) {
+    if (!sv.alive || !sv.contact) continue;
+    if (sv.war) {
+      if (seizeBlocked(state, sv) === null) seizeSurvivor(state, sv.id);
+      else if (state.turn - sv.war.since > 30) makePeace(state, sv.id);
+      else if (raidStrength(state, sv.homeSystemId) <= 0) for (const f of warships) if (f.at && f.at !== sv.homeSystemId) orderFleet(state, f.id, sv.homeSystemId, 'move');
+      continue;
+    }
+    if (!warCause(state, sv)) continue;
+    if (strength >= warDefence(state, sv) * 2 && warBlocked(state, sv) === null && civ.accord >= WAR_ACCORD + ACCORD_KEEP) declareWar(state, sv.id);
+    else if (strength < warDefence(state, sv) * 2 && (cap.structures.shipyard ?? 0) > 0 && cap.queue.length < 3 && civ.energy > 120) queueBuild(state, cap.id, 'ship', 'warden');
+  }
+}
+
 function planSignals(state: GameState) {
   const civ = state.civ;
   for (const s of state.signals) {
@@ -462,6 +491,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planSignals(state);
   planPace(state);
   planWorks(state);
+  if (strategy === 'warlike') planWar(state);
 }
 
 export const _techCount = TECHS.length;

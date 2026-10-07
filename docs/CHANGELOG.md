@@ -803,3 +803,49 @@ at once". Built in phases, each with its checks and harness numbers.
   239, curvature 93 of 211. Of 2,906 neighbours 714 were saved and 326 absorbed, in 710 of the
   900 games. Also: the fates checks stop short of a boundary with room for a turn twice as long
   as the last (the autoplayer may slow down just before it).
+- **Phase 3, expansion.** A thriving civilization (health over 0.5, 12 people or more) sends
+  settlers, about one turn in seventeen, to the nearest free star of its own cluster (within 100
+  ly) that suits its way of life: gardens to a living world, uploads and the Choir to a white
+  dwarf, neutron star or black hole, the sleepers to a cold world by a new star, the Tessellate to
+  a brown dwarf or a belt. Never to a star we live at, or another civilization's; if we settle it
+  before their ships arrive (at 0.02 c), they look again. Up to three stars beyond their first,
+  each easing the universe's drain on them (÷ 1 + 0.25 each) and lifting them a little (+0.05)
+  when they arrive. We see a star is theirs when the light of their arrival reaches us: a dashed
+  ring in their colour on the map, the system panel's Others section, their card's Stars row.
+  The Hunger smells them as it smells us (their people and health warm their stars), and when a
+  swarm feeds at one of their stars they ask us for warships, at most once in ten turns. We can
+  promise: if our warships fight it there within ten turns they think better of us (+10), and if
+  none come while the swarm still feeds, worse (−10). Every fight our warships win at their star
+  is worth +5 with them, breaking the swarm +20, and everyone hears of it (+5). The autoplayer
+  makes no promises. Also: Mutual Aid beams only what we can spare, keeping 30% of our reserve
+  (it could drive our energy below zero).
+  Balance, 300 games: 144 survive, 55 victories, a Degenerate Age of 68 turns (was 147 / 57 / 68);
+  900 games 396 / 158 / 68 (was 426 / 162 / 70); by fate decay 169 of 450, stable 145 of 239,
+  curvature 82 of 211. Without the Hunger smelling them, 410 / 167; without expansion (the rest
+  as it is), 409 / 150: each part costs a little, and together the drop is within about 1.5
+  times the noise between two runs of 900. Serein and the Choir hold 2.7 stars beyond their first
+  by a game's end, the Tessellate 1.0, gardens none (no living world near them), the sleepers
+  almost none (a new star must burn near them). 313 of 2,906 neighbours are alive at the end
+  (244 before).
+- **Phase 4, war, narrow and costly.** Seize is no longer one warship and no fight. Declaring
+  war needs the Threads' consent (60 accord) and costs resolve (−5), calm (dissent +8) and every
+  Thread's standing (−3); our pacts with them end, as broken pacts; they hear it when the light
+  arrives (−40), and so does everyone else (−15). While we fight anyone, a civilization that
+  hates us (below −20) joins against us and raids us half the time it can, and the one we fight
+  strikes back the same way. Dissent rises half a point a turn of war. A siege is warships held at
+  their first star turn after turn (each turn costs them 0.03 of their prospects, and their guns
+  answer ours), while they arm (+15% strength a turn of war); after three turns we can try to
+  take the star, a battle (our attack × 0.6 to 1.4 against their strength) we can lose, which
+  sends the siege back to the start. Its heat draws the Hunger, to the siege and to our capital.
+  No pacts, offers, asking, aid, refugees, trade, shared works or refuge with them while it
+  lasts; Make peace stops it (heard, +10). Against our own people who left us (a fork), or a
+  neighbour who has raided us twice within twenty turns, the Threads mind less (−1), others
+  hardly blame us (−5, and −10 rather than −30 for the taking), and taking it carries no Taint:
+  a fork comes back with every settlement it took. Signals: Declare war (asks first), a War row
+  with the siege, Make peace, and Seize waiting for the siege; the Manual's Other minds section
+  covers expansion and war.
+  Balance: the autoplayer never goes to war, and its 900 games are the same as phase 3's, game
+  for game. A test strategy that wages the wars with a cause (building Wardens, declaring at
+  twice their strength, holding the siege, seizing; peace after 30 turns) fought 21 wars in 900
+  games, 8 ending with a fork retaken: 397 / 158 / 68 against 396 / 158 / 68, and in those 21
+  games 14 survived against 13 in peace. Worth it only in the narrow case, and not by much.

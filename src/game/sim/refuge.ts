@@ -65,7 +65,7 @@ export function roomFor(state: GameState, t: ThreadId): number {
 
 /** Whether they trust us enough to come: a pact; Sanctuary and goodwill; or, for the Choir, our own Confluence. */
 export function mayComeToUs(state: GameState, sv: Survivor): boolean {
-  if (sv.disposition < 0) return false;
+  if (sv.disposition < 0 || sv.war) return false;
   if (pactsWith(sv).length > 0) return true;
   if (hasCharter(state, 'sanctuary') && sv.disposition >= 20) return true;
   return merging(state, sv) && sv.disposition >= 10;

@@ -54,6 +54,7 @@ export function pactBlocked(state: GameState, sv: Survivor, kind: PactKind): str
   if (!sv.alive) return 'They are gone.';
   if (!sv.contact) return 'We have not made contact.';
   if (hasPact(sv, kind)) return 'It is in force.';
+  if (sv.war) return 'We are at war with them.';
   if (sv.proposal) return `Our proposal of ${PACTS[sv.proposal.kind].name} is still crossing to them, or their answer is.`;
   if (!inStep(state, sv)) return 'Our clocks are too far apart to agree on anything.';
   if (state.civ.taint >= 60) return 'They will not bind themselves to what we are becoming.';
@@ -150,7 +151,7 @@ export function theirPacts(state: GameState, sv: Survivor, chance: () => number)
     });
     return true;
   }
-  if (sv.disposition > 30 && mine.length < PACT_KINDS.length && !sv.proposal && state.civ.taint < 60 && chance() < 0.12) {
+  if (!sv.war && sv.disposition > 30 && mine.length < PACT_KINDS.length && !sv.proposal && state.civ.taint < 60 && chance() < 0.12) {
     const kind = (sv.health < 0.6 && !mine.includes('aid') ? 'aid' : PACT_KINDS.find((k) => !mine.includes(k)))!;
     sendSignal(state, {
       from: sv.id,
@@ -182,8 +183,10 @@ export function pactsTurn(state: GameState) {
     if (hasPact(sv, 'aid')) {
       const outKey = `pact_aid_out_${sv.id}`;
       const inKey = `pact_aid_in_${sv.id}`;
-      if (sv.health < 0.35 && civ.energy > cap * 0.3 && state.turn - (civ.flags[outKey] ?? -99) >= AID_EVERY) {
-        const e = Math.round(15 + (0.35 - sv.health) * 100);
+      // what they need, as far as we can spare it and keep 30% of our reserve
+      const spare = civ.energy - cap * 0.3;
+      if (sv.health < 0.35 && spare >= 5 && state.turn - (civ.flags[outKey] ?? -99) >= AID_EVERY) {
+        const e = Math.floor(Math.min(15 + (0.35 - sv.health) * 100, spare));
         civ.energy -= e;
         beamEnergy(state, sv, e, true);
         civ.flags[outKey] = state.turn;

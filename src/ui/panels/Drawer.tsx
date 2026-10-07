@@ -51,7 +51,8 @@ import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivor
 import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { loreView } from '../screens/Story';
 import { siteValue, type SiteValue } from '../../game/sim/sites';
-import { residentsOf, survivorPeople, survivorWorld } from '../../game/sim/homes';
+import { survivorPeople, survivorWorld } from '../../game/sim/homes';
+import { residentsSeen, seenThere } from '../../game/sim/claims';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 import { calendarEra } from '../../game/fate';
@@ -171,7 +172,9 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const province = s.provinces.find((x) => x.id === sys.provinceId);
   const fleets = Object.values(s.fleets).filter((f) => f.at === sys.id);
   const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id);
-  const survivor = Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id));
+  // another civilization here: at its first star, or where the light of its arrival has reached us
+  const survivor = Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id) && (v.homeSystemId === sys.id || seenThere(s, v, sys.id)));
+  const outpost = !!survivor && survivor.homeSystemId !== sys.id;
   const survivorHome = survivor && known === 2 ? survivorWorld(s, survivor, sys.id) : null;
   const fc = s.forecasts.filter((f) => f.systemId === sys.id);
   const d = distFromCapital(s, sys);
@@ -290,7 +293,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                 {survivor.name}
                 {survivorHome && <span class="faint" style={{ fontSize: '11px' }}> · {survivorHome.kind === 'deep' ? 'in the Deep' : `on ${survivorHome.name}`}</span>}
               </span>
-              <span class="faint">{survivor.contact ? survivorPeople(survivor) : 'not contacted'}</span>
+              <span class="faint">{!survivor.contact ? 'not contacted' : outpost ? 'a settlement of theirs' : survivorPeople(survivor)}</span>
             </div>
           </div>
         )}
@@ -519,7 +522,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
   const sys = s.systems[b.systemId];
   const surveyed = s.civ.known[sys.id] === 2;
   const settlers = Object.values(s.fleets).filter((f) => f.at && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles && (!SHIP_BY_ID[x.cls]?.inSystem || f.at === b.systemId)));
-  const residents = surveyed ? residentsOf(s, b) : null;
+  const residents = surveyed ? residentsSeen(s, b) : null;
   return (
     <>
       <div class="drawer-head">
@@ -533,7 +536,11 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             <span>
               {residents.contact ? (
                 <>
-                  Home of <b>{residents.name}</b> <span class="faint">· {survivorPeople(residents)}{b.kind === 'deep' ? ', in orbital habitats' : ''}</span>
+                  {residents.homeSystemId === b.systemId ? 'Home of' : 'A settlement of'} <b>{residents.name}</b>{' '}
+                  <span class="faint">
+                    · {residents.homeSystemId === b.systemId ? survivorPeople(residents) : 'settled from their first star'}
+                    {b.kind === 'deep' ? ', in orbital habitats' : ''}
+                  </span>
                 </>
               ) : (
                 'Someone lives here.'

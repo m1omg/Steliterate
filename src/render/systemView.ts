@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { bodyClimate, diskLight, emberShare, primaryTemperature, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
+import { seenThere } from '../game/sim/claims';
 import type { Body, GameState, StarSystem, Survivor, Swarm } from '../game/types';
 import { radialTexture, type Pickable } from './galaxyView';
 import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, STAR_FRAG, STAR_VERT, VIEW_MODE, thermalRGB } from './shaders/bodies';
@@ -115,7 +116,7 @@ export class SystemView {
     const residents = new Map<string, Survivor>();
     if (surveyed) {
       for (const v of Object.values(state.survivors)) {
-        if (!v.alive || !v.systems.includes(sys.id)) continue;
+        if (!v.alive || !v.systems.includes(sys.id) || (v.homeSystemId !== sys.id && !seenThere(state, v, sys.id))) continue;
         const w = survivorWorld(state, v, sys.id);
         if (w) residents.set(w.id, v);
       }

@@ -1,8 +1,10 @@
 import { useState } from 'preact/hooks';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
-import { answerSignal, askForAid, breakPact, devour, makeGesture, proposeAPact, seize, sendAid } from '../../game/sim/actions';
+import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace, proposeAPact, seize, sendAid } from '../../game/sim/actions';
+import { SIEGE_TURNS, WAR_ACCORD, seizeBlocked, warBlocked, warCause, warDefence } from '../../game/sim/war';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
+import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
 import { ASK_COOLDOWN, askBlocked, inStep } from '../../game/sim/survivors';
 import { canConverse, voiceClock } from '../../game/sim/signals';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
@@ -73,7 +75,7 @@ export function SignalsModal({ s }: { s: GameState }) {
   const arrived = s.signals.filter((x) => x.arrivedTurn !== null);
   const openMsgs = arrived.filter((x) => !x.resolved && x.choices.length);
   const [tab, setTab] = useState<'messages' | 'others' | 'minds'>(openMsgs.length ? 'messages' : 'others');
-  // a heavy choice waits for a yes: 'seize:<id>' or 'devour:<id>'
+  // a heavy choice waits for a yes: 'seize:<id>', 'war:<id>' or 'devour:<id>'
   const [armed, setArmed] = useState<string | null>(null);
   const logL = logTurnLength(turnStep(s));
   const my = voiceClock(s, logL);
@@ -136,6 +138,29 @@ export function SignalsModal({ s }: { s: GameState }) {
                             <>
                               <dt data-tip="Energy we beamed to them that has reached them, and that they know came from us.">Aid received</dt>
                               <dd class="mono">{n0(sv.aidGiven)}</dd>
+                            </>
+                          )}
+                          {starsSeen(s, sv).length > 1 && (
+                            <>
+                              <dt data-tip="The stars we can see they live at. Their settlers cross at a fiftieth of the speed of light, and we see a new star of theirs when the light of it reaches us. Each one slows their decline.">Stars</dt>
+                              <dd class="mono">{starsSeen(s, sv).length}</dd>
+                            </>
+                          )}
+                          {sv.promised && (
+                            <>
+                              <dt data-tip={`We promised them warships against the swarm there. If ours fight it within ${PROMISE_TURNS} turns they will remember it; if we never come, they will remember that too.`}>Promised</dt>
+                              <dd class={`mono ${sv.promised.kept ? 'good' : 'warn'}`}>
+                                warships to {s.systems[sv.promised.systemId]?.name ?? 'their star'}
+                                {sv.promised.kept ? ', and they came' : `, ${Math.max(0, PROMISE_TURNS - (s.turn - sv.promised.turn))} turns left`}
+                              </dd>
+                            </>
+                          )}
+                          {sv.war && (
+                            <>
+                              <dt data-tip={`At war since turn ${sv.war.since}. A siege is warships held at their first star turn after turn; after ${SIEGE_TURNS} turns we can try to take it. They arm as the war goes on.`}>War</dt>
+                              <dd class="mono bad">
+                                since turn {sv.war.since} · siege {sv.war.siege}/{SIEGE_TURNS} · their strength {warDefence(s, sv).toFixed(0)}
+                              </dd>
                             </>
                           )}
                           {sv.exodus && (
@@ -201,9 +226,39 @@ export function SignalsModal({ s }: { s: GameState }) {
                                   </button>
                                 );
                               })()}
-                              <button class={`btn small danger ${armed === `seize:${sv.id}` ? 'on' : ''}`} data-tip="Take their star by force. Needs warships at their home. Everyone will hear of it, when the light reaches them." onClick={() => setArmed(armed === `seize:${sv.id}` ? null : `seize:${sv.id}`)}>
-                                Seize
-                              </button>
+                              {sv.war ? (
+                                <>
+                                  {(() => {
+                                    const why = seizeBlocked(s, sv);
+                                    return (
+                                      <button
+                                        class={`btn small danger ${armed === `seize:${sv.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
+                                        data-tip={`${why ? `${why}\n` : ''}Take their first star by force: a battle against their strength (${warDefence(s, sv).toFixed(0)}), which we can lose. Everyone will hear of it when the light reaches them.`}
+                                        onClick={() => !why && setArmed(armed === `seize:${sv.id}` ? null : `seize:${sv.id}`)}
+                                      >
+                                        Seize
+                                      </button>
+                                    );
+                                  })()}
+                                  <button class="btn small" data-tip="Stop the war. They hear of it when the light arrives; the ill will takes longer to fade." onClick={() => act((g) => peace(g, sv.id)) && sfx('good')}>
+                                    Make peace
+                                  </button>
+                                </>
+                              ) : (
+                                (() => {
+                                  const why = warBlocked(s, sv);
+                                  const cause = warCause(s, sv);
+                                  return (
+                                    <button
+                                      class={`btn small danger ${armed === `war:${sv.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
+                                      data-tip={`${why ? `${why}\n` : ''}${cause ? `${cause} ` : ''}The Threads must consent (${WAR_ACCORD} accord); resolve −5, dissent +8, every Thread’s standing −${cause ? 1 : 3}. Our pacts with them end. Everyone hears of it when the light arrives${cause ? ', and few blame us' : ', and those who hate us join against us'}. No trade, archives or refuge while it lasts.`}
+                                      onClick={() => !why && setArmed(armed === `war:${sv.id}` ? null : `war:${sv.id}`)}
+                                    >
+                                      Declare war
+                                    </button>
+                                  );
+                                })()
+                              )}
                               {hasCharter(s, 'absorb_the_weak') && (
                                 <button class={`btn small danger ${armed === `devour:${sv.id}` ? 'on' : ''}`} data-tip="Devour them whole while they are weak. The Hunger's way." onClick={() => setArmed(armed === `devour:${sv.id}` ? null : `devour:${sv.id}`)}>
                                   Devour
@@ -248,17 +303,21 @@ export function SignalsModal({ s }: { s: GameState }) {
                         {armed?.endsWith(`:${sv.id}`) && (
                           <div class="row wrap confirm-heavy" style={{ gap: '6px', alignItems: 'center' }}>
                             <span class="warn" style={{ fontSize: '12px' }}>
-                              {armed.startsWith('seize') ? `Take ${sv.name}’s star by force? Some of them would live on as our people; the rest would not. Every civilization will hear of it.` : `Devour ${sv.name} whole? There is no way back from this.`}
+                              {armed.startsWith('seize')
+                                ? `Take ${sv.name}’s star by force? Some of them would live on as our people; the rest would not. Every civilization will hear of it.`
+                                : armed.startsWith('war')
+                                  ? `Go to war with ${sv.name}? ${warCause(s, sv) ?? 'Everyone will hear of it, and those who hate us will join against us.'}`
+                                  : `Devour ${sv.name} whole? There is no way back from this.`}
                             </span>
                             <button
                               class="btn small danger"
                               onClick={() => {
                                 const what = armed;
                                 setArmed(null);
-                                if (act((g) => (what.startsWith('seize') ? seize(g, sv.id) : devour(g, sv.id)))) sfx('bad');
+                                if (act((g) => (what.startsWith('seize') ? seize(g, sv.id) : what.startsWith('war') ? goToWar(g, sv.id) : devour(g, sv.id)))) sfx('bad');
                               }}
                             >
-                              {armed.startsWith('seize') ? 'Seize their star' : 'Devour them'}
+                              {armed.startsWith('seize') ? 'Seize their star' : armed.startsWith('war') ? 'Declare war' : 'Devour them'}
                             </button>
                             <button class="btn small" onClick={() => setArmed(null)}>
                               Not now

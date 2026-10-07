@@ -12,15 +12,20 @@ import { check, done } from '../lib';
 
 
 // ---------------------------------------------------------------- a giant is born as its turn ends
-const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard' });
+// (giants are rare: play seeds until one forms; which seed it is moves whenever the rules do)
+let s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard' });
 let born: StarSystem | null = null;
-for (let guard = 0; guard < 700 && !s.outcome && !born; guard++) {
-  autoPlay(s, 'competent');
-  const r = endTurn(s);
-  const g = r.notes.find((n) => n.kind === 'giant');
-  if (g) born = s.systems[g.systemId];
+for (const seed of [1000, 8919, 16838, 24757, 32676, 40595]) {
+  s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard' });
+  for (let guard = 0; guard < 700 && !s.outcome && !born; guard++) {
+    autoPlay(s, 'competent');
+    const r = endTurn(s);
+    const g = r.notes.find((n) => n.kind === 'giant');
+    if (g) born = s.systems[g.systemId];
+  }
+  if (born) break;
 }
-check(!!born, `a helium giant forms in play (${born?.name}, η ${s.eta.toFixed(2)})`);
+check(!!born, `a helium giant forms in play (${born?.name}, seed ${s.settings.seed}, η ${s.eta.toFixed(2)})`);
 if (born) {
   const p = born.primary;
   check(p.kind === 'helium_giant' && p.bornAt === s.years && p.diesAt === s.years + GIANT_LIFE, 'it lights as its turn ends, and burns for 120,000 years from then');

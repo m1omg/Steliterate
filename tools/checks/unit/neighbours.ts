@@ -11,7 +11,7 @@ import { askBlocked, inStep, resolveSurvivorSignal, updateSurvivors } from '../.
 import { deliverSignals, sendSignal, voiceClock } from '../../../src/game/sim/signals';
 import { acceptOffer, answerArrived, endPact, hasPact, pactBlocked, pactCost, pactsTurn, proposePact, theirPacts } from '../../../src/game/sim/pacts';
 import { computeMods } from '../../../src/game/sim/mods';
-import { capacity } from '../../../src/game/sim/economy';
+import { capacity, reserveCapacity } from '../../../src/game/sim/economy';
 import { turnStep } from '../../../src/game/sim/flare';
 import { fork } from '../../../src/game/sim/society';
 import { logTurnLength } from '../../../src/game/eras';
@@ -212,6 +212,21 @@ const later = (s: GameState, years: number) => {
   s.civ.energy = 1000;
   pactsTurn(s);
   check(s.civ.energy < 1000 && !!sv.beams?.some((b) => b.plea), `they are failing: help goes to them unasked (${1000 - s.civ.energy} energy)`);
+  {
+    // only what we can spare: 30% of our reserve stays
+    const t = clone(s);
+    const tv = t.survivors[sv.id];
+    delete t.civ.flags[`pact_aid_out_${sv.id}`];
+    const keep = reserveCapacity(t, computeMods(t)) * 0.3;
+    t.civ.energy = keep + 12;
+    pactsTurn(t);
+    check(t.civ.energy >= keep - 1e-9 && t.civ.energy < keep + 12 && tv.beams!.length > sv.beams!.length, `and only what we can spare: 30% of our reserve stays (${(keep + 12).toFixed(0)} → ${t.civ.energy.toFixed(0)})`);
+    t.civ.energy = keep + 3;
+    delete t.civ.flags[`pact_aid_out_${sv.id}`];
+    const e0 = t.civ.energy;
+    pactsTurn(t);
+    check(t.civ.energy === e0, 'with less than 5 to spare, nothing goes');
+  }
   sv.health = 0.8;
   s.civ.energy = 1;
   s.civ.flags.last_energy_net = -5;

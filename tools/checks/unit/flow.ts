@@ -40,6 +40,8 @@ for (let g = 0; g < 900 && !s.outcome && s.eta < FLOW_ETA - 2.5; g++) {
 }
 check(!s.outcome && s.eta < FLOW_ETA && s.civ.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come`);
 s.pending.length = 0;
+// with the Tide (the autoplayer may have slowed down, and a slow turn here outlasts the flow)
+s.civ.pace = 0;
 if (!s.civ.techs.includes('hawking_patience')) s.civ.techs.push('horizon_cognition', 'hawking_patience');
 // three places of our own, on worlds no one lives on: one kept by Kin, one of slow Echoes, one with only sleepers
 const free = Object.values(s.bodies).filter((b) => !b.colonyId && !b.dissolved && b.kind !== 'deep' && !b.relic && s.systems[b.systemId] && !s.systems[b.systemId].gone);

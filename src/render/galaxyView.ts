@@ -3,6 +3,7 @@ import { fleetLook, lookRole, type FleetLook } from '../game/data/ships';
 import { diskLight, emberShare, primaryTemperature, shownKind } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
+import { starsSeen } from '../game/sim/claims';
 import { Rng, hashSeed } from '../game/rng';
 import type { GameState, StarSystem } from '../game/types';
 import { blackbody } from './shaders/noise';
@@ -48,6 +49,7 @@ const NODE_VERT = /* glsl */ `
   attribute vec3 aColor;
   attribute vec4 aState; // x: owned, y: rust, z: pulse phase, w: dim
   attribute float aMark; // 0: seen from afar, 1: surveyed, 2: surveyed, with a living world
+  attribute vec4 aOthers; // rgb: the colour of another civilization living here; w: 1 if one does
   uniform float uTime;
   uniform float uPixel;
   uniform float uLift; // 0 natural, 1 enhanced, 2 thermal
@@ -56,18 +58,20 @@ const NODE_VERT = /* glsl */ `
   varying float vSize;
   varying float vStar;
   varying float vMark;
+  varying vec4 vOthers;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
     float s = aSize * uPixel * (1.0 + 60.0 / max(8.0, -mv.z));
     vStar = clamp(s, (uLift > 0.5 ? 9.0 : 5.0) * uPixel, 64.0 * uPixel);
     // marked systems get room for their ring, however small the star is drawn
-    bool marked = aMark > 0.5 || aState.x > 0.5 || aState.y > 0.01;
+    bool marked = aMark > 0.5 || aState.x > 0.5 || aState.y > 0.01 || aOthers.w > 0.5;
     gl_PointSize = max(vStar, marked ? 26.0 * uPixel : 0.0);
     vColor = aColor;
     vState = aState;
     vSize = gl_PointSize;
     vMark = aMark;
+    vOthers = aOthers;
   }
 `;
 
@@ -84,6 +88,7 @@ const NODE_FRAG = /* glsl */ `
   varying float vSize;
   varying float vStar;
   varying float vMark;
+  varying vec4 vOthers;
   // a line lw pixels wide along the circle of radius R (pixels)
   float ringAt(float px, float R, float lw) {
     return 1.0 - smoothstep(0.0, lw, abs(px - R));
@@ -116,6 +121,13 @@ const NODE_FRAG = /* glsl */ `
       // surveyed: a steady thin ring; green where a living world waits
       float ring = ringAt(px, max(r * 0.62, 7.0 * uPixel), lw) * (vMark > 1.5 ? 0.9 : 0.6);
       col += (vMark > 1.5 ? uLiving : uCharted) * ring;
+      a = max(a, ring);
+    }
+    if (vOthers.w > 0.5) {
+      // another civilization lives here: a dashed ring in its colour, outside ours
+      float dash = 0.55 + 0.45 * step(0.0, sin(atan(c.y, c.x) * 10.0));
+      float ring = ringAt(px, max(r * 1.05, 12.0 * uPixel), lw * 1.2) * dash;
+      col += vOthers.rgb * ring * 1.2;
       a = max(a, ring);
     }
     // the Hunger's rust bloom, flickering
@@ -400,6 +412,10 @@ export class GalaxyView {
     const size: number[] = [];
     const st: number[] = [];
     const mark: number[] = [];
+    const others: number[] = [];
+    // the stars other civilizations live at, as far as their light has told us
+    const theirs = new Map<string, THREE.Color>();
+    for (const v of Object.values(state.survivors)) for (const id of starsSeen(state, v)) if (!theirs.has(id)) theirs.set(id, new THREE.Color(v.color));
     this.pickables = [];
     this.living.clear();
     for (const s of Object.values(state.systems)) {
@@ -412,6 +428,8 @@ export class GalaxyView {
       const alive = known[s.id] === 2 && livingWorlds(state, s.id).length > 0;
       if (alive) this.living.add(s.id);
       mark.push(known[s.id] === 2 ? (alive ? 2 : 1) : 0);
+      const o = theirs.get(s.id);
+      others.push(o ? o.r : 0, o ? o.g : 0, o ? o.b : 0, o ? 1 : 0);
       this.pickables.push({ kind: 'system', id: s.id, pos: new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z) });
     }
     if (this.nodes) {
@@ -424,6 +442,7 @@ export class GalaxyView {
     ng.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
     ng.setAttribute('aState', new THREE.Float32BufferAttribute(st, 4));
     ng.setAttribute('aMark', new THREE.Float32BufferAttribute(mark, 1));
+    ng.setAttribute('aOthers', new THREE.Float32BufferAttribute(others, 4));
     this.nodes = new THREE.Points(ng, this.nodeMat);
     this.nodes.frustumCulled = false;
     this.nodes.renderOrder = 2;

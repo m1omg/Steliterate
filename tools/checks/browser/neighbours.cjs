@@ -1,6 +1,6 @@
 // Browser check: living neighbours. In Signals, Send says how long the beam takes to reach them;
-// once sent, their card shows the energy on its way; Seize asks first, and Not now changes nothing;
-// a pact can be proposed from the card, and waits for their answer.
+// once sent, their card shows the energy on its way; Declare war asks first, and Not now changes
+// nothing; a pact can be proposed from the card, and waits for their answer.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('neighbours', { seed: 1000 });
@@ -14,6 +14,7 @@ run(async () => {
     v.contact = true;
     v.health = Math.max(v.health, 0.6);
     s.civ.energy = 500;
+    s.civ.accord = 300;
     s.pending.length = 0;
     window.__stel.refresh();
     return { id: v.id, name: v.name };
@@ -36,15 +37,15 @@ run(async () => {
   check(/^25 energy, there in .+/.test(row ?? ''), `the card shows it on its way (${row})`);
   const energy = await page.evaluate(() => window.__stel.state().civ.energy);
   check(energy === 475, `and it left our reserve at once (${energy})`);
-  await card.locator('button', { hasText: /^Seize$/ }).click();
+  await card.locator('button', { hasText: /^Declare war$/ }).click();
   await page.waitForTimeout(300);
   const ask = await card.locator('.confirm-heavy').textContent().catch(() => null);
-  check(/^Take .* star by force\?/.test(ask ?? ''), `Seize asks first (${ask?.slice(0, 60)})`);
-  await ck.shot('seize-asks.png');
+  check(/^Go to war with .*\?/.test(ask ?? ''), `Declare war asks first (${ask?.slice(0, 60)})`);
+  await ck.shot('war-asks.png');
   await card.locator('.confirm-heavy button', { hasText: 'Not now' }).click();
   await page.waitForTimeout(300);
-  const after = await page.evaluate((id) => ({ alive: window.__stel.state().survivors[id].alive, bar: !!document.querySelector('.confirm-heavy') }), sv.id);
-  check(after.alive && !after.bar, 'Not now changes nothing');
+  const after = await page.evaluate((id) => ({ alive: window.__stel.state().survivors[id].alive, war: !!window.__stel.state().survivors[id].war, bar: !!document.querySelector('.confirm-heavy') }), sv.id);
+  check(after.alive && !after.war && !after.bar, 'Not now changes nothing');
   // pacts: propose one, and see it waiting for their answer
   await page.evaluate((id) => {
     const s = window.__stel.state();
