@@ -31,6 +31,15 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 
 ## Open threads and pending decisions
 
+- **7 Oct, after Part C went live:** "can you instead make the beacons temporary? … more realistic
+  than having them last literally trillions and trillions of years" (instead of the earlier offer
+  to undo them). Chosen: a beacon burns "while we keep feeding it", and lighting one turns the
+  nearest swarm toward it ("Yes"). Then: "make sure the AI for computer players is good and
+  explain how it works and compare to Civ V AIs workings … the other players CONSTANTLY wanted 40
+  matter for an unspecified knowledge amount." Done: dealings by way of life, stated terms,
+  patience after refusals, memory shown on their cards. They like the Tessellate: "Principle
+  seems fair." They asked for a PR, a push and the build live on Pages when done.
+
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **The player works from more than one session.** Before changing anything, fetch every branch
   and compare with `origin/claude/lucid-newton-30cbpk` (they asked for this check on 2 Oct; it

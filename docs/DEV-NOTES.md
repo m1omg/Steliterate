@@ -64,7 +64,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Checks** (`tools/checks/`, since 7 Oct; before then they lived in the ephemeral scratchpad):
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
-    old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
+    beacon, dealings), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -392,6 +393,23 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   0.04 × pop × health a hole, half for a partner; their drain ×0.85 when they draw) and
   `spinSharers` (the system panel's Spin row). Autoplayer: lets the Choir have the Echoes who
   wish it.
+  Dealings (`src/game/sim/dealings.ts`): `termsFor` (what each way wants, `share` of a project
+  its notes are worth, `rate` of insight per unit, `every` turns between offers; a fork as its
+  Thread), `tradeOffer` (notes on our project, or the cheapest open one; ask at their rate, at most
+  `ASK_MAX` and half of what we hold, none under `ASK_MIN` or with nothing left to learn),
+  `offerDue` / `offered` / `answered` (`trade_next_<id>`, `trade_no_<id>`, and the same for
+  `joint`, in `civ.flags`: the rhythm doubles after each refusal, up to `BACKOFF_MAX`), and `feel`
+  (regard, clamped to ±100, and `Survivor.memory`, the last `MEMORY` reasons, shown by
+  `regardTip` in `Signals.tsx`). Every event that moves a neighbour's regard goes through `feel`
+  except the standing drifts (the Taint ceiling, Sanctuary). A `trade` signal carries
+  `{ ask, want, insight, tech }`; one without them (older saves) keeps the old 40-matter terms.
+  Raids: `raid_wait_<id>` (`RAID_WAIT` 15) after our defences turned them away. `theirPacts`
+  offers Shared Watch first when the Hunger is within 100 ly of their stars.
+- **Decoy beacons (`src/game/sim/beacons.ts`):** `placeBeacon` (`actions.ts`, `BEACON_COST` 30,
+  then `drawSwarmTo`, no random draw), `putOutBeacon`, `feedBeacons` (in `turn.ts` right after
+  the economy is applied: `BEACON_UPKEEP` 3 × lived share each, in system order, dark when short),
+  `beaconUpkeep` in `project()` and the HUD's energy tooltip. The pull itself is unchanged (+25 in
+  `moveSwarm` while `sys.beacon`). Unrelated: `isBeacon` and the Systems "Collision stars" tab.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -613,7 +631,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | taking structures apart (7 Oct) | 135 | 48 victories, Degenerate Age 69 turns; 900 games 406 / 143 / 69 (386 / 142 / 69 before). By fate: decay 179 / 450, stable 144 / 239, curvature 83 / 211. The autoplayer takes apart a collector whose source is gone for good when matter is under 40: 5.6 a game, 170 matter (30 games). Letting it take apart idle Decay Harvesters too: 404 / 143 |
 | the Long Flow (7 Oct) | 129 | 47 victories, Degenerate Age 69 turns; 900 games 400 / 142 / 69 (406 / 143 / 69 before); decay games identical. By fate: stable 140 / 239, curvature 81 / 211. Chosen, 300 each: stable 184 / 119 / 56, curvature 106 / 57 / 88. The autoplayer taking apart the dearest things at unmanned places, collectors included: 399 / 142 |
 | neighbours, phase 0: honesty (work branch) | 136 | 52 victories, Degenerate Age 71 turns; 900 games 406 / 146 / 69 (400 / 142 / 69 before); by fate decay 175 / 450, stable 154 / 239, curvature 77 / 211; 430 of 900 games as before |
-| neighbours, phase 5: ways that meet; Part C live (7 Oct) | 146 | 60 victories, Degenerate Age 67 turns; 900 games 435 / 179 / 68 (396 / 158 / 68 before); by fate decay 179 / 450, stable 163 / 239, curvature 93 / 211. The autoplayer keeping its Echoes from the Choir: 439 / 163 / 71. Part C in all: 400 / 142 → 435 / 179 |
-| neighbours, phases 3 and 4: expansion, war (work branch) | 144 | 55 victories, Degenerate Age 68 turns; 900 games 396 / 158 / 68 (426 / 162 / 70 before); by fate decay 169 / 450, stable 145 / 239, curvature 82 / 211. Without the Hunger smelling them 410 / 167, without expansion 409 / 150. War does not change the autoplayer's games (identical); the 'warlike' strategy: 21 wars, 397 / 158 / 68, its war games 14 survive against 13 in peace |
-| neighbours, phase 2: refuge (work branch) | 147 | 57 victories, Degenerate Age 68 turns; 900 games 426 / 162 / 70 (440 / 150 / 69 before); by fate decay 177 / 450, stable 156 / 239, curvature 93 / 211. Of 2,906 neighbours 714 were saved and 326 absorbed, in 710 of 900 games |
 | neighbours, phase 1: pacts (work branch) | 138 | 50 victories, Degenerate Age 69 turns; 900 games 440 / 150 / 69 (406 / 146 / 69 before); by fate decay 190 / 450, stable 145 / 239, curvature 105 / 211; fewer end in the Black Hole Age or fade in the Dark. 792 of 900 games sign a pact (a game: 1.2 Mutual Aid, 1.4 Open Archives, 0.9 Shared Watch) |
+| neighbours, phase 2: refuge (work branch) | 147 | 57 victories, Degenerate Age 68 turns; 900 games 426 / 162 / 70 (440 / 150 / 69 before); by fate decay 177 / 450, stable 156 / 239, curvature 93 / 211. Of 2,906 neighbours 714 were saved and 326 absorbed, in 710 of 900 games |
+| neighbours, phases 3 and 4: expansion, war (work branch) | 144 | 55 victories, Degenerate Age 68 turns; 900 games 396 / 158 / 68 (426 / 162 / 70 before); by fate decay 169 / 450, stable 145 / 239, curvature 82 / 211. Without the Hunger smelling them 410 / 167, without expansion 409 / 150. War does not change the autoplayer's games (identical); the 'warlike' strategy: 21 wars, 397 / 158 / 68, its war games 14 survive against 13 in peace |
+| neighbours, phase 5: ways that meet; Part C live (7 Oct) | 146 | 60 victories, Degenerate Age 67 turns; 900 games 435 / 179 / 68 (396 / 158 / 68 before); by fate decay 179 / 450, stable 163 / 239, curvature 93 / 211. The autoplayer keeping its Echoes from the Choir: 439 / 163 / 71. Part C in all: 400 / 142 → 435 / 179 |
+| beacons fed; neighbours' dealings (7 Oct) | 154 | 59 victories, Degenerate Age 69 turns; 900 games 437 / 183 / 69 (435 / 179 / 68 before); by fate decay 173 / 450, stable 162 / 239, curvature 102 / 211. Beacons alone: 300 games identical (the autoplayer lights none). In 30 games trade offers 17 → 5.3 a game, shared works 3.0 → 1.7 |

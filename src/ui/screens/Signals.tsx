@@ -7,8 +7,9 @@ import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/si
 import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
 import { ASK_COOLDOWN, askBlocked, inStep } from '../../game/sim/survivors';
 import { canConverse, voiceClock } from '../../game/sim/signals';
+import { SANCTUARY_TRUST } from '../../game/sim/refuge';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
-import type { GameState, Signal } from '../../game/types';
+import type { GameState, Signal, Survivor } from '../../game/types';
 import { n0, pct, pow10 } from '../fmt';
 import { WAY_NAME, wayArt } from '../labels';
 import { act, rev } from '../store';
@@ -65,6 +66,17 @@ function PatternView({ p }: { p: number[] }) {
       ))}
     </svg>
   );
+}
+
+/** Why they feel as they do: what they remember, newest first, and the standing reasons. */
+function regardTip(s: GameState, sv: Survivor): string {
+  const lines = [...(sv.memory ?? [])].reverse().map((m) => `Turn ${m.turn}: ${m.what} (${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)})`);
+  if (!lines.length) lines.push('Nothing yet: they are making up their minds about us.');
+  const ceiling = Math.round(100 - s.civ.taint * 1.5);
+  if (s.civ.taint > 0) lines.push(`The Hunger in us: no one thinks better of us than ${ceiling}.`);
+  const trust = Math.min(SANCTUARY_TRUST, ceiling);
+  if (hasCharter(s, 'sanctuary') && sv.disposition >= 0 && sv.disposition < trust) lines.push(`Sanctuary: their trust in us grows, toward ${trust}.`);
+  return lines.join('\n');
 }
 
 const SLOW_STAGE = ['Unknown.', 'A pattern near the Heart: someone counting, very slowly.', 'They have spoken. They wait for an answer.', 'In conversation, one thought per age.', 'They have shared the seam: the Aeon Seed is possible.'];
@@ -130,8 +142,10 @@ export function SignalsModal({ s }: { s: GameState }) {
                         <dl class="kv">
                           <dt>People</dt>
                           <dd class="mono">{n0(sv.pop)}</dd>
-                          <dt>Toward us</dt>
-                          <dd class={`mono ${sv.disposition < -20 ? 'bad' : sv.disposition > 20 ? 'good' : ''}`}>{sv.disposition > 20 ? 'friendly' : sv.disposition < -20 ? 'hostile' : 'wary'} ({n0(sv.disposition)})</dd>
+                          <dt data-tip="How they feel about us, and why: what they remember of what we did and what they heard of us, each when its light reached them.">Toward us</dt>
+                          <dd class={`mono ${sv.disposition < -20 ? 'bad' : sv.disposition > 20 ? 'good' : ''}`} data-tip={regardTip(s, sv)}>
+                            {sv.disposition > 20 ? 'friendly' : sv.disposition < -20 ? 'hostile' : 'wary'} ({n0(sv.disposition)})
+                          </dd>
                           <dt data-tip="Two minds can only talk if their clocks are within about three orders of magnitude.">Clock</dt>
                           <dd class={`mono ${talk ? '' : 'warn'}`}>{pow10(sv.clock)} yr{talk ? '' : ' · out of step'}</dd>
                           {sv.aidGiven > 0 && (

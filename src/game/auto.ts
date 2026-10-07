@@ -396,7 +396,12 @@ function planSignals(state: GameState) {
     if (s.kind === 'choir_wish') choice = 'let';
     if (s.kind === 'pact_offer') choice = civ.accord >= pactCost(state) + ACCORD_KEEP ? 'accept' : 'decline';
     if (s.kind === 'joint') choice = civ.matter > 120 ? 'join' : 'decline';
-    if (s.kind === 'trade') choice = civ.matter > 150 ? 'trade' : 'decline';
+    if (s.kind === 'trade') {
+      // a deal we can afford three times over (an old offer: 40 matter, as it always was)
+      const ask = s.data.ask !== undefined ? Number(s.data.ask) : 40;
+      const have = s.data.want === 'energy' ? civ.energy : civ.matter;
+      choice = have > Math.max(ask * 3, s.data.ask !== undefined ? 0 : 150) ? 'trade' : 'decline';
+    }
     if (s.kind === 'slow_first') choice = 'math';
     if (s.kind === 'dark_reveal1') choice = 'ease';
     if (s.kind === 'dark_reveal2') choice = 'help';

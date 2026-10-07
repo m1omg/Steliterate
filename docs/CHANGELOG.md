@@ -881,3 +881,56 @@ at once". Built in phases, each with its checks and harness numbers.
   them against the Hunger does better.
   Also: the evaporation, Long Flow and survey checks no longer depend on what one seed's game
   happens to hold, or on how fast the camera flies.
+
+## Beacons that need feeding, and neighbours who deal sensibly (7 Oct)
+
+- **Decoy beacons burn only while we feed them.** The player: "can you instead make the beacons
+  temporary? I think that would be more realistic than having them last literally trillions and
+  trillions of years." Chosen: a beacon burns while we keep feeding it, and lighting one turns the
+  nearest swarm toward it.
+  - Lighting one still costs 30 energy, from a ship at a star where none of our people live. The
+    nearest awake swarm within reach (90 ly in the Dusk) turns toward it at once.
+  - Keeping it burning costs 3 energy a turn at the Tide, scaled by the turn's lived share as all
+    upkeep is.
+  - It goes dark when we put it out (Put out, on its star's panel) or cannot feed it; energy never
+    drops below zero, and the Record says which went dark.
+  - The coming turn's projection and the HUD's energy tooltip count the upkeep.
+  - A beacon from an older save is fed like any other, and can be put out.
+  - Balance: the autoplayer never lights a beacon; 300 games identical to before, game for game.
+- **Neighbours deal sensibly.** The player: "the other players CONSTANTLY wanted 40 matter for an
+  unspecified knowledge amount." In 30 autoplayed games trade offers were 17 a game (about one
+  every 13 turns), the same 40 matter each time, and shared works were asked for again after
+  every refusal (67 of 91 refused).
+  - Each way of life deals in what it lacks, at its own rate and rhythm:
+
+    | Way | Asks for | Insight per unit | Offers every |
+    |---|---|---|---|
+    | Gardens | matter | 2 | 22 turns |
+    | The Archive (uploads) | energy | 3 | 16 |
+    | The Choir | energy | 2.5 | 18 |
+    | The sleepers | energy | 2 | 40 |
+    | The Tessellate | matter | 2.5 | 18, exactly |
+    | A fork | as its Thread | | 24 |
+
+    Matter-wanters ask for energy once matter is gone.
+  - An offer says exactly what it asks and gives: their notes on what we are researching, worth a
+    share of it (a fifth to three tenths), for its price at their rate, never more than half of
+    what we hold, and none at all when there is nothing left to learn or the deal would be too
+    small to bother with. The insight goes to that project while it is open.
+  - After a refusal they wait twice as long before offering again (up to eight times); a yes
+    brings them back to their rhythm. Shared works too.
+  - Raiders our defences turned away wait 15 turns before trying again.
+  - They offer the pact they need most: Mutual Aid while failing, a Shared Watch while the Hunger
+    feeds near them, else Open Archives.
+  - They remember why they feel as they do: the last 8 things they heard of us or saw us do, with
+    what each did to their regard, shown on their card (hold the pointer over Toward us), with
+    the standing reasons (our Taint's ceiling, Sanctuary). Everything that moves their regard is
+    remembered, telling them of a new star included; a Thread that leaves us remembers that it
+    left, and sleepers we woke against their will remember that too.
+  - Offers from older saves keep their old terms.
+  - In the same 30 games: trade offers 5.3 a game (127 of 158 taken by the autoplayer), at 1.9
+    to 3 insight for each unit asked; shared works 1.7 (25 of 50 taken).
+  - Balance, 300 games: 154 survive, 59 victories, a Degenerate Age of 69 turns (was 146 / 60 /
+    67); 900 games 437 / 183 / 69 (was 435 / 179 / 68): as before, within the noise. By fate:
+    decay 173 of 450, stable 162 of 239, curvature 102 of 211.
+

@@ -6,6 +6,7 @@ import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShel
 import { eta, formatYears, stepTime } from '../eras';
 import { boilingAway } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
+import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
@@ -536,7 +537,17 @@ export const EVENTS: EventDef[] = [
         },
       },
       { label: 'Study it', hint: `Insight +${STAR_INSIGHT}: a merger seen as it happens, a fresh star in a dead galaxy. Resolve +${STAR_RESOLVE}: a new light, however brief. ${STAR_WORLDS}`, run: (s, d) => studyStar(s, d) },
-      { label: 'Tell the others', hint: 'Every survivor you know recovers a little. Their trust grows.', run: (s) => { for (const sv of Object.values(s.survivors)) if (sv.alive && sv.contact) { sv.health = Math.min(1, sv.health + 0.08); sv.disposition += 8; } } },
+      {
+        label: 'Tell the others',
+        hint: 'Every survivor you know recovers a little. Their trust grows.',
+        run: (s, d) => {
+          for (const sv of Object.values(s.survivors)) {
+            if (!sv.alive || !sv.contact) continue;
+            sv.health = Math.min(1, sv.health + 0.08);
+            feel(s, sv, 8, `you told us of the new star at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'}`);
+          }
+        },
+      },
     ],
   },
   {
@@ -852,7 +863,7 @@ export const EVENTS: EventDef[] = [
           }
           if (r < 0.75) {
             const id = uid(s, 'sl');
-            s.survivors[id] = { id, kind: 'survivor', name: 'The Woken', adjective: 'Woken', color: '#9fc7b0', way: 'dormant', homeSystemId: b?.systemId ?? s.civ.homeSystemId, systems: b ? [b.systemId] : [], pop: 14, health: 0.7, reserve: 10, disposition: -30, clock: 6, contact: true, alive: true, aidGiven: 0, lastSent: s.turn };
+            s.survivors[id] = { id, kind: 'survivor', name: 'The Woken', adjective: 'Woken', color: '#9fc7b0', way: 'dormant', homeSystemId: b?.systemId ?? s.civ.homeSystemId, systems: b ? [b.systemId] : [], pop: 14, health: 0.7, reserve: 10, disposition: -30, clock: 6, contact: true, alive: true, aidGiven: 0, lastSent: s.turn, memory: [{ turn: s.turn, delta: -30, what: 'you woke us from a sleep we had planned for a hundred ages' }] };
             return 'They wake angry. We interrupted a sleep they had planned for a hundred ages. They leave, and do not thank us.';
           }
           res(s, -6);

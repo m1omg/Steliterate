@@ -110,6 +110,8 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
 {
   const s = clone(degenerate);
   const sv = only(s, 'chorus');
+  // (whatever this game's Choir last asked)
+  delete s.civ.flags[`choir_wish_${sv.id}`];
   const cap = colonies(s)[0];
   cap.pops.echoes = Math.max(cap.pops.echoes, 6);
   const echoes = colonies(s).reduce((a, c) => a + c.pops.echoes, 0);

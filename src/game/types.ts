@@ -312,6 +312,8 @@ export interface Survivor {
   promised?: { systemId: string; turn: number; kept?: boolean };
   /** At war with us: since which turn, and how many turns in a row our warships have held their first star. */
   war?: { since: number; siege: number };
+  /** What they remember of us, newest last: the reasons for how they feel (dealings.ts, feel). */
+  memory?: { turn: number; delta: number; what: string }[];
 }
 
 /** Mutual Aid, Shared Watch, Open Archives. */

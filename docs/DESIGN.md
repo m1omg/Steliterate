@@ -312,6 +312,14 @@ the disagreement as real model uncertainty.
     a partner at a new star shares its clock; in the Black Hole Age a hole's spin is a commons.
   * *The Hunger* stays possible but hard to fight: allies add eyes and a little strength, never
     a shield.
+  * *How they decide.* Each civilization is a light simulation, not a second empire: health,
+    people, stars, a clock, and its regard for us. Every turn it lives by its way of life's needs
+    (pleas when failing, refuge when dying, warships against the Hunger, settlers when thriving)
+    and deals by its own terms and rhythm (`dealings.ts`): it asks for what it lacks, says
+    exactly what it gives, and waits longer after every refusal. Its regard moves only by what it
+    sees us do or hears of us, at light speed, and it remembers why, which its card shows. Closer
+    to Civilization V's city-states (requests and rewards, a relationship) than to its rival
+    empires: no one is playing to win against us.
 * **The Slow Ones** think around the Heart on clocks of millions of years. You can only
   converse when your own clock comes close to theirs. They matter for the *Aeon Seed*.
 * **Sleepers and ghosts:** vault civilizations and archived dead in ruins. Waking them is

@@ -13,6 +13,7 @@ import { residentsOf } from './homes';
 import { sendSignal } from './signals';
 import { distanceToThem, lightArrived, spreadNews, voice } from './survivors';
 import { capital, distLy, log } from './util';
+import { feel } from './dealings';
 
 /** How far they look for new stars (ly): their own cluster. */
 export const CLAIM_REACH = 100;
@@ -174,10 +175,10 @@ export function judgePromise(state: GameState, sv: Survivor) {
   delete sv.promised;
   const sys = state.systems[p.systemId];
   if (p.kept) {
-    sv.disposition = Math.min(100, sv.disposition + 10);
+    feel(state, sv, 10, `your warships came to ${sys?.name ?? 'our star'}, as you promised`);
     log(state, `${sv.name} saw our warships fight for them at ${sys?.name ?? 'their star'}, as we promised.`, 'good', p.systemId);
   } else if (Object.values(state.swarms).some((w) => w.systemId === p.systemId && w.awake && !w.tamed)) {
-    sv.disposition = Math.max(-100, sv.disposition - 10);
+    feel(state, sv, -10, `you promised warships to ${sys?.name ?? 'our star'}, and none came`);
     log(state, `We promised ${sv.name} warships at ${sys?.name ?? 'their star'}, and none came. They will remember.`, 'bad', p.systemId);
   }
 }
@@ -189,9 +190,9 @@ export function judgePromise(state: GameState, sv: Survivor) {
 export function foughtFor(state: GameState, systemId: string, broke: boolean) {
   for (const sv of Object.values(state.survivors)) {
     if (!sv.alive || !sv.systems.includes(systemId)) continue;
-    sv.disposition = Math.min(100, sv.disposition + (broke ? 20 : 5));
-    if (sv.promised?.systemId === systemId) sv.promised.kept = true;
     const sys = state.systems[systemId];
+    feel(state, sv, broke ? 20 : 5, broke ? `your warships broke the swarm at ${sys?.name ?? 'our star'}` : `your warships fought the swarm at ${sys?.name ?? 'our star'}`);
+    if (sv.promised?.systemId === systemId) sv.promised.kept = true;
     if (broke) spreadNews(state, systemId, 5, `you broke the Hunger at ${sys?.name ?? 'a star'} for ${sv.name}`, sv.id);
     if (sv.contact) log(state, broke ? `${sv.name} will not forget that our warships broke the swarm at ${sys?.name}.` : `${sv.name} saw our warships fight the swarm at ${sys?.name}.`, 'good', systemId);
   }

@@ -15,7 +15,7 @@ import { reserveCapacity } from './economy';
 import { computeMods } from './mods';
 import { sendSignal } from './signals';
 import { beamEnergy, distanceToThem, inStep, lightAt, spreadNews, voice } from './survivors';
-import { log } from './util';
+import { distLy, log } from './util';
 import { breach } from './ways';
 
 export const PACT_KINDS: PactKind[] = ['aid', 'archives', 'watch'];
@@ -154,7 +154,8 @@ export function theirPacts(state: GameState, sv: Survivor, chance: () => number)
     return true;
   }
   if (!sv.war && sv.disposition > 30 && mine.length < PACT_KINDS.length && !sv.proposal && state.civ.taint < 60 && chance() < 0.12) {
-    const kind = (sv.health < 0.6 && !mine.includes('aid') ? 'aid' : PACT_KINDS.find((k) => !mine.includes(k)))!;
+    // the pact they need most: help while they are failing, a watch while the Hunger is near them
+    const kind = (sv.health < 0.6 && !mine.includes('aid') ? 'aid' : !mine.includes('watch') && hungerNear(state, sv) ? 'watch' : PACT_KINDS.find((k) => !mine.includes(k)))!;
     sendSignal(state, {
       from: sv.id,
       kind: 'pact_offer',
@@ -233,6 +234,14 @@ export function pactsTurn(state: GameState) {
       }
     }
   }
+}
+
+/** An awake swarm at one of their stars, or within a hundred light-years of one. */
+function hungerNear(state: GameState, sv: Survivor): boolean {
+  return Object.values(state.swarms).some((w) => {
+    const at = w.systemId ? state.systems[w.systemId] : null;
+    return !!at && w.awake && !w.tamed && sv.systems.some((id) => state.systems[id] && distLy(state.systems[id], at) <= 100);
+  });
 }
 
 /** Shared Watch partners: their stars are eyes on the Hunger for us. */

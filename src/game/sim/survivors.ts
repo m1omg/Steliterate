@@ -6,6 +6,8 @@ import { askRefuge, onTheirWay, sanctuaryTrust, takeThemIn } from './refuge';
 import { askAgainstHunger, claimEase, expand, judgePromise, promiseHelp } from './claims';
 import { atWar, inCoalition, raidedUs, seizeBlocked, warCause, warDefence } from './war';
 import { answerChoirWish, choirWish, drawTheirSpin, wakeForNewStar } from './ways';
+import { answered, feel, offerDue, offered, tradeOffer, type Offer } from './dealings';
+import { TECH_BY_ID } from '../data/techs';
 import { createColony, isWarFleet } from './fleets';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
@@ -96,7 +98,7 @@ function reachThem(state: GameState, sv: Survivor) {
     for (const b of sv.beams.filter((x) => arrived(state, x.at))) {
       sv.health = Math.min(1, sv.health + (b.plea ? 0.12 + b.energy / 600 : b.energy / 400));
       if (b.known) {
-        sv.disposition = Math.min(100, sv.disposition + (b.plea ? 15 : b.energy / 4));
+        feel(state, sv, b.plea ? 15 : b.energy / 4, b.plea ? `you answered our plea with ${Math.round(b.energy)} energy` : `you beamed us ${Math.round(b.energy)} energy`);
         sv.aidGiven += b.energy;
       }
     }
@@ -104,7 +106,7 @@ function reachThem(state: GameState, sv: Survivor) {
   }
   if (sv.news?.length) {
     for (const n of sv.news.filter((x) => arrived(state, x.at))) {
-      sv.disposition = clamp(sv.disposition + n.delta, -100, 100);
+      feel(state, sv, n.delta, n.what);
       // a great wrong is answered, if they can speak to us
       if (n.delta <= -20 && sv.contact && inStep(state, sv)) {
         sendSignal(state, {
@@ -222,6 +224,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         continue;
       }
       const talk = sv.contact && canConverse(myClock, sv.clock, sv.way === 'lattice' ? 6 : 3);
+      let deal: Offer | null = null;
 
       // with nothing left they fade, whether or not we can hear them go
       if (sv.health <= 0.02) {
@@ -308,6 +311,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       } else if (
         (sv.health < 0.22 || (sv.raidedAt !== undefined && sv.disposition < -50) || (sv.tempted !== undefined && state.turn - sv.tempted < 10) || atWar(sv) || inCoalition(state, sv)) &&
         (sv.disposition < -20 || atWar(sv)) &&
+        state.turn >= (civ.flags[`raid_wait_${sv.id}`] ?? 0) &&
         rng.chance(atWar(sv) || inCoalition(state, sv) ? 0.5 : 0.35)
       ) {
         // the desperate take what they can; those we raided come back for what we took; the
@@ -323,6 +327,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         // a defence grid, or warships fortified over the capital, turns raiders away
         const defended = cap && ((cap.structures.defense_grid ?? 0) > 0 || Object.values(state.fleets).some((f) => f.at === cap.systemId && f.order === 'fortify'));
         if (!defended && took > 0) civ.energy -= took;
+        // turned away, they do not try again soon
+        if (defended) civ.flags[`raid_wait_${sv.id}`] = state.turn + RAID_WAIT;
         sendSignal(state, {
           from: sv.id,
           kind: 'raid',
@@ -340,8 +346,9 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
                 ? `We told them we were weak when we asked them for help. They came for ${took} energy of what little we had.`
                 : `Desperate ships drained ${took} energy from the reserve before anyone understood what was happening.`,
         });
-      } else if (sv.disposition > 35 && sv.health > 0.4 && rng.chance(0.25) && !civ.flags[`joint_${sv.id}`]) {
+      } else if (sv.disposition > 35 && sv.health > 0.4 && !civ.flags[`joint_${sv.id}`] && offerDue(state, sv, 'joint', () => rng.next())) {
         sv.lastSent = state.turn;
+        offered(state, sv, 'joint');
         sendSignal(state, {
           from: sv.id,
           kind: 'joint',
@@ -353,17 +360,24 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
             { id: 'decline', label: 'Decline' },
           ],
         });
-      } else if (!sv.war && rng.chance(0.2)) {
+      } else if (offerDue(state, sv, 'trade', () => rng.next()) && (deal = tradeOffer(state, sv)) !== null) {
         sv.lastSent = state.turn;
+        offered(state, sv, 'trade');
+        const on = deal.techName ? ` on ${deal.techName}` : '';
         sendSignal(state, {
           from: sv.id,
           kind: 'trade',
           distanceLy: dist,
           title: `${sv.name} offers a trade`,
-          text: voice(sv, `We have knowledge we cannot use and need matter we cannot find. 40 matter for what we have learned?`, `EXCHANGE: 40 MATTER FOR ONE DATA PACKAGE (INSIGHT). ACCEPT/REJECT.`),
+          text: voice(
+            sv,
+            `We have notes${on} we cannot use, and we need ${deal.want}. ${deal.ask} ${deal.want} for ${deal.insight} insight?`,
+            `EXCHANGE PROPOSED: ${deal.ask} ${deal.want.toUpperCase()} FOR ONE DATA PACKAGE: ${deal.insight} INSIGHT${deal.techName ? `, SUBJECT ${deal.techName.toUpperCase()}` : ''}. TERMS FIXED.`,
+          ),
+          data: { ask: deal.ask, want: deal.want, insight: deal.insight, tech: deal.tech ?? '' },
           choices: [
-            { id: 'trade', label: 'Trade 40 matter', hint: 'Receive their research.' },
-            { id: 'decline', label: 'Decline' },
+            { id: 'trade', label: `Trade ${deal.ask} ${deal.want}`, hint: `${deal.insight} insight: their notes${on}.` },
+            { id: 'decline', label: 'Decline', hint: 'They will wait longer before they offer again.' },
           ],
         });
       }
@@ -407,7 +421,7 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         // it goes by beam, and helps them when it gets there
         beamEnergy(state, sv, ask, true);
         civ.resolve = Math.min(100, civ.resolve + 1);
-      } else if (sv) sv.disposition -= 12;
+      } else if (sv) feel(state, sv, -12, 'you would not help us when we asked');
       break;
     }
     case 'refugees': {
@@ -420,11 +434,11 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         const came = settleNewcomers(state, t, n);
         if (came <= 0) return `We have no room for ${t === 'kin' ? 'them, awake or asleep' : 'them'}.`;
         sv.pop = Math.max(0, sv.pop - came * 2);
-        sv.disposition += 10;
+        feel(state, sv, 10, 'you took in our refugees');
         civ.resolve = Math.min(100, civ.resolve + 3);
         civ.flags.refugees = (civ.flags.refugees ?? 0) + came;
         log(state, came < n ? `${came} of ${n} refugees from ${sv.name} found room among us; the rest stay with their own.` : `${n} refugees from ${sv.name} have joined us.`, 'good', cap.systemId);
-      } else if (sv) sv.disposition -= 8;
+      } else if (sv) feel(state, sv, -8, 'you turned our refugees away');
       break;
     }
     case 'exodus': {
@@ -462,20 +476,32 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         civ.matter -= 60;
         civ.flags[`joint_${sv.id}`] = 1;
         sv.health = Math.min(1, sv.health + 0.15);
-        sv.disposition += 10;
+        feel(state, sv, 10, 'you joined us in a shared work');
+        answered(state, sv, 'joint', true);
         log(state, `A shared collector field with ${sv.name} begins to take shape.`, 'good');
-      }
+      } else if (sv) answered(state, sv, 'joint', false);
       break;
     }
     case 'trade': {
+      // (an offer from an older save carries no terms: 40 matter, for 60 insight plus half the turn number)
+      const want = sig.data.want === 'energy' ? 'energy' : 'matter';
+      const ask = sig.data.ask !== undefined ? Number(sig.data.ask) : 40;
       if (choice === 'trade') {
-        if (civ.matter < 40) return 'You need 40 matter.';
-        civ.matter -= 40;
-        const gain = 60 + state.turn * 0.5;
-        if (civ.researching) civ.research[civ.researching] = (civ.research[civ.researching] ?? 0) + gain;
+        if ((want === 'energy' ? civ.energy : civ.matter) < ask) return `You need ${ask} ${want}.`;
+        if (want === 'energy') civ.energy -= ask;
+        else civ.matter -= ask;
+        const gain = sig.data.insight !== undefined ? Number(sig.data.insight) : 60 + state.turn * 0.5;
+        // their notes go to the project they are on, while it is still open; else to ours now
+        const tech = String(sig.data.tech ?? '');
+        const to = tech && !civ.techs.includes(tech) && TECH_BY_ID[tech] ? tech : civ.researching;
+        if (to) civ.research[to] = (civ.research[to] ?? 0) + gain;
         else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
-        if (sv) sv.health = Math.min(1, sv.health + 0.05);
-      }
+        if (sv) {
+          sv.health = Math.min(1, sv.health + 0.05);
+          feel(state, sv, 3, 'you traded with us');
+          answered(state, sv, 'trade', true);
+        }
+      } else if (sv) answered(state, sv, 'trade', false);
       break;
     }
     default:
@@ -582,7 +608,7 @@ export function requestAid(state: GameState, id: string): string | null {
   // asking again soon wears thin
   const again = sv.askedAt !== undefined && state.turn - sv.askedAt < ASK_COOLDOWN * 3;
   sv.askedAt = state.turn;
-  sv.disposition = Math.max(-100, sv.disposition - (again ? 12 : 6));
+  feel(state, sv, again ? -12 : -6, again ? 'you keep asking us for help' : 'you asked us for help');
   let energy = 0;
   let words: string;
   let protocol: string;
@@ -620,6 +646,8 @@ export function requestAid(state: GameState, id: string): string | null {
 
 /** How many turns must pass before the same civilization can be raided again. */
 export const RAID_COOLDOWN = 5;
+/** Raiders our defences turned away wait this many turns before they try again. */
+export const RAID_WAIT = 15;
 
 const isRaider = (cls: string) => (SHIP_BY_ID[cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[cls]?.settles;
 
@@ -677,7 +705,7 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
     }
   });
   // what it costs, whatever happened
-  sv.disposition = Math.max(-100, sv.disposition - 35);
+  feel(state, sv, -35, 'your warships raided us');
   spreadNews(state, sys.id, -10, `your warships raided ${sv.name}`, sv.id);
   civ.resolve = Math.max(0, civ.resolve - 3);
   civ.dissent = Math.min(100, civ.dissent + 4);

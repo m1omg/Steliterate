@@ -14,6 +14,7 @@ import { sendSignal } from './signals';
 import { pactsWith } from './pacts';
 import { distanceToThem, inStep, lightAt, voice } from './survivors';
 import { colonies, distLy, log } from './util';
+import { feel } from './dealings';
 
 /** How far a new star's light wakes the sleepers (ly): their own cluster. */
 export const WAKE_REACH = 100;
@@ -103,7 +104,7 @@ export function answerChoirWish(state: GameState, sv: Survivor, choice: string):
   const civ = state.civ;
   if (choice !== 'let') {
     civ.standing.echoes = Math.max(0, civ.standing.echoes - 3);
-    sv.disposition = Math.max(-100, sv.disposition - 5);
+    feel(state, sv, -5, 'you kept your Echoes from us');
     return null;
   }
   if (!sv.alive) return 'They are gone: there is no one left to go to.';
@@ -167,7 +168,7 @@ export function breach(state: GameState, sv: Survivor) {
     return;
   }
   delete sv.pacts;
-  sv.disposition = Math.max(-100, sv.disposition - 15);
+  feel(state, sv, -15, `you breached Mutual Aid ${BREACHES} times`);
   delete state.civ.flags[key];
   sendSignal(state, {
     from: sv.id,

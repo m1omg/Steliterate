@@ -200,6 +200,7 @@ export function fork(state: GameState, t: ThreadId) {
     aidGiven: 0,
     lastSent: state.turn,
     forkOf: t,
+    memory: [{ turn: state.turn, delta: -15, what: 'we left you' }],
   };
   log(state, `A Fork. Part of the ${t === 'kin' ? 'Kin' : t} has left, taking ${systems.length} settlement(s) with them. They call themselves ${names[t]}.`, 'bad');
 }
