@@ -38,7 +38,17 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   explain how it works and compare to Civ V AIs workings … the other players CONSTANTLY wanted 40
   matter for an unspecified knowledge amount." Done: dealings by way of life, stated terms,
   patience after refusals, memory shown on their cards. They like the Tessellate: "Principle
-  seems fair." They asked for a PR, a push and the build live on Pages when done.
+  seems fair." They asked for a PR, a push and the build live on Pages when done (PR
+  m1omg/Steliterate#2, live at 8fd17c9).
+- **7 Oct, later:** they wanted the AI explained as a mechanism, not as outcomes or quotes ("is
+  the finite state machine a decision tree or whatever?"): ours is a decision list (priority-
+  ordered rules with dice), Civ V's a stack of utility scorers with state machines for military
+  operations, checked in its released source; Civ IV's unit and production AI, Halo 2's
+  prioritized lists, Infinity Engine scripts and FFXII's gambits use decision lists too. Answer
+  technical questions with the mechanism and primary sources. Then, about the teal ring around
+  Aster: "how about making the big flat circle teal instead of having 2 circles/rings?" Chosen:
+  one ring per world (the selection circle takes the colour of the world's own ring, which steps
+  aside), live on Pages.
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **The player works from more than one session.** Before changing anything, fetch every branch

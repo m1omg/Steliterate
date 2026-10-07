@@ -504,7 +504,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **`src/render/systemView.ts`:** other civilizations: `residents` from `survivorWorld`;
   surface civs set the planet shader's `uLights`/`uDev`/`uNeon` and the new `uCityCol` (sodium
   for ours); `addHabitats` builds flotilla / ring-station / lattice by way, `habitats` and
-  `sleepLights` animate on elapsed time; labels in `engine.ts` use `residentsOf`.
+  `sleepLights` animate on elapsed time; labels in `engine.ts` use `residentsOf`. Whose world
+  it is: our habitat ring (`hab`) and a surface neighbour's ring (`theirs`) carry
+  `userData.mark`; in `update` the selected world's mark hides and the selection circle
+  (`selRing`) takes its colour, with an opacity floor of 0.35 (0.12 and the pale `SELECT` on a
+  world no one lives on).
 - **UI:**
   - `Story.tsx`: `LoreModal`, `loreView`, `worldFinds`.
   - `Drawer.tsx`: Raid button, settler list sorts, Sunlight row, resident lines, Ruins "Read

@@ -24,6 +24,9 @@ interface PlanetRig {
   extra: THREE.Object3D[];
 }
 
+/** The selection circle on a world no one lives on (on a lived-on world it takes its ring's colour). */
+const SELECT = new THREE.Color('#ffd9b0');
+
 const KIND_INDEX: Record<string, number> = { eyeball: 1, terran: 1, super_earth: 0, barren: 0, ice: 2, ocean_ice: 5, gas_giant: 3, ice_giant: 4 };
 
 export class SystemView {
@@ -72,7 +75,7 @@ export class SystemView {
 
   constructor() {
     this.stars = backgroundStars();
-    this.selRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 96), new THREE.MeshBasicMaterial({ color: '#ffd9b0', transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+    this.selRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 96), new THREE.MeshBasicMaterial({ color: SELECT.clone(), transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
     this.selRing.visible = false;
   }
 
@@ -341,6 +344,8 @@ export class SystemView {
       // habitat ring: a thin lit band around the settled world
       const hab = new THREE.Mesh(new THREE.TorusGeometry(size * 1.5, 0.03 + size * 0.01, 6, 96), new THREE.MeshBasicMaterial({ color: this.neon, transparent: true, opacity: 0.7 }));
       hab.rotation.x = Math.PI / 2 + 0.25;
+      // whose world this is: selected, the selection circle takes its place and colour (update)
+      hab.userData.mark = true;
       mesh.add(hab);
       extra.push(hab);
       if (col && (col.structures.mag_shield ?? 0) > 0) {
@@ -356,6 +361,7 @@ export class SystemView {
         if (sv.way !== 'dormant') {
           const theirs = new THREE.Mesh(new THREE.TorusGeometry(size * 1.45, 0.02 + size * 0.008, 6, 96), new THREE.MeshBasicMaterial({ color: other, transparent: true, opacity: 0.45 }));
           theirs.rotation.x = Math.PI / 2 - 0.35;
+          theirs.userData.mark = true;
           mesh.add(theirs);
           extra.push(theirs);
         } else this.sleepLights.push(mat);
@@ -723,21 +729,30 @@ export class SystemView {
       const f = this.fleets.children[i];
       if (f) p.pos.copy(f.position);
     });
+    // a world wears one ring: selected, the selection circle takes the place and colour of the
+    // ring that says whose it is (ours, or a neighbour's); a world no one lives on gets the pale one
+    let marked: THREE.Mesh | undefined;
     if (this.selectedBody) {
       const p = pick(`body:${this.selectedBody}`) ?? pick(this.selectedBody);
       if (p) {
         const rig = this.planets.find((x) => x.body.id === this.selectedBody);
         const r = rig ? (rig.body.kind === 'asteroids' ? 3 : rig.body.size * 1.9) : 2;
+        marked = rig?.extra.find((e) => e.userData.mark) as THREE.Mesh | undefined;
+        const mat = this.selRing.material as THREE.MeshBasicMaterial;
+        mat.color.copy(marked ? (marked.material as THREE.MeshBasicMaterial).color : SELECT);
         this.selRing.visible = true;
         this.selRing.position.copy(p.pos);
         this.selRing.lookAt(camera.position);
         this.selRing.scale.setScalar(r * (1 + 0.05 * Math.sin(t * 3)));
-        // close up the planet fills the view; the ring steps back so it does not glare over it
+        // close up the planet fills the view; the ring steps back so it does not glare over it,
+        // though one that says whose world it is stays clear enough to read
         const k = camera.position.distanceTo(p.pos) / r;
         const fade = Math.min(1, Math.max(0, (k - 3) / 9));
-        (this.selRing.material as THREE.MeshBasicMaterial).opacity = 0.12 + 0.68 * fade * fade * (3 - 2 * fade);
+        const floor = marked ? 0.35 : 0.12;
+        mat.opacity = floor + (0.8 - floor) * fade * fade * (3 - 2 * fade);
       } else this.selRing.visible = false;
     } else this.selRing.visible = false;
+    for (const pr of this.planets) for (const e of pr.extra) if (e.userData.mark) e.visible = e !== marked;
   }
 }
 

@@ -936,3 +936,17 @@ at once". Built in phases, each with its checks and harness numbers.
 - **Checks:** `evap`, `star-clock` and `dealings` set up their own situation instead of riding
   a seeded game's course, which the dealings had moved (DEV-NOTES, Gotchas).
 
+## One ring per world (7 Oct)
+
+- The player, looking at Aster in the system view with two rings around it (the flat selection
+  circle and the tilted ring that marks a settled world): "how about making the big flat circle
+  teal instead of having 2 circles/rings?" Chosen: one ring per world.
+  - Selected, a world someone lives on shows only the selection circle, in the colour of its own
+    ring: ours (the age's colour for us, teal in the Dusk) or a neighbour's. Its tilted ring
+    steps aside while it is selected and comes back when it is not.
+  - A world no one lives on (and a belt, the Deep, or a world whose minds live in stations around
+    it) keeps the pale selection circle.
+  - Close up the circle still dims so it does not glare over the planet, but on a lived-on world
+    only to an opacity of 0.35 (0.12 elsewhere; 0.8 from afar), so its colour still reads.
+  - Display only; check `browser/ring-select`.
+
