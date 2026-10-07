@@ -1,7 +1,8 @@
 import { TECH_BY_ID, TECHS, type TechDef } from '../data/techs';
 import type { GameState } from '../types';
 import { queueEvent } from './events';
-import { eraIndex, hasTech, log, protonFateKnown } from './util';
+import { hasTech, log, protonFateKnown } from './util';
+import { ageReached } from '../fate';
 
 export function techCost(state: GameState, id: string): number {
   const def = TECH_BY_ID[id];
@@ -28,7 +29,7 @@ export function techVisible(state: GameState, def: TechDef): boolean {
 export function techAvailable(state: GameState, id: string): boolean {
   const def = TECH_BY_ID[id];
   if (!def || hasTech(state, id)) return false;
-  if (eraIndex(def.era) > eraIndex(state.era)) return false;
+  if (!ageReached(state, def.era)) return false;
   if (!techVisible(state, def)) return false;
   return def.requires.every((r) => hasTech(state, r));
 }

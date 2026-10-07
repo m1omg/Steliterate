@@ -5,6 +5,7 @@ import type { Body, GameState, ThreadId } from '../types';
 import { turnStep } from './flare';
 import { naturalKinRoom } from './fleets';
 import { eraIndex, hasTech } from './util';
+import { ageReached, calendarEra } from '../fate';
 
 // What a world is worth to each kind of mind, for choosing where to settle. Kin need livable
 // ground; Echoes (and the Chorus) need power for their substrate; the Lattice needs matter to
@@ -14,7 +15,7 @@ import { eraIndex, hasTech } from './util';
 /** Could a settlement on this world build it now? (structureCheck's location rules, without a colony) */
 function buildableAt(state: GameState, b: Body, d: StructureDef): boolean {
   if (d.tech && !hasTech(state, d.tech)) return false;
-  if (eraIndex(d.era) > eraIndex(state.era)) return false;
+  if (!ageReached(state, d.era)) return false;
   const sys = state.systems[b.systemId];
   // orbital structures can be built from any world in the system
   if (d.bodies && !d.bodies.includes(b.kind) && !d.bodies.includes('deep')) return false;
@@ -37,7 +38,7 @@ export function powerParts(state: GameState, b: Body): { label: string; e: numbe
   const L = turnStep(state, 0).turnLength;
   const light = b.rogue ? 0 : sourceLight(state, sys, state.years, isFinite(L) ? L : 0).light;
   const hole = p.kind === 'black_hole' || p.kind === 'smbh';
-  const parts = [{ label: 'Hearth', e: 2 * Math.max(0.25, Math.min(1.5, light), b.coreHeat * 0.8, hole && eraIndex(state.era) >= 1 ? 1 : 0) }];
+  const parts = [{ label: 'Hearth', e: 2 * Math.max(0.25, Math.min(1.5, light), b.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0) }];
   for (const d of STRUCTURES) {
     if (!d.energy || !buildableAt(state, b, d)) continue;
     const a = d.energy.amount * d.max;
@@ -115,7 +116,7 @@ export function siteValue(state: GameState, b: Body, thread: ThreadId): SiteValu
       const tip = 'Kin need livable ground: habitability × vitality, and room for Kin without building anything.';
       // a world whose star has died is losing its life, and its room with it: no place to count on
       const freezeIn = turnsToFreeze(state, b);
-      const cooling = !isFinite(freezeIn) && state.era === 'dusk' && sunGone(state, b) && !lampsOver(state, b);
+      const cooling = !isFinite(freezeIn) && calendarEra(state) === 'dusk' && sunGone(state, b) && !lampsOver(state, b);
       if (room > 0 && (isFinite(freezeIn) || cooling)) {
         return {
           score: hab,

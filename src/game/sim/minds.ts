@@ -2,6 +2,7 @@ import type { GameState, Mind } from '../types';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
 import { capital, clamp, colonies, distLy, log, withRng } from './util';
+import { calendarEra } from '../fate';
 
 // Two minds that are not like you at all.
 // The Slow Ones live around the Heart and think one thought per age.
@@ -15,11 +16,11 @@ function heartDistance(state: GameState): number {
 }
 
 export function slowClock(state: GameState, logL: number): number {
-  return state.era === 'dusk' ? 6.5 : logL + 2;
+  return calendarEra(state) === 'dusk' ? 6.5 : logL + 2;
 }
 
 export function unlitClock(state: GameState, logL: number): number {
-  return state.era === 'dusk' ? 7 : logL + 1;
+  return calendarEra(state) === 'dusk' ? 7 : logL + 1;
 }
 
 export function updateMinds(state: GameState, logL: number, _mods: Mods) {
@@ -36,7 +37,7 @@ export function updateMinds(state: GameState, logL: number, _mods: Mods) {
     sendSignal(state, { from: 'slow', kind: 'slow_silent', distanceLy: 0, title: 'The Slow Ones have stopped answering', text: 'Their last message is a single, very long pause. The pattern around the Heart goes dark, and stays dark.' });
   }
   if (!slow.flags.silent) {
-    if (slow.stage === 0 && civ.techs.includes('deep_listening') && (state.era !== 'dusk' || state.eraTurn >= 20)) {
+    if (slow.stage === 0 && civ.techs.includes('deep_listening') && (calendarEra(state) !== 'dusk' || state.eraTurn >= 20)) {
       slow.stage = 1;
       sendSignal(state, {
         from: 'astronomers',
@@ -129,7 +130,7 @@ export function updateMinds(state: GameState, logL: number, _mods: Mods) {
       igniteDarkStar(state);
     }
     // exploitation has consequences: they can move worlds
-    if (dark.stage >= 2 && state.era === 'degenerate' && (civ.techs.includes('halo_siphons') || dark.flags.hostile) && rng.chance(0.08)) {
+    if (dark.stage >= 2 && calendarEra(state) === 'degenerate' && (civ.techs.includes('halo_siphons') || dark.flags.hostile) && rng.chance(0.08)) {
       const c = rng.pick(colonies(state));
       if (c) {
         const b = state.bodies[c.bodyId];

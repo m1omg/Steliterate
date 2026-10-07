@@ -5,6 +5,7 @@ import { FORTIFY_BONUS, destroyColony, signatureOf } from './fleets';
 import type { Mods } from './mods';
 import { colonies, distLy, hasCharter, log, uid, withRng } from './util';
 import { queueEvent } from './events';
+import { calendarEra } from '../fate';
 
 // The Hunger: harvesters left running by a civilization that died long ago. Its makers built
 // it to survive; it still does, the way a tumour does. It has no plan beyond the next meal,
@@ -161,7 +162,7 @@ export function swarmReach(state: GameState): number {
 }
 
 function rangeLy(state: GameState): number {
-  return state.era === 'dusk' ? 90 : state.era === 'degenerate' ? 4e5 : 1e9;
+  return calendarEra(state) === 'dusk' ? 90 : calendarEra(state) === 'degenerate' ? 4e5 : 1e9;
 }
 
 export function updateHunger(state: GameState, L: number, mods: Mods) {
@@ -175,7 +176,7 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
     for (const sw of swarms) {
       // waking
       if (!sw.awake) {
-        const p = state.era === 'dusk' ? (state.eraTurn > 18 ? 0.035 : 0) : 0.1;
+        const p = calendarEra(state) === 'dusk' ? (state.eraTurn > 18 ? 0.035 : 0) : 0.1;
         if (rng.chance(p)) {
           sw.awake = true;
           const sys = sw.systemId ? state.systems[sw.systemId] : null;
@@ -186,7 +187,7 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
       }
       // travelling
       if (!sw.systemId && sw.to) {
-        const step = isFinite(L) ? (state.era === 'dusk' ? 0.05 : 0.5) * L : Infinity;
+        const step = isFinite(L) ? (calendarEra(state) === 'dusk' ? 0.05 : 0.5) * L : Infinity;
         sw.traveled += step;
         if (sw.traveled >= sw.distance) {
           sw.systemId = sw.to;

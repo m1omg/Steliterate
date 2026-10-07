@@ -2,6 +2,7 @@ import { TECH_BY_ID } from '../data/techs';
 import { THREAD_DEFS } from '../data/threads';
 import type { GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
+import { calendarEra } from '../fate';
 
 export interface Mods {
   echoMax: number;
@@ -50,7 +51,7 @@ export function computeMods(state: GameState): Mods {
   if (m.flags.has('charter:abandon_the_surface')) m.industryMult *= 1.1;
   if (m.flags.has('charter:child_quotas')) m.upkeep.kin *= 0.8;
   if (m.flags.has('charter:rationing')) for (const t of THREADS) m.upkeep[t] *= 0.85;
-  if (state.era !== 'dusk') m.detect = Math.max(m.detect, state.era === 'degenerate' ? 3e5 : 1e7);
+  if (calendarEra(state) !== 'dusk') m.detect = Math.max(m.detect, calendarEra(state) === 'degenerate' ? 3e5 : 1e7);
   return m;
 }
 

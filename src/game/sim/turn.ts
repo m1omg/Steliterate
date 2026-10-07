@@ -22,6 +22,7 @@ import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
 import { clamp, colonies, distLy, hasCharter, log, popsOf, totalPops, withRng } from './util';
+import { calendarEra } from '../fate';
 
 export interface TurnResult {
   crossing: CrossingReport | null;
@@ -82,11 +83,11 @@ function declineWorlds(state: GameState) {
     const c = byBody.get(b.id);
     const loss = vitalityLoss(state, b, c);
     b.vitality = Math.max(0, b.vitality - loss.decline);
-    if (c && b.traits.includes('homeworld') && state.era === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
+    if (c && b.traits.includes('homeworld') && calendarEra(state) === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
     if (b.vitality > 0) b.vitality = Math.max(0, b.vitality - loss.freeze);
     // one of ours begins to freeze, its dead star cooled at last: say so once (the Last Light
     // says it for every world)
-    if (c && loss.freeze > 0 && b.vitality > 0 && state.era === 'dusk' && !b.rogue && !state.civ.flags[`frz_${b.id}`]) {
+    if (c && loss.freeze > 0 && b.vitality > 0 && calendarEra(state) === 'dusk' && !b.rogue && !state.civ.flags[`frz_${b.id}`]) {
       state.civ.flags[`frz_${b.id}`] = state.turn;
       const n = turnsToFreeze(state, b, c);
       log(state, `${b.name} has begun to freeze: its dead star no longer warms it. It dies in about ${n} turn${n === 1 ? '' : 's'} unless Orbital Lamps keep it warm.`, 'bad', b.systemId);
@@ -352,7 +353,7 @@ export function endTurn(state: GameState): TurnResult {
   const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
   result.notes = notes;
   handleNotes(state, notes);
-  if (state.era === 'dark') {
+  if (calendarEra(state) === 'dark') {
     // Continuity: every cycle risks a little of the pattern
     let decay = 2.2;
     for (const c of colonies(state)) {

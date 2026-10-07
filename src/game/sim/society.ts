@@ -5,6 +5,7 @@ import { capacity } from './economy';
 import { livedShare } from './flare';
 import { computeMods, type Mods, strainFor } from './mods';
 import { clamp, colonies, hasCharter, log, popsOf, threadTotals, uid, withRng } from './util';
+import { calendarEra } from '../fate';
 
 // Resolve is the will to go on. Dissent is how much the Threads disagree about how.
 // Each conscious Thread has a demand; meeting it lifts its standing, ignoring it erodes it.
@@ -102,9 +103,9 @@ export function updateSociety(state: GameState, logL: number, popsLost: number, 
     if (mods.flags.has('charter:rationing')) dr -= 0.5;
     for (const c of colonies(state)) dr += 0.3 * (c.structures.commons ?? 0);
     const home = Object.values(state.bodies).find((b) => b.traits.includes('homeworld'));
-    if (home && !hasCharter(state, 'abandon_the_surface') && state.era === 'dusk' && home.vitality < 0.2) dr -= 1;
+    if (home && !hasCharter(state, 'abandon_the_surface') && calendarEra(state) === 'dusk' && home.vitality < 0.2) dr -= 1;
     dr -= civ.taint / 50;
-    let hardened = state.era === 'dusk' ? 0.03 : 0.05; // later minds have learned to endure
+    let hardened = calendarEra(state) === 'dusk' ? 0.03 : 0.05; // later minds have learned to endure
     // Sanctity of Flesh: a people sure of what it is keeps its nerve, both ways
     if (mods.flags.has('charter:sanctity_of_flesh') && totals.kin / population >= 0.5) hardened += 0.02;
     civ.resolve = clamp(civ.resolve + dr + (50 - civ.resolve) * hardened, 0, 100);

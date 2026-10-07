@@ -8,6 +8,7 @@ import { queueEvent } from './events';
 import { survivorWorld } from './homes';
 import { formatDistance, formatYears } from '../eras';
 import { capital, clamp, distLy, hasCharter, log, withRng } from './util';
+import { calendarEra } from '../fate';
 
 // Fellow survivors: other young civilizations facing the same end. Simulated lightly: their
 // fate follows the same physics, and they talk to you across light-years.
@@ -36,14 +37,14 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       sv.clock += (Math.min(logL, sv.way === 'garden' ? 1.7 : sv.way === 'dormant' ? logL + 1 : logL) - sv.clock) * 0.25;
       // the universe drains them
       let drain = 0.004;
-      if (state.era === 'dusk') {
+      if (calendarEra(state) === 'dusk') {
         const light = home ? sourceLight(state, home, state.years, isFinite(L) ? L : 0).light : 0;
         drain = light < 0.3 ? 0.03 : 0.004;
-      } else if (state.era === 'degenerate') drain = 0.02;
-      else if (state.era === 'blackhole') drain = 0.025;
+      } else if (calendarEra(state) === 'degenerate') drain = 0.02;
+      else if (calendarEra(state) === 'blackhole') drain = 0.025;
       else drain = 0.04;
       drain *= WAY_DRAIN[sv.way] / (0.5 + state.gfe * 0.5);
-      if (sv.way === 'garden' && state.era !== 'dusk' && state.protonsDecay) drain *= 1.4;
+      if (sv.way === 'garden' && calendarEra(state) !== 'dusk' && state.protonsDecay) drain *= 1.4;
       sv.health = clamp(sv.health - drain + rng.range(-0.004, 0.006), 0, 1);
       sv.pop = Math.max(0, sv.pop * (0.98 + sv.health * 0.03));
 

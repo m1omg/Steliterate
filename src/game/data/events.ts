@@ -6,6 +6,7 @@ import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShel
 import { eta, formatYears, stepTime } from '../eras';
 import { boilingAway } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
+import { calendarEra } from '../fate';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -88,11 +89,11 @@ function newStarTiming(s: GameState, d: EventData): string {
     const have = Math.floor(s.civ.energy);
     const purse = have >= t.cost ? `we have ${have}` : `more than the ${have} we have`;
     if (t.floor) return `${lead} To carry our quickened pace on to it, ${STAR_TURNS} more turns of its light: ${t.cost} energy, once (${purse}), the least it ever costs to pass our clock from one star to the next.`;
-    const then = formatYears(stepTime(s.era, t.from, eta(t.from), s.civ.pace, s.settings.length).turnLength);
+    const then = formatYears(stepTime(calendarEra(s), t.from, eta(t.from), s.civ.pace, s.settings.length).turnLength);
     return `${lead} At our own pace the turn after that would span ${then}, ${timesOver(t.orders)} what will be left of its life. To follow it on, ${STAR_TURNS} more turns of its light, our minds must stay quickened: ${t.cost} energy, once (${purse}).`;
   }
   if (t.flash) {
-    const next = formatYears(stepTime(s.era, s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
+    const next = formatYears(stepTime(calendarEra(s), s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
     const have = Math.floor(s.civ.energy);
     const purse = have >= t.cost ? `we have ${have}` : `more than the ${have} we have`;
     const end = t.flashUntil === p.diesAt ? 'that ends as it burns out' : 'as short as our calendar can count, though it outlasts the star';
@@ -100,7 +101,7 @@ function newStarTiming(s: GameState, d: EventData): string {
   }
   if (t.brief) return ` It will burn for about ${left}: so brief, this late in the age, that no clock of ours could count its turns.`;
   if (!t.possible) return ` It will burn for about ${left}: at our pace, ${about}.`;
-  const next = formatYears(stepTime(s.era, s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
+  const next = formatYears(stepTime(calendarEra(s), s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
   if (t.cost === 0) return ` It will burn for about ${left}, and at our pace the next turn alone would span ${next}: ${turns <= 1 ? 'it would come and go inside it' : `it would last only ${about}`}. We are close enough to its pace to keep time with it, ${STAR_TURNS} turns of its light, at no cost.`;
   const have = Math.floor(s.civ.energy);
   return ` It will burn for about ${left}, and at our pace the next turn alone would span ${next}, ${timesOver(t.orders)} its whole life. To keep time with it, ${STAR_TURNS} turns of its light, our minds must quicken that far: ${t.cost} energy, once (${have >= t.cost ? `we have ${have}` : `more than the ${have} we have`}).`;

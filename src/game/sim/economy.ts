@@ -6,6 +6,7 @@ import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
 import { type Mods, strainFor, type Strain } from './mods';
 import { clamp, colonies, eraIndex } from './util';
+import { calendarEra } from '../fate';
 
 export interface TurnContext {
   years: number; // start of the coming turn
@@ -158,8 +159,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
           e = a * light.light * (body.rogue ? 0 : 1);
           // arrays on the surface get the light where the world is (inverse square); orbital collectors do not care
           if (d.id === 'solar_array') e *= insolation(state, body);
-          if (flags.has('halo_siphons') && sys.primary.halo && state.era === 'degenerate') e *= 2;
-          if (civ.flags.ember_restraint && sys.primary.halo && state.era === 'degenerate') e *= 0.75;
+          if (flags.has('halo_siphons') && sys.primary.halo && calendarEra(state) === 'degenerate') e *= 2;
+          if (civ.flags.ember_restraint && sys.primary.halo && calendarEra(state) === 'degenerate') e *= 0.75;
           break;
         case 'geo':
           e = a * body.coreHeat;
@@ -187,11 +188,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
           break;
         case 'decay': {
           const eta = Math.log10(Math.max(1, ctx.years));
-          e = state.protonsDecay && state.era === 'degenerate' && eta > 30 ? a * clamp((eta - 30) / 6, 0.2, 1) : 0;
+          e = state.protonsDecay && calendarEra(state) === 'degenerate' && eta > 30 ? a * clamp((eta - 30) / 6, 0.2, 1) : 0;
           break;
         }
         case 'siphon':
-          e = state.era === 'dark' ? a : 0;
+          e = calendarEra(state) === 'dark' ? a : 0;
           break;
       }
       e *= pf * overdrive * focusMul(c, 'energy') * taintBoost;
@@ -204,7 +205,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
       // only its own focus touches matter: the others leave it as it was
       mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1);
       depletion += (d.matterYield || d.hydrogenYield ? mt : 0);
-      if (!state.protonsDecay || eraIndex(state.era) < 2) matter += mt;
+      if (!state.protonsDecay || eraIndex(calendarEra(state)) < 2) matter += mt;
     }
     const ind = (d.industry ?? 0) * n * out;
     const ins = (d.insight ?? 0) * n * out;
@@ -223,7 +224,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   if (!body.dissolved) {
     const hole = sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh';
     // at a black hole the Hearth draws on its spin and the thin gas still falling in
-    const local = Math.max(0.25, Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(state.era) >= 1 ? 1 : 0);
+    const local = Math.max(0.25, Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
     const hearth = 2 * local * (1 - c.damage) * pf * overdrive * focusMul(c, 'energy') * taintBoost;
     energy += hearth;
     lines.push({ label: c.overdrive ? 'Hearth (overdriven)' : 'Hearth', energy: hearth });

@@ -5,6 +5,7 @@ import type { Body, Colony, GameState, StarSystem } from '../types';
 import { computeMods } from './mods';
 import { reserveCapacity } from './storage';
 import { colonies, hasTech } from './util';
+import { calendarEra } from '../fate';
 
 // A red dwarf's last flare. At the end of its life a red dwarf does not swell into a giant: it
 // heats up and shrinks into a blue dwarf for a few billion years, a few hundred times brighter
@@ -87,8 +88,8 @@ export function flareClock(state: GameState): { turn: number; of: number; system
  * stops the moment it leaves the main sequence, so a slower pace cannot take us past it.
  */
 export function flareStop(state: GameState, pace = state.civ.pace): StarSystem | null {
-  const step = stepTime(state.era, state.years, state.eta, pace, state.settings.length);
-  if (state.era !== 'dusk' || !isFinite(step.years) || keepingTime(state)) return null;
+  const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
+  if (calendarEra(state) !== 'dusk' || !isFinite(step.years) || keepingTime(state)) return null;
   return flareDue(state, state.years, step.years);
 }
 
@@ -163,7 +164,7 @@ export function clearStarClock(state: GameState) {
   delete f.star_step;
   delete f.star_next;
   delete f.star_flash;
-  if (next && next > state.years && state.era === 'degenerate') {
+  if (next && next > state.years && calendarEra(state) === 'degenerate') {
     f.star_until = next;
     f.star_step = (next - state.years) / STAR_TURNS;
   }
@@ -217,7 +218,7 @@ export interface StarTerms {
 export function starClockTerms(state: GameState, sys: StarSystem | undefined): StarTerms {
   const none: StarTerms = { possible: false, brief: false, orders: 0, cost: 0, after: null, why: 'gone', from: state.years, floor: false, flash: false, flashUntil: 0 };
   const p = sys?.primary;
-  if (!sys || !p || state.era !== 'degenerate' || sys.gone || !isNewStar(sys)) return none;
+  if (!sys || !p || calendarEra(state) !== 'degenerate' || sys.gone || !isNewStar(sys)) return none;
   if (!p.diesAt || p.diesAt <= state.years) return none;
   const f = state.civ.flags;
   let from = state.years;
@@ -231,7 +232,7 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
     after = kept?.system ?? 'the star we keep time with';
   }
   const left = p.diesAt - from;
-  const next = stepTime(state.era, from, eta(from), state.civ.pace, state.settings.length).turnLength;
+  const next = stepTime(calendarEra(state), from, eta(from), state.civ.pace, state.settings.length).turnLength;
   const full = Math.floor(reserveCapacity(state, computeMods(state)));
   const price = (orders: number) => Math.ceil(STAR_ORDER_COST * Math.max(0, orders - STAR_FREE));
   if (left / STAR_TURNS < from * STAR_STEP_MIN) {
@@ -316,14 +317,14 @@ export function starClock(state: GameState): { turn: number; of: number; split: 
  * at a quick pace each of those splits into STAR_SPLIT.
  */
 export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
-  const step = stepTime(state.era, state.years, state.eta, pace, state.settings.length);
-  const left = state.era === 'degenerate' && isFinite(step.years) ? starTurnsLeft(state, pace) : 0;
+  const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
+  const left = calendarEra(state) === 'degenerate' && isFinite(step.years) ? starTurnsLeft(state, pace) : 0;
   if (left >= 1) {
     const f = state.civ.flags;
     const end = left === 1 ? f.star_until : f.star_until - (f.star_step / starSplit(state, pace)) * (left - 1);
     if (end > state.years) return { years: end, eta: eta(end), turnLength: end - state.years };
   }
-  if (state.era !== 'dusk' || !isFinite(step.years)) return step;
+  if (calendarEra(state) !== 'dusk' || !isFinite(step.years)) return step;
   let end = step.years;
   const f = state.civ.flags;
   if (keepingTime(state)) {
@@ -363,10 +364,10 @@ export function paceMatters(state: GameState, pace: number): boolean {
  */
 export function livedShare(state: GameState, pace = state.civ.pace, step: TimeStep = turnStep(state, pace)): number {
   const share = Math.pow(10, -pace);
-  if (state.era === 'degenerate' && keepingStarTime(state)) return 1 / starSplit(state, pace);
-  if (state.era !== 'dusk' || !isFinite(step.turnLength)) return share;
+  if (calendarEra(state) === 'degenerate' && keepingStarTime(state)) return 1 / starSplit(state, pace);
+  if (calendarEra(state) !== 'dusk' || !isFinite(step.turnLength)) return share;
   if (keepingTime(state)) return 1;
-  const planned = stepTime(state.era, state.years, state.eta, pace, state.settings.length).turnLength;
+  const planned = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length).turnLength;
   return planned > 0 && step.turnLength < planned ? Math.min(share, 1) : share;
 }
 
@@ -408,10 +409,10 @@ export function flareHeat(state: GameState, b: Body): { before: ReturnType<typeo
   const kind = p.kind;
   p.kind = 'red_dwarf';
   const before = bodyClimate(state, b);
-  const lr = primaryLuminosity(p, state.years, state.era);
+  const lr = primaryLuminosity(p, state.years, calendarEra(state));
   p.kind = 'blue_dwarf';
   const during = bodyClimate(state, b);
-  const lb = primaryLuminosity(p, state.years, state.era);
+  const lb = primaryLuminosity(p, state.years, calendarEra(state));
   p.kind = kind;
   return { before, during, ratio: lr > 0 ? lb / lr : Infinity };
 }
@@ -472,7 +473,7 @@ export function flareData(state: GameState, sys: StarSystem): Record<string, str
     mine.map((c) => state.bodies[c.bodyId]).filter((b) => b && living.includes(b.kind)).sort((a, b) => b.vitality - a.vitality)[0] ??
     state.bodies[mine.sort((a, b) => b.pops.kin - a.pops.kin)[0]?.bodyId ?? ''];
   const span = (p.whiteAt ?? state.years) - state.years;
-  const next = stepTime(state.era, state.years, state.eta, state.civ.pace, state.settings.length).turnLength;
+  const next = stepTime(calendarEra(state), state.years, state.eta, state.civ.pace, state.settings.length).turnLength;
   const d: Record<string, string | number> = {
     systemId: sys.id,
     star: sys.name,

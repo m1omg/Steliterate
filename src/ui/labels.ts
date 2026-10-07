@@ -4,6 +4,7 @@ import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
 import type { Body, BodyKind, Focus, GameState, PrimaryKind, SpareWork, StarSystem } from '../game/types';
 import { SPARE_RATE, TEND_SHARE, salvageIsMatter } from '../game/sim/spare';
 import type { IconName } from './icons';
+import { calendarEra } from '../game/fate';
 
 export const PRIMARY_NAME: Record<PrimaryKind, string> = {
   red_dwarf: 'Red dwarf',
@@ -208,7 +209,7 @@ export function bodyKindNote(s: GameState, b: Body): string {
 
 /** What the Deep is for: its panel shows no habitability, room or matter, which reads as empty. */
 export function deepNote(s: GameState): string {
-  const industry = s.era === 'dusk' && !s.civ.techs.includes('orbital_industry') ? ' and Orbital Industry' : '';
+  const industry = calendarEra(s) === 'dusk' && !s.civ.techs.includes('orbital_industry') ? ' and Orbital Industry' : '';
   return `Orbital space around the star: no ground, water or rock, so nothing to live on or mine. Orbital Collectors work here, and some structures exist only here (the Dyson Swarm, the Stellar Lifter; later most power from dead stars and black holes): any settlement of ours in this system can build them. Minds on substrate live here as well as anywhere; Kin need Habitat Domes${industry}.`;
 }
 
@@ -218,7 +219,7 @@ export function deepNote(s: GameState): string {
  * within the last turn keeps the name until the turn ends, without light.)
  */
 export function isBeacon(s: GameState, sys: StarSystem): boolean {
-  return s.era === 'degenerate' && sys.primary.kind === 'collision_star' && !sys.gone && (s.civ.known[sys.id] ?? 0) > 0 && (sys.primary.diesAt ?? 0) > s.years;
+  return calendarEra(s) === 'degenerate' && sys.primary.kind === 'collision_star' && !sys.gone && (s.civ.known[sys.id] ?? 0) > 0 && (sys.primary.diesAt ?? 0) > s.years;
 }
 
 export const BEACON_TIP = 'A collision star: two brown dwarfs, each too small to burn hydrogen, collided, and the merged body is heavy enough to burn it. In the Degenerate Age nothing else nearby shines like it.';

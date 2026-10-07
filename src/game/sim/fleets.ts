@@ -9,6 +9,7 @@ import { stepTurns } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
 import { colonies, distLy, eraIndex, log, swarmSeenAt, uid, withRng } from './util';
+import { calendarEra } from '../fate';
 
 // No faster-than-light travel. Fleets advance speed × turn length light-years per turn.
 // Early on a 10 ly hop takes several turns; later a whole province fits into one.
@@ -22,7 +23,7 @@ export function fleetMass(f: Fleet): number {
 
 export function launchCost(state: GameState, f: Fleet, ly: number, mods: Mods): number {
   const cheap = mods.flags.has('cheap_launch') ? 0.6 : 1;
-  return Math.round(fleetMass(f) * (0.6 + 0.55 * Math.log10(1 + ly)) * cheap * ERA_LAUNCH[state.era] * 10) / 10;
+  return Math.round(fleetMass(f) * (0.6 + 0.55 * Math.log10(1 + ly)) * cheap * ERA_LAUNCH[calendarEra(state)] * 10) / 10;
 }
 
 /**
@@ -172,7 +173,7 @@ export function canSettle(state: GameState, b: Body, thread: ThreadId): string |
   const boil = boilingAway(state, b);
   if (boil) return boil === 'swallowed' ? 'Its star is swelling over it: it will be swallowed as this turn ends.' : 'Its new star will boil it away as this turn ends.';
   if (b.kind === 'gas_giant' && thread === 'kin') return 'Kin cannot live on a gas giant.';
-  if (b.kind === 'deep' && thread === 'kin' && eraIndex(state.era) === 0 && !state.civ.techs.includes('orbital_industry')) return 'Kin need Orbital Industry to live in the Deep.';
+  if (b.kind === 'deep' && thread === 'kin' && eraIndex(calendarEra(state)) === 0 && !state.civ.techs.includes('orbital_industry')) return 'Kin need Orbital Industry to live in the Deep.';
   const sys = state.systems[b.systemId];
   if (sys.gone) return 'The system is gone.';
   const others = residentsOf(state, b);

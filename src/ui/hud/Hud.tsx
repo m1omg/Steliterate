@@ -20,6 +20,7 @@ import { Resources } from './Resources';
 import { ResearchPrompt } from './ResearchPrompt';
 import { Tutorial } from './Tutorial';
 import { sfx } from '../../audio/sfx';
+import { calendarEra } from '../../game/fate';
 
 export function Hud({ s }: { s: GameState }) {
   void rev.value;
@@ -68,7 +69,7 @@ function Rail({ s }: { s: GameState }) {
   return (
     <nav class="rail panel" aria-label="Civilization">
       <RailBtn icon="research" label={`Research${s.civ.researching ? '' : ': nothing chosen'}`} short="Research" on={m === 'research'} badge={s.civ.researching ? 0 : 1} onClick={() => (modal.value = { kind: 'research' })} />
-      <RailBtn icon="colony" label={`Systems: our settlements and every surveyed world${s.era === 'degenerate' ? ', and the collision stars' : ''}`} short="Systems" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
+      <RailBtn icon="colony" label={`Systems: our settlements and every surveyed world${calendarEra(s) === 'degenerate' ? ', and the collision stars' : ''}`} short="Systems" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
       <RailBtn icon="fleet" label="Fleets" short="Fleets" on={m === 'fleets'} badge={readySettlers} onClick={() => (modal.value = { kind: 'fleets' })} />
       <RailBtn icon="threads" label="Threads: the kinds of mind you are made of" short="Threads" on={m === 'threads'} onClick={() => (modal.value = { kind: 'threads' })} />
       <RailBtn icon="doctrines" label="Charters: the book of laws" short="Laws" wide="Charters" on={m === 'charters'} onClick={() => (modal.value = { kind: 'charters' })} />
@@ -112,7 +113,7 @@ function BottomLeft({ s }: { s: GameState }) {
       {ui.forecasts &&
         shown.map((f) => {
           // turns at the pace you have chosen (the Tide figure too, when they differ)
-          const due = isFinite(f.dueYears) && s.era !== 'dark';
+          const due = isFinite(f.dueYears) && calendarEra(s) !== 'dark';
           // (as they will really fall: a flare's own clock and its first moment shorten them)
           const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : Infinity;
           const tideTurns = due && s.civ.pace !== 0 ? turnsUntilYears(s, f.dueYears, 0, 5000) : turns;
@@ -192,7 +193,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
     if (flare) return `Not now: we keep time with ${flare.system}’s last flare, and it sets our turns.`;
     const stop = flareStop(s, x);
     if (stop && x < 0) return `Not now: the turn stops when ${stop.name} begins its last flare, whatever the pace.`;
-    if (s.era === 'dark') return x > 0 ? 'Not in this age: a turn cannot be quickened further.' : 'Not in this age: a turn cannot be slowed further.';
+    if (calendarEra(s) === 'dark') return x > 0 ? 'Not in this age: a turn cannot be quickened further.' : 'Not in this age: a turn cannot be slowed further.';
     return `Not now: the turn would be the same as at ${PACE_LABEL[x > 0 ? x - 1 : x + 1]}.`;
   };
   // nothing queued and no work chosen for when nothing is (such a settlement only recycles)

@@ -51,6 +51,7 @@ import { siteValue, type SiteValue } from '../../game/sim/sites';
 import { residentsOf, survivorPeople, survivorWorld } from '../../game/sim/homes';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
+import { calendarEra } from '../../game/fate';
 
 export function Drawer({ s }: { s: GameState }) {
   void rev.value;
@@ -161,7 +162,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const known = s.civ.known[sys.id] ?? 0;
   const p = project(s);
   const src = sourceLight(s, sys, s.years, p.turnYears);
-  const T = primaryTemperature(sys.primary, s.years, s.era);
+  const T = primaryTemperature(sys.primary, s.years, calendarEra(s));
   const province = s.provinces.find((x) => x.id === sys.provinceId);
   const fleets = Object.values(s.fleets).filter((f) => f.at === sys.id);
   const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id);
@@ -424,7 +425,7 @@ function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
       </>
     );
   }
-  if (s.era !== 'dusk' || !sunGone(s, b) || lampsOver(s, b, c)) return null;
+  if (calendarEra(s) !== 'dusk' || !sunGone(s, b) || lampsOver(s, b, c)) return null;
   return (
     <>
       <dt data-tip={tip}>Cooling</dt>

@@ -3,19 +3,21 @@ import { SURFACE_LIFE, boilingAway, lampsOver, nextStellarChange } from '../phys
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
 import { colonies, protonFateKnown } from './util';
+import { calendarEra } from '../fate';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
 // question is whether you can prepare in time.
 
 export function forecastTurns(state: GameState, f: Forecast): number {
-  if (state.era === 'dark') return Infinity;
+  if (calendarEra(state) === 'dark') return Infinity;
   return turnsUntilYears(state, f.dueYears, 0);
 }
 
 /** Turns until `at` at the Tide, for deciding which warnings to show: in the Dusk as the turns will really fall (a flare's clock, its stops). */
 function tideTurnsTo(state: GameState, at: number, horizon: number): number {
-  if (state.era === 'dusk') return turnsUntilYears(state, at, 0, horizon + 1);
-  return turnsUntil(state.era === 'dark' ? 'blackhole' : state.era, state.years, at, state.settings.length);
+  if (calendarEra(state) === 'dusk') return turnsUntilYears(state, at, 0, horizon + 1);
+  const era = calendarEra(state);
+  return turnsUntil(era === 'dark' ? 'blackhole' : era, state.years, at, state.settings.length);
 }
 
 export function updateForecasts(state: GameState) {
@@ -23,7 +25,7 @@ export function updateForecasts(state: GameState) {
   const add = (f: Omit<Forecast, 'uid'>) => out.push({ ...f, uid: `${f.kind}:${f.systemId ?? ''}:${f.bodyId ?? ''}` });
   const colonized = new Set(colonies(state).map((c) => c.systemId));
   const years = state.years;
-  const horizon = state.era === 'dusk' ? 60 : 40;
+  const horizon = calendarEra(state) === 'dusk' ? 60 : 40;
 
   // stars that matter to us
   for (const sid of colonized) {
@@ -53,7 +55,7 @@ export function updateForecasts(state: GameState) {
     const b = state.bodies[c.bodyId];
     if (!b || !b.inspiralAt || b.feeding || b.rogue || b.dissolved) continue;
     const sys = state.systems[b.systemId];
-    const dead = ['white_dwarf', 'black_dwarf', 'neutron_star'].includes(sys.primary.kind) || state.era !== 'dusk';
+    const dead = ['white_dwarf', 'black_dwarf', 'neutron_star'].includes(sys.primary.kind) || calendarEra(state) !== 'dusk';
     if (!dead || b.inspiralAt < years) continue;
     if (tideTurnsTo(state, b.inspiralAt, horizon) > horizon) continue;
     add({

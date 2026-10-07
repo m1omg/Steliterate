@@ -34,6 +34,7 @@ import type { Body, Colony, GameState, ThreadId } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
+import { calendarEra, inAge } from './fate';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
@@ -104,8 +105,8 @@ function planBuilds(state: GameState) {
   const mods = computeMods(state);
   const cap = reserveCapacity(state, mods);
   const net = civ.flags.last_energy_net ?? 0;
-  const lateDusk = state.era === 'dusk' && state.eta > 13.99;
-  const preDecay = state.era === 'degenerate' && state.eta > 27;
+  const lateDusk = calendarEra(state) === 'dusk' && state.eta > 13.99;
+  const preDecay = calendarEra(state) === 'degenerate' && state.eta > 27;
   const t = threadTotals(state);
   for (const c of colonies(state)) {
     // before the protons go, re-encoding goes to the front of the queue
@@ -127,11 +128,11 @@ function planBuilds(state: GameState) {
     const energyFirst = net < 3 || civ.energy < cap * 0.25;
     const plan: string[] = [];
     if (preDecay && state.protonsDecay) plan.push('lepton_substrate');
-    if (state.era === 'blackhole') plan.push('penrose_harvester', 'hawking_collector', 'bastion', 'horizon_vault');
-    if (state.era === 'degenerate' && state.eta > 30) plan.push('penrose_harvester', 'hawking_collector');
-    if (state.era === 'dark') plan.push('preservation_array', 'horizon_siphon');
+    if (calendarEra(state) === 'blackhole') plan.push('penrose_harvester', 'hawking_collector', 'bastion', 'horizon_vault');
+    if (calendarEra(state) === 'degenerate' && state.eta > 30) plan.push('penrose_harvester', 'hawking_collector');
+    if (calendarEra(state) === 'dark') plan.push('preservation_array', 'horizon_siphon');
     // after the embers: burn matter (it is going anyway), feed black holes, catch the decay
-    if (state.era === 'degenerate' && light < 0.3) {
+    if (calendarEra(state) === 'degenerate' && light < 0.3) {
       if (state.protonsDecay && state.eta > 29) plan.push('decay_harvester');
       if (civ.matter > 60) plan.push('accretion_engine', 'fusion_plant');
     }
@@ -140,13 +141,13 @@ function planBuilds(state: GameState) {
       plan.push('disk_skimmer', 'accretion_engine', 'pulsar_brake', 'geothermal_tap', 'fusion_plant', 'decay_harvester');
     }
     // its star has died: light Orbital Lamps while there is still life to keep
-    if (state.era === 'dusk' && b.vitality >= 0.2 && vitalityLoss(state, b, c).freeze > 0) plan.unshift('orbital_lamps');
-    if (b.traits.includes('homeworld') && state.era === 'dusk') plan.push('mag_shield', 'comet_shepherd', 'core_stimulator');
-    if (c.pops.kin >= capc.kin - 1 && state.era === 'dusk') plan.push('warrens', 'habitat_dome');
+    if (calendarEra(state) === 'dusk' && b.vitality >= 0.2 && vitalityLoss(state, b, c).freeze > 0) plan.unshift('orbital_lamps');
+    if (b.traits.includes('homeworld') && calendarEra(state) === 'dusk') plan.push('mag_shield', 'comet_shepherd', 'core_stimulator');
+    if (c.pops.kin >= capc.kin - 1 && calendarEra(state) === 'dusk') plan.push('warrens', 'habitat_dome');
     if (hasTech(state, 'mind_substrate') && c.pops.echoes >= capc.echoes - 1) plan.push('substrate_core');
     if (hasTech(state, 'cold_computation') && c.pops.coldminds >= capc.coldminds - 1) plan.unshift('cold_vault');
     if (lateDusk && c.pops.kin > 0) plan.push('cryo_hall');
-    if (state.era === 'dusk' && state.eta > 13.985) plan.push('ember_collector', 'fusion_plant', 'accretion_engine', 'reserve_vault');
+    if (calendarEra(state) === 'dusk' && state.eta > 13.985) plan.push('ember_collector', 'fusion_plant', 'accretion_engine', 'reserve_vault');
     if (civ.energy > cap * 0.8) plan.push('reserve_vault', 'superconducting_ring', 'horizon_vault', 'burst_catcher');
     if (civ.matter < 80) plan.push('mine', 'hydrogen_skimmer', 'brown_siphon');
     if (t.echoes > 0 && hasTech(state, 'upload')) plan.push('upload_clinic');
@@ -164,14 +165,14 @@ function settleScore(state: GameState, b: Body, thread: ThreadId): number {
   const light = sourceLight(state, sys, state.years, 0).light;
   let s = light * 3 + b.richness * 0.5;
   if (thread === 'kin') s += b.habitability * 4 * (0.3 + b.vitality);
-  if (state.era === 'degenerate' && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 3;
-  if (state.era === 'degenerate' && emberShare(sys.primary, state.years) > 0) s += 2;
+  if (calendarEra(state) === 'degenerate' && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 3;
+  if (calendarEra(state) === 'degenerate' && emberShare(sys.primary, state.years) > 0) s += 2;
   // late in the Dusk, look ahead: dark-matter embers and black holes will be all that is left
-  if (state.era === 'dusk' && state.eta > 13.99 && (sys.primary.halo || sys.primary.kind === 'black_hole')) s += 2.5;
-  if (sys.special === 'core' && eraIndex(state.era) >= 1) s += 4;
-  if (eraIndex(state.era) >= 2 && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 2 + Math.min(6, sys.primary.spin / 200);
+  if (calendarEra(state) === 'dusk' && state.eta > 13.99 && (sys.primary.halo || sys.primary.kind === 'black_hole')) s += 2.5;
+  if (sys.special === 'core' && eraIndex(calendarEra(state)) >= 1) s += 4;
+  if (eraIndex(calendarEra(state)) >= 2 && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 2 + Math.min(6, sys.primary.spin / 200);
   // matter will dissolve: the future is at the black holes
-  if (state.era === 'degenerate' && state.protonsDecay && state.eta > 24 && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 10;
+  if (calendarEra(state) === 'degenerate' && state.protonsDecay && state.eta > 24 && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 10;
   if (b.kind === 'deep' && thread !== 'kin') s += 0.5;
   return s;
 }
@@ -196,7 +197,7 @@ function planFleets(state: GameState) {
         const d = distLy(here, sys);
         for (const bid of sys.bodies) {
           const b = state.bodies[bid];
-          const s = settleScore(state, b, thread) / (1 + d / (state.era === 'dusk' ? 40 : 1e6));
+          const s = settleScore(state, b, thread) / (1 + d / (calendarEra(state) === 'dusk' ? 40 : 1e6));
           if (s > bestS) {
             bestS = s;
             best = b;
@@ -217,17 +218,17 @@ function planFleets(state: GameState) {
   }
   // build settlers
   const nCol = colonies(state).length;
-  const want = state.era === 'dusk' ? 3 + Math.floor(state.eraTurn / 12) : 4 + Math.floor(state.eraTurn / 10);
+  const want = calendarEra(state) === 'dusk' ? 3 + Math.floor(state.eraTurn / 12) : 4 + Math.floor(state.eraTurn / 10);
   const inFlight = Object.values(state.fleets).filter((f) => f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls))).length + capital.queue.filter((q) => q.kind === 'ship').length;
   // only expand what the economy can carry: new settlements cost upkeep long before they pay
   const pr = project(state);
   const netNow = pr.energyIn - pr.energyOut;
   const affordable = netNow > 2 + nCol * 1.5 && civ.energy > reserveCapacity(state, computeMods(state)) * 0.4;
   const atHole = colonies(state).some((c) => ['black_hole', 'smbh'].includes(state.systems[c.systemId].primary.kind));
-  const needHole = state.era === 'degenerate' && state.protonsDecay && state.eta > 22 && !atHole && inFlight === 0 && civ.matter > 80;
+  const needHole = calendarEra(state) === 'degenerate' && state.protonsDecay && state.eta > 22 && !atHole && inFlight === 0 && civ.matter > 80;
   if ((affordable || needHole) && nCol + inFlight < want + (needHole ? 1 : 0) && (capital.structures.shipyard ?? 0) > 0 && capital.queue.length < 3) {
-    const opts = state.era === 'dusk' ? ['seedcore', 'ark', 'spore'] : ['vaultship', 'seedcore', 'spore'];
-    if (eraIndex(state.era) >= 2) opts.unshift('vaultship');
+    const opts = calendarEra(state) === 'dusk' ? ['seedcore', 'ark', 'spore'] : ['vaultship', 'seedcore', 'spore'];
+    if (eraIndex(calendarEra(state)) >= 2) opts.unshift('vaultship');
     for (const k of opts) if (!queueBuild(state, capital.id, 'ship', k)) break;
   }
   const lighterBusy = Object.values(state.fleets).some((f) => f.ships.some((x) => x.cls === 'lighter')) || capital.queue.some((q) => q.key === 'lighter');
@@ -237,7 +238,7 @@ function planFleets(state: GameState) {
     const b = state.bodies[bid];
     return b && !b.colonyId && !canSettle(state, b, 'kin') && b.habitability * b.vitality > 0.05;
   });
-  if (state.era === 'dusk' && affordable && !lighterBusy && freeHere && homeCols < 2 && capital.pops.kin >= 6 && capital.queue.length < 3) queueBuild(state, capital.id, 'ship', 'lighter');
+  if (calendarEra(state) === 'dusk' && affordable && !lighterBusy && freeHere && homeCols < 2 && capital.pops.kin >= 6 && capital.queue.length < 3) queueBuild(state, capital.id, 'ship', 'lighter');
   if (state.eraTurn % 25 === 3 && Object.values(state.fleets).filter((f) => f.ships.some((s) => s.cls === 'probe')).length < 2) queueBuild(state, capital.id, 'ship', 'probe');
 }
 
@@ -253,7 +254,7 @@ function planThreads(state: GameState) {
         if (convert(state, c.id, 'upload')) convert(state, c.id, 'freeze');
       }
       if (echoStrain > 0.5 && c.pops.echoes > 0) convert(state, c.id, 'cool');
-      if (state.era === 'dusk' && state.eta > 13.995 && c.pops.kin > 0) convert(state, c.id, 'freeze');
+      if (calendarEra(state) === 'dusk' && state.eta > 13.995 && c.pops.kin > 0) convert(state, c.id, 'freeze');
     }
   }
 }
@@ -349,7 +350,7 @@ function planWorks(state: GameState) {
   if (civ.work) return;
   for (const id of ['aeon_seed', 'hibernal_cascade', 'archive_of_everything', 'confluence', 'garden_of_embers']) {
     const w = WORK_BY_ID[id];
-    if (!hasTech(state, w.tech) || !w.eras.includes(state.era)) continue;
+    if (!hasTech(state, w.tech) || !inAge(state, w.eras)) continue;
     if (!workRequirementMet(state, id)) continue;
     if (!startWork(state, id)) return;
   }

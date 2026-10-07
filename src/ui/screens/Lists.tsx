@@ -21,6 +21,7 @@ import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, spareChoices, BEACON_
 import { act, engine, modal, openBuildFor, rev, selection, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
+import { calendarEra } from '../../game/fate';
 
 const ANOMALY_IDS = new Set(ANOMALIES.map((a) => a.id));
 
@@ -141,7 +142,7 @@ export function FleetsModal({ s }: { s: GameState }) {
 /** Open the Systems window to choose where a stationed ship goes: collision stars first while any burn. */
 export function sendFromSystems(s: GameState, f: Fleet) {
   sfx('click');
-  const burning = s.era === 'degenerate' && Object.values(s.systems).some((x) => isBeacon(s, x));
+  const burning = calendarEra(s) === 'degenerate' && Object.values(s.systems).some((x) => isBeacon(s, x));
   modal.value = { kind: 'settlements', tab: burning ? 'beacons' : 'worlds', send: f.id };
 }
 
@@ -177,7 +178,7 @@ function SendButton({ s, f, sys }: { s: GameState; f: Fleet; sys: StarSystem }) 
  */
 export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab; send?: string }) {
   void rev.value;
-  const degenerate = s.era === 'degenerate';
+  const degenerate = calendarEra(s) === 'degenerate';
   const which = tab === 'beacons' && !degenerate ? undefined : tab;
   const f = send ? s.fleets[send] : undefined;
   const sending = f?.at ? f : undefined;

@@ -13,17 +13,18 @@ import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
 import { devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
 import { colonies, eraIndex, hasCharter, hasTech, log, savableName, uid } from './util';
+import { ageReached, calendarEra, inAge } from '../fate';
 
 export type ActionResult = string | null; // error message or null on success
 
 /** In ages without ordinary matter, construction is paid in energy instead. */
 export function matterIsEnergy(state: GameState): boolean {
-  return state.protonsDecay && eraIndex(state.era) >= 2;
+  return state.protonsDecay && eraIndex(calendarEra(state)) >= 2;
 }
 
 export function structureCheck(state: GameState, c: Colony, d: StructureDef): string | null {
   if (d.tech && !hasTech(state, d.tech)) return 'Not yet researched.';
-  if (eraIndex(d.era) > eraIndex(state.era)) return 'Not in this age.';
+  if (!ageReached(state, d.era)) return 'Not in this age.';
   const b = state.bodies[c.bodyId];
   const sys = state.systems[c.systemId];
   const have = (c.structures[d.id] ?? 0) + c.queue.filter((q) => q.key === d.id).length;
@@ -60,7 +61,7 @@ export function buildCost(state: GameState, d: StructureDef | ShipDef, isShip: b
 }
 
 export function buildableStructures(state: GameState, c: Colony): { def: StructureDef; error: string | null }[] {
-  return STRUCTURES.filter((d) => !d.tech || hasTech(state, d.tech) || eraIndex(d.era) <= eraIndex(state.era))
+  return STRUCTURES.filter((d) => !d.tech || hasTech(state, d.tech) || ageReached(state, d.era))
     .map((def) => ({ def, error: structureCheck(state, c, def) }))
     .filter((x) => x.error !== 'Not yet researched.' && x.error !== 'Not in this age.');
 }
@@ -218,7 +219,7 @@ export function charterAvailable(state: GameState, id: string): string | null {
   if (!d) return 'Unknown charter.';
   if (hasCharter(state, id)) return 'Already enacted.';
   if (!hasTech(state, 'the_long_record')) return 'Research The Long Record to begin writing Charters.';
-  if (eraIndex(d.era) > eraIndex(state.era)) return 'Not in this age.';
+  if (!ageReached(state, d.era)) return 'Not in this age.';
   if (d.tech && !hasTech(state, d.tech)) return 'Needs research.';
   if (d.requiresCharter && !hasCharter(state, d.requiresCharter)) return `Requires ${CHARTER_BY_ID[d.requiresCharter]?.name}.`;
   if (d.excludes?.some((x) => hasCharter(state, x))) return 'Contradicts an existing charter.';
@@ -442,7 +443,7 @@ export function startWork(state: GameState, workId: string): ActionResult {
   const w = WORK_BY_ID[workId];
   if (!w) return 'Unknown Great Work.';
   if (!hasTech(state, w.tech)) return 'Needs research.';
-  if (!w.eras.includes(state.era)) return 'Not in this age.';
+  if (!inAge(state, w.eras)) return 'Not in this age.';
   if (state.civ.taint > w.maxTaint) return 'What we have become cannot do this.';
   if (state.civ.work === workId) return null;
   if ((state.civ.works[workId] ?? 0) === 0) {

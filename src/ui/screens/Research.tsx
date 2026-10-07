@@ -6,13 +6,14 @@ import { setResearch, startWork } from '../../game/sim/actions';
 import { workCost, workRequirementMet } from '../../game/sim/endings';
 import { project } from '../../game/sim/projection';
 import { RESEARCH_DRAW, techAvailable, techCost, techVisible } from '../../game/sim/research';
-import { eraIndex, hasTech } from '../../game/sim/util';
+import { hasTech } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
 import { n0, n1, pct } from '../fmt';
 import { Icon } from '../Icon';
 import { act, game, notify, rev } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
+import { ageReached, inAge } from '../../game/fate';
 
 function techTip(s: GameState, t: TechDef): string {
   const req = t.requires.map((r) => TECH_BY_ID[r]?.name ?? r);
@@ -75,7 +76,7 @@ export function ResearchModal({ s }: { s: GameState }) {
         <div class="techgrid">
           <div />
           {ERAS.map((e) => (
-            <div key={e.id} class="eh" style={{ opacity: eraIndex(e.id) > eraIndex(s.era) ? 0.45 : 1 }}>
+            <div key={e.id} class="eh" style={{ opacity: ageReached(s, e.id) ? 1 : 0.45 }}>
               {e.numeral} · {e.name}
             </div>
           ))}
@@ -135,7 +136,7 @@ export function ResearchModal({ s }: { s: GameState }) {
             const prog = s.civ.works[w.id] ?? 0;
             const met = workRequirementMet(s, w.id);
             const active = s.civ.work === w.id;
-            const inEra = w.eras.includes(s.era);
+            const inEra = inAge(s, w.eras);
             const tainted = s.civ.taint > w.maxTaint;
             return (
               <div key={w.id} class={`card ${active ? 'enacted' : ''}`}>

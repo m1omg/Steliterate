@@ -1,6 +1,7 @@
 import { STRUCTURE_BY_ID } from './data/structures';
 import { hawkingTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
+import { calendarEra } from './fate';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
 // share of a structure's nominal capture a source supports per Tide turn. Physical ratios
@@ -201,7 +202,7 @@ export function youngDwarfLight(a: number, b: number): number {
 /** The light a primary supplies, era-normalised, for the turn [years, years + L]. */
 export function sourceLight(state: GameState, sys: StarSystem, years: number, L: number): SourceInfo {
   const p = sys.primary;
-  const era = state.era;
+  const era = calendarEra(state);
   const gfe = state.gfe;
   const rek = p.rekindle ?? 0;
   switch (p.kind) {
@@ -387,7 +388,7 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
     }
     // white dwarfs go black: one no dark matter warms once it has cooled to 5 K (about η 16.7), an
     // ember once the halo is spent (η 25). Only the name changes: nothing happens to it at 5 K.
-    if (p.kind === 'white_dwarf' && state.era !== 'dusk' && to >= DWARF_COLD_AT && emberShare(p, to) === 0) p.kind = 'black_dwarf';
+    if (p.kind === 'white_dwarf' && calendarEra(state) !== 'dusk' && to >= DWARF_COLD_AT && emberShare(p, to) === 0) p.kind = 'black_dwarf';
     // rekindled dwarfs: feeding worlds fade as (1 + t/tau)^-2
     let rek = 0;
     for (const bid of sys.bodies) {
@@ -410,7 +411,7 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
     for (const bid of sys.bodies) {
       const b = state.bodies[bid];
       if (!b || b.kind === 'deep' || b.dissolved || b.rogue || b.feeding) continue;
-      if (!sys.ejected && b.orbitAU > 0 && state.era !== 'blackhole' && state.era !== 'dark') {
+      if (!sys.ejected && b.orbitAU > 0 && calendarEra(state) !== 'blackhole' && calendarEra(state) !== 'dark') {
         const density = sys.special === 'core' ? 3 : state.regions.find((r) => r.id === sys.regionId)?.kind === 'globular' ? 4 : 1;
         const tau = 1e15 / (density * Math.pow(Math.max(0.01, b.orbitAU), 2)) * 25;
         const pRogue = 1 - Math.exp(-L / tau);
@@ -450,7 +451,7 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
   // a star's whole life, so (a bend) each lights as its turn ends, whenever in the turn the two
   // met: it is seen alight, and we may keep time with it (flare.ts). The draw that used to place
   // its birth inside the turn is still made, so every later draw stays where it was.
-  if (state.era === 'degenerate') {
+  if (calendarEra(state) === 'degenerate') {
     // Brown dwarfs meet only in a bound galaxy: as it evaporates (η 18.4 to 21, below) their
     // collisions grow rarer, and once it has, they stop. Helium stars come from white-dwarf pairs
     // that spiral together by their own gravitational waves, galaxy or not: those go on to η 25.
@@ -535,7 +536,7 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
   }
 
   // Black Hole Era (and beyond): Hawking evaporation, the last bursts
-  if (state.era === 'blackhole' || state.era === 'dark') {
+  if (calendarEra(state) === 'blackhole' || calendarEra(state) === 'dark') {
     for (const s of systems) {
       const p = s.primary;
       if ((p.kind === 'black_hole' || p.kind === 'smbh') && p.evaporateAt && to >= p.evaporateAt && !s.gone) {
@@ -696,13 +697,13 @@ export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = 
     }
     if (c.overdrive) mult *= 1.3;
   }
-  const accel = state.era === 'dusk' ? Math.min(3, 1 + state.eraTurn * 0.02) : 3;
+  const accel = calendarEra(state) === 'dusk' ? Math.min(3, 1 + state.eraTurn * 0.02) : 3;
   const decline = c && b.decline > 0 ? b.decline * mult * accel : 0;
   const cold = () => {
     const cl = bodyClimate(state, b);
     return (cl.day ?? cl.mean) < FROZEN_K;
   };
-  const sunless = state.era !== 'dusk' || !!b.rogue || (SURFACE_LIFE.includes(b.kind) && cold());
+  const sunless = calendarEra(state) !== 'dusk' || !!b.rogue || (SURFACE_LIFE.includes(b.kind) && cold());
   const freeze = sunless && !lampsOver(state, b, c) ? 0.05 * (core ? 0.5 : 1) : 0;
   return { decline, freeze };
 }
@@ -756,7 +757,7 @@ export function bodyClimate(state: GameState, b: Body): BodyClimate {
 /** A world's climate without Orbital Lamps: under its star's light today, or under `lum` Suns. */
 export function starClimate(state: GameState, b: Body, lum?: number): BodyClimate {
   const sys = state.systems[b.systemId];
-  const L = b.rogue ? 0 : (lum ?? primaryLuminosity(sys.primary, state.years, state.era));
+  const L = b.rogue ? 0 : (lum ?? primaryLuminosity(sys.primary, state.years, calendarEra(state)));
   const a = Math.max(0.003, b.orbitAU);
   const tEq = L > 0 ? 278 * Math.pow(L, 0.25) * Math.pow(0.7, 0.25) / Math.sqrt(a) : 0;
   const tInt = 40 * b.coreHeat;
