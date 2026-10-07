@@ -45,7 +45,10 @@ for (const strategy of strategies) {
         );
       }
     }
-    const sv = Object.values(state.survivors).map((s) => `${s.adjective}:${s.alive ? 'alive' : s.fate}`).join(' ');
+    // each neighbour: alive or its fate, and +N for every star it settled beyond its first
+    const sv = Object.values(state.survivors)
+      .map((s) => `${s.adjective}:${s.alive ? 'alive' : s.fate}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}`)
+      .join(' ');
     console.log(
       `seed ${seed}: ${state.outcome ? `${state.outcome.kind.toUpperCase()} "${state.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
     );

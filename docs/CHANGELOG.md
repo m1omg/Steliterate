@@ -734,3 +734,25 @@ neighbours. Plan agreed 7 Oct; parts land one at a time.
     collectors fed a dwindling civilization, and watchers' upkeep at settlements of slow minds;
     with the autoplayer taking apart the dearest things first, power collectors included, it was
     399 / 142.
+
+## Living neighbours (Part C, built on the work branch; it goes live all at once)
+
+The player chose "Pacts, then expansion", war against "Any, at a high price", and to see it "All
+at once". Built in phases, each with its checks and harness numbers.
+
+- **Phase 0, honesty.** Energy we send to another civilization now travels as a beam at the speed
+  of light and helps them when it arrives (Send says how long; their card shows what is on its
+  way); a plea we answer goes the same way, and nothing is sent to the dead. What we do to one
+  civilization (a raid, a seizure, devouring) changes how the others feel when its light reaches
+  each of them, not at once, and a great wrong is answered. The Hunger in us shows: with Taint T no
+  one thinks better of us than 100 − 1.5 T, sinking toward it two a turn. A civilization we raided
+  into the dark leaves us no last transmission. Asking for help needs our clocks within reach of
+  theirs; a beam sent out of step helps them but earns no trust. Seize and Devour ask first.
+  Refugees come only as far as we have room (the capital first, Kin into free berths). A Thread
+  that forks away with no settlement of its own goes to the nearest star no one lives at, not to
+  ours. Also: every neutron star bursts under curvature radiation, even one flung out of the
+  galaxy (a lingering neutron star could be left in a system with nothing left in it). The harness
+  prints, for each neighbour, the stars it settled beyond its first.
+  Balance, 300 games: 136 survive, 52 victories, a Degenerate Age of 71 turns (was 129 / 47 / 69);
+  900 games 406 / 146 / 69 (was 400 / 142 / 69); by fate decay 175 of 450, stable 154 of 239,
+  curvature 77 of 211. 430 of 900 games play as before.

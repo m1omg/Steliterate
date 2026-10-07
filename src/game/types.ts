@@ -292,6 +292,10 @@ export interface Survivor {
   askedAt?: number;
   /** The turn a hostile civilization learned we were weak, because we asked it for help. */
   tempted?: number;
+  /** Energy we beamed to them, still crossing the dark (cosmic years it arrives); `known`: they can tell it came from us. */
+  beams?: { at: number; energy: number; known: boolean; plea?: boolean }[];
+  /** What they will hear of us when its light reaches them (cosmic years), and how it will change how they feel. */
+  news?: { at: number; delta: number; what: string }[];
 }
 
 export interface Mind {

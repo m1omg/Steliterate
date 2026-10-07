@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { answerSignal, askForAid, devour, makeGesture, seize, sendAid } from '../../game/sim/actions';
-import { ASK_COOLDOWN, askBlocked } from '../../game/sim/survivors';
+import { ASK_COOLDOWN, askBlocked, inStep } from '../../game/sim/survivors';
 import { canConverse, voiceClock } from '../../game/sim/signals';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
 import type { GameState, Signal } from '../../game/types';
@@ -72,6 +72,8 @@ export function SignalsModal({ s }: { s: GameState }) {
   const arrived = s.signals.filter((x) => x.arrivedTurn !== null);
   const openMsgs = arrived.filter((x) => !x.resolved && x.choices.length);
   const [tab, setTab] = useState<'messages' | 'others' | 'minds'>(openMsgs.length ? 'messages' : 'others');
+  // a heavy choice waits for a yes: 'seize:<id>' or 'devour:<id>'
+  const [armed, setArmed] = useState<string | null>(null);
   const logL = logTurnLength(turnStep(s));
   const my = voiceClock(s, logL);
   const cap = capital(s);
@@ -131,8 +133,16 @@ export function SignalsModal({ s }: { s: GameState }) {
                           <dd class={`mono ${talk ? '' : 'warn'}`}>{pow10(sv.clock)} yr{talk ? '' : ' · out of step'}</dd>
                           {sv.aidGiven > 0 && (
                             <>
-                              <dt>Aid sent</dt>
+                              <dt data-tip="Energy we beamed to them that has reached them, and that they know came from us.">Aid received</dt>
                               <dd class="mono">{n0(sv.aidGiven)}</dd>
+                            </>
+                          )}
+                          {(sv.beams ?? []).length > 0 && (
+                            <>
+                              <dt data-tip="Energy we beamed to them, still crossing the dark at the speed of light.">On its way</dt>
+                              <dd class="mono">
+                                {n0((sv.beams ?? []).reduce((a, b) => a + b.energy, 0))} energy, there in {formatYears(Math.max(0, Math.min(...(sv.beams ?? []).map((b) => b.at)) - s.years))}
+                              </dd>
                             </>
                           )}
                         </dl>
@@ -142,12 +152,17 @@ export function SignalsModal({ s }: { s: GameState }) {
                         </div>
                         <div class={`bar ${sv.health < 0.3 ? 'bad' : 'good'}`}><i style={{ width: pct(sv.health) }} /></div>
                         <div class="row wrap" style={{ gap: '4px' }}>
-                          <button class="btn small" disabled={s.civ.energy < 25} onClick={() => act((g) => sendAid(g, sv.id, 25)) && sfx('good')}>
-                            Send 25 energy
-                          </button>
-                          <button class="btn small" disabled={s.civ.energy < 100} onClick={() => act((g) => sendAid(g, sv.id, 100)) && sfx('good')}>
-                            Send 100
-                          </button>
+                          {[25, 100].map((e) => (
+                            <button
+                              key={e}
+                              class="btn small"
+                              disabled={s.civ.energy < e}
+                              data-tip={`Beam ${e} energy to them. It crosses ${formatDistance(ly)} at the speed of light and reaches them ${ly > 0 ? `in ${formatYears(ly)}` : 'at once'}.${inStep(s, sv) ? '' : ' Our clocks are too far apart to talk: they will have the energy, but not know it came from us.'}`}
+                              onClick={() => act((g) => sendAid(g, sv.id, e)) && sfx('good')}
+                            >
+                              {e === 25 ? 'Send 25 energy' : 'Send 100'}
+                            </button>
+                          ))}
                           {(() => {
                             const blocked = askBlocked(s, sv);
                             const cap = capital(s);
@@ -170,15 +185,35 @@ export function SignalsModal({ s }: { s: GameState }) {
                               </button>
                             );
                           })()}
-                          <button class="btn small danger" data-tip="Take their star by force. Needs warships at their home. Everyone will know." onClick={() => act((g) => seize(g, sv.id)) && sfx('bad')}>
+                          <button class={`btn small danger ${armed === `seize:${sv.id}` ? 'on' : ''}`} data-tip="Take their star by force. Needs warships at their home. Everyone will hear of it, when the light reaches them." onClick={() => setArmed(armed === `seize:${sv.id}` ? null : `seize:${sv.id}`)}>
                             Seize
                           </button>
                           {hasCharter(s, 'absorb_the_weak') && (
-                            <button class="btn small danger" data-tip="Devour them whole while they are weak. The Hunger's way." onClick={() => act((g) => devour(g, sv.id)) && sfx('bad')}>
+                            <button class={`btn small danger ${armed === `devour:${sv.id}` ? 'on' : ''}`} data-tip="Devour them whole while they are weak. The Hunger's way." onClick={() => setArmed(armed === `devour:${sv.id}` ? null : `devour:${sv.id}`)}>
                               Devour
                             </button>
                           )}
                         </div>
+                        {armed?.endsWith(`:${sv.id}`) && (
+                          <div class="row wrap confirm-heavy" style={{ gap: '6px', alignItems: 'center' }}>
+                            <span class="warn" style={{ fontSize: '12px' }}>
+                              {armed.startsWith('seize') ? `Take ${sv.name}’s star by force? Some of them would live on as our people; the rest would not. Every civilization will hear of it.` : `Devour ${sv.name} whole? There is no way back from this.`}
+                            </span>
+                            <button
+                              class="btn small danger"
+                              onClick={() => {
+                                const what = armed;
+                                setArmed(null);
+                                if (act((g) => (what.startsWith('seize') ? seize(g, sv.id) : devour(g, sv.id)))) sfx('bad');
+                              }}
+                            >
+                              {armed.startsWith('seize') ? 'Seize their star' : 'Devour them'}
+                            </button>
+                            <button class="btn small" onClick={() => setArmed(null)}>
+                              Not now
+                            </button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div class="dim" style={{ fontSize: '12px' }}>

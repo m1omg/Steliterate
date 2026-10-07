@@ -1,5 +1,6 @@
 import { CHARTER_BY_ID, CHARTERS } from '../data/charters';
 import { SHIP_BY_ID, SHIPS, type ShipDef } from '../data/ships';
+import { formatYears } from '../eras';
 import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, hasOnceEffect, structureLabel, type StructureDef } from '../data/structures';
 import { THREAD_DEFS } from '../data/threads';
 import { WORK_BY_ID } from '../data/works';
@@ -15,7 +16,7 @@ import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
 import { sourceLight } from '../physics';
 import { turnStep } from './flare';
-import { devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
+import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
 import { colonies, hasCharter, hasTech, log, savableName, uid } from './util';
 import { ageReached, inAge, matterGone } from '../fate';
 
@@ -485,16 +486,15 @@ export function devour(state: GameState, survivorId: string): ActionResult {
   return devourSurvivor(state, survivorId);
 }
 
+/** Beam energy to another civilization: it reaches them, and helps, when the light does. */
 export function sendAid(state: GameState, survivorId: string, energy: number): ActionResult {
   const sv = state.survivors[survivorId];
   if (!sv || !sv.alive) return 'They are gone.';
   if (!sv.contact) return 'We have not made contact.';
   if (state.civ.energy < energy) return 'Not enough energy.';
   state.civ.energy -= energy;
-  sv.health = Math.min(1, sv.health + energy / 400);
-  sv.disposition = Math.min(100, sv.disposition + energy / 4);
-  sv.aidGiven += energy;
-  log(state, `We sent ${energy} energy to ${sv.name}.`, 'good');
+  const ly = beamEnergy(state, sv, energy);
+  log(state, `We beamed ${energy} energy toward ${sv.name}. It reaches them ${ly > 0 ? `in ${formatYears(ly)}` : 'at once'}.`, 'good', sv.homeSystemId);
   return null;
 }
 

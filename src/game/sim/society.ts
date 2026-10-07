@@ -4,7 +4,7 @@ import { THREADS } from '../types';
 import { capacity } from './economy';
 import { livedShare } from './flare';
 import { computeMods, type Mods, strainFor } from './mods';
-import { clamp, colonies, hasCharter, log, popsOf, threadTotals, uid, withRng } from './util';
+import { capital, clamp, colonies, distLy, hasCharter, log, popsOf, threadTotals, uid, withRng } from './util';
 import { calendarEra } from '../fate';
 
 // Resolve is the will to go on. Dissent is how much the Threads disagree about how.
@@ -135,6 +135,28 @@ export function updateSociety(state: GameState, logL: number, popsLost: number, 
   });
 }
 
+/**
+ * Where a Thread that leaves with no settlement of its own goes: the nearest star we know that no
+ * one lives at (not ours, as it used to be). Takes no random draw.
+ */
+function forkHome(state: GameState): string {
+  const civ = state.civ;
+  const from = state.systems[capital(state)?.systemId ?? civ.homeSystemId];
+  const taken = new Set([...colonies(state).map((c) => c.systemId), ...Object.values(state.survivors).filter((v) => v.alive).flatMap((v) => v.systems)]);
+  let best: string | null = null;
+  let bestD = Infinity;
+  for (const s of Object.values(state.systems)) {
+    if (s.gone || taken.has(s.id) || !civ.known[s.id] || !from) continue;
+    if (!s.bodies.some((id) => state.bodies[id] && !state.bodies[id].dissolved)) continue;
+    const d = distLy(from, s);
+    if (d < bestD) {
+      bestD = d;
+      best = s.id;
+    }
+  }
+  return best ?? civ.homeSystemId;
+}
+
 /** A Thread leaves, taking the settlements where it is the majority. It becomes one of the other minds. */
 export function fork(state: GameState, t: ThreadId) {
   const civ = state.civ;
@@ -166,8 +188,8 @@ export function fork(state: GameState, t: ThreadId) {
     adjective: 'Forked',
     color: '#b7a58f',
     way: 'fork',
-    homeSystemId: systems[0] ?? civ.homeSystemId,
-    systems,
+    homeSystemId: systems[0] ?? forkHome(state),
+    systems: systems.length ? systems : [forkHome(state)],
     pop,
     health: 0.8,
     reserve: 20,

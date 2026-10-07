@@ -6,8 +6,11 @@ import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
 import { queueEvent } from './events';
 import { survivorWorld } from './homes';
-import { formatDistance, formatYears } from '../eras';
-import { capital, clamp, distLy, hasCharter, log, withRng } from './util';
+import { formatDistance, formatYears, logTurnLength } from '../eras';
+import { capital, clamp, colonies, distLy, hasCharter, log, withRng } from './util';
+import { turnStep } from './flare';
+import { capacity } from './economy';
+import { computeMods } from './mods';
 import { calendarEra } from '../fate';
 import { flowing } from './flow';
 
@@ -27,6 +30,107 @@ function distanceTo(state: GameState, sv: Survivor): number {
   return a && b ? distLy(a, b) : 0;
 }
 
+/** When light sent now arrives `ly` light-years away (at once in deep time, where a turn outlasts any crossing). */
+function lightAt(state: GameState, ly: number): number {
+  return isFinite(state.years) ? state.years + Math.max(0, ly) : state.years;
+}
+
+function arrived(state: GameState, at: number): boolean {
+  return !isFinite(state.years) || state.years >= at;
+}
+
+/** How far apart two clocks can be and still hold a conversation: the Lattice parses anything slow enough. */
+function span(sv: Survivor): number {
+  return sv.way === 'lattice' ? 6 : 3;
+}
+
+/** Can we talk with them now: our dominant voice's clock against theirs? */
+export function inStep(state: GameState, sv: Survivor): boolean {
+  return canConverse(voiceClock(state, logTurnLength(turnStep(state))), sv.clock, span(sv));
+}
+
+/**
+ * Beam energy to a civilization: it crosses the dark at the speed of light and helps them when it
+ * arrives. If our clocks are too far apart to talk, they will have the energy but cannot tell it
+ * came from us. `plea`: they asked for it, which is worth more to them.
+ */
+export function beamEnergy(state: GameState, sv: Survivor, energy: number, plea = false): number {
+  const ly = distanceTo(state, sv);
+  (sv.beams ??= []).push({ at: lightAt(state, ly), energy, known: inStep(state, sv), ...(plea ? { plea: true } : {}) });
+  return ly;
+}
+
+/**
+ * What we did at a star reaches every other civilization when its light does, and changes how
+ * they feel about us then, not before.
+ */
+export function spreadNews(state: GameState, fromSystemId: string, delta: number, what: string, except?: string) {
+  const from = state.systems[fromSystemId];
+  for (const o of Object.values(state.survivors)) {
+    if (!o.alive || o.id === except) continue;
+    const home = state.systems[o.homeSystemId];
+    (o.news ??= []).push({ at: lightAt(state, from && home ? distLy(from, home) : 0), delta, what });
+  }
+}
+
+/** Beams and news whose light has reached them. */
+function reachThem(state: GameState, sv: Survivor) {
+  if (sv.beams?.length) {
+    for (const b of sv.beams.filter((x) => arrived(state, x.at))) {
+      sv.health = Math.min(1, sv.health + (b.plea ? 0.12 + b.energy / 600 : b.energy / 400));
+      if (b.known) {
+        sv.disposition = Math.min(100, sv.disposition + (b.plea ? 15 : b.energy / 4));
+        sv.aidGiven += b.energy;
+      }
+    }
+    sv.beams = sv.beams.filter((x) => !arrived(state, x.at));
+  }
+  if (sv.news?.length) {
+    for (const n of sv.news.filter((x) => arrived(state, x.at))) {
+      sv.disposition = clamp(sv.disposition + n.delta, -100, 100);
+      // a great wrong is answered, if they can speak to us
+      if (n.delta <= -20 && sv.contact && inStep(state, sv)) {
+        sendSignal(state, {
+          from: sv.id,
+          kind: 'heard',
+          distanceLy: distanceTo(state, sv),
+          title: `${sv.name} saw what we did`,
+          text: voice(sv, `The light of it has reached us: ${n.what}. We had hoped you were different. We will not forget it.`, `EVENT OBSERVED: ${n.what.toUpperCase()}. COUNTERPARTY STANDING REVISED.`),
+        });
+      }
+    }
+    sv.news = sv.news.filter((x) => !arrived(state, x.at));
+  }
+}
+
+/**
+ * Newcomers of one kind find room among us: the capital first, then wherever there is space for
+ * them; Kin with nowhere to live awake sleep in free berths. Returns how many found a place.
+ */
+export function settleNewcomers(state: GameState, t: ThreadId, n: number): number {
+  const mods = computeMods(state);
+  const cap = capital(state);
+  const order = colonies(state).sort((a, b) => (a.id === cap?.id ? -1 : b.id === cap?.id ? 1 : 0));
+  let left = n;
+  for (const c of order) {
+    if (left <= 0) break;
+    const room = Math.max(0, capacity(state, c, mods)[t] - c.pops[t]);
+    const take = Math.min(room, left);
+    c.pops[t] += take;
+    left -= take;
+  }
+  if (t === 'kin') {
+    for (const c of order) {
+      if (left <= 0) break;
+      const berths = Math.max(0, capacity(state, c, mods).cryo - c.cryo);
+      const take = Math.min(berths, left);
+      c.cryo += take;
+      left -= take;
+    }
+  }
+  return n - left;
+}
+
 export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: number) {
   const civ = state.civ;
   const myClock = voiceClock(state, logL);
@@ -34,6 +138,11 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
     for (const sv of Object.values(state.survivors)) {
       if (!sv.alive) continue;
       const home = state.systems[sv.homeSystemId];
+      // what we sent them, and what they hear of us, reaches them at the speed of light
+      reachThem(state, sv);
+      // the Hunger in us shows: the more of it we carry, the less anyone can think well of us
+      const ceiling = 100 - civ.taint * 1.5;
+      if (sv.disposition > ceiling) sv.disposition = Math.max(ceiling, sv.disposition - 2);
       // their clock drifts toward the age, as ours does
       sv.clock += (Math.min(logL, sv.way === 'garden' ? 1.7 : sv.way === 'dormant' ? logL + 1 : logL) - sv.clock) * 0.25;
       // the universe drains them
@@ -96,6 +205,11 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
           if (b) b.relic = { kind: 'tomb', state: sv.contact ? 'found' : 'hidden' };
         }
         if (!sv.contact) continue;
+        // those we raided into the dark do not leave their archive to us
+        if (sv.raidedAt !== undefined && state.turn - sv.raidedAt < 10) {
+          log(state, `${sv.name} has gone dark. After what we did to them, they sent us nothing.`, 'bad', sv.homeSystemId);
+          continue;
+        }
         // their last transmission is an archive, not a conversation: we can read it at our own pace
         sv.lastSent = state.turn;
         sendSignal(state, {
@@ -201,6 +315,12 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
   });
 }
 
+/** What kind of mind someone of theirs becomes among us. */
+export function newcomerThread(sv: Survivor): ThreadId {
+  if (sv.way === 'fork' && sv.forkOf) return sv.forkOf;
+  return sv.way === 'lattice' ? 'lattice' : sv.way === 'upload' || sv.way === 'dormant' ? 'echoes' : sv.way === 'chorus' ? 'chorus' : 'kin';
+}
+
 function firstWords(sv: Survivor): string {
   switch (sv.way) {
     case 'garden':
@@ -225,13 +345,11 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
     case 'aid': {
       const ask = Number(sig.data.ask);
       if (choice === 'give') {
+        if (!sv?.alive) return 'They are gone: there is no one left to send it to.';
         if (civ.energy < ask) return `You have only ${civ.energy.toFixed(0)} energy.`;
         civ.energy -= ask;
-        if (sv) {
-          sv.health = Math.min(1, sv.health + 0.12 + ask / 600);
-          sv.disposition = Math.min(100, sv.disposition + 15);
-          sv.aidGiven += ask;
-        }
+        // it goes by beam, and helps them when it gets there
+        beamEnergy(state, sv, ask, true);
         civ.resolve = Math.min(100, civ.resolve + 1);
       } else if (sv) sv.disposition -= 12;
       break;
@@ -241,13 +359,15 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         const cap = capital(state);
         if (!cap) return 'You have no capital to receive them.';
         const n = Number(sig.data.n);
-        const t: ThreadId = sv.way === 'lattice' ? 'lattice' : sv.way === 'upload' || sv.way === 'dormant' ? 'echoes' : sv.way === 'chorus' ? 'chorus' : 'kin';
-        cap.pops[t] += n;
-        sv.pop = Math.max(0, sv.pop - n * 2);
+        const t = newcomerThread(sv);
+        // only as many as we have room for: the rest stay with their own people
+        const came = settleNewcomers(state, t, n);
+        if (came <= 0) return `We have no room for ${t === 'kin' ? 'them, awake or asleep' : 'them'}.`;
+        sv.pop = Math.max(0, sv.pop - came * 2);
         sv.disposition += 10;
         civ.resolve = Math.min(100, civ.resolve + 3);
-        civ.flags.refugees = (civ.flags.refugees ?? 0) + n;
-        log(state, `${n} refugees from ${sv.name} have joined you at ${cap.name}.`, 'good', cap.systemId);
+        civ.flags.refugees = (civ.flags.refugees ?? 0) + came;
+        log(state, came < n ? `${came} of ${n} refugees from ${sv.name} found room among us; the rest stay with their own.` : `${n} refugees from ${sv.name} have joined us.`, 'good', cap.systemId);
       } else if (sv) sv.disposition -= 8;
       break;
     }
@@ -306,7 +426,7 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
   civ.resolve = Math.max(0, civ.resolve - 8);
   civ.dissent = Math.min(100, civ.dissent + 10);
   civ.taint = Math.min(100, civ.taint + 5);
-  for (const o of Object.values(state.survivors)) if (o.alive) o.disposition -= 30;
+  spreadNews(state, sys.id, -30, `you took the star of ${sv.name} by force`);
   log(state, `You took ${sv.name}’s star. Some of them live on as your people now. The rest do not.`, 'bad', sys.id);
   return null;
 }
@@ -318,6 +438,7 @@ export const ASK_COOLDOWN = 8;
 export function askBlocked(state: GameState, sv: Survivor): string | null {
   if (!sv.alive) return 'They are gone.';
   if (!sv.contact) return 'We have not made contact.';
+  if (!inStep(state, sv)) return 'Our clocks are too far apart: they could not hear the question.';
   if (state.signals.some((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null)) return 'Our last request is still on its way, or their answer is.';
   if (sv.askedAt !== undefined && state.turn - sv.askedAt < ASK_COOLDOWN) return `We asked them recently. Wait ${ASK_COOLDOWN - (state.turn - sv.askedAt)} more turn(s).`;
   return null;
@@ -438,7 +559,7 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
   });
   // what it costs, whatever happened
   sv.disposition = Math.max(-100, sv.disposition - 35);
-  for (const o of Object.values(state.survivors)) if (o.alive && o.contact && o.id !== sv.id) o.disposition = Math.max(-100, o.disposition - 10);
+  spreadNews(state, sys.id, -10, `your warships raided ${sv.name}`, sv.id);
   civ.resolve = Math.max(0, civ.resolve - 3);
   civ.dissent = Math.min(100, civ.dissent + 4);
   state.battles.push({ systemId: sys.id, turn: state.turn, text: result.text });
@@ -467,7 +588,7 @@ export function devourSurvivor(state: GameState, id: string): string | null {
   civ.taint = Math.min(100, civ.taint + 10);
   civ.resolve = Math.max(0, civ.resolve - 6);
   state.gfe = Math.max(0.05, state.gfe - 0.01);
-  for (const o of Object.values(state.survivors)) if (o.alive) o.disposition -= 40;
+  spreadNews(state, sv.homeSystemId, -40, `you devoured ${sv.name} whole`);
   log(state, `${sv.name} is gone. You are fuller than you have been in ages.`, 'bad', sv.homeSystemId);
   return null;
 }

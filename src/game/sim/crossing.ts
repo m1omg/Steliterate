@@ -76,7 +76,8 @@ function burstNeutronStars(state: GameState, lines: CrossingReport['lines']) {
   let lostHere = 0;
   let people = 0;
   for (const s of Object.values(state.systems)) {
-    if (s.primary.kind !== 'neutron_star' || s.gone) continue;
+    // every one bursts, even one flung out of the galaxy with nothing left around it
+    if (s.primary.kind !== 'neutron_star') continue;
     burst++;
     for (const c of colonies(state)) {
       if (c.systemId !== s.id) continue;
@@ -95,7 +96,7 @@ function burstNeutronStars(state: GameState, lines: CrossingReport['lines']) {
       b.rogue = true;
       left = true;
     }
-    s.gone = !left;
+    s.gone = s.gone || !left;
   }
   lines.push({ text: `The neutron stars have burst: ${burst} of them, each at a tenth of a Sun, in a last flash of particles and neutrinos. They had given their mass to the curvature of space for 10⁶⁸ years.`, kind: 'info' });
   if (lostHere) lines.push({ text: `${lostHere} of our settlements at neutron stars went with them${people ? `, and ${people} of our people` : ''}.`, kind: 'bad' });
