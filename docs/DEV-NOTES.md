@@ -145,6 +145,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   never move the harness. The victories it reaches are The Long Thought and, at the Heart, The
   Aeon Seed: the other Great Works never move it. It does answer the flare event with choice 0 (keep time with the
   flare), and keeps time with every new star it can (choice 0 of A New Star and White Fire).
+- **Browser checks that play a seeded game** ride that game's course, and any rules change can
+  move it: the dealings turned seed 2360862's game into a defeat before the Black Hole Age, and
+  moved where seed 1000 stands after 120 turns. Set the situation up instead of hoping for it.
+  `evap` tries a few seeds until one is in the Black Hole Age by its age and by the calendar
+  (from 10⁴⁰ years, when holes evaporate in every fate), with the game still going. `star-clock`
+  goes one turn at a time at our own pace once in the Degenerate Age (turns there grow
+  twentyfold in three). `dealings` (unit and browser) sets a dear project, because the first
+  techs are too cheap for any deal.
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
 - The user dislikes long blocking waits. Prefer background runs and report when done.

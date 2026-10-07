@@ -48,6 +48,8 @@ const setup = (way: Survivor['way']) => {
   sv.clock = voiceClock(s, logTurnLength(turnStep(s)));
   s.civ.energy = 200;
   s.civ.matter = 200;
+  // a project worth their notes, whatever this game is researching (the first techs are too cheap)
+  s.civ.researching = ['accretion_engines', 'last_light_protocols', 'reversible_logic'].find((t) => !s.civ.techs.includes(t))!;
   return { s, sv };
 };
 const theirTurn = (s: GameState) => {

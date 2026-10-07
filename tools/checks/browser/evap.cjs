@@ -3,20 +3,27 @@ const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('evap');
   const { page } = ck;
-  await page.evaluate(() => window.__stel.newGame({ seed: 2360862 }));
-  await page.waitForTimeout(800);
-  // play into the Black Hole Age
-  for (let i = 0; i < 40; i++) {
-    const era = await page.evaluate(() => { window.__stel.endTurns(5); const s = window.__stel.state(); s.pending.length = 0; return s.era; });
-    if (era === 'blackhole') break;
+  // play into the Black Hole Age, by the age we see and by the calendar (from 10^40 years: holes
+  // evaporate from then on, whatever the fate), in the first of these games still going there (a
+  // game that ends first cannot see a hole evaporate)
+  const there = (a) => (a.era === 'blackhole' || a.era === 'dark') && a.years >= 1e40 && !a.over;
+  for (const seed of [1000, 72271, 40595]) {
+    await page.evaluate((sd) => window.__stel.newGame({ seed: sd }), seed);
+    await page.waitForTimeout(800);
+    let at = { era: '', years: 0, over: false };
+    for (let i = 0; i < 60 && !there(at) && !at.over; i++) {
+      at = await page.evaluate(() => { window.__stel.endTurns(5); const s = window.__stel.state(); s.pending.length = 0; return { era: s.era, years: s.years, over: !!s.outcome }; });
+    }
+    console.log(`  seed ${seed}: ${at.era}, ${at.years.toExponential(1)} years${at.over ? ', the game over' : ''}`);
+    if (there(at)) break;
   }
   const info = await page.evaluate(() => {
     const s = window.__stel.state();
     const worlds = (x) => x.bodies.some((id) => { const b = s.bodies[id]; return b && !b.dissolved && b.kind !== 'deep'; });
-    let sys = Object.values(s.systems).find((x) => x.primary.kind === 'black_hole' && !x.gone && worlds(x));
+    let sys = Object.values(s.systems).find((x) => x.primary.kind === 'black_hole' && !x.gone && !x.ejected && worlds(x));
     // no hole with worlds left in this game: make one of a star nobody lives at
     if (!sys) {
-      sys = Object.values(s.systems).find((x) => !x.gone && !x.special && worlds(x) && !Object.values(s.colonies).some((c) => c.systemId === x.id));
+      sys = Object.values(s.systems).find((x) => !x.gone && !x.ejected && !x.special && worlds(x) && !Object.values(s.colonies).some((c) => c.systemId === x.id));
       Object.assign(sys.primary, { kind: 'black_hole', mass: 10, spin: 100, spinMax: 100 });
     }
     sys.primary.evaporateAt = s.years * (1 + 1e-12);

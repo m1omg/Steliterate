@@ -933,4 +933,6 @@ at once". Built in phases, each with its checks and harness numbers.
   - Balance, 300 games: 154 survive, 59 victories, a Degenerate Age of 69 turns (was 146 / 60 /
     67); 900 games 437 / 183 / 69 (was 435 / 179 / 68): as before, within the noise. By fate:
     decay 173 of 450, stable 162 of 239, curvature 102 of 211.
+- **Checks:** `evap`, `star-clock` and `dealings` set up their own situation instead of riding
+  a seeded game's course, which the dealings had moved (DEV-NOTES, Gotchas).
 

@@ -14,10 +14,13 @@ run(async () => {
     s.civ.flags[`trade_next_${v.id}`] = 0;
     s.civ.energy = 200;
     s.pending.length = 0;
+    // a project worth their notes (the first techs are too cheap for a deal worth the light)
+    const dear = () => ['accretion_engines', 'last_light_protocols', 'reversible_logic', 'stellar_lifting'].find((t) => !s.civ.techs.includes(t));
     // their offer crosses to us at the speed of light
     for (let i = 0; i < 60 && !s.signals.some((x) => x.kind === 'trade' && x.from === v.id && x.arrivedTurn !== null); i++) {
       v.health = 0.8;
       v.disposition = 10;
+      if (!s.civ.researching || s.civ.techs.includes(s.civ.researching)) s.civ.researching = dear();
       window.__stel.endTurns(1, false);
       s.civ.energy = Math.max(s.civ.energy, 200);
     }

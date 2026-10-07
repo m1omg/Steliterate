@@ -7,10 +7,15 @@ run(async () => {
   const { page } = ck;
   await page.evaluate(() => window.__stel.newGame({ seed: 1000 }));
   await page.waitForTimeout(1000);
-  // into the Degenerate Age, far enough that a turn outlasts a collision star
+  // into the Degenerate Age, far enough that a turn outlasts a collision star but not a hundred
+  // times over (where keeping time is free): there, at our own pace, one turn at a time (turns
+  // grow twentyfold in three, and the autoplayer's pace is its own)
   const at = await page.evaluate(() => {
     const s = window.__stel.state();
-    for (let i = 0; i < 40 && (s.era !== 'degenerate' || s.turnLength < 2e13); i++) window.__stel.endTurns(5);
+    for (let i = 0; i < 300 && (s.era !== 'degenerate' || s.turnLength < 2e13); i++) {
+      if (s.era === 'degenerate') s.civ.pace = 0;
+      window.__stel.endTurns(1, s.era !== 'degenerate');
+    }
     delete s.civ.flags.star_until;
     delete s.civ.flags.star_step;
     s.civ.pace = 0;
