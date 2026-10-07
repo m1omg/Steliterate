@@ -783,3 +783,23 @@ at once". Built in phases, each with its checks and harness numbers.
   curvature 105 of 211. Fewer games end in the Black Hole Age or fade in the Dark. 792 of 900
   games sign at least one pact: a game averages 1.2 Mutual Aid, 1.4 Open Archives and 0.9 Shared
   Watch. Also: a proposal is weighed once, even in deep time, where every light has arrived.
+- **Phase 2, refuge.** A dying civilization (health under 0.2) that trusts us asks, once, to
+  come to us: a partner in any pact, or, while Sanctuary stands, any that think well of us (20
+  or more). If we take them in, they set out when our answer reaches them, minds as light and
+  flesh by ship at a fiftieth of the speed of light; on the way nothing drains them, and if they
+  go dark before our answer arrives it was too late. A third of their people come (8 of 24),
+  with their archive (60 + 4 × their people in insight): where we have room, Kin also asleep in
+  free Cold Sleep berths, Echoes in the archive until there is substrate; the rest crowd in at
+  the capital, where without more room not all of them last. Their fate is saved, and every other
+  civilization hears of it (+8). The Choir asks to join our Chorus instead, if we merge minds
+  too (even without a pact, at goodwill 10): its minds join where a Confluence Node has room, the
+  rest as memory (20 insight each), and its fate is absorbed. Sanctuary keeps its promise of
+  trust: every civilization hears of it when the light arrives (+10, a repeal −10), and while it
+  stands those who are not against us trust us more, half a point a turn up to 25. Their card in
+  Signals says when they will arrive; the Manual's Other minds section now covers pacts and
+  refuge. The autoplayer takes the dying in.
+  Balance, 300 games: 147 survive, 57 victories, a Degenerate Age of 68 turns (was 138 / 50 /
+  69); 900 games 426 / 162 / 70 (was 440 / 150 / 69); by fate decay 177 of 450, stable 156 of
+  239, curvature 93 of 211. Of 2,906 neighbours 714 were saved and 326 absorbed, in 710 of the
+  900 games. Also: the fates checks stop short of a boundary with room for a turn twice as long
+  as the last (the autoplayer may slow down just before it).

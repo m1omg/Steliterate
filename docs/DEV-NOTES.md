@@ -64,7 +64,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Checks** (`tools/checks/`, since 7 Oct; before then they lived in the ephemeral scratchpad):
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
-    old-saves, pace, quake, quick, refund, repeal, rogue, spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -344,6 +344,19 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `aid_answer` signal over twice the distance) and Open Archives (`NOTES_EVERY` 10). Shared
   Watch: `updateDetection` eyes, `defenseAt` +0.5 a partner, a swarm's harm to a partner ×0.7.
   Autoplayer: `planPacts`, and `pact_offer` in `planSignals`, both keeping `ACCORD_KEEP`.
+  Refuge (`src/game/sim/refuge.ts`): `askRefuge` (their turn, before the five-turn message gap):
+  health under `DYING` 0.2, in step with us, `mayComeToUs` (a pact; Sanctuary and goodwill 20;
+  the Choir and our Confluence at 10), once (`Survivor.exodusAsked`); an `exodus` signal.
+  `takeThemIn` sets `Survivor.exodus` (`leaves` when our answer's light arrives, `at` after
+  their crossing: light for minds, `EXODUS_SPEED` 0.02 c for Kin); `onTheirWay` (right after
+  `reachThem`) skips the rest of their turn once they have left and calls `arriveAmongUs` at
+  `at`: Echoes through `welcomeEchoes`, others through `settleNewcomers`, the rest crowded into
+  the capital (the growth step loses one a turn per Thread over capacity), or for the Choir
+  merging into our Chorus, the rest as `MEMORY_INSIGHT` each; fate 'saved' or 'absorbed', an
+  `arrived` signal, news +8. Sanctuary: `sanctuaryHeard` on enact and repeal (news tagged
+  `sanctuary`, ±10), `sanctuaryTrust` after the Taint ceiling (+0.5 a turn to
+  `SANCTUARY_TRUST` 25, not below 0 and not while the news is on its way). Autoplayer: takes
+  every exodus.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -565,4 +578,5 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | taking structures apart (7 Oct) | 135 | 48 victories, Degenerate Age 69 turns; 900 games 406 / 143 / 69 (386 / 142 / 69 before). By fate: decay 179 / 450, stable 144 / 239, curvature 83 / 211. The autoplayer takes apart a collector whose source is gone for good when matter is under 40: 5.6 a game, 170 matter (30 games). Letting it take apart idle Decay Harvesters too: 404 / 143 |
 | the Long Flow (7 Oct) | 129 | 47 victories, Degenerate Age 69 turns; 900 games 400 / 142 / 69 (406 / 143 / 69 before); decay games identical. By fate: stable 140 / 239, curvature 81 / 211. Chosen, 300 each: stable 184 / 119 / 56, curvature 106 / 57 / 88. The autoplayer taking apart the dearest things at unmanned places, collectors included: 399 / 142 |
 | neighbours, phase 0: honesty (work branch) | 136 | 52 victories, Degenerate Age 71 turns; 900 games 406 / 146 / 69 (400 / 142 / 69 before); by fate decay 175 / 450, stable 154 / 239, curvature 77 / 211; 430 of 900 games as before |
+| neighbours, phase 2: refuge (work branch) | 147 | 57 victories, Degenerate Age 68 turns; 900 games 426 / 162 / 70 (440 / 150 / 69 before); by fate decay 177 / 450, stable 156 / 239, curvature 93 / 211. Of 2,906 neighbours 714 were saved and 326 absorbed, in 710 of 900 games |
 | neighbours, phase 1: pacts (work branch) | 138 | 50 victories, Degenerate Age 69 turns; 900 games 440 / 150 / 69 (406 / 146 / 69 before); by fate decay 190 / 450, stable 145 / 239, curvature 105 / 211; fewer end in the Black Hole Age or fade in the Dark. 792 of 900 games sign a pact (a game: 1.2 Mutual Aid, 1.4 Open Archives, 0.9 Shared Watch) |

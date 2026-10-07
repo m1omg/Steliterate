@@ -6,6 +6,7 @@ import { THREAD_DEFS } from '../data/threads';
 import { WORK_BY_ID } from '../data/works';
 import type { Colony, Focus, GameState, PactKind, SpareWork } from '../types';
 import { endPact, proposePact } from './pacts';
+import { sanctuaryHeard } from './refuge';
 import { THREADS } from '../types';
 import { capacity } from './economy';
 import { workRequirementMet } from './endings';
@@ -310,6 +311,8 @@ export function enactCharter(state: GameState, id: string): ActionResult {
   // stripping what is already dead and in reach pays at once
   if (!again && id === 'salvage_the_dead') civ.matter += 40;
   if (id === 'consume_the_dead') civ.matter += hasCharter(state, 'salvage_the_dead') ? 80 : 120;
+  // an open door is heard of everywhere
+  if (id === 'sanctuary') sanctuaryHeard(state, true);
   log(state, `Charter ${again ? 're-enacted' : 'enacted'}: ${d.name}.`, d.dark ? 'bad' : 'event');
   return null;
 }
@@ -345,6 +348,7 @@ export function repealCharter(state: GameState, id: string): ActionResult {
   civ.flags[`repealed_${id}`] = state.turn;
   // without the Protocols no Hearth may run past its rating
   if (id === 'overdrive_protocols') for (const c of colonies(state)) c.overdrive = false;
+  if (id === 'sanctuary') sanctuaryHeard(state, false);
   log(state, `Charter repealed: ${d.name}.`, 'event');
   return null;
 }

@@ -78,7 +78,13 @@ const seen = (fate: 'decays' | 'stable' | 'curvature') => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'unknown' });
   s.fate = fate === 'decays' ? 'decay' : fate;
   s.protonsDecay = fate === 'decays';
-  for (let g = 0; g < 900 && !s.outcome && s.eta < 29; g++) blindTurn(s);
+  // stop short of η 30, where the neutron stars tell (a slow turn here can be two η long)
+  let prev = s.eta;
+  for (let g = 0; g < 900 && !s.outcome && s.eta < 29; g++) {
+    if (s.eta + 2 * Math.max(s.eta - prev, 0.05) >= 29.8) break;
+    prev = s.eta;
+    blindTurn(s);
+  }
   const f = s.forecasts.find((x) => x.kind === 'crossing');
   return { s, f };
 };

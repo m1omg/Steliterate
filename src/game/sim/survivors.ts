@@ -2,6 +2,7 @@ import { sourceLight } from '../physics';
 import { SHIP_BY_ID } from '../data/ships';
 import type { GameState, PactKind, Survivor, ThreadId } from '../types';
 import { acceptOffer, hasPact, theirPacts, weighProposal } from './pacts';
+import { askRefuge, onTheirWay, sanctuaryTrust, takeThemIn } from './refuge';
 import { createColony, isWarFleet } from './fleets';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
@@ -46,6 +47,11 @@ function arrived(state: GameState, at: number): boolean {
   return !isFinite(state.years) || state.years >= at;
 }
 
+/** Whether light (or anything slower) due at `at` cosmic years has arrived. */
+export function lightArrived(state: GameState, at: number): boolean {
+  return arrived(state, at);
+}
+
 /** How far apart two clocks can be and still hold a conversation: the Lattice parses anything slow enough. */
 function span(sv: Survivor): number {
   return sv.way === 'lattice' ? 6 : 3;
@@ -71,12 +77,12 @@ export function beamEnergy(state: GameState, sv: Survivor, energy: number, plea 
  * What we did at a star reaches every other civilization when its light does, and changes how
  * they feel about us then, not before.
  */
-export function spreadNews(state: GameState, fromSystemId: string, delta: number, what: string, except?: string) {
+export function spreadNews(state: GameState, fromSystemId: string, delta: number, what: string, except?: string, tag?: 'sanctuary') {
   const from = state.systems[fromSystemId];
   for (const o of Object.values(state.survivors)) {
     if (!o.alive || o.id === except) continue;
     const home = state.systems[o.homeSystemId];
-    (o.news ??= []).push({ at: lightAt(state, from && home ? distLy(from, home) : 0), delta, what });
+    (o.news ??= []).push({ at: lightAt(state, from && home ? distLy(from, home) : 0), delta, what, ...(tag ? { tag } : {}) });
   }
 }
 
@@ -148,9 +154,13 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       const home = state.systems[sv.homeSystemId];
       // what we sent them, and what they hear of us, reaches them at the speed of light
       reachThem(state, sv);
+      // on their way to us, they do nothing else; when they arrive they live on among us
+      if (onTheirWay(state, sv)) continue;
       // the Hunger in us shows: the more of it we carry, the less anyone can think well of us
       const ceiling = 100 - civ.taint * 1.5;
       if (sv.disposition > ceiling) sv.disposition = Math.max(ceiling, sv.disposition - 2);
+      // an open door is trusted
+      sanctuaryTrust(state, sv, ceiling);
       // their clock drifts toward the age, as ours does
       sv.clock += (Math.min(logL, sv.way === 'garden' ? 1.7 : sv.way === 'dormant' ? logL + 1 : logL) - sv.clock) * 0.25;
       // the universe drains them
@@ -205,6 +215,10 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       if (sv.health <= 0.02) {
         sv.alive = false;
         sv.fate = 'faded';
+        if (sv.exodus) {
+          delete sv.exodus;
+          log(state, `Our answer reached ${sv.name} too late: they went dark before they could set out.`, 'bad', sv.homeSystemId);
+        }
         for (const sid of sv.systems) {
           const s = state.systems[sid];
           if (!s) continue;
@@ -235,7 +249,9 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         continue;
       }
       if (!sv.contact) continue;
-      if (state.turn - sv.lastSent < 5 || !talk) continue;
+      // dying, they ask to come to us, if they trust us
+      if (talk && askRefuge(state, sv)) continue;
+      if (state.turn - sv.lastSent < 5 || !talk || sv.exodus) continue;
 
       // pacts: they offer one, or renounce them all
       if (theirPacts(state, sv, () => rng.next())) {
@@ -382,6 +398,14 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         civ.flags.refugees = (civ.flags.refugees ?? 0) + came;
         log(state, came < n ? `${came} of ${n} refugees from ${sv.name} found room among us; the rest stay with their own.` : `${n} refugees from ${sv.name} have joined us.`, 'good', cap.systemId);
       } else if (sv) sv.disposition -= 8;
+      break;
+    }
+    case 'exodus': {
+      if (choice === 'take') {
+        if (!sv) return 'They are gone.';
+        const err = takeThemIn(state, sv, Number(sig.data.n));
+        if (err) return err;
+      }
       break;
     }
     case 'pact_offer': {

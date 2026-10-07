@@ -63,7 +63,8 @@ run(async () => {
       const s = window.__stel.state();
       let prev = s.eta;
       for (let i = 0; i < 600 && !s.outcome; i++) {
-        if (s.eta + Math.max(s.eta - prev, 0.05) >= b) break;
+        // with room for a turn twice as long as the last (the autoplayer may slow down)
+        if (s.eta + 2 * Math.max(s.eta - prev, 0.05) >= b) break;
         prev = s.eta;
         window.__stel.endTurns(1, true, true);
       }

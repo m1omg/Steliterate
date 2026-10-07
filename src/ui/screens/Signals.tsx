@@ -138,11 +138,23 @@ export function SignalsModal({ s }: { s: GameState }) {
                               <dd class="mono">{n0(sv.aidGiven)}</dd>
                             </>
                           )}
+                          {sv.exodus && (
+                            <>
+                              <dt data-tip="They set out when our answer reaches them: minds cross as light, flesh by ship.">Coming to us</dt>
+                              <dd class="mono good">
+                                {n0(sv.exodus.n)} of them, {isFinite(s.years) && sv.exodus.at > s.years ? `here in ${formatYears(sv.exodus.at - s.years)}` : 'arriving'}
+                              </dd>
+                            </>
+                          )}
                           {(sv.beams ?? []).length > 0 && (
                             <>
                               <dt data-tip="Energy we beamed to them, still crossing the dark at the speed of light.">On its way</dt>
                               <dd class="mono">
-                                {n0((sv.beams ?? []).reduce((a, b) => a + b.energy, 0))} energy, there in {formatYears(Math.max(0, Math.min(...(sv.beams ?? []).map((b) => b.at)) - s.years))}
+                                {n0((sv.beams ?? []).reduce((a, b) => a + b.energy, 0))} energy,{' '}
+                                {(() => {
+                                  const left = Math.min(...(sv.beams ?? []).map((b) => b.at)) - s.years;
+                                  return isFinite(left) && left > 0 ? `there in ${formatYears(left)}` : 'arriving';
+                                })()}
                               </dd>
                             </>
                           )}
@@ -152,82 +164,87 @@ export function SignalsModal({ s }: { s: GameState }) {
                           <span class="mono">{pct(sv.health)}</span>
                         </div>
                         <div class={`bar ${sv.health < 0.3 ? 'bad' : 'good'}`}><i style={{ width: pct(sv.health) }} /></div>
-                        <div class="row wrap" style={{ gap: '4px' }}>
-                          {[25, 100].map((e) => (
-                            <button
-                              key={e}
-                              class="btn small"
-                              disabled={s.civ.energy < e}
-                              data-tip={`Beam ${e} energy to them. It crosses ${formatDistance(ly)} at the speed of light and reaches them ${ly > 0 ? `in ${formatYears(ly)}` : 'at once'}.${inStep(s, sv) ? '' : ' Our clocks are too far apart to talk: they will have the energy, but not know it came from us.'}`}
-                              onClick={() => act((g) => sendAid(g, sv.id, e)) && sfx('good')}
-                            >
-                              {e === 25 ? 'Send 25 energy' : 'Send 100'}
-                            </button>
-                          ))}
-                          {(() => {
-                            const blocked = askBlocked(s, sv);
-                            const cap = capital(s);
-                            const d = cap ? distLy(s.systems[cap.systemId], s.systems[sv.homeSystemId]) : 0;
-                            const turns = isFinite(s.years) ? turnsUntilYears(s, s.years + 2 * d, s.civ.pace) : 0;
-                            const trip = d > 0 ? `${formatYears(2 * d)}${isFinite(turns) ? `, about ${turns} turn${turns === 1 ? '' : 's'} at your pace` : ''}` : 'no time';
-                            const inFlight = s.signals.find((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null);
-                            return (
-                              <button
-                                class="btn small"
-                                disabled={!!blocked}
-                                data-tip={
-                                  inFlight
-                                    ? `Our request is out. Their answer arrives in about ${formatYears(Math.max(0, inFlight.arriveYears - s.years))}.`
-                                    : `${blocked ? `${blocked}\n` : ''}Ask them for energy. The request and their answer (and the beam carrying what they give) travel at the speed of light: back in ${trip}. They decide by how they feel about us, how they are faring and what we have given them; giving costs them a little. Every request costs some goodwill, more if we keep asking; once every ${ASK_COOLDOWN} turns at most. A hostile civilization refuses, and if we are weak, it will know.`
-                                }
-                                onClick={() => act((g) => askForAid(g, sv.id)) && sfx('signal')}
-                              >
-                                {inFlight ? 'Request on its way…' : 'Ask for help'}
-                              </button>
-                            );
-                          })()}
-                          <button class={`btn small danger ${armed === `seize:${sv.id}` ? 'on' : ''}`} data-tip="Take their star by force. Needs warships at their home. Everyone will hear of it, when the light reaches them." onClick={() => setArmed(armed === `seize:${sv.id}` ? null : `seize:${sv.id}`)}>
-                            Seize
-                          </button>
-                          {hasCharter(s, 'absorb_the_weak') && (
-                            <button class={`btn small danger ${armed === `devour:${sv.id}` ? 'on' : ''}`} data-tip="Devour them whole while they are weak. The Hunger's way." onClick={() => setArmed(armed === `devour:${sv.id}` ? null : `devour:${sv.id}`)}>
-                              Devour
-                            </button>
-                          )}
-                        </div>
-                        <div class="pacts">
-                          <div class="eyebrow" style={{ marginTop: '8px' }} data-tip="Proposed and answered at the speed of light, so a pact takes the round trip to seal. Each costs accord, the Threads' consent to bind us, and every pact in force makes the next dearer. Breaking one is heard everywhere.">
-                            Pacts
-                          </div>
-                          {PACT_KINDS.map((k) => {
-                            const on = hasPact(sv, k);
-                            const waiting = sv.proposal?.kind === k;
-                            const why = pactBlocked(s, sv, k);
-                            return (
-                              <div key={k} class="row" style={{ gap: '6px', alignItems: 'center', marginTop: '3px' }}>
-                                <span class={`grow ${on ? 'good' : 'dim'}`} style={{ fontSize: '12px' }} data-tip={PACTS[k].desc}>
-                                  {PACTS[k].name}
-                                  {on ? ` · since turn ${sv.pacts?.[k]}` : waiting ? ' · proposed: waiting for their answer' : ''}
-                                </span>
-                                {on ? (
-                                  <button class="btn small" data-tip="End it. They hear of it first and worst, everyone else when the light reaches them." onClick={() => act((g) => breakPact(g, sv.id, k)) && sfx('bad')}>
-                                    End
+                        {sv.exodus && <div class="dim" style={{ fontSize: '12px' }}>They are leaving their star to live among us.</div>}
+                        {!sv.exodus && (
+                          <>
+                            <div class="row wrap" style={{ gap: '4px' }}>
+                              {[25, 100].map((e) => (
+                                <button
+                                  key={e}
+                                  class="btn small"
+                                  disabled={s.civ.energy < e}
+                                  data-tip={`Beam ${e} energy to them. It crosses ${formatDistance(ly)} at the speed of light and reaches them ${ly > 0 ? `in ${formatYears(ly)}` : 'at once'}.${inStep(s, sv) ? '' : ' Our clocks are too far apart to talk: they will have the energy, but not know it came from us.'}`}
+                                  onClick={() => act((g) => sendAid(g, sv.id, e)) && sfx('good')}
+                                >
+                                  {e === 25 ? 'Send 25 energy' : 'Send 100'}
+                                </button>
+                              ))}
+                              {(() => {
+                                const blocked = askBlocked(s, sv);
+                                const cap = capital(s);
+                                const d = cap ? distLy(s.systems[cap.systemId], s.systems[sv.homeSystemId]) : 0;
+                                const turns = isFinite(s.years) ? turnsUntilYears(s, s.years + 2 * d, s.civ.pace) : 0;
+                                const trip = d > 0 ? `${formatYears(2 * d)}${isFinite(turns) ? `, about ${turns} turn${turns === 1 ? '' : 's'} at your pace` : ''}` : 'no time';
+                                const inFlight = s.signals.find((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null);
+                                return (
+                                  <button
+                                    class="btn small"
+                                    disabled={!!blocked}
+                                    data-tip={
+                                      inFlight
+                                        ? `Our request is out. Their answer arrives in about ${formatYears(Math.max(0, inFlight.arriveYears - s.years))}.`
+                                        : `${blocked ? `${blocked}\n` : ''}Ask them for energy. The request and their answer (and the beam carrying what they give) travel at the speed of light: back in ${trip}. They decide by how they feel about us, how they are faring and what we have given them; giving costs them a little. Every request costs some goodwill, more if we keep asking; once every ${ASK_COOLDOWN} turns at most. A hostile civilization refuses, and if we are weak, it will know.`
+                                    }
+                                    onClick={() => act((g) => askForAid(g, sv.id)) && sfx('signal')}
+                                  >
+                                    {inFlight ? 'Request on its way…' : 'Ask for help'}
                                   </button>
-                                ) : (
-                                  !waiting && (
-                                    <button
-                                      class={`btn small pact-propose ${why ? 'disabled' : ''}`}
-                                      data-tip={why ? `Cannot propose it: ${why}` : `Propose it: ${pactCost(s)} accord now, back if they decline. Our proposal reaches them in ${formatYears(ly)}, and their answer comes back as long again.`}
-                                      onClick={() => !why && act((g) => proposeAPact(g, sv.id, k)) && sfx('signal')}
-                                    >
-                                      Propose · {pactCost(s)}
-                                    </button>
-                                  )
-                                )}
+                                );
+                              })()}
+                              <button class={`btn small danger ${armed === `seize:${sv.id}` ? 'on' : ''}`} data-tip="Take their star by force. Needs warships at their home. Everyone will hear of it, when the light reaches them." onClick={() => setArmed(armed === `seize:${sv.id}` ? null : `seize:${sv.id}`)}>
+                                Seize
+                              </button>
+                              {hasCharter(s, 'absorb_the_weak') && (
+                                <button class={`btn small danger ${armed === `devour:${sv.id}` ? 'on' : ''}`} data-tip="Devour them whole while they are weak. The Hunger's way." onClick={() => setArmed(armed === `devour:${sv.id}` ? null : `devour:${sv.id}`)}>
+                                  Devour
+                                </button>
+                              )}
+                            </div>
+                            <div class="pacts">
+                              <div class="eyebrow" style={{ marginTop: '8px' }} data-tip="Proposed and answered at the speed of light, so a pact takes the round trip to seal. Each costs accord, the Threads' consent to bind us, and every pact in force makes the next dearer. Breaking one is heard everywhere.">
+                                Pacts
                               </div>
-                            );
-                          })}
-                        </div>
+                              {PACT_KINDS.map((k) => {
+                                const on = hasPact(sv, k);
+                                const waiting = sv.proposal?.kind === k;
+                                const why = pactBlocked(s, sv, k);
+                                return (
+                                  <div key={k} class="row" style={{ gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+                                    <span class={`grow ${on ? 'good' : 'dim'}`} style={{ fontSize: '12px' }} data-tip={PACTS[k].desc}>
+                                      {PACTS[k].name}
+                                      {on ? ` · since turn ${sv.pacts?.[k]}` : waiting ? ' · proposed: waiting for their answer' : ''}
+                                    </span>
+                                    {on ? (
+                                      <button class="btn small" data-tip="End it. They hear of it first and worst, everyone else when the light reaches them." onClick={() => act((g) => breakPact(g, sv.id, k)) && sfx('bad')}>
+                                        End
+                                      </button>
+                                    ) : (
+                                      !waiting && (
+                                        <button
+                                          class={`btn small pact-propose ${why ? 'disabled' : ''}`}
+                                          data-tip={why ? `Cannot propose it: ${why}` : `Propose it: ${pactCost(s)} accord now, back if they decline. Our proposal reaches them in ${formatYears(ly)}, and their answer comes back as long again.`}
+                                          onClick={() => !why && act((g) => proposeAPact(g, sv.id, k)) && sfx('signal')}
+                                        >
+                                          Propose · {pactCost(s)}
+                                        </button>
+                                      )
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
                         {armed?.endsWith(`:${sv.id}`) && (
                           <div class="row wrap confirm-heavy" style={{ gap: '6px', alignItems: 'center' }}>
                             <span class="warn" style={{ fontSize: '12px' }}>
