@@ -121,7 +121,7 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
         lines.push({ text: 'We were awake to watch the last light go out, as the Slow Ones were. They noticed.', kind: 'good' });
       }
       for (const sw of Object.values(state.swarms)) sw.size *= 0.7;
-      for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health -= sv.way === 'garden' ? 0.6 : sv.way === 'dormant' ? 0.15 : 0.35;
+      for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health = Math.max(0, sv.health - (sv.way === 'garden' ? 0.6 : sv.way === 'dormant' ? 0.15 : 0.35));
       civ.energy *= 0.6;
     } else if (from === 'degenerate') {
       // ---------------------------------------------------------------- The Great Decay
@@ -192,7 +192,7 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
           if (sv.way === 'garden' || sv.way === 'fork') {
             sv.alive = false;
             sv.fate = 'faded';
-          } else sv.health -= 0.45;
+          } else sv.health = Math.max(0, sv.health - 0.45);
         }
       } else {
         for (const s of Object.values(state.systems)) if (s.primary.kind === 'white_dwarf') s.primary.kind = 'black_dwarf';
@@ -208,7 +208,7 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
           }
         }
         lines.push({ text: lost ? `${lost} Kin could not be kept warm.` : 'Everyone who needed warmth had it.', kind: lost ? 'bad' : 'good' });
-        for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health -= 0.25;
+        for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health = Math.max(0, sv.health - 0.25);
       }
       civ.energy *= 0.6;
     } else if (from === 'blackhole') {
@@ -226,7 +226,7 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
           c.pops.kin = 0;
         }
       }
-      for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health -= 0.4;
+      for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health = Math.max(0, sv.health - 0.4);
       civ.energy *= 1 - 0.15 * crossingMult;
     }
   });

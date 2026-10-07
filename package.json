@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "sim": "tsx tools/sim.ts",
-    "savecompat": "tsx tools/savecompat.ts"
+    "savecompat": "tsx tools/savecompat.ts",
+    "check": "node tools/checks/run.mjs unit",
+    "check:browser": "node tools/checks/run.mjs browser"
   },
   "dependencies": {
     "@preact/signals": "^2.11.2",

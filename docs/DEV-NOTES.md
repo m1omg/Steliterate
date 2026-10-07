@@ -16,10 +16,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      `grep -oE "^seed [0-9]+: [A-Z]+" | awk '{print $3}' | sort | uniq -c`. Survival is
      ENDURANCE + VICTORY; noise is about ±12 per 300 games. For a closer call, compare 900 games
      against a `git worktree` of HEAD (symlink `node_modules` into it).
-   - Save compatibility: `npm run savecompat` loads every save in `tools/saves/` (so far the
-     71-turn save from `551fb1a`) through `readSave` → `migrate`, checks the round trip, and
-     plays each to the end. It must end with "SAVE COMPAT OK". To try one in the browser, gunzip
-     it and paste the JSON into Load / import → "Load from a save code".
+   - Save compatibility: `npm run savecompat` loads every save in `tools/saves/` through
+     `readSave` → `migrate`, checks the round trip, and plays each to the end. It must end with
+     "SAVE COMPAT OK". The saves: the 71-turn save from `551fb1a`, and four from the week of
+     2 Oct (seed 1000, all in the Degenerate Age): `4fe2404` turn 87 with a star clock running,
+     `7d0806d` turn 85, `9eea773` turn 119 just after a white-dwarf merger and turn 120 with a
+     helium giant lingering. To try one in the browser, gunzip it and paste the JSON into
+     Load / import → "Load from a save code".
+   - Checks: `npm run check` (unit checks, about 15 s) and, with `vite preview` running,
+     `npm run check:browser -- http://localhost:4173/` (browser checks, about 10 min). Both must
+     end with "ALL CHECKS PASSED". See Test hooks and scripts.
 3. **Commit** with the attribution lines, then `git push -u origin claude/lucid-newton-30cbpk`.
    The Pages workflow builds and force-pushes `dist/` to `gh-pages` on every push to that
    branch or `main`.
@@ -52,10 +58,25 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Headless sim checks:** `npx tsx script.ts`, importing from `src/game/...` (`newGame`,
   `endTurn`, `autoPlay`). `autoPlay` answers events itself: it takes the first allowed choice
   that isn't tainted.
-- **Scratch scripts** live in the session scratchpad, which is ephemeral. The first session's
-  (`raid.cjs`, `flare.ts`, `flareui.cjs`, `lore.cjs`, `ask.ts`, `thaw*.ts`, `loadold.ts` +
-  `oldsave.txt` and others) are gone; its old save was regenerated from `551fb1a` into
-  `tools/saves/`. Anything worth keeping belongs in `tools/`.
+- **Checks** (`tools/checks/`, since 7 Oct; before then they lived in the ephemeral scratchpad):
+  - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
+    cooling, evap, flash, focus, follow, old-saves, pace, quake, quick, refund, repeal, rogue,
+    spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    people, no settlement on a vanished world unless decay-proof, survivors' health within
+    0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
+    and a clone play on identically to the original). They import `check`, `near`, `done` and
+    `loadSave` (a save from `tools/saves/`) from `tools/checks/lib.ts`. `tsc` checks them, so
+    they must type-check cleanly: the Pages build runs `tsc`.
+  - `browser/*.cjs`: interface checks against a served build, each opening its own page through
+    `start()` in `tools/checks/lib.cjs` (which waits for the server; any console error fails the
+    check) and ending with `finish()`. Screenshots go to `playtest-shots/checks/<name>/`, or the
+    folder given as the second argument.
+  - `run.mjs unit|browser|all [url] [out] [names…]` runs them (unit checks several at a time,
+    browser checks one at a time) and prints a summary; `npm run check` and
+    `npm run check:browser` call it. Name some to run only those:
+    `node tools/checks/run.mjs unit clock evap`.
+  - A new rule or fix gets a check here. One-off investigations (traces, censuses) stay in the
+    scratchpad.
 - **The container is ephemeral.** Anything installed with pip is gone next session: numpy,
   scipy, matplotlib, imageio-ffmpeg (ffmpeg binary at
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).
@@ -459,3 +480,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | accord uses; accord income halved (4 Oct) | 151 | 58 victories, Degenerate Age 68 turns, The Will Fails 63 (70 before); 900 games 452 / 152 / 68 against 444 / 152 / 68. Tuning (300; survive, Will Fails): uses at the first prices (Rally +5 for 40, Calm −6 for 30, Hear +8 for 25) 170 / 46; prices ×2 164 / 53, ×4 159 / 61; Rally alone 161 / 46, Calm alone 154, Hear alone 157; bank capped at 200 169; income halved 162 (prices ×2 158); gains ×0.4 157–158; income halved and no uses 146 (neutral) |
 | spare work; Matter focus (4 Oct) | 148 | identical to the bit with Recycle as everyone's default. Variants (300, every settlement on one choice): Study 152 / 57 / 68, Tend 147 / 58 / 69, Morale 150 / 59 / 68; mining settlements on the Matter focus 133 / 47 / 69 (on Industry 153 / 54 / 71). The autoplayer is rarely idle (0.1 to 0.6 idle settlements a turn), so this mostly checks nothing breaks |
 | giants light at turn end; catch the flash | 148 | a giant shines through the turn after its birth (its event offers a flash: one turn in its light), swallowing then; 58 victories, Degenerate Age 68 turns; 900 games 444 / 152 / 68 against 447 / 136 / 68 before the boiling (620 of 900 end as then); per 150 games 407 giant events, 10 flashes taken by the autoplayer (about 690 energy each) |
+| survivors' health stops at zero; checks in the repo (7 Oct) | 149 | 55 victories, Degenerate Age 68 turns; 5 of 300 games play out differently: help sent right after a crossing or a swarm (Tell the others, aid) no longer first fills a negative |

@@ -39,12 +39,13 @@ npm run build
 npx vite preview --port 4173             # in the background; leave it running
 node tools/playtest.cjs http://localhost:4173/ <dir outside the repo>   # "ALL CHECKS PASSED"
 npm run savecompat                       # "SAVE COMPAT OK"
+npm run check                            # unit checks in tools/checks/unit: "ALL CHECKS PASSED"
+npm run check:browser -- http://localhost:4173/   # browser checks in tools/checks/browser
 npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; count in DEV-NOTES
 ```
 
-Balance reference: 150 of 300 standard competent games survive (54 victories, a Degenerate Age of 68
-turns) with settlements that outlive their black hole and nothing drawn from a hole once it is
-gone, 4 Oct (900 games: 431, 146 victories; noise ±12; 151 before, 900 games: 452, with accord's
-uses and accord income halved; 148 before that, 900 games: 444, with worlds boiling away near helium stars and helium giants
-that shine through a turn of their own; 144 before these, 900 games: 447; 140 before cooling white dwarfs and follow-on clocks; 133 at `b950f24`, before any
-new-star clock, 900 games: 390; 114 before the fixes of the 28 Sep review).
+A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
+
+Balance reference (7 Oct): 149 of 300 standard competent games survive, 55 victories, a Degenerate
+Age of 68 turns; 900 games at the 4 Oct baseline: 431 survive, 146 victories; noise ±12. The full
+history is in DEV-NOTES (Balance reference).

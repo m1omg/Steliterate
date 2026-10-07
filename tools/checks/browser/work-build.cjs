@@ -1,0 +1,45 @@
+// Browser check: an idle settlement is given work from its Build tab; the reminder opens that tab.
+const { check, start, finish, run } = require('../lib.cjs');
+run(async () => {
+  const ck = await start('work-build');
+  const { page } = ck;
+  await page.evaluate(() => window.__stel.newGame({ seed: 1000 }));
+  await page.waitForTimeout(800);
+  await page.evaluate(() => { const s = window.__stel.state(); s.colonies[s.civ.capitalId].queue = []; window.__stel.endTurns(1, false); s.pending.length = 0; window.__stel.refresh(); });
+  await page.waitForTimeout(1200);
+  const chip = page.locator('text=/1 idle settlement/').first();
+  check((await chip.count()), `the reminder says 1 idle settlement`);
+  await chip.click();
+  await page.waitForTimeout(1200);
+  const tabOn = await page.evaluate(() => [...document.querySelectorAll('.drawer .btn.primary')].map((b) => b.textContent.trim()).find((t) => /^(Overview|Build)/.test(t)));
+  check(/^Build/.test(tabOn ?? ''), `clicking it opens the settlement on its Build tab (${tabOn})`);
+  const working = () => page.evaluate(() => [...document.querySelectorAll('.drawer div')].map((d) => d.textContent.trim()).filter((t) => /^Working on:/.test(t)).pop() ?? null);
+  const w1 = await working();
+  console.log(`  ${w1}`);
+  check(/Recycle \(by default: choose below\) · \+[\d.]+ matter a turn/.test(w1 ?? ''), `with nothing chosen it recycles, and says so`);
+  const btns = await page.evaluate(() => { const h = [...document.querySelectorAll('.drawer h3')].find((x) => x.textContent.trim() === 'When nothing is queued'); return h ? [...h.nextElementSibling.querySelectorAll('button')].map((b) => ({ t: b.textContent.trim(), tip: b.dataset.tip })) : null; });
+  check(btns && btns.map((b) => b.t).join() === 'Recycle,Study,Tend,Morale', `the choice sits in the Build tab: ${btns?.map((b) => b.t).join(', ')}`);
+  console.log(`  Study tip: ${btns?.find((b) => b.t === 'Study')?.tip.replace(/\n/g, ' / ')}`);
+  await page.locator('.drawer button', { hasText: /^Study$/ }).click();
+  await page.waitForTimeout(600);
+  const w2 = await working();
+  console.log(`  ${w2}`);
+  check(/^Working on: Study · \+[\d.]+ insight a turn$/.test(w2 ?? ''), `after choosing Study it works on that`);
+  const chipGone = await page.locator('text=/idle settlement/').count();
+  check(chipGone === 0, `and is no longer called idle`);
+  const overviewHas = await page.evaluate(() => { [...document.querySelectorAll('.drawer .btn')].find((b) => b.textContent.trim() === 'Overview').click(); return true; });
+  await page.waitForTimeout(400);
+  const old = await page.evaluate(() => [...document.querySelectorAll('.drawer h3')].some((x) => /Spare work|When nothing is queued/.test(x.textContent)));
+  check(!old, `the Overview tab no longer has its own copy of the choice`);
+  await page.evaluate(() => { [...document.querySelectorAll('.drawer .btn')].find((b) => /^Build/.test(b.textContent.trim())).click(); });
+  await page.waitForTimeout(400);
+  await ck.shot('work-build.png', { clip: { x: 900, y: 60, width: 500, height: 760 } });
+  // queue something: the choice waits for the queue
+  await page.evaluate(() => { const s = window.__stel.state(); window.__stel.state(); });
+  await page.locator('.drawer .list-item.build:not(.disabled)').first().click();
+  await page.waitForTimeout(500);
+  const later = await page.evaluate(() => [...document.querySelectorAll('.drawer div')].some((d) => d.textContent.trim() === 'Starts once the queue is done.'));
+  const w3 = await working();
+  check(later && !w3, `with something queued it builds, and the choice waits ("Starts once the queue is done.")`);
+  await finish('WORK BUILD', ck);
+});

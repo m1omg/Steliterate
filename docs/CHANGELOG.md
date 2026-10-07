@@ -594,3 +594,31 @@ belongs to another organization.
   Balance, 300 games: 150 survive, 54 victories, a Degenerate Age of 68 turns (was 151 / 58 / 68);
   900 games 431 / 146 / 68 (was 452 / 152 / 68). Keeping the phantom energy would have made it
   461 / 156 / 68: the game is a little harder for losing it, which the player accepted.
+
+## Tests in the repository, honest cooling, the fates of matter (7 Oct)
+
+The player (6 Oct) asked for the scratch test scripts to go into the repository, then for honest
+cooling, an honest crossing screen, three fates of matter, dismantling, the Long Flow and living
+neighbours. Plan agreed 7 Oct; parts land one at a time.
+
+- **The checks live in `tools/checks/`** (the player: "add the test scripts to the repository").
+  The rules and interface checks written for each change since 28 Sep sat in the session
+  scratchpad, which a new container loses. Now `npm run check` runs 19 unit checks (about 15 s):
+  one for each change (accord, boil, castout, clock, cooling, evap, flash, focus, follow,
+  old-saves, pace, quake, quick, refund, repeal, rogue, spare), plus 12 whole games checked every
+  turn (`invariants`: no NaN, no negative stocks or people, no settlement on a vanished world
+  unless decay-proof, survivors' health within 0..1) and a save round trip that must play on
+  identically (`determinism`). `npm run check:browser` runs 20 interface checks against a served
+  build (about 10 min); any console error fails a check. Three that had gone stale were brought
+  up to date: a second new star can now follow the first one's clock on, a White Fire too brief
+  for six turns can be caught as a flash, and "Race for it at our own pace" is gone. Four saves
+  from this week join `tools/saves/` (seed 1000, Degenerate Age, turns 85 to 120, one with a star
+  clock running and two around a white-dwarf merger), so `npm run savecompat` plays five saves to
+  their end. `tools/sim.ts` takes `--from=N` (to split a run) and prints the halo civilization's
+  stage; `tools/tally.sh` counts a run.
+- **Survivors' health never reads below zero.** The invariants check found it: a crossing or a
+  swarm could leave a civilization at negative health for a turn, so help sent right then (Tell
+  the others, aid) first had to fill the hole before it counted. Now it stops at zero and the
+  civilization fades as before unless help reaches it. Balance, 300 games: 149 survive, 55
+  victories, a Degenerate Age of 68 turns (was 150 / 54 / 68); 5 of 300 games play out
+  differently.

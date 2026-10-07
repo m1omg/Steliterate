@@ -287,7 +287,7 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
       }
       // survivors suffer too
       for (const sv of Object.values(state.survivors)) {
-        if (sv.alive && sv.systems.includes(sys.id)) sv.health -= 0.012 * sw.size;
+        if (sv.alive && sv.systems.includes(sys.id)) sv.health = Math.max(0, sv.health - 0.012 * sw.size);
       }
 
       // bud
