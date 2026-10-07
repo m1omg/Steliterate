@@ -1,9 +1,9 @@
 import { ERA_BY_ID, formatYears, turnsUntil } from '../eras';
-import { SURFACE_LIFE, boilingAway, lampsOver, nextStellarChange } from '../physics';
+import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, dwarfFadeEta, lampsOver, nextStellarChange } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
 import { colonies, protonFateKnown } from './util';
-import { calendarEra } from '../fate';
+import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf } from '../fate';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
 // question is whether you can prepare in time.
@@ -32,6 +32,8 @@ export function updateForecasts(state: GameState) {
     const sys = state.systems[sid];
     const ch = nextStellarChange(sys, years);
     if (!ch || !isFinite(ch.at)) continue;
+    // a hole we live on has its own warning in the Black Hole Age, which says more (below)
+    if ((sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh') && (calendarEra(state) === 'blackhole' || state.era === 'blackhole')) continue;
     // a collapsing star leaves our living worlds there to freeze
     const freezing = sys.primary.kind === 'blue_dwarf'
       ? colonies(state).filter((c) => c.systemId === sid).map((c) => state.bodies[c.bodyId]).filter((b) => b && SURFACE_LIFE.includes(b.kind) && b.vitality > 0 && !lampsOver(state, b))
@@ -86,28 +88,47 @@ export function updateForecasts(state: GameState) {
     });
   }
 
-  // the end of the era
+  // the end of the age: where the Degenerate Age ends depends on the fate of matter, and while
+  // that is unknown the warning stands at the earliest it could be, so its date gives nothing away
   const d = ERA_BY_ID[state.era];
-  if (state.era !== 'dark') {
-    const end = Math.pow(10, d.endEta);
-    const titles: Record<string, string> = { dusk: 'The Last Light', degenerate: 'The Great Decay', blackhole: 'The Last Horizon' };
+  const fate = fateOf(state);
+  const known = protonFateKnown(state);
+  if (state.era === 'degenerate') {
+    if (!known)
+      add({ kind: 'crossing', title: 'The end of the Degenerate Age?', text: 'No one knows yet what becomes of matter. If protons decay, it dissolves near η 39, and only minds moved onto leptonic substrates, or living around black holes, will continue. If space itself slowly unmakes it, the neutron stars burst near η 68 and worlds last until η 90. If neither, nothing at all happens: the dead stars simply grow colder than the black holes, near η 30. The Proton Question would tell us; the neutron stars will, near η 30.', dueYears: Math.pow(10, FATE_SHOWN_AT), severity: 'danger' });
+    else if (fate === 'decay') add({ kind: 'crossing', title: 'The Great Decay', text: 'Ordinary matter dissolves. Only minds moved onto leptonic substrates, or living around black holes, will continue.', dueYears: Math.pow(10, DEGENERATE_END.decay), severity: 'danger' });
+    else if (fate === 'stable') add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars, the last things warm of their own accord, cool below the faint glow of the black holes. Nothing dissolves: matter endures, frozen, and gives nothing back. From then on only the black holes are sources, and Kin will need warmth no star can give.', dueYears: Math.pow(10, DEGENERATE_END.stable), severity: 'warn' });
+    else add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars burst, one after another, at a tenth of a Sun: whatever is settled at one is lost. After that only the black holes are warm, and space goes on unmaking the rest: the dwarfs fade by η 85, worlds by η 90.', dueYears: Math.pow(10, DEGENERATE_END.curvature), severity: 'danger' });
+  } else if (state.era !== 'dark') {
+    const titles: Record<string, string> = { dusk: 'The Last Light', blackhole: 'The Last Horizon' };
     const texts: Record<string, string> = {
       dusk: 'Every remaining star leaves the main sequence. Whatever depends on starlight must be ready to do without it.',
-      degenerate: state.protonsDecay || !protonFateKnown(state) ? 'Ordinary matter dissolves (if protons decay). Only minds moved onto leptonic substrates, or living around black holes, will continue.' : 'The age of remnants gives way to the age of black holes. Matter endures, frozen.',
       blackhole: 'The last black holes evaporate. After this there are no more sources.',
     };
-    add({ kind: 'crossing', title: titles[state.era], text: texts[state.era], dueYears: end, severity: 'danger' });
+    add({ kind: 'crossing', title: titles[state.era], text: texts[state.era], dueYears: Math.pow(10, d.endEta), severity: 'danger' });
+  }
+  // curvature radiation, once we know it: the end of matter, and the stars we live at that will go
+  if (known && fate === 'curvature' && state.civ.flags.matter_gone === undefined) {
+    add({ kind: 'evaporation_all', title: 'The Great Evaporation', text: 'Every world, every dead star and every scrap of ordinary matter will have evaporated. Only minds on leptonic substrate, living around the black holes that are left, go on.', dueYears: Math.pow(10, MATTER_END.curvature), severity: 'danger' });
+    for (const sid of colonized) {
+      const sys = state.systems[sid];
+      const k = sys.primary.kind;
+      const at = k === 'neutron_star' ? DEGENERATE_END.curvature : k === 'white_dwarf' || k === 'black_dwarf' ? dwarfFadeEta(sys.primary.mass) : k === 'brown_dwarf' ? BROWN_FADE_ETA : Infinity;
+      if (!isFinite(at) || at <= state.eta) continue;
+      if (k === 'neutron_star') add({ kind: 'burst', title: `${sys.name} will burst`, text: 'Its neutron star, its mass given to the curvature of space, will burst at a tenth of a Sun: our settlements here will be lost with it. Move what can be moved.', dueYears: Math.pow(10, at), systemId: sid, severity: 'danger' });
+      else add({ kind: 'fade', title: `${sys.name} will fade`, text: 'Space is turning its dwarf’s mass into particles; when it is gone its worlds drift loose, and our settlements stay, with nothing there to warm them.', dueYears: Math.pow(10, at), systemId: sid, severity: 'warn' });
+    }
   }
 
   // epoch milestones of the Degenerate Age
-  if (state.era === 'degenerate') {
+  if (calendarEra(state) === 'degenerate') {
     if (state.eta < 18.4) add({ kind: 'evaporation', title: 'Galactic evaporation begins', text: 'Close encounters will start flinging whole systems out of the Coalescence. A few will fall into the Heart.', dueYears: Math.pow(10, 18.4), severity: 'warn' });
     if (state.eta < 22) add({ kind: 'embers', title: 'The embers begin to fade', text: 'The dark-matter halo is being used up. White dwarfs will cool toward black dwarfs by η 25.', dueYears: Math.pow(10, 22), severity: 'warn' });
     if (protonFateKnown(state) && state.protonsDecay && state.eta < 37.5) add({ kind: 'decay', title: 'Proton decay takes hold', text: 'Matter will begin to dissolve in earnest.', dueYears: Math.pow(10, 37.5), severity: 'danger' });
   }
 
   // black holes we live on
-  if (state.era === 'blackhole') {
+  if (calendarEra(state) === 'blackhole' || state.era === 'blackhole') {
     for (const sid of colonized) {
       const p = state.systems[sid].primary;
       if (p.evaporateAt && p.evaporateAt > years) add({ kind: 'evaporate', title: `${state.systems[sid].name} will evaporate`, text: 'Its Hawking radiation brightens as it shrinks, ending in a final burst that Burst Catchers here can bank. Its worlds then drift loose, and our settlements stay, with nothing left there to draw on: its spin, its Hawking light and its glow go with it, and Horizon Vaults here, which store energy in its spin, will hold nothing.', dueYears: p.evaporateAt, systemId: sid, severity: 'warn' });

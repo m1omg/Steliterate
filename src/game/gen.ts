@@ -5,6 +5,7 @@ import type {
   Body,
   BodyKind,
   Civ,
+  Fate,
   GameSettings,
   GameState,
   Primary,
@@ -568,6 +569,8 @@ export function generateWorld(settings: GameSettings): GameState {
   vault.name = properName(rng, 3);
 
   const civ = makeCiv(settings, home.id);
+  // the fate of matter: as chosen, or one draw (the same single draw as ever, so no galaxy changes)
+  const fate: Fate = settings.protonFate === 'decays' ? 'decay' : settings.protonFate === 'stable' ? 'stable' : settings.protonFate === 'curvature' ? 'curvature' : drawFate(rng.next());
   const state: GameState = {
     v: 1,
     settings,
@@ -578,7 +581,8 @@ export function generateWorld(settings: GameSettings): GameState {
     years: START_YEARS,
     eta: Math.log10(START_YEARS),
     turnLength: ERA_BY_ID.dusk.l0,
-    protonsDecay: settings.protonFate === 'decays' ? true : settings.protonFate === 'stable' ? false : rng.chance(0.7),
+    protonsDecay: fate === 'decay',
+    fate,
     gfe: 1,
     provinces: b.provinces,
     regions: b.regions,
@@ -690,4 +694,9 @@ export function defaultWater(kind: BodyKind, u = 0.5): number {
     default:
       return 0;
   }
+}
+
+/** An unknown fate of matter, from one uniform draw: protons decay half the time, curvature radiation a quarter, stable a quarter. */
+export function drawFate(u: number): Fate {
+  return u < 0.5 ? 'decay' : u < 0.75 ? 'curvature' : 'stable';
 }

@@ -1,4 +1,5 @@
 import { ERA_BY_ID } from '../eras';
+import { fateKnown } from '../fate';
 import { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, LogEntry, StarSystem, ThreadId } from '../types';
 import { THREADS } from '../types';
@@ -128,6 +129,7 @@ export function capital(state: GameState): Colony | null {
   return all[0] ?? null;
 }
 
+/** Do we know the fate of matter? (See fateKnown in fate.ts.) */
 export function protonFateKnown(state: GameState): boolean {
-  return state.settings.protonFate !== 'unknown' || hasTech(state, 'proton_question') || eraIndex(state.era) >= 2;
+  return fateKnown(state);
 }

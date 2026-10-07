@@ -9,7 +9,7 @@ near('share as it leaves', emberShare(p, 1e19), 1);
 near('share half a decade on', emberShare(p, Math.pow(10, 19.5)), 0.5);
 near('share a decade on', emberShare(p, 1e20), 0);
 near('T half a decade on', primaryTemperature(p, Math.pow(10, 19.5), 'degenerate'), 63 * Math.pow(0.5, 0.25));
-const st = { era: 'degenerate', gfe: 1 } as any;
+const st = { era: 'degenerate', gfe: 1, years: 1e20 } as any;
 near('light half a decade on: half the ember’s', sourceLight(st, { primary: p } as any, Math.pow(10, 19.5), 0).light, 0.525);
 near('light a decade on: nothing (no floor)', sourceLight(st, { primary: p } as any, 1e20, 0).light, 0);
 const late = { kind: 'white_dwarf', halo: true, mass: 0.6, haloLeft: Math.pow(10, 23) } as any;

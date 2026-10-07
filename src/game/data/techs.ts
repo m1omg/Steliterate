@@ -38,6 +38,7 @@ export interface TechDef {
   noAuto?: boolean; // a deliberate choice with consequences: never worked out from surplus insight
   needsStable?: boolean; // only if protons are stable
   needsDecay?: boolean; // only if protons decay
+  needsCurvature?: boolean; // only if curvature radiation is unmaking matter
 }
 
 const T = (t: TechDef) => t;
@@ -93,6 +94,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'burst_capture', name: 'Burst Capture', era: 'degenerate', field: 'harvest', cost: 420, requires: ['deep_storage'], desc: 'Catch flashes too brief to use as they happen. Unlocks Burst Catchers.' }),
   T({ id: 'horizon_storage', name: 'Horizon Storage', era: 'degenerate', field: 'harvest', cost: 650, requires: ['deep_storage'], desc: 'Bank energy as black-hole spin. Unlocks Horizon Vaults.' }),
   T({ id: 'baryon_decay_harvest', name: 'Decay Harvest', era: 'degenerate', field: 'harvest', cost: 820, requires: [], needsDecay: true, desc: 'The protons are going. Catch the heat as they do. Unlocks Decay Harvesters.' }),
+  T({ id: 'curvature_harvest', name: 'Curvature Harvest', era: 'degenerate', field: 'harvest', cost: 820, requires: [], needsCurvature: true, desc: 'Space itself, curved tight around a neutron star, is turning its mass into particles. Catch them. Unlocks Curvature Collectors.' }),
   T({ id: 'cold_computation', name: 'Cold Computation', era: 'degenerate', field: 'mind', cost: 330, requires: [], desc: 'Minds that run near absolute zero. Unlocks Coldminds, Cold Vaults and Vault Ships. Echo clock limit 10¹⁶ years.', effects: { echoMaxClock: 16 } }),
   T({ id: 'glacial_cognition', name: 'Glacial Cognition', era: 'degenerate', field: 'mind', cost: 480, requires: ['cold_computation'], desc: 'Echo clock limit 10²⁴ years.', effects: { echoMaxClock: 24 } }),
   T({ id: 'deep_time_protocols', name: 'Deep-Time Protocols', era: 'degenerate', field: 'mind', cost: 600, requires: ['glacial_cognition'], desc: 'Echo clock limit 10³² years.', effects: { echoMaxClock: 32 } }),
@@ -107,7 +109,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'communion', name: 'Communion', era: 'degenerate', field: 'mind', cost: 600, requires: ['hunger_engines'], taint: 18, desc: 'Do not tame the swarms: join them. Unlocks the Communion charter.' }),
   T({ id: 'gravitic_semaphore', name: 'Gravitic Semaphore', era: 'degenerate', field: 'continuity', cost: 380, requires: [], desc: 'Speak with mass itself: move worlds a little, read the replies in orbits. Contact with what hides in the halo becomes possible.' }),
   T({ id: 'halo_siphons', name: 'Halo Siphons', era: 'degenerate', field: 'harvest', cost: 560, requires: ['ember_harvest'], desc: 'Drive dark matter into the embers faster. Ember yields double, and the halo empties sooner.', effects: { flags: ['halo_siphons'] } , noAuto: true }),
-  T({ id: 'great_decay_protocols', name: 'Great Decay Protocols', era: 'degenerate', field: 'continuity', cost: 700, requires: [], desc: 'Prepare for the end of matter. Losses in the Great Decay are halved.', effects: { crossing: 0.5 } }),
+  T({ id: 'great_decay_protocols', name: 'Great Decay Protocols', era: 'degenerate', field: 'continuity', cost: 700, requires: [], desc: 'Prepare for the end of matter. Losses in the Great Decay (or, if space itself unmakes matter, the Great Evaporation) are halved.', effects: { crossing: 0.5 } }),
 
   // ============================================================ III. Black Hole
   T({ id: 'penrose_process', name: 'Penrose Process', era: 'degenerate', field: 'harvest', cost: 700, requires: ['accretion_engines'], desc: 'Extract a black hole’s spin. Unlocks Penrose Harvesters.' }),

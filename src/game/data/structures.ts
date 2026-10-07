@@ -8,6 +8,7 @@ export type EnergyMode =
   | 'spin' // rotational energy (neutron stars, Penrose process) from a finite reservoir
   | 'hawking' // Hawking radiation of a black hole
   | 'decay' // proton decay in degenerate matter
+  | 'curvature' // curvature radiation: a neutron star's mass turned into particles by the space around it
   | 'siphon' // horizon siphoning (speculative)
   | 'rekindle'; // debris stream of a feeding world
 
@@ -93,7 +94,8 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'horizon_vault', name: 'Horizon Vault', desc: 'Stores energy as black-hole spin. Almost nothing leaks.', era: 'degenerate', tech: 'horizon_storage', cost: 110, matter: 60, max: 2, bodies: ['deep'], primaries: ['black_hole', 'smbh'], reserveCap: 400, signature: 1 }),
   S({ id: 'burst_catcher', name: 'Burst Catcher', desc: 'Buffers for flashes: brief stars, final bursts and flares too fast to use as they happen.', era: 'degenerate', tech: 'burst_capture', cost: 90, matter: 40, max: 2, burstCap: 300, signature: 1 }),
   S({ id: 'decay_harvester', name: 'Decay Harvester', desc: 'Collects the faint heat of protons decaying inside dead stars.', era: 'degenerate', tech: 'baryon_decay_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['white_dwarf', 'black_dwarf', 'neutron_star', 'brown_dwarf'], energy: { mode: 'decay', amount: 4 }, signature: 1 }),
-  S({ id: 'lepton_substrate', name: 'Leptonic Substrate', desc: 'Speculative: minds re-encoded in electron–positron structures that will outlast the protons.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 70, max: 3, decayProof: true, cap: { echoes: 4, coldminds: 4, lattice: 2 }, signature: 1 }),
+  S({ id: 'curvature_collector', name: 'Curvature Collector', desc: 'Catches the particles that space, curved tight around a neutron star, makes from its mass.', era: 'degenerate', tech: 'curvature_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['neutron_star'], energy: { mode: 'curvature', amount: 4 }, signature: 1 }),
+  S({ id: 'lepton_substrate', name: 'Leptonic Substrate', desc: 'Speculative: minds re-encoded in electron–positron structures that will outlast ordinary matter.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 70, max: 3, decayProof: true, cap: { echoes: 4, coldminds: 4, lattice: 2 }, signature: 1 }),
   S({ id: 'superconducting_ring', name: 'Deep Storage Ring', desc: 'Giant, patient batteries for the long nights between sources.', era: 'degenerate', tech: 'deep_storage', cost: 70, matter: 40, max: 3, reserveCap: 150, burstCap: 100, signature: 0.3 }),
 
   // ---------------------------------------------------------------- Black Hole Age

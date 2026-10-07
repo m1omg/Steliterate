@@ -1,7 +1,7 @@
 import { DARK_ENDING, ENDURANCE_ENDING, WORK_BY_ID } from '../data/works';
 import type { GameState, Outcome } from '../types';
 import { colonies, protonFateKnown, threadTotals, totalPops } from './util';
-import { calendarEra } from '../fate';
+import { calendarEra, fateOf } from '../fate';
 
 export function workRequirementMet(state: GameState, id: string): boolean {
   const civ = state.civ;
@@ -24,7 +24,7 @@ export function workRequirementMet(state: GameState, id: string): boolean {
     case 'garden_of_embers': {
       let kin = 0;
       for (const c of colonies(state)) kin += c.pops.kin + c.cryo;
-      return !state.protonsDecay && protonFateKnown(state) && kin >= 6;
+      return fateOf(state) === 'stable' && protonFateKnown(state) && kin >= 6;
     }
     default:
       return false;

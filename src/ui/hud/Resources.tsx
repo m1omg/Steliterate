@@ -5,7 +5,7 @@ import type { GameState } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import { modal, rev } from '../store';
-import { calendarEra } from '../../game/fate';
+import { matterGone } from '../../game/fate';
 
 function Gauge({ v, max, cls }: { v: number; max: number; cls?: string }) {
   return (
@@ -31,7 +31,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
   ]
     .filter(Boolean)
     .join('\n');
-  const matterGone = s.protonsDecay && (calendarEra(s) === 'blackhole' || calendarEra(s) === 'dark');
+  const gone = matterGone(s);
   return (
     <div class="resources panel scan">
       <div class={`res ${civ.energy < cap * 0.15 && eNet < 0 ? 'hazard-edge' : ''}`} data-tip={eTip}>
@@ -45,7 +45,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         </div>
         <span class="l">Energy</span>
       </div>
-      {!matterGone && (
+      {!gone && (
         <div class="res" data-tip={`Matter ${n0(civ.matter)}\nNext turn: +${n1(p.matterIn)} mined, −${n1(p.matterOut)} used\nDeposits run out as you mine them.`}>
           <Icon name="matter" size="lg" />
           <span class="v phos">{n0(civ.matter)}</span>

@@ -1,7 +1,7 @@
 import { STRUCTURE_BY_ID } from './data/structures';
 import { hawkingTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
-import { calendarEra } from './fate';
+import { calendarEra, fateKnown, fateOf } from './fate';
 import { protonFateKnown } from './sim/util';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
@@ -64,6 +64,17 @@ export function decayWarmth(state: GameState, years = state.years): number {
   if (!state.protonsDecay || !protonFateKnown(state)) return 0;
   const e = Math.log10(Math.max(1, years));
   return Math.max(0, Math.min(1, (39 - e) / 1.5));
+}
+
+/**
+ * Curvature radiation, if that is the fate of matter: a neutron star glows at about 30 nK as space
+ * turns its mass into particles (a white dwarf, far less dense, at a few picokelvin: nothing).
+ */
+const CURVATURE_NEUTRON_K = 3e-8;
+
+/** How much of the curvature glow to show (0 or 1): only under that fate, and once we know it. */
+export function curvatureWarmth(state: GameState): number {
+  return fateOf(state) === 'curvature' && fateKnown(state) ? 1 : 0;
 }
 
 /**
@@ -174,7 +185,7 @@ function shoneDuring(p: Primary, from: number, to: number): p is Primary & { kin
  * star's surface, a dead star's by what still warms it (see the cooling above), a black hole's
  * Hawking temperature. `decay`: the share of the warmth of decaying protons to count (decayWarmth).
  */
-export function primaryTemperature(p: Primary, years: number, era: EraId, decay = 0): number {
+export function primaryTemperature(p: Primary, years: number, era: EraId, decay = 0, curve = 0): number {
   const fromDecay = (k: number) => k * Math.pow(decay, 0.25);
   // a new star a turn outlasted: the white dwarf it left, cooled through the rest of that turn
   if (newStarOut(p, years)) return warmth(residual(RESIDUAL.dwarf, years - (p.diesAt ?? 0)), fromDecay(DECAY_K.dwarf));
@@ -207,7 +218,7 @@ export function primaryTemperature(p: Primary, years: number, era: EraId, decay 
     case 'brown_dwarf':
       return era === 'dusk' ? 420 : warmth(BROWN_HALO_K * Math.pow(haloShare(years), 0.25), residual(RESIDUAL.brown, years), fromDecay(DECAY_K.brown));
     case 'neutron_star':
-      return era === 'dusk' ? 30000 : warmth(NEUTRON_HALO_K * Math.pow(haloShare(years), 0.25), residual(RESIDUAL.neutron, years), fromDecay(DECAY_K.neutron));
+      return era === 'dusk' ? 30000 : warmth(NEUTRON_HALO_K * Math.pow(haloShare(years), 0.25), residual(RESIDUAL.neutron, years), fromDecay(DECAY_K.neutron), CURVATURE_NEUTRON_K * curve);
     case 'black_hole':
     case 'smbh':
       // Hawking: 6.2 × 10^-8 K for a hole of one Sun, colder the heavier it is
@@ -297,7 +308,7 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
     }
     case 'neutron_star': {
       const light = era === 'dusk' ? 0.1 : era === 'degenerate' ? 0.25 * Math.max(0, 1 - (Math.log10(years) - 15) / 12) * (0.4 + 0.6 * gfe) : 0;
-      return { light, label: 'Neutron star, slowly spinning down', temperatureK: primaryTemperature(p, years, era, decay), alive: null };
+      return { light, label: light > 0 ? 'Neutron star, slowly spinning down' : 'Neutron star, spun down and cold', temperatureK: primaryTemperature(p, years, era, decay, curvatureWarmth(state)), alive: null };
     }
     case 'dark_star': {
       const born = p.bornAt ?? years;
@@ -379,7 +390,8 @@ export interface EvolutionNote {
     | 'swallowed'
     | 'evaporated'
     | 'dissolved'
-    | 'boiled';
+    | 'boiled'
+    | 'faded';
   bodyId?: string;
   /** (boiled) inside a giant's own radius, rather than boiled by its light */
   swallowed?: boolean;
@@ -593,7 +605,33 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
       }
     }
   }
+  // curvature radiation (that fate only): space turns the dwarfs' mass into particles until they
+  // are gone, white and black dwarfs between η 78.5 and 85 by mass, brown dwarfs near η 87; their
+  // worlds drift loose and what we built there stays (the neutron stars burst at the Last Warmth)
+  if (fateOf(state) === 'curvature') {
+    for (const s of systems) {
+      const p = s.primary;
+      if (s.gone) continue;
+      const at = p.kind === 'white_dwarf' || p.kind === 'black_dwarf' ? dwarfFadeEta(p.mass) : p.kind === 'brown_dwarf' ? BROWN_FADE_ETA : Infinity;
+      if (e >= at) {
+        evaporateHole(state, s);
+        notes.push({ systemId: s.id, kind: 'faded' });
+      }
+    }
+  }
   return notes;
+}
+
+/** Brown dwarfs under curvature radiation last to about η 87 (Falcke, Wondrak & van Suijlekom, from their density). */
+export const BROWN_FADE_ETA = 87;
+
+/**
+ * When a white dwarf is gone to curvature radiation (η): a 1.3 M☉ one, dense, at about 78.5
+ * (Falcke, Wondrak & van Suijlekom), lighter and thinner ones later, 0.6 M☉ near 82; between 78 and
+ * 85. As it shrinks it grows less dense, so it fades away rather than bursting as a neutron star does.
+ */
+export function dwarfFadeEta(mass: number): number {
+  return Math.max(78, Math.min(85, 82 - 10 * Math.log10(Math.max(0.1, mass) / 0.6)));
 }
 
 /**

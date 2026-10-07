@@ -8,14 +8,16 @@ import { colonyTurn, reserveCapacity } from '../../../src/game/sim/economy';
 import { computeMods } from '../../../src/game/sim/mods';
 import { turnStep } from '../../../src/game/sim/flare';
 import { deserialize } from '../../../src/game/save';
+import { calendarEra } from '../../../src/game/fate';
 import { check, done } from '../lib';
 
-const s = newGame({ seed: 2360862, length: 'standard', survivors: 3, difficulty: 'standard' });
-for (let g = 0; g < 900 && !s.outcome && !(s.era === 'blackhole' && s.eraTurn >= 3); g++) {
+// stable matter, so worlds still circle the holes; holes evaporate by the calendar's Black Hole Age
+const s = newGame({ seed: 2360862, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
+for (let g = 0; g < 900 && !s.outcome && !(calendarEra(s) === 'blackhole' && s.eraTurn >= 3); g++) {
   autoPlay(s, 'competent');
   endTurn(s);
 }
-console.log(`  turn ${s.turn}, ${s.era}, η ${s.eta.toFixed(1)}, protons ${s.protonsDecay ? 'decay' : 'stable'}`);
+console.log(`  turn ${s.turn}, ${s.era}, η ${s.eta.toFixed(1)}, fate ${s.fate}`);
 const holes = Object.values(s.systems).filter((x) => x.primary.kind === 'black_hole' && !x.gone);
 const settledAt = (id: string) => Object.values(s.colonies).some((c) => c.systemId === id);
 const withWorld = holes.find((x) => x.bodies.some((id) => { const b = s.bodies[id]; return b && !b.dissolved && b.kind !== 'deep' && !b.colonyId; }) && !settledAt(x.id))!;

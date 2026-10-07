@@ -44,7 +44,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       else if (calendarEra(state) === 'blackhole') drain = 0.025;
       else drain = 0.04;
       drain *= WAY_DRAIN[sv.way] / (0.5 + state.gfe * 0.5);
-      if (sv.way === 'garden' && calendarEra(state) !== 'dusk' && state.protonsDecay) drain *= 1.4;
+      // gardens live on living worlds: once proton decay takes hold (η 37.5) those worlds are dissolving
+      if (sv.way === 'garden' && state.protonsDecay && state.eta > 37.5) drain *= 1.4;
       sv.health = clamp(sv.health - drain + rng.range(-0.004, 0.006), 0, 1);
       sv.pop = Math.max(0, sv.pop * (0.98 + sv.health * 0.03));
 

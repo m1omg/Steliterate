@@ -2,7 +2,7 @@ import { TECH_BY_ID, TECHS, type TechDef } from '../data/techs';
 import type { GameState } from '../types';
 import { queueEvent } from './events';
 import { hasTech, log, protonFateKnown } from './util';
-import { ageReached } from '../fate';
+import { ageReached, fateOf } from '../fate';
 
 export function techCost(state: GameState, id: string): number {
   const def = TECH_BY_ID[id];
@@ -18,10 +18,12 @@ export function techCost(state: GameState, id: string): number {
 }
 
 export function techVisible(state: GameState, def: TechDef): boolean {
-  if (def.needsStable || def.needsDecay) {
+  if (def.needsStable || def.needsDecay || def.needsCurvature) {
     if (!protonFateKnown(state)) return false;
-    if (def.needsStable && state.protonsDecay) return false;
-    if (def.needsDecay && !state.protonsDecay) return false;
+    const fate = fateOf(state);
+    if (def.needsStable && fate !== 'stable') return false;
+    if (def.needsDecay && fate !== 'decay') return false;
+    if (def.needsCurvature && fate !== 'curvature') return false;
   }
   return true;
 }

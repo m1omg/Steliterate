@@ -1,6 +1,6 @@
 // Headless balance harness: autoplay whole games and report how far each strategy gets.
 declare const process: { argv: string[] };
-// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--from=0] [-v]
+// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [-v]
 // Game g uses seed 1000 + g·7919; --from=N starts at game N, so runs can be split and run in parallel.
 
 import { autoPlay, type Strategy } from '../src/game/auto';
@@ -8,7 +8,8 @@ import { formatEta } from '../src/game/eras';
 import { newGame } from '../src/game/newGame';
 import { endTurn } from '../src/game/sim/turn';
 import { colonies, threadTotals, totalPops } from '../src/game/sim/util';
-import type { EpochLength } from '../src/game/types';
+import type { EpochLength, ProtonFate } from '../src/game/types';
+import { fateOf } from '../src/game/fate';
 
 // positional arguments, with the flags (-v, --diff=…) taken out wherever they stand
 const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));
@@ -24,7 +25,8 @@ for (const strategy of strategies) {
   for (let g = from; g < from + games; g++) {
     const seed = 1000 + g * 7919;
     const difficulty = (process.argv.find((a) => a.startsWith('--diff='))?.slice(7) ?? 'standard') as 'gentle' | 'standard' | 'harsh';
-    const state = newGame({ seed, length, survivors: 3, difficulty });
+    const protonFate = (process.argv.find((a) => a.startsWith('--fate='))?.slice(7) ?? 'unknown') as ProtonFate;
+    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate });
     const eraTurns: Record<string, number> = {};
     let crossings = '';
     const t0 = Date.now();
@@ -45,7 +47,7 @@ for (const strategy of strategies) {
     }
     const sv = Object.values(state.survivors).map((s) => `${s.adjective}:${s.alive ? 'alive' : s.fate}`).join(' ');
     console.log(
-      `seed ${seed}: ${state.outcome ? `${state.outcome.kind.toUpperCase()} "${state.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage} protons ${state.protonsDecay ? 'decay' : 'stable'} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
+      `seed ${seed}: ${state.outcome ? `${state.outcome.kind.toUpperCase()} "${state.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
     );
   }
 }

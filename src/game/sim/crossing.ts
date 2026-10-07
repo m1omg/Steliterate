@@ -1,4 +1,5 @@
-import { ERA_BY_ID, eta, nextEra, tideLength } from '../eras';
+import { ERA_BY_ID, ageIntro, crossingName, eta, nextEra, tideLength } from '../eras';
+import { calendarEra, fateKnown, fateOf } from '../fate';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import { TECH_BY_ID } from '../data/techs';
 import type { Colony, CrossingReport, EraId, GameState } from '../types';
@@ -8,6 +9,7 @@ import { capacity, reserveCapacity } from './economy';
 import { destroyColony } from './fleets';
 import type { Mods } from './mods';
 import { colonies, log, popsOf, totalPops, withRng } from './util';
+import type { Rng } from '../rng';
 
 // The three great storms. Each transforms the world; your preparation decides what survives.
 
@@ -62,6 +64,120 @@ function migrateToBlackHoles(state: GameState): number {
     }
   }
   return moved;
+}
+
+/**
+ * Curvature radiation: each neutron star, its mass given to the curvature of space for 10^68 years,
+ * bursts at a tenth of a Sun in a last flash of particles and neutrinos (some 10^42 J): whatever we
+ * had settled at one is lost, and its worlds are blasted loose.
+ */
+function burstNeutronStars(state: GameState, lines: CrossingReport['lines']) {
+  let burst = 0;
+  let lostHere = 0;
+  let people = 0;
+  for (const s of Object.values(state.systems)) {
+    if (s.primary.kind !== 'neutron_star' || s.gone) continue;
+    burst++;
+    for (const c of colonies(state)) {
+      if (c.systemId !== s.id) continue;
+      lostHere++;
+      people += popsOf(c) + c.cryo;
+      destroyColony(state, c, 'its neutron star burst');
+    }
+    s.primary.kind = 'void';
+    s.primary.lum = 0;
+    s.primary.spin = 0;
+    s.primary.spinMax = 0;
+    let left = false;
+    for (const id of s.bodies) {
+      const b = state.bodies[id];
+      if (!b || b.dissolved || b.kind === 'deep') continue;
+      b.rogue = true;
+      left = true;
+    }
+    s.gone = !left;
+  }
+  lines.push({ text: `The neutron stars have burst: ${burst} of them, each at a tenth of a Sun, in a last flash of particles and neutrinos. They had given their mass to the curvature of space for 10⁶⁸ years.`, kind: 'info' });
+  if (lostHere) lines.push({ text: `${lostHere} of our settlements at neutron stars went with them${people ? `, and ${people} of our people` : ''}.`, kind: 'bad' });
+}
+
+/**
+ * The end of ordinary matter, by proton decay (the Great Decay) or by curvature radiation (the
+ * Great Evaporation): every system but the black holes is gone with every world in it; only
+ * settlements on decay-proof (leptonic) substrate go on, keeping only that, and drift to the
+ * nearest black holes; the Hunger, made of matter too, nearly ends; so do the civilizations that
+ * live on worlds.
+ */
+function endOfMatter(state: GameState, mods: Mods, lines: CrossingReport['lines'], crossingMult: number, rng: Rng, how: 'decayed' | 'evaporated') {
+  let dissolved = 0;
+  for (const s of Object.values(state.systems)) {
+    if (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') continue;
+    if (!s.gone) dissolved++;
+    s.primary.kind = 'void';
+    s.primary.lum = 0;
+    s.gone = true;
+  }
+  for (const b of Object.values(state.bodies)) if (b.kind !== 'deep') b.dissolved = true;
+  lines.push({ text: `Every planet, every dead star and every scrap of ordinary matter has ${how}. ${dissolved} systems are simply gone.`, kind: 'info' });
+  const cs = colonies(state);
+  const cap = cs.find((c) => c.id === state.civ.capitalId && decayProof(c)) ?? cs.find((c) => decayProof(c));
+  let saved = 0;
+  let lost = 0;
+  for (const c of cs) {
+    if (decayProof(c)) {
+      // only what was re-encoded survives
+      for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]?.decayProof) delete c.structures[k];
+      c.queue = [];
+      lost += c.pops.kin + c.cryo;
+      c.pops.kin = 0;
+      c.cryo = 0;
+      const lat = Math.round(c.pops.lattice * 0.5 * crossingMult);
+      c.pops.lattice -= lat;
+      lost += lat;
+      continue;
+    }
+    // migration through the protocols
+    if (cap && crossingMult < 1) {
+      for (const t of ['echoes', 'coldminds', 'chorus'] as const) {
+        const m = Math.floor(c.pops[t] * 0.35);
+        cap.pops[t] += m;
+        saved += m;
+      }
+    }
+    lost += popsOf(c) + c.cryo;
+    destroyColony(state, c, how === 'decayed' ? 'dissolved with the protons' : 'evaporated with the rest of matter');
+  }
+  // what does not fit on the new substrate is lost
+  for (const c of colonies(state)) {
+    const capc = capacity(state, c, mods);
+    for (const t of THREADS) {
+      if (c.pops[t] > capc[t]) {
+        lost += c.pops[t] - capc[t];
+        c.pops[t] = capc[t];
+      }
+    }
+  }
+  lost += state.flags.decay_lost ?? 0;
+  state.flags.decay_lost = 0;
+  const moved = migrateToBlackHoles(state);
+  if (moved) lines.push({ text: `The Migration: ${moved} leptonic vault(s) fell toward the nearest black holes, the only sources left.`, kind: 'info' });
+  if (saved) lines.push({ text: `${saved} minds were carried onto leptonic substrate before their homes ${how === 'decayed' ? 'dissolved' : 'evaporated'}.`, kind: 'good' });
+  lines.push({ text: lost > 0 ? `${lost} of our people ${how === 'decayed' ? 'dissolved' : 'evaporated'} with the matter they were made of.` : 'No one was lost.', kind: lost > 0 ? 'bad' : 'good' });
+  state.civ.matter = 0;
+  for (const sw of Object.values(state.swarms)) {
+    const at = sw.systemId ? state.systems[sw.systemId] : null;
+    if (at && (at.primary.kind === 'black_hole' || at.primary.kind === 'smbh') && rng.chance(0.4)) sw.size *= 0.2;
+    else delete state.swarms[sw.id];
+  }
+  lines.push({ text: 'The Hunger was made of matter too. Only a few starving swarms cling on at the black holes.', kind: 'info' });
+  for (const sv of Object.values(state.survivors)) {
+    if (!sv.alive) continue;
+    if (sv.way === 'garden' || sv.way === 'fork') {
+      sv.alive = false;
+      sv.fate = 'faded';
+    } else sv.health = Math.max(0, sv.health - 0.45);
+  }
+  state.civ.flags.matter_gone = state.turn;
 }
 
 export function runCrossing(state: GameState, mods: Mods): CrossingReport {
@@ -124,79 +240,17 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
       for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health = Math.max(0, sv.health - (sv.way === 'garden' ? 0.6 : sv.way === 'dormant' ? 0.15 : 0.35));
       civ.energy *= 0.6;
     } else if (from === 'degenerate') {
-      // ---------------------------------------------------------------- The Great Decay
-      if (state.protonsDecay) {
-        let dissolved = 0;
-        for (const s of Object.values(state.systems)) {
-          if (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') continue;
-          if (!s.gone) dissolved++;
-          s.primary.kind = 'void';
-          s.primary.lum = 0;
-          s.gone = true;
-        }
-        for (const b of Object.values(state.bodies)) if (b.kind !== 'deep') b.dissolved = true;
-        lines.push({ text: `Every planet, every dead star and every scrap of ordinary matter has decayed. ${dissolved} systems are simply gone.`, kind: 'info' });
-        const cs = colonies(state);
-        const cap = cs.find((c) => c.id === civ.capitalId && decayProof(c)) ?? cs.find((c) => decayProof(c));
-        let saved = 0;
-        let lost = 0;
-        for (const c of cs) {
-          if (decayProof(c)) {
-            // only what was re-encoded survives
-            for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]?.decayProof) delete c.structures[k];
-            c.queue = [];
-            lost += c.pops.kin + c.cryo;
-            c.pops.kin = 0;
-            c.cryo = 0;
-            const lat = Math.round(c.pops.lattice * 0.5 * crossingMult);
-            c.pops.lattice -= lat;
-            lost += lat;
-            continue;
-          }
-          // migration through the protocols
-          if (cap && crossingMult < 1) {
-            for (const t of ['echoes', 'coldminds', 'chorus'] as const) {
-              const m = Math.floor(c.pops[t] * 0.35);
-              cap.pops[t] += m;
-              saved += m;
-            }
-          }
-          lost += popsOf(c) + c.cryo;
-          destroyColony(state, c, 'dissolved with the protons');
-        }
-        // what does not fit on the new substrate is lost
-        for (const c of colonies(state)) {
-          const capc = capacity(state, c, mods);
-          for (const t of THREADS) {
-            if (c.pops[t] > capc[t]) {
-              lost += c.pops[t] - capc[t];
-              c.pops[t] = capc[t];
-            }
-          }
-        }
-        lost += state.flags.decay_lost ?? 0;
-        state.flags.decay_lost = 0;
-        const moved = migrateToBlackHoles(state);
-        if (moved) lines.push({ text: `The Migration: ${moved} leptonic vault(s) fell toward the nearest black holes, the only sources left.`, kind: 'info' });
-        if (saved) lines.push({ text: `${saved} minds were carried onto leptonic substrate before their homes dissolved.`, kind: 'good' });
-        lines.push({ text: lost > 0 ? `${lost} of our people dissolved with the matter they were made of.` : 'No one was lost.', kind: lost > 0 ? 'bad' : 'good' });
-        civ.matter = 0;
-        for (const sw of Object.values(state.swarms)) {
-          const at = sw.systemId ? state.systems[sw.systemId] : null;
-          if (at && (at.primary.kind === 'black_hole' || at.primary.kind === 'smbh') && rng.chance(0.4)) sw.size *= 0.2;
-          else delete state.swarms[sw.id];
-        }
-        lines.push({ text: 'The Hunger was made of matter too. Only a few starving swarms cling on at the black holes.', kind: 'info' });
-        for (const sv of Object.values(state.survivors)) {
-          if (!sv.alive) continue;
-          if (sv.way === 'garden' || sv.way === 'fork') {
-            sv.alive = false;
-            sv.fate = 'faded';
-          } else sv.health = Math.max(0, sv.health - 0.45);
-        }
+      // ---------------------------------------------------------------- The Great Decay, or the Last Warmth
+      // unless we found it out before (the Proton Question, or the neutron stars showing it earlier)
+      if (!fateKnown(state) || civ.flags.fate_known === state.turn) lines.push({ text: fateOf(state) === 'decay' ? 'The question is settled: the protons decay.' : fateOf(state) === 'curvature' ? 'The question is settled: space itself is unmaking matter.' : 'The question is settled: the protons are stable.', kind: 'info' });
+      civ.flags.fate_known ??= state.turn;
+      if (fateOf(state) === 'decay') {
+        endOfMatter(state, mods, lines, crossingMult, rng, 'decayed');
       } else {
+        if (fateOf(state) === 'curvature') burstNeutronStars(state, lines);
+        else lines.push({ text: 'The protons held. Matter endures, cold and dark, slowly tunnelling toward iron.', kind: 'good' });
+        lines.push({ text: 'The neutron stars, the last things warm of their own accord, are colder now than the faint glow of the black holes. For the whole life of the universe the holes were the coldest things in it; from now on they are the warmest. The astronomers close the Degenerate Age here.', kind: 'info' });
         for (const s of Object.values(state.systems)) if (s.primary.kind === 'white_dwarf') s.primary.kind = 'black_dwarf';
-        lines.push({ text: 'The protons held. Matter endures, cold and dark, slowly tunnelling toward iron.', kind: 'good' });
         let lost = 0;
         for (const c of colonies(state)) {
           const cap = capacity(state, c, mods);
@@ -234,12 +288,14 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
   // clean up settlements that are now empty
   for (const c of colonies(state)) if (popsOf(c) + c.cryo <= 0) destroyColony(state, c, 'no one is left there');
 
-  // enter the new era
+  // enter the new era: the calendar skips ahead where it always did (into the Degenerate Age, into
+  // the Dark, and with the Great Decay); the Last Warmth of a fate without decay keeps the calendar's
+  // time and Tide
   state.era = to;
   state.eraTurn = 0;
-  state.years = ERA_BY_ID[to].startYears;
+  if (from !== 'degenerate' || fateOf(state) === 'decay') state.years = ERA_BY_ID[to].startYears;
   state.eta = eta(state.years);
-  state.turnLength = to === 'dark' ? Infinity : tideLength(to, state.years, state.settings.length);
+  state.turnLength = to === 'dark' ? Infinity : tideLength(calendarEra(state), state.years, state.settings.length);
   civ.pace = 0;
   civ.dormant = false;
   civ.sleepTurns = 0;
@@ -248,6 +304,37 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
   return {
     from,
     to,
+    title: crossingName(from, fateOf(state)),
+    intro: ageIntro(to, fateOf(state)),
+    lines,
+    popsBefore,
+    popsAfter: totalPops(state),
+    coloniesBefore,
+    coloniesAfter: colonies(state).length,
+  };
+}
+
+/**
+ * The Great Evaporation (curvature radiation only, near η 89.5): the last ordinary matter, worlds
+ * and the last scraps of dead stars, is gone to curvature radiation. A storm inside the Black Hole
+ * Age, with a screen of its own; its losses are the Great Decay's (and its protocols halve them).
+ */
+export function greatEvaporation(state: GameState, mods: Mods): CrossingReport {
+  const lines: CrossingReport['lines'] = [];
+  const popsBefore = totalPops(state);
+  const coloniesBefore = colonies(state).length;
+  const civ = state.civ;
+  const protocols = PROTOCOLS.degenerate!;
+  const crossingMult = civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1;
+  withRng(state, (rng) => endOfMatter(state, mods, lines, crossingMult, rng, 'evaporated'));
+  civ.energy *= 0.6;
+  for (const c of colonies(state)) if (popsOf(c) + c.cryo <= 0) destroyColony(state, c, 'no one is left there');
+  log(state, 'The Great Evaporation: the last ordinary matter is gone.', 'era');
+  return {
+    from: state.era,
+    to: state.era,
+    title: 'The Great Evaporation',
+    intro: 'Space took some 10⁹⁰ years to unmake it all, and now it is done: every world, every dead star, every scrap of ordinary matter has evaporated into particles and light. Only what was carried onto leptonic substrate goes on, around the black holes that are left. The Heart will last a little longer than the rest.',
     lines,
     popsBefore,
     popsAfter: totalPops(state),

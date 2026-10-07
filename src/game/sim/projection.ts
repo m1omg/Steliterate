@@ -105,7 +105,7 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
   if (d.coreHeatBonus) notes.push(`Core heat +${Math.round(d.coreHeatBonus * 100)}% when built`);
   if (d.vitalityOnce) notes.push(`Vitality +${Math.round(d.vitalityOnce * 100)}% when built`);
   if (d.resolve) notes.push(`Resolve +${d.resolve} a turn`);
-  if (d.decayProof) notes.push('Survives the Great Decay');
+  if (d.decayProof) notes.push('Survives the end of matter (the Great Decay, or the Great Evaporation)');
   if (d.continuityMult) notes.push(`Continuity fades ${Math.round((1 - d.continuityMult) * 100)}% slower`);
   if (d.enables === 'upload') notes.push('Lets Kin upload into Echoes here');
   if (d.enables === 'merge') notes.push('Lets Echoes merge into the Chorus here');

@@ -6,7 +6,7 @@ import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShel
 import { eta, formatYears, stepTime } from '../eras';
 import { boilingAway } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
-import { calendarEra } from '../fate';
+import { calendarEra, fateOf } from '../fate';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -639,8 +639,9 @@ export const EVENTS: EventDef[] = [
     eras: ['degenerate'],
     once: true,
     weight: 20,
-    bind: (s) => (s.eta > 22.3 ? {} : null),
-    text: () => 'The dark-matter halo is running thin. The white dwarfs it kept warm are cooling, one after another, toward the few kelvin of true black dwarfs. Whatever we are going to live on next, we need to find it now.',
+    // the halo thins near η 22; if curvature radiation keeps the age going long after, the news is old by η 39
+    bind: (s) => (s.eta > 22.3 && s.eta < 39 ? {} : null),
+    text: () => 'The dark-matter halo is running thin. The white dwarfs it kept warm are cooling, one after another, toward the cold of true black dwarfs, a small fraction of a degree above nothing. Whatever we are going to live on next, we need to find it now.',
     choices: [{ label: 'Understood', hint: 'Ember yields keep falling until η 25.', run: (s) => { res(s, -2); } }],
   },
   {
@@ -649,11 +650,37 @@ export const EVENTS: EventDef[] = [
     art: 'degenerate',
     once: true,
     text: (s) =>
-      s.protonsDecay
+      fateOf(s) === 'decay'
         ? 'The detector finally registered it: a single proton, decaying into a positron and a flash. Then another. Ordinary matter is not forever. Somewhere around 10³⁸ years from the beginning, every planet, every dead star and every body will have evaporated into light and leptons. Whatever we are then, we cannot be made of this.'
-        : 'Ten thousand detector-lifetimes, and not a single decay. The protons are stable. Matter will outlast the black holes, cold and dark, slowly tunnelling into iron. Flesh, in principle, can last.',
+        : fateOf(s) === 'curvature'
+          ? 'Ten thousand detector-lifetimes, and not a single decay: the protons are stable. But the theory the detectors were built to test, finished at last, says matter is not for ever even so. Space, curved tight around anything dense, turns a little of its mass into particles. A neutron star has some 10⁶⁸ years before it bursts, a white dwarf 10⁸⁰ or so, a world 10⁸⁹. Matter will outlast the stellar black holes, though not the Heart. (The theory is new and unconfirmed; the neutron stars will show it, near η 30.)'
+          : 'Ten thousand detector-lifetimes, and not a single decay. The protons are stable. Matter will outlast the black holes, cold and dark, slowly tunnelling into iron. Flesh, in principle, can last.',
     choices: [
-      { label: 'Tell everyone the truth', hint: 'Resolve ±5 depending on the answer.', run: (s) => { res(s, s.protonsDecay ? -5 : 5); } },
+      { label: 'Tell everyone the truth', hint: 'Resolve ±5 depending on the answer.', run: (s) => { res(s, fateOf(s) === 'decay' ? -5 : fateOf(s) === 'curvature' ? -2 : 5); } },
+      { label: 'Tell the councils only', hint: 'Dissent +3.', run: (s) => { dis(s, 3); } },
+    ],
+  },
+  {
+    id: 'decay_shown',
+    title: 'Not for Ever',
+    art: 'degenerate',
+    once: true,
+    text: () =>
+      'The neutron stars should be a few billionths of a degree above nothing by now, and still falling. They are at nearly two degrees, and holding; every dead dwarf at a twentieth of one. The warmth is their own protons dying. Ordinary matter is not for ever: by about 10³⁹ years every planet, every dead star and every body will have dissolved into light and leptons. Whatever we are then, we cannot be made of this.',
+    choices: [
+      { label: 'Tell everyone the truth', hint: 'Resolve −5.', run: (s) => { res(s, -5); } },
+      { label: 'Tell the councils only', hint: 'Dissent +3.', run: (s) => { dis(s, 3); } },
+    ],
+  },
+  {
+    id: 'curvature_shown',
+    title: 'The Stars That Would Not Cool',
+    art: 'degenerate',
+    once: true,
+    text: () =>
+      'The neutron stars should be a few billionths of a degree above nothing by now, and still falling. They are at thirty billionths, and holding. The warmth is not theirs: space itself, curved tight around them, is turning their mass into particles, a little at a time. The protons are stable, and still matter is not for ever. The neutron stars will burst near η 68, the dwarfs fade by η 85, and every world will be gone by η 90. Matter will outlast the stellar black holes, though not the Heart.',
+    choices: [
+      { label: 'Tell everyone the truth', hint: 'Resolve −2.', run: (s) => { res(s, -2); } },
       { label: 'Tell the councils only', hint: 'Dissent +3.', run: (s) => { dis(s, 3); } },
     ],
   },
@@ -703,6 +730,8 @@ export const EVENTS: EventDef[] = [
     art: 'dark',
     eras: ['dark'],
     weight: 4,
+    // the positrons come from dying protons or from matter that space unmade; stable matter makes none
+    bind: (s) => (fateOf(s) === 'stable' ? null : {}),
     text: () => 'An electron and a positron, separated by more than the width of the old observable universe, have been orbiting each other since before the last black hole died. Their orbit has decayed. They annihilate, and the two photons pass through our collectors.',
     choices: [{ label: 'Catch what we can', hint: 'Energy +6.', run: (s) => { energy(s, 6); } }],
   },

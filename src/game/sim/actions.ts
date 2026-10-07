@@ -14,14 +14,14 @@ import { completeTech, techAvailable, techCost } from './research';
 import { sourceLight } from '../physics';
 import { turnStep } from './flare';
 import { devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { colonies, eraIndex, hasCharter, hasTech, log, savableName, uid } from './util';
-import { ageReached, calendarEra, inAge } from '../fate';
+import { colonies, hasCharter, hasTech, log, savableName, uid } from './util';
+import { ageReached, inAge, matterGone } from '../fate';
 
 export type ActionResult = string | null; // error message or null on success
 
 /** In ages without ordinary matter, construction is paid in energy instead. */
 export function matterIsEnergy(state: GameState): boolean {
-  return state.protonsDecay && eraIndex(calendarEra(state)) >= 2;
+  return matterGone(state);
 }
 
 export function structureCheck(state: GameState, c: Colony, d: StructureDef): string | null {

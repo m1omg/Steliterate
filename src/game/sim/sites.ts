@@ -38,7 +38,8 @@ export function powerParts(state: GameState, b: Body): { label: string; e: numbe
   const L = turnStep(state, 0).turnLength;
   const light = b.rogue ? 0 : sourceLight(state, sys, state.years, isFinite(L) ? L : 0).light;
   const hole = p.kind === 'black_hole' || p.kind === 'smbh';
-  const parts = [{ label: 'Hearth', e: 2 * Math.max(0.25, Math.min(1.5, light), b.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0) }];
+  const fed = Math.max(Math.min(1.5, light), b.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
+  const parts = [{ label: fed < 0.25 ? 'Hearth: stored fuel and salvage' : 'Hearth', e: 2 * Math.max(0.25, fed) }];
   for (const d of STRUCTURES) {
     if (!d.energy || !buildableAt(state, b, d)) continue;
     const a = d.energy.amount * d.max;

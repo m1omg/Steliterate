@@ -1,4 +1,5 @@
-import { DEEP_MILESTONES, ERA_BY_ID, ERAS, MILESTONES, formatEta, formatYears, formatYearsShort } from '../../game/eras';
+import { ERA_BY_ID, ERAS, deepMilestonesFor, formatEta, formatYears, formatYearsShort, milestonesFor } from '../../game/eras';
+import { DEGENERATE_END, fateKnown, fateOf } from '../../game/fate';
 import type { EraId, GameState } from '../../game/types';
 import { rev } from '../store';
 
@@ -42,7 +43,14 @@ export function Chronometer({ s }: { s: GameState }) {
     .filter((f) => isFinite(f.dueYears))
     .map((f) => ({ f, x: deep ? deepPos(Math.log10(Math.max(1, f.dueYears))) : rulerPos(f.dueYears, Math.log10(Math.max(1, f.dueYears))) }))
     .filter((p) => p.x > now - 0.001);
-  const milestones = deep ? DEEP_MILESTONES.map((m) => ({ ...m, x: deepPos(Math.pow(10, m.at)) })) : MILESTONES.map((m) => ({ ...m, x: rulerPos(Math.pow(10, m.at), m.at) }));
+  // the fate of matter decides where the Degenerate Age ends: until it is known, the timeline
+  // shows the stretch it might end in, and every date that depends on it, as questions
+  const fate = fateKnown(s) ? fateOf(s) : null;
+  const milestones = deep ? deepMilestonesFor(fate).map((m) => ({ ...m, x: deepPos(Math.pow(10, m.at)) })) : milestonesFor(fate).map((m) => ({ ...m, x: rulerPos(Math.pow(10, m.at), m.at) }));
+  const at = (e: number) => rulerPos(Math.pow(10, e), e);
+  const split = at(fate ? DEGENERATE_END[fate] : DEGENERATE_END.stable);
+  const unsure: [number, number] | null = fate ? null : [at(DEGENERATE_END.stable), at(DEGENERATE_END.curvature)];
+  const band: Record<EraId, [number, number]> = { dusk: SEG.dusk, degenerate: [SEG.degenerate[0], split], blackhole: [unsure ? unsure[1] : split, SEG.blackhole[1]], dark: SEG.dark };
   const turnSpan = isFinite(s.turnLength) ? formatYears(s.turnLength) : formatYears(Infinity, s.eta);
   const age = s.era === 'dusk' ? `${formatYears(s.years)} since the Big Bang` : formatYears(s.years, s.eta);
   return (
@@ -58,15 +66,26 @@ export function Chronometer({ s }: { s: GameState }) {
         <svg viewBox="0 0 1000 46" preserveAspectRatio="none">
           {!deep &&
             ERAS.map((e) => {
-              const [a, b] = SEG[e.id];
+              const [a, b] = band[e.id];
               const cur = e.id === s.era;
               return (
                 <g key={e.id}>
-                  <rect x={a * 1000} y={18} width={(b - a) * 1000 - 3} height={10} fill={cur ? 'var(--accent)' : 'rgba(233,223,207,0.08)'} opacity={cur ? 0.28 : 1} />
+                  <rect x={a * 1000} y={18} width={Math.max(0, (b - a) * 1000 - 3)} height={10} fill={cur ? 'var(--accent)' : 'rgba(233,223,207,0.08)'} opacity={cur ? 0.28 : 1} />
                   <rect x={a * 1000} y={18} width={Math.max(0, (Math.min(now, b) - a)) * 1000} height={10} fill="var(--accent)" opacity={e.index < ERA_BY_ID[s.era].index ? 0.12 : cur ? 0.55 : 0} />
                 </g>
               );
             })}
+          {!deep && unsure && (
+            <g>
+              <defs>
+                <pattern id="chrono-unsure" width="6" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+                  <rect width="3" height="10" fill="rgba(233,223,207,0.16)" />
+                </pattern>
+              </defs>
+              <rect x={unsure[0] * 1000} y={18} width={(unsure[1] - unsure[0]) * 1000 - 3} height={10} fill="url(#chrono-unsure)" />
+              <rect x={unsure[0] * 1000} y={18} width={Math.max(0, (Math.min(now, unsure[1]) - unsure[0])) * 1000} height={10} fill="var(--accent)" opacity={s.era === 'degenerate' ? 0.4 : 0.12} />
+            </g>
+          )}
           {deep && (
             <g>
               <rect x={0} y={18} width={55} height={10} fill="rgba(233,223,207,0.1)" />
@@ -85,10 +104,19 @@ export function Chronometer({ s }: { s: GameState }) {
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {!deep &&
             ERAS.map((e) => (
-              <div key={e.id} class="eyebrow" style={{ position: 'absolute', left: `${SEG[e.id][0] * 100}%`, top: '-2px', fontSize: '9.5px', color: e.id === s.era ? 'var(--accent-soft)' : undefined }}>
+              <div key={e.id} class="eyebrow" style={{ position: 'absolute', left: `${band[e.id][0] * 100}%`, top: '-2px', fontSize: '9.5px', color: e.id === s.era ? 'var(--accent-soft)' : undefined }}>
                 {e.numeral} {e.science.replace(' Era', '')}
               </div>
             ))}
+          {!deep && unsure && (
+            <div
+              class="eyebrow"
+              data-tip="Where the Degenerate Age ends depends on what becomes of matter, which no one knows yet: near η 30 if it is stable, η 39 if protons decay, η 68 if space itself slowly unmakes it. The Proton Question would tell us; the neutron stars will, near η 30."
+              style={{ position: 'absolute', left: `${unsure[0] * 100}%`, top: '-2px', fontSize: '9.5px', pointerEvents: 'auto', cursor: 'help' }}
+            >
+              II → III ?
+            </div>
+          )}
           {deep && (
             <div class="eyebrow" style={{ position: 'absolute', left: '0', top: '-2px', fontSize: '9.5px' }}>
               I–III · deep time: log₁₀ <span class="greek">η</span> →

@@ -5,7 +5,13 @@ export type ThreadId = 'kin' | 'echoes' | 'chorus' | 'lattice' | 'coldminds';
 export type Focus = 'balanced' | 'energy' | 'matter' | 'industry' | 'insight' | 'accord';
 /** What a settlement does with industry it has nothing to build with (see sim/spare.ts). */
 export type SpareWork = 'salvage' | 'study' | 'tend' | 'morale';
-export type ProtonFate = 'decays' | 'stable' | 'unknown';
+export type ProtonFate = 'decays' | 'stable' | 'curvature' | 'unknown';
+/**
+ * What becomes of ordinary matter: protons decay (it dissolves near η 39); it is stable (it
+ * endures, cold); or curvature radiation (Falcke, Wondrak & van Suijlekom) slowly evaporates it,
+ * neutron stars by η 68, worlds by η 89.5.
+ */
+export type Fate = 'decay' | 'stable' | 'curvature';
 export type EpochLength = 'brief' | 'standard' | 'vast';
 export type Difficulty = 'gentle' | 'standard' | 'harsh';
 
@@ -357,6 +363,9 @@ export interface PendingEvent {
 export interface CrossingReport {
   from: EraId;
   to: EraId;
+  /** The crossing's name (The Great Decay, The Last Warmth …), and the new age's intro for this fate; absent in older saves. */
+  title?: string;
+  intro?: string;
   lines: { text: string; kind: 'good' | 'bad' | 'info' }[];
   popsBefore: number;
   popsAfter: number;
@@ -398,6 +407,8 @@ export interface GameState {
   eta: number; // log10(years), canonical
   turnLength: number; // years spanned by the last turn (Infinity in deep time)
   protonsDecay: boolean;
+  /** The fate of matter (absent in saves before version 3: there it follows protonsDecay). */
+  fate?: Fate;
   gfe: number; // galactic free energy 0..1
   provinces: Province[];
   regions: Region[];

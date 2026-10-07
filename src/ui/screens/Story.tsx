@@ -3,7 +3,7 @@ import { useEffect } from 'preact/hooks';
 import { SHIP_BY_ID } from '../../game/data/ships';
 import { EVENT_BY_ID, choiceHint } from '../../game/data/events';
 import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
-import { ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
+import { ageIntro, ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
 import { threadTotals, totalPops } from '../../game/sim/util';
 import type { Body, GameState, PendingEvent } from '../../game/types';
@@ -16,6 +16,7 @@ import { bump, engine, hudPrefs, modal, rev, screen, selection, setHudPrefs } fr
 import { pivotToSystem } from './Lists';
 import { Icon } from '../Icon';
 import { ModalFrame } from './Frame';
+import { fateOf } from '../../game/fate';
 
 // Art plates live in art/<name>.webp. Until one exists the plate is a graded gradient. An event
 // with a painting of its own (art/events/<plate>.webp) shows it over its era's, which stays
@@ -222,7 +223,7 @@ export function EraIntro({ s }: { s: GameState }) {
       <div class="crossing-body">
         <div class="from">{era.numeral} · {era.science}</div>
         <h1>{era.name}</h1>
-        <p class="intro">{era.intro}</p>
+        <p class="intro">{ageIntro(s.era, fateOf(s))}</p>
         <p class="dim" style={{ fontSize: '13px', maxWidth: '60ch' }}>
           η {formatEta(s.eta, s.era)}: {formatYears(s.years, s.eta)} since the Big Bang. Keep your people alive through what is coming. Every turn covers more time than the last.
         </p>
@@ -251,9 +252,9 @@ export function CrossingScreen({ s }: { s: GameState }) {
     <div class="crossing" role="dialog" aria-modal="true" aria-label={to.name}>
       <div class="crossing-art" style={{ backgroundImage: `url(art/${r.to}.webp)` }} />
       <div class="crossing-body">
-        <div class="from">The end of {from.name}</div>
-        <h1>{to.name}</h1>
-        <p class="intro">{to.intro}</p>
+        <div class="from">{r.from === r.to ? from.name : `The end of ${from.name}${r.title ? ` · ${r.title}` : ''}`}</div>
+        <h1>{r.from === r.to && r.title ? r.title : to.name}</h1>
+        <p class="intro">{r.intro ?? to.intro}</p>
         <div class="row wrap" style={{ gap: '18px', justifyContent: 'center' }}>
           <div>
             <div class="eyebrow">People</div>

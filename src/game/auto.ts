@@ -30,11 +30,11 @@ import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle } from './sim/fleets';
 import { colonies, distLy, eraIndex, hasTech, swarmSeenAt, threadTotals } from './sim/util';
-import type { Body, Colony, GameState, ThreadId } from './types';
+import type { Body, Colony, Fate, GameState, ThreadId } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
-import { calendarEra, inAge } from './fate';
+import { DEGENERATE_END, MATTER_END, calendarEra, fateKnown, fateOf, inAge, matterGone } from './fate';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
@@ -52,7 +52,7 @@ const TECH_PRIORITY = [
   'last_light_protocols', 'reversible_logic', 'hibernation_protocols', 'deep_listening', 'hunger_studies', 'magnetic_sails', 'comet_shepherding', 'assembly_of_threads',
   'horizon_physics', 'accretion_engines', 'proton_question', 'deep_mantle', 'catalyzed_drives', 'mind_merging', 'halo_dynamics', 'pulsar_braking', 'hunger_lures',
   // degenerate
-  'cold_computation', 'glacial_cognition', 'relativistic_arks', 'deep_time_protocols', 'baryon_decay_harvest', 'leptonic_computation', 'penrose_process',
+  'cold_computation', 'glacial_cognition', 'relativistic_arks', 'deep_time_protocols', 'baryon_decay_harvest', 'curvature_harvest', 'leptonic_computation', 'penrose_process',
   'great_decay_protocols', 'hawking_capture',
   'deep_storage', 'brown_dwarf_mining', 'accretion_modelling', 'burst_capture', 'horizon_storage', 'abyssal_thought', 'gravitic_semaphore', 'quickening',
   'garden_arks', 'aegis_lattices', 'command_language',
@@ -100,17 +100,25 @@ function tryBuild(state: GameState, c: Colony, ids: string[]): boolean {
   return false;
 }
 
+/** The fate of matter we plan for: the one we know, or, not knowing yet, the worst (decay, the soonest end). */
+function plannedFate(state: GameState): Fate {
+  return fateKnown(state) ? fateOf(state) : 'decay';
+}
+
 function planBuilds(state: GameState) {
   const civ = state.civ;
   const mods = computeMods(state);
   const cap = reserveCapacity(state, mods);
   const net = civ.flags.last_energy_net ?? 0;
   const lateDusk = calendarEra(state) === 'dusk' && state.eta > 13.99;
-  const preDecay = calendarEra(state) === 'degenerate' && state.eta > 27;
+  // before matter ends (the Great Decay, or the Great Evaporation), re-encode onto leptonic substrate
+  const fate = plannedFate(state);
+  // about as many turns ahead for either: the Black Hole Age's Tide covers a decade a turn, the Degenerate Age's under half
+  const preEnd = fate === 'decay' ? calendarEra(state) === 'degenerate' && state.eta > 27 : fate === 'curvature' ? state.eta > 62 && !matterGone(state) : false;
   const t = threadTotals(state);
   for (const c of colonies(state)) {
     // before the protons go, re-encoding goes to the front of the queue
-    if (preDecay && state.protonsDecay && hasTech(state, 'leptonic_computation') && (c.structures.lepton_substrate ?? 0) < 2) {
+    if (preEnd && hasTech(state, 'leptonic_computation') && (c.structures.lepton_substrate ?? 0) < 2) {
       if (!c.queue.some((q) => q.key === 'lepton_substrate')) {
         if (c.queue.length >= 6) removeQueued(state, c.id, c.queue[c.queue.length - 1].uid);
         if (tryBuild(state, c, ['lepton_substrate'])) {
@@ -127,13 +135,14 @@ function planBuilds(state: GameState) {
     const light = lightAt(state, c);
     const energyFirst = net < 3 || civ.energy < cap * 0.25;
     const plan: string[] = [];
-    if (preDecay && state.protonsDecay) plan.push('lepton_substrate');
+    if (preEnd) plan.push('lepton_substrate');
     if (calendarEra(state) === 'blackhole') plan.push('penrose_harvester', 'hawking_collector', 'bastion', 'horizon_vault');
     if (calendarEra(state) === 'degenerate' && state.eta > 30) plan.push('penrose_harvester', 'hawking_collector');
     if (calendarEra(state) === 'dark') plan.push('preservation_array', 'horizon_siphon');
+    if (fate === 'curvature' && state.eta > 29 && state.eta < DEGENERATE_END.curvature) plan.push('curvature_collector');
     // after the embers: burn matter (it is going anyway), feed black holes, catch the decay
     if (calendarEra(state) === 'degenerate' && light < 0.3) {
-      if (state.protonsDecay && state.eta > 29) plan.push('decay_harvester');
+      if (fate === 'decay' && state.eta > 29) plan.push('decay_harvester');
       if (civ.matter > 60) plan.push('accretion_engine', 'fusion_plant');
     }
     if (energyFirst) {
@@ -171,8 +180,13 @@ function settleScore(state: GameState, b: Body, thread: ThreadId): number {
   if (calendarEra(state) === 'dusk' && state.eta > 13.99 && (sys.primary.halo || sys.primary.kind === 'black_hole')) s += 2.5;
   if (sys.special === 'core' && eraIndex(calendarEra(state)) >= 1) s += 4;
   if (eraIndex(calendarEra(state)) >= 2 && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 2 + Math.min(6, sys.primary.spin / 200);
-  // matter will dissolve: the future is at the black holes
-  if (calendarEra(state) === 'degenerate' && state.protonsDecay && state.eta > 24 && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 10;
+  // matter will dissolve: the future is at the black holes (under curvature, the ones that outlast it)
+  const fate = plannedFate(state);
+  const hole = sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh';
+  if (fate === 'decay' && calendarEra(state) === 'degenerate' && state.eta > 24 && hole) s += 10;
+  if (fate === 'curvature' && state.eta > 50 && hole && (sys.primary.evaporateAt ?? Infinity) > Math.pow(10, MATTER_END.curvature)) s += 10;
+  // a neutron star that will burst is no place to settle
+  if (fate === 'curvature' && sys.primary.kind === 'neutron_star' && state.eta > 55) return -1;
   if (b.kind === 'deep' && thread !== 'kin') s += 0.5;
   return s;
 }
@@ -224,8 +238,11 @@ function planFleets(state: GameState) {
   const pr = project(state);
   const netNow = pr.energyIn - pr.energyOut;
   const affordable = netNow > 2 + nCol * 1.5 && civ.energy > reserveCapacity(state, computeMods(state)) * 0.4;
-  const atHole = colonies(state).some((c) => ['black_hole', 'smbh'].includes(state.systems[c.systemId].primary.kind));
-  const needHole = calendarEra(state) === 'degenerate' && state.protonsDecay && state.eta > 22 && !atHole && inFlight === 0 && civ.matter > 80;
+  const fate = plannedFate(state);
+  // a black hole that will outlast the end of matter (under curvature, only the big ones do)
+  const lasting = (k: string, at?: number) => (k === 'black_hole' || k === 'smbh') && (fate !== 'curvature' || (at ?? Infinity) > Math.pow(10, MATTER_END.curvature));
+  const atHole = colonies(state).some((c) => lasting(state.systems[c.systemId].primary.kind, state.systems[c.systemId].primary.evaporateAt));
+  const needHole = ((fate === 'decay' && calendarEra(state) === 'degenerate' && state.eta > 22) || (fate === 'curvature' && state.eta > 50 && !matterGone(state))) && !atHole && inFlight === 0 && civ.matter > 80;
   if ((affordable || needHole) && nCol + inFlight < want + (needHole ? 1 : 0) && (capital.structures.shipyard ?? 0) > 0 && capital.queue.length < 3) {
     const opts = calendarEra(state) === 'dusk' ? ['seedcore', 'ark', 'spore'] : ['vaultship', 'seedcore', 'spore'];
     if (eraIndex(calendarEra(state)) >= 2) opts.unshift('vaultship');

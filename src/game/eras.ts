@@ -1,4 +1,4 @@
-import type { EpochLength, EraId } from './types';
+import type { EpochLength, EraId, Fate } from './types';
 
 // Scale follows time. Each era has a natural pace, the Tide: the turn length a civilization
 // surviving at that moment would naturally live at. The Tide grows in proportion to the time
@@ -89,6 +89,25 @@ export const ERAS: EraDef[] = [
 ];
 
 export const ERA_BY_ID: Record<EraId, EraDef> = Object.fromEntries(ERAS.map((e) => [e.id, e])) as Record<EraId, EraDef>;
+
+/** An age's intro, for the fate of matter: the Black Hole Age (and, for stable matter, the Dark) reads differently by fate. */
+export function ageIntro(era: EraId, fate: Fate): string {
+  if (era === 'blackhole' && fate === 'stable')
+    return 'The protons held, and nothing marked the moment: the neutron stars, the last things warm of their own accord, have cooled below the faint glow of the black holes. For the whole life of the universe the holes were the coldest things in it; now they are the warmest. Matter endures, cold and dark, slowly tunnelling toward iron, and the dead stars and worlds are fuel now, not sources. The holes spin, and they very slowly evaporate. Whatever you are now, you live around them.';
+  if (era === 'blackhole' && fate === 'curvature')
+    return 'The neutron stars have burst. For 10⁶⁸ years each gave its mass, a little at a time, to the curvature of space around it; at a tenth of a Sun it could hold together no longer. They were the last things warm of their own accord. Now the black holes are the warmest things in the universe, and the lightest of them are already bursting too. White dwarfs, brown dwarfs and worlds remain, cold and dark, and space is unmaking them as well, slowly: the dwarfs will fade by η 85, every world by η 90. Whatever you are now, you live around the holes.';
+  if (era === 'dark' && fate === 'stable')
+    return 'The last black hole has evaporated. There are no more sources, only what you saved. The matter is still here, dead stars and worlds as cold as the sky itself, giving nothing back. Photons stretched longer than galaxies once were drift through the dark. Every thought now draws on a reserve that will never refill, and time itself now passes in powers of powers.';
+  return ERA_BY_ID[era].intro;
+}
+
+/** The name of the crossing out of an age: the Degenerate Age ends in the Great Decay if protons decay, otherwise at the Last Warmth. */
+export function crossingName(from: EraId, fate: Fate): string {
+  if (from === 'dusk') return 'The Last Light';
+  if (from === 'degenerate') return fate === 'decay' ? 'The Great Decay' : 'The Last Warmth';
+  if (from === 'blackhole') return 'The Last Horizon';
+  return 'The End';
+}
 
 export function nextEra(id: EraId): EraId | null {
   const i = ERA_BY_ID[id].index;
@@ -244,26 +263,66 @@ export interface Milestone {
   detail: string;
 }
 
-export const MILESTONES: Milestone[] = [
+/** Milestones every fate shares. */
+const COMMON_MILESTONES: Milestone[] = [
   { at: 14, label: 'Last Light', detail: 'The last ordinary stars leave the main sequence; star formation ends.' },
   { at: 15, label: 'Stripped worlds', detail: 'Close stellar passes have torn most planets from their stars.' },
   { at: 19.5, label: 'Galactic evaporation', detail: 'Most remnants are flung out of the galaxy; a minority falls into the central black hole.' },
   { at: 21, label: 'Last collision stars', detail: 'The galaxy has evaporated: brown dwarfs no longer meet, and no new collision stars light. (Merging white-dwarf pairs need no galaxy and still flare until about η 25.)' },
   { at: 25, label: 'Embers fade', detail: 'The dark-matter halo is spent; white dwarfs are no longer warmed by WIMP annihilation.' },
-  { at: 37, label: 'Proton decay?', detail: 'If protons decay (lifetime unknown, above 10³⁴ years), ordinary matter dissolves by η ≈ 39.' },
   { at: 69, label: 'Stellar holes evaporate', detail: 'Black holes of a few to tens of solar masses finish evaporating.' },
   { at: 83, label: 'Million-sun holes', detail: 'Black holes of 10⁶ solar masses evaporate.' },
-  { at: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
   { at: 99, label: 'Last Horizon', detail: 'Galaxy-sized black holes evaporate. The Black Hole Era ends.' },
-  { at: 141, label: 'Positronium decays', detail: 'The last bound atoms annihilate into photons.' },
 ];
+
+/** What each fate of matter adds; `null` is a fate not yet known, whose milestones are questions. */
+const FATE_MILESTONES: Record<Fate | 'unknown', Milestone[]> = {
+  decay: [
+    { at: 37.5, label: 'Proton decay', detail: 'Protons decay in earnest: ordinary matter begins to dissolve.' },
+    { at: 39, label: 'The Great Decay', detail: 'Ordinary matter is gone. Only minds on leptonic substrate, and the black holes, remain. The Degenerate Age ends.' },
+    { at: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
+    { at: 141, label: 'Positronium decays', detail: 'The last bound atoms annihilate into photons.' },
+  ],
+  stable: [{ at: 30, label: 'The Last Warmth', detail: 'The neutron stars, the last things warm of their own accord, cool below the faint glow of the black holes. The Degenerate Age ends; nothing dissolves.' }],
+  curvature: [
+    { at: 68, label: 'Neutron stars burst', detail: 'Curvature radiation: at a tenth of a Sun each neutron star bursts. The Degenerate Age ends.' },
+    { at: 82, label: 'White dwarfs fade', detail: 'Space has turned their mass into particles: the heaviest are gone near η 78.5, a typical one near 82, the lightest by 85.' },
+    { at: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
+    { at: 87, label: 'Brown dwarfs fade', detail: 'The brown dwarfs are gone the same way.' },
+    { at: 89.5, label: 'The Great Evaporation', detail: 'Every world and every scrap of ordinary matter has evaporated.' },
+    { at: 141, label: 'Positronium decays', detail: 'The last bound atoms annihilate into photons.' },
+  ],
+  unknown: [
+    { at: 30, label: 'The Last Warmth?', detail: 'If matter is stable, the Degenerate Age ends about here: the neutron stars cool below the black holes, and nothing else happens.' },
+    { at: 37, label: 'Proton decay?', detail: 'If protons decay (lifetime unknown, above 10³⁴ years), ordinary matter dissolves by η ≈ 39.' },
+    { at: 68, label: 'Neutron stars burst?', detail: 'If space itself slowly unmakes matter (curvature radiation), the neutron stars burst about here, and the dwarfs and worlds follow by η 90.' },
+    { at: 89.5, label: 'Great Evaporation?', detail: 'If curvature radiation is real, the last ordinary matter is gone by about here.' },
+  ],
+};
+
+/** The milestones on the main ruler, for a fate of matter (null while it is unknown). */
+export function milestonesFor(fate: Fate | null): Milestone[] {
+  return [...COMMON_MILESTONES, ...FATE_MILESTONES[fate ?? 'unknown']].sort((a, b) => a.at - b.at);
+}
+
+/** Today's milestones with the fate unknown (kept for anything that lists them all). */
+export const MILESTONES: Milestone[] = milestonesFor(null);
 
 /** Deep-time milestones, on log10(eta). Speculative physics, labelled as such in the Codex. */
 export const DEEP_MILESTONES: Milestone[] = [
-  { at: Math.log10(141), label: 'Positronium decays', detail: 'η ≈ 141 (Page & McKee).' },
+  { at: Math.log10(141), label: 'Positronium decays', detail: 'η ≈ 141 (Page & McKee), where protons decayed or space unmade matter.' },
   { at: Math.log10(161), label: 'Vacuum decay?', detail: 'One Standard Model estimate puts the vacuum lifetime near 10¹⁶¹ years, with an uncertainty spanning over a thousand orders of magnitude.' },
   { at: Math.log10(1500), label: 'Iron stars', detail: 'If protons are stable, cold fusion by tunnelling turns all matter to iron by about 10¹⁵⁰⁰ years (Dyson 1979).' },
   { at: 26, label: 'Tunnelling collapse', detail: 'If protons are stable, iron stars tunnel into neutron stars and black holes between 10^(10²⁶) and 10^(10⁷⁶) years.' },
   { at: 76, label: 'Last collapse', detail: 'The slowest estimate for matter tunnelling into black holes.' },
   { at: 122, label: 'Recurrence', detail: 'Poincaré recurrence of a de Sitter horizon, about 10^(10¹²²) years: given long enough, any state returns.' },
 ];
+
+/** The deep-time milestones for a fate: iron and collapse only if matter is stable, positronium only if it is not. */
+export function deepMilestonesFor(fate: Fate | null): Milestone[] {
+  return DEEP_MILESTONES.filter((m) => {
+    if (m.label === 'Iron stars' || m.label === 'Tunnelling collapse' || m.label === 'Last collapse') return fate === 'stable' || fate === null;
+    if (m.label === 'Positronium decays') return fate !== 'stable';
+    return true;
+  });
+}

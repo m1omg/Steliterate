@@ -50,7 +50,7 @@ export const CODEX: CodexEntry[] = [
       'After the Last Light, the galaxy is made of stellar corpses: white dwarfs, neutron stars, brown dwarfs and black holes.',
       'Embers: white dwarfs capture dark matter particles, which annihilate inside them and keep them warm. Adams & Laughlin estimate a few trillionths of the Sun’s luminosity (about 10¹⁵ W) and a temperature of around 63 K, for as long as the halo lasts (to roughly η 25). In the game the Unlit, the dark-matter minds, have something to say about that.',
       'Black dwarfs: a white dwarf that no dark matter warms has only its own heat left. This late it keeps that heat in its electrons and is the same temperature right through, while its surface radiates as T⁴, so it cools as T ≈ K·t⁻½: a few millikelvin as the age opens, about ten microkelvin by η 20, colder every age after. The game calls it a black dwarf from η 16.7; it was black long before. An ember joins them as the halo runs out, its warmth fading from η 22. Neutron stars cool the same way once the dark matter stops warming them (from about 900 K), brown dwarfs from a few kelvin, and the cores of worlds, whose warmth runs out after the Last Light (really it went long before; the game keeps it through the Dusk). Nothing ends up colder than the sky itself: the cosmic horizon glows at about 2×10⁻³⁰ K. Black holes glow at their Hawking temperature, a few hundredths of a microkelvin for one of a few Suns.',
-      'Usable energy goes as T⁴: a body a thousand times colder gives a million million times less. Collectors get nothing from a cold dwarf unless something warms it: a world falling in, or its own protons decaying, if they do (a white dwarf would hold near 0.05 K, a neutron star near 1.5 K). The cold has one gift: erasing a bit of information costs at least kT ln 2 (Landauer), so the colder the sky, the cheaper a thought. Under a dark sky, a star with no light left to give, Coldminds and Cold Vaults keep for half.',
+      'Usable energy goes as T⁴: a body a thousand times colder gives a million million times less. Collectors get nothing from a cold dwarf unless something warms it: a world falling in, or its own protons decaying, if they do (a white dwarf would hold near 0.05 K, a neutron star near 1.5 K), or, if curvature radiation is real, space unmaking a neutron star (a few hundredths of a microkelvin). The cold has one gift: erasing a bit of information costs at least kT ln 2 (Landauer), so the colder the sky, the cheaper a thought. Under a dark sky, a star with no light left to give, Coldminds and Cold Vaults keep for half.',
       'Collision stars: when two brown dwarfs collide they can merge into a red dwarf that burns for trillions of years. About a hundred such stars shine in a galaxy at any time from η 15 until the galaxy itself evaporates (around η 19 to 21): brown dwarfs meet only while it holds together.',
       'Merger stars: two white dwarfs that spiral together can ignite as a short-lived, very bright helium-burning star, or explode as a type Ia supernova. Its ultraviolet boils away the closest worlds; a heavier one then swells into a giant some 25 times the Sun’s size, swallowing whatever orbits inside it.',
       'Galactic evaporation: close encounters slowly fling most remnants out of the galaxy (η 19–20). Some fall into the central black hole instead. An ember flung out leaves behind the dark matter that warmed it: it dims over about a tenfold of years as it climbs away, then goes out (in the game from the moment it is cast out; really its orbit widens, and the dimming begins, a little before).',
@@ -67,11 +67,14 @@ export const CODEX: CodexEntry[] = [
   },
   {
     id: 'decay',
-    title: 'Proton decay',
+    title: 'The fate of matter',
     body: [
-      'Many grand unified theories predict that protons decay, with a half-life above about 10³⁴ years; no decay has ever been observed. If they do, the white dwarfs and neutron stars dissolve between η 30 and 40. Each dissolving white dwarf glows at around 400 W: the last matter-based power in the universe.',
-      'If protons are stable, matter stays. Over about 10¹⁵⁰⁰ years cold fusion by quantum tunnelling turns everything into iron (Dyson 1979), and much later the iron stars tunnel into black holes.',
-      'You choose at the start whether protons decay, are stable, or remain unknown until your scientists find out.',
+      'Is ordinary matter for ever? Physics has not settled it, and the game keeps three answers. You choose one at the start, or leave it unknown: then the universe has drawn one (protons decay half the time, each of the others a quarter), and you learn which from the Proton Question or, near η 30, from the neutron stars.',
+      'Protons decay. Many grand unified theories predict it, with a half-life above about 10³⁴ years; no decay has ever been seen. If they do, the decay keeps every dead star faintly warm (a white dwarf near 0.05 K on some 400 W, a neutron star near 1.5 K), and between η 37.5 and 39 it dissolves them, and every world, into light and a thin haze of electrons and positrons: the Great Decay.',
+      'Matter is stable. Then it stays, cold and dark. Over about 10¹⁵⁰⁰ years cold fusion by quantum tunnelling turns it all into iron, and much later the iron stars tunnel into black holes (Dyson 1979).',
+      'Curvature radiation. Falcke, Wondrak & van Suijlekom (2024) argue that space curved tightly around any dense body turns a little of its mass into particles, as it does at a black hole’s horizon; the denser the body, the faster. A neutron star lasts about 3×10⁶⁸ years, the densest white dwarf some 10⁷⁸, a typical one nearer 10⁸², the Moon a few times 10⁸⁹. A neutron star shrinks until, at about a tenth of a Sun, it can no longer hold together, and bursts. A white dwarf grows less dense as it shrinks, so the game has it fade away instead (η 78.5 to 85, the heaviest first); brown dwarfs go near η 87, and the last worlds by η 89.5, the Great Evaporation. The glow is faint: a neutron star holds at a few hundredths of a microkelvin, on some 10⁻²⁹ W, much like the Hawking glow of a stellar black hole, and, like it, worth gathering only to minds as slow as the age. The idea is new, unconfirmed and disputed: not everyone agrees that a body without a horizon radiates at all.',
+      'Each age is named for the warmest thing in it: the last stars, then the dead stars, then the black holes, then nothing warmer than the sky. The Degenerate Age ends when the neutron stars, the last things warm of their own accord, fall below the faint glow of the black holes. If matter is stable that happens near η 30, the Last Warmth; if protons decay, their warmth holds the neutron stars up until the Great Decay at η 39; under curvature radiation they glow until they burst, near η 68. Whatever happens to matter, the Black Hole Age lasts until the last hole evaporates, near η 100.',
+      'Where the game bends it: decay warmth would show in the neutron stars as soon as the dark matter stopped warming them, about η 25, and curvature warmth near η 29; the game keeps the question open until the Proton Question or the neutron stars at η 30 settle it.',
     ],
   },
   {
@@ -80,14 +83,14 @@ export const CODEX: CodexEntry[] = [
     body: [
       'Once matter is gone or locked away, black holes are the last sources. They lose mass through Hawking radiation, slowly at first and then faster: a black hole of mass M lasts about 2×10⁶⁷ (M / M☉)³ years, ending in a bright final burst. Until near the end a stellar hole radiates less than a billion-billion-billionth of a watt, so its last second, about 2×10²² joules (its last year, nearly 10²⁵), dwarfs everything it gave before: a prize for whoever catches it close in. Spread over the distance its worlds orbit it harms nothing: a world 1 AU out gets under a tenth of a joule on each square metre, what Earth gets from the Sun in a twentieth of a millisecond. As the hole shrinks, its hold on what circles it fades, and its worlds drift free.',
       'A spinning black hole also stores rotational energy that can in principle be tapped (the Penrose process). In the game it is a finite reservoir.',
-      'Around η 85, electrons and positrons can pair into positronium atoms larger than today’s observable universe.',
+      'Around η 85, if protons decayed or space unmade matter, electrons and positrons can pair into positronium atoms larger than today’s observable universe.',
     ],
   },
   {
     id: 'dark',
     title: 'IV. The Dark Era',
     body: [
-      'After the last galaxy-sized black hole evaporates (around η 100) there is only thin radiation and the occasional positronium atom, which decays around η 141.',
+      'After the last galaxy-sized black hole evaporates (around η 100) there is only thin radiation and, unless matter was stable, the occasional positronium atom, which decays around η 141. If it was, the dead stars and worlds are still there, as cold as the sky.',
       'Far beyond: the vacuum might decay (one Standard Model estimate is near 10¹⁶¹ years, but uncertain by more than a thousand orders of magnitude). If protons are stable, iron stars tunnel into black holes between 10^(10²⁶) and 10^(10⁷⁶) years. A de Sitter horizon returns to any previous state after roughly 10^(10¹²²) years (Poincaré recurrence).',
       'Roger Penrose’s conformal cyclic cosmology suggests the end of one universe might be the start of another. It is speculative; the game’s Aeon Seed is built on it.',
     ],
@@ -112,6 +115,7 @@ export const CODEX: CodexEntry[] = [
       'L. M. Krauss & R. J. Scherrer, “The return of a static universe and the end of cosmology”, GRG 39, 1545 (2007).',
       'R. Penrose, Cycles of Time (2010). Speculative.',
       'D. N. Page & M. R. McKee, positronium formation and decay in the far future (1981).',
+      'H. Falcke, M. F. Wondrak & W. D. van Suijlekom, “An upper limit to the lifetime of stellar remnants from gravitational pair production”, arXiv:2410.14734 (2024). Theoretical and disputed.',
       'Planet inspiral and accretion figures: estimates from the co-designer’s speculation notes (not peer-reviewed; they disagree with each other, which the game keeps).',
     ],
   },

@@ -651,3 +651,42 @@ neighbours. Plan agreed 7 Oct; parts land one at a time.
     the dark-sky discount 126 / 36; the gentler fade it has now (×0.8 a turn) 128 / 40 (×0.9:
     134 / 39). Most of the cost is the core heat that had lasted into the Dark Era: The Fade
     (continuity lost in the dark) rises from 9 to 28 games in 300.
+- **Three fates of matter, and ages named for their warmest thing** (the player: three paths,
+  "decay 50, curvature 25, stable 25"; "the timeline stays ambiguous" until research or the
+  universe shows it). Matter's fate is now one of three, chosen at the start or drawn (the same
+  single draw as before, so no galaxy changes; seeds whose draw falls in 0.5–0.75 now get
+  curvature radiation, which were decay below 0.7 and stable above). Saves go to version 3 and
+  keep their fate.
+  - The Degenerate Age ends when the neutron stars, the last things warm of their own accord,
+    fall below the faint glow of the black holes: at the Great Decay (η 39) if protons decay, as
+    before; near η 30 if matter is stable (the Last Warmth: nothing dissolves, no "Great Decay"
+    screen any more); near η 68 under curvature radiation (Falcke, Wondrak & van Suijlekom,
+    arXiv:2410.14734), when the neutron stars burst and whatever is settled at one is lost. The
+    calendar does not move: the Tide still turns at 10⁴⁰ years (η 39) in every fate.
+  - Curvature radiation goes on unmaking matter: white dwarfs fade at η 78.5 to 85 by mass,
+    brown dwarfs at η 87, their worlds drifting loose; at η 89.5 the Great Evaporation, a storm
+    inside the Black Hole Age, takes every world as the Great Decay does. A Curvature Collector
+    (Curvature Harvest) gathers a neutron star's faint glow from η 30 until it bursts.
+  - With the fate unknown nothing gives it away: the forecast asks "The end of the Degenerate
+    Age?" at the earliest date, the Chronometer hatches η 30 to 68 with its dates as questions,
+    temperatures leave out decay and curvature warmth, and the autoplayer plans for decay. Near
+    η 30 the neutron stars show it (Not for Ever; The Stars That Would Not Cool; or, if matter is
+    stable, the Last Warmth itself, which then says so). The check plays three such games to
+    η 29 and finds them identical in every field but the fate.
+  - Texts by fate: the Black Hole Age's intro (and the Dark Era's, if matter is stable), the
+    crossing names and screens, The Proton Question's three answers, forecasts, milestones, the
+    Manual and a Codex entry, The fate of matter. A garden civilization declines faster only once
+    proton decay takes hold (η 37.5; it was from η 15, a tell before anyone knew). Events: the
+    halo-thin news no longer arrives after η 39, and atoms of positronium need positrons, which
+    stable matter does not make.
+  - Also: the Hearth says "stored fuel and salvage" where nothing local is left to draw on (the
+    same small floor as before); a hole we live on no longer has two forecasts in the Black Hole
+    Age.
+  - Balance, 300 games: 124 survive, 52 victories, a Degenerate Age of 70 turns (was 128 / 40 /
+    68); 900 games 386 / 142 / 69 (was 397 / 119 / 67). Decay games are as before, line for line
+    (148 of 300). By fate in the 900: decay 163 of 450 survive (4 victories), stable 143 of 239
+    (89), curvature 80 of 211 (49). With the fate chosen, 300 games each: decay 110 / 7 / 68,
+    stable 184 / 114 / 55, curvature 113 / 65 / 89 (98 / 56 before the autoplayer prepared for
+    the Great Evaporation as many turns ahead as for the Great Decay). Stable matter is the
+    kindest fate; curvature games trade endurance for victories (more time with matter), and
+    lose most at the Great Evaporation and in the Dark that follows soon after.

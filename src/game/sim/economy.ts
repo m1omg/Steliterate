@@ -6,7 +6,7 @@ import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
 import { type Mods, strainFor, type Strain } from './mods';
 import { clamp, colonies, eraIndex } from './util';
-import { calendarEra } from '../fate';
+import { calendarEra, fateOf, matterGone } from '../fate';
 
 export interface TurnContext {
   years: number; // start of the coming turn
@@ -195,6 +195,12 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
           e = state.protonsDecay && calendarEra(state) === 'degenerate' && eta > 30 ? a * clamp((eta - 30) / 6, 0.2, 1) : 0;
           break;
         }
+        case 'curvature': {
+          // the glow of a neutron star's mass turning to particles, worth gathering once all else is colder
+          const eta = Math.log10(Math.max(1, ctx.years));
+          e = fateOf(state) === 'curvature' && sys.primary.kind === 'neutron_star' && eta > 30 ? a * clamp((eta - 30) / 6, 0.2, 1) : 0;
+          break;
+        }
         case 'siphon':
           e = calendarEra(state) === 'dark' ? a : 0;
           break;
@@ -209,7 +215,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
       // only its own focus touches matter: the others leave it as it was
       mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1);
       depletion += (d.matterYield || d.hydrogenYield ? mt : 0);
-      if (!state.protonsDecay || eraIndex(calendarEra(state)) < 2) matter += mt;
+      if (!matterGone(state)) matter += mt;
     }
     const ind = (d.industry ?? 0) * n * out;
     const ins = (d.insight ?? 0) * n * out;
@@ -230,10 +236,12 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   if (!body.dissolved) {
     const hole = sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh';
     // at a black hole the Hearth draws on its spin and the thin gas still falling in
-    const local = Math.max(0.25, Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
+    const fed = Math.max(Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
+    // where nothing local is left to draw on, it burns what was stored and salvaged, a little
+    const local = Math.max(0.25, fed);
     const hearth = 2 * local * (1 - c.damage) * pf * overdrive * focusMul(c, 'energy') * taintBoost;
     energy += hearth;
-    lines.push({ label: c.overdrive ? 'Hearth (overdriven)' : 'Hearth', energy: hearth });
+    lines.push({ label: `Hearth${c.overdrive ? ' (overdriven)' : ''}${fed < 0.25 ? ': stored fuel and salvage' : ''}`, energy: hearth });
   }
 
   industry *= ctx.mods.industryMult * focusMul(c, 'industry');

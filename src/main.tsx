@@ -264,15 +264,22 @@ window.__stel = {
     const s = game.value!;
     engine()?.focusGalaxyOn(s.civ.homeSystemId, 150, true);
   },
-  endTurns(n: number, auto = true) {
+  // `keep` leaves events waiting for the autoplayer to answer next turn, as the balance harness does
+  endTurns(n: number, auto = true, keep = false) {
     const s = game.value;
     if (!s) return;
     for (let i = 0; i < n && !s.outcome; i++) {
       if (auto) autoPlay(s, 'competent');
       endTurn(s);
       s.crossing = null;
-      s.pending.length = 0;
+      if (!keep) s.pending.length = 0;
     }
+    bump();
+  },
+  /** One turn's worth of the autoplayer's choices (events answered too), without ending the turn. */
+  autoPlay() {
+    const s = game.value;
+    if (s && !s.outcome) autoPlay(s, 'competent');
     bump();
   },
   orderFleet(fleetId: string, systemId: string, order: 'move' | 'survey' | 'colonize' = 'survey') {

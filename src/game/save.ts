@@ -21,7 +21,7 @@ function ls(): Storage | null {
 }
 
 /** The current save format. Bump it with a new step in migrate() whenever saved state changes shape. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /**
  * Bring a save from any earlier version up to date, so old games keep working. Every step is
@@ -49,6 +49,10 @@ export function migrate(s: GameState): GameState {
     for (const b of Object.values(s.bodies)) {
       if (b.water === undefined) b.water = b.traits.includes('homeworld') ? 0.42 : defaultWater(b.kind, (b.seed % 1000) / 1000);
     }
+  }
+  if (v < 3) {
+    // v3: the fate of matter has three answers; a game from before keeps the one it had
+    s.fate ??= s.protonsDecay ? 'decay' : 'stable';
   }
   // anything this version of the game no longer knows is dropped rather than left to break it
   s.civ.techs = s.civ.techs.filter((t) => TECH_BY_ID[t]);

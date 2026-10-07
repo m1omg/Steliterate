@@ -1,10 +1,10 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
-import { eraOver, logTurnLength } from '../eras';
+import { ERA_BY_ID, logTurnLength, tideLength } from '../eras';
 import { SURFACE_LIFE, evolveUniverse, lampsOver, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
-import { runCrossing } from './crossing';
+import { greatEvaporation, runCrossing } from './crossing';
 import { spareYield } from './spare';
 import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
@@ -22,7 +22,7 @@ import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
 import { clamp, colonies, distLy, hasCharter, log, popsOf, totalPops, withRng } from './util';
-import { calendarEra } from '../fate';
+import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf } from '../fate';
 
 export interface TurnResult {
   crossing: CrossingReport | null;
@@ -422,7 +422,12 @@ export function endTurn(state: GameState): TurnResult {
   updateForecasts(state);
 
   // ------------------------------------------------ 9. crossings
-  if (eraOver(state.era, state.eta)) {
+  // the fate of matter shows itself: near η 30 the neutron stars tell the fates apart
+  if (!fateKnown(state) && state.eta >= FATE_SHOWN_AT) {
+    revealFate(state);
+    updateForecasts(state);
+  }
+  if (ageOver(state)) {
     if (state.era === 'dark') {
       // the deep-time ruler has run out: endurance
     } else {
@@ -438,6 +443,14 @@ export function endTurn(state: GameState): TurnResult {
       state.crossing = result.crossing;
       updateForecasts(state);
     }
+  }
+  // the calendar turns without the age (a fate other than decay): the Black Hole Age's Tide
+  else if (calendarTurnDue(state)) calendarTurn(state);
+  // curvature radiation unmakes the last ordinary matter: a storm of its own, inside the age
+  if (fateOf(state) === 'curvature' && state.eta >= MATTER_END.curvature && state.civ.flags.matter_gone === undefined && state.era !== 'dark') {
+    result.crossing = greatEvaporation(state, computeMods(state));
+    state.crossing = result.crossing;
+    updateForecasts(state);
   }
   // the last black hole may evaporate before the calendar says so
   if (state.era === 'blackhole' && !Object.values(state.systems).some((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone)) {
@@ -551,6 +564,11 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         else if (seen) log(state, `The black hole at ${sys.name} has evaporated in a final burst. Whatever orbited it drifts loose.`, 'info', sys.id);
         break;
       }
+      case 'faded':
+        // curvature radiation: a dwarf gone, its mass turned to particles; its worlds drift loose,
+        // and what we built there stays (with nothing left there to warm it)
+        if (mine || seen) log(state, `The dwarf at ${sys.name} is gone: space has turned the last of its mass into particles. Whatever orbited it drifts loose.`, mine ? 'bad' : 'info', sys.id);
+        break;
       case 'dissolved':
         for (const c of colonies(state)) {
           if (c.systemId === sys.id && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) {
@@ -587,4 +605,27 @@ function evacuate(state: GameState, c: Colony, reason: string) {
   for (const [id, k] of orbital) host.structures[id] = Math.max(host.structures[id] ?? 0, k);
   if (!host.structures.substrate_core && (saved.echoes ?? 0) > 0) host.structures.substrate_core = Math.ceil((saved.echoes ?? 0) / 4);
   log(state, `${n + cryo} of ${c.name}’s people escaped to the Deep before the end.`, 'good', sys.id);
+}
+
+/**
+ * The fate of matter shows itself, if no one found it out first: near η 30 a neutron star should
+ * be a few billionths of a degree above nothing. If protons decay their warmth holds it near two
+ * degrees; under curvature radiation it holds at thirty billionths, paid for with its mass. If
+ * neither, it cools below the black holes, and that is the end of the Degenerate Age (the crossing
+ * says so).
+ */
+function revealFate(state: GameState) {
+  state.civ.flags.fate_known = state.turn;
+  const fate = fateOf(state);
+  if (fate !== 'stable') queueEvent(state, fate === 'decay' ? 'decay_shown' : 'curvature_shown');
+}
+
+/**
+ * The calendar turns without the age (a fate other than decay): at η 39 it skips to 10^40 years and
+ * the Black Hole Age's Tide, as it always did there, while the age goes on as it is.
+ */
+function calendarTurn(state: GameState) {
+  state.years = ERA_BY_ID.blackhole.startYears;
+  state.eta = Math.log10(state.years);
+  state.turnLength = tideLength('blackhole', state.years, state.settings.length);
 }

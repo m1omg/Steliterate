@@ -1,5 +1,5 @@
 import type { Colony, GameState, SpareWork } from '../types';
-import { calendarEra } from '../fate';
+import { matterGone } from '../fate';
 
 // What a settlement does with industry it has nothing to build with. Every choice turns it into
 // about as much as recycling does (a tenth of what a building of that kind makes per point of
@@ -28,7 +28,7 @@ export interface SpareYield {
 
 /** Recycling runs on matter only while there is matter to reuse. */
 export function salvageIsMatter(state: GameState): boolean {
-  return !state.protonsDecay || calendarEra(state) === 'dusk' || calendarEra(state) === 'degenerate';
+  return !matterGone(state);
 }
 
 /**

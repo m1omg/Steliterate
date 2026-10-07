@@ -44,8 +44,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 - **`window.__stel`** (in `src/main.tsx`):
   - `newGame(opts)`
-  - `endTurns(n, auto)`, which autoplays and **clears pending events** (to test events, click
-    `.endturn` instead)
+  - `endTurns(n, auto, keep)`, which autoplays and **clears pending events** (to test events, click
+    `.endturn` instead); with `keep` they wait for the autoplayer to answer next turn, as in the
+    harness, so a game plays out as `tools/sim.ts` plays it
+  - `autoPlay()`: the autoplayer's choices for one turn (it answers waiting events too), without
+    ending it, so a check can then press `.endturn` on a game played as the harness plays it
   - `orderFleet`
   - `select(kind, id)`
   - `refresh()`, which calls `bump()`
@@ -60,8 +63,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   that isn't tainted.
 - **Checks** (`tools/checks/`, since 7 Oct; before then they lived in the ephemeral scratchpad):
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
-    cooling, evap, flash, focus, follow, old-saves, pace, quake, quick, refund, repeal, rogue,
-    spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    cold-energy, cooling, evap, fates, flash, focus, follow, old-saves, pace, quake, quick, refund,
+    repeal, rogue, spare), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -138,8 +141,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Generation changes** must keep RNG consumption the same (pick from the already-shuffled
   order), or every seed's galaxy changes.
 - **Harness blind spots:** the autoplayer never raids, asks for aid or picks tracks, so those
-  never move the harness. Every victory it reaches is The Long Thought: the other Great Works
-  never move it either. It does answer the flare event with choice 0 (keep time with the
+  never move the harness. The victories it reaches are The Long Thought and, at the Heart, The
+  Aeon Seed: the other Great Works never move it. It does answer the flare event with choice 0 (keep time with the
   flare), and keeps time with every new star it can (choice 0 of A New Star and White Fire).
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
@@ -265,6 +268,32 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   Solar Arrays × insolation. Focus: Matter (+25%) touches only matter raised by mines, skimmers
   and lifters; no other focus touches matter (the −10% applies to energy, industry, insight and
   accord).
+- **The fate of matter (`src/game/fate.ts`, 7 Oct):** `state.fate` is 'decay', 'stable' or
+  'curvature' (saves before version 3 follow `protonsDecay`, which still means decay). An Unknown
+  fate is the old single draw (`drawFate` in `gen.ts`: below 0.5 decay, below 0.75 curvature).
+  - Two clocks. `calendarEra()` is the Tide's and the fixed-date physics' (outside decay games,
+    years below 10^40 are the Degenerate Age's); `state.era` is the age the player sees (intro,
+    music, art, event pools). `ageReached`/`inAge` open what belongs to an age when either gets
+    there. `DEGENERATE_END` (decay 39, stable 30, curvature 68) is where `ageOver` ends the
+    Degenerate Age; without decay the calendar turns on its own at η 39 (`calendarTurnDue`,
+    `calendarTurn` in `turn.ts`: the years jump to 10^40).
+  - `fateKnown`: chosen, The Proton Question, `civ.flags.fate_known` (set by `revealFate` in
+    `turn.ts` at `FATE_SHOWN_AT` 30, which queues `decay_shown` or `curvature_shown`), or past the
+    Degenerate Age. Until then nothing may differ by fate: decay and curvature warmth show only once
+    known (`decayWarmth`, `curvatureWarmth`), `forecast.ts` asks "The end of the Degenerate Age?",
+    the Chronometer hatches η 30 to 68 (`milestonesFor(null)`), and the autoplayer plans for decay
+    (`plannedFate` in `auto.ts`). `unit/fates.ts` plays three blind games to η 29 and requires them
+    identical but for the fate; anything new that reads `fateOf` must keep it so.
+  - `matterGone`: `civ.flags.matter_gone` (set by `endOfMatter` in `crossing.ts`, at the Great
+    Decay or the Great Evaporation), or decay with the calendar past the Degenerate Age. It drives
+    matter-as-energy, salvage and mining.
+  - Curvature: `evolveUniverse` fades white and black dwarfs at `dwarfFadeEta(mass)` (78 to 85) and
+    brown dwarfs at `BROWN_FADE_ETA` 87 through `evaporateHole` (note `faded`); `burstNeutronStars`
+    at the Last Warmth; `greatEvaporation` at `MATTER_END.curvature` 89.5 is a crossing report with
+    `from === to` and a `title`, which the crossing screen shows as a storm inside the age.
+    Curvature Collector: `curvature_collector`, tech `curvature_harvest` (`needsCurvature`).
+  - Texts by fate: `ageIntro`, `crossingName`, `milestonesFor`, `deepMilestonesFor` (`eras.ts`);
+    `proton_answer` has three answers.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -482,3 +511,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | giants light at turn end; catch the flash | 148 | a giant shines through the turn after its birth (its event offers a flash: one turn in its light), swallowing then; 58 victories, Degenerate Age 68 turns; 900 games 444 / 152 / 68 against 447 / 136 / 68 before the boiling (620 of 900 end as then); per 150 games 407 giant events, 10 flashes taken by the autoplayer (about 690 energy each) |
 | survivors' health stops at zero; checks in the repo (7 Oct) | 149 | 55 victories, Degenerate Age 68 turns; 5 of 300 games play out differently: help sent right after a crossing or a swarm (Tell the others, aid) no longer first fills a negative |
 | honest cooling; core heat fades; the dark keeps cold minds for half (7 Oct) | 128 | 40 victories, Degenerate Age 68 turns; 900 games 397 / 119 / 67. Steps: no light floors 137 / 55; core heat ×0.5 a turn 106 / 31, with the dark-sky discount 126 / 36; ×0.8 (kept) 128 / 40; ×0.9 134 / 39. The Fade 9 → 28 per 300: core heat had lasted into the Dark |
+| three fates of matter; ages by warmth (7 Oct) | 124 | 52 victories, Degenerate Age 70 turns; 900 games 386 / 142 / 69 (397 / 119 / 67 before); decay games identical line for line. By fate in the 900: decay 163 / 450 (4 victories), stable 143 / 239 (89), curvature 80 / 211 (49). Chosen, 300 each: decay 110 / 7 / 68, stable 184 / 114 / 55, curvature 113 / 65 / 89 (98 / 56 with the autoplayer preparing for the Great Evaporation from η 78 rather than 62) |

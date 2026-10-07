@@ -167,7 +167,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | Age | Sources |
 |---|---|
 | Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase (about 174× as luminous; about 3× the light per turn for collectors while you keep time with it); geothermal (declining); fusion |
-| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. The others are cold already (they cool as T ≈ K·t^-½, a few millikelvin as the age opens) and give collectors nothing; the game calls them black dwarfs from η 16.7. An ember cast out of the galaxy dims over a decade of η as it leaves the halo behind. Worlds' core heat runs out after the Last Light (×0.8 a turn). **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova); their ultraviolet boils away the closest worlds (warmest ground past 3,000 K, rubble past 1,600 K; gas and ice giants spared), and a heavier one swells into a helium giant (1,000 L☉, 120,000 years) that swallows whatever orbits inside its 0.116 AU. A turn soon outlasts every kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full, or, for one too brief for six (a giant, a late helium star), a single flash turn; one clock at a time, though a star that outlasts it can be followed on (priced from our own pace, never below 250 energy); with Quickening, Quick ×10 splits each clock turn into ten, each lived as a tenth; free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve, which charts its system. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting** |
+| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. The others are cold already (they cool as T ≈ K·t^-½, a few millikelvin as the age opens) and give collectors nothing; the game calls them black dwarfs from η 16.7. An ember cast out of the galaxy dims over a decade of η as it leaves the halo behind. Worlds' core heat runs out after the Last Light (×0.8 a turn). **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova); their ultraviolet boils away the closest worlds (warmest ground past 3,000 K, rubble past 1,600 K; gas and ice giants spared), and a heavier one swells into a helium giant (1,000 L☉, 120,000 years) that swallows whatever orbits inside its 0.116 AU. A turn soon outlasts every kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full, or, for one too brief for six (a giant, a late helium star), a single flash turn; one clock at a time, though a star that outlasts it can be followed on (priced from our own pace, never below 250 energy); with Quickening, Quick ×10 splits each clock turn into ten, each lived as a tenth; free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve, which charts its system. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting**; under curvature radiation, **curvature collectors** at neutron stars (η 30 to 68) |
 | Black Hole | Penrose (finite spin), Hawking collectors (rising as holes shrink), final bursts, accretion only if protons are stable |
 | Dark | The reserve; a trickle of speculative horizon siphoning |
 
@@ -178,21 +178,42 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | Age | η | Core tension |
 |---|---|---|
 | **I. The Long Dusk** (late Stelliferous) | 13.95 to 14 | Keep the homeworld alive or adapt; expand; prepare starless power before the Last Light |
-| **II. The Degenerate Age** | 15 to 39 | Live on embers, feeding worlds and black holes; survive galactic evaporation; prepare for the decay |
-| **III. The Black Hole Age** | 40 to 100 | Spin and Hawking energy; move as small holes evaporate |
+| **II. The Degenerate Age** | 15 to 30, 39 or 68, by the fate of matter | Live on embers, feeding worlds and black holes; survive galactic evaporation; prepare for the end of matter |
+| **III. The Black Hole Age** | from there to 100 | Spin and Hawking energy; move as small holes evaporate |
+
+Each age is named for the warmest thing in it: the last stars, the dead stars, the black holes,
+then nothing warmer than the sky. The Degenerate Age ends when the neutron stars, the last things
+warm of their own accord, fall below the glow of the black holes: near η 30 if matter is stable,
+at the Great Decay (η 39) if protons decay, when they burst (η 68) under curvature radiation. The
+calendar does not move with it: the Tide and every fixed-date event follow the years, which turn
+to the Black Hole Age's Tide at 10^40 years (η 39) whatever the fate (`calendarEra()` in
+`src/game/fate.ts`); the intro, music, art and event pools follow the age.
 | **IV. The Dark Era** | 100 to 10^122 | A finite budget; hold **Continuity** and complete an ending |
 
 **Crossings** are the great storms between ages. Preparation decides what survives:
 
 * **The Last Light:** every remaining star becomes a white dwarf. Settlements without
   starless power, reserves or cold sleep lose people.
-* **The Great Decay:** if protons decay, every planet and baryonic structure dissolves.
+* **The Great Decay** (η 39): if protons decay, every planet and baryonic structure dissolves.
   Settlements with leptonic substrate survive, and migrate to the black holes (bringing a
-  Penrose harvester if they know how to build one). If protons are stable, matter persists.
+  Penrose harvester if they know how to build one).
+* **The Last Warmth:** if matter is stable (η 30), nothing dissolves: the neutron stars cool
+  below the black holes, the white dwarfs are named black, and Kin with no warmth suffer. Under
+  curvature radiation (η 68) the neutron stars burst, and whatever is settled at one is lost.
+* **The Great Evaporation** (curvature only, η 89.5): a storm inside the Black Hole Age. Every
+  world and every scrap of ordinary matter is gone, as at the Great Decay; the dwarfs have faded
+  before it (white dwarfs η 78.5 to 85 by mass, brown dwarfs η 87), their worlds drifting loose.
 * **The Last Horizon:** the last supermassive black holes evaporate.
 
-**Proton fate** is a setting: *decays*, *stable*, or *unknown* (revealed by research). The
-proton's lifetime really is unknown; experiments only give a lower limit around 10^34 years.
+**The fate of matter** is a setting: *protons decay*, *stable*, *curvature radiation*, or
+*unknown*. Unknown is one draw (the same single draw as ever, so no galaxy changes): decay half
+the time, curvature and stable a quarter each. It is learned from The Proton Question or, near
+η 30, from the neutron stars (`revealFate`): decay holds them near 1.5 K, curvature at 30 nK,
+and if neither they cool below the holes, which is the Last Warmth itself. Until then nothing in
+the game differs by fate: temperatures leave out decay and curvature warmth, the forecast asks
+"The end of the Degenerate Age?" at the earliest date, the Chronometer hatches η 30 to 68 with
+its dates as questions, and the autoplayer plans for decay. The proton's lifetime really is
+unknown; experiments only give a lower limit around 10^34 years.
 
 **Forecasts** telegraph the catastrophes with countdowns: the star leaving the main
 sequence, a world reaching its dead star's tidal limit, galactic evaporation, the embers
@@ -269,7 +290,7 @@ stop them from talking.
 | **One Voice** | Union | Chorus at least half of everyone, all standings high; complete *Confluence* |
 | **The Quiet Lattice** | Persistence, kept by the machines | Lattice at least half of everyone; complete the *Archive of Everything* |
 | **The Aeon Seed** | Speculative physics (Penrose's conformal cyclic cosmology) | A settlement at the Heart and the Slow Ones' trust; the seed is written as the Heart evaporates |
-| **The Last Garden** | Biology | Protons stable; 6+ living Kin reach the Dark Era; complete the *Garden of Embers* |
+| **The Last Garden** | Biology | Matter stable (no decay, no curvature radiation); 6+ living Kin reach the Dark Era; complete the *Garden of Embers* |
 | **The Hunger** | The dark path | Taint reaches 100 |
 | **Recurrence** | Endurance | Still exist at 10^(10^122) years, when the horizon's state recurs |
 | Defeat | | *Silence* (everyone gone), *The Will Fails*, *The Fade* (Continuity lost in the dark) |
@@ -329,6 +350,18 @@ stop them from talking.
   game halves Coldminds' and Cold Vaults' upkeep under a dark sky).
 * Dyson (1979), *Time without end*, Rev. Mod. Phys. 51, 447: slowing minds; iron stars by
   about 10^1500 years; tunnelling collapse at 10^(10^26) to 10^(10^76) years.
+* Falcke, Wondrak & van Suijlekom (2024), *An upper limit to the lifetime of stellar remnants
+  from gravitational pair production* ([arXiv:2410.14734](https://arxiv.org/abs/2410.14734)):
+  curvature radiation from bodies without a horizon, τ ≈ 3.4×10^68 yr × (ρ / 3.3×10^14 g cm^-3)^-3/2.
+  A neutron star lasts about 10^68 years and bursts at its minimum mass (about 0.1 M☉); a
+  1.3 M☉ white dwarf about 3×10^78, a 0.6 M☉ one about 10^82; the Moon about 3×10^89. Bends:
+  their homogeneous model evaporates as a black hole does, accelerating; a white dwarf grows less
+  dense as it shrinks, so the game has it fade (η 78.5 to 85 by mass) rather than burst; brown
+  dwarfs go at η 87 and all ordinary matter at η 89.5, one date for every world. A neutron star's
+  glow, some 10^-29 W (30 nK), feeds the Curvature Collector like the comparable Hawking glow of a
+  stellar hole feeds a Hawking Collector: worth it only to minds as slow as the age. The effect is
+  theoretical and disputed; the Codex says so. Decay or curvature warmth would show in cold enough
+  dead stars before η 30 (decay from about η 25); the game keeps the question open until then.
 * Krauss & Starkman (2000), *Life, the universe, and nothing*, ApJ 531, 22.
 * Krauss & Scherrer (2007), *The return of a static universe*, GRG 39, 1545.
 * Page & McKee (1981), positronium in the far future.

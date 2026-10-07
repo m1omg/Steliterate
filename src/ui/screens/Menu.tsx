@@ -155,13 +155,14 @@ export function Setup() {
           />
         </div>
         <div class="field">
-          <label>Do protons decay?</label>
+          <label>What becomes of matter?</label>
           <Seg<ProtonFate>
             value={st.protonFate}
             options={[
-              { id: 'unknown', name: 'Unknown', tip: 'Nobody knows yet, including you. Your scientists can find out.' },
-              { id: 'decays', name: 'They decay', tip: 'Matter dissolves around η 30–40. The Great Decay is a crossing of its own.' },
-              { id: 'stable', name: 'Stable', tip: 'Matter endures. Different endings open.' },
+              { id: 'unknown', name: 'Unknown', tip: 'Nobody knows yet, including you: protons decay (half the time), space slowly evaporates matter (a quarter), or it is stable (a quarter). Your scientists can find out, and the neutron stars will show it near η 30.' },
+              { id: 'decays', name: 'Protons decay', tip: 'Matter dissolves around η 37–39. The Great Decay is a crossing of its own.' },
+              { id: 'stable', name: 'Stable', tip: 'Matter endures, cold. The Degenerate Age ends early, near η 30, when the neutron stars cool below the black holes. Different endings open.' },
+              { id: 'curvature', name: 'Curvature', tip: 'Space itself slowly turns matter into particles (Falcke, Wondrak & van Suijlekom, unconfirmed): neutron stars burst near η 68, dwarfs fade by η 85, worlds by η 90.' },
             ]}
             onPick={(v) => set({ protonFate: v })}
           />

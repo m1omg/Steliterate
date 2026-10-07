@@ -35,6 +35,26 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
 - **The player works from more than one session.** Before changing anything, fetch every branch
   and compare with `origin/claude/lucid-newton-30cbpk` (they asked for this check on 2 Oct; it
   found nothing new: both branches at `a16f928`, PR m1omg/Steliterate#1 without comments).
+- **6–7 Oct, the long plan** (asked 6 Oct: put the test scripts in the repository; "Black dwarves
+  never cool below 5 Kelvin and planets never cool below 1 Kelvin … the amount of usable energy
+  they give off is actually drastically different"; the Great Decay screen showed when protons do
+  not decay; aliens who colonize, war, deeper diplomacy, "not Endless Space too, but dark").
+  Their choices: honest temperatures, "little energy is not zero energy", buildings that harvest
+  decay and curvature heat, any building dismantled for its mass at an energy cost, inner heat
+  fading after the Last Light, Coldminds and Cold Vaults at half upkeep in the dark; three fates
+  of matter, odds decay 50, curvature 25, stable 25, the timeline ambiguous until "Research or
+  the event"; the Long Flow once, at 10⁶⁵ years ("it's actually going on right now … for really
+  slow beings it may be significant … the timestep of the civ in question may determine if its a
+  threat to their own integrity"), with unexcavated relics lost, unmanned structures flowing,
+  worlds smoothing into spheres and sleeping aliens at risk; neighbours "Pacts, then expansion",
+  war against "Any, at a high price", built and shown "All at once". Constraints: the halo
+  civilization's quest line stays exactly as it is ("don't change that part. I love it. Unless
+  you want to extend it rather than reduce anything"); "it should be possible but hard to fight
+  the hunger"; a little harder is fine, never unwinnable. Order: A tests (`975d6c3`), B0 calendar
+  apart from the age (`812e2e2`), B2 honest cooling (`aae0347`), B3 three fates (7 Oct), then B4
+  dismantling, B5 the Long Flow, C living neighbours. A and B go live one at a time; C goes live
+  in one piece when all its phases are done. The player's own game was in the Black Hole Age on
+  6 Oct, so B2 reaches it: core heat fades and cold dwarfs give nothing.
 - **2 Oct, kinds of structure** ("a UI friendly way of distinguishing building types … the list
   is becoming very long"): done, interface only (`CHANGELOG.md`).
 - **2 Oct, Charters can be repealed** ("without breaking saves and my playthrough … no law can
