@@ -13,7 +13,8 @@ import { capacity } from './economy';
 import { workRequirementMet } from './endings';
 import { resolveEvent } from './events';
 import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
-import { absorbSwarm, tameSwarm } from './hunger';
+import { absorbSwarm, drawSwarmTo, tameSwarm } from './hunger';
+import { BEACON_COST } from './beacons';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
@@ -441,16 +442,31 @@ export function disbandFleet(state: GameState, fleetId: string): ActionResult {
   return null;
 }
 
+/**
+ * Light a decoy beacon where a fleet is stationed, away from our people. It burns while we feed it
+ * (beacons.ts), and the nearest awake swarm within reach turns toward it at once.
+ */
 export function placeBeacon(state: GameState, fleetId: string): ActionResult {
   if (!hasTech(state, 'hunger_lures')) return 'Research Decoy Beacons first.';
   const f = state.fleets[fleetId];
   if (!f || !f.at) return 'The fleet must be stationed.';
   const sys = state.systems[f.at];
+  if (sys.beacon) return 'A beacon already burns here.';
   if (Object.values(state.colonies).some((c) => c.systemId === sys.id)) return 'Place beacons in empty systems, away from our people.';
-  if (state.civ.energy < 30) return 'A beacon needs 30 energy.';
-  state.civ.energy -= 30;
+  if (state.civ.energy < BEACON_COST) return `A beacon needs ${BEACON_COST} energy.`;
+  state.civ.energy -= BEACON_COST;
   sys.beacon = true;
-  log(state, `A decoy beacon burns at ${sys.name}.`, 'info', sys.id);
+  const from = drawSwarmTo(state, sys.id);
+  log(state, `A decoy beacon burns at ${sys.name}. ${from ? `The swarm at ${from.name} has turned toward it.` : 'No swarm is near enough to notice it yet.'}`, from ? 'good' : 'info', sys.id);
+  return null;
+}
+
+/** Stop feeding a beacon: it goes dark at once. */
+export function putOutBeacon(state: GameState, systemId: string): ActionResult {
+  const sys = state.systems[systemId];
+  if (!sys?.beacon) return 'No beacon burns there.';
+  delete sys.beacon;
+  log(state, `We let the beacon at ${sys.name} go dark.`, 'info', sys.id);
   return null;
 }
 

@@ -21,6 +21,7 @@ import {
   setAutoExplore,
   standFleet,
   placeBeacon,
+  putOutBeacon,
   queueBuild,
   raid,
   removeQueued,
@@ -40,6 +41,7 @@ import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
 import { capital, distLy, hasCharter, hasTech, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
 import { swarmReach } from '../../game/sim/hunger';
+import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, n0, n1, pct, signed } from '../fmt';
@@ -188,7 +190,16 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           <span class="chip"><Icon name={primaryIcon(sys.primary.kind)} /> {PRIMARY_NAME[sys.primary.kind]}</span>
           {known < 2 && <span class="chip warn">{known === 1 ? 'not surveyed' : 'unknown'}</span>}
           {(sys.rust ?? 0) > 0.05 && <span class="chip danger" data-tip={rustTip(s, sys)}>rust {pct(sys.rust ?? 0)}</span>}
-          {sys.beacon && <span class="chip neon">decoy beacon</span>}
+          {sys.beacon && (
+            <>
+              <span class="chip neon" data-tip={`A decoy beacon burns here, drawing swarms away from us. It costs ${BEACON_UPKEEP} energy a turn at the Tide to keep burning, and goes dark if we stop feeding it or run short.`}>
+                decoy beacon
+              </span>
+              <button class="btn small" data-tip="Stop feeding it: it goes dark at once." onClick={() => act((g) => putOutBeacon(g, sys.id)) && sfx('click')}>
+                Put out
+              </button>
+            </>
+          )}
           {sys.gone && <span class="chip danger">gone</span>}
         </div>
         {view.value === 'galaxy' && known > 0 && !sys.gone && (
@@ -1314,7 +1325,11 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                 <Icon name="move" /> {tgt ? 'Click a star… (Esc cancels)' : 'Choose on map'}
               </button>
               {hasTech(s, 'hunger_lures') && !here.beacon && (
-                <button class="btn small" data-tip="Light a decoy beacon here (30 energy). Swarms are drawn to it instead of to us." onClick={() => act((g) => placeBeacon(g, f.id))}>
+                <button
+                  class="btn small"
+                  data-tip={`Light a decoy beacon here: ${BEACON_COST} energy, then ${BEACON_UPKEEP} a turn at the Tide to keep it burning (it goes dark if we stop feeding it or run short). The nearest awake swarm within reach turns toward it at once; while it burns, swarms choosing their next meal are drawn to it instead of to us.`}
+                  onClick={() => act((g) => placeBeacon(g, f.id))}
+                >
                   Beacon
                 </button>
               )}

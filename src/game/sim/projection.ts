@@ -7,6 +7,7 @@ import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type ColonyTu
 import { computeMods, strainFor, type Strain } from './mods';
 import { researchDraw } from './research';
 import { jointIncome } from './survivors';
+import { beaconUpkeep } from './beacons';
 import { colonies } from './util';
 
 export interface Projection {
@@ -61,6 +62,7 @@ export function project(state: GameState, paceOverride?: number): Projection {
     p.accord += t.y.accord;
   }
   p.energyIn += jointIncome(state) * ctx.paceFactor;
+  p.energyOut += beaconUpkeep(state) * ctx.paceFactor;
   p.accord -= latticeAlienation(state, mods);
   p.researchDraw = researchDraw(state, p.insight);
   p.energyOut += p.researchDraw;

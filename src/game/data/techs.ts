@@ -67,7 +67,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'magnetic_sails', name: 'Magsail Braking', era: 'dusk', field: 'reach', cost: 130, requires: ['fusion_drives'], desc: 'Brake against the thin interstellar medium. Ships at 15% of light; launches cost less.', effects: { speed: 0.15, flags: ['cheap_launch'] } }),
   T({ id: 'catalyzed_drives', name: 'Catalysed Drives', era: 'dusk', field: 'reach', cost: 280, requires: ['magnetic_sails'], desc: 'Ships at 40% of light. Other provinces come within reach.', effects: { speed: 0.4, detect: 2000 } }),
   T({ id: 'hunger_studies', name: 'Hunger Studies', era: 'dusk', field: 'reach', cost: 90, requires: ['orbital_defense'], desc: 'Learn what the swarms are and how they move. Reveals swarms within detection range and forecasts their paths.' }),
-  T({ id: 'hunger_lures', name: 'Decoy Beacons', era: 'dusk', field: 'reach', cost: 160, requires: ['hunger_studies'], desc: 'Bright false hearths in dead systems draw the Hunger away. Fleets can place beacons.' }),
+  T({ id: 'hunger_lures', name: 'Decoy Beacons', era: 'dusk', field: 'reach', cost: 160, requires: ['hunger_studies'], desc: 'Bright false hearths in dead systems draw the Hunger away. Fleets can light beacons; each burns while we feed it.' }),
   // harvest
   T({ id: 'energy_storage', name: 'Superconducting Storage', era: 'dusk', field: 'harvest', cost: 40, requires: [], desc: 'Hold energy against lean years. Unlocks Energy Vaults.' }),
   T({ id: 'orbital_collectors', name: 'Orbital Collectors', era: 'dusk', field: 'harvest', cost: 55, requires: [], desc: 'Mirror-sails in close orbit. Unlocks Orbital Collectors.' }),

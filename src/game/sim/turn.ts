@@ -8,6 +8,7 @@ import { greatEvaporation, runCrossing } from './crossing';
 import { theLongFlow } from './flow';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
+import { feedBeacons } from './beacons';
 import { spareYield } from './spare';
 import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
@@ -215,6 +216,8 @@ export function endTurn(state: GameState): TurnResult {
   eOut += researchDraw(state, insight);
   accord -= latticeAlienation(state, mods);
   civ.energy += eIn - eOut;
+  // decoy beacons burn only while we feed them
+  const beacons = feedBeacons(state, ctx.paceFactor);
   civ.matter += mIn - mOut;
   civ.accord = clamp(civ.accord + accord, 0, 999);
   const cap = reserveCapacity(state, mods);
@@ -223,7 +226,7 @@ export function endTurn(state: GameState): TurnResult {
     result.wasted = civ.energy - cap;
     civ.energy = cap;
   }
-  civ.flags.last_energy_net = eIn - eOut;
+  civ.flags.last_energy_net = eIn - eOut - beacons;
   civ.flags.last_matter_net = mIn - mOut;
   civ.flags.last_insight = insight;
   civ.flags.last_accord = accord;
