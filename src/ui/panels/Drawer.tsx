@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
-import { FROZEN_K, bodyClimate, boilingAway, insolation, lampsOver, primaryTemperature, sourceLight, sunGone, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, sourceLight, sunGone, turnsToFreeze, waterState } from '../../game/physics';
 import {
   absorb,
   buildableShips,
@@ -35,11 +35,11 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, distLy, hasCharter, hasTech, nearestSwarmSeen, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { capital, distLy, hasCharter, hasTech, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
 import { swarmReach } from '../../game/sim/hunger';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
-import { n0, n1, pct, signed } from '../fmt';
+import { kelvin, n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
@@ -162,7 +162,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const known = s.civ.known[sys.id] ?? 0;
   const p = project(s);
   const src = sourceLight(s, sys, s.years, p.turnYears);
-  const T = primaryTemperature(sys.primary, s.years, calendarEra(s));
+  const T = primaryTemperature(sys.primary, s.years, calendarEra(s), decayWarmth(s));
   const province = s.provinces.find((x) => x.id === sys.provinceId);
   const fleets = Object.values(s.fleets).filter((f) => f.at === sys.id);
   const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id);
@@ -237,8 +237,8 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           )}
           {T > 0 && (
             <>
-              <dt>Surface</dt>
-              <dd class="mono">{n0(T)} K</dd>
+              <dt data-tip={tempTip(s, sys)}>{sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh' ? 'Hawking temperature' : 'Temperature'}</dt>
+              <dd class="mono" data-tip={tempTip(s, sys)}>{kelvin(T)}</dd>
             </>
           )}
           <dt>Mass</dt>
@@ -316,9 +316,21 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   );
 }
 
-function kelvin(k: number): string {
+/** What a dead star's temperature means, and what it would be if protons decay, while we do not know. */
+function tempTip(s: GameState, sys: StarSystem): string {
+  const k = sys.primary.kind;
+  if (k === 'black_hole' || k === 'smbh') return 'A black hole glows at its Hawking temperature, colder the heavier it is: a few hundredths of a microkelvin for one of a few Suns. It gives almost nothing, but it gives it until it is gone.';
+  const dead = k === 'white_dwarf' || k === 'black_dwarf' || k === 'brown_dwarf' || k === 'neutron_star';
+  if (!dead || calendarEra(s) === 'dusk') return '';
+  const base = 'Nothing warms a dead star but dark matter falling into it while the halo lasts, a world falling in, and its own last heat, which it loses as T ≈ K·t^-½. What we can gather goes as T⁴: a thousand times colder is a million million times less.';
+  if (protonFateKnown(s) || sys.primary.rekindle) return base;
+  return `${base}\nIf protons decay, their warmth would hold it near ${k === 'neutron_star' ? '1.5 K' : k === 'brown_dwarf' ? '9 mK' : '0.05 K'}. Until we know (the Proton Question), this is the prediction without it.`;
+}
+
+/** A temperature, with Celsius where people would feel it. */
+function kelvinC(k: number): string {
   const c = k - 273.15;
-  return c > -120 && c < 200 ? `${n0(k)} K (${c > 0 ? '+' : ''}${n0(c)} °C)` : `${n0(k)} K`;
+  return c > -120 && c < 200 ? `${n0(k)} K (${c > 0 ? '+' : ''}${n0(c)} °C)` : kelvin(k);
 }
 
 /** The four needs a place can meet, in the order of the settle sorts: livable, power, matter, lasting. */
@@ -484,8 +496,8 @@ function ClimateRows({ s, b }: { s: GameState; b: Body }) {
   return (
     <>
       <dt data-tip={tip}>Temperature</dt>
-      <dd class="mono" data-tip={c.day !== undefined ? `Day side ${kelvin(c.day)}\nNight side ${kelvin(c.night!)}` : ''}>
-        {c.day !== undefined && n0(c.day) !== n0(c.night!) ? `${n0(c.night!)}–${n0(c.day)} K` : kelvin(c.mean)}
+      <dd class="mono" data-tip={c.day !== undefined ? `Day side ${kelvinC(c.day)}\nNight side ${kelvinC(c.night!)}` : ''}>
+        {c.day !== undefined && kelvin(c.day) !== kelvin(c.night!) ? `${kelvin(c.night!)} to ${kelvin(c.day)}` : kelvinC(c.mean)}
       </dd>
       <dt>Water</dt>
       <dd style={{ fontSize: '12px' }}>{waterState(b, c)}</dd>

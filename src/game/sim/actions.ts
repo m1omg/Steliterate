@@ -11,6 +11,8 @@ import { absorbSwarm, tameSwarm } from './hunger';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
+import { sourceLight } from '../physics';
+import { turnStep } from './flare';
 import { devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
 import { colonies, eraIndex, hasCharter, hasTech, log, savableName, uid } from './util';
 import { ageReached, calendarEra, inAge } from '../fate';
@@ -36,6 +38,11 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.habitable && b.habitability < 0.3) return 'Only on a living world.';
   if (d.id === 'relic_dig' && !(b.relic && b.relic.state !== 'hidden')) return 'Needs ruins.';
   if (d.id === 'disk_skimmer' && !(sys.primary.rekindle && sys.primary.rekindle > 0)) return 'Needs a world feeding its dead star.';
+  // a collector of light needs light to collect: a cold dwarf, a quiet black hole or the dark has none
+  if (d.energy?.mode === 'light') {
+    if (b.rogue && d.id === 'solar_array') return 'Nothing to gather: a rogue world has no sun.';
+    if (sourceLight(state, sys, state.years, turnStep(state).turnLength).light <= 0) return 'Nothing to gather: its star gives no light.';
+  }
   if (d.systemUnique) {
     for (const o of Object.values(state.colonies)) {
       if (o.systemId !== c.systemId) continue;

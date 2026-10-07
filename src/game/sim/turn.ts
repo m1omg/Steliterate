@@ -76,7 +76,13 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
   return y.insight;
 }
 
+/** After the Last Light a world's core heat keeps this share of itself each turn: half is gone in three turns, nearly all of it in eighteen. */
+export const CORE_FADE = 0.8;
+
 function declineWorlds(state: GameState) {
+  // after the Last Light the deep warmth of every world runs out too (really it went long before;
+  // the game keeps it through the Dusk), and Geothermal Taps wind down with it
+  if (calendarEra(state) !== 'dusk') for (const b of Object.values(state.bodies)) if (b.coreHeat > 0) b.coreHeat = b.coreHeat < 0.02 ? 0 : b.coreHeat * CORE_FADE;
   const byBody = new Map(colonies(state).map((c) => [c.bodyId, c]));
   for (const b of Object.values(state.bodies)) {
     if (b.dissolved || b.vitality <= 0) continue;

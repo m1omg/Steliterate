@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { fleetLook, lookRole, type FleetLook } from '../game/data/ships';
-import { diskLight, dwarfGlow, emberShare, primaryTemperature, shownKind } from '../game/physics';
+import { diskLight, emberShare, primaryTemperature, shownKind } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
 import { Rng, hashSeed } from '../game/rng';
 import type { GameState, StarSystem } from '../game/types';
 import { blackbody } from './shaders/noise';
+import { calendarEra } from '../game/fate';
 
 // The Coalescence seen from outside: layered star populations of the ancestral galaxies,
 // dimming era by era, with every known system as a node you can pick.
@@ -629,9 +630,9 @@ export class GalaxyView {
 /** A primary's surface (or, for holes, its disk's) temperature for the thermal view, in K. */
 function nodeTemperature(s: StarSystem, state: GameState): number {
   const k = shownKind(s.primary, state.years);
-  if (k === 'black_hole' || k === 'smbh') return 2.7 + 900 * diskLight(k, state.era, state.years);
+  if (k === 'black_hole' || k === 'smbh') return 2.7 + 900 * diskLight(k, calendarEra(state), state.years);
   if (k === 'void' || k === 'rogue') return 3;
-  return primaryTemperature(s.primary, state.years, state.era);
+  return primaryTemperature(s.primary, state.years, calendarEra(state));
 }
 
 function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
@@ -641,13 +642,12 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   if (k === 'void' || k === 'rogue') return [0.35, 0.36, 0.42];
   if (k === 'brown_dwarf') return [0.62, 0.3, 0.28];
   if (k === 'black_dwarf') return s.primary.rekindle ? [0.9, 0.45, 0.25] : [0.3, 0.3, 0.34];
-  const tK = primaryTemperature(s.primary, state.years, state.era);
-  if (k === 'white_dwarf' && state.era !== 'dusk') {
-    // greying toward a black dwarf as it cools; an ember blue-white while the halo warms it
+  const tK = primaryTemperature(s.primary, state.years, calendarEra(state));
+  if (k === 'white_dwarf' && calendarEra(state) !== 'dusk') {
+    // grey as a black dwarf once nothing warms it; an ember blue-white while the halo warms it
     if (s.primary.rekindle) return [0.9, 0.45, 0.25];
-    const g = dwarfGlow(state.years);
     const e = emberShare(s.primary, state.years);
-    const cold = [0.3 + 0.05 * g, 0.3 + 0.07 * g, 0.34 + 0.11 * g];
+    const cold = [0.3, 0.3, 0.34];
     return [cold[0] + (0.55 - cold[0]) * e, cold[1] + (0.62 - cold[1]) * e, cold[2] + (0.8 - cold[2]) * e];
   }
   const [r, g, b] = blackbody(Math.max(1800, tK));

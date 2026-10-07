@@ -1,11 +1,12 @@
 import * as THREE from 'three';
-import { bodyClimate, diskLight, dwarfGlow, emberShare, primaryTemperature, shownKind } from '../game/physics';
+import { bodyClimate, diskLight, emberShare, primaryTemperature, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
 import type { Body, GameState, StarSystem, Survivor, Swarm } from '../game/types';
 import { radialTexture, type Pickable } from './galaxyView';
 import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, STAR_FRAG, STAR_VERT, VIEW_MODE, thermalRGB } from './shaders/bodies';
 import { blackbody } from './shaders/noise';
+import { calendarEra } from '../game/fate';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -136,7 +137,7 @@ export class SystemView {
   private buildPrimary(state: GameState, sys: StarSystem) {
     const p = sys.primary;
     const seed = (hashSeed(sys.id) % 1000) / 10;
-    const temp = primaryTemperature(p, state.years, state.era);
+    const temp = primaryTemperature(p, state.years, calendarEra(state));
     const col = new THREE.Color(...blackbody(Math.max(1500, temp)));
     const addGlow = (size: number, color: THREE.Color, power: number, beams = 0, ring = 0) => {
       const m = new THREE.ShaderMaterial({
@@ -189,15 +190,14 @@ export class SystemView {
         addGlow(70, new THREE.Color('#ffb98a'), 1.2);
         break;
       case 'white_dwarf':
-        if (state.era === 'dusk') {
+        if (calendarEra(state) === 'dusk') {
           addStar(1.6, col, 0.1, 0, 3);
           addGlow(20, col, 1.1);
         } else {
-          // greying toward a black dwarf as it cools; an ember keeps a dull red warmth while the halo lasts
+          // dark as a black dwarf once nothing warms it; an ember keeps a dull red warmth while the halo lasts
           const ember = emberShare(p, state.years);
-          const glow = dwarfGlow(state.years);
-          const surface = new THREE.Color('#2a2628').lerp(new THREE.Color('#3a3a44'), glow).lerp(new THREE.Color('#6d4a52'), ember);
-          addStar(1.6, surface, 0.15, 0, 0.6 + 0.3 * Math.max(glow, ember));
+          const surface = new THREE.Color('#2a2628').lerp(new THREE.Color('#6d4a52'), ember);
+          addStar(1.6, surface, 0.15, 0, 0.6 + 0.3 * ember);
           if (ember > 0) addGlow(14, new THREE.Color('#8a4f4a'), 0.35 * ember);
         }
         break;
@@ -205,12 +205,12 @@ export class SystemView {
         addStar(1.6, new THREE.Color('#2a2628'), 0.1, 0, 0.6);
         break;
       case 'brown_dwarf':
-        addStar(3.4, new THREE.Color(state.era === 'dusk' ? '#7a3a33' : '#3c2225'), 0.2, 1.0, 0.9);
+        addStar(3.4, new THREE.Color(calendarEra(state) === 'dusk' ? '#7a3a33' : '#3c2225'), 0.2, 1.0, 0.9);
         addGlow(14, new THREE.Color('#5a2420'), 0.35);
         break;
       case 'neutron_star':
         addStar(0.8, new THREE.Color('#dde8ff'), 0.1, 0, 3);
-        addGlow(40, new THREE.Color('#9cc3ff'), state.era === 'dusk' ? 0.9 : 0.4, 0.6);
+        addGlow(40, new THREE.Color('#9cc3ff'), calendarEra(state) === 'dusk' ? 0.9 : 0.4, 0.6);
         break;
       case 'black_hole':
       case 'smbh': {
@@ -221,7 +221,7 @@ export class SystemView {
         this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: r });
         addGlow(r * 6, new THREE.Color('#ffd2a8'), 0.0, 0, 1.0);
         const fed = Object.values(state.colonies).some((c) => c.systemId === sys.id && ((c.structures.accretion_engine ?? 0) > 0 || (c.structures.penrose_harvester ?? 0) > 0));
-        const shine = diskLight(kind, state.era, state.years);
+        const shine = diskLight(kind, calendarEra(state), state.years);
         const heat = fed ? 1.0 : kind === 'smbh' ? Math.min(0.75, 0.12 + shine * 0.4) : 0.18;
         this.addDisk(r * 1.6, r * (kind === 'smbh' ? 9 : 6), heat);
         break;
@@ -770,11 +770,11 @@ function feedingSwarm(state: GameState, sys: StarSystem): Swarm | null {
 function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Color; power: number } {
   const p = sys.primary;
   const k = shownKind(p, state.years);
-  const temp = primaryTemperature(p, state.years, state.era);
+  const temp = primaryTemperature(p, state.years, calendarEra(state));
   const c = new THREE.Color(...blackbody(Math.max(1500, temp)));
   let power = 1.4;
   if (k === 'blue_dwarf' || k === 'helium_star' || k === 'helium_giant') power = 2;
-  if (k === 'white_dwarf') power = state.era === 'dusk' ? 1.1 : p.rekindle ? 0.3 : 0.03 + 0.09 * Math.max(dwarfGlow(state.years), emberShare(p, state.years));
+  if (k === 'white_dwarf') power = calendarEra(state) === 'dusk' ? 1.1 : p.rekindle ? 0.3 : 0.03 + 0.09 * emberShare(p, state.years);
   if (k === 'black_dwarf') power = p.rekindle ? 0.3 : 0.03;
   if (k === 'brown_dwarf') power = 0.12;
   if (k === 'neutron_star') power = 0.3;
@@ -783,7 +783,7 @@ function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Co
     power = 0.05;
     if (k === 'black_hole' || k === 'smbh') {
       // lit by the disk: warm light, as strong as what the collectors get
-      const shine = diskLight(k, state.era, state.years);
+      const shine = diskLight(k, calendarEra(state), state.years);
       if (shine > 0.05) {
         c.set('#ffd6b0');
         power = Math.min(1.4, 0.1 + shine * 0.85);

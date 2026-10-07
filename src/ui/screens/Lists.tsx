@@ -15,7 +15,7 @@ import { starClock, turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
 import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
-import { n1, signed } from '../fmt';
+import { kelvin, n1, signed } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, spareChoices, BEACON_TIP, SWARM_TIP } from '../labels';
 import { act, engine, modal, openBuildFor, rev, selection, targeting, view, type SystemsTab } from '../store';
@@ -422,7 +422,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
                 ))}
                 <div class="faint" style={{ fontSize: '11px' }}>
                   {sys.name} · {formatDistance(ly)}
-                  {c ? ` · ${c.day !== undefined ? `${Math.round(c.night!)}–${Math.round(c.day)}` : Math.round(c.mean)} K` : ''}
+                  {c ? ` · ${c.day !== undefined && kelvin(c.night!) !== kelvin(c.day) ? `${kelvin(c.night!)} to ${kelvin(c.day)}` : kelvin(c.mean)}` : ''}
                   {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
                 </div>
               </span>

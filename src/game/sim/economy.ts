@@ -96,6 +96,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   let matterBurn = 0;
   let depletion = 0;
 
+  const light = sourceLight(state, sys, ctx.years, isFinite(ctx.L) ? ctx.L : 0);
+  // under a dark sky (a star with no light left to give) cold computing is cheaper: erasing a bit
+  // costs kT ln 2, and nothing is colder than the dark, so Coldminds and Cold Vaults keep for half
+  const darkSky = light.light <= 0;
+
   // ---- populations
   const strain = {} as Record<ThreadId, Strain>;
   const upkeepScale = dormant ? (flags.has('charter:the_long_watch') ? 0.05 : 0.1) : 1;
@@ -112,14 +117,14 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const ind = n * d.industry * o;
     const ins = n * d.insight * o;
     const acc = n * d.accord * o;
-    const eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale;
+    const eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * (t === 'coldminds' && darkSky ? 0.5 : 1);
     const mUp = n * d.matterUpkeep * upkeepScale;
     industry += ind;
     insight += ins;
     accord += acc;
     energyUpkeep += eUp;
     matterUpkeep += mUp;
-    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
+    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
   }
   if (c.cryo > 0) {
     const cu = c.cryo * 0.08 * (flags.has('charter:cold_sleep_lottery') ? 0.5 : 1) * slowTime;
@@ -128,7 +133,6 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   }
 
   // ---- structures
-  const light = sourceLight(state, sys, ctx.years, isFinite(ctx.L) ? ctx.L : 0);
   // housing costs upkeep only for the share of it that is lived in
   const capAll = capacity(state, c, ctx.mods);
   const occupancy = (d: StructureDef): number => {
@@ -210,13 +214,15 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const ind = (d.industry ?? 0) * n * out;
     const ins = (d.insight ?? 0) * n * out;
     const acc = (d.accord ?? 0) * n * out;
-    const up = (d.upkeep ?? 0) * n * upkeepScale * slowTime * (d.cap || d.cryoCap ? occupancy(d) : 1);
+    const up = (d.upkeep ?? 0) * n * upkeepScale * slowTime * (d.cap || d.cryoCap ? occupancy(d) : 1) * (id === 'cold_vault' && darkSky ? 0.5 : 1);
     energy += e;
     industry += ind;
     insight += ins;
     accord += acc;
     energyUpkeep += up;
-    if (e || mt || ind || ins || acc || up) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc });
+    // a collector with nothing to collect says so, rather than vanishing from the list
+    const idle = !!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion';
+    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${idle ? ': nothing to gather' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc });
   }
   if (matterBurn > 0) lines.push({ label: 'Fuel burned', matter: -matterBurn });
 

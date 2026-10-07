@@ -7,6 +7,7 @@ import { GalaxyView, type Pickable } from './galaxyView';
 import { createPost, type PostChain } from './post';
 import { SystemView } from './systemView';
 import { VIEW_MODE } from './shaders/bodies';
+import { calendarEra } from '../game/fate';
 
 export type ViewKind = 'galaxy' | 'system';
 export type Quality = 'low' | 'medium' | 'high';
@@ -534,9 +535,9 @@ export class Engine {
         // burns (one that lit and went out within the last turn has no light left to mark)
         const burning = (id: string) => {
           const pr = state.systems[id]?.primary;
-          return state.era === 'degenerate' && pr?.kind === 'collision_star' && (pr.diesAt ?? 0) > state.years;
+          return calendarEra(state) === 'degenerate' && pr?.kind === 'collision_star' && (pr.diesAt ?? 0) > state.years;
         };
-        if (state.era === 'degenerate') {
+        if (calendarEra(state) === 'degenerate') {
           for (const p of this.galaxy.pickables) {
             if (p.kind !== 'system' || !burning(p.id) || cand.some((c) => c.p.id === p.id)) continue;
             cand.push({ p, dd: 0 });

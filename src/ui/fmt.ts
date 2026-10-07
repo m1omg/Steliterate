@@ -31,3 +31,25 @@ export function pow10(x: number): string {
   const t = (Math.round(x * 10) / 10).toString();
   return `10${t.split('').map((c) => sup[c] ?? c).join('')}`;
 }
+
+const SUP: Record<string, string> = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻' };
+
+/**
+ * A temperature, readable at any scale: whole kelvin from 10 K, one decimal below, then mK, µK and
+ * nK to two figures, then powers of ten; the sky's own floor reads as the horizon's.
+ */
+export function kelvin(k: number): string {
+  if (!isFinite(k)) return '∞';
+  if (k <= 0) return '0 K';
+  if (k >= 10) return `${n0(k)} K`;
+  if (k >= 1) return `${(Math.round(k * 10) / 10).toFixed(1)} K`;
+  const two = (x: number) => (x >= 10 ? Math.round(x).toString() : (Math.round(x * 10) / 10).toFixed(1));
+  if (k >= 1e-3) return `${two(k * 1e3)} mK`;
+  if (k >= 1e-6) return `${two(k * 1e6)} µK`;
+  if (k >= 1e-9) return `${two(k * 1e9)} nK`;
+  const e = Math.floor(Math.log10(k));
+  const m = Math.round((k / Math.pow(10, e)) * 10) / 10;
+  const mant = m >= 10 ? '1' : m === Math.round(m) ? String(Math.round(m)) : m.toFixed(1);
+  const exp = (m >= 10 ? e + 1 : e).toString().split('').map((c) => SUP[c] ?? c).join('');
+  return `${mant}×10${exp} K${k < 3e-30 ? ', the horizon’s' : ''}`;
+}

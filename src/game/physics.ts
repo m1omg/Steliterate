@@ -2,6 +2,7 @@ import { STRUCTURE_BY_ID } from './data/structures';
 import { hawkingTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
 import { calendarEra } from './fate';
+import { protonFateKnown } from './sim/util';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
 // share of a structure's nominal capture a source supports per Tide turn. Physical ratios
@@ -18,29 +19,64 @@ export interface SourceInfo {
 const LAST_LIGHT = 1e14;
 
 /**
- * A white dwarf no dark matter warms, in the Degenerate Age: about 20 K as the age opens, then
- * cooling by Mestel’s law (L ∝ t^-1.4, so T ∝ t^-0.35) down to the 5 K the game gives a black
- * dwarf, which it reaches about η 16.7 and is then called. Nothing happens to a dwarf at 5 K but
- * its name; a real one would go on cooling, and faster than Mestel’s law once its core has
- * crystallised. The floor is the game’s, so that a cold dwarf is worth a little rather than nothing.
+ * Dead stars and worlds that nothing warms go on cooling for ever. This late a degenerate body
+ * keeps its heat in its electrons (heat capacity ∝ T) and is the same temperature throughout,
+ * while its surface radiates ∝ T⁴, so it cools as T ≈ K·t^-½ (K in kelvin·years^½): a white dwarf
+ * no dark matter warms is about 3 mK as the Degenerate Age opens, a neutron star about 0.2 K,
+ * and colder every age after. (In the Dusk the game follows a white dwarf's light instead; see
+ * primaryLuminosity.) Usable energy goes as T⁴, so a body a thousand times colder gives a million
+ * million times less. Nothing ends up colder than the sky: the cosmic horizon's own glow, SKY_K.
  */
-const DWARF_START_K = 20;
-const BLACK_DWARF_K = 5;
-const MESTEL_T = -0.35;
+const RESIDUAL = { dwarf: 1e5, neutron: 7e6, brown: 3e4, world: 1e4 } as const;
+/** The temperature of the cosmic horizon (de Sitter, H∞ ≈ 56 km/s/Mpc): nothing ends up colder. */
+export const SKY_K = 2.4e-30;
 /** An ember: a white dwarf warmed by dark matter annihilating inside it (Adams & Laughlin). */
 const EMBER_K = 63;
+/** Dark matter falling into a neutron star warms it to about this while the halo lasts. */
+const NEUTRON_HALO_K = 900;
+/** And a brown dwarf, which catches far less of it, to a few kelvin (uncertain). */
+const BROWN_HALO_K = 4;
+/**
+ * The warmth of protons decaying inside, if they decay (a lifetime near 10^37 years): about 400 W
+ * from a white dwarf, which holds it near 0.05 K; a neutron star, small and dense, near 1.5 K; a
+ * brown dwarf 9 mK; a world's interior 3 mK.
+ */
+const DECAY_K = { dwarf: 0.05, neutron: 1.5, brown: 0.009, world: 0.003 } as const;
 
-export function coldDwarfK(years: number): number {
-  return Math.min(DWARF_START_K, Math.max(BLACK_DWARF_K, DWARF_START_K * Math.pow(Math.max(1, years) / 1e15, MESTEL_T)));
+/** What a body cools to, `age` years after it formed, with nothing to warm it. */
+function residual(k: number, age: number): number {
+  return k / Math.sqrt(Math.max(1, age));
 }
 
-/** The year an unwarmed white dwarf has cooled to 5 K: about 5.2 × 10^16 (η 16.7). */
-export const DWARF_COLD_AT = 1e15 * Math.pow(BLACK_DWARF_K / DWARF_START_K, 1 / MESTEL_T);
+/** Temperatures that add as power does: (a⁴ + b⁴ + …)^¼, never below the sky's. */
+function warmth(...parts: number[]): number {
+  let s = SKY_K ** 4;
+  for (const x of parts) s += x ** 4;
+  return Math.pow(s, 0.25);
+}
 
-/** The warmth an unwarmed white dwarf has left in the Degenerate Age, by its light (T⁴): 1 at 20 K, 0 at 5 K. */
-export function dwarfGlow(years: number): number {
-  const t = coldDwarfK(years);
-  return (t ** 4 - BLACK_DWARF_K ** 4) / (DWARF_START_K ** 4 - BLACK_DWARF_K ** 4);
+/**
+ * How much of the warmth of decaying protons to show and count (0..1): none unless protons decay
+ * and we know they do (until then a dead star reads as the prediction without it: finding out is
+ * what the Proton Question does), all of it until η 37.5, then less as the matter goes, none by η 39.
+ */
+export function decayWarmth(state: GameState, years = state.years): number {
+  if (!state.protonsDecay || !protonFateKnown(state)) return 0;
+  const e = Math.log10(Math.max(1, years));
+  return Math.max(0, Math.min(1, (39 - e) / 1.5));
+}
+
+/**
+ * The year the game calls a white dwarf no dark matter warms a black dwarf: about 5.2 × 10^16
+ * (η 16.7). Only a name: it has been colder than any star for ages by then. (Other rules read
+ * this date, so it stays where it was when the game called them black at 5 K.)
+ */
+export const DWARF_COLD_AT = 1e15 * Math.pow(5 / 20, 1 / -0.35);
+
+/** The share of its halo of dark matter still falling into any dead star: all of it to η 22, none by η 25. */
+function haloShare(years: number): number {
+  const e = Math.log10(Math.max(1, years));
+  return e < 22 ? 1 : Math.max(0, (25 - e) / 3);
 }
 
 /**
@@ -54,9 +90,9 @@ export function dwarfGlow(years: number): number {
  */
 export function emberShare(p: Primary, years: number): number {
   if (!p.halo || p.kind !== 'white_dwarf') return 0;
-  const e = Math.log10(Math.max(1, years));
-  const halo = e < 22 ? 1 : Math.max(0, (25 - e) / 3);
+  const halo = haloShare(years);
   if (p.haloLeft === undefined) return halo;
+  const e = Math.log10(Math.max(1, years));
   return halo * Math.max(0, 1 - (e - Math.log10(Math.max(1, p.haloLeft))));
 }
 
@@ -133,9 +169,15 @@ function shoneDuring(p: Primary, from: number, to: number): p is Primary & { kin
   return (p.kind === 'helium_star' || p.kind === 'helium_giant') && (p.bornAt ?? -Infinity) < to && (p.diesAt ?? Infinity) > from;
 }
 
-/** Blackbody-ish surface temperature by primary kind and state (used for colours and text). */
-export function primaryTemperature(p: Primary, years: number, era: EraId): number {
-  if (newStarOut(p, years)) return coldDwarfK(years);
+/**
+ * A primary's temperature in kelvin, for colours and text (no rule reads one below 195 K): a
+ * star's surface, a dead star's by what still warms it (see the cooling above), a black hole's
+ * Hawking temperature. `decay`: the share of the warmth of decaying protons to count (decayWarmth).
+ */
+export function primaryTemperature(p: Primary, years: number, era: EraId, decay = 0): number {
+  const fromDecay = (k: number) => k * Math.pow(decay, 0.25);
+  // a new star a turn outlasted: the white dwarf it left, cooled through the rest of that turn
+  if (newStarOut(p, years)) return warmth(residual(RESIDUAL.dwarf, years - (p.diesAt ?? 0)), fromDecay(DECAY_K.dwarf));
   switch (p.kind) {
     case 'red_dwarf':
       return 2700 + (p.mass - 0.08) * 6000;
@@ -157,18 +199,19 @@ export function primaryTemperature(p: Primary, years: number, era: EraId): numbe
         return 5772 * Math.pow(primaryLuminosity(p, years, era) / (r * r), 0.25);
       }
       if (p.rekindle) return 300; // a world falling into it, as a rekindled black dwarf
-      // an ember holds about 63 K while the halo lasts and cools as its warmth fades (T ∝ power^¼);
-      // the rest cool on toward a black dwarf's 5 K
-      const cold = coldDwarfK(years);
-      const ember = emberShare(p, years);
-      return ember > 0 ? Math.max(cold, EMBER_K * Math.pow(ember, 0.25)) : cold;
+      // an ember holds about 63 K while the halo lasts and cools as its warmth fades (T ∝ power^¼)
+      return warmth(EMBER_K * Math.pow(emberShare(p, years), 0.25), residual(RESIDUAL.dwarf, years - (p.whiteAt ?? 0)), fromDecay(DECAY_K.dwarf));
     }
     case 'black_dwarf':
-      return p.rekindle ? 300 : 5;
+      return p.rekindle ? 300 : warmth(residual(RESIDUAL.dwarf, years - (p.whiteAt ?? 0)), fromDecay(DECAY_K.dwarf));
     case 'brown_dwarf':
-      return era === 'dusk' ? 420 : 60;
+      return era === 'dusk' ? 420 : warmth(BROWN_HALO_K * Math.pow(haloShare(years), 0.25), residual(RESIDUAL.brown, years), fromDecay(DECAY_K.brown));
     case 'neutron_star':
-      return era === 'dusk' ? 30000 : 900;
+      return era === 'dusk' ? 30000 : warmth(NEUTRON_HALO_K * Math.pow(haloShare(years), 0.25), residual(RESIDUAL.neutron, years), fromDecay(DECAY_K.neutron));
+    case 'black_hole':
+    case 'smbh':
+      // Hawking: 6.2 × 10^-8 K for a hole of one Sun, colder the heavier it is
+      return 6.17e-8 / Math.max(1e-6, p.mass);
     default:
       return 0;
   }
@@ -205,6 +248,7 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
   const era = calendarEra(state);
   const gfe = state.gfe;
   const rek = p.rekindle ?? 0;
+  const decay = decayWarmth(state, years);
   switch (p.kind) {
     case 'red_dwarf':
       return { light: p.lum, label: 'Red dwarf, main sequence', temperatureK: primaryTemperature(p, years, era), alive: null };
@@ -225,7 +269,7 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       if (era === 'degenerate') {
         const gf = 0.35 + 0.65 * gfe;
         const ember = emberShare(p, years);
-        const temperatureK = primaryTemperature(p, years, era);
+        const temperatureK = primaryTemperature(p, years, era, decay);
         if (ember > 0) {
           const label =
             p.haloLeft !== undefined
@@ -233,23 +277,27 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
               : ember < 1
                 ? 'Ember, fading: the dark matter that warms it is running out'
                 : 'Ember: a white dwarf warmed by dark matter annihilating inside it (about 63 K)';
-          return { light: (0.05 + ember) * gf + rek, label, temperatureK, alive: null };
+          // its light is the dark matter it burns, and fades with it
+          return { light: 1.05 * ember * gf + rek, label, temperatureK, alive: null };
         }
-        // no dark matter warms it: from ×0.05 at 20 K to a black dwarf's ×0.01 at 5 K, as its light falls
-        const glow = dwarfGlow(years);
-        const light = 0.01 + (0.05 * gf - 0.01) * glow + rek;
-        const label = rek > 0 ? 'White dwarf, rekindled by an infalling world' : glow > 0 ? 'White dwarf, still cooling: no dark matter warms it' : 'White dwarf gone cold: a black dwarf in all but name';
-        return { light, label, temperatureK, alive: null };
+        // nothing warms it: a few millikelvin, and nothing to gather unless a world falls in
+        const label = rek > 0 ? 'White dwarf, rekindled by an infalling world' : 'White dwarf gone cold: nothing warms it, and it has nothing left to give';
+        return { light: rek, label, temperatureK, alive: null };
       }
-      return { light: rek, label: 'Cold white dwarf', temperatureK: 5, alive: null };
+      return { light: rek, label: rek > 0 ? 'White dwarf, rekindled by an infalling world' : 'Cold white dwarf: nothing left to give', temperatureK: primaryTemperature(p, years, era, decay), alive: null };
     }
     case 'black_dwarf':
-      return { light: 0.01 + rek, label: rek > 0 ? 'Black dwarf, rekindled by an infalling world' : 'Black dwarf: a white dwarf gone cold', temperatureK: rek > 0 ? 300 : 5, alive: null };
-    case 'brown_dwarf':
-      return { light: era === 'dusk' ? 0.03 : 0.02 * gfe, label: 'Brown dwarf: a star that never ignited', temperatureK: primaryTemperature(p, years, era), alive: null };
+      return { light: rek, label: rek > 0 ? 'Black dwarf, rekindled by an infalling world' : 'Black dwarf: a white dwarf gone cold, with nothing left to give', temperatureK: primaryTemperature(p, years, era, decay), alive: null };
+    case 'brown_dwarf': {
+      if (era === 'dusk') return { light: 0.03, label: 'Brown dwarf: a star that never ignited', temperatureK: primaryTemperature(p, years, era), alive: null };
+      // a few kelvin from the dark matter falling into it, while the halo lasts; then nothing
+      const halo = haloShare(years);
+      const label = halo > 0 ? 'Brown dwarf: a star that never ignited, faintly warmed by dark matter' : 'Brown dwarf gone cold: the dark matter that warmed it is spent';
+      return { light: 0.02 * gfe * halo, label, temperatureK: primaryTemperature(p, years, era, decay), alive: null };
+    }
     case 'neutron_star': {
       const light = era === 'dusk' ? 0.1 : era === 'degenerate' ? 0.25 * Math.max(0, 1 - (Math.log10(years) - 15) / 12) * (0.4 + 0.6 * gfe) : 0;
-      return { light, label: 'Neutron star, slowly spinning down', temperatureK: primaryTemperature(p, years, era), alive: null };
+      return { light, label: 'Neutron star, slowly spinning down', temperatureK: primaryTemperature(p, years, era, decay), alive: null };
     }
     case 'dark_star': {
       const born = p.bornAt ?? years;
@@ -386,8 +434,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         notes.push({ systemId: sys.id, kind: 'burnout' });
       }
     }
-    // white dwarfs go black: one no dark matter warms once it has cooled to 5 K (about η 16.7), an
-    // ember once the halo is spent (η 25). Only the name changes: nothing happens to it at 5 K.
+    // white dwarfs are called black: one no dark matter warms from η 16.7 (it has been cold for
+    // ages), an ember once the halo is spent (η 25). Only the name changes.
     if (p.kind === 'white_dwarf' && calendarEra(state) !== 'dusk' && to >= DWARF_COLD_AT && emberShare(p, to) === 0) p.kind = 'black_dwarf';
     // rekindled dwarfs: feeding worlds fade as (1 + t/tau)^-2
     let rek = 0;
@@ -602,12 +650,11 @@ export const LAST_LIGHT_YEARS = LAST_LIGHT;
  * Approximate luminosity of a primary in solar units, for surface temperatures shown to the
  * player. (The economy uses era-normalised light factors instead; see sourceLight.)
  */
-export function primaryLuminosity(p: Primary, years: number, era: EraId): number {
+export function primaryLuminosity(p: Primary, years: number, era: EraId, decay = 0): number {
   const m = Math.max(0.01, p.mass);
-  if (newStarOut(p, years)) {
-    const r = dwarfRadius(p);
-    return Math.pow(coldDwarfK(years) / 5772, 4) * r * r;
-  }
+  // a dead star's light, from its temperature and its size (Stefan–Boltzmann; radii in Suns)
+  const glow = (r: number) => Math.pow(primaryTemperature(p, years, era, decay) / 5772, 4) * r * r;
+  if (newStarOut(p, years)) return glow(dwarfRadius(p));
   switch (p.kind) {
     case 'red_dwarf':
     case 'collision_star':
@@ -625,19 +672,17 @@ export function primaryLuminosity(p: Primary, years: number, era: EraId): number
         return 0.01 * Math.pow(1 + age / 1e8, -1.3);
       }
       // an ember by the dark matter it burns (about 4 × 10^-12 L☉ while the halo lasts), any other
-      // by how far it has cooled (Stefan–Boltzmann, from its size)
-      const r = dwarfRadius(p);
-      const cold = Math.pow(coldDwarfK(years) / 5772, 4) * r * r;
+      // by what is left of its warmth
       const ember = era === 'degenerate' ? emberShare(p, years) : 0;
-      if (ember > 0) return Math.max(cold, 4e-12 * ember);
-      return cold + (p.rekindle ?? 0) * 1e-6;
+      if (ember > 0) return Math.max(glow(dwarfRadius(p)), 4e-12 * ember);
+      return (p.rekindle ? 0 : glow(dwarfRadius(p))) + (p.rekindle ?? 0) * 1e-6;
     }
     case 'black_dwarf':
-      return 1e-17 + (p.rekindle ?? 0) * 1e-6;
+      return (p.rekindle ? 0 : glow(dwarfRadius(p))) + (p.rekindle ?? 0) * 1e-6;
     case 'brown_dwarf':
-      return era === 'dusk' ? 1e-6 : 1e-8;
+      return era === 'dusk' ? 1e-6 : glow(0.1);
     case 'neutron_star':
-      return era === 'dusk' ? 1e-5 : 1e-9;
+      return era === 'dusk' ? 1e-5 : glow(1.7e-5);
     default:
       return 0;
   }
@@ -757,13 +802,16 @@ export function bodyClimate(state: GameState, b: Body): BodyClimate {
 /** A world's climate without Orbital Lamps: under its star's light today, or under `lum` Suns. */
 export function starClimate(state: GameState, b: Body, lum?: number): BodyClimate {
   const sys = state.systems[b.systemId];
-  const L = b.rogue ? 0 : (lum ?? primaryLuminosity(sys.primary, state.years, calendarEra(state)));
+  const era = calendarEra(state);
+  const decay = decayWarmth(state);
+  const L = b.rogue ? 0 : (lum ?? primaryLuminosity(sys.primary, state.years, era, decay));
   const a = Math.max(0.003, b.orbitAU);
   const tEq = L > 0 ? 278 * Math.pow(L, 0.25) * Math.pow(0.7, 0.25) / Math.sqrt(a) : 0;
-  const tInt = 40 * b.coreHeat;
+  // its own heat: its core's, while that lasts (it runs out after the Last Light), then what is
+  // left of it, and its protons decaying, if they do and we know it
+  const tInt = warmth(40 * b.coreHeat, era === 'dusk' ? 0 : residual(RESIDUAL.world, state.years), DECAY_K.world * Math.pow(decay, 0.25));
   let t = Math.pow(Math.pow(tEq, 4) + Math.pow(tInt, 4), 0.25);
   if (b.kind === 'eyeball' || b.kind === 'terran' || b.kind === 'super_earth') t *= 1 + 0.12 * b.vitality;
-  t = Math.max(1, t);
   if (b.traits.includes('tidally_locked') && tEq > 0) {
     // the day side faces the star for ever; air and sea carry some heat round to the night
     const airless = b.kind === 'barren' || b.kind === 'asteroids';

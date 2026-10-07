@@ -622,3 +622,32 @@ neighbours. Plan agreed 7 Oct; parts land one at a time.
   civilization fades as before unless help reaches it. Balance, 300 games: 149 survive, 55
   victories, a Degenerate Age of 68 turns (was 150 / 54 / 68); 5 of 300 games play out
   differently.
+- **The calendar and the age part ways in the code** (no change in play). Physics, the Tide and
+  everything physical read `calendarEra()` (`src/game/fate.ts`); what belongs to an age opens with
+  `ageReached()`, when either the calendar or the age reaches it. The same today; it is what lets
+  the fate of matter move a boundary between ages. 300 harness games identical, line for line.
+- **Dead stars and worlds cool honestly, and the cold gives nothing** (the player: "Black dwarves
+  never cool below 5 Kelvin and planets never cool below 1 Kelvin … at those low energy scales,
+  the amount of usable energy they give off is actually drastically different").
+  - Temperatures: a body nothing warms keeps its last heat in its electrons and cools as
+    T ≈ K·t^-½, so a white dwarf with no dark matter is about 3 mK as the Degenerate Age opens
+    (the game had it at 20 K, falling to a 5 K floor); embers hold 63 K while the halo lasts,
+    neutron stars about 900 K and brown dwarfs about 4 K; worlds lose the 1 K floor; black holes
+    show their Hawking temperature; nothing goes below the horizon's 2.4×10⁻³⁰ K. If protons decay,
+    their warmth shows (a white dwarf near 0.05 K, a neutron star near 1.5 K) once we know they
+    do. Every temperature reads at its scale: 63 K, 4.0 K, 3.2 mK, 225 µK, 2.2 nK, 2×10⁻³⁰ K. No
+    rule reads a temperature below 195 K, so this alone changes no game.
+  - Energy: usable energy goes as T⁴. Cold white and black dwarfs give collectors nothing (no
+    ×0.01 floor, no early ×0.05 glow), unless a world falls in; a brown dwarf's faint light fades
+    with the halo; an ember's light follows its warmth (×1.05 at full, fading to nothing). A
+    light collector cannot be built where its star gives no light, and one already there says
+    "nothing to gather". Worlds' core heat runs out after the Last Light, a fifth a turn
+    (Geothermal Taps wind down with it): it used to last for ever, into the Dark. One honest gift
+    of the cold: erasing a bit costs kT ln 2 (Landauer), so under a dark sky Coldminds and Cold
+    Vaults keep for half. The black-dwarf name keeps its date, η 16.7.
+  - Balance: 300 games 128 survive, 40 victories, a Degenerate Age of 68 turns (was 149 / 55 /
+    68); 900 games 397 / 119 / 67 (about 430 / 147 before). By step, 300 games: honest
+    temperatures and no light floors 137 / 55; core heat gone within seven turns 106 / 31; with
+    the dark-sky discount 126 / 36; the gentler fade it has now (×0.8 a turn) 128 / 40 (×0.9:
+    134 / 39). Most of the cost is the core heat that had lasted into the Dark Era: The Fade
+    (continuity lost in the dark) rises from 9 to 28 games in 300.

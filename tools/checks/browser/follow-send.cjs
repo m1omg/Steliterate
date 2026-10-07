@@ -135,9 +135,9 @@ run(async () => {
   }
   if (dw.cold) {
     const t = await panel(dw.cold);
-    const m = t.match(/(\d+) K/);
-    console.log('cooling dwarf panel:', t.slice(0, 160), '| years', dw.years.toExponential(2));
-    check(t.includes('still cooling') && m && Number(m[1]) < 20, `an unwarmed dwarf reads ${m && m[1]} K, still cooling`);
+    const m = t.match(/([\d.]+ (mK|µK|nK))/);
+    console.log('cold dwarf panel:', t.slice(0, 160), '| years', dw.years.toExponential(2));
+    check(t.includes('gone cold') && !!m, `an unwarmed dwarf reads ${m && m[1]}, gone cold (no 5 K floor)`);
     await ck.shot('cooling-panel.png');
   }
   await finish('FOLLOW SEND', ck);
