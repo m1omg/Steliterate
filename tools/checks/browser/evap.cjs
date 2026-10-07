@@ -12,7 +12,13 @@ run(async () => {
   }
   const info = await page.evaluate(() => {
     const s = window.__stel.state();
-    const sys = Object.values(s.systems).find((x) => x.primary.kind === 'black_hole' && !x.gone && x.bodies.some((id) => { const b = s.bodies[id]; return b && !b.dissolved && b.kind !== 'deep'; }));
+    const worlds = (x) => x.bodies.some((id) => { const b = s.bodies[id]; return b && !b.dissolved && b.kind !== 'deep'; });
+    let sys = Object.values(s.systems).find((x) => x.primary.kind === 'black_hole' && !x.gone && worlds(x));
+    // no hole with worlds left in this game: make one of a star nobody lives at
+    if (!sys) {
+      sys = Object.values(s.systems).find((x) => !x.gone && !x.special && worlds(x) && !Object.values(s.colonies).some((c) => c.systemId === x.id));
+      Object.assign(sys.primary, { kind: 'black_hole', mass: 10, spin: 100, spinMax: 100 });
+    }
     sys.primary.evaporateAt = s.years * (1 + 1e-12);
     s.civ.known[sys.id] = 2;
     window.__stel.endTurns(1, false);

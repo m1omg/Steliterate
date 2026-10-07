@@ -16,6 +16,7 @@ import { computeMods } from './mods';
 import { sendSignal } from './signals';
 import { beamEnergy, distanceToThem, inStep, lightAt, spreadNews, voice } from './survivors';
 import { log } from './util';
+import { breach } from './ways';
 
 export const PACT_KINDS: PactKind[] = ['aid', 'archives', 'watch'];
 
@@ -140,7 +141,8 @@ export function acceptOffer(state: GameState, sv: Survivor, kind: PactKind): str
  */
 export function theirPacts(state: GameState, sv: Survivor, chance: () => number): boolean {
   const mine = pactsWith(sv);
-  if (mine.length && sv.disposition < -10) {
+  // the Tessellate keeps an agreement to the letter, whatever it thinks of us
+  if (mine.length && sv.disposition < -10 && sv.way !== 'lattice') {
     delete sv.pacts;
     sendSignal(state, {
       from: sv.id,
@@ -185,14 +187,22 @@ export function pactsTurn(state: GameState) {
       const inKey = `pact_aid_in_${sv.id}`;
       // what they need, as far as we can spare it and keep 30% of our reserve
       const spare = civ.energy - cap * 0.3;
-      if (sv.health < 0.35 && spare >= 5 && state.turn - (civ.flags[outKey] ?? -99) >= AID_EVERY) {
+      const due = sv.health < 0.35 && state.turn - (civ.flags[outKey] ?? -99) >= AID_EVERY;
+      if (due && spare < 5 && sv.way === 'lattice') {
+        // the Tessellate holds us to our side of it, to the letter
+        civ.flags[outKey] = state.turn;
+        breach(state, sv);
+        if (!hasPact(sv, 'aid')) continue;
+      }
+      if (due && spare >= 5) {
         const e = Math.floor(Math.min(15 + (0.35 - sv.health) * 100, spare));
         civ.energy -= e;
         beamEnergy(state, sv, e, true);
         civ.flags[outKey] = state.turn;
         log(state, `As our pact says, we beamed ${e} energy to ${sv.name}.`, 'info', sv.homeSystemId);
       }
-      if (weak && sv.health > 0.4 && state.turn - (civ.flags[inKey] ?? -99) >= AID_EVERY) {
+      // they pay their side while they can; the Tessellate pays it even while failing
+      if (weak && (sv.health > 0.4 || (sv.way === 'lattice' && sv.health > 0.05)) && state.turn - (civ.flags[inKey] ?? -99) >= AID_EVERY) {
         const e = Math.round(Math.min(60, Math.max(8, sv.pop * sv.health * 0.8)));
         sv.health = Math.max(0, sv.health - e / 1200);
         civ.flags[inKey] = state.turn;

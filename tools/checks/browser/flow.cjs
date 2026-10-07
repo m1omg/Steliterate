@@ -18,12 +18,16 @@ run(async () => {
     }
     s.pending.length = 0;
     window.__stel.refresh();
-    return { eta: s.eta, outcome: s.outcome ? s.outcome.ending : null, home: s.civ.homeSystemId };
+    // a star we know with worlds of rock and a belt still there: home if it still has them
+    const fit = (x) => !x.gone && x.bodies.some((id) => s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind === 'asteroids') && x.bodies.some((id) => s.bodies[id] && !s.bodies[id].dissolved && ['barren', 'ice', 'terran', 'super_earth', 'eyeball', 'ocean_ice'].includes(s.bodies[id].kind));
+    const home = s.systems[s.civ.homeSystemId];
+    const look = home && fit(home) ? home : Object.values(s.systems).find((x) => s.civ.known[x.id] === 2 && fit(x));
+    return { eta: s.eta, outcome: s.outcome ? s.outcome.ending : null, home: look ? look.id : s.civ.homeSystemId };
   });
   check(!pre.outcome && pre.eta < 65 && pre.eta > 62, `stable, η ${pre.eta.toFixed(1)}: just before the flow`);
   const tips = await page.evaluate(() => [...document.querySelectorAll('.chrono [data-tip]')].map((x) => x.dataset.tip.split('\n')[0]));
   check(tips.includes('The Long Flow'), 'the timeline marks the Long Flow, and a forecast warns of it');
-  // look at home, where there is a belt
+  // look at home (or another star we know with worlds and a belt)
   const world = async () =>
     page.evaluate(() => {
       const e = window.__stel.engine();

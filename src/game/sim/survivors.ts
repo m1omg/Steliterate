@@ -5,6 +5,7 @@ import { acceptOffer, hasPact, theirPacts, weighProposal } from './pacts';
 import { askRefuge, onTheirWay, sanctuaryTrust, takeThemIn } from './refuge';
 import { askAgainstHunger, claimEase, expand, judgePromise, promiseHelp } from './claims';
 import { atWar, inCoalition, raidedUs, seizeBlocked, warCause, warDefence } from './war';
+import { answerChoirWish, choirWish, drawTheirSpin, wakeForNewStar } from './ways';
 import { createColony, isWarFleet } from './fleets';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceClock } from './signals';
@@ -178,12 +179,15 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       if (sv.way === 'garden' && state.protonsDecay && state.eta > 37.5) drain *= 1.4;
       // sleepers through the ages must wake to mend their vaults once solid matter flows
       if (sv.way === 'dormant' && flowing(state)) drain *= 2;
-      // every star they have settled beyond their first is another source
+      // every star they have settled beyond their first is another source; and in the Black
+      // Hole Age a hole's spin, drawn from a commons we may share
       drain *= claimEase(state, sv);
+      if (drawTheirSpin(state, sv) > 0) drain *= 0.85;
       sv.health = clamp(sv.health - drain + rng.range(-0.004, 0.006), 0, 1);
       sv.pop = Math.max(0, sv.pop * (0.98 + sv.health * 0.03));
-      // settlers arrive at a new star, or a thriving civilization sends some out
-      expand(state, sv, () => rng.next());
+      // the sleepers wake for a new star; otherwise settlers arrive at a new star, or a thriving
+      // civilization sends some out
+      if (!wakeForNewStar(state, sv)) expand(state, sv, () => rng.next());
       // a promise of warships we made them: kept, or not
       judgePromise(state, sv);
 
@@ -262,6 +266,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       // the Hunger feeds at one of their stars: they ask for warships
       if (talk && askAgainstHunger(state, sv)) continue;
       if (state.turn - sv.lastSent < 5 || !talk || sv.exodus) continue;
+      // the Choir would gather some of our Echoes
+      if (choirWish(state, sv)) continue;
 
       // pacts: they offer one, or renounce them all
       if (theirPacts(state, sv, () => rng.next())) {
@@ -427,6 +433,12 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         const err = takeThemIn(state, sv, Number(sig.data.n));
         if (err) return err;
       }
+      break;
+    }
+    case 'choir_wish': {
+      if (!sv) return 'They are gone.';
+      const err = answerChoirWish(state, sv, choice);
+      if (err) return err;
       break;
     }
     case 'swarm_plea': {

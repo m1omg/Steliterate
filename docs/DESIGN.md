@@ -286,8 +286,32 @@ the disagreement as real model uncertainty.
 * **Fellow survivors** (0 to 4): other young civilizations with their own way of coping
   (clinging to biology, uploading, merging, sleeping, or the Tessellate, which is not
   conscious at all and speaks only in protocol). They send pleas, trades, refugees, joint
-  works and raids; you can help, trade, take them in, seize their star, or devour them.
-  You watch other lights go out.
+  works and raids; you can help, trade, take them in, go to war, or devour them. You watch
+  other lights go out, and some you keep lit. Since 7 Oct they are **living neighbours**
+  (`sim/survivors.ts`, `pacts.ts`, `refuge.ts`, `claims.ts`, `war.ts`, `ways.ts`), built on one
+  rule: everything between civilizations moves at the speed of light. Not rivals on a
+  scoreboard (there is no conquest victory); cooperation pays in people, energy, eyes on the
+  Hunger and lights still on beside ours; taking pays once and is heard everywhere.
+  * *Honesty.* Help is a beam that arrives when it arrives; what we do at one star changes how
+    the others feel when its light reaches them; the Hunger in us (Taint) caps how well anyone
+    can think of us.
+  * *Pacts* (Mutual Aid, Shared Watch, Open Archives), proposed and answered at light speed,
+    priced in accord, dearer with every pact; breaking one is heard everywhere.
+  * *Refuge.* A dying civilization that trusts us comes to us, minds as light and flesh by
+    ship, and lives on among us (fate *saved*); the Choir joins our Chorus (*absorbed*).
+    Sanctuary is heard of, and trusted.
+  * *Expansion.* They settle the stars of their own cluster that suit their way of life, slowly,
+    never ours; we see it when the light arrives. The Hunger hunts them too, and they ask for
+    warships.
+  * *War,* narrow and costly: an accord vote, resolve, calm and standing; a siege while they
+    arm; an assault we can lose; infamy at light speed and coalitions of those who hate us; its
+    heat draws the Hunger; no pacts, trade or refuge while it lasts. It pays only against our
+    own people who left us or a neighbour who keeps raiding us, and then only a little.
+  * *Ways that meet.* The sleepers wake for new stars and race for them; the Tessellate keeps
+    its agreements to the letter and holds us to ours; the Choir gathers the Echoes who wish it;
+    a partner at a new star shares its clock; in the Black Hole Age a hole's spin is a commons.
+  * *The Hunger* stays possible but hard to fight: allies add eyes and a little strength, never
+    a shield.
 * **The Slow Ones** think around the Heart on clocks of millions of years. You can only
   converse when your own clock comes close to theirs. They matter for the *Aeon Seed*.
 * **Sleepers and ghosts:** vault civilizations and archived dead in ruins. Waking them is
@@ -407,11 +431,11 @@ stop them from talking.
 games headlessly. The autoplayer paces from the same projection the HUD shows, expands only
 what its energy can carry, cools Echoes as the ages lengthen, and prepares for the decay.
 
-At the time of writing (60 games for the standard figure; 12 to 24 games are too noisy to
-compare changes):
-* **Standard, competent:** about 38% make it to the end of time (22 of 60 endure, 1 Great
-  Work victory); the rest fall at the Great Decay or in the Black Hole Age, a few when their
-  resolve gives out.
+At the time of writing (7 Oct, 900 games; 300 are the least that tell a change from noise):
+* **Standard, competent:** about 48% make it to the end of time (435 of 900, 179 of them in
+  victory); by fate of matter 40% where protons decay, 68% where they are stable, 44% under
+  curvature radiation. The rest fall in the Black Hole Age, fade in the Dark, or, a few, when
+  their resolve gives out.
 * **Vast:** Great Work victories appear (The Long Thought).
 * **Brief:** harder; fewer turns to prepare.
 * **Passive** (research only, first choice everywhere): dies in the Dusk.
@@ -431,6 +455,8 @@ Great Works; construction (about 45 structures), settlement and sublight fleets;
 and the dark path; fellow survivors, the Slow Ones, sleepers and ghosts, the Unlit; about 40
 events; forecasts; save, autosave and save codes; the score and plates.
 
-Candidates for later: deeper survivor diplomacy, ship design, more events and relics, an
-in-game advisor built on the autoplayer, a multi-scale camera without a view switch,
-localisation.
+Since 7 Oct, living neighbours: pacts, refuge, expansion, war and the wants of each way of life
+(Section 8).
+
+Candidates for later: ship design, more events and relics, an in-game advisor built on the
+autoplayer, a multi-scale camera without a view switch, localisation.

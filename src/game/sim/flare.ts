@@ -203,6 +203,14 @@ export interface StarTerms {
   flash: boolean;
   /** The year a flash's one turn would end: as the star burns out, or the shortest turn the calendar can count. */
   flashUntil: number;
+  /** A partner who lives at this star keeps its clock with us, and the cost is shared (half). */
+  shared?: string;
+}
+
+/** A civilization bound to us by a pact that lives at this star: it keeps the clock with us. */
+export function clockPartner(state: GameState, sys: StarSystem): string | null {
+  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.war && sv.pacts && Object.keys(sv.pacts).length > 0 && sv.systems.includes(sys.id)) return sv.name;
+  return null;
 }
 
 /**
@@ -235,6 +243,10 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
   const next = stepTime(calendarEra(state), from, eta(from), state.civ.pace, state.settings.length).turnLength;
   const full = Math.floor(reserveCapacity(state, computeMods(state)));
   const price = (orders: number) => Math.ceil(STAR_ORDER_COST * Math.max(0, orders - STAR_FREE));
+  // a partner at the star keeps the clock with us: half the cost
+  const with_ = clockPartner(state, sys);
+  const partner = with_ ? { shared: with_ } : {};
+  const share = (cost: number) => (with_ ? Math.ceil(cost / 2) : cost);
   if (left / STAR_TURNS < from * STAR_STEP_MIN) {
     // too brief for six turns: unless we keep time with another, catch it in one (a flash), ending
     // as it burns out, or after the shortest turn the calendar can count (its light still in full)
@@ -242,13 +254,13 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
     if (left >= next) return { ...none, why: 'unneeded', from };
     const orders = Math.log10(next / left);
     const flashUntil = left >= from * STAR_STEP_MIN ? p.diesAt : from + from * STAR_STEP_MIN;
-    return { possible: true, brief: true, orders, cost: Math.min(full, price(orders)), after: null, why: null, from, floor: false, flash: true, flashUntil };
+    return { possible: true, brief: true, orders, cost: share(Math.min(full, price(orders))), after: null, why: null, from, floor: false, flash: true, flashUntil, ...partner };
   }
   if (left >= next * STAR_TURNS) return { ...none, why: 'unneeded', after, from };
   const orders = Math.log10(next / left);
   const byOrders = price(orders);
   const floor = !!after && byOrders < STAR_FOLLOW_MIN;
-  return { possible: true, brief: false, orders, cost: Math.min(full, floor ? STAR_FOLLOW_MIN : byOrders), after, why: null, from, floor, flash: false, flashUntil: 0 };
+  return { possible: true, brief: false, orders, cost: share(Math.min(full, floor ? STAR_FOLLOW_MIN : byOrders)), after, why: null, from, floor, flash: false, flashUntil: 0, ...partner };
 }
 
 /** Could we keep time with this new star now: possible, and its price within our reserve? */

@@ -52,8 +52,12 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   you want to extend it rather than reduce anything"); "it should be possible but hard to fight
   the hunger"; a little harder is fine, never unwinnable. Order: A tests (`975d6c3`), B0 calendar
   apart from the age (`812e2e2`), B2 honest cooling (`aae0347`), B3 three fates (`5b9d277`), B4
-  taking structures apart (`f34c673`), B5 the Long Flow (7 Oct), then C living neighbours. A and B go live one at a time; C goes live
-  in one piece when all its phases are done. The player's own game was in the Black Hole Age on
+  taking structures apart (`f34c673`), B5 the Long Flow (`9c39829`), then C living neighbours in
+  six phases: honesty (`e706fcd`), pacts (`aa11b79`), refuge (`862b219`), expansion and war
+  (`43da424`), ways that meet (the commit that took Part C live, 7 Oct). A and B went live one
+  at a time; C went live in one piece when all its phases were done. Not asked, so not done:
+  conquest victories, neighbours' fleets on the map, diplomacy between the neighbours themselves
+  (they meet only through us: news, coalitions, claims never on another's star). The player's own game was in the Black Hole Age on
   6 Oct, so B2 reaches it: core heat fades and cold dwarfs give nothing.
 - **2 Oct, kinds of structure** ("a UI friendly way of distinguishing building types … the list
   is becoming very long"): done, interface only (`CHANGELOG.md`).

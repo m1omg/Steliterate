@@ -53,6 +53,7 @@ import { loreView } from '../screens/Story';
 import { siteValue, type SiteValue } from '../../game/sim/sites';
 import { survivorPeople, survivorWorld } from '../../game/sim/homes';
 import { residentsSeen, seenThere } from '../../game/sim/claims';
+import { spinSharers } from '../../game/sim/ways';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 import { calendarEra } from '../../game/fate';
@@ -253,8 +254,14 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           <dd class="mono">{sys.primary.mass >= 1000 ? sys.primary.mass.toExponential(1) : n1(sys.primary.mass)} M☉</dd>
           {sys.primary.spinMax > 0 && (
             <>
-              <dt>Spin reservoir</dt>
-              <dd class="mono">{pct(sys.primary.spin / sys.primary.spinMax)}</dd>
+              <dt data-tip={spinSharers(s, sys.id).length ? 'In the Black Hole Age a hole’s spin is a commons: others living here draw on it as we do (a partner only half what it could), and it does not come back.' : undefined}>Spin reservoir</dt>
+              <dd class="mono">
+                {pct(sys.primary.spin / sys.primary.spinMax)}
+                {(() => {
+                  const others = spinSharers(s, sys.id).filter((v) => v.contact && (v.homeSystemId === sys.id || seenThere(s, v, sys.id)));
+                  return others.length ? ` · shared with ${others.map((v) => v.name).join(', ')}` : '';
+                })()}
+              </dd>
             </>
           )}
           {src.alive && (

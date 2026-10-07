@@ -37,11 +37,15 @@ run(async () => {
   check(toast?.button?.endsWith('Look'), `it carries a Look button (${toast?.button})`);
   await ck.shot('survey-toast.png');
   await page.locator('.toast', { hasText: 'Survey complete' }).locator('.toast-act').click();
-  await page.waitForTimeout(1500);
-  const after = await page.evaluate(() => {
-    const e = window.__stel.engine();
-    return { view: e.view, shown: e.system?.systemId, toastLeft: !![...document.querySelectorAll('.toast')].find((x) => x.textContent.includes('Survey complete')), drawer: document.querySelector('.drawer h2, .drawer h1, .drawer-head h2')?.textContent ?? document.querySelector('.drawer')?.textContent.slice(0, 80) };
-  });
+  // the camera flies there first: wait for the system view (up to ten seconds)
+  let after = null;
+  for (let i = 0; i < 20 && after?.view !== 'system'; i++) {
+    await page.waitForTimeout(500);
+    after = await page.evaluate(() => {
+      const e = window.__stel.engine();
+      return { view: e.view, shown: e.system?.systemId, toastLeft: !![...document.querySelectorAll('.toast')].find((x) => x.textContent.includes('Survey complete')), drawer: document.querySelector('.drawer h2, .drawer h1, .drawer-head h2')?.textContent ?? document.querySelector('.drawer')?.textContent.slice(0, 80) };
+    });
+  }
   const surveyedName = toast?.text.match(/Survey complete: ([^,]+),/)?.[1];
   const shownName = await page.evaluate((id) => window.__stel.state().systems[id]?.name, after.shown);
   check(after.view === 'system' && shownName === surveyedName, `Look opens the system view of ${surveyedName} (view ${after.view}, showing ${shownName})`);

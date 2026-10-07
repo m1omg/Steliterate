@@ -849,3 +849,35 @@ at once". Built in phases, each with its checks and harness numbers.
   twice their strength, holding the siege, seizing; peace after 30 turns) fought 21 wars in 900
   games, 8 ending with a fork retaken: 397 / 158 / 68 against 396 / 158 / 68, and in those 21
   games 14 survived against 13 in peace. Worth it only in the narrow case, and not by much.
+- **Phase 5, ways that meet.** Each way of life wants its own things.
+  - The sleepers wake when a new star lights within 100 ly of their stars with a cold world by it,
+    and set out for it at once (health over 0.25 is enough), telling us so: a race, for if we
+    settle there first it is not theirs.
+  - The Tessellate keeps agreements to the letter: it never renounces a pact, whatever it thinks
+    of us; it pays its side of Mutual Aid even while failing; and it holds us to ours: each time
+    its Mutual Aid falls due and we cannot spare 5 energy, a breach is logged, and at the second
+    every agreement ends (−15).
+  - The Choir, healthy and thinking well of us (over 20), asks at most every 25 turns for those of
+    our Echoes who wish to join it. Letting two go raises the Echoes' standing (+3), and the
+    Choir grows and hears of it (+12); asking them to stay costs the Echoes' standing (−3) and
+    the Choir's goodwill (−5). The autoplayer lets them go.
+  - A partner (any pact) living at a new star keeps its clock with us: half the price.
+  - In the Black Hole Age a hole's spin is a commons: a civilization living at a hole draws
+    0.04 × its people × health a turn from it (a partner half), which slows its own decline;
+    the system panel's Spin row names who shares it.
+  - Our own people who left us are retaken without Taint (phase 4).
+
+  Balance, 300 games: 146 survive, 60 victories, a Degenerate Age of 67 turns (was 144 / 55 /
+  68); 900 games 435 / 179 / 68 (was 396 / 158 / 68); by fate decay 179 of 450, stable 163 of
+  239, curvature 93 of 211. With the autoplayer asking its Echoes to stay rather than letting
+  them go: 439 / 163 / 71. Of 2,906 neighbours 684 were saved, 186 absorbed and 307 alive at
+  the end; Serein and the Choir hold 2.7 stars beyond their first, the Tessellate 1.0, the
+  sleepers 0.6 (none before).
+
+  Part C as a whole, against the Long Flow's 900 games: 435 survive (400), 179 victories (142);
+  the steps between phases moved by up to 30 either way, about the noise between two runs of
+  900, but the rise from cooperation (pacts above all) holds. A player who keeps to themselves
+  plays much as before; one who binds neighbours to them, takes in the dying and stands with
+  them against the Hunger does better.
+  Also: the evaporation, Long Flow and survey checks no longer depend on what one seed's game
+  happens to hold, or on how fast the camera flies.

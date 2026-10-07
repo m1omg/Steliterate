@@ -68,6 +68,12 @@ const turnsWord = (n: number) => `${n} turn${n === 1 ? '' : 's'}`;
 
 /** How long a new star will burn, and what keeping time with it would take (see flare.ts). */
 function newStarTiming(s: GameState, d: EventData): string {
+  const text = newStarTimingCore(s, d);
+  const t = starClockTerms(s, s.systems[String(d.systemId)]);
+  return t.possible && t.shared ? `${text} ${t.shared} live there, and keep its clock with us: we pay half.` : text;
+}
+
+function newStarTimingCore(s: GameState, d: EventData): string {
   const sys = s.systems[String(d.systemId)];
   const p = sys?.primary;
   if (!sys || !p?.diesAt) return '';
@@ -143,7 +149,7 @@ function keepTimeHint(s: GameState, d: EventData): string {
         return 'It has burned out.';
     }
   }
-  const price = t.cost === 0 ? 'Free: we are in tune with it.' : `${t.cost} energy, once${s.civ.energy < t.cost ? ': more than we have' : ''}.`;
+  const price = (t.cost === 0 ? 'Free: we are in tune with it.' : `${t.cost} energy, once${s.civ.energy < t.cost ? ': more than we have' : ''}.`) + (t.shared ? ` ${t.shared} keep its clock with us: half the cost.` : '');
   if (t.flash) return `${price} Then one turn, ${t.flashUntil === sys?.primary.diesAt ? 'ending as it burns out' : 'as short as our calendar can count'}, lived in full in its light as one turn at the Tide, whatever the pace. Then our own pace again.`;
   const start = t.after ? `Once the clock of ${t.after} runs out, ${STAR_TURNS}` : `Then ${STAR_TURNS}`;
   return `${price} ${start} turns while it burns, each a sixth of what is left of its life whatever the pace, each lived in full as one turn at the Tide. Then our own pace again.`;

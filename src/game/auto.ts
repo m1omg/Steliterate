@@ -393,6 +393,7 @@ function planSignals(state: GameState) {
     if (s.kind === 'aid') choice = civ.energy > Number(s.data.ask) * 3 ? 'give' : 'refuse';
     if (s.kind === 'refugees') choice = 'accept';
     if (s.kind === 'exodus') choice = 'take';
+    if (s.kind === 'choir_wish') choice = 'let';
     if (s.kind === 'pact_offer') choice = civ.accord >= pactCost(state) + ACCORD_KEEP ? 'accept' : 'decline';
     if (s.kind === 'joint') choice = civ.matter > 120 ? 'join' : 'decline';
     if (s.kind === 'trade') choice = civ.matter > 150 ? 'trade' : 'decline';
