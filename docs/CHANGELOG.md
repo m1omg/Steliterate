@@ -1072,3 +1072,41 @@ at once". Built in phases, each with its checks and harness numbers.
   defeat → victory and 46 back. By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211.
 - **Checks.** New: `unit/icy`. `unit/twilight` now builds its own twilight sea, and checks that new
   galaxies start without any and that old saves name theirs rightly.
+
+## Water-rich worlds and steam worlds (8 Oct)
+
+- **Request.** The player, on the ice-world fix: "I don't think it's realistic for all planets that
+  are closer than the early snowline to be water-free. I think there should be steam worlds as well
+  … as well as worlds that were boiling at that time but didn't lose all the water and then they
+  froze … some planets can be up to 50% water." Chosen: the version with steam worlds.
+- **Water-rich worlds keep their water.** A new galaxy's icy worlds are sorted by the water they
+  formed with.
+  - Ice-shelled oceans, and ice worlds with half their surface or more under water (the wetter
+    half), keep it, marked Water-rich. They may be up to half water by mass, like the ocean
+    planets of Léger et al. 2004, more than their star's bright youth could boil away.
+  - Only the warm water-poor ones dry to bare rock, as before.
+  - Cold ice worlds stay as they were: they are the ones that boiled young, kept their water and
+    froze.
+- **Steam worlds.** A water-rich world past the runaway greenhouse has a sky of steam hundreds of
+  bars deep. It holds the ground at 1,500 K or more by night as by day (Kasting 1988).
+  - The limit is a mean from starlight of 260 K, about 1.06 times Earth's sunlight (Kopparapu et
+    al. 2013). For a tidally locked world it is 300 K, twice the light, because clouds over the
+    star-facing side shade it (Yang, Cowan & Abbot 2013).
+  - It is live: with less light (the star's remnant cooled, or mirrors shading it) the steam rains
+    out into seas.
+  - The world is named Steam world, with a note and a Water-rich chip. The buried-ocean chip is
+    hidden while it is one, and survey finds of ice, of an ocean under ice or of dried seas do not
+    fit it.
+  - On the map it is a veil of steam: the shader never draws lava under an icy world's sky.
+- **Per galaxy** (six seeds): about 5 steam worlds, 3 with a sea on the day side and ice beyond, a
+  rare twilight sea, 7.5 dried to bare rock; the rest stay frozen. Twilight seas are now mostly a
+  water-poor world's state, as in Leconte et al. 2013, and the water-poor warm ones dry out.
+- **Saves and seeds.** No random draw. Saves are untouched: old games have no water-rich worlds,
+  and their climates are as they were.
+- **Balance.** 300 games: 139 survive, 62 victories, a Degenerate Age of 72 turns. 900 games: 423
+  / 188 / 69, against 426 / 184 / 68 with the dry pass, within the noise. 232 of 900 games play out
+  exactly as with the dry pass, and the outcomes that change go both ways (81 endurance → defeat,
+  79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211.
+- **Checks.** `unit/icy` is rewritten: water-rich worlds kept and marked; steam worlds, and only
+  they, past the limit; rain-out with less light; no icy finds on them; old saves. `unit/twilight`
+  audits naming without assuming none at the start.

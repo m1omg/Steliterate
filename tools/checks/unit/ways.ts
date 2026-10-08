@@ -95,6 +95,9 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
   sv.health = 0.2;
   s.civ.energy = 1;
   s.civ.flags.last_energy_net = -5;
+  // our side falls due now: no aid beamed lately, no breach before (the seeded game may have had either)
+  delete s.civ.flags[`pact_aid_out_${sv.id}`];
+  delete s.civ.flags[`breach_${sv.id}`];
   const n = s.signals.length;
   pactsTurn(s);
   check(s.signals.slice(n).some((x) => x.kind === 'aid_answer'), 'it pays its side of Mutual Aid even while failing');
