@@ -8,8 +8,9 @@ import { colonies, hasTech } from './util';
 import { calendarEra } from '../fate';
 
 // A red dwarf's last flare. At the end of its life a red dwarf does not swell into a giant: it
-// heats up and shrinks into a blue dwarf for a few billion years, a few hundred times brighter
-// than before, then collapses into a white dwarf (Adams, Laughlin & Graves 2004). Late in the
+// heats up into a blue dwarf for a few billion years, some 4 to 80 times brighter than before by
+// its mass (gen.ts flarePeak), then collapses into a white dwarf (Laughlin, Bodenheimer & Adams
+// 1997; Adams, Laughlin & Graves 2004). Late in the
 // Dusk a turn lasts far longer than the whole flare, so without help it would come and go
 // between two turns. So the turn stops the moment one of our stars leaves the main sequence,
 // and we may choose to keep time with the flare: turns pinned to a sixth of it, lived in full.

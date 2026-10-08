@@ -74,6 +74,36 @@ function pickKind(rng: Rng, w: Weights): PrimaryKind {
   return rng.weighted(entries, (e) => e[1])[0];
 }
 
+/** Piecewise-linear through (x, y) points, held flat beyond the ends. */
+function lerpTable(x: number, pts: [number, number][]): number {
+  if (x <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    const [x1, y1] = pts[i];
+    const [x0, y0] = pts[i - 1];
+    if (x <= x1) return y0 + ((x - x0) * (y1 - y0)) / (x1 - x0);
+  }
+  return pts[pts.length - 1][1];
+}
+
+/**
+ * A red dwarf's last flare at its peak, by mass (Laughlin, Bodenheimer & Adams 1997, ApJ 482,
+ * 420; Adams et al. 2005): it heats up as it burns its last hydrogen, to about 5,800 K at
+ * 0.10 M☉ (never more than about 1% of the Sun's light) and 8,600 K at 0.14, and shrinks, to about
+ * 0.7 times its red dwarf's radius up to 0.13 M☉; heavier, it swells, 1.6 times by 0.16, when it
+ * peaks at about 0.27 L☉. Its light from its size and its temperature (Stefan–Boltzmann): about
+ * 3 × 10^-3 L☉ at 0.08 M☉, 0.010 at 0.10, 0.05 at 0.13. A new galaxy's stars carry these.
+ */
+export function flarePeak(mass: number): { blueK: number; blueLum: number } {
+  const m = Math.max(0.08, Math.min(0.16, mass));
+  const blueK = lerpTable(m, [[0.08, 4600], [0.1, 5800], [0.14, 8600], [0.16, 7400]]);
+  // the red dwarf it was (as primaryLuminosity and primaryTemperature have it), and its radius
+  const redL = 0.23 * Math.pow(m, 2.3);
+  const redK = 2700 + (m - 0.08) * 6000;
+  const redR = Math.sqrt(redL) / Math.pow(redK / 5772, 2);
+  const r = redR * lerpTable(m, [[0.13, 0.7], [0.14, 1.0], [0.16, 1.63]]);
+  return { blueK, blueLum: r * r * Math.pow(blueK / 5772, 4) };
+}
+
 export function makePrimary(rng: Rng, kind: PrimaryKind): Primary {
   const p: Primary = { kind, mass: 0.1, lum: 0, spin: 0, spinMax: 0 };
   switch (kind) {
@@ -83,6 +113,7 @@ export function makePrimary(rng: Rng, kind: PrimaryKind): Primary {
       const untilBlue = Math.pow(10, rng.range(8, 12.97));
       p.blueAt = START_YEARS + untilBlue;
       p.whiteAt = p.blueAt + rng.range(2e9, 6e9);
+      Object.assign(p, flarePeak(p.mass));
       break;
     }
     case 'blue_dwarf': {
@@ -90,6 +121,7 @@ export function makePrimary(rng: Rng, kind: PrimaryKind): Primary {
       p.lum = 1.0;
       p.blueAt = START_YEARS - 1e9;
       p.whiteAt = START_YEARS + Math.pow(10, rng.range(6, 9.4));
+      Object.assign(p, flarePeak(p.mass));
       break;
     }
     case 'white_dwarf':
@@ -330,8 +362,7 @@ class Builder {
     return sys;
   }
 
-  addBody(sys: StarSystem, kind: BodyKind, aAU: number, massEarth: number, index: number): Body {
-    const rng = this.rng;
+  addBody(sys: StarSystem, kind: BodyKind, aAU: number, massEarth: number, index: number, rng: Rng = this.rng): Body {
     const stats = bodyStats(rng, kind);
     const b: Body = {
       id: this.id('b'),
@@ -501,7 +532,7 @@ export function generateWorld(settings: GameSettings): GameState {
   for (const id of home.bodies) delete b.bodies[id];
   home.bodies = [];
   home.name = properName(rng, 2);
-  home.primary = { kind: 'red_dwarf', mass: 0.1, lum: 1.0, blueAt: 9.94e13, whiteAt: 9.94e13 + 4e9, spin: 0, spinMax: 0 };
+  home.primary = { kind: 'red_dwarf', mass: 0.1, lum: 1.0, blueAt: 9.94e13, whiteAt: 9.94e13 + 4e9, ...flarePeak(0.1), spin: 0, spinMax: 0 };
   b.addBody(home, 'deep', 0, 0, 0);
   const inner = b.addBody(home, 'barren', 0.014, 0.4, 0);
   inner.richness = 1.6;
@@ -512,7 +543,8 @@ export function generateWorld(settings: GameSettings): GameState {
   hw.size = 2.0;
   hw.inspiralAt = START_YEARS + inspiralTime(0.031, 1, 0.1);
   const ice = b.addBody(home, 'ocean_ice', 0.058, 0.3, 2);
-  ice.traits = ['subsurface_ocean'];
+  // as close in as Aster, so locked to the star as every world inside 0.08 AU is
+  ice.traits = ['tidally_locked', 'subsurface_ocean'];
   ice.vitality = 0.12;
   const belt = b.addBody(home, 'asteroids', 0.1, 0.001, 3);
   belt.richness = 2.2;
@@ -629,6 +661,8 @@ export function generateWorld(settings: GameSettings): GameState {
     s.rust = 0.15;
   });
 
+  addOuterWorlds(b, settings);
+
   // ---- knowledge: the home reach is charted
   for (const s of Object.values(state.systems)) {
     if (s.regionId === homeReach.id) civ.known[s.id] = 1;
@@ -637,6 +671,43 @@ export function generateWorld(settings: GameSettings): GameState {
   civ.known[heart.id] = 1; // the Heart is visible from anywhere
 
   return state;
+}
+
+/**
+ * Cold worlds far out. The generator gives red and brown dwarfs only close-in worlds, as the
+ * transit surveys find them; microlensing finds cold planets beyond the snow line about as common
+ * around M dwarfs, mostly Neptunes and super-Earths, giants rarer (Cassan et al. 2012, Nature 481,
+ * 167; Suzuki et al. 2016, ApJ 833, 145), and a few around brown dwarfs (Han et al. 2013, ApJL
+ * 778, L38). So one red dwarf in three has one to three more, at 0.3 to 8 AU: ice worlds and ice
+ * giants, the odd gas giant or belt; one brown dwarf in eight has one. After everything else is
+ * generated, each system from a draw of its own, so every seed's galaxy is as it was with these
+ * added (and the systems of note keep their fixed layouts).
+ */
+function addOuterWorlds(b: Builder, settings: GameSettings) {
+  for (const sys of Object.values(b.systems)) {
+    const k = sys.primary.kind;
+    if (sys.special || (k !== 'red_dwarf' && k !== 'blue_dwarf' && k !== 'brown_dwarf')) continue;
+    const rng = new Rng(hashSeed(`${settings.seed}:${sys.id}:outer`));
+    const brown = k === 'brown_dwarf';
+    if (!rng.chance(brown ? 1 / 8 : 1 / 3)) continue;
+    const n = brown ? 1 : rng.int(1, 3);
+    const inner = sys.bodies.map((id) => b.bodies[id]).filter((x) => x.kind !== 'deep');
+    let index = inner.length;
+    let orbit = inner.reduce((m, x) => Math.max(m, x.orbit), 16);
+    let a = Math.exp(rng.range(Math.log(0.3), Math.log(brown ? 3 : 2)));
+    for (let i = 0; i < n && a <= 8; i++) {
+      const r = rng.next();
+      const kind: BodyKind = brown ? (r < 0.65 ? 'ice' : r < 0.85 ? 'ice_giant' : 'gas_giant') : r < 0.45 ? 'ice' : r < 0.8 ? 'ice_giant' : r < 0.9 ? 'asteroids' : 'gas_giant';
+      const mass = kind === 'ice' ? rng.range(0.3, 5) : kind === 'ice_giant' ? rng.range(8, 25) : kind === 'gas_giant' ? rng.range(60, 300) : 0.001;
+      const w = b.addBody(sys, kind, a, mass, index, rng);
+      // drawn beyond the close worlds, with a gap for the distance between
+      orbit += i === 0 ? 16 : rng.range(9, 12);
+      w.orbit = orbit + (kind === 'gas_giant' ? 4 : 0);
+      w.traits.push('outer');
+      index++;
+      a *= rng.range(1.7, 3.2);
+    }
+  }
 }
 
 function makeCiv(settings: GameSettings, homeSystemId: string): Civ {

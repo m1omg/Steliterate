@@ -176,7 +176,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | Age | Sources |
 |---|---|
 | Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase (about 174× as luminous; about 3× the light per turn for collectors while you keep time with it); geothermal (declining); fusion |
-| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. The others are cold already (they cool as T ≈ K·t^-½, a few millikelvin as the age opens) and give collectors nothing; the game calls them black dwarfs from η 16.7. An ember cast out of the galaxy dims over a decade of η as it leaves the halo behind. Worlds' core heat runs out after the Last Light (×0.8 a turn). **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova); their ultraviolet boils away the closest worlds (warmest ground past 3,000 K, rubble past 1,600 K; gas and ice giants spared), and a heavier one swells into a helium giant (1,000 L☉, 120,000 years) that swallows whatever orbits inside its 0.116 AU. A turn soon outlasts every kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full, or, for one too brief for six (a giant, a late helium star), a single flash turn; one clock at a time, though a star that outlasts it can be followed on (priced from our own pace, never below 250 energy); with Quickening, Quick ×10 splits each clock turn into ten, each lived as a tenth; free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve, which charts its system. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting**; under curvature radiation, **curvature collectors** at neutron stars (η 30 to 68) |
+| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. The others cool on (Mestel's law, then faster once crystallised: about 50 K as the age opens, 13 K at η 15) and give collectors nothing; the game calls them black dwarfs from η 16.7. An ember cast out of the galaxy dims over a decade of η as it leaves the halo behind. Worlds' core heat runs out after the Last Light (×0.8 a turn). **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova); their ultraviolet boils away the closest worlds (warmest ground past 3,000 K, rubble past 1,600 K; gas and ice giants spared), and a heavier one swells into a helium giant (1,000 L☉, 120,000 years) that swallows whatever orbits inside its 0.116 AU. A turn soon outlasts every kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full, or, for one too brief for six (a giant, a late helium star), a single flash turn; one clock at a time, though a star that outlasts it can be followed on (priced from our own pace, never below 250 energy); with Quickening, Quick ×10 splits each clock turn into ten, each lived as a tenth; free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve, which charts its system. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting**; under curvature radiation, **curvature collectors** at neutron stars (η 30 to 68) |
 | Black Hole | Penrose (finite spin), Hawking collectors (rising as holes shrink), final bursts, accretion only if protons are stable |
 | Dark | The reserve; a trickle of speculative horizon siphoning |
 
@@ -316,7 +316,10 @@ the disagreement as real model uncertainty.
   they draw down galactic free energy. They are desperate survivors too, in a cancer-like
   way, and they do not consume every run. You can fight them, hide (*Blackout*), lure them
   with decoy beacons, or decode their makers' command language and **tame** them. Tamed
-  swarms can be absorbed as Lattice.
+  swarms can be absorbed as Lattice. Fighting is defending (Defense Grids, Fortify) or, since
+  8 Oct, going for a swarm: every warship at its star together, once a turn, at plain strength,
+  by the odds the swarm has when it comes for them (shown before you commit); a sleeping swarm
+  that survives it wakes. Its rust fades once no swarm is there (a tenth a turn).
 * **Becoming the Hunger.** The dark path: consumption Charters (*Consume the Dead*, *Strip
   the Sleepers*, *Absorb the Weak*, *Communion*), Hunger-derived technology, devouring
   failing survivors. **Taint** brings plenty now, closes endings past 30 and 60, turns the
@@ -428,13 +431,64 @@ stop them from talking.
   `t ≈ 2×10^67 (M/M☉)^3` years; positronium forms near η 85 and decays near η 141.
 * Adams, Laughlin & Graves (2004), *Red dwarfs and the end of the main sequence*.
 * Mestel (1952), *On the theory of white dwarf stars*, MNRAS 112, 583: the cooling law
-  L ∝ t^-7/5, which the game follows for white dwarfs in the Dusk. Later it is not apt: with no
-  insulating envelope left, a degenerate body holds its heat in its electrons (C ∝ T), is
-  isothermal, and radiates ∝ T⁴, so it cools as T ≈ K·t^-½ (K ≈ 10⁵ K·yr^½ for a white dwarf,
-  7×10⁶ a neutron star, 3×10⁴ a brown dwarf, 10⁴ a world's core): about 3 mK at η 15 (consults of
-  6 Oct, checked twice). Dark-matter heating holds neutron stars near 900 K and brown dwarfs near
-  4 K (uncertain) while the halo lasts; proton decay, if protons decay, a white dwarf near 0.05 K
-  and a neutron star near 1.5 K. The floor is the de Sitter horizon's temperature, 2.4×10^-30 K.
+  L ∝ t^-7/5. Since 8 Oct one law per kind of dead star holds in every age, each from its own age
+  (a red dwarf's remnant from its collapse; one the galaxy began with from a hash of its mass,
+  formed between 1 billion years and the Dusk, as many in each tenfold of time), so nothing jumps
+  at the Last Light. A white dwarf: 0.01 L☉ × (1 + t / 10^8 yr)^-1.3 while its envelope holds the
+  heat in (about 4,000 K at 10 Gyr, as the coolest observed), then, its core crystallised by about
+  5 × 10^11 years (log L ≈ −7 at 0.6 M☉: Althaus et al. 2010, A&A Rev. 18, 471), faster, as
+  T ∝ t^-0.58 (our estimate: the electrons' heat, C ∝ T, let out through the same envelope,
+  L ∝ T_core^3.5); about 50 K as the Dusk ends, 13 K at η 15, 0.016 K at η 20. A red dwarf's
+  remnant is never hotter than its flare's peak. Brown dwarfs: Burrows et al. (2001), Rev. Mod.
+  Phys. 73, 719, eq. 2, T ≈ 1,550 K (t / Gyr)^-0.32 (M / 0.05 M☉)^0.83, fitted to about 10 Gyr, so
+  an upper bound this late (a cold envelope may let the heat out sooner): 28 to 63 K in the Dusk,
+  about 19 K at η 15. Giants by the same slope from what Jupiter, Saturn and Neptune hold now
+  (about 100 K × (M / 318 M⊕)^0.2; Uranus, 30 K, the exception): 2 to 5 K in the Dusk. With no
+  insulating envelope, neutron stars and worlds' cores keep their heat in their electrons and
+  cool as T ≈ K·t^-½ (K ≈ 7×10⁶ K·yr^½ a neutron star, 10⁴ a world's core; consults of 6 Oct; the
+  audit of 8 Oct estimates 1.2 to 3.9 × 10⁶ for the neutron star, within the uncertainty).
+  Dark-matter heating, from the Dusk on while the halo lasts (Adams & Laughlin: from η 11):
+  embers 63 K, neutron stars near 900 K (no longer 30,000 K in the Dusk; Baryakhtar et al. 2017
+  find 1,700 to 2,500 K at the Milky Way's density today), brown dwarfs near 4 K (uncertain). A
+  world falling into a dead star warms it to 50 to 110 K (about 10^15 to 10^16 W of accretion).
+  Proton decay, if protons decay: a white dwarf near 0.05 K, a neutron star near 1.5 K. The
+  floor is the de Sitter horizon's temperature, ħH/2πk = 2.2×10^-30 K at 56 km/s/Mpc.
+* Laughlin, Bodenheimer & Adams (1997), *The end of the main sequence*, ApJ 482, 420: a red
+  dwarf's last flare. A 0.10 M☉ star peaks near 5,800 K and about 1% of the Sun's light and
+  shrinks; heavier ones swell, 1.6 times by 0.16 M☉ at about 0.27 L☉; the bluest, near 8,600 K,
+  at 0.14 (Adams et al. 2005). New galaxies' stars carry their own peak (gen.ts flarePeak: 4 to
+  80 times their red-dwarf light by mass); games begun before 8 Oct keep 8,200 K and up to 0.4 L☉,
+  the player's choice. Bends: the brightening is a step at `blueAt`, not a slow rise over the
+  star's last trillion years; and `blueAt` is log-uniform whatever the mass, so about 40% of red
+  dwarfs flare in the Dusk's first 10 Gyr (it would be about 0.1%, heaviest first): fitted to the
+  log-spaced turns. Collectors still get three times a red dwarf's light in a flare.
+* Selsis et al. (2023), *A cool runaway greenhouse without surface magma ocean*, Nature 620, 287:
+  under a steam sky the ground is about 1,250 K at the runaway's limit for a Sun-like star and
+  some 550 K for one like TRAPPIST-1, not the 1,500 K and more of a fully convective model. The
+  game's steam worlds go by their star's temperature between those, warming as (sunlight /
+  limit)^0.16 (our fit to where they find the rock melts), never past 1,650 K at the limit.
+* Cold worlds far out: microlensing finds planets beyond the snow line about as common around M
+  dwarfs as close ones, mostly Neptunes and super-Earths (Cassan et al. 2012, Nature 481, 167;
+  Suzuki et al. 2016, ApJ 833, 145), a few around brown dwarfs (Han et al. 2013, ApJL 778, L38).
+  New galaxies give one red dwarf in three one to three at 0.3 to 8 AU, one brown dwarf in eight
+  one, each system from a draw of its own after generation.
+* The galaxy's glow: today's interstellar starlight is about 3.2 K (Eddington 1926); a galaxy of
+  red dwarfs alone holds a few tenths of a percent of today's light, about 1 K, and the embers
+  about a hundredth of a kelvin. Water: an airless world keeps no liquid, and bare ice lasts only
+  below about 110 K (Vasavada, Paige & Wood 1999); a water-poor world locked to its star keeps its
+  water cold-trapped on a frozen night side (Leconte et al. 2013, A&A 554, A69; Menou 2013). Names:
+  an eyeball (Pierrehumbert 2011, ApJL 726, L8), terminator habitability (Lobo et al. 2023, ApJ
+  945, 161). A black hole's disk warms its worlds with what it gives collectors (5% of a red dwarf
+  in the Dusk, about 6 × 10^-5 L☉, within what a stellar hole draws from thin gas by Bondi
+  accretion; 5% of an ember after the Last Light: a bend, the drop is a step, where the gas would
+  thin over ages).
+* Simplifications the star audit of 8 Oct named: one helium star for every merger, 42,000 K,
+  30 L☉ and 0.8 to 3 × 10^8 years, which fits about 0.5 M☉ (a 1 M☉ one would be about ten times
+  brighter and shorter-lived; helium needs at least 0.3 M☉ of helium-rich matter to ignite, and
+  two C/O dwarfs make a massive dwarf or a carbon-burning star instead); the helium giant's
+  1,000 L☉ is low against R CrB stars (about 10⁴ L☉), its 120,000 years the right order. Collisions
+  and mergers come some 10^8 times as often per object as in Adams & Laughlin, so that a galaxy of
+  a few thousand stars sees them.
 * Landauer (1961): erasing a bit costs at least kT ln 2, so computing is cheaper in the cold (the
   game halves Coldminds' and Cold Vaults' upkeep under a dark sky).
 * Dyson (1979), *Time without end*, Rev. Mod. Phys. 51, 447: slowing minds; iron stars by

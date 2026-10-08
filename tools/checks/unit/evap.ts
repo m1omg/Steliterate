@@ -42,6 +42,8 @@ withWorld.primary.evaporateAt = s.years * (1 + 1e-12);
 empty.primary.evaporateAt = s.years * (1 + 1e-12);
 s.pending.length = 0;
 s.civ.energy = 10;
+// nothing else finishes this turn, so the storage change is the vault's alone
+for (const x of Object.values(s.colonies)) x.queue = [];
 const structs = JSON.stringify(c.structures);
 endTurn(s);
 const cc = s.colonies[c.id];

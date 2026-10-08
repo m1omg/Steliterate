@@ -88,7 +88,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'last_light_protocols', name: 'Last Light Protocols', era: 'dusk', field: 'continuity', cost: 340, requires: ['assembly_of_threads'], desc: 'Plan for the end of starlight: losses in the Last Light are halved.', effects: { crossing: 0.5 } }),
 
   // ============================================================ II. Degenerate
-  T({ id: 'ember_harvest', name: 'Ember Harvest', era: 'dusk', field: 'harvest', cost: 240, requires: ['orbital_collectors'], desc: 'Cold radiators around white dwarfs warmed by annihilating dark matter. Unlocks Ember Collectors.' }),
+  T({ id: 'ember_harvest', name: 'Ember Harvest', era: 'dusk', field: 'harvest', cost: 240, requires: ['orbital_collectors'], desc: 'Cold radiators around white dwarfs warmed by annihilating dark matter, and close around brown dwarfs, whose weak gravity lets them in. Unlocks Ember Collectors and Infrared Shrouds.' }),
   T({ id: 'brown_dwarf_mining', name: 'Brown Dwarf Mining', era: 'degenerate', field: 'harvest', cost: 280, requires: [], desc: 'The failed stars are full of hydrogen. Unlocks Hydrogen Siphons.' }),
   T({ id: 'accretion_modelling', name: 'Accretion Modelling', era: 'degenerate', field: 'harvest', cost: 320, requires: [], desc: 'Predict how falling worlds feed their dead stars, and harvest the stream. Unlocks Disk Skimmers; sharpens feeding forecasts.' }),
   T({ id: 'deep_storage', name: 'Deep Storage', era: 'degenerate', field: 'harvest', cost: 360, requires: [], desc: 'Batteries for ages. Unlocks Deep Storage Rings; reserve capacity +25%.', effects: { reserveMult: 1.25 } }),

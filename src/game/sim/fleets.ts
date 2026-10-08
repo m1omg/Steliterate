@@ -4,9 +4,9 @@ import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
 import { formatDistance } from '../eras';
-import { boilingAway } from '../physics';
+import { boilingAway, frozenHard } from '../physics';
 import { habitabilityOf } from './terraform';
-import { stepTurns } from './flare';
+import { THAW_ROOM, scorched, stepTurns, thawed } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
 import { colonies, distLy, eraIndex, log, swarmSeenAt, uid, withRng } from './util';
@@ -151,7 +151,7 @@ export function survey(state: GameState, systemId: string) {
   }
   log(state, `Surveyed ${sys.name}.`, 'info', systemId);
   for (const b of livingWorlds(state, systemId)) {
-    log(state, `A living world at ${sys.name}: ${b.name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b)} Kin without domes.`, 'good', systemId);
+    log(state, `A living world at ${sys.name}: ${b.name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b, state)} Kin without domes.`, 'good', systemId);
   }
   // a survey sometimes turns up something remarkable (at most one find per survey)
   withRng(state, (rng) => {
@@ -173,7 +173,7 @@ export function canSettle(state: GameState, b: Body, thread: ThreadId): string |
   if (b.dissolved) return 'Nothing is left of it.';
   const boil = boilingAway(state, b);
   if (boil) return boil === 'swallowed' ? 'Its star is swelling over it: it will be swallowed as this turn ends.' : 'Its new star will boil it away as this turn ends.';
-  if (b.kind === 'gas_giant' && thread === 'kin') return 'Kin cannot live on a gas giant.';
+  if ((b.kind === 'gas_giant' || b.kind === 'ice_giant') && thread === 'kin') return `Kin cannot live on ${b.kind === 'gas_giant' ? 'a gas' : 'an ice'} giant: it has no ground to build on.`;
   if (b.kind === 'deep' && thread === 'kin' && eraIndex(calendarEra(state)) === 0 && !state.civ.techs.includes('orbital_industry')) return 'Kin need Orbital Industry to live in the Deep.';
   const sys = state.systems[b.systemId];
   if (sys.gone) return 'The system is gone.';
@@ -339,10 +339,15 @@ export function autoExplore(state: GameState, mods: Mods) {
 export const FORTIFY_BONUS = 2;
 
 /** Room for Kin a world offers on its own, before any domes or warrens (with `state`, as terraformed). */
-export function naturalKinRoom(b: Body, state?: GameState): number {
+export function naturalKinRoom(b: Body, state: GameState): number {
   if (b.dissolved) return 0;
-  const cap = Math.floor(Math.round(12 * (state ? habitabilityOf(state, b) : b.habitability)) * b.vitality);
-  return b.rogue || b.feeding ? Math.floor(cap * 0.3) : cap;
+  // as kinBaseCapacity: a flaring star leaves nowhere on the surface livable, nor does a world
+  // frozen hard; a frozen world melted into warm sea has room by the water
+  if (scorched(state, b) || frozenHard(state, b)) return 0;
+  let cap = Math.floor(Math.round(12 * habitabilityOf(state, b)) * b.vitality);
+  if (b.rogue || b.feeding) cap = Math.floor(cap * 0.3);
+  if (thawed(state, b) === 'warm') cap = Math.max(cap, THAW_ROOM);
+  return cap;
 }
 
 /** Habitable enough to be news: at least half as good as a living world can be, right now. */

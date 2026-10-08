@@ -12,6 +12,7 @@ import { STRUCTURE_BY_ID, dismantledKey } from '../../../src/game/data/structure
 import { capacity } from '../../../src/game/sim/economy';
 import { computeMods } from '../../../src/game/sim/mods';
 import { project } from '../../../src/game/sim/projection';
+import { sourceLight } from '../../../src/game/physics';
 import type { Colony, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
 
@@ -129,7 +130,10 @@ const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
     for (const c of Object.values(g.colonies)) for (const l of pr.perColony[c.id]?.y.lines ?? []) if (l.idle && STRUCTURE_BY_ID[l.idle].matter > 0) n += c.structures[l.idle] ?? 0;
     return n;
   };
-  const c = capital(s);
+  // a settlement under a star that gives no light (the capital's may be an ember, which does)
+  const dark = (x: Colony) => sourceLight(s, s.systems[x.systemId], s.years, 1).light <= 0;
+  const c = Object.values(s.colonies).find(dark) ?? capital(s);
+  if (!dark(c)) s.systems[c.systemId].primary.halo = false;
   c.structures.solar_array = Math.max(1, c.structures.solar_array ?? 0);
   const lines = project(s).perColony[c.id]?.y.lines ?? [];
   check(lines.some((l) => l.idle === 'solar_array' && /nothing to gather/.test(l.label)), `η ${s.eta.toFixed(1)}: Solar Arrays under ${s.systems[c.systemId].name}’s cold star gather nothing, and say so`);

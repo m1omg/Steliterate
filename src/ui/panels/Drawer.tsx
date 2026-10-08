@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, ICE_MELTS_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, ICE_MELTS_K, WATER_RICH, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, insolation, insolationByDistance, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -32,6 +32,7 @@ import {
   setSpare,
   tame,
   toggleOverdrive,
+  attack as attackOrder,
   type Conversion,
 } from '../../game/sim/actions';
 import { capacity } from '../../game/sim/economy';
@@ -41,11 +42,11 @@ import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
 import { capital, distLy, hasCharter, hasTech, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
-import { swarmReach } from '../../game/sim/hunger';
+import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
 import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
-import { kelvin, n0, n1, pct, signed } from '../fmt';
+import { kelvin, mult, n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
@@ -174,7 +175,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const known = s.civ.known[sys.id] ?? 0;
   const p = project(s);
   const src = sourceLight(s, sys, s.years, p.turnYears);
-  const T = primaryTemperature(sys.primary, s.years, calendarEra(s), decayWarmth(s));
+  const T = primaryTemperature(sys.primary, s.years, calendarEra(s), decayWarmth(s), curvatureWarmth(s));
   const province = s.provinces.find((x) => x.id === sys.provinceId);
   const fleets = Object.values(s.fleets).filter((f) => f.at === sys.id);
   const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id);
@@ -256,7 +257,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
               {`burns ${formatYears(src.alive[1] - s.years)} of a ${formatYears(p.turnYears)} turn`}
             </dd>
           ) : (
-            <dd class="mono" data-tip="How much a light collector here gathers compared with its rating.">{src.light > 0 ? `×${n1(src.light)}` : 'none'}</dd>
+            <dd class="mono" data-tip="How much a light collector here gathers compared with its rating.">{src.light > 0 ? `×${mult(src.light)}` : 'none'}</dd>
           )}
           {T > 0 && (
             <>
@@ -351,7 +352,7 @@ function tempTip(s: GameState, sys: StarSystem): string {
   if (k === 'black_hole' || k === 'smbh') return 'A black hole glows at its Hawking temperature, colder the heavier it is: a few hundredths of a microkelvin for one of a few Suns. It gives almost nothing, but it gives it until it is gone.';
   const dead = k === 'white_dwarf' || k === 'black_dwarf' || k === 'brown_dwarf' || k === 'neutron_star';
   if (!dead || calendarEra(s) === 'dusk') return '';
-  const base = 'Nothing warms a dead star but dark matter falling into it while the halo lasts, a world falling in, and its own last heat, which it loses as T ≈ K·t^-½. What we can gather goes as T⁴: a thousand times colder is a million million times less.';
+  const base = `Nothing warms a dead star but dark matter falling into it while the halo lasts, a world falling in, and its own last heat, which it loses slowly${k === 'neutron_star' ? ' (as T ≈ K·t^-½, with no envelope to hold it in)' : ', its envelope holding it in'}.${k === 'neutron_star' && curvatureWarmth(s) ? ' Space itself turns its mass into particles: a glow of about 30 nK.' : ''} What we can gather goes as T⁴: a thousand times colder is a million million times less.`;
   if (protonFateKnown(s) || sys.primary.rekindle) return base;
   return `${base}\nIf protons decay, their warmth would hold it near ${k === 'neutron_star' ? '1.5 K' : k === 'brown_dwarf' ? '9 mK' : '0.05 K'}. Until we know (the Proton Question), this is the prediction without it.`;
 }
@@ -393,7 +394,7 @@ function SwarmNear({ s, systemId }: { s: GameState; systemId: string }) {
 /** What a star's rust means, and whether the Hunger is still at it. */
 function rustTip(s: GameState, sys: StarSystem): string {
   const feeding = Object.values(s.swarms).some((w) => w.systemId === sys.id && w.awake && !w.tamed);
-  return `The Hunger's rust: how much a swarm has fed here. It builds while one eats (4% a turn, more for a bigger swarm) and never fades. The rust itself does no harm; the harm is what was eaten, the worlds' mineral richness and hydrogen, which never grow back. ${feeding ? 'A swarm is feeding here now.' : 'No swarm is feeding here now.'}`;
+  return `The Hunger's rust: how much a swarm has fed here. It builds while one eats (4% a turn, more for a bigger swarm), and fades by a tenth each turn once no swarm is there. The rust itself does no harm; the harm is what was eaten, the worlds' mineral richness and hydrogen, which never grow back. ${feeding ? 'A swarm is feeding here now.' : 'No swarm is feeding here now.'}`;
 }
 
 /** A living world without a sun: cooling as its dead star fades, or freezing, and how long it has. */
@@ -461,13 +462,41 @@ function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
  */
 function shownTraits(s: GameState, b: Body): string[] {
   const c = bodyClimate(s, b);
-  const noIce = (c.night ?? c.mean) >= ICE_MELTS_K;
-  return b.traits.filter((t) => !(b.rogue && t === 'tidally_locked') && !(noIce && t === 'subsurface_ocean'));
+  const p = s.systems[b.systemId]?.primary;
+  const alone = !!b.rogue || !p || p.kind === 'rogue' || p.kind === 'void';
+  // what the world was given once, shown only while it is still so
+  const past = (t: string): boolean => {
+    switch (t) {
+      case 'tidally_locked':
+        return alone || b.kind === 'asteroids';
+      case 'subsurface_ocean':
+        return !buriedOcean(s, b, c);
+      case 'water_rich':
+        return (b.water ?? 0) < WATER_RICH;
+      case 'vent_life':
+      case 'warm_rogue':
+        return b.vitality <= 0;
+      case 'clathrates':
+        return !!c.steam || (c.day ?? c.mean) >= ICE_MELTS_K;
+      case 'resonance':
+        return alone;
+      case 'outer':
+        return true; // (a mark for the rules, not a find)
+      default:
+        return false;
+    }
+  };
+  return b.traits.filter((t) => !past(t));
 }
 
+/** Stars whose worlds never fall in: only a dead star of ordinary matter pulls its worlds in (physics.ts). */
+const NEVER_FEED = new Set(['brown_dwarf', 'black_hole', 'smbh', 'rogue', 'void']);
+
 /** When a world reaches its dead star's tidal limit: never for a rogue world, which has no star to fall into. */
-function FallsInwardRow({ b }: { b: Body }) {
-  if (!b.inspiralAt || !isFinite(b.inspiralAt)) return null;
+function FallsInwardRow({ s, b }: { s: GameState; b: Body }) {
+  if (!b.inspiralAt || !isFinite(b.inspiralAt) || b.feeding) return null;
+  // around a star that never takes its worlds in, or once the date has passed without it, say nothing
+  if (!b.rogue && (NEVER_FEED.has(s.systems[b.systemId]?.primary.kind ?? 'void') || b.inspiralAt <= s.years)) return null;
   if (b.rogue) {
     const tip = 'Flung loose from its star, it drifts on its own: it has no star to fall into.';
     return (
@@ -502,21 +531,54 @@ function BoilingRow({ s, b }: { s: GameState; b: Body }) {
   );
 }
 
-/** Temperature and water rows for a world's key/value list. */
+/** A world with no star to orbit: cast out of its system, or born in a starless one. */
+function starless(s: GameState, b: Body): boolean {
+  return !!b.rogue || s.systems[b.systemId]?.primary.kind === 'rogue';
+}
+
+/** Temperature and water rows for a world's key/value list (a giant's temperature only: it has no surface). */
 function ClimateRows({ s, b }: { s: GameState; b: Body }) {
-  if (b.kind === 'deep' || b.kind === 'gas_giant' || b.kind === 'ice_giant') return null;
+  if (b.kind === 'deep') return null;
+  const giant = b.kind === 'gas_giant' || b.kind === 'ice_giant';
   const c = bodyClimate(s, b);
-  const tip = 'From starlight, the world’s own heat and what is left of its air. Tidally locked worlds keep a hot day side and a cold night side.';
+  const tip = giant
+    ? 'At the cloud tops: from starlight (by a black hole, its disk’s) and what is left of its own heat, and far from any star the galaxy’s faint glow.'
+    : 'From starlight (by a black hole, its disk’s), the world’s own heat and what is left of its air, and far from any star the galaxy’s faint glow (about 1 K in the Dusk). Tidally locked worlds keep a hot day side and a cold night side.';
   return (
     <>
       <dt data-tip={tip}>Temperature</dt>
       <dd class="mono" data-tip={c.day !== undefined ? `Day side ${kelvinC(c.day)}\nNight side ${kelvinC(c.night!)}` : ''}>
         {c.day !== undefined && kelvin(c.day) !== kelvin(c.night!) ? `${kelvin(c.night!)} to ${kelvin(c.day)}` : kelvinC(c.mean)}
       </dd>
-      <dt>Water</dt>
-      <dd style={{ fontSize: '13.5px' }}>{waterState(b, c)}</dd>
-      <dt data-tip="Sunlight on the surface compared with the star's standard orbit, by the inverse-square law. Surface Solar Arrays collect this much of the star's light; orbital collectors catch it anywhere.">Sunlight</dt>
-      <dd class="mono">{b.rogue ? 'none' : `×${n1(insolation(s, b))}`}</dd>
+      {!giant && (
+        <>
+          <dt>Water</dt>
+          <dd style={{ fontSize: '13.5px' }}>{waterState(b, c, buriedOcean(s, b, c))}</dd>
+        </>
+      )}
+      {b.kind !== 'gas_giant' && <SunlightRow s={s} b={b} />}
+    </>
+  );
+}
+
+/** Sunlight on the surface: none without a star, or from one that gives nothing; capped values marked. */
+function SunlightRow({ s, b }: { s: GameState; b: Body }) {
+  const tip = 'Sunlight on the surface compared with the star’s standard orbit, by the inverse-square law. Surface Solar Arrays collect this much of the star’s light (at most ×2.5, at least ×0.05); orbital collectors catch it anywhere.';
+  const sys = s.systems[b.systemId];
+  let text: string;
+  let more = '';
+  if (starless(s, b)) text = 'none: no star';
+  else if (!(sourceLight(s, sys, s.years, project(s).turnYears).light > 0)) text = 'none: its star gives none';
+  else {
+    const raw = insolationByDistance(s, b);
+    const got = insolation(s, b);
+    text = `×${mult(got)}${raw > got * 1.01 ? ' (most)' : raw < got * 0.99 ? ' (least)' : ''}`;
+    if (raw > got * 1.01 || raw < got * 0.99) more = `\nBy distance alone ×${mult(raw)}; surface arrays collect ×${mult(got)}.`;
+  }
+  return (
+    <>
+      <dt data-tip={tip + more}>Sunlight</dt>
+      <dd class="mono" data-tip={more.trim() || undefined}>{text}</dd>
     </>
   );
 }
@@ -581,11 +643,11 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             <dd class="mono">{pct(b.vitality)}</dd>
             <FreezingRow s={s} b={b} />
             <BoilingRow s={s} b={b} />
-            {b.kind !== 'deep' && b.kind !== 'gas_giant' && (
+            {b.kind !== 'deep' && b.kind !== 'gas_giant' && b.kind !== 'ice_giant' && (
               <>
                 <dt data-tip="Kin the world holds by itself: about 12 × habitability × vitality, rounded down (a third of that on a rogue or feeding world). Below about 8% habitability × vitality there is no room, and Kin can live here only in domes, warrens or a Garden Ark.">Room for Kin</dt>
-                <dd class={naturalKinRoom(b) > 0 ? 'mono good' : ''} style={naturalKinRoom(b) > 0 ? undefined : { fontSize: '13.5px' }}>
-                  {naturalKinRoom(b) > 0 ? `${naturalKinRoom(b)} without domes` : 'none: domes needed'}
+                <dd class={naturalKinRoom(b, s) > 0 ? 'mono good' : ''} style={naturalKinRoom(b, s) > 0 ? undefined : { fontSize: '13.5px' }}>
+                  {naturalKinRoom(b, s) > 0 ? `${naturalKinRoom(b, s)} without domes` : 'none: domes needed'}
                 </dd>
               </>
             )}
@@ -601,10 +663,10 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
               </>
             )}
             <dt>Orbit</dt>
-            <dd class="mono">{b.kind === 'deep' ? '—' : b.rogue ? 'none: adrift' : `${b.orbitAU < 0.1 ? b.orbitAU.toFixed(3) : n1(b.orbitAU)} AU`}</dd>
+            <dd class="mono">{b.kind === 'deep' ? '—' : b.rogue ? 'none: adrift' : starless(s, b) ? 'none: no star' : b.feeding ? 'at its star’s tidal limit' : `${b.orbitAU < 0.1 ? b.orbitAU.toFixed(3) : n1(b.orbitAU)} AU`}</dd>
             <dt>Mass</dt>
-            <dd class="mono">{b.massEarth >= 10 ? n0(b.massEarth) : n1(b.massEarth)} M⊕</dd>
-            <FallsInwardRow b={b} />
+            <dd class="mono">{b.massEarth >= 10 ? n0(b.massEarth) : mult(b.massEarth)} M⊕</dd>
+            <FallsInwardRow s={s} b={b} />
             {b.relic && b.relic.state !== 'hidden' && (
               <>
                 <dt>Ruins</dt>
@@ -779,7 +841,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                     <dd class="mono bad">{pct(c.damage)}</dd>
                   </>
                 )}
-                <FallsInwardRow b={b} />
+                <FallsInwardRow s={s} b={b} />
               </dl>
             </div>
             <ExpandSection s={s} c={c} />
@@ -1338,6 +1400,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                   Hold here
                 </button>
               )}
+              {isWarFleet(f) && swarmHere && here && <AttackButton s={s} systemId={here.id} fleetId={f.id} />}
               {raidSv && (
                 <button
                   class={`btn small danger ${raidArmed ? 'on' : ''}`}
@@ -1437,6 +1500,43 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
 
 // ------------------------------------------------------------------ swarm
 
+/** Send every warship of ours at this star against its swarm: the odds shown, a second click to confirm. */
+function AttackButton({ s, systemId, fleetId }: { s: GameState; systemId: string; fleetId: string }) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => setArmed(false), [systemId, fleetId]);
+  const sw = Object.values(s.swarms).find((w) => w.systemId === systemId && !w.tamed);
+  if (!sw) return null;
+  const { attack } = warshipsAt(s, systemId);
+  const odds = attackOdds(attack, sw.size);
+  const blocked = attackBlocked(s, systemId);
+  const go = () => {
+    if (!armed) {
+      setArmed(true);
+      sfx('warn');
+      return;
+    }
+    setArmed(false);
+    const out: { r?: { ok: boolean; text: string } } = {};
+    const done = act((g) => {
+      const r = attackOrder(g, fleetId);
+      if (typeof r === 'string') return r;
+      out.r = r;
+    });
+    if (done && out.r) {
+      notify(out.r.text, out.r.ok ? 'good' : 'bad');
+      sfx(out.r.ok ? 'good' : 'bad');
+    }
+  };
+  const tip =
+    blocked ??
+    `Every warship of ours here goes for it together: attack ${n1(attack)} against its size ${n1(sw.size)} (fortified ships fight at their plain strength when they go out to attack). About ${pct(odds)} to win. A win kills ${n1(Math.min(sw.size, attack * 0.3))} of it, and we salvage twice that in matter, while what is left of it hurts our ships; a loss tears into all of them and can sink them.${sw.awake ? '' : ' It is asleep: unless we break it, it wakes.'} Once a turn.`;
+  return (
+    <button class={`btn small danger ${armed ? 'on' : ''}`} disabled={!!blocked} onClick={go} data-tip={tip}>
+      <Icon name="attack" /> {armed ? `Really attack? ${pct(odds)} to win (click again)` : `Attack the swarm (${pct(odds)})`}
+    </button>
+  );
+}
+
 function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
   void rev.value; // mutable game state: re-render on every change
   const at = sw.systemId ? s.systems[sw.systemId] : null;
@@ -1475,6 +1575,7 @@ function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
               Absorb into {col.name}
             </button>
           )}
+          {!sw.tamed && at && warshipsAt(s, at.id).fleets.length > 0 && <AttackButton s={s} systemId={at.id} fleetId={warshipsAt(s, at.id).fleets[0].id} />}
         </div>
       </div>
     </>

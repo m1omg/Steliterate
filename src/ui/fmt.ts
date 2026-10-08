@@ -12,6 +12,15 @@ export function n1(x: number): string {
   return (Math.round(x * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 });
 }
 
+/** A multiplier readable at any size: one decimal from 0.1, else two figures (0.05, 0.0012, 2.3×10⁻⁷). */
+export function mult(x: number): string {
+  if (!isFinite(x) || x <= 0 || x >= 0.095) return n1(x);
+  if (x >= 1e-3) return Number(x.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 });
+  const [m, e] = x.toExponential(1).split('e');
+  const exp = String(Number(e)).split('').map((c) => '⁰¹²³⁴⁵⁶⁷⁸⁹'['0123456789'.indexOf(c)] ?? (c === '-' ? '⁻' : c)).join('');
+  return `${m.replace(/\.0$/, '')}×10${exp}`;
+}
+
 export function signed(x: number, digits = 1): string {
   const v = digits === 0 ? n0(x) : n1(x);
   return x > 0.049 ? `+${v}` : v;

@@ -1,6 +1,6 @@
 import { STRUCTURE_BY_ID, type StructureDef } from '../data/structures';
 import { THREAD_DEFS } from '../data/threads';
-import { hawkingLight, insolation, sourceLight } from '../physics';
+import { frozenHard, hawkingLight, insolation, sourceLight } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
 import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
@@ -23,8 +23,9 @@ export type Capacity = Record<ThreadId, number> & { cryo: number };
 export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number {
   const b = state.bodies[c.bodyId];
   if (!b || b.dissolved) return 0;
-  // a flaring star: nowhere on the surface is livable, not even the night side
-  if (scorched(state, b)) return 0;
+  // a flaring star: nowhere on the surface is livable, not even the night side; nor on a world
+  // frozen hard (its star dead and cooled, or the Last Light), whatever life is left in it
+  if (scorched(state, b) || frozenHard(state, b)) return 0;
   const base = Math.round(12 * habitabilityOf(state, b, c));
   let vit = b.vitality;
   if (mods.flags.has('hardy')) vit = Math.pow(vit, 0.6);
@@ -166,7 +167,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
       const a = d.energy.amount * n;
       switch (d.energy.mode) {
         case 'light':
-          e = a * light.light * (body.rogue ? 0 : 1);
+          // (an ordinary collector built at a brown dwarf before it was known to gather nothing there)
+          e = d.notAt?.includes(sys.primary.kind) ? 0 : a * light.light * (body.rogue ? 0 : 1);
           // arrays on the surface get the light where the world is (inverse square); orbital collectors do not care
           if (d.id === 'solar_array') e *= insolation(state, body);
           if (flags.has('halo_siphons') && sys.primary.halo && calendarEra(state) === 'degenerate') e *= 2;

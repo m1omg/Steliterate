@@ -71,10 +71,10 @@ export function bodyIcon(k: BodyKind): IconName {
 export const TRAIT_NAME: Record<string, [string, string]> = {
   ...Object.fromEntries(ANOMALIES.map((a) => [a.id, [a.name, a.tip] as [string, string]])),
   homeworld: ['Homeworld', 'Where the Kin were born. They will not forgive its abandonment.'],
-  tidally_locked: ['Tidally locked', 'One face always toward the star: a burning day side, a frozen night side, and a thin habitable ring between.'],
+  tidally_locked: ['Tidally locked', 'One face always toward its star: a day side that never sees night and a night side that never sees the star (the Temperature row gives both).'],
   failing_dynamo: ['Failing dynamo', 'The core is freezing and the magnetic field is fading. The stellar wind is stripping the air.'],
-  subsurface_ocean: ['Buried ocean', 'Liquid water under the ice, kept warm by tides.'],
-  once_alive: ['Once alive', 'This world had seas, air and life. It froze or dried out when its warmth was gone.'],
+  subsurface_ocean: ['Buried ocean', 'Liquid water under the ice, kept warm by the tides of its star.'],
+  once_alive: ['Once alive', 'This world had seas, air and life. They are gone: frozen when its warmth failed, or boiled away by its star.'],
   water_rich: ['Water-rich', 'Water is a large share of this world, perhaps half its mass: more than its star’s bright youth could boil away. Past the runaway greenhouse its seas rise into a sky of steam; below it they rain out again.'],
 };
 
@@ -126,11 +126,13 @@ export function bodyKindName(s: GameState, b: Body): string {
   const boil = boilingAway(s, b);
   if (boil) return boil === 'swallowed' ? 'Being swallowed' : b.kind === 'asteroids' ? 'Vaporising rubble' : 'Boiling away';
   const sea = thawed(s, b);
-  if (sea) return sea === 'warm' ? 'Thawed ocean' : 'Hot sea';
+  // (locked, its night side still frozen and its day side boiled dry: a band of sea between)
+  if (sea) return twilightSea(s, b) ? 'Twilight sea' : sea === 'warm' ? 'Thawed ocean' : 'Hot sea';
   const melt = waterChanged(s, b);
-  if (melt) return melt === 'steam' ? 'Steam world' : melt === 'scorched' ? 'Scorched world' : melt === 'warm' ? 'Thawed ocean' : 'Hot sea';
+  if (melt) return melt === 'steam' ? 'Steam world' : melt === 'scorched' ? 'Scorched world' : melt === 'terminator' ? 'Terminator world' : melt === 'warm' ? 'Thawed ocean' : 'Hot sea';
   if (lavaWorld(s, b)) return 'Lava world';
   if (twilightSea(s, b)) return 'Twilight sea';
+  if (eyeballFace(s, b)) return (b.kind === 'ice' || b.kind === 'ocean_ice') && !b.traits.includes('once_alive') ? 'Eyeball sea' : 'Eyeball world';
   if (SURFACE_LIFE.includes(b.kind)) {
     const c = bodyClimate(s, b);
     if ((c.day ?? c.mean) < FROZEN_K) return 'Frozen world';
@@ -143,16 +145,25 @@ export function bodyKindName(s: GameState, b: Body): string {
  * with no ice anywhere, melted into open sea, a hot sea or steam by whatever warms it (a flare,
  * a helium star, a white dwarf still hot from its collapse; a locked world may keep a hot sea on
  * its night side), or a world of sea and land (an eyeball or terrestrial world) whose day-side
- * sea has boiled away (scorched), or boiled to steam even on its night side. A flare's thaw is
- * `thawed`, which comes first.
+ * sea has boiled away: down to its night side (scorched), or to the band of twilight between a dry
+ * day side and a frozen night side, where life holds on (terminator habitability: Lobo et al.
+ * 2023, ApJ 945, 161), or to steam even on its night side. A flare's thaw is `thawed`, which comes
+ * first.
  */
-function waterChanged(s: GameState, b: Body): 'warm' | 'hot' | 'steam' | 'scorched' | null {
+function waterChanged(s: GameState, b: Body): 'warm' | 'hot' | 'steam' | 'scorched' | 'terminator' | null {
   if (b.dissolved || (b.water ?? 0) <= 0.005) return null;
   if (b.kind !== 'ice' && b.kind !== 'ocean_ice' && b.kind !== 'eyeball' && b.kind !== 'terran') return null;
   const c = bodyClimate(s, b);
   const coldest = c.night ?? c.mean;
-  if (b.kind === 'eyeball' || b.kind === 'terran') return coldest >= 373 ? 'steam' : (c.day ?? c.mean) >= 373 ? 'scorched' : null;
+  if (b.kind === 'eyeball' || b.kind === 'terran') {
+    if (coldest >= 373) return 'steam';
+    if ((c.day ?? c.mean) < 373) return null;
+    return c.night !== undefined && c.night < 273 ? 'terminator' : 'scorched';
+  }
   if (coldest < 273) return null;
+  if (coldest >= 373) return 'steam';
+  // locked, its day side boiled and a sea left on its night side
+  if (c.day !== undefined && c.day >= 373) return 'scorched';
   return c.mean >= 373 ? 'steam' : c.mean > SCORCH_K ? 'hot' : 'warm';
 }
 
@@ -169,6 +180,18 @@ function twilightSea(s: GameState, b: Body): boolean {
   return c.day !== undefined && c.night !== undefined && c.day >= 373 && c.night < 273;
 }
 
+/**
+ * A world locked to its star with an open sea on the side that faces it and ice everywhere else:
+ * what Pierrehumbert (2011, ApJ 726, L8) called an eyeball. An ice world (or ice-shelled ocean)
+ * thawed so on its day side is an eyeball sea; a living world of any kind so is an eyeball world.
+ */
+function eyeballFace(s: GameState, b: Body): boolean {
+  if (b.dissolved || (b.water ?? 0) < 0.1) return false;
+  if (b.kind !== 'ice' && b.kind !== 'ocean_ice' && b.kind !== 'terran' && b.kind !== 'eyeball') return false;
+  const c = bodyClimate(s, b);
+  return c.day !== undefined && c.night !== undefined && c.day >= 273 && c.day < 373 && c.night < 273;
+}
+
 /** Rocky kinds that melt into a lava world (water worlds boil to steam first). */
 const MELTS: BodyKind[] = ['barren', 'super_earth', 'terran', 'eyeball'];
 
@@ -179,24 +202,30 @@ function lavaWorld(s: GameState, b: Body): boolean {
   return (c.day ?? c.mean) >= LAVA_K;
 }
 
-/** What a world was, for the notes on what it has become. */
-function onceWas(k: BodyKind): string {
+/**
+ * What a world was, for the notes on what it has become: a world that once had life was a living
+ * world (our homeworld an eyeball world), whatever it has turned into since.
+ */
+function onceWas(b: Body): string {
+  if (b.traits.includes('homeworld') && b.kind !== 'eyeball') return 'an eyeball world, and our home';
+  if (b.traits.includes('once_alive')) return 'a living world';
   const was: Partial<Record<BodyKind, string>> = { eyeball: 'an eyeball world', ice: 'an ice world', ocean_ice: 'an ice-shelled ocean', super_earth: 'a super-Earth', barren: 'bare rock' };
-  return was[k] ?? `a ${BODY_NAME[k].toLowerCase()}`;
+  return was[b.kind] ?? `a ${BODY_NAME[b.kind].toLowerCase()}`;
 }
 
 /** A longer note on the kind, for tooltips: what it was, when that has changed. */
 export function bodyKindNote(s: GameState, b: Body): string {
   const boil = boilingAway(s, b);
-  const what = b.kind === 'asteroids' ? 'An asteroid belt' : `Once ${onceWas(b.kind)}`;
+  const what = b.kind === 'asteroids' ? 'An asteroid belt' : `Once ${onceWas(b)}`;
   if (boil === 'swallowed') return `${what}. Its star is swelling into a helium giant some 25 times the Sun’s size, and this world orbits inside it: it is swallowed as this turn ends.`;
   if (boil) {
     const by = s.systems[b.systemId]?.primary.kind === 'helium_giant' ? 'Its star has swollen into a helium giant, a thousand times as bright as the Sun' : 'Its new star, a helium star burning at 42,000 K, pours out ultraviolet';
     return `${what}. ${by}: ${b.kind === 'asteroids' ? 'the rubble is evaporating' : 'its ground is past 3,000 K, and the rock vapour is stripped off into space'}. It is gone as this turn ends.`;
   }
   const sea = thawed(s, b);
-  if (sea === 'warm') return `Once ${onceWas(b.kind)}. Its star's last flare has melted it into open ocean under a thin, steamy sky: room for ${THAW_ROOM} Kin by the water without domes, for as long as the flare lasts. When the star collapses it will freeze again.`;
-  if (sea === 'hot') return `Once ${onceWas(b.kind)}. Its star's last flare has melted it into a hot, steaming sea, too hot to live by. When the star collapses it will freeze again.`;
+  if (sea && twilightSea(s, b)) return `Once ${onceWas(b)}. Its star's last flare has boiled its day side dry, and its night side is still frozen: along the terminator, between the two, the ice has melted into a band of open sea${sea === 'warm' ? `, with room for ${THAW_ROOM} Kin by the water without domes for as long as the flare lasts` : ''}. When the star collapses it will freeze again.`;
+  if (sea === 'warm') return `Once ${onceWas(b)}. Its star's last flare has melted it into open ocean under a thin, steamy sky: room for ${THAW_ROOM} Kin by the water without domes, for as long as the flare lasts. When the star collapses it will freeze again.`;
+  if (sea === 'hot') return `Once ${onceWas(b)}. Its star's last flare has melted it into a hot, steaming sea, too hot to live by. When the star collapses it will freeze again.`;
   const melt = waterChanged(s, b);
   if (melt === 'steam' && steamWorld(s, b)) {
     return `A water-rich world past the runaway greenhouse: its oceans have risen into a sky of steam hundreds of bars deep, which holds the ground at ${kelvin(bodyClimate(s, b).mean)} by night as by day. If its light falls below the limit (its star dead and its remnant cooled), the steam rains out into seas.`;
@@ -207,15 +236,24 @@ export function bodyKindNote(s: GameState, b: Body): string {
     const by = flare ? `Its star's last flare has` : 'Its star has';
     const night = c.night === undefined ? '' : c.night < 373 ? ', with a hot sea left only on its night side' : ', even on its night side';
     // a world of sea and land is alive: the flare is killing it (scorched), not thawing it for a while
-    if (melt === 'scorched') return `Once ${onceWas(b.kind)}. ${by} boiled away the sea on its day side; ${(c.night ?? c.mean) < 273 ? 'ice is left' : 'a sea is left'} only on its night side.`;
-    if (b.kind === 'eyeball' || b.kind === 'terran') return `Once ${onceWas(b.kind)}. ${by} boiled its seas into a sky of steam${night}${flare ? ': nowhere on its surface is livable while the flare lasts' : ''}.`;
+    if (melt === 'terminator')
+      return `Locked to its star, its day side ${flare ? 'boiled dry by the flare' : 'boiled dry'} and its night side frozen: water stays liquid${b.vitality > 0 ? ', and life holds on,' : ''} only in the band of twilight between. Astronomers call it terminator habitability (Lobo et al. 2023).`;
+    if (melt === 'scorched')
+      return flare || b.traits.includes('once_alive') || b.kind === 'ice' || b.kind === 'ocean_ice'
+        ? `Once ${onceWas(b)}. ${by} boiled away the sea on its day side; a sea is left only on its night side.`
+        : 'Locked close to its star, its day side too hot for any sea: its water lies on its night side, as open sea.';
+    if (b.kind === 'eyeball' || b.kind === 'terran') return `Once ${onceWas(b)}. ${by} boiled its seas into a sky of steam${night}${flare ? ': nowhere on its surface is livable while the flare lasts' : ''}.`;
     const again = flare ? ' When the star collapses it will freeze again.' : '';
-    if (melt !== 'steam') return `Once ${onceWas(b.kind)}. ${by} melted it into ${melt === 'warm' ? 'open ocean' : 'a hot, steaming sea'}.${again}`;
-    return `Once ${onceWas(b.kind)}. ${by} boiled its ice into a sky of steam${night}.${again}`;
+    if (melt !== 'steam') return `Once ${onceWas(b)}. ${by} melted it into ${melt === 'warm' ? 'open ocean' : 'a hot, steaming sea'}.${again}`;
+    return `Once ${onceWas(b)}. ${by} boiled its ice into a sky of steam${night}.${again}`;
+  }
+  if (eyeballFace(s, b) && !twilightSea(s, b) && b.kind !== 'eyeball') {
+    const icy = b.kind === 'ice' || b.kind === 'ocean_ice';
+    return `Locked to its star: ${icy ? 'its ice has thawed into' : 'it keeps'} an open sea on the side that faces it, with ice all round it and over the night side. Pierrehumbert (2011) called such a world an eyeball.`;
   }
   if (lavaWorld(s, b)) {
     const c = bodyClimate(s, b);
-    const was = b.kind === 'barren' ? 'Bare rock' : `Once ${onceWas(b.kind)}`;
+    const was = b.kind === 'barren' ? 'Bare rock' : `Once ${onceWas(b)}`;
     const side = c.night !== undefined && c.night < LAVA_K ? ' on the side that faces it (the night side is solid rock)' : '';
     const haze = (c.day ?? c.mean) >= 2600 ? '; past 2,600 K the rock itself boils into a thin, glowing haze' : '';
     return `${was}, melted by its star${side}: a dark crust of basalt over glowing magma${haze}.`;
@@ -227,7 +265,7 @@ export function bodyKindNote(s: GameState, b: Body): string {
   if (bodyKindName(s, b) !== 'Frozen world') return '';
   const p = s.systems[b.systemId]?.primary;
   const why = b.rogue ? 'It has no star' : !p || !isStarLike(p) ? 'Its star is dead' : 'Its star is too faint to warm it';
-  return `Once ${onceWas(b.kind)}. ${why}, and ${b.kind === 'eyeball' ? 'the sea on its day side has' : 'its seas have'} frozen over; what warmth is left comes from inside.`;
+  return `Once ${onceWas(b)}. ${why}, and ${b.kind === 'eyeball' ? 'the sea on its day side has' : 'its seas have'} frozen over; what warmth is left comes from inside.`;
 }
 
 /** What the Deep is for: its panel shows no habitability, room or matter, which reads as empty. */
@@ -247,4 +285,4 @@ export function isBeacon(s: GameState, sys: StarSystem): boolean {
 
 export const BEACON_TIP = 'A collision star: two brown dwarfs, each too small to burn hydrogen, collided, and the merged body is heavy enough to burn it. In the Degenerate Age nothing else nearby shines like it.';
 
-export const SWARM_TIP = 'A swarm is feeding there. It goes for most ships that stop at its star, where we have no settlement to fight beside them: a probe rarely comes back, and warships beat off only small swarms.';
+export const SWARM_TIP = 'A swarm is feeding there. It goes for most ships that stop at its star, where we have no settlement to fight beside them: a probe rarely comes back, and warships beat off only small swarms (or go for one, from their panel, by the same odds).';

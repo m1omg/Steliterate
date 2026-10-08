@@ -271,7 +271,7 @@ const COMMON_MILESTONES: Milestone[] = [
   { at: 21, label: 'Last collision stars', detail: 'The galaxy has evaporated: brown dwarfs no longer meet, and no new collision stars light. (Merging white-dwarf pairs need no galaxy and still flare until about η 25.)' },
   { at: 25, label: 'Embers fade', detail: 'The dark-matter halo is spent; white dwarfs are no longer warmed by WIMP annihilation.' },
   { at: 69, label: 'Stellar holes evaporate', detail: 'Black holes of a few to tens of solar masses finish evaporating.' },
-  { at: 83, label: 'Million-sun holes', detail: 'Black holes of 10⁶ solar masses evaporate.' },
+  { at: 85, label: 'Million-sun holes', detail: 'Black holes of 10⁶ solar masses evaporate.' },
   { at: 99, label: 'Last Horizon', detail: 'Galaxy-sized black holes evaporate. The Black Hole Era ends.' },
 ];
 

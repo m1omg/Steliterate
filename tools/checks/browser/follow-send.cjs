@@ -135,9 +135,11 @@ run(async () => {
   }
   if (dw.cold) {
     const t = await panel(dw.cold);
-    const m = t.match(/([\d.]+ (mK|µK|nK))/);
+    // it cools on by one law (Mestel, then Debye fading): about 12 K at η 15.3, well below an ember
+    const m = t.match(/Temperature\s*([\d.]+) (K|mK|µK|nK)/);
+    const k = m ? Number(m[1]) * ({ K: 1, mK: 1e-3, µK: 1e-6, nK: 1e-9 })[m[2]] : NaN;
     console.log('cold dwarf panel:', t.slice(0, 160), '| years', dw.years.toExponential(2));
-    check(t.includes('gone cold') && !!m, `an unwarmed dwarf reads ${m && m[1]}, gone cold (no 5 K floor)`);
+    check(t.includes('gone cold') && k > 0 && k < 30, `an unwarmed dwarf reads ${m && `${m[1]} ${m[2]}`}, gone cold, far below an ember's 63 K`);
     await ck.shot('cooling-panel.png');
   }
   await finish('FOLLOW SEND', ck);

@@ -3,8 +3,8 @@ import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
 import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '../sim/util';
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
-import { eta, formatYears, stepTime } from '../eras';
-import { boilingAway, steamWorld } from '../physics';
+import { eta, formatYears, stepTime, sup } from '../eras';
+import { SURFACE_LIFE, boilingAway, steamWorld } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
@@ -201,6 +201,11 @@ function boilNote(s: GameState, d: EventData): string {
 function homeworld(s: GameState): Body | undefined {
   return Object.values(s.bodies).find((b) => b.traits.includes('homeworld'));
 }
+/** The homeworld, while it still has life on its surface (once dead, nothing brings it back). */
+function livingHomeworld(s: GameState): Body | undefined {
+  const hw = homeworld(s);
+  return hw && !hw.dissolved && hw.vitality > 0 && SURFACE_LIFE.includes(hw.kind) ? hw : undefined;
+}
 function colonyById(s: GameState, d: EventData): Colony | undefined {
   return s.colonies[String(d.colonyId)];
 }
@@ -292,8 +297,8 @@ export const EVENTS: EventDef[] = [
     once: true,
     weight: 10,
     bind: (s) => {
-      const hw = homeworld(s);
-      return hw && !hw.dissolved && hw.vitality < 0.32 && hw.colonyId ? { colonyId: hw.colonyId } : null;
+      const hw = livingHomeworld(s);
+      return hw && hw.vitality < 0.32 && hw.colonyId ? { colonyId: hw.colonyId } : null;
     },
     text: () => 'The substellar sea, the eye of our world, the one place that was always warm, has a skin of ice across it for the first time. Heating it would take energy we may need elsewhere.',
     choices: [
@@ -360,7 +365,7 @@ export const EVENTS: EventDef[] = [
     weight: 3,
     text: () => 'A long-period comet is falling through the home system, full of ices from the old outer dark.',
     choices: [
-      { label: 'Shepherd it to the homeworld', hint: 'Energy −20, homeworld vitality +5%.', ok: (s) => !!homeworld(s)?.colonyId, run: (s) => { energy(s, -20); const hw = homeworld(s); if (hw) hw.vitality = Math.min(1, hw.vitality + 0.05); } },
+      { label: 'Shepherd it to the homeworld', hint: 'Energy −20, homeworld vitality +5% (while it has life to keep).', ok: (s) => !!livingHomeworld(s)?.colonyId, run: (s) => { energy(s, -20); const hw = livingHomeworld(s); if (hw) hw.vitality = Math.min(1, hw.vitality + 0.05); } },
       { label: 'Mine it', hint: 'Matter +40.', run: (s) => { matter(s, 40); } },
     ],
   },
@@ -683,7 +688,7 @@ export const EVENTS: EventDef[] = [
     art: 'degenerate',
     once: true,
     text: () =>
-      'The neutron stars should be a few billionths of a degree above nothing by now, and still falling. They are at nearly two degrees, and holding; every dead dwarf at a twentieth of one. The warmth is their own protons dying. Ordinary matter is not for ever: by about 10³⁹ years every planet, every dead star and every body will have dissolved into light and leptons. Whatever we are then, we cannot be made of this.',
+      'The neutron stars should be a few billionths of a degree above nothing by now, and still falling. They are at one and a half degrees, and holding; every dead dwarf at a twentieth of one. The warmth is their own protons dying. Ordinary matter is not for ever: by about 10³⁹ years every planet, every dead star and every body will have dissolved into light and leptons. Whatever we are then, we cannot be made of this.',
     choices: [
       { label: 'Tell everyone the truth', hint: 'Resolve −5.', run: (s) => { res(s, -5); } },
       { label: 'Tell the councils only', hint: 'Dissent +3.', run: (s) => { dis(s, 3); } },
@@ -893,6 +898,14 @@ export interface AnomalyDef {
 }
 
 const sysOf = (s: GameState, b: Body) => s.systems[b.systemId];
+/**
+ * The mass of a black hole finishing its Hawking evaporation at this age: about 5 × 10^11 kg at
+ * 13.8 billion years (Carr et al. 2010), the lifetime going as the mass cubed.
+ */
+function finishingHole(years: number): string {
+  const kg = 5.1e11 * Math.cbrt(Math.max(1.38e10, years) / 1.38e10);
+  return kg < 1e15 ? `${Math.max(1, Math.round(kg / 1e12))} trillion kilograms` : `10${sup(Math.round(Math.log10(kg)))} kilograms`;
+}
 const rocky = (b: Body) => ['barren', 'super_earth', 'terran', 'eyeball', 'ice', 'ocean_ice'].includes(b.kind);
 
 export const ANOMALIES: AnomalyDef[] = [
@@ -947,7 +960,7 @@ export const ANOMALIES: AnomalyDef[] = [
     event: {
       title: 'A Black Hole the Size of a Mountain',
       text: (s, d) =>
-        `In the belt of ${sysOf(s, bodyById(s, d)!)?.name} the survey found a point of gamma-ray light with no surface at all: about four trillion kilograms, a black hole smaller than an atomic nucleus. Only a hole formed in the first second of the universe could be this small, and a hole this small should be finishing its Hawking evaporation about now, brightening as it shrinks. Primordial black holes were only ever a hypothesis. (Speculative physics.)`,
+        `In the belt of ${sysOf(s, bodyById(s, d)!)?.name} the survey found a point of gamma-ray light with no surface at all: about ${finishingHole(s.years)}, a black hole about the size of an atomic nucleus. Only a hole formed in the first second of the universe could be this small, and a hole this small should be finishing its Hawking evaporation about now, brightening as it shrinks. Primordial black holes were only ever a hypothesis. (Speculative physics.)`,
       choices: [
         { label: 'Catch its last light', hint: 'Energy +120, once. It is nearly gone.', run: (s) => energy(s, 120) },
         { label: 'Measure it as it dies', hint: 'Insight +90: Hawking radiation, observed directly.', run: (s) => insight(s, 90) },
@@ -972,12 +985,12 @@ export const ANOMALIES: AnomalyDef[] = [
   {
     id: 'fossils',
     name: 'Fossil biosphere',
-    tip: 'Mineral structures grown around life that died tens of trillions of years ago.',
+    tip: 'Mineral structures grown around life that died long before ours began.',
     fits: (s, b) => ['barren', 'super_earth', 'terran', 'ice'].includes(b.kind) && !steamWorld(s, b),
     event: {
       title: 'Someone Lived Here',
       text: (s, d) =>
-        `Under the dust of ${bodyById(s, d)?.name}: layered mounds of mineral that grew around mats of microbes, like stromatolites, in shallow seas that dried up some eighty trillion years ago. Life happened here, once, without anyone to see it.`,
+        `Under the dust of ${bodyById(s, d)?.name}: layered mounds of mineral that grew around mats of microbes, like stromatolites, in shallow seas that dried up some ${formatYears(s.years / 2)} ago. Life happened here, once, without anyone to see it.`,
       choices: [
         { label: 'Tell everyone', hint: 'Resolve +6, Dissent −2. We are not the first.', run: (s) => { res(s, 6); dis(s, -2); } },
         { label: 'Archive it quietly', hint: 'Insight +30.', run: (s) => insight(s, 30) },
@@ -987,12 +1000,12 @@ export const ANOMALIES: AnomalyDef[] = [
   {
     id: 'flare_glass',
     name: 'Flare glass',
-    tip: 'Plains of glass fused by the superflares of a young red dwarf.',
+    tip: 'Plains of glass fused by the superflares of its star when it was young.',
     fits: (s, b) => (b.kind === 'barren' || b.kind === 'super_earth') && ['red_dwarf', 'blue_dwarf', 'white_dwarf', 'black_dwarf'].includes(sysOf(s, b).primary.kind),
     event: {
       title: 'Plains of Glass',
       text: (s, d) =>
-        `The day side of ${bodyById(s, d)?.name} is paved with glass: layer on layer of rock melted by superflares when its red dwarf was young and violent, trillions of years ago. Each layer dates an outburst.`,
+        `The ground of ${bodyById(s, d)?.name} is paved with glass: layer on layer of rock melted by superflares when its star was young and violent, trillions of years ago. Each layer dates an outburst.`,
       choices: [
         { label: 'Quarry the glass', hint: 'Matter +40.', run: (s) => matter(s, 40) },
         { label: 'Read the flare record', hint: 'Insight +25, and our astronomers learn to see flares coming.', run: (s) => { insight(s, 25); s.civ.flags.flare_warning = 1; } },

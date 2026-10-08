@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
-import type { GameState, StarSystem, Swarm } from '../types';
-import { FORTIFY_BONUS, destroyColony, signatureOf } from './fleets';
+import type { Fleet, GameState, StarSystem, Swarm } from '../types';
+import { FORTIFY_BONUS, destroyColony, isWarFleet, signatureOf } from './fleets';
 import type { Mods } from './mods';
 import { colonies, distLy, hasCharter, log, uid, withRng } from './util';
 import { queueEvent } from './events';
@@ -162,6 +162,96 @@ export function swarmsHunt(state: GameState, mods: Mods) {
   });
 }
 
+/**
+ * The chance our warships beat a swarm when they go for it: as when it comes for them, they win if
+ * their attack is at least 1.2 × its size × a draw from 0.6 to 1.1. So a win is sure while its
+ * size is at most attack / 1.32, and impossible once it is past attack / 0.72.
+ */
+export function attackOdds(attack: number, size: number): number {
+  if (attack <= 0) return 0;
+  return Math.max(0, Math.min(1, (attack / (1.2 * size) - 0.6) / 0.5));
+}
+
+/** Every warship of ours at this star, their attack added up (at their plain strength: attacking, they leave any fortifications). */
+export function warshipsAt(state: GameState, systemId: string): { fleets: Fleet[]; attack: number } {
+  const fleets = Object.values(state.fleets).filter((x) => x.at === systemId && isWarFleet(x));
+  const attack = fleets.reduce((a, x) => a + x.ships.reduce((b, sh) => b + (SHIP_BY_ID[sh.cls]?.settles ? 0 : (SHIP_BY_ID[sh.cls]?.attack ?? 0)), 0), 0);
+  return { fleets, attack };
+}
+
+/** The year-mark a star's warships last went for a swarm (civ.flags): once a turn. */
+const attackedKey = (systemId: string) => `swarm_attack_${systemId}`;
+
+/**
+ * Our warships at a swarm's star go for it, every one of ours there together, once a turn. It is
+ * the fight it would pick with them, at the moment we choose: win, and they kill a share of it
+ * (0.3 × their attack) and we salvage what they kill, while what is left of it hurts them; break
+ * it (to 0.4 or less) and it is gone. Lose, and it tears into every ship there. One asleep wakes
+ * unless it is broken. Our neighbours who live there see us fight it, as when it comes for us.
+ */
+export function attackSwarm(state: GameState, fleetId: string): { ok: boolean; text: string } | string {
+  const f = state.fleets[fleetId];
+  if (!f || !f.at) return 'The fleet must be stationed at the swarm’s star.';
+  if (!isWarFleet(f)) return 'Only warships can attack a swarm.';
+  const sw = Object.values(state.swarms).find((w) => w.systemId === f.at && !w.tamed);
+  if (!sw) return 'No swarm of the Hunger is here to attack.';
+  if (hasCharter(state, 'communion_charter')) return 'Under the Communion Charter they take us for their own: we will not turn on them.';
+  if (state.civ.flags[attackedKey(f.at)] === state.turn) return 'Our warships here have already fought it this turn.';
+  const sys = state.systems[f.at];
+  const { fleets, attack } = warshipsAt(state, f.at);
+  state.civ.flags[attackedKey(f.at)] = state.turn;
+  const asleep = !sw.awake;
+  let result: { ok: boolean; text: string } = { ok: false, text: '' };
+  let broke = false;
+  withRng(state, (rng) => {
+    if (attack >= sw.size * 1.2 * rng.range(0.6, 1.1)) {
+      const lost = Math.min(sw.size, attack * 0.3);
+      sw.size -= lost;
+      state.civ.matter += lost * 2;
+      for (const x of fleets) for (const sh of x.ships) sh.hp = Math.max(1, sh.hp - rng.range(0, sw.size * 0.3));
+      broke = sw.size <= 0.4;
+      result = {
+        ok: true,
+        text: broke
+          ? `Our warships went for the swarm at ${sys.name} and broke it (+${Math.round(lost * 2)} salvaged matter).`
+          : `Our warships went for the swarm at ${sys.name} and tore a ${lost >= 1 ? `great ` : ''}piece out of it (+${Math.round(lost * 2)} salvaged matter). It is ${sw.size < 2 ? 'small now' : 'still there'}.`,
+      };
+    } else {
+      let gone = 0;
+      for (const x of fleets) {
+        const before = x.ships.length;
+        for (const sh of x.ships) sh.hp -= rng.range(0.6, 1.2) * sw.size * 0.8;
+        x.ships = x.ships.filter((sh) => sh.hp > 0);
+        gone += before - x.ships.length;
+        if (!x.ships.length) delete state.fleets[x.id];
+      }
+      result = { ok: false, text: `Our warships went for the swarm at ${sys.name}, and it was too much for them${gone ? `: ${gone} ship${gone === 1 ? '' : 's'} lost` : ''}. What is left is hurt.` };
+    }
+  });
+  if (broke) {
+    delete state.swarms[sw.id];
+    foughtFor(state, sys.id, true);
+  } else {
+    if (result.ok) foughtFor(state, sys.id, false);
+    if (asleep) {
+      sw.awake = true;
+      state.flags.hunger_woke = (state.flags.hunger_woke ?? 0) + 1;
+      result.text += ' It was asleep. It is not now.';
+    }
+  }
+  state.battles.push({ systemId: sys.id, turn: state.turn, text: result.text });
+  log(state, result.text, 'combat', sys.id);
+  return result;
+}
+
+/** Can our warships at this star go for its swarm this turn? Why not, if not (null: they can). */
+export function attackBlocked(state: GameState, systemId: string): string | null {
+  if (!Object.values(state.swarms).some((w) => w.systemId === systemId && !w.tamed)) return 'No swarm is here.';
+  if (hasCharter(state, 'communion_charter')) return 'Under the Communion Charter we will not turn on them.';
+  if (state.civ.flags[attackedKey(systemId)] === state.turn) return 'Our warships here have already fought it this turn.';
+  return null;
+}
+
 /** How far a swarm looks, and goes, for its next meal (ly). */
 export function swarmReach(state: GameState): number {
   return rangeLy(state);
@@ -308,6 +398,23 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
       if (matter < 1.2 || rng.chance(0.08)) moveSwarm(state, sw, () => rng.next(), blackout);
     }
   });
+  fadeRust(state);
+}
+
+/** Rust fades by this share a turn where no swarm of the Hunger is. */
+export const RUST_FADE = 0.1;
+
+/**
+ * Where no untamed swarm is (feeding, or asleep in its nest), rust fades, a tenth a turn, and is
+ * gone below 1%: about 45 turns after a swarm fed its fill. Takes no random draw.
+ */
+function fadeRust(state: GameState) {
+  const held = new Set(Object.values(state.swarms).filter((w) => !w.tamed && w.systemId).map((w) => w.systemId!));
+  for (const sys of Object.values(state.systems)) {
+    if (!sys.rust || held.has(sys.id)) continue;
+    sys.rust *= 1 - RUST_FADE;
+    if (sys.rust < 0.01) delete sys.rust;
+  }
 }
 
 function moveSwarm(state: GameState, sw: Swarm, rand: () => number, blackout: number) {

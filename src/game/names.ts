@@ -52,7 +52,7 @@ export function galaxyName(rng: Rng, host: boolean): string {
   return `The ${properName(rng, 2)} ${rng.pick(GALAXY_WORDS.slice(1))}`;
 }
 
-const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 export function bodyName(systemName: string, index: number): string {
   return `${systemName} ${ROMAN[index] ?? index + 1}`;
 }

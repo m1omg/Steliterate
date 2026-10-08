@@ -54,6 +54,15 @@ export function migrate(s: GameState): GameState {
     // v3: the fate of matter has three answers; a game from before keeps the one it had
     s.fate ??= s.protonsDecay ? 'decay' : 'stable';
   }
+  // a system that fell into the Heart took its worlds with it (older games left them behind,
+  // some feeding a star that was gone): every other way a system goes, its worlds are gone or adrift
+  for (const sys of Object.values(s.systems)) {
+    if (!sys.gone) continue;
+    for (const id of sys.bodies) {
+      const b = s.bodies[id];
+      if (b && b.kind !== 'deep' && !b.dissolved && !b.rogue) b.dissolved = true;
+    }
+  }
   // anything this version of the game no longer knows is dropped rather than left to break it
   s.civ.techs = s.civ.techs.filter((t) => TECH_BY_ID[t]);
   s.civ.charters = s.civ.charters.filter((c) => CHARTER_BY_ID[c]);

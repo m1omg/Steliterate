@@ -1,7 +1,9 @@
 import { STRUCTURE_BY_ID } from './data/structures';
 import { defaultWater, hawkingTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
-import { calendarEra, fateKnown, fateOf } from './fate';
+import { calendarEra, fateKnown, fateOf, matterGone } from './fate';
+import { ERA_BY_ID } from './eras';
+import { hashSeed } from './rng';
 import { protonFateKnown } from './sim/util';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
@@ -18,18 +20,37 @@ export interface SourceInfo {
 
 const LAST_LIGHT = 1e14;
 
+/** A blue dwarf's surface in a game begun before its stars carried their own flare (blueK): every one at 8,200 K. */
+const BLUE_K_OLD = 8200;
+
 /**
- * Dead stars and worlds that nothing warms go on cooling for ever. This late a degenerate body
- * keeps its heat in its electrons (heat capacity ∝ T) and is the same temperature throughout,
- * while its surface radiates ∝ T⁴, so it cools as T ≈ K·t^-½ (K in kelvin·years^½): a white dwarf
- * no dark matter warms is about 3 mK as the Degenerate Age opens, a neutron star about 0.2 K,
- * and colder every age after. (In the Dusk the game follows a white dwarf's light instead; see
- * primaryLuminosity.) Usable energy goes as T⁴, so a body a thousand times colder gives a million
- * million times less. Nothing ends up colder than the sky: the cosmic horizon's own glow, SKY_K.
+ * Dead stars and worlds that nothing warms go on cooling for ever, each by one law in every age.
+ * A neutron star or a world's core, with no insulating envelope, keeps its heat in its electrons
+ * (heat capacity ∝ T) and is the same temperature throughout, while its surface radiates ∝ T⁴, so
+ * it cools as T ≈ K·t^-½ (K in kelvin·years^½). White dwarfs (dwarfCoolingK) and brown dwarfs
+ * (brownCoolingK) are kept warmer by their envelopes. Usable energy goes as T⁴, so a body a
+ * thousand times colder gives a million million times less. Nothing ends up colder than the sky:
+ * the cosmic horizon's own glow, SKY_K.
  */
-const RESIDUAL = { dwarf: 1e5, neutron: 7e6, brown: 3e4, world: 1e4 } as const;
-/** The temperature of the cosmic horizon (de Sitter, H∞ ≈ 56 km/s/Mpc): nothing ends up colder. */
-export const SKY_K = 2.4e-30;
+const RESIDUAL = { neutron: 7e6, world: 1e4 } as const;
+/** The temperature of the cosmic horizon (de Sitter, ħH/2πk at H∞ ≈ 56 km/s/Mpc): nothing ends up colder. */
+export const SKY_K = 2.2e-30;
+/**
+ * The galaxy's own glow, the floor nothing in it cools below while it lasts. In the Dusk, the
+ * light of the merged galaxy's red dwarfs: about 1 K. Today's interstellar starlight is about
+ * 3.2 K (Eddington worked out 3.18 K in 1926), nearly all of it from stars far brighter than red
+ * dwarfs. Only the faintest still shine, each about a thousandth of the Sun, so even a merged
+ * galaxy holds a few tenths of a percent of today's light, and the temperature goes as its
+ * fourth root. (The cosmic microwave background has long since redshifted to nothing.) After the
+ * Last Light, the faint glow of the embers and the cooling brown dwarfs, about a hundredth of a
+ * kelvin, while dark matter still warms them (to η 22, gone by η 25); then only the horizon's.
+ */
+export const BACKGROUND_DUSK_K = 1;
+export const BACKGROUND_EMBERS_K = 0.01;
+export function backgroundK(years: number): number {
+  if (years < LAST_LIGHT) return BACKGROUND_DUSK_K;
+  return BACKGROUND_EMBERS_K * Math.pow(haloShare(years), 0.25);
+}
 /** An ember: a white dwarf warmed by dark matter annihilating inside it (Adams & Laughlin). */
 const EMBER_K = 63;
 /** Dark matter falling into a neutron star warms it to about this while the halo lasts. */
@@ -46,6 +67,75 @@ const DECAY_K = { dwarf: 0.05, neutron: 1.5, brown: 0.009, world: 0.003 } as con
 /** What a body cools to, `age` years after it formed, with nothing to warm it. */
 function residual(k: number, age: number): number {
   return k / Math.sqrt(Math.max(1, age));
+}
+
+/**
+ * A giant's own heat, left from its formation and its slow contraction: Jupiter's gives it about
+ * 100 K today, Saturn's 77 K and Neptune's 53 K, about 100 K × (M / 318 M⊕)^0.2 at 4.5 billion
+ * years (our fit to the three; Uranus, at 30 K, is the odd one out), fading as t^-0.32 as a brown
+ * dwarf's does (Burrows et al. 2001): about 4 K for a Jupiter in the Dusk, 2 K at η 15.
+ */
+export function giantHeatK(b: Body, years: number): number {
+  if (b.kind !== 'gas_giant' && b.kind !== 'ice_giant') return 0;
+  return 100 * Math.pow(Math.max(1, b.massEarth) / 318, 0.2) * Math.pow(Math.max(4.5e9, years) / 4.5e9, -0.32);
+}
+
+/** A white dwarf's core has crystallised by about this age, and its ions hold almost no heat (log L ≈ −7 at 0.6 M☉: Althaus et al. 2010, A&A Rev. 18, 471). */
+const DEBYE_AGE = 5e11;
+
+/**
+ * A white dwarf's own temperature `age` years after it formed, with nothing warming it, by one law
+ * in every age. Mestel's law while its envelope holds its heat in, 0.01 L☉ × (1 + t / 10^8
+ * years)^-1.3 radiated from its surface: about 4,000 K at 10 billion years, as the coolest dwarfs
+ * we see. Once its core has crystallised it fades faster, as T ∝ t^-0.58 (our estimate: the heat
+ * left in its electrons, ∝ T, let out through the same envelope, L ∝ T_core^3.5): about 50 K
+ * when the Dusk ends, 13 K at η 15, a hundredth of a kelvin at η 20. A red dwarf's remnant is
+ * never hotter than its last flare was at its peak (the star contracts into it, cooling).
+ */
+export function dwarfCoolingK(p: Primary, age: number): number {
+  const r = dwarfRadius(p);
+  const mestel = (t: number) => 5772 * Math.pow((0.01 * Math.pow(1 + Math.max(0, t) / 1e8, -1.3)) / (r * r), 0.25);
+  const t = age <= DEBYE_AGE ? mestel(age) : mestel(DEBYE_AGE) * Math.pow(age / DEBYE_AGE, -0.58);
+  return p.blueAt !== undefined ? Math.min(t, p.blueK ?? BLUE_K_OLD) : t;
+}
+
+/**
+ * A brown dwarf's own temperature, by Burrows et al.'s fit to their models (2001, Rev. Mod. Phys.
+ * 73, 719, eq. 2): 1,550 K × (t / 1 billion years)^-0.32 × (M / 0.05 M☉)^0.83. Fitted to ages of
+ * up to about 10 billion years; this far on it is an upper bound (a cold envelope may let the
+ * heat out faster). About 40 K at the Dusk's end for a middling one, 19 K at η 15, 0.5 K at η 20.
+ */
+export function brownCoolingK(p: Primary, age: number): number {
+  return 1550 * Math.pow(Math.max(1e8, age) / 1e9, -0.32) * Math.pow(Math.max(0.01, p.mass) / 0.05, 0.83);
+}
+
+/** The year a dwarf the galaxy began with formed. */
+const FIRST_FORMED = 1e9;
+/**
+ * When a dead star the galaxy began with formed (a red dwarf's remnant has its own collapse,
+ * whiteAt): from 1 billion years after the Big Bang to the Dusk, as many in each tenfold of time,
+ * a star formation fading as 1/t. From a hash of its own, so with no random draw, the same in any
+ * game and in a save from before.
+ */
+export function formedAt(p: Primary): number {
+  const u = (hashSeed(`formed:${p.kind === 'brown_dwarf' ? 'bd' : 'wd'}:${p.mass}`) % 1000003) / 1000003;
+  return Math.pow(10, Math.log10(FIRST_FORMED) + u * (Math.log10(ERA_BY_ID.dusk.startYears) - Math.log10(FIRST_FORMED)));
+}
+
+/** Years since a white or black dwarf formed: since its collapse if it was a star of ours to watch, else since formedAt. */
+function dwarfAge(p: Primary, years: number): number {
+  return Math.max(0, years - (p.whiteAt ?? formedAt(p)));
+}
+
+/**
+ * A world falling into a dead star warms it as it feeds: an Earth spread over 10^14 to 10^15
+ * years gives about 10^15 to 10^16 W (GMṀ/R), some 10^-12 to 10^-11 L☉, so this much per unit
+ * of its light to collectors: a dwarf held at 50 to 110 K, as the Codex says.
+ */
+const REKINDLE_SUNS = 4e-12;
+/** The warmth a feeding world gives a dwarf of radius `r` (R☉), from its light (Stefan–Boltzmann). */
+function rekindledK(p: Primary, r: number): number {
+  return p.rekindle ? 5772 * Math.pow((p.rekindle * REKINDLE_SUNS) / (r * r), 0.25) : 0;
 }
 
 /** Temperatures that add as power does: (a⁴ + b⁴ + …)^¼, never below the sky's. */
@@ -186,14 +276,22 @@ function shoneDuring(p: Primary, from: number, to: number): p is Primary & { kin
  * Hawking temperature. `decay`: the share of the warmth of decaying protons to count (decayWarmth).
  */
 export function primaryTemperature(p: Primary, years: number, era: EraId, decay = 0, curve = 0): number {
+  const t = ownTemperature(p, years, era, decay, curve);
+  // a dead star sits in the galaxy's glow like everything else (a black hole's is its Hawking temperature)
+  return p.kind === 'black_hole' || p.kind === 'smbh' ? t : warmth(t, backgroundK(years));
+}
+
+/** A primary's temperature from what warms it alone, without the galaxy's background glow. */
+export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0, curve = 0): number {
   const fromDecay = (k: number) => k * Math.pow(decay, 0.25);
   // a new star a turn outlasted: the white dwarf it left, cooled through the rest of that turn
-  if (newStarOut(p, years)) return warmth(residual(RESIDUAL.dwarf, years - (p.diesAt ?? 0)), fromDecay(DECAY_K.dwarf));
+  if (newStarOut(p, years)) return warmth(dwarfCoolingK(p, years - (p.diesAt ?? 0)), fromDecay(DECAY_K.dwarf));
   switch (p.kind) {
     case 'red_dwarf':
       return 2700 + (p.mass - 0.08) * 6000;
     case 'blue_dwarf':
-      return 8200;
+      // at the peak of its last flare (a new galaxy's stars carry their own, by mass)
+      return p.blueK ?? BLUE_K_OLD;
     case 'collision_star':
       return 2900;
     case 'helium_star':
@@ -202,23 +300,19 @@ export function primaryTemperature(p: Primary, years: number, era: EraId, decay 
       return 6500;
     case 'dark_star':
       return 4200;
-    case 'white_dwarf': {
-      if (era === 'dusk') {
-        // from its light and its size (Stefan–Boltzmann): about 12,000 K at the collapse, a few
-        // hundred K trillions of years on
-        const r = dwarfRadius(p);
-        return 5772 * Math.pow(primaryLuminosity(p, years, era) / (r * r), 0.25);
-      }
-      if (p.rekindle) return 300; // a world falling into it, as a rekindled black dwarf
-      // an ember holds about 63 K while the halo lasts and cools as its warmth fades (T ∝ power^¼)
-      return warmth(EMBER_K * Math.pow(emberShare(p, years), 0.25), residual(RESIDUAL.dwarf, years - (p.whiteAt ?? 0)), fromDecay(DECAY_K.dwarf));
-    }
+    case 'white_dwarf':
     case 'black_dwarf':
-      return p.rekindle ? 300 : warmth(residual(RESIDUAL.dwarf, years - (p.whiteAt ?? 0)), fromDecay(DECAY_K.dwarf));
+      // its own cooling (one law in every age); dark matter falling into it while the halo lasts,
+      // Dusk and after (Adams & Laughlin: from η 11), an ember at about 63 K that fades with the
+      // halo (T ∝ power^¼); a world falling into it; its protons decaying, if they do
+      return warmth(dwarfCoolingK(p, dwarfAge(p, years)), EMBER_K * Math.pow(emberShare(p, years), 0.25), rekindledK(p, dwarfRadius(p)), fromDecay(DECAY_K.dwarf));
     case 'brown_dwarf':
-      return era === 'dusk' ? 420 : warmth(BROWN_HALO_K * Math.pow(haloShare(years), 0.25), residual(RESIDUAL.brown, years), fromDecay(DECAY_K.brown));
+      // its own cooling from its own age, and a few kelvin of dark matter while the halo lasts
+      return warmth(brownCoolingK(p, Math.max(0, years - formedAt(p))), BROWN_HALO_K * Math.pow(haloShare(years), 0.25), fromDecay(DECAY_K.brown));
     case 'neutron_star':
-      return era === 'dusk' ? 30000 : warmth(NEUTRON_HALO_K * Math.pow(haloShare(years), 0.25), residual(RESIDUAL.neutron, years), fromDecay(DECAY_K.neutron), CURVATURE_NEUTRON_K * curve);
+      // dark matter holds it near 900 K while the halo lasts, in the Dusk as after (its own heat
+      // was long gone: about 100 K at a billion years with nothing to warm it)
+      return warmth(NEUTRON_HALO_K * Math.pow(haloShare(years), 0.25), residual(RESIDUAL.neutron, years), fromDecay(DECAY_K.neutron), CURVATURE_NEUTRON_K * curve);
     case 'black_hole':
     case 'smbh':
       // Hawking: 6.2 × 10^-8 K for a hole of one Sun, colder the heavier it is
@@ -269,7 +363,7 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       const to = p.whiteAt ?? Infinity;
       const overlap = Math.max(0, Math.min(to, years + L) - Math.max(from, years));
       const share = L > 0 ? Math.min(1, overlap / L) : 1;
-      return { light: p.lum * (0.3 + 2.7 * share), label: 'Blue dwarf: a red dwarf in its last bright flare', temperatureK: 8200, alive: null };
+      return { light: p.lum * (0.3 + 2.7 * share), label: 'Blue dwarf: a red dwarf in its last bright flare', temperatureK: p.blueK ?? BLUE_K_OLD, alive: null };
     }
     case 'white_dwarf': {
       if (era === 'dusk') {
@@ -300,11 +394,14 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
     case 'black_dwarf':
       return { light: rek, label: rek > 0 ? 'Black dwarf, rekindled by an infalling world' : 'Black dwarf: a white dwarf gone cold, with nothing left to give', temperatureK: primaryTemperature(p, years, era, decay), alive: null };
     case 'brown_dwarf': {
-      if (era === 'dusk') return { light: 0.03, label: 'Brown dwarf: a star that never ignited', temperatureK: primaryTemperature(p, years, era), alive: null };
-      // a few kelvin from the dark matter falling into it, while the halo lasts; then nothing
-      const halo = haloShare(years);
-      const label = halo > 0 ? 'Brown dwarf: a star that never ignited, faintly warmed by dark matter' : 'Brown dwarf gone cold: the dark matter that warmed it is spent';
-      return { light: 0.02 * gfe * halo, label, temperatureK: primaryTemperature(p, years, era, decay), alive: null };
+      // all of its own light, cooling with its age, in the units of the age: next to nothing
+      // beside a red dwarf, but after the Last Light, while it still holds the heat of its youth,
+      // worth an ember or more (only collectors built for it can take it: Infrared Shrouds)
+      const lum = primaryLuminosity(p, years, era, decay);
+      const light = era === 'dusk' ? lum / lightUnitSuns('dusk') : 1.05 * (0.35 + 0.65 * gfe) * (lum / lightUnitSuns(era));
+      const temperatureK = primaryTemperature(p, years, era, decay);
+      const label = era === 'dusk' ? 'Brown dwarf: a star that never ignited, cooling since it formed' : light >= 0.05 ? 'Brown dwarf, still glowing with the heat of its youth' : haloShare(years) > 0 ? 'Brown dwarf, nearly cold, faintly warmed by dark matter' : 'Brown dwarf gone cold';
+      return { light, label, temperatureK, alive: null };
     }
     case 'neutron_star': {
       const light = era === 'dusk' ? 0.1 : era === 'degenerate' ? 0.25 * Math.max(0, 1 - (Math.log10(years) - 15) / 12) * (0.4 + 0.6 * gfe) : 0;
@@ -341,10 +438,10 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
     }
     case 'black_hole':
     case 'smbh': {
-      // collectors see the accretion disk. The Heart's disk is fed by its crowded core
-      // (stars torn apart, stellar winds), bright in the Dusk and fading as those stars die;
-      // a lone stellar hole has only a faint trickle of infalling gas
-      const disk = diskLight(p.kind, era, years) * (0.35 + 0.65 * gfe);
+      // collectors see the accretion disk. The Heart's is fed by its crowded core, the gas its
+      // stars shed (a hole this heavy swallows a whole star without tearing it), bright in the
+      // Dusk and fading as those stars die; a lone stellar hole has only a faint trickle of gas
+      const disk = diskLight(p.kind, era, years, !matterGone(state)) * (0.35 + 0.65 * gfe);
       const label =
         p.kind === 'smbh'
           ? disk > 0.3
@@ -562,9 +659,19 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         if (s.ejected || s.gone || s.special === 'core' || s.special === 'home') continue;
         if (rand() < pEject * 0.25) {
           if (rand() < 0.08 && s.primary.kind !== 'smbh') {
-            s.gone = true;
             const heart = systems.find((x) => x.primary.kind === 'smbh');
             if (heart) growHeart(heart.primary, s.primary.mass);
+            // into the Heart, with every world still bound to it; one already flung loose drifts
+            // on, and the system stays for it, empty, as when a black hole evaporates
+            let adrift = false;
+            for (const bid of s.bodies) {
+              const b = state.bodies[bid];
+              if (!b || b.kind === 'deep' || b.dissolved) continue;
+              if (b.rogue) adrift = true;
+              else b.dissolved = true;
+            }
+            if (adrift) Object.assign(s.primary, { kind: 'void', lum: 0, spin: 0, spinMax: 0, rekindle: undefined });
+            else s.gone = true;
             notes.push({ systemId: s.id, kind: 'swallowed' });
           } else {
             s.ejected = true;
@@ -691,45 +798,60 @@ export const LAST_LIGHT_YEARS = LAST_LIGHT;
 export function primaryLuminosity(p: Primary, years: number, era: EraId, decay = 0): number {
   const m = Math.max(0.01, p.mass);
   // a dead star's light, from its temperature and its size (Stefan–Boltzmann; radii in Suns)
-  const glow = (r: number) => Math.pow(primaryTemperature(p, years, era, decay) / 5772, 4) * r * r;
+  // (its own warmth: the galaxy's glow around it is not light it gives)
+  const glow = (r: number) => Math.pow(ownTemperature(p, years, era, decay) / 5772, 4) * r * r;
   if (newStarOut(p, years)) return glow(dwarfRadius(p));
   switch (p.kind) {
     case 'red_dwarf':
     case 'collision_star':
       return 0.23 * Math.pow(m, 2.3); // lower main sequence
     case 'blue_dwarf':
-      return Math.min(0.4, 2 * m); // a red dwarf's last bright phase, about a third of the Sun at peak
+      // a red dwarf's last flare at its peak (a new galaxy's stars carry their own, by mass; older
+      // games keep the bright flare they began with, up to 0.4 L☉)
+      return p.blueLum ?? Math.min(0.4, 2 * m);
     case 'helium_star':
     case 'helium_giant':
       return NEW_STAR_LUM[p.kind];
     case 'dark_star':
       return 1;
-    case 'white_dwarf': {
-      if (era === 'dusk') {
-        const age = p.whiteAt ? Math.max(0, years - p.whiteAt) : 1e13;
-        return 0.01 * Math.pow(1 + age / 1e8, -1.3);
-      }
-      // an ember by the dark matter it burns (about 4 × 10^-12 L☉ while the halo lasts), any other
-      // by what is left of its warmth
-      const ember = era === 'degenerate' ? emberShare(p, years) : 0;
-      if (ember > 0) return Math.max(glow(dwarfRadius(p)), 4e-12 * ember);
-      return (p.rekindle ? 0 : glow(dwarfRadius(p))) + (p.rekindle ?? 0) * 1e-6;
+    case 'white_dwarf':
+    case 'black_dwarf': {
+      // by its warmth; an ember at least by the dark matter it burns (about 4 × 10^-12 L☉ while
+      // the halo lasts: Adams & Laughlin)
+      const ember = emberShare(p, years);
+      return ember > 0 ? Math.max(glow(dwarfRadius(p)), 4e-12 * ember) : glow(dwarfRadius(p));
     }
-    case 'black_dwarf':
-      return (p.rekindle ? 0 : glow(dwarfRadius(p))) + (p.rekindle ?? 0) * 1e-6;
     case 'brown_dwarf':
-      return era === 'dusk' ? 1e-6 : glow(0.1);
+      return glow(0.1);
     case 'neutron_star':
-      return era === 'dusk' ? 1e-5 : glow(1.7e-5);
+      return glow(1.7e-5);
+    case 'black_hole':
+    case 'smbh':
+      // its accretion disk, as bright as what collectors there gather (its Hawking glow is
+      // nothing beside it)
+      return diskLight(p.kind, era, years) * lightUnitSuns(era);
     default:
       return 0;
   }
+}
+
+/**
+ * One unit of light to collectors (sourceLight), as a luminosity in Suns. The game sets the unit
+ * by age: in the Dusk a red dwarf of 0.1 M☉ (0.23 × 0.1^2.3 = 1.15 × 10^-3 L☉), from the Last
+ * Light an ember (about 4 × 10^-12 L☉).
+ */
+export function lightUnitSuns(era: EraId): number {
+  return era === 'dusk' ? 1.15e-3 : 4e-12;
 }
 
 export interface BodyClimate {
   mean: number; // K
   day?: number; // tidally locked worlds
   night?: number;
+  /** Past the runaway greenhouse: its seas are a sky of steam (water-rich worlds only). */
+  steam?: boolean;
+  /** No air to hold water as a liquid: bare rock and rubble, unless Atmosphere Works give it one. */
+  airless?: boolean;
 }
 
 /** Orbital Lamps hold the world they light at about this temperature, day side and night side. */
@@ -745,6 +867,17 @@ export const SURFACE_LIFE: Body['kind'][] = ['eyeball', 'terran', 'super_earth']
 
 /** Below this even a world's warmest ground is frozen hard: a frozen world, whatever it was. */
 export const FROZEN_K = 195;
+
+/**
+ * Frozen hard: even its warmest ground below FROZEN_K. Nothing lives on such a surface, Kin
+ * without domes included (Orbital Lamps keep the world they light out of it).
+ */
+export function frozenHard(state: GameState, b: Body, c: BodyClimate = bodyClimate(state, b)): boolean {
+  return !b.dissolved && b.kind !== 'deep' && (c.day ?? c.mean) < FROZEN_K;
+}
+
+/** Nothing on a world's surface survives past this, even on its night side: the limit of known life (122 °C: Takai et al. 2008). */
+export const LIFE_LIMIT_K = 395;
 
 /**
  * Surface life whose star has died (a remnant, or nothing): its light is fading, and once even
@@ -787,7 +920,10 @@ export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = 
     const cl = bodyClimate(state, b);
     return (cl.day ?? cl.mean) < FROZEN_K;
   };
-  const sunless = calendarEra(state) !== 'dusk' || !!b.rogue || (SURFACE_LIFE.includes(b.kind) && cold()) || seededLifeUnkept(state, b, c);
+  // (a world alone in the dark has no star, and no tides, to warm it, as a world flung loose has not)
+  const p = state.systems[b.systemId]?.primary;
+  const starless = !p || p.kind === 'rogue' || p.kind === 'void';
+  const sunless = calendarEra(state) !== 'dusk' || !!b.rogue || starless || (SURFACE_LIFE.includes(b.kind) && cold()) || seededLifeUnkept(state, b, c);
   const freeze = sunless && !lampsOver(state, b, c) ? 0.05 * (core ? 0.5 : 1) : 0;
   return { decline, freeze };
 }
@@ -818,7 +954,9 @@ export const WATER_RICH = 0.5;
  * `water_rich`: close to their star, past the runaway greenhouse, their seas are a sky of steam
  * (starClimate), and nothing lives there (declineWorlds). The water-poor that are not frozen even
  * on their warmest ground start as bare rock: inside their star's snow line ice never gathered,
- * and what they had boiled off in its long, bright youth (Luger & Barnes 2015). The generator
+ * and what they had boiled off in its long, bright youth (Luger & Barnes 2015). Unless they are
+ * locked to their star with a night side cold enough to keep it: there what water they have is
+ * cold-trapped as ice, never reaching the day side to boil (a twilight or eyeball sea). The generator
  * picks a world's kind by its orbit, at fixed distances whatever its star's light (and one branch
  * for red dwarfs at any orbit), so these came out close in. A star already in its last flare is
  * judged by its light before it, so the water-poor worlds it had frozen are still there to thaw in
@@ -826,9 +964,10 @@ export const WATER_RICH = 0.5;
  * instead). Deterministic and after generation, so the galaxy's random draws, and everything else
  * in it, stay as they were; the home system keeps its fixed layout.
  */
-export function waterFromTheStart(state: GameState): { rich: number; dried: number } {
+export function waterFromTheStart(state: GameState): { rich: number; dried: number; trapped: number } {
   let rich = 0;
   let dried = 0;
+  let trapped = 0;
   const era = calendarEra(state);
   const decay = decayWarmth(state);
   for (const b of Object.values(state.bodies)) {
@@ -847,6 +986,13 @@ export function waterFromTheStart(state: GameState): { rich: number; dried: numb
     const lum = sys.primary.kind === 'blue_dwarf' ? primaryLuminosity({ ...sys.primary, kind: 'red_dwarf' }, state.years, era, decay) : undefined;
     const c = starClimate(state, b, lum, NO_TERRAFORMING);
     if ((c.day ?? c.mean) < ICE_MELTS_K) continue;
+    // locked to its star with a night side that stays frozen: its water is cold-trapped there as
+    // ice, too little to raise a runaway greenhouse, since it never reaches the day side to boil
+    // (Leconte et al. 2013, A&A 554, A69; Menou 2013, ApJ 774, 51)
+    if (c.night !== undefined && c.night < ICE_MELTS_K) {
+      trapped++;
+      continue;
+    }
     // bare rock's own figures: its richness (1.0 to 1.7) from where the ice's lay in its range,
     // its trace of water from its own seed, as generation gives them
     b.richness = 1 + 0.7 * Math.max(0, Math.min(1, (b.richness - 0.5) / 0.4));
@@ -859,14 +1005,14 @@ export function waterFromTheStart(state: GameState): { rich: number; dried: numb
     b.traits = b.traits.filter((t) => t !== 'subsurface_ocean');
     dried++;
   }
-  return { rich, dried };
+  return { rich, dried, trapped };
 }
 
 /**
  * The runaway greenhouse, as the mean warmth starlight alone would give a world: past it, a
  * water-rich world's seas boil into its sky for good. At 1.4 times Earth's sunlight (the player's
- * choice): Kasting 1988's limit, where the oceans evaporate entirely, from the paper that gives
- * the 1,500 K beneath (STEAM_K). Later models start the runaway sooner, at 1.06 (Kopparapu et al.
+ * choice): Kasting 1988's limit, where the oceans evaporate entirely (the same paper put 1,500 K
+ * of ground beneath, which Selsis et al. 2023 revise: steamGroundK). Later models start the runaway sooner, at 1.06 (Kopparapu et al.
  * 2013) to 1.1 (Leconte et al. 2013, Nature 504, 268). 276.6 K is the warmth starClimate gives at
  * that light (Earth's 1 AU, albedo 0.3, is 254 K). A tidally locked world's clouds shade it and
  * hold the limit off to 300 K, nearly twice Earth's sunlight: Yang, Cowan & Abbot 2013 kept such
@@ -875,12 +1021,27 @@ export function waterFromTheStart(state: GameState): { rich: number; dried: numb
  */
 export const RUNAWAY_K = 278 * Math.pow(0.7 * 1.4, 0.25);
 export const RUNAWAY_LOCKED_K = 300;
-/** The ground under a runaway's steam sky, its ocean in the air: past 1,500 K (Kasting 1988), by night as by day. */
-export const STEAM_K = 1500;
+/** The warmth starClimate gives at Earth's sunlight (1 AU from one Sun, albedo 0.3): 254 K. */
+const EARTH_EQ_K = 278 * Math.pow(0.7, 0.25);
+
+/**
+ * The ground under a runaway's steam sky, by night as by day. Not the 1,500 K and more of a fully
+ * convective steam atmosphere (Kasting 1988): in a consistent model the deep steam is radiative,
+ * and the redder the star, the higher up its light is absorbed and the cooler the ground (Selsis
+ * et al. 2023, Nature 620, 287). Just past the runaway it is about 1,250 K under a Sun-like star
+ * and some 550 K under one like TRAPPIST-1 (2,600 K), about 1,100 K below what the convective
+ * model gives; between, by the star's temperature, and never past the convective 1,650 K. More light warms it slowly, as
+ * (sunlight / limit)^0.16, our fit to where they find the rock melts (1,620 K): at 7.4 times
+ * Earth's sunlight for the Sun, at 339 for TRAPPIST-1.
+ */
+export function steamGroundK(starK: number, sunlight: number, limit: number): number {
+  const exit = Math.min(1650, Math.max(550, 550 + ((starK - 2600) * (1250 - 550)) / (5772 - 2600)));
+  return exit * Math.pow(Math.max(1, sunlight / limit), 0.16);
+}
 
 /** A water-rich world past the runaway greenhouse, its seas a sky of steam (see starClimate). */
 export function steamWorld(state: GameState, b: Body): boolean {
-  return !b.dissolved && b.traits.includes('water_rich') && bodyClimate(state, b).mean >= STEAM_K;
+  return !b.dissolved && b.traits.includes('water_rich') && !!bodyClimate(state, b).steam;
 }
 
 /**
@@ -926,7 +1087,7 @@ export function bodyClimate(state: GameState, b: Body): BodyClimate {
   if (!lampsOver(state, b)) return c;
   // the lamps stand in for the sun where it falls short (they are no help against a flare)
   const lit = (k: number) => Math.max(k, LAMP_K);
-  return c.day !== undefined ? { mean: lit(c.mean), day: lit(c.day), night: lit(c.night!) } : { mean: lit(c.mean) };
+  return c.day !== undefined ? { ...c, mean: lit(c.mean), day: lit(c.day), night: lit(c.night!) } : { ...c, mean: lit(c.mean) };
 }
 
 /** A world's climate without Orbital Lamps: under its star's light today, or under `lum` Suns. */
@@ -944,27 +1105,35 @@ export function starClimate(state: GameState, b: Body, lum?: number, tf: Terrafo
   const tEq = L > 0 ? 278 * Math.pow(L, 0.25) * Math.pow(0.7, 0.25) / Math.sqrt(a) : 0;
   // its own heat: its core's, while that lasts (it runs out after the Last Light), then what is
   // left of it, and its protons decaying, if they do and we know it
-  const tInt = warmth(40 * b.coreHeat, era === 'dusk' ? 0 : residual(RESIDUAL.world, state.years), DECAY_K.world * Math.pow(decay, 0.25));
-  let t = Math.pow(Math.pow(tEq, 4) + Math.pow(tInt, 4), 0.25);
+  const tInt = warmth(40 * b.coreHeat, era === 'dusk' ? 0 : residual(RESIDUAL.world, state.years), DECAY_K.world * Math.pow(decay, 0.25), giantHeatK(b, state.years));
+  // and the galaxy's glow around it, which even a world far from any star sits in
+  const bg = backgroundK(state.years);
+  const raw = Math.pow(Math.pow(tEq, 4) + Math.pow(tInt, 4) + Math.pow(bg, 4), 0.25);
+  let t = raw;
   // a water-rich world past the runaway greenhouse: its seas are a sky of steam hundreds of bars
-  // deep, which holds the ground past 1,500 K by night as by day; below the limit they rain out
-  const locked = b.traits.includes('tidally_locked') && tEq > 0;
+  // deep, which holds the ground hot by night as by day (steamGroundK); below the limit they rain out
+  // (a belt is rubble on many orbits, not one face turned to its star)
+  const locked = b.traits.includes('tidally_locked') && tEq > 0 && b.kind !== 'asteroids';
   if (b.traits.includes('water_rich') && !b.rogue && t >= (locked ? RUNAWAY_LOCKED_K : RUNAWAY_K)) {
-    const k = Math.max(STEAM_K, t);
-    return locked ? { mean: k, day: k, night: k } : { mean: k };
+    const limit = Math.pow((locked ? RUNAWAY_LOCKED_K : RUNAWAY_K) / EARTH_EQ_K, 4);
+    const k = Math.max(t, steamGroundK(primaryTemperature(sys.primary, state.years, era, decay), L / (a * a), limit));
+    return locked ? { mean: k, day: k, night: k, steam: true } : { mean: k, steam: true };
   }
   // Atmosphere Works: on a cold world, an air rich in greenhouse gases keeps the warmth in
   if (tf.works && t < TERRAFORM_TARGET_K) t = Math.min(TERRAFORM_TARGET_K, t * WORKS_GREENHOUSE);
   if (b.kind === 'eyeball' || b.kind === 'terran' || b.kind === 'super_earth') t *= 1 + 0.12 * b.vitality;
-  if (b.traits.includes('tidally_locked') && tEq > 0) {
+  const airless = (b.kind === 'barren' || b.kind === 'asteroids') && !tf.works;
+  if (locked) {
     // the day side faces the star for ever; air and sea carry some heat round to the night (a
-    // thick enough air carries most of it: Atmosphere Works)
-    const airless = (b.kind === 'barren' || b.kind === 'asteroids') && !tf.works;
-    if (airless) return { mean: t, day: t * 1.4, night: Math.max(tInt, t * 0.12) };
+    // thick enough air carries most of it: Atmosphere Works). Only the starlight divides so: the
+    // world's own heat and the galaxy's glow warm both sides alike, as its air does
+    const warmed = t / raw;
+    const side = (share: number) => warmed * Math.pow(Math.pow(tEq * share, 4) + Math.pow(tInt, 4) + Math.pow(bg, 4), 0.25);
+    if (airless) return { mean: t, day: side(1.4), night: side(0.12), airless };
     const carry = Math.max(0.25 + 0.45 * b.vitality, tf.works ? WORKS_CARRY : 0);
-    return { mean: t, day: t * (1.3 - 0.15 * carry), night: Math.max(tInt, t * (0.35 + 0.4 * carry)) };
+    return { mean: t, day: side(1.3 - 0.15 * carry), night: side(0.35 + 0.4 * carry) };
   }
-  return { mean: t };
+  return airless ? { mean: t, airless } : { mean: t };
 }
 
 // ------------------------------------------------------------ terraforming (sim/terraform.ts)
@@ -1020,6 +1189,12 @@ export function livableWarmth(k: number): number {
  */
 export function insolation(state: GameState, b: Body): number {
   if (b.rogue) return 0;
+  return Math.min(2.5, Math.max(0.05, insolationByDistance(state, b)));
+}
+
+/** A world's sunlight against its star's standard orbit by the inverse-square law alone (insolation caps it for surface arrays). */
+export function insolationByDistance(state: GameState, b: Body): number {
+  if (b.rogue) return 0;
   const sys = state.systems[b.systemId];
   if (!sys) return 1;
   const p = sys.primary;
@@ -1027,24 +1202,58 @@ export function insolation(state: GameState, b: Body): number {
   if (p.kind === 'red_dwarf' || p.kind === 'blue_dwarf' || p.kind === 'collision_star') {
     aStd = 0.031 * Math.pow(Math.max(0.05, p.mass) / 0.1, 1.15);
   } else {
+    // (the close worlds set the standard: cold outer worlds far beyond them do not move it)
     const orbits = sys.bodies
       .map((id) => state.bodies[id])
-      .filter((x) => x && x.kind !== 'deep' && !x.dissolved && !x.rogue && x.orbitAU > 0)
+      .filter((x) => x && x.kind !== 'deep' && !x.dissolved && !x.rogue && x.orbitAU > 0 && (!x.traits.includes('outer') || x === b))
       .map((x) => x.orbitAU)
       .sort((x, y) => x - y);
     aStd = orbits.length ? orbits[Math.floor(orbits.length / 2)] : b.orbitAU;
   }
-  return Math.min(2.5, Math.max(0.05, (aStd / Math.max(0.003, b.orbitAU)) ** 2));
+  return (aStd / Math.max(0.003, b.orbitAU)) ** 2;
 }
 
-/** A plain description of a world's water at its current temperature. */
-export function waterState(b: Body, climate: BodyClimate): string {
+/**
+ * Bare ice in a vacuum lasts ages only below about this: Mercury's and the Moon's polar ice
+ * (Vasavada, Paige & Wood 1999). Warmer, it sublimates away.
+ */
+export const AIRLESS_ICE_K = 110;
+
+/**
+ * Is the ocean under this world's ice still liquid? While ice is left over it and something keeps
+ * it warm: the tides of the star it is bound to (not a world adrift, or alone in the dark), until
+ * its core heat runs out after the Last Light.
+ */
+export function buriedOcean(state: GameState, b: Body, climate: BodyClimate = bodyClimate(state, b)): boolean {
+  if (b.dissolved || (b.kind !== 'ocean_ice' && !b.traits.includes('subsurface_ocean'))) return false;
+  if (climate.steam || (climate.night ?? climate.mean) >= ICE_MELTS_K) return false;
+  const p = state.systems[b.systemId]?.primary;
+  if (b.rogue || !p || p.kind === 'rogue' || p.kind === 'void') return false;
+  return calendarEra(state) === 'dusk' || b.coreHeat >= BURIED_HEAT;
+}
+
+/** After the Last Light a buried ocean stays liquid while its core heat is at least this. */
+export const BURIED_HEAT = 0.05;
+
+/**
+ * A plain description of a world's water at its current temperature. `ocean`: whether an
+ * ice-shelled ocean is still liquid under its ice (buriedOcean); if not, it is frozen through.
+ */
+export function waterState(b: Body, climate: BodyClimate, ocean = true): string {
   const w = b.water ?? 0;
   if (w <= 0.005) return 'none';
   const share = `${Math.round(w * 100)}%`;
   // ice stays ice only while even the warmest ground is below freezing (a flare can melt it)
   const warmest = climate.day ?? climate.mean;
-  if (b.kind === 'ocean_ice' && warmest < 273) return `${share}: a global ocean under the ice`;
+  if (climate.airless) {
+    // no air, so no liquid: ice where the ground is cold enough to keep it, or gone to space
+    const coldest = climate.night ?? climate.mean;
+    if (b.kind === 'asteroids') return coldest < AIRLESS_ICE_K ? `${share}: ice in the rubble` : `${share}: boiling off the rubble`;
+    if (warmest < AIRLESS_ICE_K) return `${share}: frost`;
+    if (coldest < AIRLESS_ICE_K) return `${share}: frost cold-trapped on the night side, the day side bare`;
+    return `${share}: boiling off into space`;
+  }
+  if (b.kind === 'ocean_ice' && warmest < 273) return ocean ? `${share}: ${w >= 0.9 ? 'a global ocean' : 'an ocean'} under the ice` : `${share}: frozen through`;
   if (b.kind === 'asteroids') return warmest < 273 ? `${share}: ice in the rubble` : `${share}: boiling off the rubble`;
   const liquidAt = (k: number) => k >= 273 && k < 373;
   if (climate.day !== undefined && climate.night !== undefined) {
@@ -1065,9 +1274,11 @@ export function waterState(b: Body, climate: BodyClimate): string {
 
 /**
  * Light from a black hole's accretion disk, in collector units (a red dwarf's light = 1).
- * Also sets how brightly the disk is drawn, so what you see is what collectors get.
+ * Also sets how brightly the disk is drawn, so what you see is what collectors get. Nothing feeds
+ * one once ordinary matter is gone (`matter` false: after the Great Decay).
  */
-export function diskLight(kind: 'black_hole' | 'smbh', era: string, years: number): number {
+export function diskLight(kind: 'black_hole' | 'smbh', era: string, years: number, matter = true): number {
+  if (!matter) return 0;
   if (kind === 'smbh') {
     if (era === 'dusk') return 1.5;
     if (era === 'degenerate') {

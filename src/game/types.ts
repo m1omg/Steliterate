@@ -78,6 +78,8 @@ export interface Primary {
   mass: number; // solar masses
   lum: number; // base light factor for its current phase (era-normalised)
   blueAt?: number; // cosmic year a red dwarf leaves the main sequence (blue dwarf)
+  blueK?: number; // its last flare at its peak: surface (K) and light (L☉), by mass (new games; older ones use 8,200 K and min(0.4, 2M))
+  blueLum?: number;
   whiteAt?: number; // cosmic year it collapses into a white dwarf
   bornAt?: number; // collision / merger stars
   diesAt?: number; // collision / merger stars burn out

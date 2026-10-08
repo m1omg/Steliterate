@@ -25,6 +25,7 @@ export interface StructureDef {
   bodies?: BodyKind[]; // allowed body kinds (default: any)
   notBodies?: BodyKind[];
   primaries?: PrimaryKind[]; // allowed primary kinds
+  notAt?: PrimaryKind[]; // primary kinds it gathers nothing from (and cannot be built at)
   habitable?: boolean; // only bodies with intrinsic habitability > 0.3
   energy?: { mode: EnergyMode; amount: number; input?: number };
   matterYield?: number; // x richness
@@ -59,7 +60,7 @@ const S = (d: StructureDef) => d;
 
 export const STRUCTURES: StructureDef[] = [
   // ---------------------------------------------------------------- Dusk: survival basics
-  S({ id: 'solar_array', name: 'Solar Arrays', desc: 'Dark photovoltaic fields tuned to a red sun.', era: 'dusk', cost: 30, matter: 10, max: 3, notBodies: ['deep', 'gas_giant'], energy: { mode: 'light', amount: 4 }, signature: 1 }),
+  S({ id: 'solar_array', name: 'Solar Arrays', desc: 'Dark photovoltaic fields tuned to a red sun.', era: 'dusk', cost: 30, matter: 10, max: 3, notBodies: ['deep', 'gas_giant'], notAt: ['brown_dwarf'], energy: { mode: 'light', amount: 4 }, signature: 1 }),
   S({ id: 'geothermal_tap', name: 'Geothermal Tap', desc: 'Bores into whatever warmth the core has left.', era: 'dusk', cost: 35, matter: 10, max: 2, notBodies: ['deep', 'gas_giant', 'asteroids'], energy: { mode: 'geo', amount: 7 }, signature: 0.5 }),
   S({ id: 'mine', name: 'Deep Mine', desc: 'Salvage and extraction, forever patched.', era: 'dusk', cost: 30, matter: 0, max: 3, notBodies: ['deep', 'gas_giant'], matterYield: 3, signature: 0.5 }),
   S({ id: 'habitat_dome', name: 'Habitat Domes', desc: 'Sealed domes and pressure halls. Warm, crowded, always humming.', era: 'dusk', cost: 40, matter: 15, max: 5, cap: { kin: 3 }, upkeep: 1, signature: 1 }),
@@ -79,8 +80,8 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'biosphere_seeding', name: 'Biosphere Seeding', desc: 'Engineered microbes, lichens and mosses sown into a world made warm and wet enough: life that spreads on its own.', era: 'dusk', tech: 'terraforming', cost: 60, matter: 20, max: 1, bodies: TERRAFORMABLE, terraform: 'seeding', signature: 0.5 }),
   S({ id: 'comet_shepherd', name: 'Volatile Shepherding', desc: 'Nudges icy bodies inward to replace what the wind has stripped.', era: 'dusk', tech: 'comet_shepherding', cost: 90, matter: 20, max: 1, habitable: true, vitalityOnce: 0.15, declineMult: 0.8, signature: 0.5 }),
   S({ id: 'cryo_hall', name: 'Cryo Hall', desc: 'Rows of cold berths. Every one of them a promise to wake someone later.', era: 'dusk', tech: 'cold_sleep', cost: 50, matter: 15, max: 2, cryoCap: 10, upkeep: 0.3, signature: 0.2 }),
-  S({ id: 'orbital_collector', name: 'Orbital Collectors', desc: 'Salvaged mirror-sails in close orbit.', era: 'dusk', tech: 'orbital_collectors', cost: 70, matter: 30, max: 2, energy: { mode: 'light', amount: 10 }, signature: 2 }),
-  S({ id: 'dyson_swarm', name: 'Dyson Swarm', desc: 'Thousands of patched collectors wrapped around the star. Bright work, visible for light-years.', era: 'dusk', tech: 'dyson_swarms', cost: 300, matter: 150, max: 1, systemUnique: true, bodies: ['deep'], energy: { mode: 'light', amount: 40 }, signature: 8 }),
+  S({ id: 'orbital_collector', name: 'Orbital Collectors', desc: 'Salvaged mirror-sails in close orbit.', era: 'dusk', tech: 'orbital_collectors', cost: 70, matter: 30, max: 2, notAt: ['brown_dwarf'], energy: { mode: 'light', amount: 10 }, signature: 2 }),
+  S({ id: 'dyson_swarm', name: 'Dyson Swarm', desc: 'Thousands of patched collectors wrapped around the star. Bright work, visible for light-years.', era: 'dusk', tech: 'dyson_swarms', cost: 300, matter: 150, max: 1, systemUnique: true, bodies: ['deep'], notAt: ['brown_dwarf'], energy: { mode: 'light', amount: 40 }, signature: 8 }),
   S({ id: 'fusion_plant', name: 'Fusion Plant', desc: 'Burns hydrogen hauled up from the giants.', era: 'dusk', tech: 'fusion', cost: 60, matter: 20, max: 2, energy: { mode: 'fusion', amount: 4, input: 2 }, signature: 2 }),
   S({ id: 'hydrogen_skimmer', name: 'Hydrogen Skimmer', desc: 'Scoops fuel from a gas giant’s upper air.', era: 'dusk', tech: 'fusion', cost: 50, matter: 10, max: 1, bodies: ['gas_giant', 'ice_giant'], hydrogenYield: 3, signature: 1 }),
   S({ id: 'substrate_core', name: 'Substrate Core', desc: 'Cold racks of thinking matter.', era: 'dusk', tech: 'mind_substrate', cost: 50, matter: 20, max: 6, cap: { echoes: 4 }, upkeep: 0.5, signature: 1 }),
@@ -95,6 +96,7 @@ export const STRUCTURES: StructureDef[] = [
 
   // ---------------------------------------------------------------- Degenerate Age
   S({ id: 'ember_collector', name: 'Ember Collectors', desc: 'Vast cold radiators around a white dwarf warmed by dark matter. Nearly useless while stars still shine; vital after the Last Light.', era: 'dusk', tech: 'ember_harvest', cost: 70, matter: 40, max: 3, bodies: ['deep'], primaries: ['white_dwarf', 'black_dwarf'], energy: { mode: 'light', amount: 12 }, signature: 2 }),
+  S({ id: 'infrared_shroud', name: 'Infrared Shrouds', desc: 'Cold radiators wrapped close around a brown dwarf, drinking its infrared: its gravity is weak enough to work in close. Next to nothing while stars still shine; after the Last Light, while it still holds the heat of its youth, more than an ember gives, fading as it cools.', era: 'dusk', tech: 'ember_harvest', cost: 70, matter: 40, max: 3, bodies: ['deep'], primaries: ['brown_dwarf'], energy: { mode: 'light', amount: 12 }, signature: 2 }),
   S({ id: 'disk_skimmer', name: 'Disk Skimmer', desc: 'Harvests the debris stream of a world falling into its dead star.', era: 'degenerate', tech: 'accretion_modelling', cost: 80, matter: 30, max: 2, bodies: ['deep'], energy: { mode: 'rekindle', amount: 14 }, signature: 2 }),
   S({ id: 'brown_siphon', name: 'Hydrogen Siphon', desc: 'Drinks from a brown dwarf that never became a star.', era: 'degenerate', tech: 'brown_dwarf_mining', cost: 70, matter: 20, max: 1, bodies: ['deep'], primaries: ['brown_dwarf'], lift: 6, signature: 2 }),
   S({ id: 'cold_vault', name: 'Cold Vault', desc: 'A shielded vault near absolute zero, home to Coldminds.', era: 'degenerate', tech: 'cold_computation', cost: 60, matter: 25, max: 4, cap: { coldminds: 6 }, enables: 'cool', upkeep: 0.1, signature: 0.1 }),
@@ -167,20 +169,20 @@ type LightSource = 'star' | 'remnant' | 'cold' | 'pulsar' | 'hole';
 
 const LOCAL_NAMES: Record<string, Partial<Record<LightSource, [string, string]>>> = {
   solar_array: {
-    remnant: ['Glow Arrays', 'Photovoltaic fields retuned to the fading glow of a white dwarf.'],
-    cold: ['Infrared Nets', 'Thermal membranes drinking the last faint infrared of a dead star. Next to nothing, unless something warms it again.'],
+    remnant: ['Glow Arrays', 'Collector fields retuned to the fading glow of a white dwarf, its light while it is young and its infrared as it cools.'],
+    cold: ['Infrared Nets', 'Thermal membranes drinking the last faint infrared of a dead or failed star. Next to nothing, unless something warms it again.'],
     pulsar: ['Beam Arrays', 'Collector fields timed to the sweep of a pulsar’s beam.'],
     hole: ['Disk Arrays', 'Collector fields turned toward the glow of the accretion disk.'],
   },
   orbital_collector: {
     remnant: ['Orbital Glow Sails', 'Mirror-sails in close orbit, catching what light a white dwarf still gives.'],
-    cold: ['Orbital Infrared Sails', 'Wide, cold sails gathering the faint heat of a dead star.'],
+    cold: ['Orbital Infrared Sails', 'Wide, cold sails gathering the faint heat of a dead or failed star.'],
     pulsar: ['Orbital Beam Catchers', 'Sails that ride the pulsar’s beam as it sweeps past.'],
     hole: ['Disk-Light Sails', 'Mirror-sails in orbit about the accretion disk.'],
   },
   dyson_swarm: {
     remnant: ['Remnant Swarm', 'Collectors wrapped close around a white dwarf.'],
-    cold: ['Cold Swarm', 'A swarm of cold membranes around a dead star, gathering almost nothing unless it is warmed again.'],
+    cold: ['Cold Swarm', 'A swarm of cold membranes around a dead or failed star, gathering almost nothing unless it is warmed again.'],
     pulsar: ['Pulsar Swarm', 'Collectors wrapped around a neutron star, shielded from its beams.'],
     hole: ['Disk Swarm', 'Collectors ringing the accretion disk of a black hole.'],
   },

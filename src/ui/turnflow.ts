@@ -70,7 +70,7 @@ export function doEndTurn() {
   const living = surveyed.flatMap((id) => livingWorlds(s, id));
   if (living.length) {
     const b = living.sort((x, y) => y.habitability * y.vitality - x.habitability * x.vitality)[0];
-    notify(`Living world found: ${b.name} in ${s.systems[b.systemId].name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b)} Kin${living.length > 1 ? ` (and ${living.length - 1} more)` : ''}.`, 'good', {
+    notify(`Living world found: ${b.name} in ${s.systems[b.systemId].name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b, s)} Kin${living.length > 1 ? ` (and ${living.length - 1} more)` : ''}.`, 'good', {
       label: 'Look',
       tip: `Go to ${b.name}`,
       run: () => goToBody(b),

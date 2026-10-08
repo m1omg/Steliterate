@@ -274,7 +274,7 @@ export class Engine {
       this.rig.maxDistance = 600;
       this.rig.jump(new THREE.Vector3(0, 0, 0), 150);
       this.rig.goalPitch = this.rig.pitch = 0.5;
-      this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.4);
+      this.rig.flyTo(new THREE.Vector3(0, 0, 0), this.system.frameDistance(), 1.4);
       if (focusBodyId) {
         this.system.selectedBody = focusBodyId;
         this.focusBody(focusBodyId);
@@ -340,7 +340,7 @@ export class Engine {
   /** In the system view: step back to see the whole system (lets go of any followed world). */
   frameSystem() {
     if (this.view !== 'system') return;
-    this.rig.flyTo(new THREE.Vector3(0, 0, 0), 70 + this.system.primaryRadius * 4, 1.0);
+    this.rig.flyTo(new THREE.Vector3(0, 0, 0), this.system.frameDistance(), 1.0);
   }
 
   /** 0 natural light, 1 enhanced (light amplification), 2 thermal (false colour by temperature). */

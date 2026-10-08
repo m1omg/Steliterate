@@ -13,7 +13,7 @@ import { capacity } from './economy';
 import { workRequirementMet } from './endings';
 import { resolveEvent } from './events';
 import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
-import { absorbSwarm, drawSwarmTo, tameSwarm } from './hunger';
+import { absorbSwarm, attackSwarm, drawSwarmTo, tameSwarm } from './hunger';
 import { BEACON_COST } from './beacons';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
@@ -43,6 +43,7 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.bodies && !d.bodies.includes(b.kind) && !d.bodies.includes('deep')) return `Must be built on ${d.bodies.join(' or ')}.`;
   if (d.notBodies && d.notBodies.includes(b.kind)) return 'Cannot be built here.';
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return 'Needs a different kind of star or remnant.';
+  if (d.notAt?.includes(sys.primary.kind)) return sys.primary.kind === 'brown_dwarf' ? 'A brown dwarf’s light is too faint and too red for these: Infrared Shrouds gather it.' : 'Gathers nothing from this kind of star.';
   if (d.habitable && b.habitability < 0.3) return 'Only on a living world.';
   if (d.terraform) {
     const why = terraformBlocked(state, b, c, d.terraform);
@@ -473,6 +474,11 @@ export function putOutBeacon(state: GameState, systemId: string): ActionResult {
   delete sys.beacon;
   log(state, `We let the beacon at ${sys.name} go dark.`, 'info', sys.id);
   return null;
+}
+
+/** Send every warship of ours at this fleet's star against its swarm (once a turn). */
+export function attack(state: GameState, fleetId: string): string | { ok: boolean; text: string } {
+  return attackSwarm(state, fleetId);
 }
 
 export function tame(state: GameState, swarmId: string): ActionResult {

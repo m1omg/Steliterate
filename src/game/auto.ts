@@ -204,7 +204,7 @@ function planBuilds(state: GameState) {
       if (civ.matter > 60) plan.push('accretion_engine', 'fusion_plant');
     }
     if (energyFirst) {
-      if (light > 0.3) plan.push('dyson_swarm', 'orbital_collector', 'ember_collector', 'solar_array');
+      if (light > 0.3) plan.push('dyson_swarm', 'orbital_collector', 'ember_collector', 'infrared_shroud', 'solar_array');
       plan.push('disk_skimmer', 'accretion_engine', 'pulsar_brake', 'geothermal_tap', 'fusion_plant', 'decay_harvester');
     }
     // its star has died: light Orbital Lamps while there is still life to keep
@@ -218,13 +218,13 @@ function planBuilds(state: GameState) {
     if (hasTech(state, 'mind_substrate') && c.pops.echoes >= capc.echoes - 1) plan.push('substrate_core');
     if (hasTech(state, 'cold_computation') && c.pops.coldminds >= capc.coldminds - 1) plan.unshift('cold_vault');
     if (lateDusk && c.pops.kin > 0) plan.push('cryo_hall');
-    if (calendarEra(state) === 'dusk' && state.eta > 13.985) plan.push('ember_collector', 'fusion_plant', 'accretion_engine', 'reserve_vault');
+    if (calendarEra(state) === 'dusk' && state.eta > 13.985) plan.push('ember_collector', 'infrared_shroud', 'fusion_plant', 'accretion_engine', 'reserve_vault');
     if (civ.energy > cap * 0.8) plan.push('reserve_vault', 'superconducting_ring', 'horizon_vault', 'burst_catcher');
     if (civ.matter < 80) plan.push('mine', 'hydrogen_skimmer', 'brown_siphon');
     if (t.echoes > 0 && hasTech(state, 'upload')) plan.push('upload_clinic');
     if (hasTech(state, 'cold_computation')) plan.push('cold_vault');
     if (Object.values(state.swarms).some((s) => !s.tamed && s.awake)) plan.push('defense_grid');
-    plan.push('archive_spire', 'orbital_collector', 'solar_array', 'foundry', 'ember_collector', 'relic_dig', 'commons', 'reserve_vault');
+    plan.push('archive_spire', 'orbital_collector', 'solar_array', 'foundry', 'ember_collector', 'infrared_shroud', 'relic_dig', 'commons', 'reserve_vault');
     tryBuild(state, c, plan);
   }
 }

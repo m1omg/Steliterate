@@ -2,15 +2,16 @@
 // - A new galaxy whose stars are already flaring starts with the flare so far behind it
 //   (scorchedFromTheStart): each world it scorches, even on the night side, has the life and
 //   water scorchWorlds would have left it after that share of the flare, and one whose life ran
-//   out has died as it dies in play (surface life to bare rock). Nothing else changes, and no
-//   random draw is taken.
+//   out has died as it dies in play (surface life to bare rock). Life dies at once where even the
+//   night side is past the limit of life (395 K); a dead world loses its water as a living one
+//   does; a water-rich world keeps its own. Nothing else changes, and no random draw is taken.
 // - A steam world (water_rich, past the runaway limit) holds no life: what it has dies with the
 //   turn, and we hear of it if we know the world.
 // - A world dry on its day side that keeps ice, and an ocean under it, on its night side (a
 //   twilight sea) keeps its life through a flare.
 import { generateWorld } from '../../../src/game/gen';
 import { DEFAULT_SETTINGS, newGame } from '../../../src/game/newGame';
-import { SURFACE_LIFE, bodyClimate, decayWarmth, frozenFromTheStart, primaryLuminosity, steamWorld, waterFromTheStart } from '../../../src/game/physics';
+import { LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, decayWarmth, frozenFromTheStart, primaryLuminosity, steamWorld, waterFromTheStart } from '../../../src/game/physics';
 import { calendarEra } from '../../../src/game/fate';
 import { scorched } from '../../../src/game/sim/flare';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -23,6 +24,9 @@ const same = (a: Body, b: Body) => JSON.stringify({ ...a, colonyId: null }) === 
 {
   let hit = 0;
   let dead = 0;
+  let atOnce = 0;
+  let dried = 0;
+  let rich = 0;
   let wrong = 0;
   let other = 0;
   let stars = 0;
@@ -36,23 +40,31 @@ const same = (a: Body, b: Body) => JSON.stringify({ ...a, colonyId: null }) === 
     for (const [id, a] of Object.entries(pre.bodies)) {
       const b = s.bodies[id];
       const p = pre.systems[a.systemId].primary;
-      const hot = a.vitality > 0 && scorched(pre, a) && p.blueAt !== undefined && p.whiteAt !== undefined;
+      const hot = !a.dissolved && scorched(pre, a) && p.blueAt !== undefined && p.whiteAt !== undefined;
       if (!hot) {
         if (!same(a, b)) other++;
         continue;
       }
-      hit++;
       const share = Math.max(0, Math.min(1, (pre.years - p.blueAt!) / (p.whiteAt! - p.blueAt!)));
-      const want: Body = { ...a, vitality: Math.max(0, a.vitality - 0.6 * share), water: a.water ? a.water * (1 - 0.9 * share) : a.water };
-      if (want.vitality <= 0) {
-        dead++;
-        if (SURFACE_LIFE.includes(a.kind)) Object.assign(want, { kind: 'barren', habitability: 0, traits: a.traits.includes('once_alive') ? a.traits : [...a.traits, 'once_alive'] });
-      }
+      const keeps = !a.water || a.traits.includes('water_rich');
+      const want: Body = { ...a, water: keeps ? a.water : a.water! * (1 - 0.9 * share) };
+      if (a.traits.includes('water_rich')) rich++;
+      if (a.vitality > 0) {
+        hit++;
+        const c = bodyClimate(pre, a);
+        const boiled = (c.night ?? c.mean) >= LIFE_LIMIT_K;
+        if (boiled) atOnce++;
+        want.vitality = boiled ? 0 : Math.max(0, a.vitality - 0.6 * share);
+        if (want.vitality <= 0) {
+          dead++;
+          if (SURFACE_LIFE.includes(a.kind)) Object.assign(want, { kind: 'barren', habitability: 0, traits: a.traits.includes('once_alive') ? a.traits : [...a.traits, 'once_alive'] });
+        }
+      } else if (!keeps) dried++;
       if (!same(want, b)) wrong++;
     }
   }
-  check(hit >= 10 && wrong === 0, `six galaxies: ${hit} living worlds a flare under way has scorched start as the flare so far leaves them`);
-  check(dead >= hit - 3, `${dead} of them start dead (most such flares are well on)`);
+  check(hit >= 5 && wrong === 0, `six galaxies: ${hit} living worlds a flare under way has scorched start as the flare so far leaves them, and ${dried} dead ones lose their water too (${rich} water-rich keep theirs)`);
+  check(dead >= hit - 3 && atOnce > 0, `${dead} of them start dead (most such flares are well on), ${atOnce} at once, past the limit of life even on the night side`);
   check(other === 0 && stars === 0, `every other world and every star as generated and sorted by water (${other}, ${stars})`);
 }
 

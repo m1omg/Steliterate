@@ -98,6 +98,35 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   0.042 AU), unlike real systems, which also have cold outer planets (microlensing). Offered outer
   worlds as a separate batch (a hash of each system's seed, not the generator's draws); waiting
   for their word.
+- **8 Oct, later (the audits):** "Do both, keep the water (but only if their water content isn't
+  enough to induce a planet-wide runaway greenhouse) and add outer worlds" ("One red dwarf in
+  three"); steam ground cooler, after Selsis et al. 2023 ("Runaway greenhouse, especially around
+  red dwarfs, is not that hot"); brown dwarfs "should also cool realistically like white
+  dwarves", each its own age, with a brown-dwarf-only collector usable from the Dusk ("easier to
+  mine an approach … not as high gravity"), normal collectors refused there, "Their real light"
+  in the Dusk and "All of it" after the Last Light. The galaxy's background: "About 1 K, as
+  estimated" (they had pasted a table of today's 3–4 K; told them the red dwarfs alone give about
+  a few tenths of a percent of today's light). "Starless planet should show temperature value.
+  That's not a fucking bug. What's a fucking bug is that it's showing the wrong temperature":
+  keep a row that is there and fix its value. Then "Please check all the planets and stars to
+  make sure there is nothing that doesn't make sense" and "The wrong stuff please fix even though
+  I have a game in progress, make sure it applies to that too. The more radical changes, yeah,
+  apply them to a new game." Two audits (planet, star) found about 25 things; fixed live where
+  they were wrong, new games only where a galaxy changes. Their answers on the two big ones: the
+  blue-dwarf flare, far too bright (a 0.10 M☉ star peaks near 5,800 K and 1% of the Sun), "Fix it
+  for new games only"; white dwarfs, two laws with a jump at the Last Light, "Mestel, then Debye
+  fading" (Recommended). Also asked: "plenty of white dwarfs above 2000 Kelvin or so during
+  dusk": physically a white dwarf is above 2,000 K only for its first ~64 billion years, so only
+  a red dwarf's fresh remnant is, for a turn or so (told them). Cold white dwarfs "should look
+  like the degenerate era embers … a slightly different color": done, copper. Black holes: their
+  collectors gather the disk, not Hawking radiation (only the Hawking Collector does, a bend);
+  "planets around black holes which have any accretion disks, even faint ones, should definitely
+  not be horizon temperature": the disk now warms them. "It should be possible to actively attack
+  the swarm with your warships": Attack the swarm. "The rust can disappear over time. I think
+  that was a wrong choice from me to keep it permanent": it fades, a tenth a turn.
+  Discuss first, not built: tidal locking by locking time (everything within about 1.4 AU of a
+  red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
+  its mass-blind date; the helium stars' one set of numbers.
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **The player works from more than one session.** Before changing anything, fetch every branch

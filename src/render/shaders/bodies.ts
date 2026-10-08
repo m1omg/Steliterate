@@ -244,7 +244,7 @@ export const PLANET_FRAG = /* glsl */ `
         }
       }
     }
-    // the Hunger's rust: patches that spread the longer a swarm has fed here (it never fades),
+    // the Hunger's rust: patches that spread the longer a swarm has fed here (it fades once the swarms are gone),
     // dull oxide pitted where the harvesters bored in; on a giant, a thinner brown haze
     float rustN = fbm3(p * 5.0 + uSeed * 3.0) + 0.3 * snoise(p * 16.0 + uSeed);
     float giant = (uKind == 3 || uKind == 4) ? 0.5 : 1.0;

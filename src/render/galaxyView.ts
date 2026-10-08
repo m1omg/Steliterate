@@ -7,7 +7,7 @@ import { starsSeen } from '../game/sim/claims';
 import { Rng, hashSeed } from '../game/rng';
 import type { GameState, StarSystem } from '../game/types';
 import { blackbody } from './shaders/noise';
-import { calendarEra } from '../game/fate';
+import { calendarEra, matterGone } from '../game/fate';
 
 // The Coalescence seen from outside: layered star populations of the ancestral galaxies,
 // dimming era by era, with every known system as a node you can pick.
@@ -649,9 +649,15 @@ export class GalaxyView {
 /** A primary's surface (or, for holes, its disk's) temperature for the thermal view, in K. */
 function nodeTemperature(s: StarSystem, state: GameState): number {
   const k = shownKind(s.primary, state.years);
-  if (k === 'black_hole' || k === 'smbh') return 2.7 + 900 * diskLight(k, calendarEra(state), state.years);
+  if (k === 'black_hole' || k === 'smbh') return 2.7 + 900 * diskLight(k, calendarEra(state), state.years, !matterGone(state));
   if (k === 'void' || k === 'rogue') return 3;
   return primaryTemperature(s.primary, state.years, calendarEra(state));
+}
+
+/** How far a white dwarf in the Dusk glows in its own colour: 0 below 780 K (too cool to glow; drawn like an ember), 1 from 1,500 K. */
+export function coolDwarfShine(T: number): number {
+  const t = Math.min(1, Math.max(0, (T - 780) / (1500 - 780)));
+  return t * t * (3 - 2 * t);
 }
 
 function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
@@ -671,6 +677,12 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   }
   const [r, g, b] = blackbody(Math.max(1800, tK));
   const boost = k === 'red_dwarf' || k === 'collision_star' ? 1.0 : 1.2;
+  if (k === 'white_dwarf') {
+    // too cool to glow, it shows as an ember does, a little warmer in tint
+    const e = coolDwarfShine(tK);
+    const cool = [0.66, 0.6, 0.72];
+    return [cool[0] + (r * boost - cool[0]) * e, cool[1] + (g * boost - cool[1]) * e, cool[2] + (b * boost - cool[2]) * e];
+  }
   return [r * boost, g * boost, b * boost];
 }
 

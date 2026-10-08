@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
 import { ERA_BY_ID, logTurnLength, tideLength } from '../eras';
-import { SURFACE_LIFE, evolveUniverse, lampsOver, seededLifeUnkept, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
+import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, evolveUniverse, lampsOver, seededLifeUnkept, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { greatEvaporation, runCrossing } from './crossing';
@@ -132,12 +132,20 @@ function declineWorlds(state: GameState) {
   }
 }
 
-/** What `share` of a flare does to a scorched world: true if its life is gone. */
-function scorch(b: Body, share: number): boolean {
-  b.vitality = Math.max(0, b.vitality - 0.6 * share);
-  // the seas boil into steam, and the steam is broken up and lost to space
-  if (b.water) b.water *= 1 - 0.9 * share;
-  return b.vitality <= 0;
+/**
+ * What `share` of a flare does to a scorched world, living or dead: true if it had life and the
+ * life is gone. Life dies over the flare, at once where even the night side is past the limit
+ * of life. The seas boil into steam, and the steam is broken up and lost to space (a water-rich
+ * world has far too much to lose in one flare).
+ */
+function scorch(state: GameState, b: Body, share: number): boolean {
+  const alive = b.vitality > 0;
+  if (alive) {
+    const c = bodyClimate(state, b);
+    b.vitality = (c.night ?? c.mean) >= LIFE_LIMIT_K ? 0 : Math.max(0, b.vitality - 0.6 * share);
+  }
+  if (b.water && !b.traits.includes('water_rich')) b.water *= 1 - 0.9 * share;
+  return alive && b.vitality <= 0;
 }
 
 /**
@@ -146,13 +154,13 @@ function scorch(b: Body, share: number): boolean {
  */
 function scorchWorlds(state: GameState, from: number, to: number) {
   for (const b of Object.values(state.bodies)) {
-    if (b.dissolved || b.vitality <= 0 || !scorched(state, b)) continue;
+    if (b.dissolved || !scorched(state, b)) continue;
     const p = state.systems[b.systemId].primary;
     const start = p.blueAt ?? from;
     const end = p.whiteAt ?? to;
     const share = end > start ? Math.max(0, Math.min(end, to) - Math.max(start, from)) / (end - start) : 1;
     if (share <= 0) continue;
-    if (scorch(b, share)) worldDies(state, b, true);
+    if (scorch(state, b, share)) worldDies(state, b, true);
   }
 }
 
@@ -165,18 +173,23 @@ function scorchWorlds(state: GameState, from: number, to: number) {
 export function scorchedFromTheStart(state: GameState): number {
   let n = 0;
   for (const b of Object.values(state.bodies)) {
-    if (b.dissolved || b.vitality <= 0 || !scorched(state, b)) continue;
+    if (b.dissolved || !scorched(state, b)) continue;
     const p = state.systems[b.systemId].primary;
     if (p.blueAt === undefined || p.whiteAt === undefined || p.whiteAt <= p.blueAt) continue;
     const share = Math.max(0, Math.min(1, (state.years - p.blueAt) / (p.whiteAt - p.blueAt)));
     if (share <= 0) continue;
-    if (scorch(b, share)) worldDies(state, b, true);
-    n++;
+    const alive = b.vitality > 0;
+    if (scorch(state, b, share)) worldDies(state, b, true);
+    if (alive) n++;
   }
   return n;
 }
 
-/** A living world that has lost its warmth freezes, or dries to bare rock. */
+/**
+ * A living world whose life is gone: it freezes, or dries to bare rock. What we hear says how it
+ * died: boiled by a flare, frozen with its warmth gone, or (its slow decline, its star still
+ * burning) dead with its sea still open under its star.
+ */
 function worldDies(state: GameState, b: Body, scorched = false) {
   if (!SURFACE_LIFE.includes(b.kind)) return;
   const was = b.kind;
@@ -187,12 +200,14 @@ function worldDies(state: GameState, b: Body, scorched = false) {
   const mine = !!b.colonyId;
   const seen = (state.civ.known[b.systemId] ?? 0) === 2;
   if (mine || seen) {
+    const c = bodyClimate(state, b);
+    const open = !scorched && b.kind === 'ice' && (c.day ?? c.mean) >= ICE_MELTS_K;
     const what = scorched
-      ? 'Its seas boiled away under the flare and its air went with them'
-      : was === 'eyeball'
-        ? 'Its sea has frozen from the terminator to the substellar point'
-        : 'Its seas have frozen and its air has settled out as frost';
-    log(state, `${b.name} has died. ${what}; it is ${b.kind === 'ice' ? 'an ice world' : 'bare rock'} now.`, mine ? 'bad' : 'info', b.systemId);
+      ? 'Its seas boiled away under the flare and its air went with them; it is bare rock now'
+      : open
+        ? `Nothing lives there now, though its star still keeps ${c.night !== undefined && c.night < ICE_MELTS_K ? 'a sea open on its day side, ice beyond it' : 'its seas open'}`
+        : `${was === 'eyeball' ? 'Its sea has frozen from the terminator to the substellar point' : 'Its seas have frozen and its air has settled out as frost'}; it is ${b.kind === 'ice' ? 'an ice world' : 'bare rock'} now`;
+    log(state, `${b.name} has died. ${what}.`, mine ? 'bad' : 'info', b.systemId);
   }
 }
 
@@ -612,7 +627,7 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         if (mine) queueEvent(state, 'cast_out', { systemId: sys.id });
         break;
       case 'swallowed':
-        for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'the system fell into the Heart');
+        for (const c of colonies(state)) if (c.systemId === sys.id && !state.bodies[c.bodyId]?.rogue) destroyColony(state, c, 'the system fell into the Heart');
         if (seen) log(state, `${sys.name} fell into the Heart.`, 'info', sys.id);
         break;
       case 'evaporated': {

@@ -1148,3 +1148,86 @@ at once". Built in phases, each with its checks and harness numbers.
   - `unit/twilight` audits naming without assuming none at the start.
   - `unit/clock` compares the insight from Study and Watch with a tolerance: the new course gave
     25.000000000000057.
+
+## The audits of every world and star; outer worlds; dwarfs that cool; attacking swarms (8 Oct)
+
+Two audits went through every kind of world and star, in six new galaxies, two autoplayed games
+to their end, the saves in `tools/saves` and the player's turn-77 save. What was wrong is fixed
+live, so games in progress get it; what changes a galaxy is for new games only, as the player
+asked ("the wrong stuff please fix even though I have a game in progress … the more radical
+changes … apply them to a new game").
+
+- **Live: temperatures.**
+  - Nothing sits at the horizon's 2.2 × 10^-30 K while the galaxy glows: about 1 K in the Dusk
+    (its red dwarfs' light; today's starlight gives 3.2 K) and 10 mK from the embers after the
+    Last Light, to η 25. A world with no star shows it, and Sunlight and Orbit read "none: no
+    star".
+  - A black hole's disk warms its worlds with what it gives collectors: 5 to 14 K in the Dusk
+    (a disk of about 6 × 10^-5 L☉), 0.04 to 0.1 K at η 16.
+  - Giants show a temperature, and keep their own heat (Jupiter's 100 K today, by Burrows et
+    al.'s slope): 2 to 5 K in the Dusk.
+  - Steam worlds stand on ground by their star's colour (Selsis et al. 2023): about 600 K by a red
+    dwarf, 550 K by a TRAPPIST-1 and 1,250 K by a Sun-like star at the limit, warming slowly past
+    it, not 1,500 K everywhere.
+  - Only the starlight divides a locked world into day and night; its own heat and the glow warm
+    both sides (a world warm from inside had a day side 40% warmer for no reason).
+  - Dead stars, one law per kind, the same in every age, each from its own age (a hash of its
+    mass for one the galaxy began with), so nothing jumps at the Last Light. White dwarfs by
+    Mestel's law, then faster once crystallised (the player's choice): 48 to 89 K in the Dusk,
+    13 K at η 15. Brown dwarfs by Burrows et al. (2001): 28 to 63 K in the Dusk, 420 K at 59
+    billion years. Dark matter warms them from the Dusk on: embers 63 K, neutron stars 900 K (no
+    longer 30,000 K in the Dusk), brown dwarfs 4 K. A dwarf a world falls into reads 50 to 110 K,
+    not 300 K; a red dwarf's remnant is never hotter than its flare's peak. No white dwarf the
+    galaxy began with is above 2,000 K: one is, physically, only for its first 64 billion years.
+  - A neutron star's panel shows curvature warmth once known; the Heart's disk goes dark once
+    matter is gone.
+- **Live: what the panels say.**
+  - Airless bare rock and rubble hold no liquid water: frost below 110 K (Vasavada et al. 1999),
+    cold-trapped on a night side, boiling off where warm.
+  - Names by where the water is: Eyeball sea and Eyeball world (Pierrehumbert 2011), Terminator
+    world for a living world with a dry day side and a frozen night side (Lobo et al. 2023), a
+    Scorched world only with its night side thawed, a Twilight sea for a locked icy world in a
+    flare whose night side is still frozen; "Once …" only for a world that changed, from its past.
+  - Room for Kin is the real rule (none where a flare scorches, five by a thawed sea).
+  - Chips only while true: a buried ocean only with tides (and core heat after the Last Light),
+    water-rich only with the water, vent life and warm-under-hydrogen only while alive, clathrates
+    not on a steam world, resonance and locking not for a world alone; belts are never locked.
+  - Sunlight "none: its star gives none", "(most)" or "(least)" where surface arrays are capped;
+    Falls inward only where worlds fall in; masses and small lights to two figures (×0.05, not
+    ×0.1); a feeding world's orbit; truer tips and finds (a primordial hole's mass by the age,
+    fossils and flare glass).
+  - Cold white dwarfs (below 780 K) are drawn as embers are, a little more copper.
+  - Rust fades, a tenth a turn where no swarm is, and is gone below 1% (the player's call).
+- **Live: rules.**
+  - No Kin room on a world frozen hard (warmest ground below 195 K), unless Orbital Lamps warm it.
+  - A system that falls into the Heart takes its worlds (they had stayed behind as phantoms, some
+    feeding a star that was gone); older saves are cleared as they load.
+  - A flare boils a dead world's seas as a living one's; a water-rich world keeps its own; life
+    dies at once where even the night side is past 395 K. A world dead of its decline under a
+    burning star is said to keep its open sea (Aster's message had it frozen at 336 K).
+  - The sea-freezes event and the comet bring nothing back to a dead homeworld; vent life on a
+    world with no star freezes as a rogue's does; Kin cannot settle ice giants.
+  - Brown dwarfs give collectors all their own light: next to nothing in the Dusk, worth one to
+    thirty embers at the Last Light, fading as they cool. Ordinary collectors gather nothing there;
+    **Infrared Shrouds** (Ember Harvest, the Deep, three) do.
+  - **Attack the swarm** (the player's ask): every warship at its star together, once a turn, at
+    plain strength, by the odds it has when it comes for them, shown on the button; a win tears
+    0.3 × the attack out of it and salvages twice that, a loss tears into the ships, a sleeper
+    that survives wakes. Choose on map takes a swarm for its star.
+- **New games only.**
+  - Outer worlds: one red dwarf in three has one to three cold worlds at 0.3 to 8 AU, one brown
+    dwarf in eight one (18 to 34 a galaxy: 47% ice worlds, 37% ice giants, 10% gas giants, 6%
+    belts), each system from a draw of its own after generation: every other world as before.
+  - A locked water-poor world with a frozen night side keeps its water there (35 in four
+    galaxies: eyeball and twilight seas) instead of starting as bare rock.
+  - The home ice moon is locked, as everything inside 0.08 AU is.
+  - The physical flare (the player's choice, new games only): a 0.10 M☉ star peaks at 5,800 K and
+    1% of the Sun, about 9 times its light (4 to 80 times by mass), not 174. Aster's night side
+    reaches 323 K, not 681 K. Older games keep 8,200 K.
+- **Balance.** 300 games: 143 survive, 56 victories, a Degenerate Age of 69 turns. 900 games:
+  435 / 184 / 71, against 429 / 185 / 69 live, within the noise (no game plays out as before, as
+  the galaxies differ). By fate: decay 166 / 450, stable 165 / 239, curvature 104 / 211. The
+  audit's rule fixes on their own gave 455 / 194 / 69.
+- **Checks.** New `unit/worlds`, `unit/deadworlds`, `unit/outer`, `unit/attack`, `browser/worlds`
+  and `browser/attack`; `unit/cooling` rewritten for the laws; `unit/scorch`, `unit/icy`,
+  `unit/evap` and `unit/dismantle` updated.

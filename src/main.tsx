@@ -22,17 +22,21 @@ import { startLoaded } from './ui/screens/Misc';
 import './ui/styles.css';
 
 const stage = document.getElementById('stage')!;
-/** The star system a pick stands for: the star itself, or the one a fleet is parked at. */
+/** The star system a pick stands for: the star itself, the one a fleet is parked at, or a swarm's (where it is, or where it is going). */
 function starOf(p: Pickable): string | null {
   if (p.kind === 'system') return p.id.startsWith('body:') ? null : p.id;
   if (p.kind === 'fleet') return game.value?.fleets[p.id]?.at ?? null;
+  if (p.kind === 'swarm') {
+    const sw = game.value?.swarms[p.id];
+    return sw?.systemId ?? sw?.to ?? null;
+  }
   return null;
 }
 
 const eng = new Engine(stage, {
   onPick(p, v, pointerType) {
     const t = targeting.value;
-    // choosing a destination: a star, or a fleet parked at one, means that star
+    // choosing a destination: a star, a fleet parked at one or a swarm means that star
     const dest = t && p ? starOf(p) : null;
     if (t && dest) {
       targeting.value = null;
