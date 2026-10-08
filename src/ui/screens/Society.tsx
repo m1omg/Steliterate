@@ -63,15 +63,15 @@ export function ChartersModal({ s }: { s: GameState }) {
           <h4 class="grow">{d.name}</h4>
           <span class="mono faint">{d.cost} accord</span>
         </div>
-        <div class="flavor" style={{ fontSize: '13px' }}>{d.desc}</div>
-        <div style={{ fontSize: '12px' }}>{d.effect}</div>
+        <div class="flavor" style={{ fontSize: '14.5px' }}>{d.desc}</div>
+        <div style={{ fontSize: '13.5px' }}>{d.effect}</div>
         <Stances d={d} />
         {enacted && d.dark ? (
-          <span class="good" style={{ fontSize: '12px' }}><Icon name="check" /> Enacted. There is no undoing it.</span>
+          <span class="good" style={{ fontSize: '13.5px' }}><Icon name="check" /> Enacted. There is no undoing it.</span>
         ) : enacted ? (
           <div class="col" style={{ gap: '6px' }}>
             <div class="row" style={{ gap: '6px' }}>
-              <span class="good grow" style={{ fontSize: '12px' }}><Icon name="check" /> In force.</span>
+              <span class="good grow" style={{ fontSize: '13.5px' }}><Icon name="check" /> In force.</span>
               {!asking && (
                 <button class="btn small" disabled={!!repealErr} data-tip={repealErr ?? `Strike it from the book (${d.cost} accord). Standing turns around: ${repealSummary(d)}. What it did once stays done.`} onClick={() => setConfirming(d.id)}>
                   Repeal…
@@ -104,7 +104,7 @@ export function ChartersModal({ s }: { s: GameState }) {
             >
               {err && (d.tech && !s.civ.techs.includes(d.tech)) ? `Needs ${TECH_BY_ID[d.tech]?.name}` : repealedAt !== undefined ? 'Enact again' : 'Enact'}
             </button>
-            {repealedAt !== undefined && <span class="faint" style={{ fontSize: '11px' }}>Repealed in turn {repealedAt}.{d.id === 'salvage_the_dead' ? ' Its first windfall will not come again.' : ''}</span>}
+            {repealedAt !== undefined && <span class="faint" style={{ fontSize: '12.5px' }}>Repealed in turn {repealedAt}.{d.id === 'salvage_the_dead' ? ' Its first windfall will not come again.' : ''}</span>}
           </>
         )}
       </div>
@@ -115,14 +115,14 @@ export function ChartersModal({ s }: { s: GameState }) {
   return (
     <ModalFrame title="Charters" eyebrow={`The book of laws · ${inBook} of ${room} written · ${n0(s.civ.accord)} accord`} icon="doctrines">
       {!open && <p class="warn">Research The Long Record to begin writing Charters.</p>}
-      <p class="dim" style={{ fontSize: '12px', marginTop: 0 }}>
+      <p class="dim" style={{ fontSize: '13.5px', marginTop: 0 }}>
         A law stays in force until you repeal it. Each Thread has an opinion: approval raises its standing, opposition lowers it, and a repeal turns those opinions around and reopens the argument (dissent +{REPEAL_DISSENT}), for as much Accord as the law cost. What a law did once stays done. The book holds {room} laws{room === 5 ? ' (nine with the Assembly of Threads)' : ''}. A Thread whose standing stays very low may leave.
       </p>
       <div class="cards">{light.map(card)}</div>
       {showDark && (
         <div class="section">
           <h3 class="bad">The ways of the Hunger</h3>
-          <p class="dim" style={{ fontSize: '12px', marginTop: 0 }}>
+          <p class="dim" style={{ fontSize: '13.5px', marginTop: 0 }}>
             Survive the way the swarms survive: by eating what is left. Each step brings plenty now and closes some endings, and none can be repealed. They take no room in the book. At 100 Taint there is no one left inside.
           </p>
           <div class="cards">{dark.map(card)}</div>
@@ -184,7 +184,7 @@ export function ThreadsModal({ s }: { s: GameState }) {
                 <h4 class="grow">{d.name}</h4>
                 <span class="mono">{totals[t]}</span>
               </div>
-              <div class="flavor" style={{ fontSize: '13px' }}>{d.blurb}</div>
+              <div class="flavor" style={{ fontSize: '14.5px' }}>{d.blurb}</div>
               {t === 'echoes' && archivedEchoes(s) > 0 && (
                 <span class="chip warn" data-tip="Echoes that came to us with no free substrate to run on. They wait, stored and costing nothing, and move in as soon as a Substrate Core has room.">
                   {archivedEchoes(s)} waiting in the archive
@@ -211,11 +211,11 @@ export function ThreadsModal({ s }: { s: GameState }) {
                   </div>
                   <div class={`bar ${standing < 25 ? 'bad' : 'good'}`}><i style={{ width: `${standing}%` }} /></div>
                   {demDef && totals[t] > 0 && (
-                    <div class={met ? 'good' : 'warn'} style={{ fontSize: '12px' }}>
+                    <div class={met ? 'good' : 'warn'} style={{ fontSize: '13.5px' }}>
                       {met ? <Icon name="check" /> : <Icon name="warning" />} Demand: {demDef.text}
                     </div>
                   )}
-                  {s.civ.lowStanding[t] > 0 && totals[t] > 0 && <div class="bad" style={{ fontSize: '12px' }}>Talking of leaving ({s.civ.lowStanding[t]} turns).</div>}
+                  {s.civ.lowStanding[t] > 0 && totals[t] > 0 && <div class="bad" style={{ fontSize: '13.5px' }}>Talking of leaving ({s.civ.lowStanding[t]} turns).</div>}
                   {totals[t] > 0 && <AccordButton s={s} use="hear" t={t} label={`Hear them: standing +${ACCORD_USES.hear.gain}`} tip={`Give ${d.name} a full hearing before the other Threads.`} />}
                 </>
               )}

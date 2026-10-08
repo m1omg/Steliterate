@@ -639,7 +639,7 @@ export class GalaxyView {
         this.selRing.visible = true;
         this.selRing.position.copy(p.pos);
         this.selRing.lookAt(camera.position);
-        const s = Math.max(1.6, cameraDistance * 0.028) * (1 + 0.06 * Math.sin(t * 3));
+        const s = Math.max(1.6, cameraDistance * 0.028);
         this.selRing.scale.setScalar(s);
       } else this.selRing.visible = false;
     } else this.selRing.visible = false;

@@ -1,5 +1,7 @@
 import { effect } from '@preact/signals';
 import { render } from 'preact';
+// exponents drawn as raised digits of the font around them (before anything renders)
+import './ui/sup';
 import { newGame } from './game/newGame';
 import { orderFleet } from './game/sim/actions';
 import { endTurn } from './game/sim/turn';
@@ -291,4 +293,6 @@ window.__stel = {
   refresh: () => bump(),
   state: () => game.value,
   engine: () => engine(),
+  /** The music player (its layer: the synth bus, and the recording playing), for the checks. */
+  music: () => music,
 };

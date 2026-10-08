@@ -32,13 +32,13 @@ function Message({ s, sig }: { s: GameState; sig: Signal }) {
       <div class="row">
         {sv && <span style={{ width: '8px', height: '8px', background: sv.color, display: 'inline-block' }} />}
         <span class="eyebrow grow">{senderName(s, sig)}</span>
-        <span class="mono faint" style={{ fontSize: '11px' }} data-tip="How long ago this light left its sender.">
+        <span class="mono faint" style={{ fontSize: '12.5px' }} data-tip="How long ago this light left its sender.">
           {age > 1 ? `${formatYears(age)} old` : 'just now'} · turn {sig.arrivedTurn}
         </span>
       </div>
       <div class="msg-title">{sig.title}</div>
       <div class="flavor" style={{ color: 'var(--ink)' }}>{sig.text}</div>
-      {sv && !sv.alive && open && <div class="warn" style={{ fontSize: '12px', marginTop: '4px' }}>By the time this reached us, they were already gone.</div>}
+      {sv && !sv.alive && open && <div class="warn" style={{ fontSize: '13.5px', marginTop: '4px' }}>By the time this reached us, they were already gone.</div>}
       {open && (
         <div class="row wrap" style={{ gap: '6px', marginTop: '8px' }}>
           {sig.choices.map((c) => (
@@ -49,7 +49,7 @@ function Message({ s, sig }: { s: GameState; sig: Signal }) {
           ))}
         </div>
       )}
-      {sig.resolved && sig.choices.length > 0 && <div class="faint" style={{ fontSize: '11px', marginTop: '4px' }}>Answered: {sig.choices.find((c) => c.id === sig.resolved)?.label ?? sig.resolved}</div>}
+      {sig.resolved && sig.choices.length > 0 && <div class="faint" style={{ fontSize: '12.5px', marginTop: '4px' }}>Answered: {sig.choices.find((c) => c.id === sig.resolved)?.label ?? sig.resolved}</div>}
     </div>
   );
 }
@@ -136,7 +136,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                 {sv.contact ? (
                   <>
                     <div class="drawer-plate" style={{ backgroundImage: `url(art/${wayArt(sv.way)}.webp)` }} role="img" aria-label={`${sv.name}: ${WAY_NAME[sv.way]}`} />
-                    <div class="dim" style={{ fontSize: '12px' }}>{sv.adjective}, {WAY_NAME[sv.way]}. {formatDistance(ly)} away.</div>
+                    <div class="dim" style={{ fontSize: '13.5px' }}>{sv.adjective}, {WAY_NAME[sv.way]}. {formatDistance(ly)} away.</div>
                     {sv.alive ? (
                       <>
                         <dl class="kv">
@@ -203,7 +203,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                           <span class="mono">{pct(sv.health)}</span>
                         </div>
                         <div class={`bar ${sv.health < 0.3 ? 'bad' : 'good'}`}><i style={{ width: pct(sv.health) }} /></div>
-                        {sv.exodus && <div class="dim" style={{ fontSize: '12px' }}>They are leaving their star to live among us.</div>}
+                        {sv.exodus && <div class="dim" style={{ fontSize: '13.5px' }}>They are leaving their star to live among us.</div>}
                         {!sv.exodus && (
                           <>
                             <div class="row wrap" style={{ gap: '4px' }}>
@@ -289,7 +289,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                                 const why = pactBlocked(s, sv, k);
                                 return (
                                   <div key={k} class="row" style={{ gap: '6px', alignItems: 'center', marginTop: '3px' }}>
-                                    <span class={`grow ${on ? 'good' : 'dim'}`} style={{ fontSize: '12px' }} data-tip={PACTS[k].desc}>
+                                    <span class={`grow ${on ? 'good' : 'dim'}`} style={{ fontSize: '13.5px' }} data-tip={PACTS[k].desc}>
                                       {PACTS[k].name}
                                       {on ? ` · since turn ${sv.pacts?.[k]}` : waiting ? ' · proposed: waiting for their answer' : ''}
                                     </span>
@@ -316,7 +316,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                         )}
                         {armed?.endsWith(`:${sv.id}`) && (
                           <div class="row wrap confirm-heavy" style={{ gap: '6px', alignItems: 'center' }}>
-                            <span class="warn" style={{ fontSize: '12px' }}>
+                            <span class="warn" style={{ fontSize: '13.5px' }}>
                               {armed.startsWith('seize')
                                 ? `Take ${sv.name}’s star by force? Some of them would live on as our people; the rest would not. Every civilization will hear of it.`
                                 : armed.startsWith('war')
@@ -340,13 +340,13 @@ export function SignalsModal({ s }: { s: GameState }) {
                         )}
                       </>
                     ) : (
-                      <div class="dim" style={{ fontSize: '12px' }}>
+                      <div class="dim" style={{ fontSize: '13.5px' }}>
                         {sv.fate === 'faded' ? 'Their lights went out.' : sv.fate === 'saved' ? 'They made it, with our help.' : sv.fate === 'absorbed' ? 'They live on as part of us.' : sv.fate === 'seized' ? 'We took their star.' : sv.fate === 'devoured' ? 'We ate them.' : sv.fate === 'transcended' ? 'They went somewhere we cannot follow.' : 'Gone.'}
                       </div>
                     )}
                   </>
                 ) : (
-                  <div class="dim" style={{ fontSize: '12px' }}>
+                  <div class="dim" style={{ fontSize: '13.5px' }}>
                     {sv.alive ? 'Something artificial, too far or too faint to make out yet. Our voice has not reached them.' : 'Gone before we ever met.'}
                   </div>
                 )}
@@ -361,21 +361,21 @@ export function SignalsModal({ s }: { s: GameState }) {
             <div class="card">
               <div class="eyebrow">Around the Heart</div>
               <h4>The Slow Ones</h4>
-              <div class="flavor" style={{ fontSize: '13px' }}>{slow.flags.silent ? 'Silent. They stopped answering when we began to eat.' : SLOW_STAGE[slow.stage]}</div>
+              <div class="flavor" style={{ fontSize: '14.5px' }}>{slow.flags.silent ? 'Silent. They stopped answering when we began to eat.' : SLOW_STAGE[slow.stage]}</div>
               <dl class="kv">
                 <dt>Their clock</dt>
                 <dd class={`mono ${canConverse(my, slow.clock, 2.5) ? 'good' : 'warn'}`}>{pow10(slow.clock)} yr</dd>
                 <dt>Understanding</dt>
                 <dd class="mono">{n0(slow.understanding)}</dd>
               </dl>
-              {!canConverse(my, slow.clock, 2.5) && <div class="warn" style={{ fontSize: '12px' }}>We think too fast for them. Slow down (pace, Echoes, Coldminds) to be heard.</div>}
+              {!canConverse(my, slow.clock, 2.5) && <div class="warn" style={{ fontSize: '13.5px' }}>We think too fast for them. Slow down (pace, Echoes, Coldminds) to be heard.</div>}
             </div>
           )}
           {dark.stage > 0 && (
             <div class="card">
               <div class="eyebrow">In the halo</div>
               <h4>The Unlit</h4>
-              <div class="flavor" style={{ fontSize: '13px' }}>{DARK_STAGE[Math.min(dark.stage, DARK_STAGE.length - 1)]}</div>
+              <div class="flavor" style={{ fontSize: '14.5px' }}>{DARK_STAGE[Math.min(dark.stage, DARK_STAGE.length - 1)]}</div>
               <div class="row">
                 <span class="eyebrow grow">Understanding</span>
                 <span class="mono">{n0(dark.understanding)}</span>
@@ -385,7 +385,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                 <>
                   <div class="eyebrow" style={{ marginTop: '6px' }}>Their last gesture</div>
                   <PatternView p={dark.lastPattern} />
-                  <div class="dim" style={{ fontSize: '12px' }}>
+                  <div class="dim" style={{ fontSize: '13.5px' }}>
                     Answer by moving mass (15 energy, 10 matter). Continue what they began, mirror it back, resonate with it, or hold still. A misread reply can move a world.
                   </div>
                   <div class="row wrap" style={{ gap: '4px' }}>
@@ -395,7 +395,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                       </button>
                     ))}
                   </div>
-                  {s.civ.flags.gesture_turn === s.turn && <div class="faint" style={{ fontSize: '11px' }}>Masses can be moved once per turn.</div>}
+                  {s.civ.flags.gesture_turn === s.turn && <div class="faint" style={{ fontSize: '12.5px' }}>Masses can be moved once per turn.</div>}
                 </>
               )}
             </div>

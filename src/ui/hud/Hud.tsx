@@ -135,7 +135,7 @@ function BottomLeft({ s }: { s: GameState }) {
               <Icon name={f.severity === 'boon' ? 'energy' : 'warning'} cls={f.severity === 'danger' ? 'bad' : f.severity === 'boon' ? 'boon' : 'warn'} />
               <div class="grow">
                 <div class="t">{f.title}</div>
-                <div class="faint" style={{ fontSize: '11px' }}>
+                <div class="faint" style={{ fontSize: '12.5px' }}>
                   {isFinite(f.dueYears) ? `in ${formatYears(f.dueYears - s.years)}` : 'now'}
                   {isFinite(turns) ? ` · ~${turns} turn${turns === 1 ? '' : 's'}` : ''}
                 </div>
@@ -160,7 +160,7 @@ function BottomLeft({ s }: { s: GameState }) {
         <div class="feed panel scroll" aria-live="polite">
           {feed.map((e, i) => (
             <div key={i} class={`e ${e.kind}`}>
-              <span class="faint mono" style={{ fontSize: '10px' }}>
+              <span class="faint mono" style={{ fontSize: '11.5px' }}>
                 {e.turn}
               </span>{' '}
               {e.text}
@@ -236,7 +236,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
       <div class="pace panel">
         <div class="row">
           <span class="stencil grow">Pace</span>
-          <span class="mono faint" style={{ fontSize: '11px' }} data-tip="How much cosmic time the next turn will cover at this pace.">
+          <span class="mono faint" style={{ fontSize: '12.5px' }} data-tip="How much cosmic time the next turn will cover at this pace.">
             next turn {isFinite(p.turnYears) ? formatYears(p.turnYears) : 'deep time'}
           </span>
         </div>
@@ -293,7 +293,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
               Long Sleep ×5
             </button>
           )}
-          <span class={`mono grow ${eNet >= 0 ? 'good' : 'bad'}`} style={{ textAlign: 'right', fontSize: '12px' }}>
+          <span class={`mono grow ${eNet >= 0 ? 'good' : 'bad'}`} style={{ textAlign: 'right', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
             {signed(eNet)} energy
           </span>
         </div>

@@ -225,7 +225,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                     <div key={b.id} class="list-item" role="button" tabIndex={0} onClick={() => selectBody(b)} onKeyDown={(e) => e.key === 'Enter' && selectBody(b)}>
                       <Icon name={bodyIcon(b.kind)} cls={c ? 'neon' : hab >= LIVING_WORLD ? 'boon' : ''} />
                       <span class="grow">
-                        {c ? c.name : b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}</span>
+                        {c ? c.name : b.name} <span class="faint" style={{ fontSize: '12.5px' }}>{bodyKindName(s, b)}</span>
                       </span>
                       {b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls={b.relic.flowed ? '' : 'accent'} />}
                       {survivor && survivorHome?.id === b.id && (
@@ -234,9 +234,9 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                       {b.rogue && <span class="chip warn">rogue</span>}
                       {b.feeding && <span class="chip boon">feeding</span>}
                       {c ? (
-                        <span class="mono neon" style={{ fontSize: '12px' }} data-tip="People living here">{popsOf(c)}</span>
+                        <span class="mono neon" style={{ fontSize: '13.5px' }} data-tip="People living here">{popsOf(c)}</span>
                       ) : b.kind !== 'deep' ? (
-                        <span class={`mono ${hab >= LIVING_WORLD ? 'boon' : 'faint'}`} style={{ fontSize: '11px' }} data-tip="Habitable: habitability × vitality">{pct(hab)}</span>
+                        <span class={`mono ${hab >= LIVING_WORLD ? 'boon' : 'faint'}`} style={{ fontSize: '12.5px' }} data-tip="Habitable: habitability × vitality">{pct(hab)}</span>
                       ) : null}
                       <Icon name="arrow_right" cls="faint" />
                     </div>
@@ -288,7 +288,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           <div class="section">
             <h3>Forecast</h3>
             {fc.map((f) => (
-              <div key={f.uid} class={`row ${f.severity === 'danger' ? 'bad' : f.severity === 'boon' ? 'boon' : 'warn'}`} style={{ fontSize: '12px', alignItems: 'flex-start' }} data-tip={f.text}>
+              <div key={f.uid} class={`row ${f.severity === 'danger' ? 'bad' : f.severity === 'boon' ? 'boon' : 'warn'}`} style={{ fontSize: '13.5px', alignItems: 'flex-start' }} data-tip={f.text}>
                 <Icon name="warning" /> <span class="grow">{f.title}</span>
                 <span class="mono faint">{isFinite(f.dueYears) ? formatYears(f.dueYears - s.years) : ''}</span>
               </div>
@@ -301,7 +301,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
             {survivor.contact && <div class="drawer-plate" style={{ backgroundImage: `url(art/${wayArt(survivor.way)}.webp)` }} role="img" aria-label={`${survivor.name}: ${WAY_NAME[survivor.way] ?? ''}`} />}
             <div
               class={`row ${survivorHome ? 'list-item' : ''}`}
-              style={{ fontSize: '13px' }}
+              style={{ fontSize: '14.5px' }}
               role={survivorHome ? 'button' : undefined}
               onClick={() => survivorHome && selectBody(survivorHome)}
               data-tip={survivorHome ? `They live ${survivorHome.kind === 'deep' ? 'in orbital habitats in the Deep' : `on ${survivorHome.name}`}. Click to look at it.` : ''}
@@ -309,14 +309,14 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
               <span style={{ width: '10px', height: '10px', background: survivor.color, display: 'inline-block' }} />
               <span class="grow">
                 {survivor.name}
-                {survivorHome && <span class="faint" style={{ fontSize: '11px' }}> · {survivorHome.kind === 'deep' ? 'in the Deep' : `on ${survivorHome.name}`}</span>}
+                {survivorHome && <span class="faint" style={{ fontSize: '12.5px' }}> · {survivorHome.kind === 'deep' ? 'in the Deep' : `on ${survivorHome.name}`}</span>}
               </span>
               <span class="faint">{!survivor.contact ? 'not contacted' : outpost ? 'a settlement of theirs' : survivorPeople(survivor)}</span>
             </div>
           </div>
         )}
         {known === 1 && (
-          <p class="dim" style={{ fontSize: '12px' }}>
+          <p class="dim" style={{ fontSize: '13.5px' }}>
             Seen from afar: the star is known, its worlds are not. Send any ship to survey it (probes are the cheapest, and see farthest).
           </p>
         )}
@@ -386,7 +386,7 @@ function starSites(s: GameState, sys: StarSystem): StarSites {
 /** How suitable a charted star is for each kind of settler: one short figure per need. */
 function SiteStrip({ s, sites, best, mine }: { s: GameState; sites: StarSites; best: Partial<Record<ThreadId, number>>; mine: ThreadId | null }) {
   return (
-    <div class="row wrap" style={{ gap: '10px', fontSize: '11px', marginTop: '1px', flexBasis: '100%', paddingLeft: '24px' }}>
+    <div class="row wrap" style={{ gap: '10px', fontSize: '12.5px', marginTop: '1px', flexBasis: '100%', paddingLeft: '24px' }}>
       {NEEDS.map((n) => {
         const x = sites[n.thread];
         const own = mine === n.thread || (mine === 'chorus' && n.thread === 'echoes');
@@ -526,7 +526,7 @@ function ClimateRows({ s, b }: { s: GameState; b: Body }) {
         {c.day !== undefined && kelvin(c.day) !== kelvin(c.night!) ? `${kelvin(c.night!)} to ${kelvin(c.day)}` : kelvinC(c.mean)}
       </dd>
       <dt>Water</dt>
-      <dd style={{ fontSize: '12px' }}>{waterState(b, c)}</dd>
+      <dd style={{ fontSize: '13.5px' }}>{waterState(b, c)}</dd>
       <dt data-tip="Sunlight on the surface compared with the star's standard orbit, by the inverse-square law. Surface Solar Arrays collect this much of the star's light; orbital collectors catch it anywhere.">Sunlight</dt>
       <dd class="mono">{b.rogue ? 'none' : `×${n1(insolation(s, b))}`}</dd>
     </>
@@ -549,7 +549,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
         </div>
         <h2>{b.name}</h2>
         {residents && (
-          <div class="row" style={{ marginTop: '4px', fontSize: '13px', gap: '6px' }} data-tip={residents.contact ? `${residents.name}: ${WAY_NAME[residents.way] ?? ''}. Their world cannot be settled; it can only be taken, or left to them.` : 'Someone lives here. We have not made contact with them yet.'}>
+          <div class="row" style={{ marginTop: '4px', fontSize: '14.5px', gap: '6px' }} data-tip={residents.contact ? `${residents.name}: ${WAY_NAME[residents.way] ?? ''}. Their world cannot be settled; it can only be taken, or left to them.` : 'Someone lives here. We have not made contact with them yet.'}>
             <span style={{ width: '10px', height: '10px', background: residents.color, display: 'inline-block' }} />
             <span>
               {residents.contact ? (
@@ -596,7 +596,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             {b.kind !== 'deep' && b.kind !== 'gas_giant' && (
               <>
                 <dt data-tip="Kin the world holds by itself: about 12 × habitability × vitality, rounded down (a third of that on a rogue or feeding world). Below about 8% habitability × vitality there is no room, and Kin can live here only in domes, warrens or a Garden Ark.">Room for Kin</dt>
-                <dd class={naturalKinRoom(b) > 0 ? 'mono good' : ''} style={naturalKinRoom(b) > 0 ? undefined : { fontSize: '12px' }}>
+                <dd class={naturalKinRoom(b) > 0 ? 'mono good' : ''} style={naturalKinRoom(b) > 0 ? undefined : { fontSize: '13.5px' }}>
                   {naturalKinRoom(b) > 0 ? `${naturalKinRoom(b)} without domes` : 'none: domes needed'}
                 </dd>
               </>
@@ -643,9 +643,9 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
               const mods = computeMods(s);
               return (
                 <div key={f.id} class="row" style={{ marginBottom: '4px' }}>
-                  <span class="grow" style={{ fontSize: '12px' }}>
+                  <span class="grow" style={{ fontSize: '13.5px' }}>
                     {def.name} at {from.name}
-                    <div class="faint mono" style={{ fontSize: '11px' }}>{ly > 0 ? `${formatDistance(ly)} · ${tripLabel(s, ly, mods, true)} · ${n0(launchCost(s, f, ly, mods))} energy` : 'here'}</div>
+                    <div class="faint mono" style={{ fontSize: '12.5px' }}>{ly > 0 ? `${formatDistance(ly)} · ${tripLabel(s, ly, mods, true)} · ${n0(launchCost(s, f, ly, mods))} energy` : 'here'}</div>
                   </span>
                   <button class="btn small" disabled={!!err} data-tip={err ?? `Send ${def.settles!.pops} ${THREAD_DEFS[def.settles!.thread].name} to live here.`} onClick={() => act((g) => orderFleet(g, f.id, sys.id, 'colonize', b.id)) && sfx('good')}>
                     <Icon name="colonize" /> Settle
@@ -896,7 +896,7 @@ function ExpandSection({ s, c }: { s: GameState; c: Colony }) {
       {ready.map((f) => (
         <div key={f.id} class="row ready-settler">
           <Icon name="colonize" cls="neon" />
-          <span class="grow" style={{ fontSize: '12px' }}>
+          <span class="grow" style={{ fontSize: '13.5px' }}>
             {f.name} is ready.
           </span>
           <button class="btn small primary" onClick={() => selectFleet(f)}>
@@ -905,7 +905,7 @@ function ExpandSection({ s, c }: { s: GameState; c: Colony }) {
         </div>
       ))}
       {noYard ? (
-        <div class="faint" style={{ fontSize: '12px' }}>Build a Shipyard here to launch settlers.</div>
+        <div class="faint" style={{ fontSize: '13.5px' }}>Build a Shipyard here to launch settlers.</div>
       ) : (
         <div class="settler-buttons">
           {ships.map(({ def, error }) => {
@@ -930,7 +930,7 @@ function ExpandSection({ s, c }: { s: GameState; c: Colony }) {
         </div>
       )}
       {!hasTech(s, 'mind_substrate') && !hasTech(s, 'fusion_drives') && (
-        <div class="faint" style={{ fontSize: '11px', marginTop: '4px' }}>
+        <div class="faint" style={{ fontSize: '12.5px', marginTop: '4px' }}>
           Lighters reach worlds of this star. For other stars, research Mind Substrate (Seedcores) or Fusion Drives (Kin Arks).
         </div>
       )}
@@ -1011,7 +1011,7 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
                   )}
                   {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId]).name : def?.name ?? q.key}
                 </span>
-                <span class="mono faint" style={{ fontSize: '11px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
+                <span class="mono faint" style={{ fontSize: '12.5px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
                 <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>
                 <button class="btn ghost small" aria-label="Move down" data-tip="Build this later (move down the queue)" disabled={i === c.queue.length - 1} onClick={() => act((g) => moveQueued(g, c.id, q.uid, 1))}>▼</button>
                 <button class="btn ghost small" aria-label="Remove" data-tip="Remove: everything paid up front comes back (work already done here is lost)" onClick={() => act((g) => removeQueued(g, c.id, q.uid))}>
@@ -1073,7 +1073,7 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
                   {x.count > 0 && <span class="faint"> ×{x.count}</span>}
                   {x.fx && <EffectLine fx={x.fx} />}
                   <div class="build-desc">{x.desc}</div>
-                  {x.error && <div class="faint" style={{ fontSize: '11px' }}>{x.error}</div>}
+                  {x.error && <div class="faint" style={{ fontSize: '12.5px' }}>{x.error}</div>}
                 </span>
                 <span class="mono faint build-cost" data-tip={`Costs ${x.cost.industry} industry (the settlement's work)${x.cost.matter > 0 ? `, ${x.cost.matter} matter up front` : ''}${x.cost.energy > 0 ? `, ${x.cost.energy} energy` : ''}`}>
                   <span>{x.cost.industry} <Icon name="industry" /> ind</span>
@@ -1100,7 +1100,7 @@ function WorkingOn({ s, c, industry, energyMade }: { s: GameState; c: Colony; in
   const work = spareChoices(s).find((x) => x.id === (c.spare ?? 'salvage'))!;
   const made = spareMade(spareYield(s, c, industry, energyMade));
   return (
-    <div style={{ fontSize: '12px' }}>
+    <div style={{ fontSize: '13.5px' }}>
       <div class="faint">Nothing queued.</div>
       <div data-tip={work.tip}>
         Working on: <b>{work.name}</b>
@@ -1128,7 +1128,7 @@ function SpareChoice({ s, c, industry, energyMade }: { s: GameState; c: Colony; 
           );
         })}
       </div>
-      {c.queue.length > 0 && <div class="faint" style={{ fontSize: '11px', marginTop: '4px' }}>Starts once the queue is done.</div>}
+      {c.queue.length > 0 && <div class="faint" style={{ fontSize: '12.5px', marginTop: '4px' }}>Starts once the queue is done.</div>}
     </div>
   );
 }
@@ -1302,10 +1302,10 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         {!here && f.to && (
           <>
             <div class="bar neon" style={{ marginBottom: '6px' }}><i style={{ width: pct(f.distance > 0 ? f.traveled / f.distance : 1) }} /></div>
-            <div class="mono dim" style={{ fontSize: '12px' }}>
+            <div class="mono dim" style={{ fontSize: '13.5px' }}>
               {formatDistance(f.traveled)} of {formatDistance(f.distance)} · {tripLabel(s, f.distance - f.traveled, mods, true)} to go
             </div>
-            {f.order === 'colonize' && f.targetBody && <div class="faint" style={{ fontSize: '12px', marginTop: '4px' }}>To settle {s.bodies[f.targetBody]?.name}.</div>}
+            {f.order === 'colonize' && f.targetBody && <div class="faint" style={{ fontSize: '13.5px', marginTop: '4px' }}>To settle {s.bodies[f.targetBody]?.name}.</div>}
             {f.auto === 'explore' && (
               <button class="btn small" style={{ marginTop: '8px' }} onClick={() => act((g) => setAutoExplore(g, f.id, false)) && sfx('click')} data-tip="It finishes this trip, then waits for orders.">
                 <Icon name="survey" /> Stop exploring
@@ -1390,16 +1390,16 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                       <Icon name={bodyIcon(b.kind)} />
                       <span class="grow">
                         {isBeacon(s, s.systems[b.systemId]) && <span class="chip boon" style={{ marginRight: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
-                        {b.name} <span class="faint" style={{ fontSize: '11px' }}>{bodyKindName(s, b)}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
+                        {b.name} <span class="faint" style={{ fontSize: '12.5px' }}>{bodyKindName(s, b)}{b.systemId !== here.id ? ` · ${s.systems[b.systemId].name}` : ''}</span>
                         <SwarmNear s={s} systemId={b.systemId} />
                       </span>
                       <button class="btn small ghost" style={{ padding: '1px 5px' }} onClick={(e) => { e.stopPropagation(); lookAtWorld(b.systemId, b.id); }} data-tip="Look at this world before sending the ship: the view turns to it, inside its system, and the ship waits for your order. Its star's panel (and the galaxy map) show what is around it.">
                         <Icon name="focus" />
                       </button>
-                      <span class={`mono ${settleDef?.settles?.thread === 'kin' && hab >= LIVING_WORLD ? 'good' : ''}`} style={{ fontSize: '11px' }} data-tip={v.tip}>
+                      <span class={`mono ${settleDef?.settles?.thread === 'kin' && hab >= LIVING_WORLD ? 'good' : ''}`} style={{ fontSize: '12.5px' }} data-tip={v.tip}>
                         {v.label}
                       </span>
-                      <span class="mono faint" style={{ fontSize: '11px' }} data-tip={ly > 0 ? TRIP_TIP : ''}>{ly > 0 ? tripLabel(s, ly, mods) : 'here'}</span>
+                      <span class="mono faint" style={{ fontSize: '12.5px' }} data-tip={ly > 0 ? TRIP_TIP : ''}>{ly > 0 ? tripLabel(s, ly, mods) : 'here'}</span>
                     </div>
                   ))}
                 </div>
@@ -1420,7 +1420,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                 </button>
               </h3>
               {surveyor && !dests.some((d) => s.civ.known[d.sys.id] !== 2) && (
-                <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>
+                <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
                   Every star we know of here is charted. A ship with nothing uncharted near it takes a long look at the end of the turn and picks out the nearest unseen stars (a probe three, other ships one), even across the gulfs between clusters. Deep Survey Optics lets everyone see farther.
                 </p>
               )}
@@ -1432,9 +1432,9 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                       {sys.name}
                       {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                       {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip={SWARM_TIP}>swarm</span>}
-                      {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '11px' }}> unsurveyed</span>}
+                      {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '12.5px' }}> unsurveyed</span>}
                     </span>
-                    <span class="mono faint" style={{ fontSize: '11px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>
+                    <span class="mono faint" style={{ fontSize: '12.5px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>
                       {formatDistance(ly)} · {tripLabel(s, ly, mods)} · {n0(launchCost(s, f, ly, mods))}
                       <Icon name="energy" />
                     </span>

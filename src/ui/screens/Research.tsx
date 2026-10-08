@@ -63,7 +63,7 @@ export function ResearchModal({ s }: { s: GameState }) {
               <span class="mono faint">{n0(Math.min(curProg, curCost))} / {curCost}{curProg >= curCost ? ' · done this turn' : isFinite(turns) ? ` · ${turns} turn${turns > 1 ? 's' : ''}` : ''}</span>
             </div>
             <div class="bar neon" style={{ marginTop: '4px' }}><i style={{ width: pct(Math.min(1, curProg / curCost)) }} /></div>
-            <div class="dim" style={{ fontSize: '12px', marginTop: '4px' }}>{cur.desc}</div>
+            <div class="dim" style={{ fontSize: '13.5px', marginTop: '4px' }}>{cur.desc}</div>
           </div>
         ) : (
           <div class="grow warn">
@@ -126,7 +126,7 @@ export function ResearchModal({ s }: { s: GameState }) {
       </div>
       <div class="section">
         <h3>Great Works</h3>
-        <p class="dim" style={{ fontSize: '12px', margin: '0 0 8px' }}>
+        <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 8px' }}>
           The projects that can end this in something other than silence. Once begun, half of all insight goes into the active Work.
         </p>
         <div class="cards">
@@ -142,16 +142,16 @@ export function ResearchModal({ s }: { s: GameState }) {
               <div key={w.id} class={`card ${active ? 'enacted' : ''}`}>
                 <div class="eyebrow">{w.path} · ending: {w.ending}</div>
                 <h4>{w.name}</h4>
-                <div class="dim" style={{ fontSize: '12px' }}>
+                <div class="dim" style={{ fontSize: '13.5px' }}>
                   {w.eras.map((e) => ERAS.find((x) => x.id === e)!.name).join(', ')} · needs {TECH_BY_ID[w.tech]?.name}
                 </div>
-                <div style={{ fontSize: '12px' }} class={met ? 'good' : 'warn'}>
+                <div style={{ fontSize: '13.5px' }} class={met ? 'good' : 'warn'}>
                   {met ? <Icon name="check" /> : <Icon name="warning" />} {w.requirement}
                 </div>
                 {prog > 0 && (
                   <>
                     <div class="bar neon"><i style={{ width: pct(prog / cost) }} /></div>
-                    <div class="mono faint" style={{ fontSize: '11px' }}>{n0(prog)} / {cost}</div>
+                    <div class="mono faint" style={{ fontSize: '12.5px' }}>{n0(prog)} / {cost}</div>
                   </>
                 )}
                 <button

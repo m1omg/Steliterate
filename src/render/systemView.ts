@@ -743,7 +743,7 @@ export class SystemView {
         this.selRing.visible = true;
         this.selRing.position.copy(p.pos);
         this.selRing.lookAt(camera.position);
-        this.selRing.scale.setScalar(r * (1 + 0.05 * Math.sin(t * 3)));
+        this.selRing.scale.setScalar(r);
         // close up the planet fills the view; the ring steps back so it does not glare over it,
         // though one that says whose world it is stays clear enough to read
         const k = camera.position.distanceTo(p.pos) / r;

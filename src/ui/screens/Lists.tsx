@@ -100,9 +100,9 @@ export function FleetsModal({ s }: { s: GameState }) {
               <img class={`fleet-thumb${moving ? ' moving' : ''}`} src={`art/ships/${fleetLook(f.ships.map((x) => x.cls))}.png`} alt="" />
               <span class="grow">
                 {f.name}
-                <div class="faint" style={{ fontSize: '11px' }}>{shipSummary(f)}</div>
+                <div class="faint" style={{ fontSize: '12.5px' }}>{shipSummary(f)}</div>
               </span>
-              <span class="mono" style={{ fontSize: '11px', textAlign: 'right' }}>
+              <span class="mono" style={{ fontSize: '12.5px', textAlign: 'right' }}>
                 {moving ? (
                   <>
                     → {s.systems[f.to!]?.name}
@@ -195,7 +195,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
         </button>
       )}
       {sending && (
-        <div class="row" style={{ gap: '6px', width: '100%', marginTop: '4px', fontSize: '12px' }}>
+        <div class="row" style={{ gap: '6px', width: '100%', marginTop: '4px', fontSize: '13.5px' }}>
           <span class="grow neon">Where should {sending.name} go? Send it to any star on these lists.</span>
           <button class="btn small ghost" onClick={() => (modal.value = { kind: 'settlements', tab: which })} data-tip="Keep the window open without choosing a destination">
             Just browse
@@ -258,11 +258,11 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                       {c.name}
                       {s.civ.capitalId === c.id && <span class="chip neon" style={{ marginLeft: '6px' }}>capital</span>}
                       {c.starving > 0 && <span class="chip danger" style={{ marginLeft: '6px' }}>starving</span>}
-                      <div class="faint" style={{ fontSize: '11px' }}>
+                      <div class="faint" style={{ fontSize: '12.5px' }}>
                         {bodyKindName(s, b)} · {c.queue.length ? `building ${c.queue.length}` : c.spare ? `working: ${spareChoices(s).find((x) => x.id === c.spare)?.name.toLowerCase()}` : <span class="warn">idle</span>}
                       </div>
                     </span>
-                    <span class="row" style={{ gap: '6px', fontSize: '12px' }}>
+                    <span class="row" style={{ gap: '6px', fontSize: '13.5px' }}>
                       {THREADS.filter((t) => c.pops[t] > 0).map((t) => (
                         <span key={t} class="row" style={{ gap: '2px' }} data-tip={THREAD_DEFS[t].name}>
                           <Icon name={t} />
@@ -276,7 +276,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                         </span>
                       )}
                     </span>
-                    <span class={`mono ${net >= 0 ? 'good' : 'bad'}`} style={{ fontSize: '12px', minWidth: '44px', textAlign: 'right' }} data-tip="Energy this settlement adds or costs per turn">
+                    <span class={`mono ${net >= 0 ? 'good' : 'bad'}`} style={{ fontSize: '13.5px', minWidth: '44px', textAlign: 'right' }} data-tip="Energy this settlement adds or costs per turn">
                       {signed(net)}
                     </span>
                   </div>
@@ -390,19 +390,19 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
                 {finds.map((t) => (
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
                 ))}
-                <div class="faint" style={{ fontSize: '11px' }}>
+                <div class="faint" style={{ fontSize: '12.5px' }}>
                   {worlds} world{worlds === 1 ? '' : 's'}
                   {living ? ` · ${living} living` : ''} · best: {best.b.name} · {formatDistance(ly)}
                 </div>
               </span>
               {best.v ? (
-                <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }} data-tip={`${best.v.tip} (its best world)`}>
+                <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '64px' }} data-tip={`${best.v.tip} (its best world)`}>
                   {best.v.label}
                 </span>
               ) : (
-                <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
+                <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '64px' }}>
                   <span class={best.hab >= LIVING_WORLD ? 'good' : best.hab > 0.05 ? '' : 'faint'} data-tip="Its most habitable world">{Math.round(best.hab * 100)}%</span>
-                  <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room` : 'domes only'}</div>
+                  <div class="faint" style={{ fontSize: '12.5px' }} data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room` : 'domes only'}</div>
                 </span>
               )}
               {send && <SendButton s={s} f={send} sys={sys} />}
@@ -420,20 +420,20 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
                 {finds.map((t) => (
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
                 ))}
-                <div class="faint" style={{ fontSize: '11px' }}>
+                <div class="faint" style={{ fontSize: '12.5px' }}>
                   {sys.name} · {formatDistance(ly)}
                   {c ? ` · ${c.day !== undefined && kelvin(c.night!) !== kelvin(c.day) ? `${kelvin(c.night!)} to ${kelvin(c.day)}` : kelvin(c.mean)}` : ''}
                   {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
                 </div>
               </span>
               {v ? (
-                <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }} data-tip={v.tip}>
+                <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '64px' }} data-tip={v.tip}>
                   {v.label}
                 </span>
               ) : (
-                <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '64px' }}>
+                <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '64px' }}>
                   <span class={hab >= LIVING_WORLD ? 'good' : hab > 0.05 ? '' : 'faint'}>{Math.round(hab * 100)}%</span>
-                  <div class="faint" style={{ fontSize: '11px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
+                  <div class="faint" style={{ fontSize: '12.5px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
                 </span>
               )}
               {send && <SendButton s={s} f={send} sys={sys} />}
@@ -482,7 +482,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
             : 'No collision star is burning on our map. Now and then two brown dwarfs, each too small to burn hydrogen, collide and merge into a body heavy enough to burn it: a small red star that shines for one to ten trillion years. While one burns it heads every list of destinations, and its name shows on the galaxy map with a ✦.'}
         </p>
       ) : (
-        <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>
+        <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
           Small red stars lit by colliding brown dwarfs: in this age nothing else nearby shines like them, and none lasts. The longest-burning first.
         </p>
       )}
@@ -513,15 +513,15 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
                     {v.contact ? v.name : 'someone lives there'}
                   </span>
                 )}
-                <div class="faint" style={{ fontSize: '11px' }}>
+                <div class="faint" style={{ fontSize: '12.5px' }}>
                   {known === 2 ? `${worlds} world${worlds === 1 ? '' : 's'}` : 'worlds not charted'} · {formatDistance(ly)} · {formatYears(left)} of light left
                 </div>
               </span>
-              <span class="mono" style={{ fontSize: '12px', textAlign: 'right', minWidth: '84px' }}>
+              <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '84px' }}>
                 <span class="good" data-tip="How much a light collector here gathers this turn compared with its rating.">×{light < 1 ? light.toFixed(2) : n1(light)} light</span>
                 <div
                   class={turns <= 1 ? 'warn' : 'faint'}
-                  style={{ fontSize: '11px' }}
+                  style={{ fontSize: '12.5px' }}
                   data-tip={`${
                     turns <= 1
                       ? 'At this pace it goes out during this turn, so collectors catch its light for only part of it.'
@@ -543,7 +543,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
           <h3>
             Already out <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>· lit and went out within the last turn</span>
           </h3>
-          <p class="dim" style={{ fontSize: '12px', margin: '0 0 6px' }}>
+          <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
             The last turn spanned {formatYears(s.turnLength)}, longer than {out.length === 1 ? 'this star' : 'these stars'} burned. Their light is gone; at the end of this turn each settles into {s.years >= DWARF_COLD_AT ? 'a black dwarf: this late in the age a turn outlasts its cooling' : 'a white dwarf'}.
           </p>
           <div class="list">
@@ -551,11 +551,11 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
               <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
                 <span class="grow faint">
                   {sys.name} <span>{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
-                  <div style={{ fontSize: '11px' }}>
+                  <div style={{ fontSize: '12.5px' }}>
                     {life > 0 ? `burned for ${formatYears(life)} · ` : ''}{formatDistance(ly)}
                   </div>
                 </span>
-                <span class="mono faint" style={{ fontSize: '11px' }}>out</span>
+                <span class="mono faint" style={{ fontSize: '12.5px' }}>out</span>
               </div>
             ))}
           </div>

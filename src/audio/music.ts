@@ -142,6 +142,7 @@ interface Layer {
   synthUntil: number; // audio-clock time at which a synthesized piece gives way to the next (0 = none)
   onSynthEnd: (() => void) | null;
   intro: boolean; // the overture is playing
+  onShow: (() => void) | null; // the page is shown again: a recording that should be playing plays on
 }
 
 type StyleKey = keyof typeof STYLES;
@@ -190,6 +191,8 @@ const TRACK_GAIN = 0.5;
 const TRACK_CHANGE = 4;
 /** Seconds a synthesized piece plays before the next piece of its age, about a recording's length. */
 const SYNTH_SPAN = 170;
+/** Seconds a recording may take to start before the synth fills the silence (a slow connection). */
+const RECORDING_GRACE = 8;
 
 // Played once, before a style's own track, the first time that style comes up in a session.
 // The Degenerate Age opens with Pachelbel's Canon in D (public domain), arranged for the game:
@@ -217,11 +220,14 @@ class Music {
     onAudioReady(() => {
       this.apply();
       window.setInterval(() => this.tick(), 40);
+      // the music plays on while the tab is hidden, as any player's does, the same in every
+      // browser (suspending it there stopped it, and Firefox then started the track over, with
+      // the synth in between); if the browser paused anything meanwhile, it carries on from there
       document.addEventListener('visibilitychange', () => {
         const a = audio();
-        if (!a) return;
-        if (document.hidden) void a.ctx.suspend();
-        else void a.ctx.resume();
+        if (!a || document.hidden) return;
+        if (a.ctx.state === 'suspended') void a.ctx.resume();
+        this.layer?.onShow?.();
       });
     });
   }
@@ -271,6 +277,17 @@ class Music {
     }
   }
 
+  /** The overture due before a style's own pieces: once, when its age begins (not when picked by hand). */
+  private introFor(key: TrackKey): string | null {
+    const overture = INTROS[key as StyleKey];
+    return !this.override && key !== 'canon' && this.overture && overture && !this.introsPlayed.has(key as StyleKey) ? overture : null;
+  }
+
+  /** Whether a recording will play for this style (then the synth stays silent unless it fails). */
+  private recordingDue(key: TrackKey): boolean {
+    return !!this.introFor(key) || this.rotation(key).some((p) => !!p.url);
+  }
+
   /** The pieces a style plays in turn: the chosen ones, or the synthesized score if none is chosen. */
   private rotation(key: TrackKey): Piece[] {
     const all = PIECES[key];
@@ -314,9 +331,12 @@ class Music {
         }
       }, 5000);
     }
+    // with a recording to play the synth waits silent: it is the fallback, heard only if no
+    // recording will play (or one is slow to start), not a stopgap at the start of every piece
+    const due = this.recordingDue(key);
     const bus = a.ctx.createGain();
     bus.gain.setValueAtTime(0, t);
-    bus.gain.linearRampToValueAtTime(1, t + 3);
+    if (!due) bus.gain.linearRampToValueAtTime(1, t + 3);
     bus.connect(a.music);
     const send = a.ctx.createGain();
     send.gain.value = 0.6;
@@ -388,11 +408,12 @@ class Music {
       const g = a.ctx.createGain();
       g.gain.value = style.hiss;
       hissOut = a.ctx.createGain();
+      hissOut.gain.value = due ? 0 : 1;
       src.connect(hp).connect(g).connect(hissOut).connect(a.music);
       src.start(t);
       persistent.push(src);
     }
-    const layer: Layer = { style, bus, arpIn, wobble, persistent, silenced: false, track: null, hiss: hissOut, hushAt: 0, synthUntil: 0, onSynthEnd: null, intro: false };
+    const layer: Layer = { style, bus, arpIn, wobble, persistent, silenced: due, track: null, hiss: hissOut, hushAt: 0, synthUntil: 0, onSynthEnd: null, intro: false, onShow: null };
     this.layer = layer;
     this.step = 0;
     this.next = t + 0.1;
@@ -409,8 +430,7 @@ class Music {
     if (!a) return;
     const list = this.rotation(key);
     // the overture comes once, on its own, when the age begins (not when a track is picked by hand)
-    const overture = INTROS[key as StyleKey];
-    const intro = !this.override && key !== 'canon' && this.overture && overture && !this.introsPlayed.has(key as StyleKey) ? overture : null;
+    const intro = this.introFor(key);
     // nothing recorded to play: the synthesized score, as it is
     if (!intro && !list.some((p) => p.url)) return;
     if (intro) this.introsPlayed.add(key as StyleKey);
@@ -429,6 +449,9 @@ class Music {
     let idx = 0;
     let fails = 0;
     let fading = false;
+    // a recording should be playing (not the synth): what the page carries on with when shown again
+    let wanted = false;
+    let started = false;
     const ramp = (p: AudioParam, to: number, s: number) => {
       const t = a.ctx.currentTime;
       p.cancelScheduledValues(t);
@@ -437,6 +460,7 @@ class Music {
     };
     // the synth comes back for a synthesized piece, or when nothing recorded will play
     const wakeSynth = (span: number) => {
+      wanted = false;
       el.pause();
       ramp(gain.gain, 0, 0.5);
       if (layer.silenced) {
@@ -451,6 +475,7 @@ class Music {
     const play = (p: Piece) => {
       if (!p.url) return wakeSynth(list.length > 1 ? SYNTH_SPAN : 0);
       layer.synthUntil = 0;
+      wanted = true;
       el.src = p.url;
       el.loop = list.length === 1;
       el.play().catch(() => {});
@@ -472,6 +497,7 @@ class Music {
     // each recording fades in as it starts, and the synth fades out under it
     el.addEventListener('playing', () => {
       if (this.layer !== layer) return;
+      started = true;
       fails = 0;
       fading = false;
       ramp(gain.gain, TRACK_GAIN, 3);
@@ -489,8 +515,21 @@ class Music {
       fading = true;
       ramp(gain.gain, 0, Math.max(0.3, left));
     });
+    // a recording slow to start (a slow connection): the synth fills the silence until it does
+    window.setTimeout(() => {
+      if (this.layer !== layer || started || !wanted || !layer.silenced) return;
+      layer.silenced = false;
+      layer.hushAt = 0;
+      this.next = a.ctx.currentTime + 0.05;
+      ramp(layer.bus.gain, 1, 3);
+      if (layer.hiss) ramp(layer.hiss.gain, 1, 3);
+    }, RECORDING_GRACE * 1000);
+    layer.onShow = () => {
+      if (this.layer === layer && wanted && el.paused && !el.ended) el.play().catch(() => {});
+    };
     if (intro) {
       layer.intro = true;
+      wanted = true;
       el.src = intro;
       el.play().catch(() => {});
     } else play(list[0]);

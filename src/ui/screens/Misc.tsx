@@ -49,7 +49,7 @@ export function LogModal({ s }: { s: GameState }) {
               modal.value = null;
             }}
           >
-            <span class="faint mono" style={{ fontSize: '10px' }}>
+            <span class="faint mono" style={{ fontSize: '11.5px' }}>
               {ERA_BY_ID[e.era].numeral}·{e.turn}
             </span>{' '}
             {e.text}
@@ -151,7 +151,7 @@ export function SettingsModal() {
               </button>
             ))}
           </div>
-          {uiZoom.value < st.uiScale - 0.005 && <div class="faint" style={{ fontSize: '11.5px', marginTop: '4px' }}>This screen has room for ×{uiZoom.value.toFixed(2)} at most; bigger sizes stop there.</div>}
+          {uiZoom.value < st.uiScale - 0.005 && <div class="faint" style={{ fontSize: '13px', marginTop: '4px' }}>This screen has room for ×{uiZoom.value.toFixed(2)} at most; bigger sizes stop there.</div>}
         </div>
         {game.value && screen.value === 'game' && (
           <div class="field">
@@ -174,7 +174,7 @@ export function SettingsModal() {
             </div>
           </div>
         )}
-        <p class="faint" style={{ fontSize: '12px', margin: 0 }}>
+        <p class="faint" style={{ fontSize: '13.5px', margin: 0 }}>
           Animation runs on elapsed time, so the game plays the same at any display refresh rate.
         </p>
       </div>
@@ -201,7 +201,7 @@ function MusicTrackField() {
           </option>
         ))}
       </select>
-      <div class="faint" style={{ fontSize: '11px', marginTop: '3px' }}>
+      <div class="faint" style={{ fontSize: '12.5px', marginTop: '3px' }}>
         {chosen ? `Playing ${playing} until you choose Automatic again.` : `Now: ${playing}.`}
       </div>
     </div>
@@ -225,7 +225,7 @@ function PlaylistField({ playlist, overture, set }: { playlist: Record<string, b
       <div class="col" style={{ gap: '6px' }}>
         {TRACK_CHOICES.filter((t) => t.key !== 'canon').map((t) => (
           <div key={t.key} class="row wrap" style={{ gap: '4px' }}>
-            <span class="grow" style={{ fontSize: '12.5px', minWidth: '140px' }}>{t.name}</span>
+            <span class="grow" style={{ fontSize: '14px', minWidth: '140px' }}>{t.name}</span>
             {PIECES[t.key].map((p) => {
               const on = pieceOn(playlist, p);
               return (
@@ -246,7 +246,7 @@ function PlaylistField({ playlist, overture, set }: { playlist: Record<string, b
           </div>
         ))}
       </div>
-      <div class="faint" style={{ fontSize: '11px', marginTop: '3px' }}>Each age plays the pieces lit here in turn, fading from one to the next; a lone piece repeats.</div>
+      <div class="faint" style={{ fontSize: '12.5px', marginTop: '3px' }}>Each age plays the pieces lit here in turn, fading from one to the next; a lone piece repeats.</div>
     </div>
   );
 }
@@ -331,14 +331,14 @@ function SaveSlots({ s }: { s: GameState | null }) {
         </div>
       )}
       {slots.length === 0 ? (
-        <p class="dim" style={{ fontSize: '12px', margin: 0 }}>No saved slots yet.</p>
+        <p class="dim" style={{ fontSize: '13.5px', margin: 0 }}>No saved slots yet.</p>
       ) : (
         <div class="list save-slots">
           {slots.map((x) => (
             <div key={x.id} class="list-item" style={{ cursor: 'default' }}>
               <span class="grow">
                 {x.name}
-                <div class="faint" style={{ fontSize: '11px' }}>
+                <div class="faint" style={{ fontSize: '12.5px' }}>
                   {x.civ} · turn {x.turn}, {ERA_SHORT[x.era] ?? x.era} · saved {slotWhen(x.savedAt)} · {Math.max(1, Math.round(x.bytes / 1024))} KB
                 </div>
               </span>

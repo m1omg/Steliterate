@@ -125,7 +125,7 @@ export function LoreModal({ s }: { s: GameState }) {
           <div class="eyebrow">Survey report · {b.name}, {s.systems[b.systemId]?.name}</div>
           <h1 class="event-title">{def.title}</h1>
           <p class="event-text">{text}</p>
-          <p class="dim" style={{ fontSize: '13px' }}>
+          <p class="dim" style={{ fontSize: '14.5px' }}>
             {find?.choice ? <>We chose: <span class="neon">{find.choice}</span>.</> : pending ? 'We have not decided yet.' : 'What we chose then is no longer in the Record.'}
           </p>
           <div class="row" style={{ justifyContent: 'flex-end', marginTop: '10px' }}>
@@ -224,7 +224,7 @@ export function EraIntro({ s }: { s: GameState }) {
         <div class="from">{era.numeral} · {era.science}</div>
         <h1>{era.name}</h1>
         <p class="intro">{ageIntro(s.era, fateOf(s))}</p>
-        <p class="dim" style={{ fontSize: '13px', maxWidth: '60ch' }}>
+        <p class="dim" style={{ fontSize: '14.5px', maxWidth: '60ch' }}>
           η {formatEta(s.eta, s.era)}: {formatYears(s.years, s.eta)} since the Big Bang. Keep your people alive through what is coming. Every turn covers more time than the last.
         </p>
         <button

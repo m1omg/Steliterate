@@ -104,7 +104,7 @@ export function Chronometer({ s }: { s: GameState }) {
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {!deep &&
             ERAS.map((e) => (
-              <div key={e.id} class="eyebrow" style={{ position: 'absolute', left: `${band[e.id][0] * 100}%`, top: '-2px', fontSize: '9.5px', color: e.id === s.era ? 'var(--accent-soft)' : undefined }}>
+              <div key={e.id} class="eyebrow" style={{ position: 'absolute', left: `${band[e.id][0] * 100}%`, top: '-2px', fontSize: '11px', color: e.id === s.era ? 'var(--accent-soft)' : undefined }}>
                 {e.numeral} {e.science.replace(' Era', '')}
               </div>
             ))}
@@ -112,13 +112,13 @@ export function Chronometer({ s }: { s: GameState }) {
             <div
               class="eyebrow"
               data-tip="Where the Degenerate Age ends depends on what becomes of matter, which no one knows yet: near η 30 if it is stable, η 39 if protons decay, η 68 if space itself slowly unmakes it. The Proton Question would tell us; the neutron stars will, near η 30."
-              style={{ position: 'absolute', left: `${unsure[0] * 100}%`, top: '-2px', fontSize: '9.5px', pointerEvents: 'auto', cursor: 'help' }}
+              style={{ position: 'absolute', left: `${unsure[0] * 100}%`, top: '-2px', fontSize: '11px', pointerEvents: 'auto', cursor: 'help' }}
             >
               II → III ?
             </div>
           )}
           {deep && (
-            <div class="eyebrow" style={{ position: 'absolute', left: '0', top: '-2px', fontSize: '9.5px' }}>
+            <div class="eyebrow" style={{ position: 'absolute', left: '0', top: '-2px', fontSize: '11px' }}>
               I–III · deep time: log₁₀ <span class="greek">η</span> →
             </div>
           )}
