@@ -514,7 +514,12 @@ stop them from talking.
   dense as it shrinks, so the game has it fade (η 78.5 to 85 by mass) rather than burst; brown
   dwarfs go at η 87 and all ordinary matter at η 89.5, one date for every world. A neutron star's
   glow, some 10^-29 W (30 nK), feeds the Curvature Collector like the comparable Hawking glow of a
-  stellar hole feeds a Hawking Collector: worth it only to minds as slow as the age. The effect is
+  stellar hole feeds a Hawking Collector: worth it only to minds as slow as the age. The particles
+  made inside a body are absorbed and warm it (their 25 nK for a neutron star, 5.5 pK for a
+  1.3 M☉ white dwarf): one law, T ∝ (Mc²/τ ÷ 4πR²σ)^¼ scaled to those two figures, with the
+  game's lifetimes, gives every white dwarf 0.3 to 3 pK, brown dwarfs about 3.5 fK and worlds
+  0.1 to 0.3 fK, shown, never gathered (`curvatureK`). The game's white-dwarf radius, R ∝ M^-1/3,
+  is too large for the heaviest, so a 1.3 M☉ one reads 3.1 pK. The effect is
   theoretical and disputed; the Codex says so. Decay or curvature warmth would show in cold enough
   dead stars before η 30 (decay from about η 25); the game keeps the question open until then.
 * Krauss & Starkman (2000), *Life, the universe, and nothing*, ApJ 531, 22.

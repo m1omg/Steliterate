@@ -21,7 +21,7 @@ export const PRIMARY_NAME: Record<PrimaryKind, string> = {
   helium_giant: 'Helium giant',
   dark_star: 'The Last Star',
   rogue: 'Starless',
-  void: 'Empty',
+  void: 'No star left',
 };
 
 export function primaryIcon(k: PrimaryKind): IconName {

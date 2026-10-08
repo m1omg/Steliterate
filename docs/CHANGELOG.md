@@ -1261,3 +1261,36 @@ changes … apply them to a new game").
   pick as the picker does (its distance and drawn disc): it had listed what was near each point
   only up to 12 px, while a world wins over a swarm's haze within 13 px in a system, so a world
   orbiting 12.6 px from the cloud's centre, rightly picked, failed it one run in three.
+
+## A settlement where a star was; curvature warmth; stars sorted by type (8 Oct)
+
+- **Live: a settlement where a star has gone shows on the map** (the player's Uluvacaluth Deep).
+  A black hole that evaporated while only others lived in its Deep (our own people who left us)
+  was marked gone, as nothing of ours was there; taking them back settled that Deep, in a system
+  still marked gone: no node or name on the galaxy map, nothing to click, ships refused ("Nothing
+  is left there."), a "gone" chip. A settlement now keeps its system (`createColony`), and a game
+  in progress is repaired as it loads (a starless system holding a settlement of ours; one that
+  fell into the Heart stays gone). Its panel reads "No star left" (was "Empty"), "No star is left;
+  what was around it drifts on" (was "Nothing remains"), and no longer gives the mass of a star
+  that is gone.
+- **Live: curvature radiation warms everything a little** (the player's catch: "everything is at
+  horizon temperature. Even though curvature radiation would heat it above"). Under that fate,
+  known by the Black Hole Age, the particles made inside a body are absorbed and warm it (Falcke,
+  Wondrak & van Suijlekom 2025, JCAP 05, 023: 25 nK for a neutron star, 5.5 pK for a 1.3 M☉
+  white dwarf). One law, T ∝ (Mc²/τ ÷ 4πR²σ)^¼ scaled to those two figures, with the game's own
+  lifetimes: white dwarfs 0.3 to 3 pK, brown dwarfs about 3.5 fK, worlds 0.1 to 0.3 fK, where
+  they read the horizon's 2 × 10^-30 K (only neutron stars glowed before, at 30 nK). Shown, never
+  gathered: no rule reads a temperature this low, and collectors gather the same at every star.
+  The game's white-dwarf radius (R ∝ M^-1/3) is too large for the heaviest: a 1.3 M☉ one reads
+  3.1 pK.
+- **Live: stars sorted by type** (the player's ask, "without cluttering the UI"): one more sort in
+  the Surveyed worlds list, Type: the Heart and the black holes, neutron stars, white, black and
+  brown dwarfs, the living stars, the starless, nearest first within each. Its Systems view now
+  lists every surveyed star, those with no worlds too, "no worlds, only its Deep" (10 of the 12
+  black holes in seed 1000, and the Heart); in Planets view each world names its star's kind
+  while sorted by it.
+- **Balance.** 900 games identical to the last run, line for line: the autoplayer never takes a
+  star by force, and no rule reads the new warmth.
+- **Checks.** New `unit/settled` (fails without the fix: the system stays gone, ships are refused,
+  an old save is not repaired), `unit/curvature`, `browser/settled` and `browser/startype`;
+  `browser/evap` reads "No star left".
