@@ -820,9 +820,11 @@ export const WATER_RICH = 0.5;
  * as bare rock: inside their star's snow line ice never gathered, and what they had boiled off in
  * its long, bright youth (Luger & Barnes 2015). The generator picks a world's kind by its orbit, at
  * fixed distances whatever its star's light (and one branch for red dwarfs at any orbit), so these
- * came out close in. A star already in its last flare is judged by its light before it, so its
- * frozen worlds still thaw in the flare. Deterministic and after generation, so the galaxy's random
- * draws, and everything else in it, stay as they were; the home system keeps its fixed layout.
+ * came out close in. A star already in its last flare is judged by its light before it, so the
+ * water-poor worlds it had frozen are still there to thaw in the flare (the water-rich ones the
+ * flare takes past the runaway greenhouse are steam worlds instead). Deterministic and after
+ * generation, so the galaxy's random draws, and everything else in it, stay as they were; the
+ * home system keeps its fixed layout.
  */
 export function waterFromTheStart(state: GameState): { rich: number; dried: number } {
   let rich = 0;
@@ -858,9 +860,11 @@ export function waterFromTheStart(state: GameState): { rich: number; dried: numb
 
 /**
  * The runaway greenhouse, as the mean warmth starlight alone would give a world: past it, a
- * water-rich world's seas boil into its sky for good. About 1.06 times Earth's sunlight (Kopparapu
- * et al. 2013); a tidally locked world's clouds hold it off to about twice that (Yang, Cowan &
- * Abbot 2013).
+ * water-rich world's seas boil into its sky for good. 260 K is about 1.1 times Earth's sunlight,
+ * the limit in the three-dimensional model of Leconte et al. 2013, Nature 504, 268
+ * (one-dimensional models put it at 1.06: Kopparapu et al. 2013). A tidally locked world's clouds
+ * shade it and hold the limit off to 300 K, nearly twice Earth's sunlight (Yang, Cowan & Abbot
+ * 2013: twice the one-dimensional limit). Any light counts, a flaring star's too.
  */
 export const RUNAWAY_K = 260;
 export const RUNAWAY_LOCKED_K = 300;

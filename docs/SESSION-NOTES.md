@@ -81,6 +81,11 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   as well … some planets can be up to 50% water … I don't want to overly complicate it". Offered
   a simple version (no steam worlds) or one with a runaway greenhouse; they chose "With steam
   worlds". Done (`waterFromTheStart`, trait `water_rich`, steam skies past the runaway limit).
+  Two consequences, told to them in the report and theirs to overrule: a star's last flare is
+  light like any other, so a water-rich world it takes past the limit is a steam world, not a
+  Thawed ocean refuge (the water-poor still thaw); and Orbital Mirrors can shade a steam world
+  only a little past the limit back below it (14 of 30 in six galaxies), so those can be
+  terraformed.
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **The player works from more than one session.** Before changing anything, fetch every branch

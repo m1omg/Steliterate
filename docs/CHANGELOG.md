@@ -1089,18 +1089,28 @@ at once". Built in phases, each with its checks and harness numbers.
     froze.
 - **Steam worlds.** A water-rich world past the runaway greenhouse has a sky of steam hundreds of
   bars deep. It holds the ground at 1,500 K or more by night as by day (Kasting 1988).
-  - The limit is a mean from starlight of 260 K, about 1.06 times Earth's sunlight (Kopparapu et
-    al. 2013). For a tidally locked world it is 300 K, twice the light, because clouds over the
-    star-facing side shade it (Yang, Cowan & Abbot 2013).
+  - The limit is a mean from starlight of 260 K, about 1.1 times Earth's sunlight, as in the
+    three-dimensional model of Leconte et al. 2013 (Nature; one-dimensional models put it at
+    1.06: Kopparapu et al. 2013). For a tidally locked world it is 300 K, nearly twice Earth's
+    sunlight, because clouds over the star-facing side shade it (Yang, Cowan & Abbot 2013 found
+    twice the one-dimensional limit).
   - It is live: with less light (the star's remnant cooled, or mirrors shading it) the steam rains
     out into seas.
   - The world is named Steam world, with a note and a Water-rich chip. The buried-ocean chip is
     hidden while it is one, and survey finds of ice, of an ocean under ice or of dried seas do not
     fit it.
   - On the map it is a veil of steam: the shader never draws lava under an icy world's sky.
+  - A flare can do it too. A water-rich world that its star's last flare takes past the limit is
+    a steam world, not a Thawed ocean refuge, until the light falls back below the limit after
+    the star collapses. Water-poor icy worlds still thaw into refuges, and so does a water-rich
+    one the flare leaves below the limit (only a tidally locked one can be: unlocked, the limit
+    is below freezing).
+  - Mirrors can undo it. In six galaxies 14 of the 30 steam worlds are only a little past the
+    limit, and Orbital Mirrors would shade them back below it and let them be terraformed (to 34
+    to 41% habitability, the warmest ground at 344 to 356 K).
 - **Per galaxy** (six seeds): about 5 steam worlds, 3 with a sea on the day side and ice beyond, a
   rare twilight sea, 7.5 dried to bare rock; the rest stay frozen. Twilight seas are now mostly a
-  water-poor world's state, as in Leconte et al. 2013, and the water-poor warm ones dry out.
+  water-poor world's state, as in Leconte et al. 2013 (A&A), and the water-poor warm ones dry out.
 - **Saves and seeds.** No random draw. Saves are untouched: old games have no water-rich worlds,
   and their climates are as they were.
 - **Balance.** 300 games: 139 survive, 62 victories, a Degenerate Age of 72 turns. 900 games: 423

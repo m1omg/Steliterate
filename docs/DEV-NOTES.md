@@ -289,7 +289,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     (`t`, before the Atmosphere Works step) is at least `RUNAWAY_LOCKED_K` (300 K, tidally
     locked) or `RUNAWAY_K` (260 K, otherwise) gets a steam sky, day = night = mean =
     max(`STEAM_K` 1,500 K, t). It is live: shading or dimming below the limit gives the plain
-    climate back. `steamWorld(state, b)` tells the labels. Only new games have `water_rich`, so
+    climate back. Orbital Mirrors judge by the bare climate (1,500 K), so they shade a steam
+    world, and `terraformBlocked` lets them build where half the light is below the limit (14 of
+    30 steam worlds in six galaxies, all tidally locked to red dwarfs). A flare counts like any
+    light: a water-rich world it takes past the limit is a steam world, never `thawed` (an
+    unlocked one cannot be: 260 K is below freezing), while the water-poor still thaw.
+    `steamWorld(state, b)` tells the labels. Only new games have `water_rich`, so
     old saves' climates are unchanged. `youngDwarfLight(a, b)`: a Dusk white dwarf's
     collector light averaged over ages a..b (the power law integrated, then the 0.02 floor).
   - `bodyClimate` holds a world under Orbital Lamps at `LAMP_K` (285 K) at least
