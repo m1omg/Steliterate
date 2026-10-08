@@ -3,6 +3,7 @@ import { siteValue } from '../../game/sim/sites';
 import { ANOMALIES } from '../../game/data/events';
 import { bodyClimate, sourceLight } from '../../game/physics';
 import { LIVING_WORLD, naturalKinRoom } from '../../game/sim/fleets';
+import { habitabilityOf } from '../../game/sim/terraform';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
@@ -324,7 +325,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
       const sys = s.systems[b.systemId];
       const c = b.kind === 'gas_giant' || b.kind === 'ice_giant' ? null : bodyClimate(s, b);
       const mind = MIND_SORT[sort];
-      return { b, sys, hab: b.habitability * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)), v: mind ? siteValue(s, b, mind) : null };
+      return { b, sys, hab: habitabilityOf(s, b) * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b, s), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)), v: mind ? siteValue(s, b, mind) : null };
     })
     .filter((r) => !findsOnly || r.finds.length > 0)
     .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (x.v && y.v ? y.v.score - x.v.score : sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);

@@ -4,6 +4,7 @@ import { hawkingLight, insolation, sourceLight } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
 import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
+import { habitabilityOf } from './terraform';
 import { type Mods, strainFor, type Strain } from './mods';
 import { clamp, colonies, eraIndex } from './util';
 import { calendarEra, fateOf, matterGone } from '../fate';
@@ -24,7 +25,7 @@ export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number
   if (!b || b.dissolved) return 0;
   // a flaring star: nowhere on the surface is livable, not even the night side
   if (scorched(state, b)) return 0;
-  const base = Math.round(12 * b.habitability);
+  const base = Math.round(12 * habitabilityOf(state, b, c));
   let vit = b.vitality;
   if (mods.flags.has('hardy')) vit = Math.pow(vit, 0.6);
   let cap = Math.floor(base * vit);

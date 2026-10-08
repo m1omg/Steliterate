@@ -64,7 +64,10 @@ dig.structures = { relic_dig: 1, habitat_dome: 1 };
 s.civ.energy = 5000;
 s.civ.matter = 5000;
 {
-  const { logL, mods } = ctxOf(s);
+  // a turn shorter than the flow: the seeded game's own turn here can already be longer (rules
+  // changes move where it stands)
+  const { mods } = ctxOf(s);
+  const logL = FLOW_ETA - 1;
   check(keeping(slow, logL, mods) === 'kept', `before it, Echoes thinking once in 10^${logL.toFixed(1)} years, faster than the flow, would keep a place`);
 }
 

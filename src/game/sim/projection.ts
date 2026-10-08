@@ -9,6 +9,8 @@ import { researchDraw } from './research';
 import { jointIncome } from './survivors';
 import { beaconUpkeep } from './beacons';
 import { colonies } from './util';
+import { terraformingOf } from '../physics';
+import { SEED_CAP, SEED_RATE, WORKS_WATER, habitabilityOf, terraformedWarmth } from './terraform';
 
 export interface Projection {
   ctx: TurnContext;
@@ -113,6 +115,17 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
   if (d.enables === 'merge') notes.push('Lets Echoes merge into the Chorus here');
   if (d.enables === 'cool') notes.push('Lets Echoes cool into Coldminds here');
   if (d.gfeDrain) notes.push('Drains the galaxy’s free energy');
+  const w = state.bodies[c.bodyId];
+  if (d.terraform && w) {
+    if (d.terraform === 'seeding') notes.push(`Life spreads: vitality +${Math.round(SEED_RATE * 100)}% a turn, up to ${Math.round(SEED_CAP * 100)}%`);
+    else {
+      const h0 = habitabilityOf(state, w, c);
+      const h1 = habitabilityOf(state, w, more);
+      notes.push(`Habitability ${Math.round(h0 * 100)}% → ${Math.round(h1 * 100)}% here (warmest ground ${Math.round(terraformedWarmth(state, w, terraformingOf(state, w, more)))} K)`);
+      if (d.terraform === 'works' && (w.water ?? 0) < WORKS_WATER) notes.push(`Brings water in with the air: ${Math.round(WORKS_WATER * 100)}% of the surface`);
+      if (w.vitality <= 0) notes.push('Room for Kin comes once life takes hold (Biosphere Seeding)');
+    }
+  }
   if (d.signature >= 2) notes.push('Bright: draws the Hunger');
   return { energy: e, matter: b.matter - b.matterUpkeep - (a.matter - a.matterUpkeep), industry: b.industry - a.industry, insight: b.insight - a.insight, accord: b.accord - a.accord, room, notes };
 }

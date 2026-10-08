@@ -25,7 +25,9 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   remind the user of the truth if asked to present incorrect information; double-check
   corrections.
 - **Environment:** plays mostly on PC (mouse), sometimes touch. Has a live playthrough with saves
-  in the browser and continues playing between changes. Leave the preview server running.
+  in the browser and continues playing between changes, and during them ("I will be playing the
+  games while you do this … so please take care"): a deploy must not break an open game or a
+  save. Leave the preview server running.
 - **Music:** loves the 1991 Utopia (Amiga) version of Pachelbel's Canon by Barry Leitch; likes a
   slight bitcrush ("fits the dissonance of the game"); prefers dark ambient synthwave.
 
@@ -49,6 +51,21 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   Aster: "how about making the big flat circle teal instead of having 2 circles/rings?" Chosen:
   one ring per world (the selection circle takes the colour of the world's own ring, which steps
   aside), live on Pages.
+- **7 Oct, evening,** while they played: the type "a little bit larger, especially the ones that
+  mention years … I really need to basically squint to see the numbers, especially properly the
+  exponents", and on their 1440p screen "make it somewhat larger please". Done: 1.5 px more on
+  every small size, exponents drawn in the game's own digits, the layout kept (Settings →
+  Interface size goes further). The selection ring: "please make it not pulsate". Done, and the
+  galaxy map's star ring too (they can have that one back). Music: "the sound stops when I switch
+  between tabs … then it starts the soundtrack from the very beginning", and in Firefox (they
+  used Vivaldi before) the synth played before the recording: "it should be the same in all
+  browsers". Done: it plays on while hidden, and the synth plays only when no recording will.
+  Then terraforming, "without breaking the saves … to increase habitability of planets while
+  they're still in the late stelliferous era": all three structures, with seeding "conditional
+  on some minimum habitability, so you cannot just seed complete wastelands with microbes and
+  have them do all the work", and "it should not have that much use with worlds that are already
+  habitable … more making uninhabitable planets more habitable. Think terraforming Mars ideas
+  IRL." All of it shipped together, live on Pages.
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **The player works from more than one session.** Before changing anything, fetch every branch

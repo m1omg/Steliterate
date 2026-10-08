@@ -49,7 +49,11 @@ export interface StructureDef {
   warms?: boolean; // keeps a living world warm after its star has gone
   gfeDrain?: number; // unsustainable
   enables?: string; // conversion / action key
+  terraform?: 'mirrors' | 'works' | 'seeding'; // terraforming (sim/terraform.ts): its rules and effects live there
 }
+
+/** The worlds terraforming can work on: rock and ice, not gas giants, belts or the Deep. */
+const TERRAFORMABLE: BodyKind[] = ['barren', 'ice', 'ocean_ice', 'super_earth', 'terran', 'eyeball'];
 
 const S = (d: StructureDef) => d;
 
@@ -69,6 +73,10 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'warrens', name: 'Deep Warrens', desc: 'Cities dug below the frost line, lit by strip lamps.', era: 'dusk', tech: 'subterranean_cities', cost: 60, matter: 15, max: 3, notBodies: ['deep', 'gas_giant', 'asteroids'], cap: { kin: 4 }, upkeep: 0.5, signature: 0.3 }),
   S({ id: 'orbital_lamps', name: 'Orbital Lamps', desc: 'A ring of fusion lamps in orbit, standing in for a dying or dead sun. While they burn, a living world stays alive after its star is gone. They are very hungry.', era: 'dusk', tech: 'fusion', cost: 140, matter: 60, max: 1, habitable: true, warms: true, declineMult: 0.5, upkeep: 6, signature: 3 }),
   S({ id: 'core_stimulator', name: 'Core Stimulator', desc: 'Deep-bored reactors keeping the mantle soft a little longer.', era: 'dusk', tech: 'deep_mantle', cost: 120, matter: 40, max: 1, habitable: true, coreHeatBonus: 0.3, declineMult: 0.7, upkeep: 1, signature: 1 }),
+  // terraforming (sim/terraform.ts): a dead or marginal world made livable while its star still burns
+  S({ id: 'orbital_mirrors', name: 'Orbital Mirrors', desc: 'A swarm of thin mirrors in orbit, as wide in all as the world itself, sending a cold world twice its star’s light, or shading a hot one to half.', era: 'dusk', tech: 'terraforming', cost: 100, matter: 40, max: 1, bodies: TERRAFORMABLE, terraform: 'mirrors', upkeep: 1, signature: 2 }),
+  S({ id: 'atmosphere_works', name: 'Atmosphere Works', desc: 'Greenhouse-gas factories, and volatiles steered in from icy bodies: an air that keeps the warmth in, carries it round to the night side and lets water stay liquid.', era: 'dusk', tech: 'terraforming', cost: 120, matter: 50, max: 1, bodies: TERRAFORMABLE, terraform: 'works', upkeep: 1, signature: 1 }),
+  S({ id: 'biosphere_seeding', name: 'Biosphere Seeding', desc: 'Engineered microbes, lichens and mosses sown into a world made warm and wet enough: life that spreads on its own.', era: 'dusk', tech: 'terraforming', cost: 60, matter: 20, max: 1, bodies: TERRAFORMABLE, terraform: 'seeding', signature: 0.5 }),
   S({ id: 'comet_shepherd', name: 'Volatile Shepherding', desc: 'Nudges icy bodies inward to replace what the wind has stripped.', era: 'dusk', tech: 'comet_shepherding', cost: 90, matter: 20, max: 1, habitable: true, vitalityOnce: 0.15, declineMult: 0.8, signature: 0.5 }),
   S({ id: 'cryo_hall', name: 'Cryo Hall', desc: 'Rows of cold berths. Every one of them a promise to wake someone later.', era: 'dusk', tech: 'cold_sleep', cost: 50, matter: 15, max: 2, cryoCap: 10, upkeep: 0.3, signature: 0.2 }),
   S({ id: 'orbital_collector', name: 'Orbital Collectors', desc: 'Salvaged mirror-sails in close orbit.', era: 'dusk', tech: 'orbital_collectors', cost: 70, matter: 30, max: 2, energy: { mode: 'light', amount: 10 }, signature: 2 }),
@@ -148,7 +156,7 @@ export function structureKind(d: StructureDef): StructureKind {
   if (d.accord || d.resolve) return 'accord';
   if (d.industry) return 'industry';
   if (d.defense) return 'defence';
-  if (d.warms || d.declineMult !== undefined || d.coreHeatBonus || d.vitalityOnce) return 'world';
+  if (d.warms || d.declineMult !== undefined || d.coreHeatBonus || d.vitalityOnce || d.terraform) return 'world';
   return 'people'; // room, cold sleep, conversions, continuity
 }
 

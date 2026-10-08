@@ -19,6 +19,7 @@ import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
 import { sourceLight } from '../physics';
+import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
 import { colonies, hasCharter, hasTech, log, savableName, uid } from './util';
@@ -43,6 +44,10 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.notBodies && d.notBodies.includes(b.kind)) return 'Cannot be built here.';
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return 'Needs a different kind of star or remnant.';
   if (d.habitable && b.habitability < 0.3) return 'Only on a living world.';
+  if (d.terraform) {
+    const why = terraformBlocked(state, b, c, d.terraform);
+    if (why) return why;
+  }
   if (d.id === 'relic_dig' && !(b.relic && b.relic.state !== 'hidden')) return 'Needs ruins.';
   if (d.id === 'relic_dig' && b.relic?.flowed) return 'Its ruins have flowed into smooth lumps.';
   if (d.id === 'disk_skimmer' && !(sys.primary.rekindle && sys.primary.rekindle > 0)) return 'Needs a world feeding its dead star.';

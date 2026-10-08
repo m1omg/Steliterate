@@ -162,7 +162,7 @@ export function boilsUnder(state: GameState, b: Body, kind: NewStar): boolean {
   const giant = kind === 'helium_giant';
   if (giant && b.orbitAU <= GIANT_RADIUS_AU) return true;
   if (b.kind === 'gas_giant' || b.kind === 'ice_giant') return false;
-  const c = starClimate(state, b, NEW_STAR_LUM[kind]);
+  const c = starClimate(state, b, NEW_STAR_LUM[kind], NO_TERRAFORMING);
   if (b.kind === 'asteroids') return c.mean >= (giant ? RUBBLE_GIANT_K : RUBBLE_BOIL_K);
   return !giant && (c.day ?? c.mean) >= ROCK_BOIL_K;
 }
@@ -766,6 +766,7 @@ export function sunGone(state: GameState, b: Body): boolean {
  * out of its system, or, for life on the surface, once even its warmest ground is below FROZEN_K:
  * its star dead and cooled (see sunGone), or too faint to warm it (no new game has such a world;
  * older saves may). Life under an ice shell, kept warm by tides, lasts until the Last Light.
+ * Life seeded on a dead world freezes once nothing keeps the world warm (seededLifeUnkept).
  */
 export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = b.colonyId ? state.colonies[b.colonyId] : undefined): { decline: number; freeze: number } {
   if (b.dissolved || b.vitality <= 0) return { decline: 0, freeze: 0 };
@@ -786,9 +787,20 @@ export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = 
     const cl = bodyClimate(state, b);
     return (cl.day ?? cl.mean) < FROZEN_K;
   };
-  const sunless = calendarEra(state) !== 'dusk' || !!b.rogue || (SURFACE_LIFE.includes(b.kind) && cold());
+  const sunless = calendarEra(state) !== 'dusk' || !!b.rogue || (SURFACE_LIFE.includes(b.kind) && cold()) || seededLifeUnkept(state, b, c);
   const freeze = sunless && !lampsOver(state, b, c) ? 0.05 * (core ? 0.5 : 1) : 0;
   return { decline, freeze };
+}
+
+/**
+ * Life seeded on a dead world (Biosphere Seeding, sim/terraform.ts) lives on the warmth the
+ * terraforming gives it: once its star has died, or its mirrors and its air works are both gone,
+ * it freezes as surface life does.
+ */
+export function seededLifeUnkept(state: GameState, b: Body, c: Colony | undefined = b.colonyId ? state.colonies[b.colonyId] : undefined): boolean {
+  if (!c || !((c.structures.biosphere_seeding ?? 0) > 0) || SURFACE_LIFE.includes(b.kind)) return false;
+  const tf = terraformingOf(state, b, c);
+  return !tf.mirrors && !tf.works;
 }
 
 /**
@@ -838,26 +850,78 @@ export function bodyClimate(state: GameState, b: Body): BodyClimate {
 }
 
 /** A world's climate without Orbital Lamps: under its star's light today, or under `lum` Suns. */
-export function starClimate(state: GameState, b: Body, lum?: number): BodyClimate {
+export function starClimate(state: GameState, b: Body, lum?: number, tf: Terraforming = terraformingOf(state, b)): BodyClimate {
   const sys = state.systems[b.systemId];
   const era = calendarEra(state);
   const decay = decayWarmth(state);
-  const L = b.rogue ? 0 : (lum ?? primaryLuminosity(sys.primary, state.years, era, decay));
+  let L = b.rogue ? 0 : (lum ?? primaryLuminosity(sys.primary, state.years, era, decay));
+  // Orbital Mirrors: more of its star's light for a cold world, a shade for a hot one
+  if (tf.mirrors && L > 0) {
+    const bare = starClimate(state, b, lum, { mirrors: false, works: tf.works });
+    L *= (bare.day ?? bare.mean) < TERRAFORM_TARGET_K ? MIRROR_GAIN : 1 / MIRROR_GAIN;
+  }
   const a = Math.max(0.003, b.orbitAU);
   const tEq = L > 0 ? 278 * Math.pow(L, 0.25) * Math.pow(0.7, 0.25) / Math.sqrt(a) : 0;
   // its own heat: its core's, while that lasts (it runs out after the Last Light), then what is
   // left of it, and its protons decaying, if they do and we know it
   const tInt = warmth(40 * b.coreHeat, era === 'dusk' ? 0 : residual(RESIDUAL.world, state.years), DECAY_K.world * Math.pow(decay, 0.25));
   let t = Math.pow(Math.pow(tEq, 4) + Math.pow(tInt, 4), 0.25);
+  // Atmosphere Works: on a cold world, an air rich in greenhouse gases keeps the warmth in
+  if (tf.works && t < TERRAFORM_TARGET_K) t = Math.min(TERRAFORM_TARGET_K, t * WORKS_GREENHOUSE);
   if (b.kind === 'eyeball' || b.kind === 'terran' || b.kind === 'super_earth') t *= 1 + 0.12 * b.vitality;
   if (b.traits.includes('tidally_locked') && tEq > 0) {
-    // the day side faces the star for ever; air and sea carry some heat round to the night
-    const airless = b.kind === 'barren' || b.kind === 'asteroids';
+    // the day side faces the star for ever; air and sea carry some heat round to the night (a
+    // thick enough air carries most of it: Atmosphere Works)
+    const airless = (b.kind === 'barren' || b.kind === 'asteroids') && !tf.works;
     if (airless) return { mean: t, day: t * 1.4, night: Math.max(tInt, t * 0.12) };
-    const carry = 0.25 + 0.45 * b.vitality;
+    const carry = Math.max(0.25 + 0.45 * b.vitality, tf.works ? WORKS_CARRY : 0);
     return { mean: t, day: t * (1.3 - 0.15 * carry), night: Math.max(tInt, t * (0.35 + 0.4 * carry)) };
   }
   return { mean: t };
+}
+
+// ------------------------------------------------------------ terraforming (sim/terraform.ts)
+
+/** The warmth terraforming aims a world's warmest ground at (K). */
+export const TERRAFORM_TARGET_K = 288;
+/** Orbital Mirrors double the light a cold world gets from its star, or halve a hot world's. */
+export const MIRROR_GAIN = 2;
+/** Atmosphere Works' greenhouse air warms a cold world by this factor (never past the target). */
+export const WORKS_GREENHOUSE = 1.15;
+/** And carries this much of a locked world's heat round to its night side (a living world's air does as much). */
+export const WORKS_CARRY = 0.7;
+
+export interface Terraforming {
+  mirrors: boolean;
+  works: boolean;
+}
+
+/**
+ * Terraforming runs on a red dwarf's steady light: in the Long Dusk only, around one that still
+ * burns. Not by a flaring star, a new star's brief blaze or a remnant: there the worlds are as
+ * they would be without it.
+ */
+export function terraformLit(state: GameState, b: Body): boolean {
+  return calendarEra(state) === 'dusk' && !b.rogue && !b.dissolved && state.systems[b.systemId]?.primary.kind === 'red_dwarf';
+}
+
+/** No terraforming: a world's climate as it is by itself. */
+export const NO_TERRAFORMING: Terraforming = { mirrors: false, works: false };
+
+/** The terraforming a settlement keeps going on its world (none once its star has gone). */
+export function terraformingOf(state: GameState, b: Body, c: Colony | undefined = b.colonyId ? state.colonies[b.colonyId] : undefined): Terraforming {
+  if (!c || !terraformLit(state, b)) return NO_TERRAFORMING;
+  return { mirrors: (c.structures.orbital_mirrors ?? 0) > 0, works: (c.structures.atmosphere_works ?? 0) > 0 };
+}
+
+/**
+ * How livable a world's warmest ground is for Kin under an open sky: fully from 250 to 330 K,
+ * not at all below 200 K (frozen hard) or above 400 K (boiling, then baking).
+ */
+export function livableWarmth(k: number): number {
+  if (k < 250) return Math.max(0, (k - 200) / 50);
+  if (k > 330) return Math.max(0, (400 - k) / 70);
+  return 1;
 }
 
 /**

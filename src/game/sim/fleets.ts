@@ -5,6 +5,7 @@ import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
 import { formatDistance } from '../eras';
 import { boilingAway } from '../physics';
+import { habitabilityOf } from './terraform';
 import { stepTurns } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
@@ -337,10 +338,10 @@ export function autoExplore(state: GameState, mods: Mods) {
 /** Fortified warships count double when they defend the system they hold. */
 export const FORTIFY_BONUS = 2;
 
-/** Room for Kin a world offers on its own, before any domes or warrens. */
-export function naturalKinRoom(b: Body): number {
+/** Room for Kin a world offers on its own, before any domes or warrens (with `state`, as terraformed). */
+export function naturalKinRoom(b: Body, state?: GameState): number {
   if (b.dissolved) return 0;
-  const cap = Math.floor(Math.round(12 * b.habitability) * b.vitality);
+  const cap = Math.floor(Math.round(12 * (state ? habitabilityOf(state, b) : b.habitability)) * b.vitality);
   return b.rogue || b.feeding ? Math.floor(cap * 0.3) : cap;
 }
 

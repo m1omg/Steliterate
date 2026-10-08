@@ -50,6 +50,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'subterranean_cities', name: 'Deep Warrens', era: 'dusk', field: 'stewardship', cost: 60, requires: [], desc: 'Live below the frost line, where vitality matters less. Unlocks Deep Warrens.' }),
   T({ id: 'hardy_lineages', name: 'Hardy Lineages', era: 'dusk', field: 'stewardship', cost: 70, requires: [], desc: 'Kin bred for thin air and cold. Kin capacity suffers less as worlds die; Kin upkeep −10%.', effects: { upkeep: { kin: 0.9 }, flags: ['hardy'] } }),
   T({ id: 'comet_shepherding', name: 'Volatile Shepherding', era: 'dusk', field: 'stewardship', cost: 95, requires: ['magnetospherics'], desc: 'Replace stripped air and water with shepherded ice. Unlocks Volatile Shepherding.' }),
+  T({ id: 'terraforming', name: 'Terraforming', era: 'dusk', field: 'stewardship', cost: 130, requires: ['comet_shepherding'], desc: 'Mirrors, an air and seeded life for a dead world by a red dwarf that still burns, as was once proposed for Mars. Unlocks Orbital Mirrors, Atmosphere Works and Biosphere Seeding.' }),
   T({ id: 'deep_mantle', name: 'Mantle Stimulation', era: 'dusk', field: 'stewardship', cost: 140, requires: ['subterranean_cities'], desc: 'Reactors bored into the mantle keep the core soft. Unlocks the Core Stimulator.' }),
   T({ id: 'cold_sleep', name: 'Cold Sleep', era: 'dusk', field: 'stewardship', cost: 110, requires: ['hardy_lineages'], desc: 'Kin can sleep through the lean centuries. Unlocks Cryo Halls.' }),
   // mind

@@ -950,3 +950,66 @@ at once". Built in phases, each with its checks and harness numbers.
     only to an opacity of 0.35 (0.12 elsewhere; 0.8 from afar), so its colour still reads.
   - Display only; check `browser/ring-select`.
 
+
+## Readable type, steady music, terraforming (7 Oct)
+
+- **Larger type.** The player: "make some of the fonts a little bit larger, especially the ones
+  that mention years … I really need to basically squint to see the numbers, especially properly
+  the exponents", and on a 1440p screen "make it somewhat larger please".
+  - Every font size up to 14 px is 1.5 px larger (the root 14 → 15.5 px), in the stylesheet and
+    in the components' own sizes.
+  - Exponents (10¹⁵·³ years) are drawn as the font's own digits, raised and a little smaller
+    (`src/ui/sup.ts`). The game's fonts carry only ¹ ² ³, so ⁰ and ⁴–⁹ had come from a system
+    fallback font, smaller and unlike the digits around them. Only the drawing changed: saves,
+    the Record and tooltips keep the text as it was.
+  - The layout keeps its shape at 1400×900 and 2560×1440: the bottom-left stack's height queries
+    move to 950 and 790 px, the turn box widens to 320 px, the research grid's field column to
+    124 px, the drawer leaves 318 px, and the chronometer's lines sit at the top.
+  - Settings → Interface size (Large ×1.2, Huge ×1.4) goes further on big screens.
+- **Selection rings hold still.** "please make it not pulsate": the selection circle around a
+  world, and the galaxy map's ring around a selected star. Display only.
+- **Music.** "the sound stops when I switch between tabs … then it starts the soundtrack from
+  the very beginning", and, in Firefox, the synthesized score played before the recording: "it
+  should be the same in all browsers".
+  - A hidden tab no longer suspends the sound: the recording plays on, and is the same one at a
+    later point when the tab comes back.
+  - While a recording is due, the synth stays silent. It plays only if no recording will: one
+    that fails, or one that has not started within 8 s.
+  - Check `browser/music-hidden`.
+- **Terraforming.** "please add some terraforming structures to increase habitability of
+  planets while they're still in the late stelliferous era", with seeding "conditional on some
+  minimum habitability, so you cannot just seed complete wastelands with microbes", and of little
+  use "with worlds that are already habitable … Think terraforming Mars ideas IRL."
+  - The research is Terraforming (Stewardship, 130, after Volatile Shepherding). It unlocks three
+    structures, on rock and ice worlds:
+
+    | Structure | Cost | Upkeep | What it does |
+    |---|---|---|---|
+    | Orbital Mirrors | 100 industry, 40 matter | 1 | twice the light for a cold world, half for a hot one; habitability up to +20 points |
+    | Atmosphere Works | 120, 50 | 1 | greenhouse air (×1.15 warmth up to 288 K), carries a locked world's heat round, water to 10%; up to +25 |
+    | Biosphere Seeding | 60, 20 | none | needs 30% habitability, 5% water and no life of its own; vitality +4% a turn, to 80% |
+
+  - Each lift counts in full where the warmest ground ends up between 250 and 330 K, falling to
+    nothing at 200 K and at 400 K. Terraforming stops at 55%: a world already that habitable gains
+    nothing, and where even both would leave it frozen hard or too hot, neither can be built.
+  - Room for Kin follows as on any world, 12 × habitability × vitality, so a bare rock made 45%
+    habitable and seeded holds 4 Kin without domes, and Kin grow faster there.
+  - It runs only by a red dwarf's steady light, in the Dusk. When the star flares or dies, or at
+    the Last Light, the world is as it was and the seeded life freezes, 5% a turn; it freezes
+    too if both the mirrors and the works are taken apart. A new star boils what it would have
+    boiled anyway.
+  - In four galaxies, of 383 dead and marginal worlds around red dwarfs (ice, bare rock, ice
+    shells, super-Earths), 240 can be brought to life (at 80% vitality, room for 3 to 5 Kin), 92
+    can't be helped (frozen hard or too hot), and the rest can be raised but not above 30%. Of 128
+    living eyeball and terran worlds, 109 are already past 55%.
+  - Grounded in McKay, Toon & Kasting 1991, Zubrin & McKay 1993 and Joshi, Haberle & Reynolds 1997.
+    Bent: Mars has too little carbon dioxide to thicken its air (Jakosky & Edwards 2018), so the
+    volatiles are brought in; and the work keeps the game's turns, far longer than it would take.
+  - Saves: no new fields. Old saves have none of the structures and play on exactly as before
+    (checked on the saves in `tools/saves/`), and generation is untouched.
+  - Balance, 300 games: 147 survive, 59 victories, a Degenerate Age of 71 turns (was 154 / 59 /
+    69); 900 games 434 / 183 / 70 (was 437 / 183 / 69): within the noise. By fate: decay
+    173 / 450, stable 162 / 239, curvature 99 / 211. The autoplayer researches it last among the
+    Dusk's projects and never builds it: its Kin live on living worlds. Researched early it costs
+    the autoplayer victories (900: 424 / 166), from the delay to the projects that win.
+  - Checks `unit/terraform` and `browser/terraform`.

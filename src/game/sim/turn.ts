@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
 import { ERA_BY_ID, logTurnLength, tideLength } from '../eras';
-import { SURFACE_LIFE, evolveUniverse, lampsOver, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
+import { SURFACE_LIFE, evolveUniverse, lampsOver, seededLifeUnkept, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { greatEvaporation, runCrossing } from './crossing';
@@ -26,6 +26,7 @@ import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
 import { clamp, colonies, distLy, hasCharter, log, popsOf, totalPops, withRng } from './util';
+import { WORKS_WATER, seededVitality } from './terraform';
 import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf } from '../fate';
 
 export interface TurnResult {
@@ -65,6 +66,11 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
             const b = state.bodies[c.bodyId];
             b.coreHeat = Math.min(1, b.coreHeat + d.coreHeatBonus);
           }
+          // the volatiles steered in to build the air bring water with them
+          if (d?.terraform === 'works') {
+            const b = state.bodies[c.bodyId];
+            b.water = Math.max(b.water ?? 0, WORKS_WATER);
+          }
           if (item.key === 'confluence_node') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
         }
         log(state, `${c.name}: ${item.kind === 'structure' ? structureLabel(item.key, state.systems[c.systemId]).name : d?.name ?? item.key} complete.`, 'good', c.systemId);
@@ -94,6 +100,11 @@ function declineWorlds(state: GameState) {
   // after the Last Light the deep warmth of every world runs out too (really it went long before;
   // the game keeps it through the Dusk), and Geothermal Taps wind down with it
   if (calendarEra(state) !== 'dusk') for (const b of Object.values(state.bodies)) if (b.coreHeat > 0) b.coreHeat = b.coreHeat < 0.02 ? 0 : b.coreHeat * CORE_FADE;
+  // seeded life spreads over a terraformed world while its star burns (terraform.ts)
+  for (const c of colonies(state)) {
+    const b = state.bodies[c.bodyId];
+    if (b) b.vitality = seededVitality(state, b, c);
+  }
   const byBody = new Map(colonies(state).map((c) => [c.bodyId, c]));
   for (const b of Object.values(state.bodies)) {
     if (b.dissolved || b.vitality <= 0) continue;
@@ -107,7 +118,8 @@ function declineWorlds(state: GameState) {
     if (c && loss.freeze > 0 && b.vitality > 0 && calendarEra(state) === 'dusk' && !b.rogue && !state.civ.flags[`frz_${b.id}`]) {
       state.civ.flags[`frz_${b.id}`] = state.turn;
       const n = turnsToFreeze(state, b, c);
-      log(state, `${b.name} has begun to freeze: its dead star no longer warms it. It dies in about ${n} turn${n === 1 ? '' : 's'} unless Orbital Lamps keep it warm.`, 'bad', b.systemId);
+      if (seededLifeUnkept(state, b, c)) log(state, `The life seeded on ${b.name} has begun to freeze: nothing keeps the world warm now. It dies in about ${n} turn${n === 1 ? '' : 's'}.`, 'bad', b.systemId);
+      else log(state, `${b.name} has begun to freeze: its dead star no longer warms it. It dies in about ${n} turn${n === 1 ? '' : 's'} unless Orbital Lamps keep it warm.`, 'bad', b.systemId);
     }
     if (b.vitality <= 0) worldDies(state, b);
   }

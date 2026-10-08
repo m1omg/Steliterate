@@ -42,6 +42,7 @@ import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost, proposePact } from '
 import { WAR_ACCORD, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
 import { raidStrength, seizeSurvivor } from './sim/survivors';
 import { SHIP_BY_ID } from './data/ships';
+import { SEED_MIN, terraformSummary } from './sim/terraform';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
@@ -58,7 +59,7 @@ const TECH_PRIORITY = [
   'energy_storage', 'magnetospherics', 'the_long_record', 'orbital_collectors', 'survey_optics', 'mind_substrate', 'fusion_drives', 'hardy_lineages',
   'subterranean_cities', 'orbital_industry', 'fusion', 'upload', 'cold_sleep', 'slow_instancing', 'ember_harvest', 'orbital_defense', 'dyson_swarms',
   'last_light_protocols', 'reversible_logic', 'hibernation_protocols', 'deep_listening', 'hunger_studies', 'magnetic_sails', 'comet_shepherding', 'assembly_of_threads',
-  'horizon_physics', 'accretion_engines', 'proton_question', 'deep_mantle', 'catalyzed_drives', 'mind_merging', 'halo_dynamics', 'pulsar_braking', 'hunger_lures',
+  'horizon_physics', 'accretion_engines', 'proton_question', 'deep_mantle', 'catalyzed_drives', 'mind_merging', 'halo_dynamics', 'pulsar_braking', 'hunger_lures', 'terraforming',
   // degenerate
   'cold_computation', 'glacial_cognition', 'relativistic_arks', 'deep_time_protocols', 'baryon_decay_harvest', 'curvature_harvest', 'leptonic_computation', 'penrose_process',
   'great_decay_protocols', 'hawking_capture',
@@ -209,7 +210,11 @@ function planBuilds(state: GameState) {
     // its star has died: light Orbital Lamps while there is still life to keep
     if (calendarEra(state) === 'dusk' && b.vitality >= 0.2 && vitalityLoss(state, b, c).freeze > 0) plan.unshift('orbital_lamps');
     if (b.traits.includes('homeworld') && calendarEra(state) === 'dusk') plan.push('mag_shield', 'comet_shepherd', 'core_stimulator');
-    if (c.pops.kin >= capc.kin - 1 && calendarEra(state) === 'dusk') plan.push('warrens', 'habitat_dome');
+    if (c.pops.kin >= capc.kin - 1 && calendarEra(state) === 'dusk') {
+      plan.push('warrens', 'habitat_dome');
+      // then make the world itself more livable, where that can bring it to life
+      if (terraformSummary(state, b, c).full >= SEED_MIN) plan.push('orbital_mirrors', 'atmosphere_works', 'biosphere_seeding');
+    }
     if (hasTech(state, 'mind_substrate') && c.pops.echoes >= capc.echoes - 1) plan.push('substrate_core');
     if (hasTech(state, 'cold_computation') && c.pops.coldminds >= capc.coldminds - 1) plan.unshift('cold_vault');
     if (lateDusk && c.pops.kin > 0) plan.push('cryo_hall');

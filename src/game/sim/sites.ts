@@ -22,6 +22,7 @@ function buildableAt(state: GameState, b: Body, d: StructureDef): boolean {
   if (d.notBodies && d.notBodies.includes(b.kind)) return false;
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return false;
   if (d.habitable && b.habitability < 0.3) return false;
+  if (d.terraform) return false;
   if (d.id === 'disk_skimmer' && !(sys.primary.rekindle && sys.primary.rekindle > 0)) return false;
   return true;
 }

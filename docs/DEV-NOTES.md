@@ -54,6 +54,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `refresh()`, which calls `bump()`
   - `state()`
   - `engine()`
+  - `music()`: the music player (its `layer`: the synth `bus`, `silenced`, and the `track`
+    element playing), for `browser/music-hidden`
 - **Playwright:** `require('/opt/node22/lib/node_modules/playwright')`. Launch with
   `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`, and add
   `--autoplay-policy=no-user-gesture-required` for music tests. Watch `request` events for
@@ -65,7 +67,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -142,7 +144,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Generation changes** must keep RNG consumption the same (pick from the already-shuffled
   order), or every seed's galaxy changes.
 - **Harness blind spots:** the autoplayer never raids, asks for aid or picks tracks, so those
-  never move the harness. The victories it reaches are The Long Thought and, at the Heart, The
+  never move the harness. Nor does it terraform: its Kin live on living worlds, and terraforming
+  is for dead ones. The victories it reaches are The Long Thought and, at the Heart, The
   Aeon Seed: the other Great Works never move it. It does answer the flare event with choice 0 (keep time with the
   flare), and keeps time with every new star it can (choice 0 of A New Star and White Fire).
 - **Browser checks that play a seeded game** ride that game's course, and any rules change can
@@ -152,7 +155,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   (from 10⁴⁰ years, when holes evaporate in every fate), with the game still going. `star-clock`
   goes one turn at a time at our own pace once in the Degenerate Age (turns there grow
   twentyfold in three). `dealings` (unit and browser) sets a dear project, because the first
-  techs are too cheap for any deal.
+  techs are too cheap for any deal. `flow` judges its Echoes by a turn of 10^64 years: the
+  Terraforming research moved seed 1000 to η 64.2 before the flow, where a Tide turn already
+  outlasts it.
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
 - The user dislikes long blocking waits. Prefer background runs and report when done.
@@ -418,6 +423,36 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   the economy is applied: `BEACON_UPKEEP` 3 × lived share each, in system order, dark when short),
   `beaconUpkeep` in `project()` and the HUD's energy tooltip. The pull itself is unchanged (+25 in
   `moveSwarm` while `sys.beacon`). Unrelated: `isBeacon` and the Systems "Collision stars" tab.
+- **Terraforming (`src/game/sim/terraform.ts`, 7 Oct):** three Dusk structures, tech `terraforming`
+  (Stewardship, after `comet_shepherding`): `orbital_mirrors`, `atmosphere_works`,
+  `biosphere_seeding`, each with `terraform` set on its `StructureDef`, buildable on the
+  `TERRAFORMABLE` kinds (`structureKind` puts them with the world's structures).
+  - Climate, in `physics.ts`: `terraformingOf(state, b, c)` reads what the settlement keeps, and
+    is none unless `terraformLit` (the Dusk, a red dwarf primary, not rogue or dissolved).
+    `starClimate`'s fourth argument takes it (by default the world's own). Mirrors multiply the
+    light by `MIRROR_GAIN` (2) where the warmest ground without them is below
+    `TERRAFORM_TARGET_K` (288 K), and divide it above. The works warm a cold world ×
+    `WORKS_GREENHOUSE` (1.15, never past 288 K) and give a locked world an air that carries
+    `WORKS_CARRY` (0.7) of its heat round. `NO_TERRAFORMING` is a world as it is: `boilsUnder`
+    passes it, so a new star boils what it boiled before.
+  - Rules: `habitabilityOf(state, b, c)` is the world's own plus (0.2 for mirrors + 0.25 for the
+    works) × `livableWarmth` of its warmest ground (1 from 250 to 330 K, 0 below 200 or above
+    400), at most `TERRAFORM_CEILING` (0.55) and never below its own. `kinBaseCapacity`,
+    `naturalKinRoom(b, state)` and the Worlds list read it.
+  - Seeding: `seedingBlocked` (own habitability at least `OWN_LIFE` 0.5, below `SEED_MIN` 0.3,
+    or water below `SEED_WATER` 0.05). `seededVitality` adds `SEED_RATE` (0.04) up to
+    `SEED_CAP` (0.8), rounded to six places so it lands on the cap; `declineWorlds` applies it
+    before the decline. The works' first completion sets water to at least `WORKS_WATER` (0.1).
+  - `seededLifeUnkept` (`physics.ts`): seeded life on a world without surface life of its own
+    freezes, 5% a turn through `vitalityLoss`, once neither mirrors nor works run (its star flared
+    or died, the Dusk ended, or both were taken apart). The freeze message says so.
+  - Interface: `terraformBlocked` in `structureCheck`; `buildableAt` in `sites.ts` skips them;
+    `structureEffect` notes (habitability before and after, the warmth, the water, room waiting
+    on life); `TerraformedRow` and `seededTip` in the settlement's World section (`Drawer.tsx`).
+  - The autoplayer researches it after Volatile Shepherding and builds them after Warrens and
+    Domes, where Kin are at capacity and `terraformSummary(...).full` reaches `SEED_MIN`.
+  - Checks: `unit/terraform`, `browser/terraform`. No random draws, and old saves (no such
+    structures) are unchanged; the check confirms both.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -470,6 +505,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     checked in `tick`). A file that fails to load passes to the next piece, once round, then to
     the synth. `INTROS` (degenerate → canon, once per session, not when picked by hand, and not
     with Canon first off: `settings.overture`) plays before the rotation.
+  - The tab hidden (7 Oct): nothing is suspended. The old `visibilitychange` handler suspended the
+    context, and Firefox then started the recording over, with the synth in between. On show it
+    resumes the context if the browser suspended it, and `layer.onShow` plays on a wanted
+    recording the browser paused.
+  - A layer whose age has a recording due (`recordingDue`: an intro or a recorded piece in its
+    rotation) starts with the synth silent (`silenced`, the hiss at 0). It wakes the synth only
+    if the recording has not started within `RECORDING_GRACE` (8 s), or fails, so the synth is the
+    fallback, not a stopgap while a slow browser loads the file. Check `browser/music-hidden`.
   - `TRACK_CHOICES`, `setTrack`/`current`/`chosen` (Settings → Music track).
   - The synth hiss runs through `layer.hiss`, which fades when a recording plays.
   - `src/ui/store.ts`: `UI_SCALES` must stay above `settings`, because `loadSettings` reads it
@@ -508,7 +551,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   it is: our habitat ring (`hab`) and a surface neighbour's ring (`theirs`) carry
   `userData.mark`; in `update` the selected world's mark hides and the selection circle
   (`selRing`) takes its colour, with an opacity floor of 0.35 (0.12 and the pale `SELECT` on a
-  world no one lives on).
+  world no one lives on). It holds still: since 7 Oct neither it nor the galaxy map's selected
+  star ring (`galaxyView.ts`) pulses.
 - **UI:**
   - `Story.tsx`: `LoreModal`, `loreView`, `worldFinds`.
   - `Drawer.tsx`: Raid button, settler list sorts, Sunlight row, resident lines, Ruins "Read
@@ -544,6 +588,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     say so.
   - `Hud.tsx`: flare clock chip.
   - `Society.tsx`: archive chip.
+  - Exponents (`src/ui/sup.ts`, 7 Oct): the Google subsets of IBM Plex Mono, Saira and Spectral
+    carry only ¹ ² ³ of the superscript digits, so ⁰ and ⁴–⁹ came from a system fallback font
+    (smaller, and unlike the digits around them). A Preact `options.vnode` hook redraws every
+    superscript run in an element's text children as `<span class="sup">` with ordinary digits
+    (`⁻` as −), raised and at 0.8em. Strings stay Unicode everywhere they are kept (saves, the
+    Record, `data-tip` attributes); `<option>`, `<textarea>` and `<title>` are left alone.
+  - Type sizes (7 Oct): every size up to 14 px is 1.5 px larger, the root 15.5 px. Layout kept
+    with it: the bottom-left stack's height queries at 950 and 790 px, the turn box 320 px wide,
+    the tech grid's first column 124 px, the drawer's reserve 318 px, and the chronometer's
+    lines top-aligned. Settings → Interface size scales all of it for large screens.
 
 ## Music tooling
 
@@ -648,3 +702,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | neighbours, phases 3 and 4: expansion, war (work branch) | 144 | 55 victories, Degenerate Age 68 turns; 900 games 396 / 158 / 68 (426 / 162 / 70 before); by fate decay 169 / 450, stable 145 / 239, curvature 82 / 211. Without the Hunger smelling them 410 / 167, without expansion 409 / 150. War does not change the autoplayer's games (identical); the 'warlike' strategy: 21 wars, 397 / 158 / 68, its war games 14 survive against 13 in peace |
 | neighbours, phase 5: ways that meet; Part C live (7 Oct) | 146 | 60 victories, Degenerate Age 67 turns; 900 games 435 / 179 / 68 (396 / 158 / 68 before); by fate decay 179 / 450, stable 163 / 239, curvature 93 / 211. The autoplayer keeping its Echoes from the Choir: 439 / 163 / 71. Part C in all: 400 / 142 → 435 / 179 |
 | beacons fed; neighbours' dealings (7 Oct) | 154 | 59 victories, Degenerate Age 69 turns; 900 games 437 / 183 / 69 (435 / 179 / 68 before); by fate decay 173 / 450, stable 162 / 239, curvature 102 / 211. Beacons alone: 300 games identical (the autoplayer lights none). In 30 games trade offers 17 → 5.3 a game, shared works 3.0 → 1.7 |
+| terraforming; type, music, rings (7 Oct) | 147 | 59 victories, Degenerate Age 71 turns; 900 games 434 / 183 / 70 (437 / 183 / 69 before); by fate decay 173 / 450, stable 162 / 239, curvature 99 / 211. The autoplayer researches Terraforming last among the Dusk's projects and builds none (its Kin live on living worlds, which gain nothing; in 60 games it researched it in 59, median turn 84, and built it in 0). Variants, 900: the tech there but never chosen 436 / 180 / 70 (a new project moves games through the cheapest-project picks); researched right after Volatile Shepherding 424 / 166 / 69 (the detour delays the projects that win); terraforming every Kin world it can, as early as it can, 423 / 166 / 68, still none built |

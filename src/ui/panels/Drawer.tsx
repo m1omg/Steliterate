@@ -5,7 +5,8 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, sourceLight, sunGone, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
   buildableShips,
@@ -452,8 +453,45 @@ function rustTip(s: GameState, sys: StarSystem): string {
 }
 
 /** A living world without a sun: cooling as its dead star fades, or freezing, and how long it has. */
+/** A settlement's world as terraformed, where it keeps mirrors or an air going (sim/terraform.ts). */
+function TerraformedRow({ s, c }: { s: GameState; c: Colony }) {
+  const b = s.bodies[c.bodyId];
+  const kept = (['orbital_mirrors', 'atmosphere_works'] as const).filter((id) => (c.structures[id] ?? 0) > 0);
+  if (!b || !kept.length) return null;
+  const t = terraformSummary(s, b, c);
+  const names = kept.map((id) => STRUCTURE_BY_ID[id].name).join(' and ');
+  const raised = t.now > t.own;
+  const more = kept.length === 1 && t.full > t.now + 0.005 ? ` With ${kept[0] === 'orbital_mirrors' ? 'Atmosphere Works' : 'Orbital Mirrors'} too it would be ${pct(t.full)}.` : '';
+  const tip = !terraformLit(s, b)
+    ? 'Its own habitability: terraforming does nothing here now (it runs on a red dwarf’s steady light, in the Long Dusk only).'
+    : raised
+      ? `${pct(t.own)} of its own, raised by ${names}: its warmest ground is ${Math.round(t.warmth)} K.${more} Terraforming makes a world at most ${pct(TERRAFORM_CEILING)} habitable.`
+      : `${names} cannot make it more livable: its warmest ground is ${Math.round(t.warmth)} K.${more}`;
+  return (
+    <>
+      <dt data-tip={tip}>Habitability</dt>
+      <dd class={raised ? 'mono good' : 'mono'} data-tip={tip}>{raised ? `${pct(t.now)}, terraformed` : pct(t.now)}</dd>
+    </>
+  );
+}
+
+/** How seeded life on a world of ours is doing (sim/terraform.ts), or undefined if none is seeded. */
+function seededTip(s: GameState, b: Body): string | undefined {
+  const c = b.colonyId ? s.colonies[b.colonyId] : undefined;
+  if (!c || !((c.structures.biosphere_seeding ?? 0) > 0)) return undefined;
+  return seedingGrowth(s, b, c) > 0
+    ? `Seeded life is spreading: +${Math.round(SEED_RATE * 100)}% a turn, up to ${Math.round(SEED_CAP * 100)}%.`
+    : b.vitality >= SEED_CAP - 1e-9
+      ? `Seeded life has spread as far as it can (${Math.round(SEED_CAP * 100)}%).`
+      : seededLifeUnkept(s, b, c) || !terraformLit(s, b)
+        ? 'Seeded life cannot spread now: nothing keeps the world warm.'
+        : `Seeded life cannot spread now. ${seedingBlocked(s, b, c) ?? ''}`;
+}
+
 function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
-  const tip = `A living world whose star has died cools as the light fades. Once even its warmest ground is below ${FROZEN_K} K it freezes: 5% of its vitality a turn (half that with a Core Stimulator), and when none is left it is an ice world or bare rock. After the Last Light every living world freezes so, as does one cast out of its system. Orbital Lamps keep one warm and alive.`;
+  const tip = seededLifeUnkept(s, b, c)
+    ? 'Life seeded on a dead world lives on the warmth the terraforming gives it. With its star flaring or dead, or its Orbital Mirrors and Atmosphere Works both gone, it freezes: 5% of its vitality a turn (half that with a Core Stimulator).'
+    : `A living world whose star has died cools as the light fades. Once even its warmest ground is below ${FROZEN_K} K it freezes: 5% of its vitality a turn (half that with a Core Stimulator), and when none is left it is an ice world or bare rock. After the Last Light every living world freezes so, as does one cast out of its system. Orbital Lamps keep one warm and alive.`;
   const n = turnsToFreeze(s, b, c);
   if (isFinite(n)) {
     return (
@@ -791,8 +829,9 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
             <div class="section">
               <h3>World</h3>
               <dl class="kv">
-                <dt data-tip="How much of the world is still alive. Kin capacity follows it.">Vitality</dt>
-                <dd>
+                <TerraformedRow s={s} c={c} />
+                <dt data-tip={`How much of the world is still alive. Kin capacity follows it.${seededTip(s, b) ? `\n${seededTip(s, b)}` : ''}`}>Vitality</dt>
+                <dd data-tip={seededTip(s, b)}>
                   <div class="row" style={{ justifyContent: 'flex-end' }}>
                     <div class={`bar ${b.vitality < 0.25 ? 'bad' : 'good'}`} style={{ width: '90px' }}><i style={{ width: pct(b.vitality) }} /></div>
                     <span class="mono">{pct(b.vitality)}</span>

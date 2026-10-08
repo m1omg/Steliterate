@@ -266,6 +266,17 @@ the disagreement as real model uncertainty.
   (enough water) or bare rock, and the game says so. Life under an ice shell, warmed by tides,
   lasts until the Last Light. Orbital Lamps (fusion lamps in orbit) keep one alive and hold it
   at about 285 K; a Core Stimulator slows the cooling.
+* **Terraforming** makes dead worlds more livable while their red dwarf burns, after the Mars
+  proposals (McKay, Toon & Kasting 1991; Zubrin & McKay 1993). Orbital Mirrors double a cold
+  world's light or halve a hot one's; Atmosphere Works give it a greenhouse air that carries a
+  locked world's heat round to the night (Joshi, Haberle & Reynolds 1997) and bring water.
+  Habitability rises as far as the warmest ground becomes livable, never past 55%, so a world
+  already that habitable gains nothing. Room for Kin also needs life: Biosphere Seeding takes
+  hold on a world at least 30% habitable with some water and no life of its own, and spreads
+  to 80% vitality. A flaring or dead star, or the Last Light, ends it, and the seeded life
+  freezes. Bends: Mars has too little carbon dioxide to thicken its air (Jakosky & Edwards
+  2018), so the volatiles are brought in; and the work keeps the game's turns, which are far
+  longer than it would take.
 * The homeworld, bound tightly to its dead star, eventually becomes the fuel that keeps its
   own dead sun faintly warm.
 
