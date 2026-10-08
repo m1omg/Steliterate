@@ -123,7 +123,12 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   "planets around black holes which have any accretion disks, even faint ones, should definitely
   not be horizon temperature": the disk now warms them. "It should be possible to actively attack
   the swarm with your warships": Attack the swarm. "The rust can disappear over time. I think
-  that was a wrong choice from me to keep it permanent": it fades, a tenth a turn.
+  that was a wrong choice from me to keep it permanent": it fades, a tenth a turn. "By adjusting
+  your turn speed, it should be possible to talk to civilizations that you otherwise would not be
+  able to (too fast/slow)" and "it should display your clock on the diploma's screen" (speech to
+  text: the diplomacy screen, Signals). Asked how far, they chose "Any rhythm from mind to turn"
+  (Recommended): our clock is the span from our dominant minds' clock to the turn's; Signals shows
+  it at the top, and each card says in reach, too slow or too fast for us, and which pace would reach them.
   Discuss first, not built: tidal locking by locking time (everything within about 1.4 AU of a
   red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
   its mass-blind date; the helium stars' one set of numbers.

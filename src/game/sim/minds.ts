@@ -1,6 +1,6 @@
 import type { GameState, Mind } from '../types';
 import type { Mods } from './mods';
-import { canConverse, sendSignal, voiceClock } from './signals';
+import { canConverse, sendSignal, voiceRange } from './signals';
 import { capital, clamp, colonies, distLy, log, withRng } from './util';
 import { calendarEra } from '../fate';
 
@@ -25,7 +25,7 @@ export function unlitClock(state: GameState, logL: number): number {
 
 export function updateMinds(state: GameState, logL: number, _mods: Mods) {
   const civ = state.civ;
-  const my = voiceClock(state, logL);
+  const my = voiceRange(state, logL);
   const slow = state.minds.slow;
   const dark = state.minds.dark;
   slow.clock = slowClock(state, logL);

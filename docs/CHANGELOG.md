@@ -1231,3 +1231,29 @@ changes … apply them to a new game").
 - **Checks.** New `unit/worlds`, `unit/deadworlds`, `unit/outer`, `unit/attack`, `browser/worlds`
   and `browser/attack`; `unit/cooling` rewritten for the laws; `unit/scorch`, `unit/icy`,
   `unit/evap` and `unit/dismantle` updated.
+
+## Our clock on the Signals screen; the pace reaches other minds (8 Oct)
+
+- **Talk at any rhythm we can keep** (the player's ask: "by adjusting your turn speed, it should
+  be possible to talk to civilizations that you otherwise would not be able to"; their choice,
+  "Any rhythm from mind to turn"). Our clock is now a span, from how fast our dominant minds think
+  to how long a turn is, since a reply can always wait for the next turn. A mind can talk with us
+  if its clock lies within a thousandfold of any point of the span (a millionfold for a
+  civilization of processes and protocol, such as the Tessellate; 2.5 tenfolds for the Slow
+  Ones). Before, only our dominant minds' clock counted. So slowing the pace reaches slower
+  minds, and quickening it, past how fast our minds think, reaches faster ones. Slow turns still
+  cost minds that cannot slow themselves (tempo strain, unchanged). Live: games in progress too.
+- **Our clock on the Signals screen:** a card at the top, "Our clock 10^1.6 to 10^2.4 yr", saying
+  what sets each end; each civilization's Clock row says in reach, too slow for us or too fast for
+  us, and its tip the nearest pace we can choose that would reach them (each pace tried with its
+  own coming turn, as flares and new stars set some), or how many tenfolds longer or shorter our
+  turns would have to be, and which other Thread of ours would reach them were it the most of us
+  (Coldminds for the slow, Kin or Echoes for the fast); the Slow Ones' card the same. The Manual
+  explains it.
+- **Balance.** 300 games: 148 survive, 72 victories, a Degenerate Age of 71 turns (143 / 56 / 69
+  before). 900 games: 439 / 203 / 71 (435 / 184 / 71): survival within the noise; victories up
+  19, as more neighbours are saved (775 of 2,894, against 688 of 2,899; The Long Thought 133
+  against 118, The Aeon Seed 70 against 66). 426 of 900 games play out as before. By fate: decay
+  167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes its pace only for
+  energy, never to reach anyone: the gain is the wider span alone.
+- **Checks.** New `unit/clocks` and `browser/clocks`.

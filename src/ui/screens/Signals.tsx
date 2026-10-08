@@ -5,13 +5,14 @@ import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace
 import { SIEGE_TURNS, WAR_ACCORD, seizeBlocked, warBlocked, warCause, warDefence } from '../../game/sim/war';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
 import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
-import { ASK_COOLDOWN, askBlocked, inStep } from '../../game/sim/survivors';
-import { canConverse, voiceClock } from '../../game/sim/signals';
+import { ASK_COOLDOWN, askBlocked, inStep, reachBy, talkSpan } from '../../game/sim/survivors';
+import { canConverse, stepGap, voiceClock, voiceRange, voiceThread } from '../../game/sim/signals';
+import { THREAD_DEFS } from '../../game/data/threads';
 import { SANCTUARY_TRUST } from '../../game/sim/refuge';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
 import type { GameState, Signal, Survivor } from '../../game/types';
 import { n0, pct, pow10 } from '../fmt';
-import { WAY_NAME, wayArt } from '../labels';
+import { WAY_NAME, paceName, wayArt } from '../labels';
 import { act, rev } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
@@ -82,6 +83,41 @@ function regardTip(s: GameState, sv: Survivor): string {
 const SLOW_STAGE = ['Unknown.', 'A pattern near the Heart: someone counting, very slowly.', 'They have spoken. They wait for an answer.', 'In conversation, one thought per age.', 'They have shared the seam: the Aeon Seed is possible.'];
 const DARK_STAGE = ['Unknown.', 'Mass without light: something invisible moves in the halo.', 'Contact by gravity: they answer moved masses with moved masses.', 'We know what the embers cost them.', 'They want to make one star.'];
 
+/** Our clock, at the top of the screen: the rhythms we can talk at, from our minds' to our turn's. */
+function OurClock({ s, logL }: { s: GameState; logL: number }) {
+  const voice = voiceThread(s);
+  const v = voiceClock(s, logL);
+  const [lo, hi] = voiceRange(s, logL);
+  const who = voice ? THREAD_DEFS[voice].name : 'our machines';
+  const tip = `Two minds can talk if their clocks are within about a thousandfold (a millionfold with a civilization of processes and protocol). We can keep any rhythm from how fast our dominant voice thinks (${who}, ${pow10(v)} yr a thought) to how long our turn is (${pow10(logL)} yr at this pace), since we can always let a turn pass between replies. Slow the pace to reach slower minds; quicken it, past how fast our minds think, to reach faster ones. Slow turns cost minds that cannot slow their own clock (tempo strain).`;
+  return (
+    <div class="card" style={{ marginBottom: '10px' }} data-tip={tip}>
+      <div class="row" style={{ gap: '10px', alignItems: 'baseline' }}>
+        <span class="eyebrow">Our clock</span>
+        <span class="mono grow">{Math.abs(hi - lo) < 0.05 ? `${pow10(lo)} yr` : `${pow10(lo)} to ${pow10(hi)} yr`}</span>
+      </div>
+      <div class="dim" style={{ fontSize: '13.5px' }}>
+        {who} think at {pow10(v)} years; a turn at this pace spans {pow10(logL)}. We can talk with any mind within a thousandfold of that.
+      </div>
+    </div>
+  );
+}
+
+/** What it would take to talk with a mind of clock `theirs`: a pace we can choose, or turns longer or shorter than any yet, or other minds of ours. */
+function stepHint(s: GameState, logL: number, theirs: number, span: number): string {
+  const gap = stepGap(voiceRange(s, logL), theirs);
+  if (Math.abs(gap) <= span) return 'In reach: we can talk.';
+  const r = reachBy(s, theirs, span);
+  const head = gap > 0 ? 'Too slow for us' : 'Too fast for us';
+  const n = Math.ceil(Math.abs(r.tenfolds) - 1e-9);
+  const how =
+    r.pace !== null
+      ? `at ${paceName(r.pace)} we could talk with them.`
+      : `our turns would have to be about ${n} tenfold${n === 1 ? '' : 's'} ${r.tenfolds > 0 ? 'longer' : 'shorter'}, beyond any pace we can choose now.`;
+  const voices = r.voices.length ? ` ${r.voices.map((t) => THREAD_DEFS[t].name).join(' or ')}, were they the most of us, could talk with them at this pace.` : '';
+  return `${head}: ${how}${voices}`;
+}
+
 export function SignalsModal({ s }: { s: GameState }) {
   void rev.value;
   const arrived = s.signals.filter((x) => x.arrivedTurn !== null);
@@ -90,7 +126,7 @@ export function SignalsModal({ s }: { s: GameState }) {
   // a heavy choice waits for a yes: 'seize:<id>', 'war:<id>' or 'devour:<id>'
   const [armed, setArmed] = useState<string | null>(null);
   const logL = logTurnLength(turnStep(s));
-  const my = voiceClock(s, logL);
+  const my = voiceRange(s, logL);
   const cap = capital(s);
   const capSys = cap ? s.systems[cap.systemId] : s.systems[s.civ.homeSystemId];
   const survivors = Object.values(s.survivors);
@@ -98,7 +134,8 @@ export function SignalsModal({ s }: { s: GameState }) {
   const dark = s.minds.dark;
   const history = arrived.filter((x) => !(!x.resolved && x.choices.length)).slice(-25).reverse();
   return (
-    <ModalFrame title="Signals" eyebrow={`Everything travels at the speed of light · our voice thinks at ${pow10(my)} yr`} icon="diplomacy">
+    <ModalFrame title="Signals" eyebrow="Everything travels at the speed of light" icon="diplomacy">
+      <OurClock s={s} logL={logL} />
       <div class="row" style={{ gap: '4px', marginBottom: '10px' }}>
         <button class={`btn small ${tab === 'messages' ? 'primary' : ''}`} onClick={() => setTab('messages')}>
           Messages {openMsgs.length ? `(${openMsgs.length})` : ''}
@@ -126,7 +163,7 @@ export function SignalsModal({ s }: { s: GameState }) {
           {survivors.map((sv) => {
             const home = s.systems[sv.homeSystemId];
             const ly = capSys && home ? distLy(capSys, home) : 0;
-            const talk = canConverse(my, sv.clock);
+            const talk = canConverse(my, sv.clock, talkSpan(sv));
             return (
               <div key={sv.id} class="card" style={{ opacity: sv.alive ? 1 : 0.55 }}>
                 <div class="row">
@@ -146,8 +183,8 @@ export function SignalsModal({ s }: { s: GameState }) {
                           <dd class={`mono ${sv.disposition < -20 ? 'bad' : sv.disposition > 20 ? 'good' : ''}`} data-tip={regardTip(s, sv)}>
                             {sv.disposition > 20 ? 'friendly' : sv.disposition < -20 ? 'hostile' : 'wary'} ({n0(sv.disposition)})
                           </dd>
-                          <dt data-tip="Two minds can only talk if their clocks are within about three orders of magnitude.">Clock</dt>
-                          <dd class={`mono ${talk ? '' : 'warn'}`}>{pow10(sv.clock)} yr{talk ? '' : ' · out of step'}</dd>
+                          <dt data-tip={`How long one of their thoughts takes. We can talk with them if it is within ${sv.way === 'lattice' ? 'a millionfold (processes and protocol parse anything slow enough)' : 'about a thousandfold'} of any rhythm we can keep, from how fast our minds think to how long our turn is.`}>Clock</dt>
+                          <dd class={`mono ${talk ? '' : 'warn'}`} data-tip={stepHint(s, logL, sv.clock, talkSpan(sv))}>{pow10(sv.clock)} yr{talk ? ' · in reach' : stepGap(my, sv.clock) > 0 ? ' · too slow for us' : ' · too fast for us'}</dd>
                           {sv.aidGiven > 0 && (
                             <>
                               <dt data-tip="Energy we beamed to them that has reached them, and that they know came from us.">Aid received</dt>
@@ -364,11 +401,11 @@ export function SignalsModal({ s }: { s: GameState }) {
               <div class="flavor" style={{ fontSize: '14.5px' }}>{slow.flags.silent ? 'Silent. They stopped answering when we began to eat.' : SLOW_STAGE[slow.stage]}</div>
               <dl class="kv">
                 <dt>Their clock</dt>
-                <dd class={`mono ${canConverse(my, slow.clock, 2.5) ? 'good' : 'warn'}`}>{pow10(slow.clock)} yr</dd>
+                <dd class={`mono ${canConverse(my, slow.clock, 2.5) ? 'good' : 'warn'}`} data-tip={stepHint(s, logL, slow.clock, 2.5)}>{pow10(slow.clock)} yr</dd>
                 <dt>Understanding</dt>
                 <dd class="mono">{n0(slow.understanding)}</dd>
               </dl>
-              {!canConverse(my, slow.clock, 2.5) && <div class="warn" style={{ fontSize: '13.5px' }}>We think too fast for them. Slow down (pace, Echoes, Coldminds) to be heard.</div>}
+              {!canConverse(my, slow.clock, 2.5) && <div class="warn" style={{ fontSize: '13.5px' }}>{stepHint(s, logL, slow.clock, 2.5)}</div>}
             </div>
           )}
           {dark.stage > 0 && (

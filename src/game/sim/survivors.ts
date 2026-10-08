@@ -1,6 +1,6 @@
 import { sourceLight } from '../physics';
 import { SHIP_BY_ID } from '../data/ships';
-import type { Body, GameState, PactKind, Survivor, ThreadId } from '../types';
+import { THREADS, type Body, type GameState, type PactKind, type Survivor, type ThreadId } from '../types';
 import { acceptOffer, hasPact, theirPacts, weighProposal } from './pacts';
 import { askRefuge, onTheirWay, sanctuaryTrust, takeThemIn } from './refuge';
 import { askAgainstHunger, claimEase, expand, judgePromise, promiseHelp } from './claims';
@@ -10,11 +10,11 @@ import { answered, feel, offerDue, offered, tradeOffer, type Offer } from './dea
 import { TECH_BY_ID } from '../data/techs';
 import { createColony, isWarFleet } from './fleets';
 import type { Mods } from './mods';
-import { canConverse, sendSignal, voiceClock } from './signals';
+import { canConverse, rangeWith, sendSignal, voiceRange, voiceThread } from './signals';
 import { queueEvent } from './events';
 import { survivorWorld } from './homes';
 import { formatDistance, formatYears, logTurnLength } from '../eras';
-import { capital, clamp, colonies, distLy, hasCharter, log, withRng } from './util';
+import { capital, clamp, colonies, distLy, hasCharter, log, threadTotals, withRng } from './util';
 import { turnStep } from './flare';
 import { capacity } from './economy';
 import { computeMods } from './mods';
@@ -62,9 +62,37 @@ function span(sv: Survivor): number {
   return sv.way === 'lattice' ? 6 : 3;
 }
 
-/** Can we talk with them now: our dominant voice's clock against theirs? */
+/** Can we talk with them now: any rhythm we can keep (voiceRange) against their clock? */
 export function inStep(state: GameState, sv: Survivor): boolean {
-  return canConverse(voiceClock(state, logTurnLength(turnStep(state))), sv.clock, span(sv));
+  return canConverse(voiceRange(state, logTurnLength(turnStep(state))), sv.clock, span(sv));
+}
+
+/** How far apart two clocks can be and still hold a conversation (orders of magnitude). */
+export function talkSpan(sv: Survivor): number {
+  return span(sv);
+}
+
+/**
+ * How we could talk with a mind of clock `theirs` (`span`: how far apart two clocks may be):
+ * - `pace`: the nearest pace we can choose now that reaches it, null if none does. Each pace is
+ *   tried with its own coming turn, since flares and new stars set some turns whatever the pace.
+ * - `tenfolds`: how many tenfolds our turns would have to grow (+) or shrink (−) to reach it, as
+ *   the turn's end of our span is the end that moves (`rangeWith`).
+ * - `voices`: which other Threads of ours, were they the most of us, would reach it at this pace.
+ */
+export function reachBy(state: GameState, theirs: number, span = 3): { pace: number | null; tenfolds: number; voices: ThreadId[] } {
+  const mods = computeMods(state);
+  const logL = logTurnLength(turnStep(state));
+  let pace: number | null = null;
+  for (let p = mods.paceMin; p <= mods.paceMax; p++) {
+    if (!canConverse(voiceRange(state, logTurnLength(turnStep(state, p))), theirs, span)) continue;
+    if (pace === null || Math.abs(p - state.civ.pace) < Math.abs(pace - state.civ.pace)) pace = p;
+  }
+  const d = theirs - logL;
+  const totals = threadTotals(state);
+  const now = voiceThread(state);
+  const voices = THREADS.filter((t) => t !== 'lattice' && t !== now && totals[t] > 0 && canConverse(rangeWith(t, logL, mods), theirs, span));
+  return { pace, tenfolds: Math.sign(d) * Math.max(0, Math.abs(d) - span), voices };
 }
 
 /**
@@ -152,7 +180,7 @@ export function settleNewcomers(state: GameState, t: ThreadId, n: number): numbe
 
 export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: number) {
   const civ = state.civ;
-  const myClock = voiceClock(state, logL);
+  const myClock = voiceRange(state, logL);
   withRng(state, (rng) => {
     for (const sv of Object.values(state.survivors)) {
       if (!sv.alive) continue;
@@ -223,7 +251,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         });
         continue;
       }
-      const talk = sv.contact && canConverse(myClock, sv.clock, sv.way === 'lattice' ? 6 : 3);
+      const talk = sv.contact && canConverse(myClock, sv.clock, span(sv));
       let deal: Offer | null = null;
 
       // with nothing left they fade, whether or not we can hear them go

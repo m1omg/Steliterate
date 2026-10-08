@@ -105,6 +105,13 @@ subjective moment takes, within a range that research widens. The mismatch
   their clocks pay nothing extra, which is Freeman Dyson's 1979 argument in game form: a mind
   that slows can stretch a finite energy budget over enormous spans. Its limits in an
   accelerating universe (Krauss & Starkman 2000) return as the Dark Era's hard budget.
+* **Talking keeps any rhythm we can.** Two minds can talk if their clocks are within about a
+  thousandfold (a millionfold with a civilization of processes and protocol, such as the
+  Tessellate). Ours is a span, from how fast our dominant
+  Thread thinks to how long a turn is, since a reply can always wait for the next turn; so the
+  pace changes whom we can reach: slower minds by slowing it, faster ones by quickening it past
+  how fast our minds think. The Signals screen shows the span, and each card which pace would
+  reach that mind.
 * **Dormancy** ("burst and sleep"): a dormant turn produces nothing, but upkeep falls to a
   tenth (a twentieth with *The Long Watch*) and energy still comes in. **Long Sleep** ends
   several turns automatically, pausing for any decision; waking gives +30% output.
@@ -362,7 +369,8 @@ the disagreement as real model uncertainty.
     to Civilization V's city-states (requests and rewards, a relationship) than to its rival
     empires: no one is playing to win against us.
 * **The Slow Ones** think around the Heart on clocks of millions of years. You can only
-  converse when your own clock comes close to theirs. They matter for the *Aeon Seed*.
+  converse when your own clock comes close to theirs (within 2.5 tenfolds of the span above).
+  They matter for the *Aeon Seed*.
 * **Sleepers and ghosts:** vault civilizations and archived dead in ruins. Waking them is
   costly and risky.
 * **The Unlit:** minds of the dark-matter sector, reachable only through gravity: moved
