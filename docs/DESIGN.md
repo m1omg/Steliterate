@@ -266,12 +266,21 @@ the disagreement as real model uncertainty.
   (enough water) or bare rock, and the game says so. Life under an ice shell, warmed by tides,
   lasts until the Last Light. Orbital Lamps (fusion lamps in orbit) keep one alive and hold it
   at about 285 K; a Core Stimulator slows the cooling.
-* **Ice only where it stays frozen.** A new galaxy's ice worlds and ice-shelled oceans that are not
-  frozen even on their warmest ground start as bare rock. Inside a star's snow line ice never
-  gathers, and a close world's water is lost in its red dwarf's long, bright youth (Luger &
-  Barnes 2015). An ice world that a brightening star warms later keeps its water: a locked one
-  with a boiling day side and a frozen night side is a twilight sea (a hot eyeball), its water
-  frozen on the night side and open along the terminator (Leconte et al. 2013).
+* **Water-rich worlds and steam worlds.** A new galaxy's icy worlds are sorted by the water they
+  formed with.
+  - The water-rich (ice-shelled oceans, the wetter half of ice worlds: up to half water by mass,
+    like the ocean planets of Léger et al. 2004) keep it, more than their star's bright youth
+    could boil away. Past the runaway greenhouse they are steam worlds: their oceans a sky of
+    steam hundreds of bars deep, the ground past 1,500 K by night as by day (Kasting 1988).
+  - The runaway limit is about 1.06 times Earth's sunlight (Kopparapu et al. 2013), twice that
+    for a tidally locked world, whose clouds shade it (Yang, Cowan & Abbot 2013). Below it the
+    steam rains out into seas.
+  - The water-poor that are warm lose their water in the star's long, bright youth (Luger &
+    Barnes 2015) and start as bare rock. Cold ones stay ice worlds: they boiled young, kept their
+    water and froze.
+  - A locked icy world with a boiling day side and a frozen night side is a twilight sea (a hot
+    eyeball): its water frozen on the night side and open along the terminator (Leconte et al.
+    2013).
 * **Terraforming** makes dead worlds more livable while their red dwarf burns, after the Mars
   proposals (McKay, Toon & Kasting 1991; Zubrin & McKay 1993). Orbital Mirrors double a cold
   world's light or halve a hot one's; Atmosphere Works give it a greenhouse air that carries a

@@ -1,9 +1,10 @@
 import { ANOMALIES } from '../game/data/events';
-import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, boilingAway, isStarLike } from '../game/physics';
+import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, boilingAway, isStarLike, steamWorld } from '../game/physics';
 import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
 import type { Body, BodyKind, Focus, GameState, PrimaryKind, SpareWork, StarSystem } from '../game/types';
 import { SPARE_RATE, TEND_SHARE, salvageIsMatter } from '../game/sim/spare';
 import type { IconName } from './icons';
+import { kelvin } from './fmt';
 import { calendarEra } from '../game/fate';
 
 export const PRIMARY_NAME: Record<PrimaryKind, string> = {
@@ -74,6 +75,7 @@ export const TRAIT_NAME: Record<string, [string, string]> = {
   failing_dynamo: ['Failing dynamo', 'The core is freezing and the magnetic field is fading. The stellar wind is stripping the air.'],
   subsurface_ocean: ['Buried ocean', 'Liquid water under the ice, kept warm by tides.'],
   once_alive: ['Once alive', 'This world had seas, air and life. It froze or dried out when its warmth was gone.'],
+  water_rich: ['Water-rich', 'Water is a large share of this world, perhaps half its mass: more than its star’s bright youth could boil away. Past the runaway greenhouse its seas rise into a sky of steam; below it they rain out again.'],
 };
 
 export const FOCUS: { id: Focus; name: string; tip: string }[] = [
@@ -196,6 +198,9 @@ export function bodyKindNote(s: GameState, b: Body): string {
   if (sea === 'warm') return `Once ${onceWas(b.kind)}. Its star's last flare has melted it into open ocean under a thin, steamy sky: room for ${THAW_ROOM} Kin by the water without domes, for as long as the flare lasts. When the star collapses it will freeze again.`;
   if (sea === 'hot') return `Once ${onceWas(b.kind)}. Its star's last flare has melted it into a hot, steaming sea, too hot to live by. When the star collapses it will freeze again.`;
   const melt = waterChanged(s, b);
+  if (melt === 'steam' && steamWorld(s, b)) {
+    return `A water-rich world past the runaway greenhouse: its oceans have risen into a sky of steam hundreds of bars deep, which holds the ground at ${kelvin(bodyClimate(s, b).mean)} by night as by day. If its light falls below the limit (its star dead and its remnant cooled), the steam rains out into seas.`;
+  }
   if (melt) {
     const c = bodyClimate(s, b);
     const flare = s.systems[b.systemId]?.primary.kind === 'blue_dwarf';

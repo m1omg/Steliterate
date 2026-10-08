@@ -75,8 +75,12 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   and a boiling day side: the generator places some ice worlds close in (fixed-AU kinds). Such
   worlds are now named for their climate (Twilight sea). That batch went live at their word
   ("Put it live"; `988c6ff`). Asked whether new galaxies should place ice worlds by each star's
-  light: "Fix it for new games". Done with a pass after generation (`dryFromTheStart`, no random
-  draw, saves untouched). Its deploy was asked about separately.
+  light: "Fix it for new games". Done with a pass after generation (no random draw, saves
+  untouched), live at their word (`4759c6f`). Then: "I don't think it's realistic for all
+  planets that are closer than the early snowline to be water-free … there should be steam worlds
+  as well … some planets can be up to 50% water … I don't want to overly complicate it". Offered
+  a simple version (no steam worlds) or one with a runaway greenhouse; they chose "With steam
+  worlds". Done (`waterFromTheStart`, trait `water_rich`, steam skies past the runaway limit).
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **The player works from more than one session.** Before changing anything, fetch every branch

@@ -1,9 +1,9 @@
 // An ice world (or ice-shelled ocean) locked close to its star, with its day side past boiling and
 // its night side below freezing, is named for what it is: a Twilight sea (a hot eyeball), its water
 // frozen on the night side, open along the terminator, boiled off the day side. Only such worlds
-// carry the name, and their water says so. New galaxies start with none (dryFromTheStart turns ice
-// worlds that are not frozen into bare rock), but a brightening star can make one, and games
-// begun before that change have them. Display only: the world itself is unchanged.
+// carry the name, and their water says so. New galaxies have few (waterFromTheStart: a water-rich
+// world that hot is a steam world, a water-poor one dries out), but a brightening star can make
+// one, and games begun before have them. Display only: the world itself is unchanged.
 import { newGame } from '../../../src/game/newGame';
 import { bodyClimate, boilingAway, waterState } from '../../../src/game/physics';
 import type { Body, GameState } from '../../../src/game/types';
@@ -30,11 +30,11 @@ const audit = (s: GameState) => {
   return { named, wrong };
 };
 
-// new galaxies start with none, and name everything rightly
+// new galaxies name everything rightly
 for (const seed of [1000, 2000, 3000]) {
   const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
   const a = audit(s);
-  check(a.named === 0 && a.wrong === 0, `seed ${seed}: no twilight seas at the start, nothing misnamed (${a.named}, ${a.wrong})`);
+  check(a.wrong === 0, `seed ${seed}: ${a.named} twilight sea${a.named === 1 ? '' : 's'} at the start, nothing misnamed`);
 }
 
 // one made by hand: bare rock close to its red dwarf, given ice
@@ -54,7 +54,7 @@ for (const seed of [1000, 2000, 3000]) {
   } else check(false, 'a hot locked rock to try');
 }
 
-// a game begun before new galaxies dried their warm ice worlds still has them, named rightly
+// a game begun before still has them, named rightly
 {
   let named = 0;
   let wrong = 0;

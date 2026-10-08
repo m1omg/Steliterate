@@ -4,7 +4,7 @@ import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime } from '../eras';
-import { boilingAway } from '../physics';
+import { boilingAway, steamWorld } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
@@ -900,7 +900,7 @@ export const ANOMALIES: AnomalyDef[] = [
     id: 'vent_life',
     name: 'Vent life',
     tip: 'Chemosynthetic life around hydrothermal vents in a buried ocean.',
-    fits: (_s, b) => (b.kind === 'ocean_ice' || b.traits.includes('subsurface_ocean')) && !b.colonyId,
+    fits: (s, b) => (b.kind === 'ocean_ice' || b.traits.includes('subsurface_ocean')) && !b.colonyId && !steamWorld(s, b),
     event: {
       title: 'Life Under the Ice',
       text: (s, d) =>
@@ -973,7 +973,7 @@ export const ANOMALIES: AnomalyDef[] = [
     id: 'fossils',
     name: 'Fossil biosphere',
     tip: 'Mineral structures grown around life that died tens of trillions of years ago.',
-    fits: (_s, b) => ['barren', 'super_earth', 'terran', 'ice'].includes(b.kind),
+    fits: (s, b) => ['barren', 'super_earth', 'terran', 'ice'].includes(b.kind) && !steamWorld(s, b),
     event: {
       title: 'Someone Lived Here',
       text: (s, d) =>
@@ -1003,7 +1003,7 @@ export const ANOMALIES: AnomalyDef[] = [
     id: 'clathrates',
     name: 'Clathrate ice',
     tip: 'Methane and hydrogen locked in cages of ice: fuel for fusion.',
-    fits: (_s, b) => ['ice', 'ocean_ice', 'ice_giant'].includes(b.kind),
+    fits: (s, b) => ['ice', 'ocean_ice', 'ice_giant'].includes(b.kind) && !steamWorld(s, b),
     event: {
       title: 'Fuel in the Ice',
       text: (s, d) =>

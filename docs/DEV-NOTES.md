@@ -274,12 +274,21 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     as the turn does, in floating point, for the panel and the Record.
   - `frozenFromTheStart` (called by `newGame`, after generation, no random draw): living worlds
     already below `FROZEN_K` start as ice or rock.
-  - `dryFromTheStart` (after it, 8 Oct, no random draw): ice worlds and ice-shelled oceans whose
-    warmest ground is at or above `ICE_MELTS_K` (273 K) start as bare rock. Their richness is
-    mapped into bare rock's 1.0 to 1.7, their water re-derived from their seed (`defaultWater`),
-    and the buried ocean dropped. A star in its last flare is judged by its red-dwarf light,
-    and the home system is left alone. Every other world and star stays as generated (check
-    `unit/icy`). `youngDwarfLight(a, b)`: a Dusk white dwarf's
+  - `waterFromTheStart` (after it, 8 Oct, no random draw; it replaced the same day's
+    `dryFromTheStart`):
+    - Water-rich icy worlds are ice-shelled oceans, and ice worlds with water at least
+      `WATER_RICH` (0.5, the wetter half). They keep their water and get the trait `water_rich`.
+    - Water-poor ones whose warmest ground is at or above `ICE_MELTS_K` (273 K) start as bare
+      rock: richness mapped into 1.0 to 1.7, water re-derived from their seed (`defaultWater`),
+      the buried ocean dropped.
+    - A star in its last flare is judged by its red-dwarf light, and the home system is left
+      alone. Every other world and star stays as generated (check `unit/icy`).
+  - The runaway greenhouse, in `starClimate`: a `water_rich` world whose mean from starlight
+    (`t`, before the Atmosphere Works step) is at least `RUNAWAY_LOCKED_K` (300 K, tidally
+    locked) or `RUNAWAY_K` (260 K, otherwise) gets a steam sky, day = night = mean =
+    max(`STEAM_K` 1,500 K, t). It is live: shading or dimming below the limit gives the plain
+    climate back. `steamWorld(state, b)` tells the labels. Only new games have `water_rich`, so
+    old saves' climates are unchanged. `youngDwarfLight(a, b)`: a Dusk white dwarf's
     collector light averaged over ages a..b (the power law integrated, then the 0.02 floor).
   - `bodyClimate` holds a world under Orbital Lamps at `LAMP_K` (285 K) at least
     (`starClimate` is the star's part); a floor, so it never adds to a flare.
@@ -477,12 +486,17 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **World kinds and climate:** `bodyTemplates` in `gen.ts` picks a kind by orbit at fixed AU,
   whatever the star's light, and for red dwarfs its last branch makes ice worlds at any orbit (91
   of 217 in six galaxies sit inside 0.06 AU). Its draws are left as they are, so every seed keeps
-  its galaxy, and since 8 Oct `dryFromTheStart` turns the ones that are not frozen into bare rock
-  (about 15 a galaxy). Games begun before keep them, and a brightening star can warm an ice world
-  later. The climate names what they are in `bodyKindName` (`labels.ts`): `twilightSea` (an ice
-  world or ice-shelled ocean with its day side past 373 K and its night side below 273 K: a hot
-  eyeball) comes before the kind's own name, and `waterState` gives its terminator sea. Check
-  `unit/twilight`.
+  its galaxy. Since 8 Oct `waterFromTheStart` sorts them, per galaxy: about 5 steam worlds, 3 with a
+  sea on the day side, a rare twilight sea, and 7.5 water-poor ones dried to bare rock. The rest
+  stay frozen. Games begun before keep their ice worlds, and a brightening star can warm one
+  later. The climate names what they are in `bodyKindName` (`labels.ts`):
+  - a steam world (`waterChanged` 'steam', with `bodyKindNote`'s runaway note when `steamWorld`);
+  - `twilightSea` (an ice world or ice-shelled ocean with its day side past 373 K and its night
+    side below 273 K: a hot eyeball), before the kind's own name, with `waterState` giving its
+    terminator sea.
+  On a steam world the panel hides the buried-ocean chip (`shownTraits`). The survey finds of ice,
+  of a buried ocean or of dried seas (`clathrates`, `vent_life`, `fossils` in `events.ts`) do not
+  fit it. Checks `unit/twilight` and `unit/icy`.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their

@@ -807,30 +807,43 @@ export function seededLifeUnkept(state: GameState, b: Body, c: Colony | undefine
 export const ICE_MELTS_K = 273;
 
 /**
- * A new galaxy's ice worlds and ice-shelled oceans that are not frozen even on their warmest ground
- * start as what they would be: bare rock. The generator picks a world's kind by its orbit, at fixed
- * distances whatever its star's light (and one branch for red dwarfs at any orbit), so some came
- * out inside their star's snow line, where ice never gathers and what a close world had would have
- * boiled off in its star's bright youth. A star already in its last flare is judged by its light
- * before it, so its frozen worlds still thaw in the flare. Deterministic and after generation, so
- * the galaxy's random draws, and everything else in it, stay as they were; the home system keeps
- * its fixed layout.
+ * A water-rich world: an ice-shelled ocean, or an ice world with at least this share of its surface
+ * under water (the wetter half; ice worlds have 30 to 70%). Up to half its mass may be water, as in
+ * the ocean planets of Léger et al. 2004: too much to lose in its star's bright youth.
  */
-export function dryFromTheStart(state: GameState): number {
-  let n = 0;
+export const WATER_RICH = 0.5;
+
+/**
+ * A new galaxy's icy worlds, sorted by the water they formed with. The water-rich
+ * keep it, marked `water_rich`: close to their star, past the runaway greenhouse, their seas are a
+ * sky of steam (starClimate). The water-poor that are not frozen even on their warmest ground start
+ * as bare rock: inside their star's snow line ice never gathered, and what they had boiled off in
+ * its long, bright youth (Luger & Barnes 2015). The generator picks a world's kind by its orbit, at
+ * fixed distances whatever its star's light (and one branch for red dwarfs at any orbit), so these
+ * came out close in. A star already in its last flare is judged by its light before it, so its
+ * frozen worlds still thaw in the flare. Deterministic and after generation, so the galaxy's random
+ * draws, and everything else in it, stay as they were; the home system keeps its fixed layout.
+ */
+export function waterFromTheStart(state: GameState): { rich: number; dried: number } {
+  let rich = 0;
+  let dried = 0;
   const era = calendarEra(state);
   const decay = decayWarmth(state);
   for (const b of Object.values(state.bodies)) {
     if (b.kind !== 'ice' && b.kind !== 'ocean_ice') continue;
     const sys = state.systems[b.systemId];
     if (!sys || sys.special === 'home') continue;
+    if (b.kind === 'ocean_ice' || (b.water ?? 0) >= WATER_RICH) {
+      if (!b.traits.includes('water_rich')) b.traits.push('water_rich');
+      rich++;
+      continue;
+    }
     const lum = sys.primary.kind === 'blue_dwarf' ? primaryLuminosity({ ...sys.primary, kind: 'red_dwarf' }, state.years, era, decay) : undefined;
     const c = starClimate(state, b, lum, NO_TERRAFORMING);
     if ((c.day ?? c.mean) < ICE_MELTS_K) continue;
     // bare rock's own figures: its richness (1.0 to 1.7) from where the ice's lay in its range,
     // its trace of water from its own seed, as generation gives them
-    const span = b.kind === 'ice' ? 0.4 : 0.3;
-    b.richness = 1 + 0.7 * Math.max(0, Math.min(1, (b.richness - 0.5) / span));
+    b.richness = 1 + 0.7 * Math.max(0, Math.min(1, (b.richness - 0.5) / 0.4));
     b.kind = 'barren';
     b.habitability = 0;
     b.vitality = 0;
@@ -838,9 +851,25 @@ export function dryFromTheStart(state: GameState): number {
     b.coreHeat = 0;
     b.water = defaultWater('barren', (b.seed % 1000) / 1000);
     b.traits = b.traits.filter((t) => t !== 'subsurface_ocean');
-    n++;
+    dried++;
   }
-  return n;
+  return { rich, dried };
+}
+
+/**
+ * The runaway greenhouse, as the mean warmth starlight alone would give a world: past it, a
+ * water-rich world's seas boil into its sky for good. About 1.06 times Earth's sunlight (Kopparapu
+ * et al. 2013); a tidally locked world's clouds hold it off to about twice that (Yang, Cowan &
+ * Abbot 2013).
+ */
+export const RUNAWAY_K = 260;
+export const RUNAWAY_LOCKED_K = 300;
+/** The ground under a runaway's steam sky, its ocean in the air: past 1,500 K (Kasting 1988), by night as by day. */
+export const STEAM_K = 1500;
+
+/** A water-rich world past the runaway greenhouse, its seas a sky of steam (see starClimate). */
+export function steamWorld(state: GameState, b: Body): boolean {
+  return !b.dissolved && b.traits.includes('water_rich') && bodyClimate(state, b).mean >= STEAM_K;
 }
 
 /**
@@ -906,6 +935,13 @@ export function starClimate(state: GameState, b: Body, lum?: number, tf: Terrafo
   // left of it, and its protons decaying, if they do and we know it
   const tInt = warmth(40 * b.coreHeat, era === 'dusk' ? 0 : residual(RESIDUAL.world, state.years), DECAY_K.world * Math.pow(decay, 0.25));
   let t = Math.pow(Math.pow(tEq, 4) + Math.pow(tInt, 4), 0.25);
+  // a water-rich world past the runaway greenhouse: its seas are a sky of steam hundreds of bars
+  // deep, which holds the ground past 1,500 K by night as by day; below the limit they rain out
+  const locked = b.traits.includes('tidally_locked') && tEq > 0;
+  if (b.traits.includes('water_rich') && !b.rogue && t >= (locked ? RUNAWAY_LOCKED_K : RUNAWAY_K)) {
+    const k = Math.max(STEAM_K, t);
+    return locked ? { mean: k, day: k, night: k } : { mean: k };
+  }
   // Atmosphere Works: on a cold world, an air rich in greenhouse gases keeps the warmth in
   if (tf.works && t < TERRAFORM_TARGET_K) t = Math.min(TERRAFORM_TARGET_K, t * WORKS_GREENHOUSE);
   if (b.kind === 'eyeball' || b.kind === 'terran' || b.kind === 'super_earth') t *= 1 + 0.12 * b.vitality;

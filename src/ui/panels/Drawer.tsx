@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, steamWorld, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -454,9 +454,10 @@ function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
   );
 }
 
-/** A world's traits as shown: a rogue world is no longer locked to any star. */
-function shownTraits(b: Body): string[] {
-  return b.rogue ? b.traits.filter((t) => t !== 'tidally_locked') : b.traits;
+/** A world's traits as shown: a rogue world is no longer locked to any star, and a steam world's buried ocean is in its sky. */
+function shownTraits(s: GameState, b: Body): string[] {
+  const steam = steamWorld(s, b);
+  return b.traits.filter((t) => !(b.rogue && t === 'tidally_locked') && !(steam && t === 'subsurface_ocean'));
 }
 
 /** When a world reaches its dead star's tidal limit: never for a rogue world, which has no star to fall into. */
@@ -549,7 +550,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
           </div>
         )}
         <div class="row wrap" style={{ marginTop: '6px' }}>
-          {shownTraits(b).map((t) =>
+          {shownTraits(s, b).map((t) =>
             EVENT_BY_ID[`anom_${t}`] ? (
               <button key={t} class="chip lore" data-tip={`${TRAIT_NAME[t]?.[1] ?? ''}\nClick to read the survey report again.`} onClick={() => { sfx('open'); loreView.value = { defId: `anom_${t}`, bodyId: b.id }; }}>
                 <Icon name="relic" /> {TRAIT_NAME[t]?.[0] ?? t}
@@ -688,7 +689,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
         <h2>{c.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
           {isCap && <span class="chip neon">capital</span>}
-          {shownTraits(b).map((tr) => (
+          {shownTraits(s, b).map((tr) => (
             <span key={tr} class="chip" data-tip={TRAIT_NAME[tr]?.[1] ?? ''}>{TRAIT_NAME[tr]?.[0] ?? tr}</span>
           ))}
           {c.starving > 0 && <span class="chip danger">starving</span>}
