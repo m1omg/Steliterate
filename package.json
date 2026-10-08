@@ -1,0 +1,30 @@
+{
+  "name": "steliterate",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A 4X strategy game at the end of starlight: survive from the last red dwarfs to the Dark Era.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "sim": "tsx tools/sim.ts",
+    "savecompat": "tsx tools/savecompat.ts",
+    "check": "node tools/checks/run.mjs unit",
+    "check:browser": "node tools/checks/run.mjs browser"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.11.2",
+    "preact": "^10.29.8",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
+  }
+}
