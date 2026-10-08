@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, steamWorld, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, ICE_MELTS_K, bodyClimate, boilingAway, decayWarmth, insolation, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -454,10 +454,15 @@ function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
   );
 }
 
-/** A world's traits as shown: a rogue world is no longer locked to any star, and a steam world's buried ocean is in its sky. */
+/**
+ * A world's traits as shown: a rogue world is no longer locked to any star, and an ocean is buried
+ * only while ice is left over it, not once even the coldest ground has thawed (a flare's open sea)
+ * or boiled (a steam world). A twilight sea keeps its ice, and its ocean, on the night side.
+ */
 function shownTraits(s: GameState, b: Body): string[] {
-  const steam = steamWorld(s, b);
-  return b.traits.filter((t) => !(b.rogue && t === 'tidally_locked') && !(steam && t === 'subsurface_ocean'));
+  const c = bodyClimate(s, b);
+  const noIce = (c.night ?? c.mean) >= ICE_MELTS_K;
+  return b.traits.filter((t) => !(b.rogue && t === 'tidally_locked') && !(noIce && t === 'subsurface_ocean'));
 }
 
 /** When a world reaches its dead star's tidal limit: never for a rogue world, which has no star to fall into. */

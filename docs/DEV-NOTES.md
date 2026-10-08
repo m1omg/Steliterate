@@ -67,7 +67,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -174,6 +174,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     autoplayer and the UI.
   - `scorched` (night side > `SCORCH_K` = 340 K at a blue dwarf); `thawed` ('warm' 273–340 K,
     'hot' < 373 K; frozen wet worlds only); `THAW_ROOM` 5.
+  - `scorchWorlds` (in `turn.ts`) takes 0.6 vitality and 90% of the water over a whole flare
+    from every scorched world with life, any kind, by the share each turn lives through (`scorch`,
+    one share); a world whose life runs out dies (`worldDies`: surface life to bare rock).
+    `scorchedFromTheStart` (8 Oct, called by `newGame` after `waterFromTheStart`, no random
+    draw) gives a new galaxy's scorched worlds the share already lived through before turn 1, so
+    a flare well on has killed what it scorches (check `unit/scorch`).
   - `flareHeat`, `flareData` (event numbers), `sheltersNeeded`, `digShelters`,
     `keepTimeWithFlare`, `flareClock`.
   - Constants: `FLARE_TURNS` 6; shelters 3 Kin, 10 matter, max 4.
@@ -285,16 +291,19 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
       the buried ocean dropped.
     - A star in its last flare is judged by its red-dwarf light, and the home system is left
       alone. Every other world and star stays as generated (check `unit/icy`).
+    - A water-rich world that is a steam world starts lifeless (vitality and decline 0).
   - The runaway greenhouse, in `starClimate`: a `water_rich` world whose mean from starlight
     (`t`, before the Atmosphere Works step) is at least `RUNAWAY_LOCKED_K` (300 K, tidally
-    locked) or `RUNAWAY_K` (260 K, otherwise) gets a steam sky, day = night = mean =
+    locked: nearly twice Earth's sunlight) or `RUNAWAY_K` (276.6 K, otherwise: 1.4 times
+    Earth's sunlight, the player's figure, Kasting 1988) gets a steam sky, day = night = mean =
     max(`STEAM_K` 1,500 K, t). It is live: shading or dimming below the limit gives the plain
     climate back. Orbital Mirrors judge by the bare climate (1,500 K), so they shade a steam
     world, and `terraformBlocked` lets them build where half the light is below the limit (14 of
     30 steam worlds in six galaxies, all tidally locked to red dwarfs). A flare counts like any
     light: a water-rich world it takes past the limit is a steam world, never `thawed` (an
-    unlocked one cannot be: 260 K is below freezing), while the water-poor still thaw.
-    `steamWorld(state, b)` tells the labels. Only new games have `water_rich`, so
+    unlocked one thaws only between 273 and 276.6 K), while the water-poor still thaw.
+    `steamWorld(state, b)` tells the labels, and `declineWorlds` (`turn.ts`): life on a steam
+    world dies with the turn, logged for ours and surveyed worlds. Only new games have `water_rich`, so
     old saves' climates are unchanged. `youngDwarfLight(a, b)`: a Dusk white dwarf's
     collector light averaged over ages a..b (the power law integrated, then the 0.02 floor).
   - `bodyClimate` holds a world under Orbital Lamps at `LAMP_K` (285 K) at least
@@ -501,9 +510,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `twilightSea` (an ice world or ice-shelled ocean with its day side past 373 K and its night
     side below 273 K: a hot eyeball), before the kind's own name, with `waterState` giving its
     terminator sea.
-  On a steam world the panel hides the buried-ocean chip (`shownTraits`). The survey finds of ice,
-  of a buried ocean or of dried seas (`clathrates`, `vent_life`, `fossils` in `events.ts`) do not
-  fit it. Checks `unit/twilight` and `unit/icy`.
+  The panel shows the buried-ocean chip only while ice is left over it (`shownTraits`: the
+  coldest ground below `ICE_MELTS_K`), so not on a steam world or a flare's open sea; a twilight
+  sea keeps it. The survey finds of ice, of a buried ocean or of dried seas (`clathrates`,
+  `vent_life`, `fossils` in `events.ts`) do not fit a steam world. Checks `unit/twilight`,
+  `unit/icy` and `unit/scorch`.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -753,6 +764,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | neighbours, phases 3 and 4: expansion, war (work branch) | 144 | 55 victories, Degenerate Age 68 turns; 900 games 396 / 158 / 68 (426 / 162 / 70 before); by fate decay 169 / 450, stable 145 / 239, curvature 82 / 211. Without the Hunger smelling them 410 / 167, without expansion 409 / 150. War does not change the autoplayer's games (identical); the 'warlike' strategy: 21 wars, 397 / 158 / 68, its war games 14 survive against 13 in peace |
 | neighbours, phase 5: ways that meet; Part C live (7 Oct) | 146 | 60 victories, Degenerate Age 67 turns; 900 games 435 / 179 / 68 (396 / 158 / 68 before); by fate decay 179 / 450, stable 163 / 239, curvature 93 / 211. The autoplayer keeping its Echoes from the Choir: 439 / 163 / 71. Part C in all: 400 / 142 → 435 / 179 |
 | beacons fed; neighbours' dealings (7 Oct) | 154 | 59 victories, Degenerate Age 69 turns; 900 games 437 / 183 / 69 (435 / 179 / 68 before); by fate decay 173 / 450, stable 162 / 239, curvature 102 / 211. Beacons alone: 300 games identical (the autoplayer lights none). In 30 games trade offers 17 → 5.3 a game, shared works 3.0 → 1.7 |
+| runaway at 1.4×; steam worlds lifeless; the flare before turn 1 (8 Oct) | 143 | the runaway limit at 1.4 times Earth's sunlight (276.6 K, locked 300 K kept); life on steam worlds dies; a new galaxy's flares under way have done their damage (14 of 15 such living worlds in six galaxies start dead); 60 victories, Degenerate Age 73 turns; 900 games 429 / 185 / 69 (423 / 188 / 69 before), within the noise: 784 of 900 games play out as before, and the changes go both ways (16 defeat → endurance, 10 back; 8 victory → defeat, 8 back). By fate: decay 171 / 450, stable 157 / 239, curvature 101 / 211 |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |
 | every measure in the settle lists; yields; twilight seas (8 Oct) | 147 | display only: all 300 games identical to the terraforming run, line for line |

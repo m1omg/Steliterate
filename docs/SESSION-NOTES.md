@@ -85,7 +85,19 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   light like any other, so a water-rich world it takes past the limit is a steam world, not a
   Thawed ocean refuge (the water-poor still thaw); and Orbital Mirrors can shade a steam world
   only a little past the limit back below it (14 of 30 in six galaxies), so those can be
-  terraformed.
+  terraformed. On the report they said: "Runaway limit should be 1.4x insolation not the ones
+  quoted but yes put it live" (Kasting 1988's figure; done, 276.6 K); keep 1.9× for locked
+  worlds; flares make steam worlds ("A steam world"); life under boiled ice: "Make that life
+  die", and "If the world is dry on the dayside, a nightside under ice ocean should survive
+  actually" (the scorch rule already works so). I had wrongly told them a flare spares boiled
+  life: `scorchWorlds` takes 60% vitality over the flare, which kills it, but a game that starts
+  mid-flare did not count
+  the flare before turn 1, which is how a 1,500 K world showed 13% life. Done: steam worlds hold
+  no life, and `scorchedFromTheStart`. They asked what Orbital Lamps are (explained). They also
+  asked whether all red and brown dwarf worlds are close in: yes, in the game (within 0.3 and
+  0.042 AU), unlike real systems, which also have cold outer planets (microlensing). Offered outer
+  worlds as a separate batch (a hash of each system's seed, not the generator's draws); waiting
+  for their word.
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **The player works from more than one session.** Before changing anything, fetch every branch

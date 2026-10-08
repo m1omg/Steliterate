@@ -1,7 +1,8 @@
 // New galaxies sort their icy worlds by the water they formed with (waterFromTheStart, after
 // generation). The water-rich (ice-shelled oceans, and ice worlds with half their surface or more
-// under water) keep it, marked water_rich; past the runaway greenhouse their seas are a sky of steam
-// that holds the ground at 1,500 K by night as by day, and when the light falls below the limit it
+// under water) keep it, marked water_rich; past the runaway greenhouse (1.4 times Earth's sunlight,
+// nearly twice for a tidally locked world) their seas are a sky of steam that holds the ground at
+// 1,500 K by night as by day, with nothing alive, and when the light falls below the limit it
 // rains out again. Any light counts: Orbital Mirrors shade one only a little past the limit back
 // below it, and a star's last flare takes a water-rich world past it, a steam world and no thawed
 // refuge, while a water-poor one still thaws. The water-poor that are not frozen even on their warmest ground
@@ -11,7 +12,7 @@
 // are as before.
 import { generateWorld } from '../../../src/game/gen';
 import { DEFAULT_SETTINGS, newGame } from '../../../src/game/newGame';
-import { ICE_MELTS_K, NO_TERRAFORMING, RUNAWAY_K, RUNAWAY_LOCKED_K, STEAM_K, WATER_RICH, bodyClimate, decayWarmth, frozenFromTheStart, primaryLuminosity, starClimate, steamWorld, waterState } from '../../../src/game/physics';
+import { ICE_MELTS_K, NO_TERRAFORMING, RUNAWAY_K, RUNAWAY_LOCKED_K, STEAM_K, WATER_RICH, bodyClimate, decayWarmth, frozenFromTheStart, primaryLuminosity, starClimate, steamWorld, waterFromTheStart, waterState } from '../../../src/game/physics';
 import { calendarEra } from '../../../src/game/fate';
 import type { Body, GameState } from '../../../src/game/types';
 import { thawed } from '../../../src/game/sim/flare';
@@ -37,7 +38,9 @@ for (const seed of [1000, 2000, 3000, 4000]) {
   const opts = { seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' } as const;
   const before = generateWorld({ ...DEFAULT_SETTINGS, ...opts });
   frozenFromTheStart(before);
-  const s = newGame(opts);
+  // the pass on its own (newGame then scorches what a flare under way has reached: unit/scorch)
+  const s = clone(before);
+  waterFromTheStart(s);
   for (const [id, a] of Object.entries(before.bodies)) {
     const b = s.bodies[id];
     if (JSON.stringify({ ...a, colonyId: null }) === JSON.stringify({ ...b, colonyId: null })) continue;
@@ -47,8 +50,10 @@ for (const seed of [1000, 2000, 3000, 4000]) {
       if (a.kind !== 'ice' || (a.water ?? 0) >= WATER_RICH || b.richness < 1 || b.richness > 1.7 || (b.water ?? 0) > 0.01 || b.traits.includes('subsurface_ocean') || JSON.stringify(others) !== JSON.stringify({ ...b, colonyId: null })) badRock++;
     } else if ((a.kind === 'ice' || a.kind === 'ocean_ice') && b.traits.includes('water_rich')) {
       rich++;
-      // nothing but the mark
-      if (JSON.stringify({ ...a, traits: [...a.traits, 'water_rich'], colonyId: null }) !== JSON.stringify({ ...b, colonyId: null }) || !(a.kind === 'ocean_ice' || (a.water ?? 0) >= WATER_RICH)) richWrong++;
+      // nothing but the mark, and no life on a steam world
+      const steamy = steamWorld(s, b);
+      const want = { ...a, traits: [...a.traits, 'water_rich'], vitality: steamy ? 0 : a.vitality, decline: steamy ? 0 : a.decline, colonyId: null };
+      if (JSON.stringify(want) !== JSON.stringify({ ...b, colonyId: null }) || !(a.kind === 'ocean_ice' || (a.water ?? 0) >= WATER_RICH)) richWrong++;
     } else otherChanged++;
   }
   for (const id of Object.keys(before.systems)) if (JSON.stringify(before.systems[id]) !== JSON.stringify(s.systems[id])) starsChanged++;
@@ -75,7 +80,7 @@ for (const seed of [1000, 2000, 3000, 4000]) {
     if (past) {
       steam++;
       const even = c.mean >= STEAM_K && (c.day === undefined || (c.day === c.mean && c.night === c.mean));
-      if (!even || !steamWorld(s, b) || bodyKindName(s, b) !== 'Steam world' || !/steam/.test(waterState(b, c))) steamWrong++;
+      if (!even || !steamWorld(s, b) || b.vitality !== 0 || bodyKindName(s, b) !== 'Steam world' || !/steam/.test(waterState(b, c))) steamWrong++;
       // no survey finds of ice, of an ocean under it, or of dried seas on a steam world
       if (ICY_FINDS.some((a) => a.fits(s, b))) steamWrong++;
       if (!example && locked) example = { s, id: b.id };
@@ -87,7 +92,7 @@ check(dried > 10 && badRock === 0, `${dried} water-poor ones not frozen at their
 check(warmPoor === 0, 'no water-poor ice world is left warm at its warmest');
 check(otherChanged === 0 && starsChanged === 0, `every other world and every star as generated (${otherChanged}, ${starsChanged})`);
 check(homeKept >= 4, `the home system keeps its icy worlds (${homeKept})`);
-check(ICY_FINDS.length === 3 && steam > 5 && steamWrong === 0, `${steam} water-rich worlds past the runaway limit are steam worlds (${STEAM_K} K by night as by day, named so, with no finds of ice or buried seas), and only they`);
+check(ICY_FINDS.length === 3 && steam > 5 && steamWrong === 0, `${steam} water-rich worlds past the runaway limit (${RUNAWAY_K.toFixed(1)} K, ${RUNAWAY_LOCKED_K} K locked) are steam worlds (${STEAM_K} K by night as by day, lifeless, named so, with no finds of ice or buried seas), and only they`);
 
 // less light, below the limit: the steam rains out (moved ten times farther out, a hundredth of the light)
 if (example) {
@@ -102,8 +107,9 @@ if (example) {
 // any light counts: mirrors shade, and a flare lights
 {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  const sys = Object.values(s.systems).find((x) => x.special !== 'home' && x.primary.kind === 'red_dwarf' && x.bodies.some((id) => !s.bodies[id].colonyId))!;
-  const proto = sys.bodies.map((id) => s.bodies[id]).find((x) => !x.colonyId)!;
+  const free = (id: string) => !s.bodies[id].colonyId && s.bodies[id].kind !== 'deep';
+  const sys = Object.values(s.systems).find((x) => x.special !== 'home' && x.primary.kind === 'red_dwarf' && x.bodies.some(free))!;
+  const proto = s.bodies[sys.bodies.find(free)!];
   // an icy world of this star's, where its light alone gives it k kelvin
   const icy = (k: number, rich: boolean, locked: boolean): Body => {
     const L = primaryLuminosity(sys.primary, s.years, calendarEra(s), decayWarmth(s));
@@ -112,19 +118,22 @@ if (example) {
   };
   const K = (b: Body) => Math.round(bodyClimate(s, b).mean);
   // mirrors: a steam world a little past its limit is shaded back below it, and can be terraformed
-  const near = icy(330, true, true);
-  const far = icy(420, true, true);
+  const near = icy(RUNAWAY_LOCKED_K * 1.1, true, true);
+  const far = icy(RUNAWAY_LOCKED_K * 1.4, true, true);
   const shaded = (b: Body) => starClimate(s, b, undefined, { mirrors: true, works: false }).mean;
-  check(steamWorld(s, near) && shaded(near) < STEAM_K && !terraformBlocked(s, near, undefined, 'mirrors'), `a locked steam world a little past its limit (330 K by starlight): mirrors shade it to ${Math.round(shaded(near))} K, and it can be terraformed`);
-  check(steamWorld(s, far) && shaded(far) >= STEAM_K && !!terraformBlocked(s, far, undefined, 'mirrors'), `one far past it (420 K) stays steam under mirrors: ${terraformBlocked(s, far, undefined, 'mirrors')}`);
-  // the star's last flare: the water-rich past the limit steam, the water-poor thaw
+  check(steamWorld(s, near) && shaded(near) < STEAM_K && !terraformBlocked(s, near, undefined, 'mirrors'), `a locked steam world a little past its limit (${RUNAWAY_LOCKED_K * 1.1} K by starlight): mirrors shade it to ${Math.round(shaded(near))} K, and it can be terraformed`);
+  check(steamWorld(s, far) && shaded(far) >= STEAM_K && !!terraformBlocked(s, far, undefined, 'mirrors'), `one far past it (${RUNAWAY_LOCKED_K * 1.4} K) stays steam under mirrors: ${terraformBlocked(s, far, undefined, 'mirrors')}`);
+  // the star's last flare: the water-rich past the limit steam, the water-poor thaw, and so do the
+  // water-rich it leaves between freezing and their limit
   sys.primary.kind = 'blue_dwarf';
   const poor = icy(300, false, false);
   const rich = icy(300, true, false);
-  const lockedRich = icy(290, true, true);
+  const lockedRich = icy((ICE_MELTS_K + RUNAWAY_LOCKED_K) / 2, true, true);
+  const unlockedRich = icy((ICE_MELTS_K + RUNAWAY_K) / 2, true, false);
   check(thawed(s, poor) === 'warm' && !steamWorld(s, poor), `in a flare, a water-poor icy world at ${K(poor)} K thaws into a refuge`);
   check(steamWorld(s, rich) && thawed(s, rich) === null, `a water-rich one there is a steam world (${K(rich)} K), no refuge`);
   check(!steamWorld(s, lockedRich) && thawed(s, lockedRich) === 'warm', `a locked water-rich one the flare leaves below its limit (${K(lockedRich)} K) thaws`);
+  check(!steamWorld(s, unlockedRich) && thawed(s, unlockedRich) === 'warm', `so does an unlocked one between freezing and its limit (${K(unlockedRich)} K)`);
   // the star collapses: the steam rains out, and freezes
   sys.primary.kind = 'white_dwarf';
   sys.primary.whiteAt = s.years;

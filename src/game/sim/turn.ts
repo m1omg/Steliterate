@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
 import { ERA_BY_ID, logTurnLength, tideLength } from '../eras';
-import { SURFACE_LIFE, evolveUniverse, lampsOver, seededLifeUnkept, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
+import { SURFACE_LIFE, evolveUniverse, lampsOver, seededLifeUnkept, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { greatEvaporation, runCrossing } from './crossing';
@@ -109,6 +109,13 @@ function declineWorlds(state: GameState) {
   for (const b of Object.values(state.bodies)) {
     if (b.dissolved || b.vitality <= 0) continue;
     const c = byBody.get(b.id);
+    // a steam world's seas are its sky, the ground past 1,500 K by night as by day: no ice left to
+    // live under, no sea, and a turn is longer than an ocean takes to boil
+    if (steamWorld(state, b)) {
+      b.vitality = 0;
+      if (c || (state.civ.known[b.systemId] ?? 0) === 2) log(state, `Nothing lives on ${b.name} now: its seas have boiled into a sky of steam.`, c ? 'bad' : 'info', b.systemId);
+      continue;
+    }
     const loss = vitalityLoss(state, b, c);
     b.vitality = Math.max(0, b.vitality - loss.decline);
     if (c && b.traits.includes('homeworld') && calendarEra(state) === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
@@ -125,6 +132,14 @@ function declineWorlds(state: GameState) {
   }
 }
 
+/** What `share` of a flare does to a scorched world: true if its life is gone. */
+function scorch(b: Body, share: number): boolean {
+  b.vitality = Math.max(0, b.vitality - 0.6 * share);
+  // the seas boil into steam, and the steam is broken up and lost to space
+  if (b.water) b.water *= 1 - 0.9 * share;
+  return b.vitality <= 0;
+}
+
 /**
  * A flaring star boils the seas of its worlds and strips their air. The damage follows the share
  * of the flare this turn lives through, so it comes to the same whether it passes in one turn or six.
@@ -137,11 +152,28 @@ function scorchWorlds(state: GameState, from: number, to: number) {
     const end = p.whiteAt ?? to;
     const share = end > start ? Math.max(0, Math.min(end, to) - Math.max(start, from)) / (end - start) : 1;
     if (share <= 0) continue;
-    b.vitality = Math.max(0, b.vitality - 0.6 * share);
-    // the seas boil into steam, and the steam is broken up and lost to space
-    if (b.water) b.water *= 1 - 0.9 * share;
-    if (b.vitality <= 0) worldDies(state, b, true);
+    if (scorch(b, share)) worldDies(state, b, true);
   }
+}
+
+/**
+ * A new galaxy whose stars are already flaring: their worlds have lived through the flare so far,
+ * scorched as scorchWorlds scorches them, in one share (it comes to the same). Most such flares
+ * are well on, so most of their living worlds start dead. Deterministic and after generation: no
+ * random draw, so the galaxy's stars and orbits stay as they were.
+ */
+export function scorchedFromTheStart(state: GameState): number {
+  let n = 0;
+  for (const b of Object.values(state.bodies)) {
+    if (b.dissolved || b.vitality <= 0 || !scorched(state, b)) continue;
+    const p = state.systems[b.systemId].primary;
+    if (p.blueAt === undefined || p.whiteAt === undefined || p.whiteAt <= p.blueAt) continue;
+    const share = Math.max(0, Math.min(1, (state.years - p.blueAt) / (p.whiteAt - p.blueAt)));
+    if (share <= 0) continue;
+    if (scorch(b, share)) worldDies(state, b, true);
+    n++;
+  }
+  return n;
 }
 
 /** A living world that has lost its warmth freezes, or dries to bare rock. */

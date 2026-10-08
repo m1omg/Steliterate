@@ -272,14 +272,21 @@ the disagreement as real model uncertainty.
     like the ocean planets of Léger et al. 2004) keep it, more than their star's bright youth
     could boil away. Past the runaway greenhouse they are steam worlds: their oceans a sky of
     steam hundreds of bars deep, the ground past 1,500 K by night as by day (Kasting 1988).
-  - The runaway limit is about 1.1 times Earth's sunlight (260 K by starlight), as in the
-    three-dimensional model of Leconte et al. 2013 (Nature; one-dimensional models put it at
-    1.06: Kopparapu et al. 2013). For a tidally locked world, whose clouds shade it, it is nearly
-    twice Earth's sunlight (300 K; Yang, Cowan & Abbot 2013 found twice the one-dimensional
-    limit). Below it the steam rains out into seas; Orbital Mirrors can shade a world only a
+  - The runaway limit is 1.4 times Earth's sunlight (276.6 K by starlight), the player's figure:
+    Kasting 1988's, where the oceans evaporate entirely. Later models start the runaway sooner,
+    at 1.06 (Kopparapu et al. 2013) to 1.1 (Leconte et al. 2013, Nature). For a tidally locked
+    world, whose clouds shade it, it is nearly twice Earth's sunlight (300 K): Yang, Cowan &
+    Abbot 2013 kept such worlds habitable to 1.6 times it around a red dwarf and 1.9 around a K
+    star. Below it the steam rains out into seas; Orbital Mirrors can shade a world only a
     little past it back below.
+  - Nothing lives on a steam world: no ice to live under, no sea. Life on one dies with the turn,
+    and new galaxies start them lifeless.
   - Any light counts. A star's last flare can take a water-rich world past the limit: a steam
     world, not a thawed refuge, until the light falls back. Water-poor icy worlds still thaw.
+  - A flare takes 60% vitality over its course from any world it heats past 340 K even on the
+    night side, which kills most (any kind of life). A world dry on its day side that keeps ice
+    and an ocean under it on its night side keeps its life. A new galaxy whose stars are already flaring starts with the flare so far
+    behind it, so a flare well on has already killed what it scorches.
   - The water-poor that are warm lose their water in the star's long, bright youth (Luger &
     Barnes 2015) and start as bare rock. Cold ones stay ice worlds: they boiled young, kept their
     water and froze.

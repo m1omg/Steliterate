@@ -814,17 +814,17 @@ export const ICE_MELTS_K = 273;
 export const WATER_RICH = 0.5;
 
 /**
- * A new galaxy's icy worlds, sorted by the water they formed with. The water-rich
- * keep it, marked `water_rich`: close to their star, past the runaway greenhouse, their seas are a
- * sky of steam (starClimate). The water-poor that are not frozen even on their warmest ground start
- * as bare rock: inside their star's snow line ice never gathered, and what they had boiled off in
- * its long, bright youth (Luger & Barnes 2015). The generator picks a world's kind by its orbit, at
- * fixed distances whatever its star's light (and one branch for red dwarfs at any orbit), so these
- * came out close in. A star already in its last flare is judged by its light before it, so the
- * water-poor worlds it had frozen are still there to thaw in the flare (the water-rich ones the
- * flare takes past the runaway greenhouse are steam worlds instead). Deterministic and after
- * generation, so the galaxy's random draws, and everything else in it, stay as they were; the
- * home system keeps its fixed layout.
+ * A new galaxy's icy worlds, sorted by the water they formed with. The water-rich keep it, marked
+ * `water_rich`: close to their star, past the runaway greenhouse, their seas are a sky of steam
+ * (starClimate), and nothing lives there (declineWorlds). The water-poor that are not frozen even
+ * on their warmest ground start as bare rock: inside their star's snow line ice never gathered,
+ * and what they had boiled off in its long, bright youth (Luger & Barnes 2015). The generator
+ * picks a world's kind by its orbit, at fixed distances whatever its star's light (and one branch
+ * for red dwarfs at any orbit), so these came out close in. A star already in its last flare is
+ * judged by its light before it, so the water-poor worlds it had frozen are still there to thaw in
+ * the flare (the water-rich ones the flare takes past the runaway greenhouse are steam worlds
+ * instead). Deterministic and after generation, so the galaxy's random draws, and everything else
+ * in it, stay as they were; the home system keeps its fixed layout.
  */
 export function waterFromTheStart(state: GameState): { rich: number; dried: number } {
   let rich = 0;
@@ -837,6 +837,10 @@ export function waterFromTheStart(state: GameState): { rich: number; dried: numb
     if (!sys || sys.special === 'home') continue;
     if (b.kind === 'ocean_ice' || (b.water ?? 0) >= WATER_RICH) {
       if (!b.traits.includes('water_rich')) b.traits.push('water_rich');
+      if (steamWorld(state, b)) {
+        b.vitality = 0;
+        b.decline = 0;
+      }
       rich++;
       continue;
     }
@@ -860,13 +864,16 @@ export function waterFromTheStart(state: GameState): { rich: number; dried: numb
 
 /**
  * The runaway greenhouse, as the mean warmth starlight alone would give a world: past it, a
- * water-rich world's seas boil into its sky for good. 260 K is about 1.1 times Earth's sunlight,
- * the limit in the three-dimensional model of Leconte et al. 2013, Nature 504, 268
- * (one-dimensional models put it at 1.06: Kopparapu et al. 2013). A tidally locked world's clouds
- * shade it and hold the limit off to 300 K, nearly twice Earth's sunlight (Yang, Cowan & Abbot
- * 2013: twice the one-dimensional limit). Any light counts, a flaring star's too.
+ * water-rich world's seas boil into its sky for good. At 1.4 times Earth's sunlight (the player's
+ * choice): Kasting 1988's limit, where the oceans evaporate entirely, from the paper that gives
+ * the 1,500 K beneath (STEAM_K). Later models start the runaway sooner, at 1.06 (Kopparapu et al.
+ * 2013) to 1.1 (Leconte et al. 2013, Nature 504, 268). 276.6 K is the warmth starClimate gives at
+ * that light (Earth's 1 AU, albedo 0.3, is 254 K). A tidally locked world's clouds shade it and
+ * hold the limit off to 300 K, nearly twice Earth's sunlight: Yang, Cowan & Abbot 2013 kept such
+ * worlds habitable to 1.6 times it around a red dwarf and 1.9 around a K star, where their runs
+ * stopped. Any light counts, a flaring star's too.
  */
-export const RUNAWAY_K = 260;
+export const RUNAWAY_K = 278 * Math.pow(0.7 * 1.4, 0.25);
 export const RUNAWAY_LOCKED_K = 300;
 /** The ground under a runaway's steam sky, its ocean in the air: past 1,500 K (Kasting 1988), by night as by day. */
 export const STEAM_K = 1500;

@@ -130,7 +130,8 @@ for (const [id, i] of [['new_star', 1], ['white_fire', 1]] as [string, number][]
   const i0 = res ? state.civ.research[res] ?? 0 : state.civ.flags.insight_bank ?? 0;
   ch.run(state, { systemId: inTune.id }, null as never);
   const i1 = res ? state.civ.research[res] ?? 0 : state.civ.flags.insight_bank ?? 0;
-  check(i1 - i0 === 25 && Math.abs(state.civ.resolve - r0 - Math.min(2, 100 - r0)) < 1e-9, `${id} "${ch.label}": insight +${i1 - i0}, resolve +${+(state.civ.resolve - r0).toFixed(6)}`);
+  // both in floating point: a project's insight so far plus 25, less what it was, is 25 give or take
+  check(Math.abs(i1 - i0 - 25) < 1e-9 && Math.abs(state.civ.resolve - r0 - Math.min(2, 100 - r0)) < 1e-9, `${id} "${ch.label}": insight +${+(i1 - i0).toFixed(6)}, resolve +${+(state.civ.resolve - r0).toFixed(6)}`);
 }
 void had;
 done('CLOCK');

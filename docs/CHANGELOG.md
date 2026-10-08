@@ -1078,7 +1078,11 @@ at once". Built in phases, each with its checks and harness numbers.
 - **Request.** The player, on the ice-world fix: "I don't think it's realistic for all planets that
   are closer than the early snowline to be water-free. I think there should be steam worlds as well
   … as well as worlds that were boiling at that time but didn't lose all the water and then they
-  froze … some planets can be up to 50% water." Chosen: the version with steam worlds.
+  froze … some planets can be up to 50% water." Chosen: the version with steam worlds. On the
+  report: "Runaway limit should be 1.4x insolation not the ones quoted but yes put it live"; keep
+  1.9× for locked worlds; a flare makes steam worlds as any light does; life under boiled ice:
+  "Make that life die", and "If the world is dry on the dayside, a nightside under ice ocean
+  should survive actually."
 - **Water-rich worlds keep their water.** A new galaxy's icy worlds are sorted by the water they
   formed with.
   - Ice-shelled oceans, and ice worlds with half their surface or more under water (the wetter
@@ -1089,34 +1093,58 @@ at once". Built in phases, each with its checks and harness numbers.
     froze.
 - **Steam worlds.** A water-rich world past the runaway greenhouse has a sky of steam hundreds of
   bars deep. It holds the ground at 1,500 K or more by night as by day (Kasting 1988).
-  - The limit is a mean from starlight of 260 K, about 1.1 times Earth's sunlight, as in the
-    three-dimensional model of Leconte et al. 2013 (Nature; one-dimensional models put it at
-    1.06: Kopparapu et al. 2013). For a tidally locked world it is 300 K, nearly twice Earth's
-    sunlight, because clouds over the star-facing side shade it (Yang, Cowan & Abbot 2013 found
-    twice the one-dimensional limit).
+  - The limit is 1.4 times Earth's sunlight, the player's figure: Kasting 1988's runaway, where
+    the oceans evaporate entirely, from the paper that gives the 1,500 K. Later models start the
+    runaway sooner, at 1.06 (Kopparapu et al. 2013) to 1.1 (Leconte et al. 2013, Nature). As a
+    mean from starlight it is 276.6 K.
+  - For a tidally locked world it is 300 K, nearly twice Earth's sunlight, because clouds over the
+    star-facing side shade it. Yang, Cowan & Abbot 2013 kept such worlds habitable to 1.6 times
+    Earth's sunlight around a red dwarf and 1.9 around a K star, where their runs stopped.
   - It is live: with less light (the star's remnant cooled, or mirrors shading it) the steam rains
     out into seas.
-  - The world is named Steam world, with a note and a Water-rich chip. The buried-ocean chip is
-    hidden while it is one, and survey finds of ice, of an ocean under ice or of dried seas do not
-    fit it.
+  - Nothing lives on a steam world. Life on one dies with the turn, and the Record says so for a
+    world we know ("Nothing lives on X now: its seas have boiled into a sky of steam."). A new
+    galaxy's steam worlds start lifeless.
+  - The world is named Steam world, with a note and a Water-rich chip. Survey finds of ice, of an
+    ocean under ice or of dried seas do not fit it.
   - On the map it is a veil of steam: the shader never draws lava under an icy world's sky.
   - A flare can do it too. A water-rich world that its star's last flare takes past the limit is
     a steam world, not a Thawed ocean refuge, until the light falls back below the limit after
     the star collapses. Water-poor icy worlds still thaw into refuges, and so does a water-rich
-    one the flare leaves below the limit (only a tidally locked one can be: unlocked, the limit
-    is below freezing).
+    one the flare leaves between freezing and its limit (277 K, or 300 K if it is locked).
   - Mirrors can undo it. In six galaxies 14 of the 30 steam worlds are only a little past the
     limit, and Orbital Mirrors would shade them back below it and let them be terraformed (to 34
     to 41% habitability, the warmest ground at 344 to 356 K).
+- **The flare before turn 1 counts.** The scorch rule already took 60% vitality over a whole flare
+  from any world it heats past 340 K even on the night side, by the share each turn lives
+  through, which kills most. But it counted only from turn 1.
+  - Before, in six galaxies, 15 living worlds in flaring systems started with all their life,
+    though their flares were 29 to 100% through.
+  - Now a new galaxy starts with the flare so far behind it (`scorchedFromTheStart`, by the same
+    rule in one share). Of the 15, 14 start dead: 11 with surface life as bare rock, and 3
+    ice-shelled oceans. One keeps 13% of its life.
+  - A world dry on its day side that keeps ice, and an ocean under it, on its night side is not
+    scorched, and keeps its life, as the player said.
+- **The buried-ocean chip** shows only while ice is left over the ocean, not on a flare's open sea
+  or a steam world. A twilight sea keeps it.
 - **Per galaxy** (six seeds): about 5 steam worlds, 3 with a sea on the day side and ice beyond, a
   rare twilight sea, 7.5 dried to bare rock; the rest stay frozen. Twilight seas are now mostly a
   water-poor world's state, as in Leconte et al. 2013 (A&A), and the water-poor warm ones dry out.
-- **Saves and seeds.** No random draw. Saves are untouched: old games have no water-rich worlds,
-  and their climates are as they were.
-- **Balance.** 300 games: 139 survive, 62 victories, a Degenerate Age of 72 turns. 900 games: 423
-  / 188 / 69, against 426 / 184 / 68 with the dry pass, within the noise. 232 of 900 games play out
-  exactly as with the dry pass, and the outcomes that change go both ways (81 endurance → defeat,
-  79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211.
-- **Checks.** `unit/icy` is rewritten: water-rich worlds kept and marked; steam worlds, and only
-  they, past the limit; rain-out with less light; no icy finds on them; old saves. `unit/twilight`
-  audits naming without assuming none at the start.
+- **Saves and seeds.** No random draw: every seed keeps its stars and orbits. Saves are untouched:
+  old games have no water-rich worlds, their climates are as they were, and the start passes run
+  only in a new game. The steam rule acts in any game, but an old game has no steam world.
+- **Balance.** 300 games: 143 survive, 60 victories, a Degenerate Age of 73 turns. 900 games: 429
+  / 185 / 69, against 423 / 188 / 69 at the first limit (1.09 times Earth's sunlight, no boiled
+  life rules), within the noise: 784 of 900 games play out exactly as before, and the outcomes
+  that change go both ways (16 defeat → endurance, 10 back; 8 victory → defeat, 8 back). By fate:
+  decay 171 / 450, stable 157 / 239, curvature 101 / 211. Against the dry pass that is live (426
+  / 184 / 68) the whole batch is within the noise too.
+- **Checks.**
+  - `unit/icy` is rewritten: water-rich worlds kept and marked; steam worlds, and only they, past
+    the limit, and lifeless; rain-out with less light; no icy finds on them; mirrors and flares
+    against the limits; old saves.
+  - New `unit/scorch`: the flare before turn 1 in six galaxies, world by world; a steam world's
+    life dying at the turn, with its line in the Record; a twilight sea keeping its life in a flare.
+  - `unit/twilight` audits naming without assuming none at the start.
+  - `unit/clock` compares the insight from Study and Watch with a tolerance: the new course gave
+    25.000000000000057.

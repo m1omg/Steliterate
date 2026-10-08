@@ -2,6 +2,7 @@ import { generateWorld } from './gen';
 import { frozenFromTheStart, waterFromTheStart } from './physics';
 import { createColony, newFleet } from './sim/fleets';
 import { updateForecasts } from './sim/forecast';
+import { scorchedFromTheStart } from './sim/turn';
 import { log, savableName } from './sim/util';
 import { SAVE_VERSION } from './save';
 import type { GameSettings, GameState } from './types';
@@ -22,6 +23,7 @@ export function newGame(partial: Partial<GameSettings> = {}): GameState {
   const state = generateWorld(settings);
   frozenFromTheStart(state);
   waterFromTheStart(state);
+  scorchedFromTheStart(state);
   const home = state.systems[state.civ.homeSystemId];
   const hw = home.bodies.map((id) => state.bodies[id]).find((b) => b.traits.includes('homeworld'))!;
   const c = createColony(state, hw, { kin: 8 });
