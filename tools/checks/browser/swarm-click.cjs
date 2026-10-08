@@ -29,19 +29,36 @@ run(async () => {
     const ce = e.screenOf(edge);
     const rpx = Math.hypot(ce.x - c.x, ce.y - c.y);
     const res = [];
+    // pixels per world unit at distance 1, as the picker sizes a body's disc
+    const rect = e.renderer.domElement.getBoundingClientRect();
+    const pxPerUnit = rect.height / 2 / Math.tan(((e.camera.fov / 2) * Math.PI) / 180);
     for (const [dx, dy] of [[0, 0], [rpx * 0.5, 0], [-rpx * 0.6, rpx * 0.3], [0, -rpx * 0.7], [rpx * 0.8, rpx * 0.4]]) {
-      const p = e.pickAt(c.x + dx, c.y + dy);
-      // what else sits within 8 px of that point
-      const near = list.filter((q) => q.kind !== 'swarm').map((q) => { const o = e.screenOf(q.pos); return { id: q.id, d: Math.round(Math.hypot(o.x - c.x - dx, o.y - c.y - dy)) }; }).filter((q) => q.d <= 12);
-      res.push(p ? (p.kind === 'swarm' ? 'swarm' : `${p.id}${near.length ? ` [${near.map((q) => q.id + '@' + q.d + 'px').join(' ')}]` : ''}`) : 'none');
+      const x = c.x + dx;
+      const y = c.y + dy;
+      const p = e.pickAt(x, y);
+      if (!p || p.kind === 'swarm') {
+        res.push(p ? 'swarm' : 'none');
+        continue;
+      }
+      // something else won: how far it is from the pointer (as the picker measures), and its disc
+      const o = e.screenOf(p.pos);
+      const d = Math.hypot(o.x - x, o.y - y) - (p.kind === 'fleet' ? 4 : 0);
+      const disc = p.radius ? (p.radius * pxPerUnit) / Math.max(1e-3, e.camera.position.distanceTo(p.pos)) : 0;
+      res.push(`${p.id} [${d.toFixed(2)}px off, disc ${disc.toFixed(2)}px]`);
     }
     const onStar = st ? e.pickAt(st.x, st.y) : null;
     return { label, rpx: Math.round(rpx), res, onStar: onStar ? onStar.kind : null, view: e.view, c };
   }, label);
   const g = await probe('galaxy');
   console.log(`  galaxy: cloud ${g.rpx} px across its radius; clicks on it pick ${g.res.join(', ')}; right on the star picks ${g.onStar}`);
-  // on the cloud, the swarm is picked unless something solid is right under the pointer (within half the reach: 8 px here)
-const fair = (r, half) => r.every((k) => k === 'swarm' || (/\[.*@(\d+)px/.test(k) && Number(/@(\d+)px/.exec(k)[1]) <= half));
+  // on the cloud, the swarm is picked unless something solid is right under the pointer: within half
+  // the picker's reach (8 px on the map, 13 in a system) or on its own disc (4 px of slack)
+  const fair = (r, half) =>
+    r.every((k) => {
+      if (k === 'swarm') return true;
+      const m = /\[([\d.]+)px off, disc ([\d.]+)px\]/.exec(k);
+      return !!m && (Number(m[1]) <= half || Number(m[1]) <= Number(m[2]) + 4);
+    });
 check(fair(g.res, 8) && g.res.filter((k) => k === 'swarm').length >= 3 && g.onStar === 'system', `galaxy map: the cloud picks the swarm (but a star right under the pointer wins), the star still picks the star`);
   // a real click on the cloud, away from the star
   await page.mouse.click(g.c.x + g.rpx * 0.6, g.c.y - g.rpx * 0.3);

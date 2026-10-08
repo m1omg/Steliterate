@@ -1256,4 +1256,7 @@ changes … apply them to a new game").
   against 118, The Aeon Seed 70 against 66). 426 of 900 games play out as before. By fate: decay
   167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes its pace only for
   energy, never to reach anyone: the gain is the wider span alone.
-- **Checks.** New `unit/clocks` and `browser/clocks`.
+- **Checks.** New `unit/clocks` and `browser/clocks`. `browser/swarm-click` measures a winning
+  pick as the picker does (its distance and drawn disc): it had listed what was near each point
+  only up to 12 px, while a world wins over a swarm's haze within 13 px in a system, so a world
+  orbiting 12.6 px from the cloud's centre, rightly picked, failed it one run in three.
