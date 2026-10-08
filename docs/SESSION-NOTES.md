@@ -129,6 +129,9 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   text: the diplomacy screen, Signals). Asked how far, they chose "Any rhythm from mind to turn"
   (Recommended): our clock is the span from our dominant minds' clock to the turn's; Signals shows
   it at the top, and each card says in reach, too slow or too fast for us, and which pace would reach them.
+  Then "Please push the base civilization update even to the live game" (speech to text; read as
+  the pace update, and the fast-forward brought the audits batch with it, all theirs to ask for):
+  live at their word (`fc6c59a`).
   Discuss first, not built: tidal locking by locking time (everything within about 1.4 AU of a
   red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
   its mass-blind date; the helium stars' one set of numbers.
