@@ -1,5 +1,5 @@
 import { STRUCTURE_BY_ID } from './data/structures';
-import { hawkingTime } from './gen';
+import { defaultWater, hawkingTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
 import { calendarEra, fateKnown, fateOf } from './fate';
 import { protonFateKnown } from './sim/util';
@@ -801,6 +801,46 @@ export function seededLifeUnkept(state: GameState, b: Body, c: Colony | undefine
   if (!c || !((c.structures.biosphere_seeding ?? 0) > 0) || SURFACE_LIFE.includes(b.kind)) return false;
   const tf = terraformingOf(state, b, c);
   return !tf.mirrors && !tf.works;
+}
+
+/** Ice melts here: an ice world (or the shell of an ice-shelled ocean) is frozen only below it. */
+export const ICE_MELTS_K = 273;
+
+/**
+ * A new galaxy's ice worlds and ice-shelled oceans that are not frozen even on their warmest ground
+ * start as what they would be: bare rock. The generator picks a world's kind by its orbit, at fixed
+ * distances whatever its star's light (and one branch for red dwarfs at any orbit), so some came
+ * out inside their star's snow line, where ice never gathers and what a close world had would have
+ * boiled off in its star's bright youth. A star already in its last flare is judged by its light
+ * before it, so its frozen worlds still thaw in the flare. Deterministic and after generation, so
+ * the galaxy's random draws, and everything else in it, stay as they were; the home system keeps
+ * its fixed layout.
+ */
+export function dryFromTheStart(state: GameState): number {
+  let n = 0;
+  const era = calendarEra(state);
+  const decay = decayWarmth(state);
+  for (const b of Object.values(state.bodies)) {
+    if (b.kind !== 'ice' && b.kind !== 'ocean_ice') continue;
+    const sys = state.systems[b.systemId];
+    if (!sys || sys.special === 'home') continue;
+    const lum = sys.primary.kind === 'blue_dwarf' ? primaryLuminosity({ ...sys.primary, kind: 'red_dwarf' }, state.years, era, decay) : undefined;
+    const c = starClimate(state, b, lum, NO_TERRAFORMING);
+    if ((c.day ?? c.mean) < ICE_MELTS_K) continue;
+    // bare rock's own figures: its richness (1.0 to 1.7) from where the ice's lay in its range,
+    // its trace of water from its own seed, as generation gives them
+    const span = b.kind === 'ice' ? 0.4 : 0.3;
+    b.richness = 1 + 0.7 * Math.max(0, Math.min(1, (b.richness - 0.5) / span));
+    b.kind = 'barren';
+    b.habitability = 0;
+    b.vitality = 0;
+    b.decline = 0;
+    b.coreHeat = 0;
+    b.water = defaultWater('barren', (b.seed % 1000) / 1000);
+    b.traits = b.traits.filter((t) => t !== 'subsurface_ocean');
+    n++;
+  }
+  return n;
 }
 
 /**

@@ -266,6 +266,12 @@ the disagreement as real model uncertainty.
   (enough water) or bare rock, and the game says so. Life under an ice shell, warmed by tides,
   lasts until the Last Light. Orbital Lamps (fusion lamps in orbit) keep one alive and hold it
   at about 285 K; a Core Stimulator slows the cooling.
+* **Ice only where it stays frozen.** A new galaxy's ice worlds and ice-shelled oceans that are not
+  frozen even on their warmest ground start as bare rock. Inside a star's snow line ice never
+  gathers, and a close world's water is lost in its red dwarf's long, bright youth (Luger &
+  Barnes 2015). An ice world that a brightening star warms later keeps its water: a locked one
+  with a boiling day side and a frozen night side is a twilight sea (a hot eyeball), its water
+  frozen on the night side and open along the terminator (Leconte et al. 2013).
 * **Terraforming** makes dead worlds more livable while their red dwarf burns, after the Mars
   proposals (McKay, Toon & Kasting 1991; Zubrin & McKay 1993). Orbital Mirrors double a cold
   world's light or halve a hot one's; Atmosphere Works give it a greenhouse air that carries a

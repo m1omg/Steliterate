@@ -73,9 +73,10 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   - each settlement's yields in the Systems list, "kind of like in Civilization".
   Done, display only (300 games identical). They also found an "Ice world" with a terminator sea
   and a boiling day side: the generator places some ice worlds close in (fixed-AU kinds). Such
-  worlds are now named for their climate (Twilight sea), generation untouched. Offered: new
-  galaxies could place ice worlds by each star's light instead, which changes which worlds new
-  games have (not saves). Not done; their call.
+  worlds are now named for their climate (Twilight sea). That batch went live at their word
+  ("Put it live"; `988c6ff`). Asked whether new galaxies should place ice worlds by each star's
+  light: "Fix it for new games". Done with a pass after generation (`dryFromTheStart`, no random
+  draw, saves untouched). Its deploy was asked about separately.
 
 - **Next steps:** the player said they may have more changes in mind; wait for them.
 - **The player works from more than one session.** Before changing anything, fetch every branch

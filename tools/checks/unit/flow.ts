@@ -110,6 +110,9 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
   for (const g of [a, b]) {
     g.civ.dormant = true;
     g.civ.charters = g.civ.charters.filter((x) => x !== 'the_long_watch');
+    // one awake Kin keeps the capital, so no slow minds keep watch there (that is ×1.5 more,
+    // checked above): only sleeping's share of upkeep differs
+    g.colonies[s.civ.capitalId!].pops.kin = Math.max(1, g.colonies[s.civ.capitalId!].pops.kin);
   }
   const ca = a.colonies[s.civ.capitalId!];
   const cb = b.colonies[s.civ.capitalId!];

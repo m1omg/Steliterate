@@ -1050,3 +1050,25 @@ at once". Built in phases, each with its checks and harness numbers.
   - Generation is unchanged, so every seed's galaxy stays as it was; the climate names the world.
 - **Display only.** Saves are untouched, and 300 games play out identically, line for line.
 - Checks `unit/twilight` and `browser/settle-measures`.
+
+## Ice worlds by starlight (8 Oct)
+
+- Asked whether new galaxies should place ice worlds by each star's light, the player chose: "Fix
+  it for new games".
+- **The pass.** A new galaxy's ice worlds and ice-shelled oceans that are not frozen even on their
+  warmest ground (at or above 273 K) now start as bare rock, about 15 a galaxy. Inside a star's
+  snow line ice never gathers, and a close world's water is lost in its red dwarf's long, bright
+  youth (Luger & Barnes 2015).
+- **What they become.** They take bare rock's figures: richness from 1.0 to 1.7 (from where their
+  own lay), a trace of water, no habitability, life or buried ocean.
+- **Exceptions.** A star already in its last flare is judged by its light before it, so its
+  frozen worlds still thaw in the flare. The home system keeps its fixed layout.
+- **Seeds and saves.** The pass runs after generation and takes no random draw. Every other world,
+  every star and every name in a seed's galaxy stay as they were. Saves are untouched: games
+  begun before keep their ice worlds (named twilight seas where they are).
+- **Balance.** 300 games: 135 survive, 60 victories, a Degenerate Age of 70 turns (was 147 / 59 /
+  71). 900 games: 426 / 184 / 68 (was 434 / 183 / 70), within the noise. 108 of 900 games play
+  out as before. The outcomes that change go both ways: 116 endurance → defeat and 104 back, 50
+  defeat → victory and 46 back. By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211.
+- **Checks.** New: `unit/icy`. `unit/twilight` now builds its own twilight sea, and checks that new
+  galaxies start without any and that old saves name theirs rightly.

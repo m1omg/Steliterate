@@ -46,7 +46,7 @@ npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; cou
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
 
-Balance reference (7 Oct, terraforming): 147 of 300 standard competent games survive, 59
-victories, a Degenerate Age of 71 turns; 900 games: 434 survive, 183 victories; noise ±12 in 300
-(two runs of 900 can differ by 30). By fate in the 900: decay 38%, stable 68%, curvature 47%
+Balance reference (8 Oct, ice worlds by starlight): 135 of 300 standard competent games survive,
+60 victories, a Degenerate Age of 70 turns; 900 games: 426 survive, 184 victories; noise ±12 in 300
+(two runs of 900 can differ by 30). By fate in the 900: decay 37%, stable 71%, curvature 42%
 (`--fate=` runs one). The full history is in DEV-NOTES (Balance reference).

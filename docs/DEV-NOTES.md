@@ -67,7 +67,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -157,7 +157,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   twentyfold in three). `dealings` (unit and browser) sets a dear project, because the first
   techs are too cheap for any deal. `flow` judges its Echoes by a turn of 10^64 years: the
   Terraforming research moved seed 1000 to η 64.2 before the flow, where a Tide turn already
-  outlasts it.
+  outlasts it. Its sleeping-upkeep part gives the capital one awake Kin: after the ice worlds
+  changed (8 Oct), seed 1000's capital held only slow minds, whose ×1.5 keeping watch stacked
+  on the ×3. `clock` compares resolve with a tolerance (2.000000000000007 is +2).
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
 - The user dislikes long blocking waits. Prefer background runs and report when done.
@@ -271,7 +273,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `isStarLike`) and the warmest ground below `FROZEN_K` (195 K). `turnsToFreeze` steps it
     as the turn does, in floating point, for the panel and the Record.
   - `frozenFromTheStart` (called by `newGame`, after generation, no random draw): living worlds
-    already below `FROZEN_K` start as ice or rock. `youngDwarfLight(a, b)`: a Dusk white dwarf's
+    already below `FROZEN_K` start as ice or rock.
+  - `dryFromTheStart` (after it, 8 Oct, no random draw): ice worlds and ice-shelled oceans whose
+    warmest ground is at or above `ICE_MELTS_K` (273 K) start as bare rock. Their richness is
+    mapped into bare rock's 1.0 to 1.7, their water re-derived from their seed (`defaultWater`),
+    and the buried ocean dropped. A star in its last flare is judged by its red-dwarf light,
+    and the home system is left alone. Every other world and star stays as generated (check
+    `unit/icy`). `youngDwarfLight(a, b)`: a Dusk white dwarf's
     collector light averaged over ages a..b (the power law integrated, then the 0.02 floor).
   - `bodyClimate` holds a world under Orbital Lamps at `LAMP_K` (285 K) at least
     (`starClimate` is the star's part); a floor, so it never adds to a flare.
@@ -468,10 +476,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   settlement's figures take a line of their own, with icons).
 - **World kinds and climate:** `bodyTemplates` in `gen.ts` picks a kind by orbit at fixed AU,
   whatever the star's light, and for red dwarfs its last branch makes ice worlds at any orbit (91
-  of 217 in six galaxies sit inside 0.06 AU). Left so, to keep every seed's galaxy. The climate
-  names what they are in `bodyKindName` (`labels.ts`): `twilightSea` (an ice world or ice-shelled
-  ocean with its day side past 373 K and its night side below 273 K: a hot eyeball) before the
-  kind's own name, and `waterState` gives its terminator sea. Check `unit/twilight`.
+  of 217 in six galaxies sit inside 0.06 AU). Its draws are left as they are, so every seed keeps
+  its galaxy, and since 8 Oct `dryFromTheStart` turns the ones that are not frozen into bare rock
+  (about 15 a galaxy). Games begun before keep them, and a brightening star can warm an ice world
+  later. The climate names what they are in `bodyKindName` (`labels.ts`): `twilightSea` (an ice
+  world or ice-shelled ocean with its day side past 373 K and its night side below 273 K: a hot
+  eyeball) comes before the kind's own name, and `waterState` gives its terminator sea. Check
+  `unit/twilight`.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -721,5 +732,6 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | neighbours, phases 3 and 4: expansion, war (work branch) | 144 | 55 victories, Degenerate Age 68 turns; 900 games 396 / 158 / 68 (426 / 162 / 70 before); by fate decay 169 / 450, stable 145 / 239, curvature 82 / 211. Without the Hunger smelling them 410 / 167, without expansion 409 / 150. War does not change the autoplayer's games (identical); the 'warlike' strategy: 21 wars, 397 / 158 / 68, its war games 14 survive against 13 in peace |
 | neighbours, phase 5: ways that meet; Part C live (7 Oct) | 146 | 60 victories, Degenerate Age 67 turns; 900 games 435 / 179 / 68 (396 / 158 / 68 before); by fate decay 179 / 450, stable 163 / 239, curvature 93 / 211. The autoplayer keeping its Echoes from the Choir: 439 / 163 / 71. Part C in all: 400 / 142 → 435 / 179 |
 | beacons fed; neighbours' dealings (7 Oct) | 154 | 59 victories, Degenerate Age 69 turns; 900 games 437 / 183 / 69 (435 / 179 / 68 before); by fate decay 173 / 450, stable 162 / 239, curvature 102 / 211. Beacons alone: 300 games identical (the autoplayer lights none). In 30 games trade offers 17 → 5.3 a game, shared works 3.0 → 1.7 |
+| ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |
 | every measure in the settle lists; yields; twilight seas (8 Oct) | 147 | display only: all 300 games identical to the terraforming run, line for line |
 | terraforming; type, music, rings (7 Oct) | 147 | 59 victories, Degenerate Age 71 turns; 900 games 434 / 183 / 70 (437 / 183 / 69 before); by fate decay 173 / 450, stable 162 / 239, curvature 99 / 211. The autoplayer researches Terraforming last among the Dusk's projects and builds none (its Kin live on living worlds, which gain nothing; in 60 games it researched it in 59, median turn 84, and built it in 0). Variants, 900: the tech there but never chosen 436 / 180 / 70 (a new project moves games through the cheapest-project picks); researched right after Volatile Shepherding 424 / 166 / 69 (the detour delays the projects that win); terraforming every Kin world it can, as early as it can, 423 / 166 / 68, still none built |
