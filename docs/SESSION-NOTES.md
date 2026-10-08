@@ -131,7 +131,9 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   it at the top, and each card says in reach, too slow or too fast for us, and which pace would reach them.
   Then "Please push the base civilization update even to the live game" (speech to text; read as
   the pace update, and the fast-forward brought the audits batch with it, all theirs to ask for):
-  live at their word (`fc6c59a`).
+  live at their word (`fc6c59a`). Asked "should I merge now?": nothing blocked it, so I advised
+  a merge commit (squash or rebase would orphan the commit IDs the docs cite) and keeping the live
+  branch. "Yes, please go for it": PR m1omg/Steliterate#1 merged into `main` as `3e913f3`.
   Discuss first, not built: tidal locking by locking time (everything within about 1.4 AU of a
   red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
   its mass-blind date; the helium stars' one set of numbers.

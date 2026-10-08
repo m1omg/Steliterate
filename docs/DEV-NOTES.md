@@ -6,7 +6,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Workflow for every batch
 
-1. **Develop** on branch `claude/lucid-newton-30cbpk` (PR m1omg/Steliterate#1).
+1. **Develop** on branch `claude/lucid-newton-30cbpk`, the live branch (PR m1omg/Steliterate#1
+   merged it into `main` on 8 Oct as `3e913f3`; later work reaches `main` by a new PR, with a
+   merge commit so the commit IDs cited here stay valid).
 2. **Validate:**
    - `npx tsc --noEmit -p .`
    - `npm run build`

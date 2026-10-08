@@ -1,8 +1,9 @@
 # Changelog
 
-All work on branch `claude/lucid-newton-30cbpk` (PR m1omg/Steliterate#1). Every batch was
-typechecked, built, playtested (`tools/playtest.cjs`), balance-checked when rules changed
-(`tools/sim.ts`), pushed (GitHub Pages redeploys) and republished to the artifact
+All work on branch `claude/lucid-newton-30cbpk` (PR m1omg/Steliterate#1, merged into `main` on
+8 Oct as `3e913f3`). Every batch was typechecked, built, playtested (`tools/playtest.cjs`),
+balance-checked when rules changed (`tools/sim.ts`), pushed (GitHub Pages redeploys) and
+republished to the artifact
 https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Balance figures are "games that survive
 (Endurance + Victory) out of 300 standard competent autoplayed games"; noise is about ±12.
 
