@@ -53,7 +53,9 @@ import { act, engine, following, notify, openBuildFor, rev, selection, targeting
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { loreView } from '../screens/Story';
-import { siteValue, type SiteValue } from '../../game/sim/sites';
+import { siteValue } from '../../game/sim/sites';
+import { SiteStrip, bestOf, needOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
+import { YIELDS, yieldText, yieldTip } from '../yields';
 import { survivorPeople, survivorWorld } from '../../game/sim/homes';
 import { residentsSeen, seenThere } from '../../game/sim/claims';
 import { spinSharers } from '../../game/sim/ways';
@@ -358,64 +360,6 @@ function tempTip(s: GameState, sys: StarSystem): string {
 function kelvinC(k: number): string {
   const c = k - 273.15;
   return c > -120 && c < 200 ? `${n0(k)} K (${c > 0 ? '+' : ''}${n0(c)} °C)` : kelvin(k);
-}
-
-/** The four needs a place can meet, in the order of the settle sorts: livable, power, matter, lasting. */
-const NEEDS: { thread: ThreadId; icon: IconName; what: string }[] = [
-  { thread: 'kin', icon: 'kin', what: 'Kin: livable ground and room without domes' },
-  { thread: 'echoes', icon: 'echoes', what: 'Echoes and the Chorus: power' },
-  { thread: 'lattice', icon: 'lattice', what: 'The Lattice: matter' },
-  { thread: 'coldminds', icon: 'coldminds', what: 'Coldminds: time before the world falls into its star' },
-];
-
-type StarSites = Partial<Record<ThreadId, { b: Body; v: SiteValue }>>;
-
-/** A charted star's best world for each kind of settler (none where they cannot settle). */
-function starSites(s: GameState, sys: StarSystem): StarSites {
-  const out: StarSites = {};
-  for (const n of NEEDS) {
-    for (const id of sys.bodies) {
-      const b = s.bodies[id];
-      if (!b || canSettle(s, b, n.thread)) continue;
-      const v = siteValue(s, b, n.thread);
-      if (!out[n.thread] || v.score > out[n.thread]!.v.score) out[n.thread] = { b, v };
-    }
-  }
-  return out;
-}
-
-/** How suitable a charted star is for each kind of settler: one short figure per need. */
-function SiteStrip({ s, sites, best, mine }: { s: GameState; sites: StarSites; best: Partial<Record<ThreadId, number>>; mine: ThreadId | null }) {
-  return (
-    <div class="row wrap" style={{ gap: '10px', fontSize: '12.5px', marginTop: '1px', flexBasis: '100%', paddingLeft: '24px' }}>
-      {NEEDS.map((n) => {
-        const x = sites[n.thread];
-        const own = mine === n.thread || (mine === 'chorus' && n.thread === 'echoes');
-        if (!x) {
-          return (
-            <span key={n.thread} class="faint" style={{ opacity: own ? 1 : 0.8 }} data-tip={`${n.what}. Nowhere here they could settle.`}>
-              <Icon name={n.icon} /> none
-            </span>
-          );
-        }
-        const label = x.v.label;
-        const dying = /freezing|cooling/.test(label);
-        const short =
-          n.thread === 'kin'
-            ? dying ? (/cooling/.test(label) ? 'cooling' : 'freezing') : /room/.test(label) ? `${label.match(/(\d+) room/)?.[1] ?? ''} room` : 'domes'
-            : n.thread === 'coldminds'
-              ? label.replace(/^lasts /, '').replace(/ years?$/, '').replace('never falls in', '∞')
-              : (label.match(/[\d,.]+/)?.[0] ?? label);
-        // the best of the stars listed here, for this need (for Kin: room to live without domes)
-        const top = n.thread === 'kin' ? !dying && /room/.test(label) : (best[n.thread] ?? 0) > 0 && x.v.score >= 0.75 * best[n.thread]!;
-        return (
-          <span key={n.thread} class={`mono ${dying ? 'warn' : top ? 'good' : 'faint'}`} style={own ? { fontWeight: 600 } : undefined} data-tip={`${n.what}. The best place here: ${x.b.name} (${bodyKindName(s, x.b)}), ${label}.\n${x.v.tip}`}>
-            <Icon name={n.icon} /> {short}
-          </span>
-        );
-      })}
-    </div>
-  );
 }
 
 /** Turn the view to a world (inside its system) without changing what is selected. */
@@ -735,11 +679,6 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   const eNet = y ? y.energy - y.energyUpkeep : 0;
   // after the Long Flow: who keeps this place whole
   const keep = flowing(s) ? keeping(c, logTurnLength(turnStep(s, s.civ.pace)), mods) : 'kept';
-  const lineTip = (key: 'energy' | 'matter' | 'industry' | 'insight' | 'accord') =>
-    (y?.lines ?? [])
-      .filter((l) => (l[key] ?? 0) !== 0)
-      .map((l) => `${l.label}: ${signed(l[key] ?? 0)}`)
-      .join('\n') || 'Nothing yet.';
   return (
     <>
       <div class="drawer-head">
@@ -773,26 +712,12 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
               <>
               <div class="eyebrow yields-head">This settlement, each turn</div>
               <div class="yields">
-                <div data-tip={`Energy: captured minus upkeep\n${lineTip('energy')}\nUpkeep −${n1(y.energyUpkeep)}`}>
-                  <span class="yv"><Icon name="energy" cls="accent" /> <span class={`mono ${eNet >= 0 ? 'good' : 'bad'}`}>{signed(eNet)}</span></span>
-                  <span class="yl">Energy</span>
-                </div>
-                <div data-tip={`Matter: mined minus used\n${lineTip('matter')}${y.matterUpkeep ? `\nUsed −${n1(y.matterUpkeep)}` : ''}`}>
-                  <span class="yv"><Icon name="matter" /> <span class="mono">{signed(y.matter - y.matterUpkeep)}</span></span>
-                  <span class="yl">Matter</span>
-                </div>
-                <div data-tip={`Industry: builds this settlement's queue\n${lineTip('industry')}`}>
-                  <span class="yv"><Icon name="industry" /> <span class="mono">{n1(y.industry)}</span></span>
-                  <span class="yl">Industry</span>
-                </div>
-                <div data-tip={`Insight: drives research\n${lineTip('insight')}`}>
-                  <span class="yv"><Icon name="insight" /> <span class="mono">{n1(y.insight)}</span></span>
-                  <span class="yl">Insight</span>
-                </div>
-                <div data-tip={`Accord: buys Charters\n${lineTip('accord')}`}>
-                  <span class="yv"><Icon name="accord" /> <span class="mono">{signed(y.accord)}</span></span>
-                  <span class="yl">Accord</span>
-                </div>
+                {YIELDS.map(({ key, name }) => (
+                  <div key={key} data-tip={yieldTip(y, key)}>
+                    <span class="yv"><Icon name={key} cls={key === 'energy' ? 'accent' : undefined} /> <span class={key === 'energy' ? `mono ${eNet >= 0 ? 'good' : 'bad'}` : 'mono'}>{yieldText(y, key)}</span></span>
+                    <span class="yl">{name}</span>
+                  </div>
+                ))}
               </div>
               </>
             )}
@@ -1254,7 +1179,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   const tgt = targeting.value?.fleetId === f.id;
   const known = here ? Object.values(s.systems).filter((x) => x.id !== here.id && !x.gone && (s.civ.known[x.id] ?? 0) > 0).map((x) => ({ sys: x, ly: distLy(here, x) })) : [];
   // collision stars first (all of them, in the Degenerate Age), then the nearest ten
-  const dests = [
+  const nearby = [
     ...known.filter((d) => isBeacon(s, d.sys)).sort((a, b) => a.ly - b.ly),
     ...known
       .filter((d) => !isBeacon(s, d.sys))
@@ -1262,27 +1187,44 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
       .slice(0, 10),
   ];
   // how suitable each charted star nearby is for each kind of settler, and the best of them
-  const destSites: Record<string, StarSites> = {};
-  const destBest: Partial<Record<ThreadId, number>> = {};
-  for (const d of dests) {
-    if (s.civ.known[d.sys.id] !== 2) continue;
-    const sites = (destSites[d.sys.id] = starSites(s, d.sys));
-    for (const n of NEEDS) destBest[n.thread] = Math.max(destBest[n.thread] ?? 0, sites[n.thread]?.v.score ?? 0);
-  }
+  const destSites: Record<string, Sites> = {};
+  for (const d of nearby) if (s.civ.known[d.sys.id] === 2) destSites[d.sys.id] = starSites(s, d.sys);
+  const destBest = bestOf(Object.values(destSites));
   const settleDef = settler ? SHIP_BY_ID[settler.cls] : null;
+  const own: Need | null = settleDef?.settles ? needOf(settleDef.settles.thread) : null;
   // settlers are ranked for their own kind unless the player picks another measure
   const [settleSort, setSettleSort] = useState<SettleSort>('auto');
   useEffect(() => setSettleSort('auto'), [f.id]);
   const measure: ThreadId = settleSort === 'auto' || settleSort === 'near' ? (settleDef?.settles?.thread ?? 'kin') : settleSort;
-  const settleTargets =
+  // the measure both lists are sorted by, marked in them (none when it is the nearest first)
+  const marked: Need | null = settleDef && settleSort !== 'near' ? needOf(measure) : null;
+  const settleTargets = (
     here && settleDef
       ? Object.values(s.bodies)
           .filter((b) => s.civ.known[b.systemId] === 2 && (!settleDef.inSystem || b.systemId === here.id) && !canSettle(s, b, settleDef.settles!.thread))
-          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), hab: b.habitability * b.vitality, v: siteValue(s, b, measure) }))
+          .map((b) => ({ b, ly: distLy(here, s.systems[b.systemId]), v: siteValue(s, b, measure) }))
           // each kind of mind wants something different: Kin livable ground, Echoes power, the Lattice matter, Coldminds time
           .sort((a, b) => Number(isBeacon(s, s.systems[b.b.systemId])) - Number(isBeacon(s, s.systems[a.b.systemId])) || (settleSort === 'near' ? a.ly - b.ly : b.v.score - a.v.score) || a.ly - b.ly)
           .slice(0, 10)
-      : [];
+      : []
+  ).map((t) => ({ ...t, sites: worldSites(s, t.b) }));
+  const settleBest = bestOf(settleTargets.map((t) => t.sites));
+  // a settler's Nearby list follows the same sort, the charted stars by their best world and the
+  // unsurveyed after them (a probe in the fleet keeps the unsurveyed first until a measure is picked)
+  const byMeasure = !!settleDef && !(surveyor && settleSort === 'auto');
+  const dests = byMeasure
+    ? [...nearby].sort((a, b) => {
+        const score = (d: { sys: StarSystem }) => (settleSort === 'near' ? 0 : (destSites[d.sys.id]?.[needOf(measure)]?.v.score ?? -1e9));
+        return Number(isBeacon(s, b.sys)) - Number(isBeacon(s, a.sys)) || score(b) - score(a) || a.ly - b.ly;
+      })
+    : nearby;
+  const sortWords = settleSort === 'auto' ? SETTLE_BEST[settleDef?.settles?.thread ?? 'kin'] : SETTLE_SORTS.find((x) => x[0] === settleSort)?.[3];
+  const unsurveyedHere = dests.some((d) => s.civ.known[d.sys.id] !== 2);
+  const nearbyOrder = byMeasure
+    ? `${sortWords}${settleSort !== 'near' && unsurveyedHere ? ', unsurveyed last' : ''}`
+    : surveyor
+      ? unsurveyedHere ? 'unsurveyed first' : 'all charted'
+      : null;
   const swarmHere = here ? Object.values(s.swarms).find((w) => w.systemId === here.id && !w.tamed) : null;
   // another civilization lives here: our warships could take from them
   const [raidArmed, setRaidArmed] = useState(false);
@@ -1424,8 +1366,8 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                   ))}
                 </div>
                 <div class="list">
-                  {settleTargets.map(({ b, ly, hab, v }) => (
-                    <div key={b.id} class="list-item" onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
+                  {settleTargets.map(({ b, ly, sites }) => (
+                    <div key={b.id} class="list-item" style={{ flexWrap: 'wrap' }} onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
                       <Icon name={bodyIcon(b.kind)} />
                       <span class="grow">
                         {isBeacon(s, s.systems[b.systemId]) && <span class="chip boon" style={{ marginRight: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
@@ -1435,10 +1377,8 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                       <button class="btn small ghost" style={{ padding: '1px 5px' }} onClick={(e) => { e.stopPropagation(); lookAtWorld(b.systemId, b.id); }} data-tip="Look at this world before sending the ship: the view turns to it, inside its system, and the ship waits for your order. Its star's panel (and the galaxy map) show what is around it.">
                         <Icon name="focus" />
                       </button>
-                      <span class={`mono ${settleDef?.settles?.thread === 'kin' && hab >= LIVING_WORLD ? 'good' : ''}`} style={{ fontSize: '12.5px' }} data-tip={v.tip}>
-                        {v.label}
-                      </span>
-                      <span class="mono faint" style={{ fontSize: '12.5px' }} data-tip={ly > 0 ? TRIP_TIP : ''}>{ly > 0 ? tripLabel(s, ly, mods) : 'here'}</span>
+                      <span class={`mark mono faint${settleSort === 'near' ? ' sorted' : ''}`} style={{ fontSize: '12.5px' }} data-tip={ly > 0 ? TRIP_TIP : ''}>{ly > 0 ? tripLabel(s, ly, mods) : 'here'}</span>
+                      <SiteStrip s={s} sites={sites} best={settleBest} active={marked} one />
                     </div>
                   ))}
                 </div>
@@ -1448,9 +1388,9 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               <h3 class="row" style={{ gap: '4px' }}>
                 <span class="grow">
                   Nearby{' '}
-                  {surveyor && (
+                  {nearbyOrder && (
                     <span class="faint" style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
-                      · {dests.some((d) => s.civ.known[d.sys.id] !== 2) ? 'unsurveyed first' : 'all charted'}
+                      · {nearbyOrder}
                     </span>
                   )}
                 </span>
@@ -1473,11 +1413,11 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                       {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip={SWARM_TIP}>swarm</span>}
                       {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '12.5px' }}> unsurveyed</span>}
                     </span>
-                    <span class="mono faint" style={{ fontSize: '12.5px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>
+                    <span class={`mark mono faint${byMeasure && settleSort === 'near' ? ' sorted' : ''}`} style={{ fontSize: '12.5px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>
                       {formatDistance(ly)} · {tripLabel(s, ly, mods)} · {n0(launchCost(s, f, ly, mods))}
                       <Icon name="energy" />
                     </span>
-                    {s.civ.known[sys.id] === 2 && <SiteStrip s={s} sites={destSites[sys.id]} best={destBest} mine={settleDef?.settles?.thread ?? null} />}
+                    {s.civ.known[sys.id] === 2 && <SiteStrip s={s} sites={destSites[sys.id]} best={destBest} mine={own} active={byMeasure ? marked : null} />}
                   </div>
                 ))}
               </div>

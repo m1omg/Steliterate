@@ -4,6 +4,7 @@ import { bodyClimate, boilingAway, hawkingLight, insolation, lampsOver, sourceLi
 import type { Body, GameState, ThreadId } from '../types';
 import { turnStep } from './flare';
 import { naturalKinRoom } from './fleets';
+import { habitabilityOf } from './terraform';
 import { eraIndex, hasTech } from './util';
 import { ageReached, calendarEra } from '../fate';
 
@@ -113,8 +114,9 @@ export function siteValue(state: GameState, b: Body, thread: ThreadId): SiteValu
   }
   switch (thread) {
     case 'kin': {
-      const hab = b.habitability * b.vitality;
-      const room = b.kind === 'gas_giant' ? 0 : naturalKinRoom(b);
+      // as terraformed, for a world of ours (no one else's world is terraformed)
+      const hab = habitabilityOf(state, b) * b.vitality;
+      const room = b.kind === 'gas_giant' ? 0 : naturalKinRoom(b, state);
       const tip = 'Kin need livable ground: habitability × vitality, and room for Kin without building anything.';
       // a world whose star has died is losing its life, and its room with it: no place to count on
       const freezeIn = turnsToFreeze(state, b);

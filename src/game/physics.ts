@@ -966,7 +966,8 @@ export function waterState(b: Body, climate: BodyClimate): string {
     if (climate.day >= 373) {
       if (climate.night >= 373) return `${share}: steam, even on the night side`;
       if (liquidAt(climate.night)) return `${share}: boiled off the day side, open sea on the night side`;
-      return `${share}: boiled off the day side, ice on the night side`;
+      // between the two, along the terminator, the ground passes through 273 to 373 K: a band of sea
+      return `${share}: ice on the night side, open water along the terminator, the day side boiled dry`;
     }
     return `${share}: all frozen`;
   }

@@ -383,6 +383,23 @@ button { font: inherit; color: inherit; }
 .queue-item .btn.small { min-height: 20px; padding: 0 5px; font-size: 11.5px; }
 .list-item.build .icon { width: 12px; height: 12px; vertical-align: -1px; }
 .list-item.disabled { opacity: 0.45; cursor: not-allowed; }
+/* a settlement's yields each turn in the Systems window, in columns under their icons (yields.ts);
+   on a narrow screen the columns take a line of their own, each with its icon */
+.yield-cells { display: grid; grid-template-columns: repeat(5, 50px); justify-items: end; align-items: center; font-size: 13.5px; }
+.yield-cells .icon { display: none; }
+.yield-heads { display: flex; align-items: center; gap: 8px; padding: 0 4px 3px; font-size: 12.5px; }
+.yield-heads .icon { display: inline-block; color: var(--ink-faint); }
+@media (max-width: 560px) {
+  .settlement-row { flex-wrap: wrap; }
+  .settlement-row .yield-cells { flex-basis: 100%; grid-template-columns: repeat(5, 1fr); }
+  .yield-cells .icon { display: inline-block; }
+  .yield-heads { display: none; }
+}
+/* every measure for a place (siteStrip.tsx), the one its list is sorted by outlined like its button */
+.site-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; flex-basis: 100%; padding-left: 20px; margin-top: 1px; font-size: 12.5px; }
+.mark { border: 1px solid transparent; border-radius: 3px; padding: 0 3px; }
+.mark.sorted { border-color: var(--neon); font-weight: 600; }
+.mark.sorted.faint { color: var(--ink); }
 .research-top { display: flex; gap: 12px; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.02); }
 .tech .bar { height: 3px; margin-top: 2px; }
 .tech:disabled { cursor: default; }

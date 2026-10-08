@@ -4,6 +4,8 @@ import { ANOMALIES } from '../../game/data/events';
 import { bodyClimate, sourceLight } from '../../game/physics';
 import { LIVING_WORLD, naturalKinRoom } from '../../game/sim/fleets';
 import { habitabilityOf } from '../../game/sim/terraform';
+import { SiteStrip, bestOf, starSites, worldSites, type Need } from '../siteStrip';
+import { YIELDS, yieldOf, yieldText, yieldTip } from '../yields';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears } from '../../game/eras';
@@ -16,7 +18,7 @@ import { starClock, turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
 import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
-import { kelvin, n1, signed } from '../fmt';
+import { kelvin, n1 } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, spareChoices, BEACON_TIP, SWARM_TIP } from '../labels';
 import { act, engine, modal, openBuildFor, rev, selection, targeting, view, type SystemsTab } from '../store';
@@ -230,6 +232,18 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
   return (
     <ModalFrame title="Systems" eyebrow={`Our settlements: ${colonies(s).length} in ${bySystem.size} system${bySystem.size === 1 ? '' : 's'} · ${total} people`} icon="colony" narrow>
       {tabs}
+      {bySystem.size > 0 && (
+        <div class="yield-heads">
+          <span class="grow faint">Each turn</span>
+          <span class="yield-cells">
+            {YIELDS.map(({ key, name, what }) => (
+              <span key={key} data-tip={`${name}: ${what}`}>
+                <Icon name={key} />
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
       {[...bySystem.entries()].map(([sid, cs]) => {
         const sys = s.systems[sid];
         return (
@@ -243,12 +257,11 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
             <div class="list">
               {cs.map((c) => {
                 const y = p.perColony[c.id]?.y;
-                const net = y ? y.energy - y.energyUpkeep : 0;
                 const b = s.bodies[c.bodyId];
                 return (
                   <div
                     key={c.id}
-                    class="list-item"
+                    class="list-item settlement-row"
                     onClick={() => {
                       // an idle settlement opens where it can be given something to do
                       if (!c.queue.length && !c.spare) openBuildFor.value = c.id;
@@ -277,9 +290,19 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                         </span>
                       )}
                     </span>
-                    <span class={`mono ${net >= 0 ? 'good' : 'bad'}`} style={{ fontSize: '13.5px', minWidth: '44px', textAlign: 'right' }} data-tip="Energy this settlement adds or costs per turn">
-                      {signed(net)}
-                    </span>
+                    {y && (
+                      <span class="yield-cells">
+                        {YIELDS.map(({ key }) => {
+                          const v = yieldOf(y, key);
+                          const tone = v < -0.049 ? 'bad' : Math.abs(v) <= 0.049 ? 'faint' : key === 'energy' ? 'good' : '';
+                          return (
+                            <span key={key} class={`mono ${tone}`} data-tip={yieldTip(y, key)}>
+                              <Icon name={key} /> {yieldText(y, key)}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -325,7 +348,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
       const sys = s.systems[b.systemId];
       const c = b.kind === 'gas_giant' || b.kind === 'ice_giant' ? null : bodyClimate(s, b);
       const mind = MIND_SORT[sort];
-      return { b, sys, hab: habitabilityOf(s, b) * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b, s), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)), v: mind ? siteValue(s, b, mind) : null };
+      return { b, sys, hab: habitabilityOf(s, b) * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b, s), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)), v: mind ? siteValue(s, b, mind) : null, sites: bySystem ? {} : worldSites(s, b) };
     })
     .filter((r) => !findsOnly || r.finds.length > 0)
     .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (x.v && y.v ? y.v.score - x.v.score : sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
@@ -343,9 +366,14 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
         living: rs.filter((r) => r.hab >= LIVING_WORLD).length,
         settled: rs.some((r) => r.b.colonyId),
         finds: [...new Set(rs.flatMap((r) => r.finds))],
+        sites: bySystem ? starSites(s, rs[0].sys) : {},
       };
     })
     .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (x.best.v && y.best.v ? y.best.v.score - x.best.v.score : sort === 'hab' ? y.best.hab - x.best.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.sys.name.localeCompare(y.sys.name)) || x.ly - y.ly);
+  // the measure the list is sorted by, marked in every row's strip (the distance when nearest first)
+  const marked: Need | null = sort === 'hab' || sort === 'room' ? 'kin' : (MIND_SORT[sort] as Need | undefined) ?? null;
+  const best = bestOf(bySystem ? systems.map((x) => x.sites) : rows.map((r) => r.sites));
+  const dist = (ly: number) => <span class={`mark${sort === 'near' ? ' sorted' : ''}`}>{formatDistance(ly)}</span>;
   const sorts: [WorldSort, string, string][] = [
     ['hab', 'Habitable', 'Best for Kin: habitability × vitality'],
     ['room', 'Room', 'Most room for Kin without domes'],
@@ -382,8 +410,8 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
       {rows.length === 0 && <p class="dim">{findsOnly ? 'No discoveries among these worlds yet. Surveys turn one up now and then.' : 'No worlds charted yet. Send a ship to survey a star.'}</p>}
       {bySystem ? (
         <div class="list">
-          {systems.map(({ sys, ly, worlds, best, room, living, settled, finds }) => (
-            <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
+          {systems.map(({ sys, ly, worlds, best: top, room, living, settled, finds, sites }) => (
+            <div key={sys.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} onClick={() => goToSystem(sys.id)}>
               <span class="grow">
                 {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
                 {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
@@ -393,27 +421,18 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
                 ))}
                 <div class="faint" style={{ fontSize: '12.5px' }}>
                   {worlds} world{worlds === 1 ? '' : 's'}
-                  {living ? ` · ${living} living` : ''} · best: {best.b.name} · {formatDistance(ly)}
+                  {living ? ` · ${living} living` : ''} · best: {top.b.name} · <span data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room in all` : 'domes only'}</span> · {dist(ly)}
                 </div>
               </span>
-              {best.v ? (
-                <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '64px' }} data-tip={`${best.v.tip} (its best world)`}>
-                  {best.v.label}
-                </span>
-              ) : (
-                <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '64px' }}>
-                  <span class={best.hab >= LIVING_WORLD ? 'good' : best.hab > 0.05 ? '' : 'faint'} data-tip="Its most habitable world">{Math.round(best.hab * 100)}%</span>
-                  <div class="faint" style={{ fontSize: '12.5px' }} data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room` : 'domes only'}</div>
-                </span>
-              )}
               {send && <SendButton s={s} f={send} sys={sys} />}
+              <SiteStrip s={s} sites={sites} best={best} active={marked} />
             </div>
           ))}
         </div>
       ) : (
         <div class="list">
-          {rows.map(({ b, sys, hab, room, c, ly, finds, v }) => (
-            <div key={b.id} class="list-item world-row" onClick={() => goToBody(b)}>
+          {rows.map(({ b, sys, c, ly, finds, sites }) => (
+            <div key={b.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} onClick={() => goToBody(b)}>
               <span class="grow">
                 {b.name} <span class="faint">{bodyKindName(s, b)}</span>
                 {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
@@ -422,22 +441,13 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
                 ))}
                 <div class="faint" style={{ fontSize: '12.5px' }}>
-                  {sys.name} · {formatDistance(ly)}
+                  {sys.name} · {dist(ly)}
                   {c ? ` · ${c.day !== undefined && kelvin(c.night!) !== kelvin(c.day) ? `${kelvin(c.night!)} to ${kelvin(c.day)}` : kelvin(c.mean)}` : ''}
                   {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
                 </div>
               </span>
-              {v ? (
-                <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '64px' }} data-tip={v.tip}>
-                  {v.label}
-                </span>
-              ) : (
-                <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '64px' }}>
-                  <span class={hab >= LIVING_WORLD ? 'good' : hab > 0.05 ? '' : 'faint'}>{Math.round(hab * 100)}%</span>
-                  <div class="faint" style={{ fontSize: '12.5px' }} data-tip="Room for Kin without domes or warrens">{b.kind === 'gas_giant' ? 'no Kin' : room > 0 ? `${room} Kin room` : 'domes only'}</div>
-                </span>
-              )}
               {send && <SendButton s={s} f={send} sys={sys} />}
+              <SiteStrip s={s} sites={sites} best={best} active={marked} one />
             </div>
           ))}
         </div>

@@ -1013,3 +1013,40 @@ at once". Built in phases, each with its checks and harness numbers.
     Dusk's projects and never builds it: its Kin live on living worlds. Researched early it costs
     the autoplayer victories (900: 424 / 166), from the delay to the projects that win.
   - Checks `unit/terraform` and `browser/terraform`.
+
+## Every measure in the settle lists; settlements' yields; twilight seas (8 Oct)
+
+- **Where to settle shows everything.** The player: show "not just livability or matter, but …
+  all of them, but sorted by the highlighted most important property … And add those things also
+  into the Nearest Worlds."
+  - Under each world in a settler's Where to settle list: livable ground (habitability ×
+    vitality, room without domes), power, matter and lasting, with the trip on its first line.
+  - The list is sorted by the measure picked (Best for them is the settler's own), and that
+    measure is outlined in every row, like its button. Nearest outlines the trip.
+  - A settler's Nearby list follows the same sort: charted stars by their best world for the
+    measure, the unsurveyed after them, the same measure outlined. A probe in the fleet keeps the
+    unsurveyed first until a measure is picked.
+  - Surveyed worlds (Systems, W) shows the same line under each world, or each star's best
+    world for each measure, with its sort outlined (the distance for Nearest). Its Systems view
+    also gives each star's room for Kin in all.
+  - Icons: people for livable, energy for power, matter, a clock for lasting.
+- **Our settlements shows each one's yields**, as in Civilization's city list. Energy and matter
+  net of what it uses, industry, insight and accord, each turn, in columns under their icons. These
+  are the same figures, and the same breakdown on hover, as the settlement's own panel. On a phone
+  the columns take a line of their own.
+- **Twilight seas.** The player found an "Ice world" with a sea along its terminator and a boiling
+  day side.
+  - The generator picks a world's kind from its orbit, by fixed distances that do not follow the
+    star's light, and one branch for red dwarfs makes ice worlds at any orbit. Of 217 ice worlds
+    around red dwarfs in six galaxies, 91 lie inside 0.06 AU, and 92 are not frozen at their warmest:
+    46 boil on the day side and freeze on the night side, and 36 have an open sea on the day side.
+  - The temperatures, water and look were already right, from the star's real light. Only the
+    name was wrong.
+  - Such a world (an ice world or ice-shelled ocean, day side past boiling, night side below
+    freezing) is now named a Twilight sea. Its note says what astronomers call it, a hot eyeball,
+    with water cold-trapped on the night side (Leconte et al. 2013).
+  - Its water reads "ice on the night side, open water along the terminator, the day side boiled
+    dry", where it said "boiled off the day side, ice on the night side".
+  - Generation is unchanged, so every seed's galaxy stays as it was; the climate names the world.
+- **Display only.** Saves are untouched, and 300 games play out identically, line for line.
+- Checks `unit/twilight` and `browser/settle-measures`.

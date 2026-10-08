@@ -128,6 +128,7 @@ export function bodyKindName(s: GameState, b: Body): string {
   const melt = waterChanged(s, b);
   if (melt) return melt === 'steam' ? 'Steam world' : melt === 'scorched' ? 'Scorched world' : melt === 'warm' ? 'Thawed ocean' : 'Hot sea';
   if (lavaWorld(s, b)) return 'Lava world';
+  if (twilightSea(s, b)) return 'Twilight sea';
   if (SURFACE_LIFE.includes(b.kind)) {
     const c = bodyClimate(s, b);
     if ((c.day ?? c.mean) < FROZEN_K) return 'Frozen world';
@@ -151,6 +152,19 @@ function waterChanged(s: GameState, b: Body): 'warm' | 'hot' | 'steam' | 'scorch
   if (b.kind === 'eyeball' || b.kind === 'terran') return coldest >= 373 ? 'steam' : (c.day ?? c.mean) >= 373 ? 'scorched' : null;
   if (coldest < 273) return null;
   return c.mean >= 373 ? 'steam' : c.mean > SCORCH_K ? 'hot' : 'warm';
+}
+
+/**
+ * An ice world (or ice-shelled ocean) locked close to its star, its day side past boiling and its
+ * night side below freezing: the day side baked dry, the water frozen out on the night side, and
+ * along the terminator, between the two, a band of open sea. Astronomers call such a planet a hot
+ * eyeball (water cold-trapped on the night side: Leconte et al. 2013, A&A 554, A69). The generator
+ * places some ice worlds this close (DEV-NOTES): the climate, not the kind, says what they are.
+ */
+function twilightSea(s: GameState, b: Body): boolean {
+  if (b.dissolved || (b.kind !== 'ice' && b.kind !== 'ocean_ice') || (b.water ?? 0) < 0.1) return false;
+  const c = bodyClimate(s, b);
+  return c.day !== undefined && c.night !== undefined && c.day >= 373 && c.night < 273;
 }
 
 /** Rocky kinds that melt into a lava world (water worlds boil to steam first). */
@@ -200,6 +214,10 @@ export function bodyKindNote(s: GameState, b: Body): string {
     const side = c.night !== undefined && c.night < LAVA_K ? ' on the side that faces it (the night side is solid rock)' : '';
     const haze = (c.day ?? c.mean) >= 2600 ? '; past 2,600 K the rock itself boils into a thin, glowing haze' : '';
     return `${was}, melted by its star${side}: a dark crust of basalt over glowing magma${haze}.`;
+  }
+  if (twilightSea(s, b)) {
+    const c = bodyClimate(s, b);
+    return `${b.kind === 'ocean_ice' ? 'An ice-shelled ocean' : 'An ice world'} locked close to its star. Its day side is baked dry, up to ${Math.round(c.day!)} K; its water has frozen out on the night side, down to ${Math.round(c.night!)} K; and along the terminator, in the twilight between, the ice melts into a band of open sea. What astronomers call a hot eyeball.`;
   }
   if (bodyKindName(s, b) !== 'Frozen world') return '';
   const p = s.systems[b.systemId]?.primary;

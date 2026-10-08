@@ -67,7 +67,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -453,6 +453,25 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     Domes, where Kin are at capacity and `terraformSummary(...).full` reaches `SEED_MIN`.
   - Checks: `unit/terraform`, `browser/terraform`. No random draws, and old saves (no such
     structures) are unchanged; the check confirms both.
+- **Every measure for a place (`src/ui/siteStrip.tsx`, 8 Oct):** `NEEDS` (the four measures, in
+  the order of the sort buttons: livable for Kin, power for Echoes and the Chorus, matter for the
+  Lattice, lasting for Coldminds; `needOf` maps the Chorus to power), `worldSites` (one world by
+  every measure), `starSites` (a star's best world by each, among worlds that kind could settle),
+  `bestOf` and `SiteStrip` (`active` outlines the measure the list is sorted by: `.mark.sorted`
+  in `styles.css`, on the trip or distance for Nearest). Used by a fleet's Where to settle and
+  Nearby lists (`FleetPanel`: a settler's Nearby follows its sort, `byMeasure`, the unsurveyed
+  last) and by Surveyed worlds (`WorldsList`). All from `siteValue` (`sim/sites.ts`, interface
+  only: the autoplayer never calls it), whose Kin figure is as terraformed.
+- **A settlement's yields (`src/ui/yields.ts`, 8 Oct):** `YIELDS`, `yieldOf` (energy and matter net
+  of upkeep), `yieldText` and `yieldTip` (its lines), shared by the settlement panel's yields and
+  the Systems window's Our settlements columns (`.yield-cells`, `.yield-heads`; under 560 px each
+  settlement's figures take a line of their own, with icons).
+- **World kinds and climate:** `bodyTemplates` in `gen.ts` picks a kind by orbit at fixed AU,
+  whatever the star's light, and for red dwarfs its last branch makes ice worlds at any orbit (91
+  of 217 in six galaxies sit inside 0.06 AU). Left so, to keep every seed's galaxy. The climate
+  names what they are in `bodyKindName` (`labels.ts`): `twilightSea` (an ice world or ice-shelled
+  ocean with its day side past 373 K and its night side below 273 K: a hot eyeball) before the
+  kind's own name, and `waterState` gives its terminator sea. Check `unit/twilight`.
 - **Evaporation (`evaporateHole`, `src/game/physics.ts`):** one rule for a hole that evaporates in
   the Black Hole Age and for every hole left at the Last Horizon (`crossing.ts`): the primary
   becomes `void` with no spin, glow or light, its worlds go rogue, settlements stay with all their
@@ -702,4 +721,5 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | neighbours, phases 3 and 4: expansion, war (work branch) | 144 | 55 victories, Degenerate Age 68 turns; 900 games 396 / 158 / 68 (426 / 162 / 70 before); by fate decay 169 / 450, stable 145 / 239, curvature 82 / 211. Without the Hunger smelling them 410 / 167, without expansion 409 / 150. War does not change the autoplayer's games (identical); the 'warlike' strategy: 21 wars, 397 / 158 / 68, its war games 14 survive against 13 in peace |
 | neighbours, phase 5: ways that meet; Part C live (7 Oct) | 146 | 60 victories, Degenerate Age 67 turns; 900 games 435 / 179 / 68 (396 / 158 / 68 before); by fate decay 179 / 450, stable 163 / 239, curvature 93 / 211. The autoplayer keeping its Echoes from the Choir: 439 / 163 / 71. Part C in all: 400 / 142 → 435 / 179 |
 | beacons fed; neighbours' dealings (7 Oct) | 154 | 59 victories, Degenerate Age 69 turns; 900 games 437 / 183 / 69 (435 / 179 / 68 before); by fate decay 173 / 450, stable 162 / 239, curvature 102 / 211. Beacons alone: 300 games identical (the autoplayer lights none). In 30 games trade offers 17 → 5.3 a game, shared works 3.0 → 1.7 |
+| every measure in the settle lists; yields; twilight seas (8 Oct) | 147 | display only: all 300 games identical to the terraforming run, line for line |
 | terraforming; type, music, rings (7 Oct) | 147 | 59 victories, Degenerate Age 71 turns; 900 games 434 / 183 / 70 (437 / 183 / 69 before); by fate decay 173 / 450, stable 162 / 239, curvature 99 / 211. The autoplayer researches Terraforming last among the Dusk's projects and builds none (its Kin live on living worlds, which gain nothing; in 60 games it researched it in 59, median turn 84, and built it in 0). Variants, 900: the tech there but never chosen 436 / 180 / 70 (a new project moves games through the cheapest-project picks); researched right after Volatile Shepherding 424 / 166 / 69 (the detour delays the projects that win); terraforming every Kin world it can, as early as it can, 423 / 166 / 68, still none built |
