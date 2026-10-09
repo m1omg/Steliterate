@@ -1359,4 +1359,12 @@ No rule changes; saves are untouched (the mode is a setting, kept in the browser
     first, to look at or send a ship to without finding it on the map; a probe's More in Systems…
     opens on it.
 - **Manual.** A part on low vision and the keyboard; the keys line names N, B and M.
+- **Balance.** No rule changes: 900 games identical to the last run, game for game (148 of 300
+  survive, 72 victories, a Degenerate Age of 71 turns; 439 and 203 of 900; decay 167 / 450,
+  stable 165 / 239, curvature 107 / 211).
+- **Checks.** New browser checks `a11y` (at 960×460: the panel scrolls whole and every Build row
+  can be reached; rows from the keyboard, no focus from a click; windows and events take focus
+  and give it back; Enter and Escape; nothing changes at 1400×900 or on a phone), `translate`
+  (turns played under a stand-in translator: it fails without the guard, on the turn count, η, the
+  panel titles and the tooltips) and `lowvision` (the mode at 1280×720 and 2×, 25 checks).
 - **Not in this batch.** Read-aloud, moving the camera from the keyboard, a translation of our own.
