@@ -147,6 +147,11 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   "Everything is at horizon temperature. Even though curvature radiation would heat it above,
   so please fix it in real time": right (Falcke et al. give 5.5 pK for a heavy white dwarf);
   fixed, live. They thanked us for the game ("This is absolutely awesome").
+  My push to the live branch was refused as a production deploy; asked "Merge?" over GitHub's
+  Compare & pull request banner, then "Merge pls.": PR m1omg/Steliterate#3 (the work branch into
+  `main`, merge commit `0e08054`) put the batch live. Offered: from now on I push each batch to my
+  branch and the player merges it (or asks me to); not yet answered. Still open: the four answers
+  to messages from gone civilizations.
   Discuss first, not built: tidal locking by locking time (everything within about 1.4 AU of a
   red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
   its mass-blind date; the helium stars' one set of numbers.
