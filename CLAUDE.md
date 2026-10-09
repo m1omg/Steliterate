@@ -6,10 +6,14 @@ https://m1omg.github.io/Steliterate/, rebuilt by the Pages workflow on every pus
 `claude/lucid-newton-30cbpk`. The game was built on that branch; PR m1omg/Steliterate#1 merged it
 into `main` on 8 Oct with a merge commit (`3e913f3`, every commit ID kept). Since 9 Oct a batch
 goes live by a PR from the work branch into `main`, merged with a merge commit (PR
-m1omg/Steliterate#3, `0e08054`). The player asked me to open and merge these myself, every time,
-once a batch is validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind
-`main`: never push an older commit to it, as Pages builds it too and would put the older build
-live.
+m1omg/Steliterate#3, `0e08054`; the latest game batch, PR m1omg/Steliterate#4, `d9bd6e5`, the
+magnifier mode). The player asked me to open and merge these myself, every time, once a batch is
+validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
+an older commit to it, as Pages builds it too and would put the older build live.
+
+A new session, or the player's other account (since 9 Oct), starts with "Picking up" in
+`docs/SESSION-NOTES.md`: what is live, the first steps, the last validation's numbers, and the
+open threads.
 
 Read these before changing anything:
 

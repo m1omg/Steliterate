@@ -422,6 +422,15 @@ stop them from talking.
 * **Refresh-rate independence:** one rAF loop with clamped real-time deltas; all smoothing is
   `1 − exp(−k·dt)`; camera flights and fleet moves follow elapsed time exactly. The playtest
   checks 30 Hz against 144 Hz.
+* **Accessibility** (9 Oct):
+  - The keyboard works throughout. Tab reaches every control and clickable row, Enter or Space
+    presses it, and a focus ring shows once Tab is in use. Windows take the focus as they open
+    and give it back as they close.
+  - The magnifier mode is optional, for low vision and screen magnifiers. It puts the panels in
+    one column beside the map, adds two larger interface sizes (1.6× and 2×), and raises the
+    contrast (faint text 7.7:1). Its type is plainer, and it drops the grain and the vignette.
+  - On the map, the mode draws names and marks larger, and names whatever is under the pointer.
+  - A page the browser translates keeps updating (`translateGuard.ts`).
 * **Audio:** recorded instrumentals for the Dusk and the Degenerate Age, Pachelbel's Canon in D
   synthesised as the Degenerate Age's overture (`tools/music/canon.py`), and a procedural
   Web Audio score for every age (worn synthwave thinning to drones and near-silence), plus
@@ -569,7 +578,9 @@ and the dark path; fellow survivors, the Slow Ones, sleepers and ghosts, the Unl
 events; forecasts; save, autosave and save codes; the score and plates.
 
 Since 7 Oct, living neighbours: pacts, refuge, expansion, war and the wants of each way of life
-(Section 8).
+(Section 8). Since 9 Oct, a magnifier mode for low vision, and the keyboard throughout
+(Section 10).
 
 Candidates for later: ship design, more events and relics, an in-game advisor built on the
-autoplayer, a multi-scale camera without a view switch, localisation.
+autoplayer, a multi-scale camera without a view switch, localisation (a Slovak translation
+first, which the player wants: SESSION-NOTES, Picking up).

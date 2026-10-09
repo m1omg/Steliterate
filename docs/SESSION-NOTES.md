@@ -1,8 +1,9 @@
 # Session notes: conversations, decisions, open threads
 
-Notes from the long working session on branch `claude/lucid-newton-30cbpk`, for picking up
-where we left off. What changed is in `CHANGELOG.md`; how to work on the code is in
-`DEV-NOTES.md`.
+Notes from the working sessions, for picking up where we left off: on branch
+`claude/lucid-newton-30cbpk` until 28 Sep, then on `claude/epic-wozniak-lyhulf`. What changed is in
+`CHANGELOG.md`; how to work on the code is in `DEV-NOTES.md`. A new session, or the player's other
+account, starts with "Picking up" below.
 
 ## How the player (m1omg) likes to work
 
@@ -30,6 +31,93 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   save. Leave the preview server running.
 - **Music:** loves the 1991 Utopia (Amiga) version of Pachelbel's Canon by Barry Leitch; likes a
   slight bitcrush ("fits the dissonance of the game"); prefers dark ambient synthwave.
+- **Language:** the player is Slovak, as is the friend the magnifier mode is for. They write in
+  English, often by dictation (speech to text): read through mis-heard words ("the diploma's
+  screen" was the diplomacy screen). The browser's Czech translation was only the tool at hand;
+  a Slovak translation of our own "would be best".
+- **Going live:** "Always. You merge pls." (9 Oct). Each batch, once validated, goes live through
+  a PR into `main` that I open and merge myself.
+
+## Picking up (9 Oct: the player moves to another account)
+
+"Put everything we've been working on and the updated information about this project into the
+appropriate MD files so I can continue there." A session on the other account starts from a fresh
+clone, with none of this session's scratch files, uploads or memory: everything is in these files.
+
+- **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
+  - The game is as of PR m1omg/Steliterate#4 (merge commit `d9bd6e5`, the magnifier mode; live
+    script `index-BdCg1vgA.js`), with these notes merged after it.
+  - `claude/lucid-newton-30cbpk`, the old live branch, stays at `fc6c59a`, behind `main`. Pages
+    builds it too, so leave it alone: a push of anything older than `main` would put that build
+    live.
+  - `claude/epic-wozniak-lyhulf` was this session's branch, and it is merged.
+  - The claude.ai artifact has not been updated since 28 Sep, as it belongs to the organization
+    the game was first built in. GitHub Pages is the live build.
+- **Before the first session on the other account** (the player's part):
+  - connect GitHub at https://claude.ai/connect-github, with the GitHub account that owns
+    `m1omg/Steliterate`;
+  - if the page asks, install the Claude GitHub App on the repository there;
+  - start the session with that repository selected, as a session's repositories are chosen when
+    it starts.
+- **First steps in a new session:**
+  - run `npm ci`;
+  - read `CLAUDE.md`, this section and `DEV-NOTES.md` (the workflow, the gotchas, and the helpers
+    to recreate in a new container);
+  - `git fetch` every branch and compare with `main`, since the player works from more than one
+    session;
+  - work on the session's own branch, started from `main`.
+- **Going live:**
+  - Validate the batch (CLAUDE.md, "Validate every batch"), push the branch, open a PR into
+    `main` and merge it with a merge commit yourself. Squash or rebase would orphan the commit
+    IDs the notes cite.
+  - Then check that the Pages run succeeded, and that the live page loads the new script (its
+    `index-*.js` name, the same as the local build's).
+- **The baseline, from the last validation (9 Oct, `d9bd6e5`):**
+  - tsc and the build were clean;
+  - the playtest printed "ALL CHECKS PASSED" (30/144 Hz parity 2.05e-15);
+  - all 41 unit checks passed;
+  - savecompat passed on the 5 saves in `tools/saves/`, and on the player's own turn-77 save
+    (uploaded in that session; it is theirs, and not in the repository);
+  - all 43 browser checks passed;
+  - the harness: 148 of 300 standard competent games survive, 72 victories, a Degenerate Age of
+    71 turns; 900 games 439 / 203; by fate decay 167 / 450, stable 165 / 239, curvature 107 / 211.
+
+  A rules change compares with these (DEV-NOTES: Balance reference, and the helpers for
+  comparing runs game for game).
+- **Open threads, likeliest first:**
+  1. **A Slovak translation of our own** ("slovak translation would be best, friend is slovak
+     like myself just using a cz translation tool", its typing tidied). Not started; plan it
+     with the player. It needs:
+     - every string of the interface, the Manual, the Codex and the events in a table per
+       language, with a language setting;
+     - the game's own terms kept consistent;
+     - the tooltips too;
+     - numbers in Slovak format only where a decimal point cannot be misread;
+     - fonts for the Slovak letters: all four (`index.html`, from Google Fonts) serve a latin-ext
+       subset that covers ľ ĺ ŕ ô ä č ť ž (checked 9 Oct). Still look at the accented capitals in
+       the uppercase titles.
+
+     `translateGuard.ts` stays, for other languages read through the browser.
+  2. **The friend's word on the magnifier mode** (live since 9 Oct; `?lowvision` on the address
+     turns it on). Not built: read-aloud, moving the camera from the keyboard, reduced motion for
+     camera flights and pings.
+  3. **Messages from gone civilizations:** four answers misbehave. Offered, not built: diplomacy is
+     discuss-first.
+     - Refugees still arrive with people and +3 resolve.
+     - A shared work costs 60 matter and never pays.
+     - A trade still costs, and still delivers notes.
+     - The Choir's wish, whose only allowed answer keeps the Echoes, costs 3 Echoes standing.
+  4. **Music:** a second Dark track and a recorded Canon wait on Krea credit (DEV-NOTES, Music
+     tooling).
+  5. **Discuss first, not built:**
+     - a Lattice rework (the player's idea: Greg Egan's "jewel"; never spoil its ending);
+     - deeper diplomacy;
+     - tidal locking by locking time;
+     - the flare's step at `blueAt` and its mass-blind date;
+     - the helium stars' single set of numbers;
+     - aid travelling as a beam;
+     - collectors after the Stelliferous era;
+     - a map marker for blue dwarfs.
 
 ## Open threads and pending decisions
 
@@ -157,10 +245,13 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
   its mass-blind date; the helium stars' one set of numbers.
 
-- **Next steps:** the player said they may have more changes in mind; wait for them.
+- **Next steps (9 Oct):** the player continues on another account for now, and will be back. Start
+  from "Picking up" above; the open threads are listed there, the Slovak translation first. Wait
+  for the player's word before starting any of them.
 - **The player works from more than one session.** Before changing anything, fetch every branch
-  and compare with `origin/claude/lucid-newton-30cbpk` (they asked for this check on 2 Oct; it
-  found nothing new: both branches at `a16f928`, PR m1omg/Steliterate#1 without comments).
+  and compare with `origin/main`, the live branch since 9 Oct (until then
+  `origin/claude/lucid-newton-30cbpk`; they asked for this check on 2 Oct, and it found nothing
+  new: both branches at `a16f928`, PR m1omg/Steliterate#1 without comments).
 - **6–7 Oct, the long plan** (asked 6 Oct: put the test scripts in the repository; "Black dwarves
   never cool below 5 Kelvin and planets never cool below 1 Kelvin … the amount of usable energy
   they give off is actually drastically different"; the Great Decay screen showed when protons do
@@ -314,7 +405,8 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   bigger. The menus are often inaccessible, especially the build menus, and she cannot really see
   the whole screen, only a part of it at once … I'm happy with the interface as it is now. Would
   I have it in mind as a mode that's optional". Her screenshots: the page translated into Czech
-  by the browser, the settlement panel's Build list squeezed to one row. Decided with them: fixes
+  by the browser, the settlement panel's Build list squeezed to one row. (She and the player are
+  Slovak: Czech was only the translation tool at hand.) Decided with them: fixes
   that change nothing at usual sizes go to everyone; an optional mode with the core and map
   helpers; plan for the mouse and the keyboard both (they were not sure which she uses). A
   reviewer's corrections taken: rows take no focus from a click (Enter would press them again),
@@ -324,9 +416,10 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   `?lowvision` on the address turns it on, a link they can send her. Their saves: asked "Will
   this be okay with my saves?"; nothing in `src/game` changed, and their turn-77 save loads and
   plays to the end. "Always. You merge pls.": I opened and merged PR m1omg/Steliterate#4 (merge
-  commit `d9bd6e5`), live. Not built: read-aloud,
-  keyboard camera control, a Czech translation of our own. Her own word on what helps would be
-  worth more than our guesses.
+  commit `d9bd6e5`), live. Not built: read-aloud, keyboard camera control, a translation of our
+  own: "slovak translation would be best, friend is slovak like myself just using a cz
+  translation tool" (its typing tidied; see Picking up). Her own word on what helps would be worth more than our
+  guesses.
 
 ## Found in the review of 28 Sep (verified)
 

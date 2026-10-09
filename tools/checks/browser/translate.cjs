@@ -1,9 +1,10 @@
-// Browser check: the game played under a browser's page translation stays live (the player's friend
-// reads it translated into Czech, 9 Oct). Chrome's translation swaps each text node for <font>
-// elements holding the translation; Preact went on updating its own text nodes out of the page, so
-// the turn count, η and every tooltip froze at their first value (src/ui/translateGuard.ts). Here a
-// stand-in translator does the same (in one replace, or a <font> put in before the text node and
-// the text node taken out), uppercasing as its "translation", while turns are played.
+// Browser check: the game played under a browser's page translation stays live (the player's friend,
+// Slovak, read it through the browser's Czech translation, 9 Oct). Chrome's translation swaps each
+// text node for <font> elements holding the translation; Preact went on updating its own text
+// nodes out of the page, so the turn count, η and every tooltip froze at their first value
+// (src/ui/translateGuard.ts). Here a stand-in translator does the same (in one replace, or a
+// <font> put in before the text node and the text node taken out), uppercasing as its
+// "translation", while turns are played.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('translate', { seed: 1000 });

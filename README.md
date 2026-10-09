@@ -37,9 +37,9 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   not yet surveyed. **Pause** (or P)
   holds the orbits still. Unsurveyed systems show only their star until a probe charts them.
 - **Settling**: a System Lighter (no research) carries a family to another world of the same
-  star; Kin Arks, Seedcores and the rest cross between stars. Settlements (S) and Fleets (F)
-  on the left rail list everything you have. **Choose on map** sends a ship to any star you
-  click. Trip times read "~26t · 2.9 Myr": turns at your pace, then the flight's cosmic time
+  star; Kin Arks, Seedcores and the rest cross between stars. Systems (S: your settlements and
+  every surveyed world) and Fleets (F) on the left rail list everything you have. **Choose on
+  map** sends a ship to any star you click. Trip times read "~26t · 2.9 Myr": turns at your pace, then the flight's cosmic time
   (nothing outruns light; the turns just keep getting longer). Forecast turn counts follow
   the pace too.
 - **Other civilizations**: once you have made contact you can send aid or **Ask for help**; the
@@ -54,8 +54,17 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
   research to save the labs' power; only half of each turn's insight is kept while paused.
 - Watch the **Forecasts** (bottom left, closable) and the **Chronometer** (top): they tell
   you what is coming and roughly when.
-- Keys: Enter end turn · R research · S settlements · F fleets · T threads · C charters ·
+- Keys: Enter end turn · R research · S systems · F fleets · T threads · C charters ·
   G signals · L the Record · K Codex · W surveyed worlds · H home · P pause orbits · Esc close.
+  In the magnifier mode, N goes to what needs attention next, B to a settlement's Build tab, and
+  M folds the column away.
+- **The keyboard**: Tab moves through the buttons and lists, and Enter or Space presses the one
+  in focus. Enter ends the turn only when nothing has the focus.
+- **Magnifier mode**, for low vision and screen magnifiers (Menu → Magnifier mode; before a game,
+  Settings on the main menu). It puts the panels in one column beside the map, offers two larger
+  interface sizes (1.6× and 2×), stronger contrast and plainer type, and draws the map's names
+  and stars larger. To open the game with it on, add `?lowvision` to the address:
+  https://m1omg.github.io/Steliterate/?lowvision
 
 Settings has a **Music track** picker: any track by hand, or Automatic to follow the age.
 

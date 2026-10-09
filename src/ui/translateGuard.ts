@@ -1,7 +1,8 @@
 // A browser's own page translation (Chrome's is Google Translate) swaps each text node it
 // translates for <font> elements holding the translation. Preact keeps the text node it made and
 // goes on updating it out of the page, so under translation the turn count, the figures and the
-// tooltips froze at their first value (a player's friend reads the game translated into Czech).
+// tooltips froze at their first value (a player's friend, Slovak, read it through the browser's
+// Czech translation).
 // Once a translation shows up, each text node and the <font> standing in for it are kept paired:
 // an update puts the text node back in its place (and the translator translates it again), and a
 // move or a removal acts on the stand-in. Untranslated, nothing here runs but one observer.
