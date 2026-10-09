@@ -1,11 +1,16 @@
 # Changelog
 
-All work on branch `claude/lucid-newton-30cbpk` (PR m1omg/Steliterate#1, merged into `main` on
-8 Oct as `3e913f3`). Every batch was typechecked, built, playtested (`tools/playtest.cjs`),
-balance-checked when rules changed (`tools/sim.ts`), pushed (GitHub Pages redeploys) and
-republished to the artifact
-https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Balance figures are "games that survive
-(Endurance + Victory) out of 300 standard competent autoplayed games"; noise is about ±12.
+The game was built on branch `claude/lucid-newton-30cbpk` (PR m1omg/Steliterate#1, merged into
+`main` on 8 Oct as `3e913f3`). From 28 Sep the work continued on `claude/epic-wozniak-lyhulf`,
+and the live branch was fast-forwarded to it. Since 9 Oct each batch goes live by a PR into
+`main` (PR m1omg/Steliterate#3 as `0e08054`, PR m1omg/Steliterate#4 as `d9bd6e5`). Every batch
+was typechecked, built, playtested
+(`tools/playtest.cjs`), balance-checked when rules changed (`tools/sim.ts`) and pushed (GitHub
+Pages redeploys). Until 28 Sep each was also republished to the artifact
+https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc, which has not been updated since: it belongs to
+the organization the game was first built in, and GitHub Pages is the live build. Balance figures
+are "games that survive (Endurance + Victory) out of 300 standard competent autoplayed games";
+noise is about ±12.
 
 ## Foundations (27 Sep)
 
@@ -1297,8 +1302,11 @@ changes … apply them to a new game").
 
 ## A magnifier mode, and the game for everyone at any size (9 Oct)
 
+Live: PR m1omg/Steliterate#4, merge commit `d9bd6e5`.
+
 For the player's friend, who has low vision and plays through a screen magnifier with the page made
-bigger and translated into Czech: "the menus are often inaccessible, especially the build menus".
+bigger and translated by the browser (into Czech, the tool at hand: she and the player are Slovak):
+"the menus are often inaccessible, especially the build menus".
 No rule changes; saves are untouched (the mode is a setting, kept in the browser).
 
 - **For everyone, unseen at usual sizes.**

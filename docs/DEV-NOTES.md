@@ -10,9 +10,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
    merged with a merge commit, which I open and merge myself once the batch is validated (the
    player: "Always. You merge pls."), so the commit IDs cited here stay valid (PR
    m1omg/Steliterate#1 merged the game as `3e913f3`, PR m1omg/Steliterate#3 the next batch as
-   `0e08054`). Pages builds `main` and `claude/lucid-newton-30cbpk` alike, and the last push wins:
-   the old live branch now lags `main`, so never push an older commit to it. A direct push to a
-   live branch can be refused as a production deploy; the PR merge, asked for, is the way.
+   `0e08054`, PR m1omg/Steliterate#4 the magnifier mode as `d9bd6e5`). Pages builds `main` and
+   `claude/lucid-newton-30cbpk` alike, and the last push wins: the old live branch now lags
+   `main`, so never push an older commit to it. A direct push to a live branch can be refused as
+   a production deploy; the PR merge, asked for, is the way. Step 3 has the details.
 2. **Validate:**
    - `npx tsc --noEmit -p .`
    - `npm run build`
@@ -32,19 +33,33 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
    - Checks: `npm run check` (unit checks, about 15 s) and, with `vite preview` running,
      `npm run check:browser -- http://localhost:4173/` (browser checks, about 10 min). Both must
      end with "ALL CHECKS PASSED". See Test hooks and scripts.
-3. **Commit** with the attribution lines, then `git push -u origin claude/lucid-newton-30cbpk`.
-   The Pages workflow builds and force-pushes `dist/` to `gh-pages` on every push to that
-   branch or `main`.
-4. **Republish the artifact:**
-   - Run `node tools/make-artifact.mjs`, which writes `dist/artifact.html` and prints its files.
-   - Publish to https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc. Include the new
-     `assets/index-*.js` (and CSS if its hash changed), plus any new public files such as
-     `music/canon.mp3`.
-   - Set the old hashes to `null`.
-   - Omit `capabilities` so the stored `downloads` capability carries forward.
-   - That artifact belongs to the organization the game was built in. A session in another
-     organization can read it but not update it (seen 28 Sep). There, rely on GitHub Pages,
-     or publish a new artifact and record its URL here.
+3. **Commit and go live:**
+   - Commit with the attribution lines and `git push -u origin <the session's work branch>`.
+   - Open a PR from that branch into `main` and merge it with a merge commit (never squash or
+     rebase).
+   - The Pages workflow (`.github/workflows/pages.yml`) builds and force-pushes `dist/` to
+     `gh-pages`. It runs on every push to `main` or `claude/lucid-newton-30cbpk`.
+   - Leave `claude/lucid-newton-30cbpk` alone. It stays at `fc6c59a`, behind `main`, and pushing
+     anything older than `main` to it would put that older build live.
+   - Then check that the Pages run succeeded, and that the live page loads the new script (a
+     minute or two after the run). The second command must print the same name as
+     `ls dist/assets`:
+     ```sh
+     gh api "repos/m1omg/Steliterate/actions/runs?branch=main&per_page=3"
+     curl -s https://m1omg.github.io/Steliterate/ | grep -o 'index-[^"]*\.js'
+     ```
+   - Once merged, a follow-up batch starts again from `main` on the work branch
+     (`git fetch origin main && git checkout -B <branch> origin/main`): a merged PR is finished,
+     and takes no new commits.
+4. **The artifact is stale** (not updated since 28 Sep): GitHub Pages is the live build. The
+   artifact (https://claude.ai/artifact/BWqtVocJezc4XXmnNgWZzc) belongs to the organization the game was
+   built in, and a session in another organization can read it but not update it (seen 28 Sep).
+   To publish one again, run `node tools/make-artifact.mjs` (it writes `dist/artifact.html` and
+   prints its files), then:
+   - publish a new artifact, with the new `assets/index-*.js` (and the CSS, if its hash changed)
+     and any new public files such as `music/canon.mp3`, and record its URL here;
+   - when updating one, set the old hashes to `null`, and omit `capabilities` so the stored
+     `downloads` capability carries forward.
 
 ## Test hooks and scripts
 
@@ -96,6 +111,61 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).
   So is `art-src/` (ignored by git): the graded files in `public/art/` are the only copies of
   the plates and sprites, so new art needs new source images.
+- **Helpers to recreate in a new container** (9 Oct). They lived in the session's scratchpad,
+  which a new session or account does not have. Write them to the new scratchpad (`$SP` below
+  stands for its path) and run them from the clone.
+  - **Serve the build for one command** (`sh $SP/withserver.sh <command…>`): it serves `dist/` on
+    :4175, runs the command, and stops the server by its PID.
+    ```sh
+    #!/bin/sh
+    node node_modules/vite/bin/vite.js preview --port 4175 --strictPort > "$(dirname "$0")/preview.log" 2>&1 &
+    PID=$!
+    for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:4175/ && break; sleep 0.5; done
+    "$@"; CODE=$?
+    kill $PID 2>/dev/null; wait $PID 2>/dev/null
+    exit $CODE
+    ```
+    For example: `sh $SP/withserver.sh node tools/checks/run.mjs browser http://localhost:4175/ $SP/shots`.
+  - **900 games in three slices at once**, then the tally overall and by fate
+    (`sh $SP/harness900.sh <tree> <absolute out dir>`). The tree is the clone, or a `git worktree`
+    of the commit to compare with (symlink `node_modules` into it). `m0.txt` holds the first 300,
+    the same games as `tools/sim.ts 300 standard competent`. The tally is the clone's, as a commit
+    from before 7 Oct has no `tools/tally.sh`.
+    ```sh
+    #!/bin/sh
+    TALLY=$(pwd)/tools/tally.sh; TREE=$1; OUT=$2
+    mkdir -p "$OUT"; cd "$TREE" || exit 1
+    for i in 0 1 2; do npx tsx tools/sim.ts 300 standard competent --from=$((i*300)) > "$OUT/m$i.txt" 2>&1 & done
+    wait
+    cat "$OUT/m0.txt" "$OUT/m1.txt" "$OUT/m2.txt" > "$OUT/m900.txt"
+    for f in decay stable curvature; do grep "fate $f " "$OUT/m900.txt" > "$OUT/m900-$f.txt"; done
+    sh "$TALLY" "$OUT/m0.txt" "$OUT/m900.txt" "$OUT/m900-decay.txt" "$OUT/m900-stable.txt" "$OUT/m900-curvature.txt"
+    ```
+  - **Compare two runs game for game** (`python3 $SP/cmp.py <before.txt> <after.txt>`): how many
+    games ended exactly alike (the time each took left out), and which outcomes moved. A display
+    change must leave all 900 alike; a rules change shows what it moved.
+    ```python
+    import re, sys
+    def load(p):
+        d = {}
+        for line in open(p):
+            m = re.match(r'seed (\d+): (\w+) ', line)
+            if m:
+                d[m.group(1)] = (m.group(2), re.sub(r'\| \d+ms\s*$', '', line.strip()))
+        return d
+    a, b = load(sys.argv[1]), load(sys.argv[2])
+    same = sum(1 for k in a if k in b and a[k][1] == b[k][1])
+    moves = {}
+    for k in a:
+        if k in b and a[k][0] != b[k][0]:
+            key = f'{a[k][0]} -> {b[k][0]}'
+            moves[key] = moves.get(key, 0) + 1
+    print(f'{len(a)} games, {same} identical')
+    for k, v in sorted(moves.items(), key=lambda x: -x[1]):
+        print(f'  {k}: {v}')
+    ```
+  - **A second build on its own port**, to compare two versions in the browser:
+    `npx vite build --outDir $SP/dist-b`, then `npx vite preview --outDir $SP/dist-b --port 4176`.
 - **Plates for the ways of life** (`public/art/way_<way>.webp`): garden, upload, chorus and
   dormant (29 Sep, Nano Banana Pro via Krea at 2K, 16:9, about 111 units each); lattice (the
   Tessellate) and fork (Codex, below). `wayArt` in `src/ui/labels.ts` picks the plate (the
@@ -189,6 +259,18 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   without the guard the turn count, η, panel titles and tooltips froze.
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
+- `pkill -f "vite.js preview --outDir"` matches its own shell too, and killed it (exit 144, 9 Oct).
+  Stop a server by its PID (as `withserver.sh` does) or by its port.
+- **A container restart stops background runs** (a harness run or the browser checks; seen 9 Oct)
+  without a word: if their output stops short, run them again.
+- **The stop hook** of the cloud sessions (`~/.claude/stop-hook-git-check.sh`) won't let a turn
+  end with uncommitted changes, untracked files or unpushed commits. Commit and push before
+  ending, and keep scratch files out of the clone.
+- **Frame-rate bound checks:** under load, the software renderer can fall below 10 frames a
+  second. The frame time is capped at 0.1 s (`engine.ts`), so easing takes longer in real time,
+  as it would on a slow machine. A check that waits on something eased (a camera move, a fade)
+  polls in a bounded loop until it has settled, as `browser/lowvision` does, rather than trust
+  one fixed wait.
 - The user dislikes long blocking waits. Prefer background runs and report when done.
 
 ## Where the newer systems live
