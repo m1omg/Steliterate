@@ -10,7 +10,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
    merged with a merge commit, which I open and merge myself once the batch is validated (the
    player: "Always. You merge pls."), so the commit IDs cited here stay valid (PR
    m1omg/Steliterate#1 merged the game as `3e913f3`, PR m1omg/Steliterate#3 the next batch as
-   `0e08054`). Pages builds `main` and `claude/lucid-newton-30cbpk` alike, and the last push wins:
+   `0e08054`, PR m1omg/Steliterate#4 the magnifier mode as `d9bd6e5`). Pages builds `main` and `claude/lucid-newton-30cbpk` alike, and the last push wins:
    the old live branch now lags `main`, so never push an older commit to it. A direct push to a
    live branch can be refused as a production deploy; the PR merge, asked for, is the way.
 2. **Validate:**

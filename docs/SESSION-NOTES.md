@@ -321,7 +321,10 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   prompts take focus on their titles, the focus ring only after Tab, the selection's panel last
   in the column. Found on the way: under the browser's translation the turn count, η, panel
   titles and tooltips froze (fixed for everyone). Built as "A magnifier mode" (CHANGELOG);
-  `?lowvision` on the address turns it on, a link they can send her. Not built: read-aloud,
+  `?lowvision` on the address turns it on, a link they can send her. Their saves: asked "Will
+  this be okay with my saves?"; nothing in `src/game` changed, and their turn-77 save loads and
+  plays to the end. "Always. You merge pls.": I opened and merged PR m1omg/Steliterate#4 (merge
+  commit `d9bd6e5`), live. Not built: read-aloud,
   keyboard camera control, a Czech translation of our own. Her own word on what helps would be
   worth more than our guesses.
 

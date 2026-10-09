@@ -1297,6 +1297,8 @@ changes … apply them to a new game").
 
 ## A magnifier mode, and the game for everyone at any size (9 Oct)
 
+Live: PR m1omg/Steliterate#4, merge commit `d9bd6e5`.
+
 For the player's friend, who has low vision and plays through a screen magnifier with the page made
 bigger and translated into Czech: "the menus are often inaccessible, especially the build menus".
 No rule changes; saves are untouched (the mode is a setting, kept in the browser).
