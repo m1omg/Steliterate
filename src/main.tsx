@@ -16,9 +16,14 @@ import type { Pickable } from './render/galaxyView';
 import { tripLabel } from './ui/trip';
 import { computeMods } from './game/sim/mods';
 import { App } from './ui/App';
-import { act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, modal, notify, screen, selection, setEngine, settings, targeting, toggleOrbits, view } from './ui/store';
+import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, lvFolded, mapHover, modal, notify, saveSettings, screen, selection, setEngine, setViewMode, settings, targeting, toggleOrbits, view } from './ui/store';
+import { PRIMARY_NAME, bodyKindName } from './ui/labels';
 import { doEndTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
+import { guardTranslation } from './ui/translateGuard';
+import { applyLowVision, trackKeyboard } from './ui/a11y';
+import { buildSelected, nextTodo } from './ui/hud/Hud';
+import { eventResult, loreView } from './ui/screens/Story';
 import './ui/styles.css';
 
 const stage = document.getElementById('stage')!;
@@ -31,6 +36,28 @@ function starOf(p: Pickable): string | null {
     return sw?.systemId ?? sw?.to ?? null;
   }
   return null;
+}
+
+/** What the pointer is on, in a few words: a star and its kind (and whether surveyed or ours), a world, a fleet, a swarm. */
+function hoverName(p: Pickable): string {
+  const g = game.value;
+  if (!g) return '';
+  if (p.kind === 'system' && p.id.startsWith('body:')) {
+    const b = g.bodies[p.id.slice(5)];
+    return b ? `${b.colonyId ? g.colonies[b.colonyId]?.name ?? b.name : b.name} · ${bodyKindName(g, b)}` : '';
+  }
+  if (p.kind === 'system') {
+    const sys = g.systems[p.id];
+    if (!sys) return '';
+    const ours = Object.values(g.colonies).some((c) => c.systemId === sys.id);
+    return `${sys.name} · ${PRIMARY_NAME[sys.primary.kind]}${ours ? ' · ours' : g.civ.known[sys.id] === 2 ? '' : ' · not surveyed'}`;
+  }
+  if (p.kind === 'fleet') {
+    const f = g.fleets[p.id];
+    return f ? `${f.name} · ${f.at && g.systems[f.at] ? `at ${g.systems[f.at].name}` : 'under way'}` : '';
+  }
+  if (p.kind === 'swarm') return g.swarms[p.id]?.tamed ? 'Tamed swarm' : 'Hunger swarm';
+  return '';
 }
 
 const eng = new Engine(stage, {
@@ -78,7 +105,9 @@ const eng = new Engine(stage, {
     // on the galaxy map a picked star becomes the centre of the view (same zoom)
     if (v === 'galaxy' && p.kind === 'system' && !p.id.startsWith('body:')) eng.centreOn(p.id);
   },
-  onHover(p) {
+  onHover(p, x, y) {
+    // the magnifier mode names what is under the pointer, in large type beside it
+    if (settings.value.lowVision) mapHover.value = p ? { text: hoverName(p), x, y } : null;
     if (!targeting.value) {
       if (hoverStar.value) hoverStar.value = null;
       return;
@@ -107,7 +136,18 @@ eng.setQuality(settings.value.quality);
 eng.orbitsPaused = hudPrefs.value.orbitsPaused;
 eng.viewMode = hudPrefs.value.viewMode;
 eng.start();
-applyUiScale(settings.value.uiScale);
+// the magnifier mode can be switched on from a link: …/?lowvision (and off with ?lowvision=0)
+{
+  const q = new URLSearchParams(location.search).get('lowvision');
+  if (q !== null) {
+    const on = q !== '0' && q !== 'off';
+    if (on !== !!settings.value.lowVision) {
+      saveSettings({ ...settings.value, lowVision: on, uiScale: on ? settings.value.uiScale : Math.min(settings.value.uiScale, PLAIN_MAX_SCALE) });
+      if (on) setViewMode(1);
+    }
+  }
+}
+applyLowVision();
 // a crosshair over the map while a destination is being chosen
 effect(() => {
   document.documentElement.classList.toggle('picking', !!targeting.value);
@@ -141,6 +181,9 @@ effect(() => {
   if (core) eng.focusGalaxyOn(core.id, 1500, true);
 });
 
+// a page translated by the browser stays live (translateGuard.ts)
+guardTranslation(document.getElementById('ui')!);
+trackKeyboard();
 render(<App />, document.getElementById('ui')!);
 
 // When the page is republished while open, carry the game across.
@@ -221,6 +264,18 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (open) return;
+  // an event (or what came of it) is answered with its own buttons; the survey report closes with Escape
+  const g = game.value;
+  const story = !!g && (g.pending.length > 0 || !!eventResult.value);
+  // the magnifier mode: N what needs attention next, B the selected settlement's Build tab, M the column folded away
+  if (settings.value.lowVision && !story && g && (key === 'n' || key === 'b' || key === 'm')) {
+    e.preventDefault();
+    sfx('click');
+    if (key === 'n') nextTodo(g);
+    else if (key === 'b') buildSelected(g);
+    else lvFolded.value = !lvFolded.value;
+    return;
+  }
   if (key === 'p') {
     e.preventDefault();
     toggleOrbits();
@@ -244,14 +299,21 @@ window.addEventListener('keydown', (e) => {
     eng.select(id);
     return;
   }
-  if (tag === 'BUTTON') return;
-  if (e.key === 'Enter') doEndTurn();
   if (e.key === 'Escape') {
+    if (story) return;
+    if (loreView.value) {
+      loreView.value = null;
+      return;
+    }
+    // whatever has focus (it used to do nothing while a button had it)
     targeting.value = null;
     hoverStar.value = null;
     selection.value = null;
     eng.select(null);
+    return;
   }
+  // a control in focus (a button, a row) answers Enter itself
+  if (e.key === 'Enter' && !story && !loreView.value && !(e.target as Element | null)?.closest?.('button, a[href], [role="button"], summary')) doEndTurn();
 });
 
 // Debug and test hooks (used by the automated playtests).
@@ -295,6 +357,8 @@ window.__stel = {
     selection.value = { kind, id } as never;
   },
   refresh: () => bump(),
+  /** A message as the game shows them (the checks: how long it stays). */
+  notify: (text: string, kind: 'info' | 'bad' | 'good' = 'info') => notify(text, kind),
   state: () => game.value,
   engine: () => engine(),
   /** The music player (its layer: the synth bus, and the recording playing), for the checks. */

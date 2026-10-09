@@ -12,6 +12,8 @@ import { act, rev } from '../store';
 import { goToFleet, pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { sfx } from '../../audio/sfx';
 import { researchPrompt } from './ResearchPrompt';
+import { useRef } from 'preact/hooks';
+import { useFocusPrompt } from '../a11y';
 
 /** Fleets that have just run out of orders, oldest first. Shown one at a time. */
 export const shipQueue = signal<string[]>([]);
@@ -62,6 +64,12 @@ export function ShipPrompt({ s }: { s: GameState }) {
   const ids = [...(shipPrompt.value ? [shipPrompt.value] : []), ...shipQueue.value];
   const f = ids.map((id) => s.fleets[id]).find((x) => x && isIdleFleet(x));
   if (!f) return null;
+  return <ShipCard s={s} f={f} />;
+}
+
+function ShipCard({ s, f }: { s: GameState; f: Fleet }) {
+  const head = useRef<HTMLDivElement>(null);
+  useFocusPrompt(head, f.id);
   const here = s.systems[f.at!];
   const war = isWarFleet(f);
   const options = suggestions(s, f);
@@ -82,7 +90,9 @@ export function ShipPrompt({ s }: { s: GameState }) {
               <Icon name="focus" /> {here.name}
             </button>
           </div>
-          <div class="rp-title">{f.name}</div>
+          <div ref={head} class="rp-title">
+            {f.name}
+          </div>
         </div>
         <button class="btn ghost small" aria-label="Later" data-tip="Later: ask again next time" onClick={() => drop(f.id)}>
           <Icon name="close" />

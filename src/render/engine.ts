@@ -66,6 +66,13 @@ export class Engine {
   private galaxyCam = { target: new THREE.Vector3(), distance: 220, yaw: 0.6, pitch: 0.85 };
   private leavePush = 0;
   private focusY: number | null = null;
+  /** Where on screen what is selected should sit across (the magnifier mode's column covers one side), or null for the middle. */
+  private focusX: number | null = null;
+  private viewShiftX = 0;
+  /** The magnifier mode: larger markers and labels, a wider reach for the pointer, no grain, vignette or fringes. */
+  private lv = false;
+  /** The interface's zoom, which the magnifier mode's labels follow. */
+  private uiZoom = 1;
   /** The browser took the GPU away (a phone backgrounding the page, a driver reset). */
   contextLost = false;
   /** Lost: true when the picture goes, false when it is back. 'stuck' if it will not come back. */
@@ -212,8 +219,11 @@ export class Engine {
     const w = el.clientWidth || window.innerWidth;
     const h = el.clientHeight || window.innerHeight;
     const shiftGoal = this.focusY === null ? 0 : h / 2 - this.focusY;
-    this.viewShift += (shiftGoal - this.viewShift) * (1 - Math.exp(-8 * dt));
-    if (Math.abs(this.viewShift) > 0.5) this.camera.setViewOffset(w, h, 0, this.viewShift, w, h);
+    const shiftGoalX = this.focusX === null ? 0 : w / 2 - this.focusX;
+    const ease = 1 - Math.exp(-8 * dt);
+    this.viewShift += (shiftGoal - this.viewShift) * ease;
+    this.viewShiftX += (shiftGoalX - this.viewShiftX) * ease;
+    if (Math.abs(this.viewShift) > 0.5 || Math.abs(this.viewShiftX) > 0.5) this.camera.setViewOffset(w, h, this.viewShiftX, this.viewShift, w, h);
     else if (this.camera.view) this.camera.clearViewOffset();
     const u = this.post.finish.uniforms;
     u.uTime.value = this.now;
@@ -235,7 +245,7 @@ export class Engine {
     this.galaxy.setPalette(era.accent, era.neon);
     this.system.neon.set(era.neon);
     this.tintGoal.set(state.era === 'dusk' ? '#fff0e2' : state.era === 'degenerate' ? '#e6eeff' : state.era === 'blackhole' ? '#ece6ff' : '#e2e4e8');
-    this.post.finish.uniforms.uGrain.value = state.era === 'dark' ? 0.06 : 0.035;
+    this.post.finish.uniforms.uGrain.value = this.grain();
     this.galaxy.sync(state, this.now);
     if (this.view === 'system' && this.system.systemId) {
       // a system that is gone, or one this game never had (a save from another game was loaded), sends us back out
@@ -330,6 +340,31 @@ export class Engine {
    */
   setFocusY(y: number | null) {
     this.focusY = y;
+  }
+
+  /** Where across the screen what is selected should sit (the middle of what a side column leaves), or null for the middle. */
+  setFocusX(x: number | null) {
+    this.focusX = x;
+  }
+
+  /** The magnifier mode on or off (a11y.ts). */
+  setLowVision(on: boolean) {
+    this.lv = on;
+    this.galaxy.setMarkScale(on ? 1.5 : 1);
+    const u = this.post.finish.uniforms;
+    u.uVignette.value = on ? 0 : 0.55;
+    u.uCA.value = on ? 0 : 0.6;
+    u.uGrain.value = this.grain();
+  }
+
+  /** The interface's zoom (store.ts applyUiScale), for the magnifier mode's labels. */
+  setUiZoom(z: number) {
+    this.uiZoom = z;
+  }
+
+  /** Film grain: a little more in the Dark Era; none in the magnifier mode. */
+  private grain(): number {
+    return this.lv ? 0 : this.state?.era === 'dark' ? 0.06 : 0.035;
   }
 
   /** Mark a discovery on the galaxy map. */
@@ -457,7 +492,7 @@ export class Engine {
   pickAt(x: number, y: number): Pickable | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const list = this.view === 'galaxy' ? this.galaxy.pickables : this.system.pickables;
-    const reach = this.view === 'galaxy' ? 16 : 26;
+    const reach = (this.view === 'galaxy' ? 16 : 26) * (this.lv ? 1.5 : 1);
     // pixels per world unit at distance 1, for the size of a body on screen
     const pxPerUnit = rect.height / 2 / Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     let best: Pickable | null = null;
@@ -530,7 +565,7 @@ export class Engine {
           .map((p) => ({ p, dd: p.pos.distanceTo(this.rig.target) }))
           .filter((x) => x.dd < d * 1.1)
           .sort((a, b) => a.dd - b.dd)
-          .slice(0, 36);
+          .slice(0, this.lv ? 24 : 36);
         // in the Degenerate Age every collision star on the map keeps its name showing while it
         // burns (one that lit and went out within the last turn has no light left to mark)
         const burning = (id: string) => {
@@ -581,13 +616,15 @@ export class Engine {
     }
     let i = 0;
     const placed: { x: number; y: number }[] = [];
+    // the magnifier mode's labels are larger (15 px at the interface's size, styles.css), and keep further apart
+    const ls = this.lv ? (15 / 11) * this.uiZoom : 1;
     items.sort((a, b) => b.w - a.w);
     for (const it of items) {
       const v = it.pos.clone().project(this.camera);
       if (v.z > 1 || Math.abs(v.x) > 1.05 || Math.abs(v.y) > 1.05) continue;
       const x = ((v.x + 1) / 2) * rect.width;
       const y = ((1 - v.y) / 2) * rect.height;
-      if (placed.some((q) => Math.abs(q.x - x) < 70 && Math.abs(q.y - y) < 14)) continue;
+      if (placed.some((q) => Math.abs(q.x - x) < 70 * ls && Math.abs(q.y - y) < 14 * ls)) continue;
       placed.push({ x, y });
       const l = this.label(i++);
       l.used = true;
@@ -595,7 +632,7 @@ export class Engine {
       l.el.className = `map-label ${it.cls}`;
       l.el.style.color = it.color ?? '';
       l.el.style.display = 'block';
-      l.el.style.transform = `translate(${Math.round(x + 9)}px, ${Math.round(y - 8)}px)`;
+      l.el.style.transform = `translate(${Math.round(x + 9 * ls)}px, ${Math.round(y - 8 * ls)}px)`;
     }
     for (const l of this.labels) if (!l.used) l.el.style.display = 'none';
   }

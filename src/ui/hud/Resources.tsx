@@ -5,6 +5,7 @@ import type { GameState } from '../../game/types';
 import { n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import { modal, rev } from '../store';
+import { pressable } from '../a11y';
 import { matterGone } from '../../game/fate';
 import { beaconUpkeep, litBeacons } from '../../game/sim/beacons';
 
@@ -55,7 +56,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
           <span class="l">Matter</span>
         </div>
       )}
-      <div class="res" style={{ cursor: 'pointer' }} onClick={() => (modal.value = { kind: 'research' })} data-tip={research ? `Researching ${research.name}: ${pct(rProg)}\n${n1(p.insight)} insight per turn` : `${n1(p.insight)} insight per turn. Nothing is being researched: choose a project.`}>
+      <div class="res" style={{ cursor: 'pointer' }} {...pressable(() => (modal.value = { kind: 'research' }))} data-tip={research ? `Researching ${research.name}: ${pct(rProg)}\n${n1(p.insight)} insight per turn` : `${n1(p.insight)} insight per turn. Nothing is being researched: choose a project.`}>
         <Icon name="insight" size="lg" />
         <div class="col" style={{ gap: '2px' }}>
           <div class="row" style={{ gap: '6px' }}>
@@ -66,7 +67,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         </div>
         <span class="l">Insight</span>
       </div>
-      <div class="res" data-tip={`Accord ${n0(civ.accord)}: spent on Charters, and in Threads to rally resolve, calm dissent or hear out one Thread.\n${signed(p.accord)} per turn`} onClick={() => (modal.value = { kind: 'charters' })} style={{ cursor: 'pointer' }}>
+      <div class="res" data-tip={`Accord ${n0(civ.accord)}: spent on Charters, and in Threads to rally resolve, calm dissent or hear out one Thread.\n${signed(p.accord)} per turn`} {...pressable(() => (modal.value = { kind: 'charters' }))} style={{ cursor: 'pointer' }}>
         <Icon name="accord" size="lg" />
         <span class="v phos">{n0(civ.accord)}</span>
         <span class={`d mono ${p.accord >= 0 ? 'good' : 'bad'}`}>{signed(p.accord)}</span>

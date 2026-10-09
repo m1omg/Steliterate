@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import { SHIP_BY_ID } from '../../game/data/ships';
 import { EVENT_BY_ID, choiceHint } from '../../game/data/events';
 import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
@@ -17,6 +17,7 @@ import { pivotToSystem } from './Lists';
 import { Icon } from '../Icon';
 import { ModalFrame } from './Frame';
 import { fateOf } from '../../game/fate';
+import { useFocusOnOpen, useWholeScroll } from '../a11y';
 
 // Art plates live in art/<name>.webp. Until one exists the plate is a graded gradient. An event
 // with a painting of its own (art/events/<plate>.webp) shows it over its era's, which stays
@@ -105,6 +106,10 @@ export function worldFinds(s: GameState, b: Body): { defId: string; title: strin
 export function LoreModal({ s }: { s: GameState }) {
   void rev.value;
   const v = loreView.value;
+  const head = useRef<HTMLHeadingElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  useFocusOnOpen(head, v ? `${v.defId}:${v.bodyId}` : null);
+  const whole = useWholeScroll(box, '.event-art', '.modal-body');
   const def = v ? EVENT_BY_ID[v.defId] : null;
   const b = v ? s.bodies[v.bodyId] : null;
   if (!v || !def || !b) return null;
@@ -119,11 +124,13 @@ export function LoreModal({ s }: { s: GameState }) {
   const close = () => (loreView.value = null);
   return (
     <div class="modal-wrap" onClick={(e) => e.target === e.currentTarget && close()}>
-      <div class="modal panel narrow event" role="dialog" aria-modal="true" aria-label={def.title}>
+      <div ref={box} class={`modal panel narrow event${whole ? ' whole' : ''}`} role="dialog" aria-modal="true" aria-label={def.title}>
         <Plate art={def.art} plate={def.plate} />
         <div class="modal-body scroll" style={{ marginTop: '-60px', position: 'relative' }}>
           <div class="eyebrow">Survey report · {b.name}, {s.systems[b.systemId]?.name}</div>
-          <h1 class="event-title">{def.title}</h1>
+          <h1 ref={head} tabIndex={-1} class="event-title">
+            {def.title}
+          </h1>
           <p class="event-text">{text}</p>
           <p class="dim" style={{ fontSize: '14.5px' }}>
             {find?.choice ? <>We chose: <span class="neon">{find.choice}</span>.</> : pending ? 'We have not decided yet.' : 'What we chose then is no longer in the Record.'}
@@ -141,6 +148,11 @@ export function EventModal({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const result = eventResult.value;
   const top = s.pending[0];
+  // each event takes focus on its title (never a choice: a stray Enter must not choose)
+  const head = useRef<HTMLHeadingElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  useFocusOnOpen(head, result ? 'result' : top?.uid);
+  const whole = useWholeScroll(box, '.event-art', '.modal-body');
   // as an event about a star opens, the view swings there behind it
   useEffect(() => {
     if (!top || eventResult.value || !hudPrefs.value.eventPivot) return;
@@ -168,11 +180,13 @@ export function EventModal({ s }: { s: GameState }) {
   const pivot = !!sysId && hudPrefs.value.eventPivot;
   return (
     <div class="modal-wrap">
-      <div class="modal panel narrow event" role="dialog" aria-modal="true" aria-label={def.title}>
+      <div ref={box} class={`modal panel narrow event${whole ? ' whole' : ''}`} role="dialog" aria-modal="true" aria-label={def.title}>
         <Plate art={def.art} plate={def.plate} />
         <div class="modal-body scroll" style={{ marginTop: '-60px', position: 'relative' }}>
           <div class="eyebrow">{ERA_BY_ID[s.era].name} · turn {s.turn}</div>
-          <h1 class="event-title">{def.title}</h1>
+          <h1 ref={head} tabIndex={-1} class="event-title">
+            {def.title}
+          </h1>
           <p class="event-text">{text}</p>
           <div class="col" style={{ gap: '6px', marginTop: '12px' }}>
             {def.choices.map((c, i) => {

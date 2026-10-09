@@ -308,6 +308,21 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   session; Higgsfield's audio tool is speech-only (it forbids general music). An ElevenLabs
   version of the Canon is still to be made; the prompt is in `DEV-NOTES.md`.
 - **Blue-dwarf visibility (offered, not built):** a distinct map marker for blue dwarfs.
+- **9 Oct, a friend with low vision:** "I have a friend who has a sight impairment … she's using a
+  software which zooms in only a part of the screen as well as making everything on the website
+  bigger. The menus are often inaccessible, especially the build menus, and she cannot really see
+  the whole screen, only a part of it at once … I'm happy with the interface as it is now. Would
+  I have it in mind as a mode that's optional". Her screenshots: the page translated into Czech
+  by the browser, the settlement panel's Build list squeezed to one row. Decided with them: fixes
+  that change nothing at usual sizes go to everyone; an optional mode with the core and map
+  helpers; plan for the mouse and the keyboard both (they were not sure which she uses). A
+  reviewer's corrections taken: rows take no focus from a click (Enter would press them again),
+  prompts take focus on their titles, the focus ring only after Tab, the selection's panel last
+  in the column. Found on the way: under the browser's translation the turn count, η, panel
+  titles and tooltips froze (fixed for everyone). Built as "A magnifier mode" (CHANGELOG);
+  `?lowvision` on the address turns it on, a link they can send her. Not built: read-aloud,
+  keyboard camera control, a Czech translation of our own. Her own word on what helps would be
+  worth more than our guesses.
 
 ## Found in the review of 28 Sep (verified)
 

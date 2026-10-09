@@ -8,7 +8,7 @@ import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, openBuildFor, rev, selection, setHudPrefs, toggleOrbits, view } from '../store';
+import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, notify, openBuildFor, rev, selection, setHudPrefs, toggleOrbits, uiZoom, view } from '../store';
 import { goToColony, goToFleet } from '../screens/Lists';
 import { isIdleFleet } from '../../game/sim/fleets';
 import { flareClock, flareStop, paceMatters, starClock, turnsUntilYears } from '../../game/sim/flare';
@@ -20,6 +20,9 @@ import { Resources } from './Resources';
 import { ResearchPrompt } from './ResearchPrompt';
 import { Tutorial } from './Tutorial';
 import { sfx } from '../../audio/sfx';
+import { pressable } from '../a11y';
+import { uiFactor } from '../Tip';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import { calendarEra } from '../../game/fate';
 
 export function Hud({ s }: { s: GameState }) {
@@ -63,11 +66,33 @@ function RailBtn({ icon, label, short, wide, onClick, badge, on }: { icon: IconN
 
 function Rail({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
+  // (and when the forecasts or the interface size change)
+  void hudPrefs.value;
+  void uiZoom.value;
+  const ref = useRef<HTMLElement>(null);
+  // on a short screen the rail stops above the forecasts and scrolls, so its last buttons
+  // (Save, Menu) are not left under them
+  useLayoutEffect(() => {
+    const fit = () => {
+      const rail = ref.current;
+      if (!rail) return;
+      const below = document.querySelector('.bottom-left');
+      if (window.innerWidth <= 760 || !below || document.documentElement.classList.contains('lv')) {
+        rail.style.maxHeight = '';
+        return;
+      }
+      const room = (below.getBoundingClientRect().top - rail.getBoundingClientRect().top - 8) / uiFactor();
+      rail.style.maxHeight = `${Math.max(120, Math.floor(room))}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  });
   const unanswered = s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
   const m = modal.value?.kind;
   const readySettlers = Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles)).length;
   return (
-    <nav class="rail panel" aria-label="Civilization">
+    <nav ref={ref} class="rail panel" aria-label="Civilization">
       <RailBtn icon="research" label={`Research${s.civ.researching ? '' : ': nothing chosen'}`} short="Research" on={m === 'research'} badge={s.civ.researching ? 0 : 1} onClick={() => (modal.value = { kind: 'research' })} />
       <RailBtn icon="colony" label={`Systems: our settlements and every surveyed world${calendarEra(s) === 'degenerate' ? ', and the collision stars' : ''}`} short="Systems" on={m === 'settlements'} onClick={() => (modal.value = { kind: 'settlements' })} />
       <RailBtn icon="fleet" label="Fleets" short="Fleets" on={m === 'fleets'} badge={readySettlers} onClick={() => (modal.value = { kind: 'fleets' })} />
@@ -123,13 +148,13 @@ function BottomLeft({ s }: { s: GameState }) {
               key={f.uid}
               class="forecast panel"
               data-tip={tip}
-              onClick={() => {
-                if (f.systemId) {
-                  selection.value = { kind: 'system', id: f.systemId };
-                  engine()?.select(f.systemId);
-                  if (view.value === 'galaxy') engine()?.focusGalaxyOn(f.systemId, 120);
-                }
-              }}
+              {...(f.systemId
+                ? pressable(() => {
+                    selection.value = { kind: 'system', id: f.systemId! };
+                    engine()?.select(f.systemId!);
+                    if (view.value === 'galaxy') engine()?.focusGalaxyOn(f.systemId!, 120);
+                  })
+                : {})}
               style={{ cursor: f.systemId ? 'pointer' : 'default' }}
             >
               <Icon name={f.severity === 'boon' ? 'energy' : 'warning'} cls={f.severity === 'danger' ? 'bad' : f.severity === 'boon' ? 'boon' : 'warn'} />
@@ -196,30 +221,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
     if (calendarEra(s) === 'dark') return x > 0 ? 'Not in this age: a turn cannot be quickened further.' : 'Not in this age: a turn cannot be slowed further.';
     return `Not now: the turn would be the same as at ${PACE_LABEL[x > 0 ? x - 1 : x + 1]}.`;
   };
-  // nothing queued and no work chosen for when nothing is (such a settlement only recycles)
-  const idle = colonies(s).filter((c) => c.queue.length === 0 && !c.spare);
-  const unanswered = s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
-  const readySettlers = Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
-  // things worth a look before ending the turn; each one takes you there
-  const todo: { text: string; tip: string; go: () => void }[] = [];
-  if (!civ.researching) todo.push({ text: 'Research paused', tip: 'Nothing is being researched. Open the research web.', go: () => (modal.value = { kind: 'research' }) });
-  if (idle.length)
-    todo.push({
-      text: `${idle.length} idle settlement${idle.length > 1 ? 's' : ''}`,
-      tip: `${idle.map((c) => c.name).join(', ')}\nNothing queued, and nothing chosen to work on instead: their spare industry is only recycled into matter. In a settlement’s Build tab, queue something or choose what it works on when nothing is queued.`,
-      go: () => {
-        if (idle.length > 1) {
-          modal.value = { kind: 'settlements' };
-          return;
-        }
-        openBuildFor.value = idle[0].id;
-        goToColony(idle[0]);
-      },
-    });
-  if (readySettlers.length) todo.push({ text: `${readySettlers.length} settler${readySettlers.length > 1 ? 's' : ''} waiting`, tip: 'Choose a world to settle.', go: () => (modal.value = { kind: 'fleets' }) });
-  const idleShips = Object.values(s.fleets).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
-  if (idleShips.length) todo.push({ text: `${idleShips.length} ship${idleShips.length > 1 ? 's' : ''} idle`, tip: `${idleShips.map((f) => f.name).join(', ')}. Click to go to the next one; Fortify or Hold stops the asking.`, go: () => nextIdleShip(s, idleShips) });
-  if (unanswered) todo.push({ text: `${unanswered} signal${unanswered > 1 ? 's' : ''} to answer`, tip: 'Open Signals.', go: () => (modal.value = { kind: 'signals' }) });
+  const todo = todoItems(s);
   const warnings = todo.map((t) => t.text);
   const eNet = p.energyIn - p.energyOut;
   return (
@@ -399,6 +401,93 @@ function ThermalLegend() {
       </div>
     </div>
   );
+}
+
+/** Settlements with nothing queued and no work chosen for when nothing is (such a settlement only recycles). */
+const idleColonies = (s: GameState) => colonies(s).filter((c) => c.queue.length === 0 && !c.spare);
+const readySettlers = (s: GameState) => Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+const idleShips = (s: GameState) => Object.values(s.fleets).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+const unansweredSignals = (s: GameState) => s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
+
+/** Things worth a look before ending the turn (the to-do chips); each one takes you there. */
+function todoItems(s: GameState): { text: string; tip: string; go: () => void }[] {
+  const idle = idleColonies(s);
+  const settlers = readySettlers(s);
+  const ships = idleShips(s);
+  const unanswered = unansweredSignals(s);
+  const todo: { text: string; tip: string; go: () => void }[] = [];
+  if (!s.civ.researching) todo.push({ text: 'Research paused', tip: 'Nothing is being researched. Open the research web.', go: () => (modal.value = { kind: 'research' }) });
+  if (idle.length)
+    todo.push({
+      text: `${idle.length} idle settlement${idle.length > 1 ? 's' : ''}`,
+      tip: `${idle.map((c) => c.name).join(', ')}\nNothing queued, and nothing chosen to work on instead: their spare industry is only recycled into matter. In a settlement’s Build tab, queue something or choose what it works on when nothing is queued.`,
+      go: () => {
+        if (idle.length > 1) {
+          modal.value = { kind: 'settlements' };
+          return;
+        }
+        openBuildFor.value = idle[0].id;
+        goToColony(idle[0]);
+      },
+    });
+  if (settlers.length) todo.push({ text: `${settlers.length} settler${settlers.length > 1 ? 's' : ''} waiting`, tip: 'Choose a world to settle.', go: () => (modal.value = { kind: 'fleets' }) });
+  if (ships.length) todo.push({ text: `${ships.length} ship${ships.length > 1 ? 's' : ''} idle`, tip: `${ships.map((f) => f.name).join(', ')}. Click to go to the next one; Fortify or Hold stops the asking.`, go: () => nextIdleShip(s, ships) });
+  if (unanswered) todo.push({ text: `${unanswered} signal${unanswered > 1 ? 's' : ''} to answer`, tip: 'Open Signals.', go: () => (modal.value = { kind: 'signals' }) });
+  return todo;
+}
+
+let lastStep = '';
+/**
+ * The magnifier mode's N: what needs attention, one thing at a time, the to-do chips' list item by
+ * item: research, each idle settlement's Build tab, each waiting settler, each idle ship, the signals.
+ */
+export function nextTodo(s: GameState) {
+  const steps: { key: string; go: () => void }[] = [];
+  if (!s.civ.researching) steps.push({ key: 'research', go: () => (modal.value = { kind: 'research' }) });
+  for (const c of idleColonies(s))
+    steps.push({
+      key: `colony:${c.id}`,
+      go: () => {
+        openBuildFor.value = c.id;
+        goToColony(c);
+      },
+    });
+  for (const f of readySettlers(s)) steps.push({ key: `fleet:${f.id}`, go: () => goToFleet(s, f) });
+  for (const f of idleShips(s))
+    steps.push({
+      key: `fleet:${f.id}`,
+      go: () => {
+        goToFleet(s, f);
+        shipPrompt.value = f.id;
+      },
+    });
+  if (unansweredSignals(s)) steps.push({ key: 'signals', go: () => (modal.value = { kind: 'signals' }) });
+  if (!steps.length) {
+    notify('Nothing is waiting on you this turn.');
+    return;
+  }
+  // the one after the last, or the first again once that one is dealt with
+  const at = steps.findIndex((x) => x.key === lastStep);
+  const step = steps[(at + 1) % steps.length];
+  lastStep = step.key;
+  step.go();
+}
+
+/** The magnifier mode's B: the selected settlement's Build tab (a star with one settlement of ours counts). */
+export function buildSelected(s: GameState) {
+  const sel = selection.value;
+  const b = sel?.kind === 'body' ? s.bodies[sel.id] : null;
+  let c = b?.colonyId ? s.colonies[b.colonyId] : null;
+  if (!c && sel?.kind === 'system') {
+    const here = colonies(s).filter((x) => x.systemId === sel.id);
+    if (here.length === 1) c = here[0];
+  }
+  if (!c) {
+    notify('Select a settlement first. N goes to one waiting for work.');
+    return;
+  }
+  openBuildFor.value = c.id;
+  goToColony(c);
 }
 
 let idleCursor = 0;

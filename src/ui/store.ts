@@ -8,7 +8,7 @@ import type { GameState } from '../game/types';
 
 export type Screen = 'menu' | 'setup' | 'game';
 /** The Systems window's tabs past the first (our settlements): surveyed worlds, collision stars. */
-export type SystemsTab = 'worlds' | 'beacons';
+export type SystemsTab = 'worlds' | 'beacons' | 'afar';
 export type Modal =
   | { kind: 'research' }
   | { kind: 'fleets' }
@@ -39,6 +39,13 @@ export interface Settings {
   playlist: Record<string, boolean>;
   /** The Canon opens the Degenerate Age. */
   overture: boolean;
+  /**
+   * The magnifier mode, for low vision (a11y.ts): the HUD in one scrolling column, bigger sizes,
+   * stronger contrast, focus that follows what opens. Unset in settings from before it.
+   */
+  lowVision?: boolean;
+  /** The side its column keeps to. */
+  lvSide?: 'left' | 'right';
 }
 
 export const game = signal<GameState | null>(null);
@@ -67,13 +74,17 @@ export const hoverStar = signal<string | null>(null);
 /** What the camera is following (set by the engine). */
 export const following = signal<{ kind: 'body' | 'fleet'; id: string; keepZoom?: boolean } | null>(null);
 
-/** Interface sizes on offer; the whole UI layer is zoomed by the chosen factor. */
-export const UI_SCALES = [
+/** Interface sizes on offer; the whole UI layer is zoomed by the chosen factor. The two largest only in the magnifier mode, whose column scrolls. */
+export const UI_SCALES: { v: number; label: string; lv?: boolean }[] = [
   { v: 0.85, label: 'Small' },
   { v: 1, label: 'Normal' },
   { v: 1.2, label: 'Large' },
   { v: 1.4, label: 'Huge' },
+  { v: 1.6, label: '1.6×', lv: true },
+  { v: 2, label: '2×', lv: true },
 ];
+/** The largest size outside the magnifier mode. */
+export const PLAIN_MAX_SCALE = 1.4;
 
 // (after UI_SCALES, which loadSettings reads: before it, the read threw and the saved settings were ignored)
 export const settings = signal<Settings>(loadSettings());
@@ -97,7 +108,8 @@ export function notify(text: string, kind: 'info' | 'bad' | 'good' = 'info', act
   if (toasts.value.some((t) => t.text === text)) return;
   const t: Toast = { id: ++toastId, text, kind, action };
   toasts.value = [...toasts.value, t].slice(-3);
-  window.setTimeout(() => dismissToast(t.id), action ? 12000 : kind === 'bad' ? 6000 : 4500);
+  // in the magnifier mode a message stays until it is closed or the turn ends: she may be looking elsewhere
+  if (!settings.value.lowVision) window.setTimeout(() => dismissToast(t.id), action ? 12000 : kind === 'bad' ? 6000 : 4500);
 }
 
 /** Run a game action; show its error if any, refresh otherwise. */
@@ -125,6 +137,7 @@ function loadSettings(): Settings {
     const s: Settings = t ? { ...d, ...JSON.parse(t) } : d;
     // older versions offered 0.9 / 1 / 1.12: snap to the nearest size now offered
     s.uiScale = UI_SCALES.reduce((a, b) => (Math.abs(b.v - s.uiScale) < Math.abs(a.v - s.uiScale) ? b : a)).v;
+    if (!s.lowVision) s.uiScale = Math.min(s.uiScale, PLAIN_MAX_SCALE);
     return s;
   } catch {
     return d;
@@ -138,11 +151,13 @@ export const uiZoom = signal(1);
 export function applyUiScale(u: number) {
   const w = window.innerWidth;
   const h = window.innerHeight;
-  // the layouts need about this much room, in the UI's own pixels
-  const room = w <= 760 ? Math.min(w / 380, h / 700) : Math.min(w / 1000, h / 640);
+  // the layouts need about this much room, in the UI's own pixels; the magnifier mode's column
+  // scrolls, and needs only its width
+  const room = settings.value.lowVision ? w / 360 : w <= 760 ? Math.min(w / 380, h / 700) : Math.min(w / 1000, h / 640);
   const z = u <= 1 ? u : Math.max(1, Math.min(u, room));
   uiZoom.value = z;
   document.documentElement.style.setProperty('--z', z.toFixed(3));
+  engineRef?.setUiZoom(z);
 }
 
 export function saveSettings(s: Settings) {
@@ -196,11 +211,20 @@ export const VIEW_MODES = [
 
 /** Step to the next view mode (V). */
 export function cycleViewMode() {
-  const m = (hudPrefs.value.viewMode + 1) % VIEW_MODES.length;
+  setViewMode((hudPrefs.value.viewMode + 1) % VIEW_MODES.length);
+}
+
+/** Show the universe one way: 0 natural light, 1 enhanced, 2 thermal (kept between sessions). */
+export function setViewMode(m: number) {
   setHudPrefs({ viewMode: m });
   const e = engine();
   if (e) e.viewMode = m;
 }
+
+/** The magnifier mode's column folded away, to see the whole map (M). */
+export const lvFolded = signal(false);
+/** The magnifier mode: what is under the pointer on the map, named in large type beside it. */
+export const mapHover = signal<{ text: string; x: number; y: number } | null>(null);
 
 export function toggleOrbits() {
   const paused = !hudPrefs.value.orbitsPaused;

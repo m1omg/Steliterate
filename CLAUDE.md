@@ -32,6 +32,9 @@ Read these before changing anything:
 - **Physics:** keep it grounded, and say plainly where the game bends it.
 - In `src/ui/screens/Manual.tsx` prose, write ’ not `'`: a straight apostrophe ends the
   single-quoted string and breaks the build.
+- **Low vision and the keyboard** (9 Oct): a clickable row is `{...pressable(fn)}` (`a11y.ts`),
+  never a bare `onClick` on a div; a new HUD part needs its place in the magnifier mode's column
+  (the `html.lv` block at the end of `styles.css`). Browser checks `a11y`, `lowvision`, `translate`.
 
 ## Validate every batch
 
