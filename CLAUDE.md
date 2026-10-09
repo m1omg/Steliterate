@@ -5,9 +5,11 @@ Preact with signals, three.js 0.186, Web Audio; GPL-3.0. Live build:
 https://m1omg.github.io/Steliterate/, rebuilt by the Pages workflow on every push to `main` or
 `claude/lucid-newton-30cbpk`. The game was built on that branch; PR m1omg/Steliterate#1 merged it
 into `main` on 8 Oct with a merge commit (`3e913f3`, every commit ID kept). Since 9 Oct a batch
-goes live by a PR from the work branch into `main`, merged with a merge commit at the player's word
-(PR m1omg/Steliterate#3, `0e08054`). The old live branch stays behind `main`: never push an older
-commit to it, as Pages builds it too and would put the older build live.
+goes live by a PR from the work branch into `main`, merged with a merge commit (PR
+m1omg/Steliterate#3, `0e08054`). The player asked me to open and merge these myself, every time,
+once a batch is validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind
+`main`: never push an older commit to it, as Pages builds it too and would put the older build
+live.
 
 Read these before changing anything:
 

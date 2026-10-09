@@ -7,7 +7,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 ## Workflow for every batch
 
 1. **Develop** on the session's work branch. Going live (since 9 Oct): a PR from it into `main`,
-   merged with a merge commit at the player's word, so the commit IDs cited here stay valid (PR
+   merged with a merge commit, which I open and merge myself once the batch is validated (the
+   player: "Always. You merge pls."), so the commit IDs cited here stay valid (PR
    m1omg/Steliterate#1 merged the game as `3e913f3`, PR m1omg/Steliterate#3 the next batch as
    `0e08054`). Pages builds `main` and `claude/lucid-newton-30cbpk` alike, and the last push wins:
    the old live branch now lags `main`, so never push an older commit to it. A direct push to a
