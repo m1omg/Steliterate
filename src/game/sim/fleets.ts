@@ -219,6 +219,10 @@ export function createColony(state: GameState, b: Body, pops: Partial<Record<Thr
   b.colonyId = c.id;
   state.civ.known[b.systemId] = 2;
   if (!state.civ.capitalId) state.civ.capitalId = c.id;
+  // a settlement is something left there: a system marked gone (a hole that evaporated while only
+  // others lived in its Deep, until we took them back) is on the map again, and ships can reach it
+  const sys = state.systems[b.systemId];
+  if (sys?.gone) sys.gone = false;
   return c;
 }
 

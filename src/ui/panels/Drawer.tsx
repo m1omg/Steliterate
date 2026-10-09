@@ -265,8 +265,12 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
               <dd class="mono" data-tip={tempTip(s, sys)}>{kelvin(T)}</dd>
             </>
           )}
-          <dt>Mass</dt>
-          <dd class="mono">{sys.primary.mass >= 1000 ? sys.primary.mass.toExponential(1) : n1(sys.primary.mass)} M☉</dd>
+          {sys.primary.kind !== 'void' && sys.primary.kind !== 'rogue' && (
+            <>
+              <dt>Mass</dt>
+              <dd class="mono">{sys.primary.mass >= 1000 ? sys.primary.mass.toExponential(1) : n1(sys.primary.mass)} M☉</dd>
+            </>
+          )}
           {sys.primary.spinMax > 0 && (
             <>
               <dt data-tip={spinSharers(s, sys.id).length ? 'In the Black Hole Age a hole’s spin is a commons: others living here draw on it as we do (a partner only half what it could), and it does not come back.' : undefined}>Spin reservoir</dt>
@@ -352,7 +356,7 @@ function tempTip(s: GameState, sys: StarSystem): string {
   if (k === 'black_hole' || k === 'smbh') return 'A black hole glows at its Hawking temperature, colder the heavier it is: a few hundredths of a microkelvin for one of a few Suns. It gives almost nothing, but it gives it until it is gone.';
   const dead = k === 'white_dwarf' || k === 'black_dwarf' || k === 'brown_dwarf' || k === 'neutron_star';
   if (!dead || calendarEra(s) === 'dusk') return '';
-  const base = `Nothing warms a dead star but dark matter falling into it while the halo lasts, a world falling in, and its own last heat, which it loses slowly${k === 'neutron_star' ? ' (as T ≈ K·t^-½, with no envelope to hold it in)' : ', its envelope holding it in'}.${k === 'neutron_star' && curvatureWarmth(s) ? ' Space itself turns its mass into particles: a glow of about 30 nK.' : ''} What we can gather goes as T⁴: a thousand times colder is a million million times less.`;
+  const base = `Nothing warms a dead star but dark matter falling into it while the halo lasts, a world falling in, and its own last heat, which it loses slowly${k === 'neutron_star' ? ' (as T ≈ K·t^-½, with no envelope to hold it in)' : ', its envelope holding it in'}.${curvatureWarmth(s) ? ` Space itself turns its mass into particles, and those made inside it warm it: ${k === 'neutron_star' ? 'about 30 nK' : k === 'brown_dwarf' ? 'a few femtokelvin' : 'a few tenths of a picokelvin to a few picokelvin, the denser the warmer'} (Falcke, Wondrak & van Suijlekom 2025).` : ''} What we can gather goes as T⁴: a thousand times colder is a million million times less.`;
   if (protonFateKnown(s) || sys.primary.rekindle) return base;
   return `${base}\nIf protons decay, their warmth would hold it near ${k === 'neutron_star' ? '1.5 K' : k === 'brown_dwarf' ? '9 mK' : '0.05 K'}. Until we know (the Proton Question), this is the prediction without it.`;
 }
@@ -541,9 +545,10 @@ function ClimateRows({ s, b }: { s: GameState; b: Body }) {
   if (b.kind === 'deep') return null;
   const giant = b.kind === 'gas_giant' || b.kind === 'ice_giant';
   const c = bodyClimate(s, b);
+  const curved = curvatureWarmth(s) ? ' Under curvature radiation space turns its mass into particles, and those made inside it keep it a few tenths of a femtokelvin warm (Falcke, Wondrak & van Suijlekom 2025).' : '';
   const tip = giant
-    ? 'At the cloud tops: from starlight (by a black hole, its disk’s) and what is left of its own heat, and far from any star the galaxy’s faint glow.'
-    : 'From starlight (by a black hole, its disk’s), the world’s own heat and what is left of its air, and far from any star the galaxy’s faint glow (about 1 K in the Dusk). Tidally locked worlds keep a hot day side and a cold night side.';
+    ? `At the cloud tops: from starlight (by a black hole, its disk’s) and what is left of its own heat, and far from any star the galaxy’s faint glow.${curved}`
+    : `From starlight (by a black hole, its disk’s), the world’s own heat and what is left of its air, and far from any star the galaxy’s faint glow (about 1 K in the Dusk). Tidally locked worlds keep a hot day side and a cold night side.${curved}`;
   return (
     <>
       <dt data-tip={tip}>Temperature</dt>

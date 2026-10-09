@@ -3,8 +3,9 @@
 A turn-based survival strategy game at the end of starlight. Vite 8, TypeScript 7 (strict),
 Preact with signals, three.js 0.186, Web Audio; GPL-3.0. Live build:
 https://m1omg.github.io/Steliterate/, rebuilt by the Pages workflow on every push to `main` or
-`claude/lucid-newton-30cbpk`. The game was built on that branch (PR m1omg/Steliterate#1); until
-it is merged, `main` holds only the licence.
+`claude/lucid-newton-30cbpk`. The game was built on that branch; PR m1omg/Steliterate#1 merged it
+into `main` on 8 Oct with a merge commit (`3e913f3`, every commit ID kept). Deploys still go to
+that branch (keep it); later work reaches `main` by a new PR, at the player's word.
 
 Read these before changing anything:
 

@@ -40,7 +40,7 @@ run(async () => {
   await page.waitForTimeout(1200);
   const head = await page.evaluate(() => document.querySelector('.drawer .drawer-head')?.textContent.replace(/\s+/g, ' ').trim());
   console.log(`  star panel: ${head?.slice(0, 120)}`);
-  check(/Empty/.test(head ?? '') && !/gone/.test(head ?? ''), `its panel reads Empty, not gone`);
+  check(/No star left/.test(head ?? '') && !/gone/.test(head ?? ''), `its panel reads No star left, not gone`);
   // open it the way a player does: the star panel's Look inside
   await page.locator('.drawer button', { hasText: /Look inside/ }).first().click();
   let v = 'galaxy';

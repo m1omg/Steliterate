@@ -54,6 +54,14 @@ export function migrate(s: GameState): GameState {
     // v3: the fate of matter has three answers; a game from before keeps the one it had
     s.fate ??= s.protonsDecay ? 'decay' : 'stable';
   }
+  // a settlement keeps its system: one placed in the Deep of a hole that had evaporated while only
+  // others lived there (taking back our own people who left) was left in a system marked gone,
+  // with nothing on the map to click and no way for ships to reach it
+  for (const c of Object.values(s.colonies)) {
+    const sys = s.systems[c.systemId];
+    const b = s.bodies[c.bodyId];
+    if (sys?.gone && sys.primary.kind === 'void' && b && !b.dissolved) sys.gone = false;
+  }
   // a system that fell into the Heart took its worlds with it (older games left them behind,
   // some feeding a star that was gone): every other way a system goes, its worlds are gone or adrift
   for (const sys of Object.values(s.systems)) {

@@ -1,7 +1,7 @@
 import { STRUCTURE_BY_ID } from './data/structures';
 import { defaultWater, hawkingTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
-import { calendarEra, fateKnown, fateOf, matterGone } from './fate';
+import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from './fate';
 import { ERA_BY_ID } from './eras';
 import { hashSeed } from './rng';
 import { protonFateKnown } from './sim/util';
@@ -157,10 +157,40 @@ export function decayWarmth(state: GameState, years = state.years): number {
 }
 
 /**
- * Curvature radiation, if that is the fate of matter: a neutron star glows at about 30 nK as space
- * turns its mass into particles (a white dwarf, far less dense, at a few picokelvin: nothing).
+ * Curvature radiation, if that is the fate of matter: space turns a body's mass into particles
+ * over its lifetime τ, giving off Mc²/τ (τ ∝ density^-3/2). The particles made inside it are
+ * absorbed and warm it, so its surface glows (Falcke, Wondrak & van Suijlekom 2025, JCAP 05, 023,
+ * arXiv:2410.14734). A neutron star at about 30 nK (they give 25 nK for 1.44 M☉).
  */
 const CURVATURE_NEUTRON_K = 3e-8;
+const C2 = 8.988e16; // c², m²/s²
+const SIGMA = 5.67e-8; // Stefan–Boltzmann, W/m²/K⁴
+const YEAR_S = 3.156e7;
+const SUN_KG = 1.989e30;
+const SUN_M = 6.957e8;
+const EARTH_KG = 5.972e24;
+const EARTH_M = 6.371e6;
+/**
+ * Everything else glows by the same law, far fainter: T ∝ (Mc²/τ ÷ 4πR²σ)^¼, scaled (×1.17) to
+ * their two figures, 25 nK for a neutron star (1.44 M☉, 12.8 km, 3.4 × 10^68 years) and 5.5 pK
+ * for a 1.3 M☉ white dwarf (2,550 km, 3.3 × 10^78 years), with the lifetimes the game gives
+ * (`lifeEta`, log10 years). A 0.6 M☉ white dwarf about 0.3 pK, a brown dwarf a few femtokelvin, a
+ * world a few tenths of one: faint, but far above the horizon's 2 × 10^-30 K.
+ */
+export function curvatureK(massKg: number, radiusM: number, lifeEta: number): number {
+  const power = (massKg * C2) / (Math.pow(10, lifeEta) * YEAR_S);
+  return 1.17 * Math.pow(power / (4 * Math.PI * radiusM * radiusM * SIGMA), 0.25);
+}
+/** An old brown dwarf's radius, about Jupiter's whatever its mass (R☉). */
+const BROWN_R = 0.1;
+/** A world's own curvature glow: rock and ice by R ∝ M^0.27, giants about their own size, a belt by its larger pieces. */
+export function worldCurvatureK(b: Body): number {
+  if (b.kind === 'deep') return 0;
+  const life = MATTER_END.curvature;
+  if (b.kind === 'asteroids') return curvatureK(1.3e21, 5e5, life);
+  const r = b.kind === 'gas_giant' ? 7e7 : b.kind === 'ice_giant' ? 2.5e7 : EARTH_M * Math.pow(Math.max(0.01, b.massEarth), 0.27);
+  return curvatureK(Math.max(0.01, b.massEarth) * EARTH_KG, r, life);
+}
 
 /** How much of the curvature glow to show (0 or 1): only under that fate, and once we know it. */
 export function curvatureWarmth(state: GameState): number {
@@ -285,7 +315,9 @@ export function primaryTemperature(p: Primary, years: number, era: EraId, decay 
 export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0, curve = 0): number {
   const fromDecay = (k: number) => k * Math.pow(decay, 0.25);
   // a new star a turn outlasted: the white dwarf it left, cooled through the rest of that turn
-  if (newStarOut(p, years)) return warmth(dwarfCoolingK(p, years - (p.diesAt ?? 0)), fromDecay(DECAY_K.dwarf));
+  // curvature radiation, under that fate (curve): a dwarf by its own lifetime
+  const curved = () => curvatureK(p.mass * SUN_KG, dwarfRadius(p) * SUN_M, dwarfFadeEta(p.mass)) * curve;
+  if (newStarOut(p, years)) return warmth(dwarfCoolingK(p, years - (p.diesAt ?? 0)), fromDecay(DECAY_K.dwarf), curved());
   switch (p.kind) {
     case 'red_dwarf':
       return 2700 + (p.mass - 0.08) * 6000;
@@ -304,11 +336,11 @@ export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0
     case 'black_dwarf':
       // its own cooling (one law in every age); dark matter falling into it while the halo lasts,
       // Dusk and after (Adams & Laughlin: from η 11), an ember at about 63 K that fades with the
-      // halo (T ∝ power^¼); a world falling into it; its protons decaying, if they do
-      return warmth(dwarfCoolingK(p, dwarfAge(p, years)), EMBER_K * Math.pow(emberShare(p, years), 0.25), rekindledK(p, dwarfRadius(p)), fromDecay(DECAY_K.dwarf));
+      // halo (T ∝ power^¼); a world falling into it; its protons decaying, if they do; curvature
+      return warmth(dwarfCoolingK(p, dwarfAge(p, years)), EMBER_K * Math.pow(emberShare(p, years), 0.25), rekindledK(p, dwarfRadius(p)), fromDecay(DECAY_K.dwarf), curved());
     case 'brown_dwarf':
-      // its own cooling from its own age, and a few kelvin of dark matter while the halo lasts
-      return warmth(brownCoolingK(p, Math.max(0, years - formedAt(p))), BROWN_HALO_K * Math.pow(haloShare(years), 0.25), fromDecay(DECAY_K.brown));
+      // its own cooling from its own age, and a few kelvin of dark matter while the halo lasts; curvature
+      return warmth(brownCoolingK(p, Math.max(0, years - formedAt(p))), BROWN_HALO_K * Math.pow(haloShare(years), 0.25), fromDecay(DECAY_K.brown), curvatureK(p.mass * SUN_KG, BROWN_R * SUN_M, BROWN_FADE_ETA) * curve);
     case 'neutron_star':
       // dark matter holds it near 900 K while the halo lasts, in the Dusk as after (its own heat
       // was long gone: about 100 K at a billion years with nothing to warm it)
@@ -454,8 +486,15 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
             : 'Black hole';
       return { light: disk, label, temperatureK: 0, alive: null };
     }
-    default:
-      return { light: 0, label: sys.primary.kind === 'rogue' ? 'Starless: rogue worlds drifting alone' : 'Nothing remains', temperatureK: 0, alive: null };
+    default: {
+      if (sys.primary.kind === 'rogue') return { light: 0, label: 'Starless: rogue worlds drifting alone', temperatureK: 0, alive: null };
+      // its star or hole is gone; worlds adrift, or a settlement in its Deep, may be left
+      const left = sys.bodies.some((id) => {
+        const b = state.bodies[id];
+        return !!b && !b.dissolved && (b.kind !== 'deep' || !!b.colonyId || Object.values(state.survivors).some((v) => v.alive && v.systems.includes(sys.id)));
+      });
+      return { light: 0, label: left ? 'No star is left; what was around it drifts on' : 'Nothing remains', temperatureK: 0, alive: null };
+    }
   }
 }
 
@@ -1104,8 +1143,9 @@ export function starClimate(state: GameState, b: Body, lum?: number, tf: Terrafo
   const a = Math.max(0.003, b.orbitAU);
   const tEq = L > 0 ? 278 * Math.pow(L, 0.25) * Math.pow(0.7, 0.25) / Math.sqrt(a) : 0;
   // its own heat: its core's, while that lasts (it runs out after the Last Light), then what is
-  // left of it, and its protons decaying, if they do and we know it
-  const tInt = warmth(40 * b.coreHeat, era === 'dusk' ? 0 : residual(RESIDUAL.world, state.years), DECAY_K.world * Math.pow(decay, 0.25), giantHeatK(b, state.years));
+  // left of it, its protons decaying, if they do and we know it, and curvature radiation, if that
+  // is the fate and we know it
+  const tInt = warmth(40 * b.coreHeat, era === 'dusk' ? 0 : residual(RESIDUAL.world, state.years), DECAY_K.world * Math.pow(decay, 0.25), giantHeatK(b, state.years), worldCurvatureK(b) * curvatureWarmth(state));
   // and the galaxy's glow around it, which even a world far from any star sits in
   const bg = backgroundK(state.years);
   const raw = Math.pow(Math.pow(tEq, 4) + Math.pow(tInt, 4) + Math.pow(bg, 4), 0.25);

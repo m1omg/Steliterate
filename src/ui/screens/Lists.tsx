@@ -4,7 +4,7 @@ import { ANOMALIES } from '../../game/data/events';
 import { bodyClimate, sourceLight } from '../../game/physics';
 import { LIVING_WORLD, naturalKinRoom } from '../../game/sim/fleets';
 import { habitabilityOf } from '../../game/sim/terraform';
-import { SiteStrip, bestOf, starSites, worldSites, type Need } from '../siteStrip';
+import { SiteStrip, bestOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
 import { YIELDS, yieldOf, yieldText, yieldTip } from '../yields';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
@@ -16,7 +16,7 @@ import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
-import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../../game/types';
+import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, n1 } from '../fmt';
 import { Icon } from '../Icon';
@@ -329,7 +329,13 @@ export function goToSystem(id: string) {
   pivotToSystem(id);
 }
 
-type WorldSort = 'hab' | 'near' | 'room' | 'name' | 'echoes' | 'lattice' | 'coldminds';
+type WorldSort = 'hab' | 'near' | 'room' | 'name' | 'type' | 'echoes' | 'lattice' | 'coldminds';
+/** The kinds of star in the order the Type sort lists them: the holes, the dead stars, the living, the starless. */
+const TYPE_ORDER: PrimaryKind[] = ['smbh', 'black_hole', 'neutron_star', 'white_dwarf', 'black_dwarf', 'brown_dwarf', 'red_dwarf', 'blue_dwarf', 'collision_star', 'helium_star', 'helium_giant', 'dark_star', 'rogue', 'void'];
+const typeRank = (sys: StarSystem) => {
+  const i = TYPE_ORDER.indexOf(sys.primary.kind);
+  return i < 0 ? TYPE_ORDER.length : i;
+};
 /** Sorts that rank by what one kind of mind needs (see sites.ts). */
 const MIND_SORT: Partial<Record<WorldSort, ThreadId>> = { echoes: 'echoes', lattice: 'lattice', coldminds: 'coldminds' };
 
@@ -351,25 +357,41 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
       return { b, sys, hab: habitabilityOf(s, b) * b.vitality, room: b.kind === 'gas_giant' ? 0 : naturalKinRoom(b, s), c, ly: distLy(home, sys), finds: b.traits.filter((t) => TRAIT_NAME[t] && ANOMALY_IDS.has(t)), v: mind ? siteValue(s, b, mind) : null, sites: bySystem ? {} : worldSites(s, b) };
     })
     .filter((r) => !findsOnly || r.finds.length > 0)
-    .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (x.v && y.v ? y.v.score - x.v.score : sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name)) || x.ly - y.ly);
+    .sort((x, y) => (sort === 'type' ? typeRank(x.sys) - typeRank(y.sys) : Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (x.v && y.v ? y.v.score - x.v.score : sort === 'hab' ? y.hab - x.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.b.name.localeCompare(y.b.name))) || x.ly - y.ly);
   // the same worlds, one line per star: its best world, its total room, what was found there
-  const systems = [...new Set(rows.map((r) => r.sys.id))]
-    .map((id) => {
-      const rs = rows.filter((r) => r.sys.id === id);
-      const best = rs.reduce((a, r) => ((r.v && a.v ? r.v.score > a.v.score : r.hab > a.hab) ? r : a), rs[0]);
-      return {
-        sys: rs[0].sys,
-        ly: rs[0].ly,
-        worlds: rs.length,
-        best,
-        room: rs.reduce((a, r) => a + r.room, 0),
-        living: rs.filter((r) => r.hab >= LIVING_WORLD).length,
-        settled: rs.some((r) => r.b.colonyId),
-        finds: [...new Set(rs.flatMap((r) => r.finds))],
-        sites: bySystem ? starSites(s, rs[0].sys) : {},
-      };
-    })
-    .sort((x, y) => Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) || (x.best.v && y.best.v ? y.best.v.score - x.best.v.score : sort === 'hab' ? y.best.hab - x.best.hab : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.sys.name.localeCompare(y.sys.name)) || x.ly - y.ly);
+  type StarRow = { sys: StarSystem; ly: number; worlds: number; best: (typeof rows)[number] | null; room: number; living: number; settled: boolean; finds: string[]; sites: Sites };
+  const withWorlds = [...new Set(rows.map((r) => r.sys.id))].map((id): StarRow => {
+    const rs = rows.filter((r) => r.sys.id === id);
+    const best = rs.reduce((a, r) => ((r.v && a.v ? r.v.score > a.v.score : r.hab > a.hab) ? r : a), rs[0]);
+    return {
+      sys: rs[0].sys,
+      ly: rs[0].ly,
+      worlds: rs.length,
+      best,
+      room: rs.reduce((a, r) => a + r.room, 0),
+      living: rs.filter((r) => r.hab >= LIVING_WORLD).length,
+      settled: rs.some((r) => r.b.colonyId),
+      finds: [...new Set(rs.flatMap((r) => r.finds))],
+      sites: bySystem ? starSites(s, rs[0].sys) : {},
+    };
+  });
+  // and the surveyed stars with no worlds, only their Deep (most black holes, the Heart)
+  const listed = new Set(withWorlds.map((x) => x.sys.id));
+  const worldless = (x: StarSystem) => !x.bodies.some((id) => !!s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind !== 'deep');
+  const deepOnly = bySystem && !findsOnly
+    ? Object.values(s.systems)
+        .filter((x) => s.civ.known[x.id] === 2 && !x.gone && !listed.has(x.id) && worldless(x) && (!open || !x.bodies.some((id) => s.bodies[id]?.colonyId)))
+        .map((x): StarRow => ({ sys: x, ly: distLy(home, x), worlds: 0, best: null, room: 0, living: 0, settled: x.bodies.some((id) => !!s.bodies[id]?.colonyId), finds: [], sites: starSites(s, x) }))
+    : [];
+  const mindOf = MIND_SORT[sort];
+  const score = (x: StarRow) => x.best?.v?.score ?? (mindOf ? (x.sites[mindOf as Need]?.v.score ?? -1e9) : -1e9);
+  const systems = [...withWorlds, ...deepOnly].sort(
+    (x, y) =>
+      (sort === 'type'
+        ? typeRank(x.sys) - typeRank(y.sys)
+        : Number(isBeacon(s, y.sys)) - Number(isBeacon(s, x.sys)) ||
+          (mindOf ? score(y) - score(x) : sort === 'hab' ? (y.best?.hab ?? -1) - (x.best?.hab ?? -1) : sort === 'room' ? y.room - x.room : sort === 'near' ? x.ly - y.ly : x.sys.name.localeCompare(y.sys.name))) || x.ly - y.ly,
+  );
   // the measure the list is sorted by, marked in every row's strip (the distance when nearest first)
   const marked: Need | null = sort === 'hab' || sort === 'room' ? 'kin' : (MIND_SORT[sort] as Need | undefined) ?? null;
   const best = bestOf(bySystem ? systems.map((x) => x.sites) : rows.map((r) => r.sites));
@@ -380,6 +402,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
     ['echoes', 'Power', 'Best for Echoes and the Chorus: the energy a settlement there could collect each turn at the Tide'],
     ['lattice', 'Matter', 'Best for the Lattice: the matter its mines, skimmers and lifters could raise each turn at the Tide'],
     ['coldminds', 'Lasting', 'Best for Coldminds: the worlds that will last longest before falling into their dead stars'],
+    ['type', 'Type', 'By the kind of star: black holes, neutron stars, white and brown dwarfs, then the rest, nearest first within each'],
     ['near', 'Nearest', 'Nearest to the capital'],
     ['name', 'Name', 'Alphabetical'],
   ];
@@ -407,7 +430,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
           Unsettled only
         </button>
       </div>
-      {rows.length === 0 && <p class="dim">{findsOnly ? 'No discoveries among these worlds yet. Surveys turn one up now and then.' : 'No worlds charted yet. Send a ship to survey a star.'}</p>}
+      {(bySystem ? systems.length : rows.length) === 0 && <p class="dim">{findsOnly ? 'No discoveries among these worlds yet. Surveys turn one up now and then.' : 'No worlds charted yet. Send a ship to survey a star.'}</p>}
       {bySystem ? (
         <div class="list">
           {systems.map(({ sys, ly, worlds, best: top, room, living, settled, finds, sites }) => (
@@ -420,8 +443,15 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
                 ))}
                 <div class="faint" style={{ fontSize: '12.5px' }}>
-                  {worlds} world{worlds === 1 ? '' : 's'}
-                  {living ? ` · ${living} living` : ''} · best: {top.b.name} · <span data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room in all` : 'domes only'}</span> · {dist(ly)}
+                  {top ? (
+                    <>
+                      {worlds} world{worlds === 1 ? '' : 's'}
+                      {living ? ` · ${living} living` : ''} · best: {top.b.name} · <span data-tip="Room for Kin across all its worlds, without domes or warrens">{room > 0 ? `${room} Kin room in all` : 'domes only'}</span>
+                    </>
+                  ) : (
+                    <span data-tip="No worlds left, or none to begin with: only the habitats of its Deep">no worlds, only its Deep</span>
+                  )}{' '}
+                  · {dist(ly)}
                 </div>
               </span>
               {send && <SendButton s={s} f={send} sys={sys} />}
@@ -441,7 +471,8 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
                 ))}
                 <div class="faint" style={{ fontSize: '12.5px' }}>
-                  {sys.name} · {dist(ly)}
+                  {sys.name}
+                  {sort === 'type' ? ` (${PRIMARY_NAME[sys.primary.kind]})` : ''} · {dist(ly)}
                   {c ? ` · ${c.day !== undefined && kelvin(c.night!) !== kelvin(c.day) ? `${kelvin(c.night!)} to ${kelvin(c.day)}` : kelvin(c.mean)}` : ''}
                   {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
                 </div>
