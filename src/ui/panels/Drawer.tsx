@@ -62,6 +62,7 @@ import { residentsSeen, seenThere } from '../../game/sim/claims';
 import { spinSharers } from '../../game/sim/ways';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
+import { focusTitle, lowVision, pressable, useWholeScroll } from '../a11y';
 import { calendarEra } from '../../game/fate';
 import { flowing, keeping, nextToFlow } from '../../game/sim/flow';
 import { turnStep } from '../../game/sim/flare';
@@ -69,6 +70,7 @@ import { turnStep } from '../../game/sim/flare';
 export function Drawer({ s }: { s: GameState }) {
   void rev.value;
   const ref = useRef<HTMLElement>(null);
+  const whole = useWholeScroll(ref, '.drawer-head', '.drawer-body');
   // On a phone the panel covers the lower half of the screen: slide the view up so what is
   // selected stays visible (and can be tapped again) between the top bar and the panel.
   useLayoutEffect(() => {
@@ -76,7 +78,8 @@ export function Drawer({ s }: { s: GameState }) {
       const eng = engine();
       const el = ref.current;
       if (!eng) return;
-      if (!el || window.innerWidth > 760) return eng.setFocusY(null);
+      // (the magnifier mode's column is beside the map, not over it)
+      if (!el || window.innerWidth > 760 || lowVision()) return eng.setFocusY(null);
       const top = (document.querySelector('.resources') as HTMLElement | null)?.getBoundingClientRect().bottom ?? 0;
       const bottom = el.getBoundingClientRect().top;
       eng.setFocusY(bottom - top > 80 ? (top + bottom) / 2 : null);
@@ -87,6 +90,10 @@ export function Drawer({ s }: { s: GameState }) {
   });
   useEffect(() => () => engine()?.setFocusY(null), []);
   const sel = selection.value;
+  // the magnifier mode: whatever is chosen, the focus (and a magnifier following it) goes to its panel
+  useEffect(() => {
+    if (lowVision() && sel) focusTitle(ref.current?.querySelector('.drawer-head h2'));
+  }, [sel?.kind, sel?.id]);
   if (!sel) return null;
   let body: preact.JSX.Element | null = null;
   if (sel.kind === 'system' && s.systems[sel.id]) body = <SystemPanel s={s} sys={s.systems[sel.id]} />;
@@ -97,7 +104,7 @@ export function Drawer({ s }: { s: GameState }) {
   else if (sel.kind === 'swarm' && s.swarms[sel.id]) body = <SwarmPanel s={s} sw={s.swarms[sel.id]} />;
   if (!body) return null;
   return (
-    <aside ref={ref} class="drawer panel" aria-label="Selection">
+    <aside ref={ref} class={`drawer panel${whole ? ' whole' : ''}`} aria-label="Selection">
       <button class="btn ghost small drawer-close" aria-label="Close" onClick={() => { selection.value = null; engine()?.select(null); }}>
         <Icon name="close" />
       </button>
@@ -226,7 +233,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                   const c = b.colonyId ? s.colonies[b.colonyId] : null;
                   const hab = b.habitability * b.vitality;
                   return (
-                    <div key={b.id} class="list-item" role="button" tabIndex={0} onClick={() => selectBody(b)} onKeyDown={(e) => e.key === 'Enter' && selectBody(b)}>
+                    <div key={b.id} class="list-item" {...pressable(() => selectBody(b))}>
                       <Icon name={bodyIcon(b.kind)} cls={c ? 'neon' : hab >= LIVING_WORLD ? 'boon' : ''} />
                       <span class="grow">
                         {c ? c.name : b.name} <span class="faint" style={{ fontSize: '12.5px' }}>{bodyKindName(s, b)}</span>
@@ -333,12 +340,12 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
             <h3>In orbit</h3>
             <div class="list">
               {fleets.map((f) => (
-                <div key={f.id} class="list-item" onClick={() => { selection.value = { kind: 'fleet', id: f.id }; engine()?.select(f.id); }}>
+                <div key={f.id} class="list-item" {...pressable(() => { selection.value = { kind: 'fleet', id: f.id }; engine()?.select(f.id); })}>
                   <Icon name="fleet" cls="neon" /> <span class="grow">{f.name}</span> <span class="faint">{f.ships.length} ship{f.ships.length > 1 ? 's' : ''}</span>
                 </div>
               ))}
               {swarms.map((w) => (
-                <div key={w.id} class="list-item" onClick={() => { selection.value = { kind: 'swarm', id: w.id }; engine()?.select(w.id); }}>
+                <div key={w.id} class="list-item" {...pressable(() => { selection.value = { kind: 'swarm', id: w.id }; engine()?.select(w.id); })}>
                   <Icon name="warning" cls={w.tamed ? 'neon' : 'bad'} /> <span class="grow">{w.tamed ? 'Tamed swarm' : 'Hunger swarm'}</span> <span class="mono faint">size {n1(w.size)}</span>
                 </div>
               ))}
@@ -600,7 +607,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
     <>
       <div class="drawer-head">
         <div class="eyebrow">
-          <span style={{ cursor: 'pointer' }} onClick={() => selectSystem(sys.id)}>{sys.name}</span> · <span data-tip={bodyKindNote(s, b)}>{bodyKindName(s, b)}</span>
+          <span style={{ cursor: 'pointer' }} {...pressable(() => selectSystem(sys.id))}>{sys.name}</span> · <span data-tip={bodyKindNote(s, b)}>{bodyKindName(s, b)}</span>
         </div>
         <h2>{b.name}</h2>
         {residents && (
@@ -736,11 +743,19 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   }, [armed]);
   // the idle-settlements reminder opens the Build tab, where a settlement is given work
   const wantBuild = openBuildFor.value;
+  const [toBuild, setToBuild] = useState(false);
   useEffect(() => {
     if (wantBuild !== c.id) return;
     setTab('build');
+    setToBuild(true);
     openBuildFor.value = null;
   }, [wantBuild, c.id]);
+  // the magnifier mode: there, the focus goes to the Build list (its heading: Tab goes on to the rows)
+  useEffect(() => {
+    if (!toBuild || tab !== 'build') return;
+    setToBuild(false);
+    if (lowVision()) focusTitle(document.querySelector('.drawer .list-head'));
+  }, [toBuild, tab]);
   const b = s.bodies[c.bodyId];
   const sys = s.systems[c.systemId];
   const mods = computeMods(s);
@@ -756,7 +771,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
     <>
       <div class="drawer-head">
         <div class="eyebrow">
-          <span style={{ cursor: 'pointer' }} onClick={() => selectSystem(sys.id)}>{sys.name}</span> · <span data-tip={bodyKindNote(s, b)}>{bodyKindName(s, b)}</span>
+          <span style={{ cursor: 'pointer' }} {...pressable(() => selectSystem(sys.id))}>{sys.name}</span> · <span data-tip={bodyKindNote(s, b)}>{bodyKindName(s, b)}</span>
         </div>
         <h2>{c.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
@@ -1099,10 +1114,9 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
                 key={x.id}
                 class={`list-item build ${x.error ? 'disabled' : ''}`}
                 data-tip={`${x.name}\n${x.desc}${x.error ? `\n${x.error}` : ''}`}
-                onClick={() => {
-                  if (x.error) return;
+                {...pressable(() => {
                   if (act((g) => queueBuild(g, c.id, kind, x.id))) sfx('build');
-                }}
+                }, !!x.error)}
               >
                 <span class="grow">
                   {x.sk && <KindIcon id={x.id} />}
@@ -1441,7 +1455,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                 </div>
                 <div class="list">
                   {settleTargets.map(({ b, ly, sites }) => (
-                    <div key={b.id} class="list-item" style={{ flexWrap: 'wrap' }} onClick={() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good')}>
+                    <div key={b.id} class="list-item" style={{ flexWrap: 'wrap' }} {...pressable(() => act((g) => orderFleet(g, f.id, b.systemId, 'colonize', b.id)) && sfx('good'))}>
                       <Icon name={bodyIcon(b.kind)} />
                       <span class="grow">
                         {isBeacon(s, s.systems[b.systemId]) && <span class="chip boon" style={{ marginRight: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
@@ -1479,7 +1493,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               )}
               <div class="list">
                 {dests.map(({ sys, ly }) => (
-                  <div key={sys.id} class="list-item" style={{ flexWrap: 'wrap' }} onClick={() => act((g) => orderFleet(g, f.id, sys.id, 'move')) && sfx('select')}>
+                  <div key={sys.id} class="list-item" style={{ flexWrap: 'wrap' }} {...pressable(() => act((g) => orderFleet(g, f.id, sys.id, 'move')) && sfx('select'))}>
                     <Icon name={primaryIcon(sys.primary.kind)} />
                     <span class="grow">
                       {sys.name}

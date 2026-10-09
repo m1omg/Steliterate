@@ -20,10 +20,11 @@ import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, ThreadId 
 import { THREADS } from '../../game/types';
 import { kelvin, n1 } from '../fmt';
 import { Icon } from '../Icon';
-import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, spareChoices, BEACON_TIP, SWARM_TIP } from '../labels';
-import { act, engine, modal, openBuildFor, rev, selection, targeting, view, type SystemsTab } from '../store';
+import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, SWARM_TIP } from '../labels';
+import { act, engine, modal, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
+import { pressable } from '../a11y';
 import { calendarEra } from '../../game/fate';
 
 const ANOMALY_IDS = new Set(ANOMALIES.map((a) => a.id));
@@ -99,7 +100,7 @@ export function FleetsModal({ s }: { s: GameState }) {
           const left = moving ? f.distance - f.traveled : 0;
           const settler = f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles);
           return (
-            <div key={f.id} class="list-item fleet-row" onClick={() => goToFleet(s, f)}>
+            <div key={f.id} class="list-item fleet-row" {...pressable(() => goToFleet(s, f))}>
               <img class={`fleet-thumb${moving ? ' moving' : ''}`} src={`art/ships/${fleetLook(f.ships.map((x) => x.cls))}.png`} alt="" />
               <span class="grow">
                 {f.name}
@@ -142,11 +143,15 @@ export function FleetsModal({ s }: { s: GameState }) {
   );
 }
 
-/** Open the Systems window to choose where a stationed ship goes: collision stars first while any burn. */
+/**
+ * Open the Systems window to choose where a stationed ship goes: collision stars first while any
+ * burn; in the magnifier mode a probe's list is the stars not yet surveyed.
+ */
 export function sendFromSystems(s: GameState, f: Fleet) {
   sfx('click');
   const burning = calendarEra(s) === 'degenerate' && Object.values(s.systems).some((x) => isBeacon(s, x));
-  modal.value = { kind: 'settlements', tab: burning ? 'beacons' : 'worlds', send: f.id };
+  const afar = !!settings.value.lowVision && f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey) && Object.values(s.systems).some((x) => s.civ.known[x.id] === 1 && !x.gone);
+  modal.value = { kind: 'settlements', tab: burning ? 'beacons' : afar ? 'afar' : 'worlds', send: f.id };
 }
 
 /** In the Systems window opened from a ship: send it to this star (the fleet's panel then shows the order). */
@@ -182,7 +187,8 @@ function SendButton({ s, f, sys }: { s: GameState; f: Fleet; sys: StarSystem }) 
 export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab; send?: string }) {
   void rev.value;
   const degenerate = calendarEra(s) === 'degenerate';
-  const which = tab === 'beacons' && !degenerate ? undefined : tab;
+  const lv = !!settings.value.lowVision;
+  const which = (tab === 'beacons' && !degenerate) || (tab === 'afar' && !lv) ? undefined : tab;
   const f = send ? s.fleets[send] : undefined;
   const sending = f?.at ? f : undefined;
   const show = (t?: SystemsTab) => (modal.value = { kind: 'settlements', tab: t, send: sending?.id });
@@ -195,6 +201,11 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       {degenerate && (
         <button class={`btn small ${which === 'beacons' ? 'primary' : ''}`} onClick={() => show('beacons')} data-tip={`${BEACON_TIP} Every one on our map, and how long each will burn.`}>
           ✦ Collision stars <span class={`mono ${burning ? 'boon' : 'faint'}`}>{burning}</span>
+        </button>
+      )}
+      {lv && (
+        <button class={`btn small ${which === 'afar' ? 'primary' : ''}`} onClick={() => show('afar')} data-tip="Every star on our map not yet surveyed, nearest first: to look at, or to send a ship to, without finding it on the map.">
+          Seen from afar <span class="mono faint">{Object.values(s.systems).filter((x) => s.civ.known[x.id] === 1 && !x.gone).length}</span>
         </button>
       )}
       {sending && (
@@ -212,6 +223,13 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       <ModalFrame title="Systems" eyebrow="Surveyed worlds: every world a probe has charted" icon="planet" narrow>
         {tabs}
         <WorldsList s={s} send={sending} />
+      </ModalFrame>
+    );
+  if (which === 'afar')
+    return (
+      <ModalFrame title="Systems" eyebrow="Seen from afar: stars on our map not yet surveyed" icon="system" narrow>
+        {tabs}
+        <AfarList s={s} send={sending} />
       </ModalFrame>
     );
   if (which === 'beacons')
@@ -262,11 +280,11 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                   <div
                     key={c.id}
                     class="list-item settlement-row"
-                    onClick={() => {
+                    {...pressable(() => {
                       // an idle settlement opens where it can be given something to do
                       if (!c.queue.length && !c.spare) openBuildFor.value = c.id;
                       goToColony(c);
-                    }}
+                    })}
                   >
                     <span class="grow">
                       {c.name}
@@ -323,6 +341,38 @@ export function goToBody(b: Body) {
 }
 
 /** Select a star and centre the view on it (the system panel lists its worlds). */
+/**
+ * The magnifier mode: every star on our map not yet surveyed, nearest first (to the ship being sent,
+ * or to the capital), to look at or send a ship to without finding it on the map.
+ */
+function AfarList({ s, send }: { s: GameState; send?: Fleet }) {
+  const cap = s.civ.capitalId ? s.colonies[s.civ.capitalId] : null;
+  const from = s.systems[send?.at ?? cap?.systemId ?? s.civ.homeSystemId];
+  const rows = Object.values(s.systems)
+    .filter((x) => s.civ.known[x.id] === 1 && !x.gone)
+    .map((sys) => ({ sys, ly: distLy(from, sys) }))
+    .sort((a, b) => a.ly - b.ly);
+  if (!rows.length) return <p class="dim">Every star on our map is surveyed.</p>;
+  return (
+    <div class="list">
+      {rows.map(({ sys, ly }) => (
+        <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
+          <Icon name={primaryIcon(sys.primary.kind)} />
+          <span class="grow">
+            {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
+            {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
+            {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip={SWARM_TIP}>swarm</span>}
+            <div class="faint" style={{ fontSize: '12.5px' }}>
+              {formatDistance(ly)} from {from.name}
+            </div>
+          </span>
+          {send && <SendButton s={s} f={send} sys={sys} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function goToSystem(id: string) {
   selection.value = { kind: 'system', id };
   engine()?.select(id);
@@ -434,7 +484,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
       {bySystem ? (
         <div class="list">
           {systems.map(({ sys, ly, worlds, best: top, room, living, settled, finds, sites }) => (
-            <div key={sys.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} onClick={() => goToSystem(sys.id)}>
+            <div key={sys.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} {...pressable(() => goToSystem(sys.id))}>
               <span class="grow">
                 {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
                 {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
@@ -462,7 +512,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
       ) : (
         <div class="list">
           {rows.map(({ b, sys, c, ly, finds, sites }) => (
-            <div key={b.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} onClick={() => goToBody(b)}>
+            <div key={b.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} {...pressable(() => goToBody(b))}>
               <span class="grow">
                 {b.name} <span class="faint">{bodyKindName(s, b)}</span>
                 {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
@@ -534,7 +584,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
           const worlds = worldsOf(sys);
           const v = others(sys);
           return (
-            <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
+            <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
               <span class="grow">
                 <span class="boon">✦</span> {sys.name} <span class="faint">{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
                 {kept?.systemId === sys.id && (
@@ -590,7 +640,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
           </p>
           <div class="list">
             {out.map(({ sys, life, ly }) => (
-              <div key={sys.id} class="list-item world-row" onClick={() => goToSystem(sys.id)}>
+              <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
                 <span class="grow faint">
                   {sys.name} <span>{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
                   <div style={{ fontSize: '12.5px' }}>

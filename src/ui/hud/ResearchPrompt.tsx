@@ -9,6 +9,8 @@ import { n0, n1 } from '../fmt';
 import { Icon } from '../Icon';
 import { act, modal, notify, rev } from '../store';
 import { sfx } from '../../audio/sfx';
+import { useRef } from 'preact/hooks';
+import { useFocusPrompt } from '../a11y';
 
 /** Set when a project finishes; cleared when the player picks the next one or pauses. */
 export const researchPrompt = signal<{ done: string } | null>(null);
@@ -16,6 +18,8 @@ export const researchPrompt = signal<{ done: string } | null>(null);
 export function ResearchPrompt({ s }: { s: GameState }) {
   void rev.value;
   const rp = researchPrompt.value;
+  const head = useRef<HTMLDivElement>(null);
+  useFocusPrompt(head, rp && !s.civ.researching ? rp.done : null);
   if (!rp || s.civ.researching) return null;
   const done = TECH_BY_ID[rp.done];
   const p = project(s);
@@ -43,7 +47,9 @@ export function ResearchPrompt({ s }: { s: GameState }) {
         <Icon name="research" size="lg" cls="accent" />
         <div class="grow">
           <div class="eyebrow">Research complete</div>
-          <div class="rp-title">{done?.name ?? rp.done}</div>
+          <div ref={head} class="rp-title">
+            {done?.name ?? rp.done}
+          </div>
         </div>
         <button class="btn ghost small" aria-label="Close" onClick={() => (researchPrompt.value = null)}>
           <Icon name="close" />

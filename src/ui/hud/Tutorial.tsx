@@ -6,6 +6,7 @@ import { uiFactor } from '../Tip';
 import { Icon } from '../Icon';
 import { act, modal, rev, selection } from '../store';
 import { sfx } from '../../audio/sfx';
+import { useFocusPrompt } from '../a11y';
 
 // The guide: a short run of steps over the first turns. The step lives in the save
 // (flags.tut), so it survives a reload; deleting the flag ends the guide.
@@ -105,6 +106,9 @@ export function Tutorial({ s }: { s: GameState }) {
   const step = s.flags.tut;
   const cur = step !== undefined ? STEPS[step] : undefined;
   const ring = useRef<HTMLDivElement>(null);
+  // the magnifier mode: each step takes the focus as it shows
+  const head = useRef<HTMLDivElement>(null);
+  useFocusPrompt(head, cur && !modal.value ? step : null);
 
   // Move on once the player has done what the step asks.
   useEffect(() => {
@@ -154,7 +158,9 @@ export function Tutorial({ s }: { s: GameState }) {
             <Icon name="close" />
           </button>
         </div>
-        <div class="tut-title">{cur.title}</div>
+        <div ref={head} class="tut-title">
+          {cur.title}
+        </div>
         <p class="tut-text">{cur.text}</p>
         <div class="row" style={{ gap: '6px', justifyContent: 'flex-end' }}>
           <button

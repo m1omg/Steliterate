@@ -42,7 +42,10 @@ html, body { margin: 0; height: 100%; background: var(--void); color: var(--ink)
 .ui-root { position: absolute; inset: 0; }
 .ui-root > * { pointer-events: auto; }
 button { font: inherit; color: inherit; }
-:focus-visible { outline: 1px solid var(--accent-soft); outline-offset: 2px; }
+:focus-visible { outline: none; }
+/* focus rings once the Tab key is in use (a11y.ts), drawn inside the edge, where the chamfers' clip-path does not cut them */
+html.kbd :focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: -2px; }
+html.kbd [tabindex='-1']:focus-visible { outline: none; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
 /* ------------------------------------------------------------------ primitives */
@@ -545,7 +548,6 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .ws-item.ours { color: var(--neon); }
 .ws-item.living { color: var(--boon); }
 .ws-item.on { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 14%, transparent); cursor: default; }
-.ws-item:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 /* an inline link that acts (the idle-ship card's location) */
 .linkbtn { display: inline-flex; align-items: center; gap: 3px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; pointer-events: auto; }
 .linkbtn .icon { width: 11px; height: 11px; }
@@ -571,3 +573,133 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 /* collision stars in the Degenerate Age: always named on the map */
 .map-label.beacon { color: #ffe0a0; font-weight: 600; text-shadow: 0 0 4px #000, 0 0 10px rgba(255, 190, 90, 0.45); }
 .map-label.others { font-weight: 600; letter-spacing: 0.06em; }
+
+/* ------------------------------------------------------------------ keyboard and magnifier (a11y.ts) */
+
+/* the HUD's wrapper has no box of its own */
+.hud { display: contents; }
+/* a panel too short for its head and a scrolling body scrolls whole, head and all */
+.drawer.whole, .modal.event.whole { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.drawer.whole .drawer-body, .modal.event.whole .modal-body { flex: none; overflow: visible; }
+.modal.event.whole .event-art { flex: none; }
+/* the rail, the prompts and the guide stay within the screen (a bigger page left Menu below it) */
+.research-prompt { max-height: max(160px, calc(calc(100vh / var(--z, 1)) - 140px - env(safe-area-inset-top, 0px))); overflow-y: auto; scrollbar-width: thin; }
+.tutorial { max-height: max(160px, calc(calc(100vh / var(--z, 1)) - 136px - env(safe-area-inset-top, 0px))); overflow-y: auto; scrollbar-width: thin; }
+/* (its height is set where the forecasts begin: Hud.tsx) */
+@media (min-width: 761px) {
+  .rail { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+}
+@media (max-width: 760px) {
+  .research-prompt { max-height: max(160px, calc(calc(100vh / var(--z, 1)) - 300px - env(safe-area-inset-top, 0px))); }
+  .tutorial { max-height: max(160px, calc(calc(100vh / var(--z, 1)) - 260px - env(safe-area-inset-top, 0px))); }
+}
+
+/* ------------------------------------------------------------------ the magnifier mode (Settings; a11y.ts) */
+/* For low vision and screen magnifiers: the HUD in one scrolling column beside the map (the
+   selection's panel last, so the rest keeps its place), solid and plain, in stronger contrast;
+   windows over the whole screen. */
+
+html.lv {
+  --ink-dim: #d2c9ba;
+  --ink-faint: #aaa194; /* 7.7:1 on the panels (was about 3.5:1) */
+  --line: rgba(233, 223, 207, 0.26);
+  --line-2: rgba(233, 223, 207, 0.5); /* the edges of controls: over 3:1 */
+  --line-3: rgba(233, 223, 207, 0.72);
+  --panel: #0d0c0e;
+  /* plainer and wider than the condensed faces */
+  --f-ui: system-ui, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+  --f-display: system-ui, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+}
+html.lv * { text-transform: none !important; letter-spacing: normal !important; }
+html.lv .flavor, html.lv .event-text, html.lv .title-sub, html.lv .crossing-body .intro { font-weight: 400; }
+html.lv .phos, html.lv .neon { text-shadow: none; }
+html.lv .panel { background: var(--panel-solid); backdrop-filter: none; }
+html.lv .panel::before, html.lv .panel::after { display: none; }
+html.lv .scan { background-image: none; }
+/* what cannot be used now stays readable: dashed, not faded */
+html.lv .btn:disabled, html.lv .btn.disabled, html.lv .choice:disabled, html.lv .list-item.disabled, html.lv .tech.locked { opacity: 0.8; border-style: dashed; }
+html.lv .fc-close, html.lv .chip .dismantle { opacity: 1; }
+html.lv .chip .dismantle.off { opacity: 0.6; }
+html.lv .techgrid .eh { opacity: 1 !important; }
+/* a chosen tab or option is marked by a bar as well as by colour */
+html.lv .btn.primary, html.lv .btn.on { box-shadow: inset 0 -3px 0 var(--accent-soft); }
+/* focus: a heavier ring, light on dark; where it lands by itself (a title), a dashed one */
+html.lv.kbd :focus-visible { outline: 3px solid #fff; outline-offset: -3px; box-shadow: inset 0 0 0 6px #000; }
+html.lv [tabindex='-1']:focus, html.lv.kbd [tabindex='-1']:focus-visible { outline: 2px dashed var(--accent-soft); outline-offset: 0; box-shadow: none; }
+/* longer words (a translation, the plainer face) wrap instead of being cut off */
+html.lv .chip, html.lv .res, html.lv .build-cost, html.lv .endturn small, html.lv .todo-chip, html.lv .kind-chips .btn, html.lv .pace .opts .btn, html.lv .mark, html.lv .targeting .target-est { white-space: normal; }
+html.lv .pace .opts .btn, html.lv .kind-chips .btn, html.lv .todo-chip { min-height: 28px; height: auto; }
+
+/* the column */
+html.lv .hud { display: flex; flex-direction: column; gap: 6px; position: absolute; top: 0; bottom: 0; right: 0; width: min(420px, 100%); padding: 8px 8px 24px; overflow-y: auto; overflow-x: hidden; background: var(--void); border-left: 2px solid var(--line-3); scrollbar-color: var(--line-3) var(--panel-2); z-index: 3; }
+html.lv.lv-left .hud { right: auto; left: 0; border-left: none; border-right: 2px solid var(--line-3); }
+html.lv .hud > :not(.tut-ring) { position: relative; inset: auto; width: auto; max-width: none; max-height: none; margin: 0; transform: none; animation: none; flex: none; z-index: auto; }
+html.lv .lv-bar { order: 0; display: flex; justify-content: flex-end; }
+html.lv .chrono { order: 1; }
+html.lv .resources { order: 2; }
+html.lv .research-prompt, html.lv .tutorial, html.lv .targeting { order: 3; }
+html.lv .turnbox { order: 4; }
+html.lv .rail { order: 5; }
+html.lv .bottom-left { order: 6; }
+html.lv .viewswitch { order: 7; }
+html.lv .drawer { order: 8; }
+/* folded away (M): only its bar */
+html.lv .hud.folded { bottom: auto; width: auto; padding: 8px; background: none; border: none; overflow: visible; }
+html.lv .hud.folded > :not(.lv-bar):not(.tut-ring) { display: none !important; }
+/* its parts, laid out for a column (whatever the phone layout would do) */
+html.lv .chrono { display: grid; grid-template-columns: 1fr; min-height: 0; }
+/* the timeline on a row of its own, without the age names that would run into each other there */
+html.lv .chrono .ruler { display: block; order: 3; height: 46px; margin: 4px 12px 10px; }
+html.lv .chrono .ruler .eyebrow { display: none; }
+html.lv .chrono-era, html.lv .chrono-time { min-width: 0; padding: 6px 10px; border: none; align-items: flex-start; }
+html.lv .chrono-era .sci, html.lv .chrono-time .span { display: block; }
+html.lv .chrono-era .name { font-size: 20px; white-space: normal; }
+html.lv .chrono-era .num { white-space: normal; }
+html.lv .resources { display: grid; grid-template-columns: 1fr 1fr; }
+html.lv .res { border: 1px solid var(--line); padding: 6px 8px; }
+html.lv .res .l { display: inline; }
+html.lv .gauge { width: 64px; }
+html.lv .rail { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px; max-height: none !important; overflow: visible; }
+html.lv .rail .iconbtn { width: auto; min-width: 0; height: auto; min-height: 40px; flex-direction: row; justify-content: flex-start; gap: 8px; padding: 4px 28px 4px 8px; }
+html.lv .rail-label { display: inline; font-size: 14.5px; color: var(--ink); white-space: normal; text-align: left; }
+html.lv .rl-wide { display: inline; }
+html.lv .rl-short { display: none; }
+html.lv .rail .iconbtn .badge { left: auto; right: 5px; top: 50%; transform: translateY(-50%); }
+html.lv .turnbox { flex-direction: column; align-items: stretch; }
+html.lv .turnbox .pace { padding: 8px 10px; }
+html.lv .turnbox .pace .stencil, html.lv .turnbox .pace .row > .mono { display: inline; }
+html.lv .pace .opts { margin-top: 6px; }
+html.lv .todo { position: static; justify-content: flex-start; margin: 0; }
+html.lv .endturn { min-height: 56px; font-size: 20px; }
+html.lv .bottom-left { display: flex; }
+html.lv .bottom-left .forecast { display: flex !important; }
+html.lv .feed { max-height: none; }
+html.lv .viewswitch { flex-wrap: wrap; }
+html.lv .vs-label { display: inline; }
+html.lv .drawer { position: relative; }
+html.lv .drawer-body { overflow: visible; flex: none; }
+html.lv .research-prompt, html.lv .tutorial { overflow: visible; }
+
+/* windows over the whole screen, scrolling in one piece where they have a plate */
+html.lv .modal-wrap { padding: 0; }
+html.lv .modal, html.lv .modal.narrow { width: 100%; height: 100%; max-height: calc(100vh / var(--z, 1)); }
+html.lv .modal.event { overflow-y: auto; }
+html.lv .modal.event .modal-body { flex: none; overflow: visible; }
+html.lv .modal.event .event-art { flex: none; height: 110px !important; }
+html.lv .codex { grid-template-columns: 1fr; }
+html.lv .codex-nav { flex-direction: row; flex-wrap: wrap; }
+
+/* messages beside the column's top, kept until closed (store.ts notify) */
+html.lv .toasts { top: 8px; bottom: auto; left: auto; right: calc(var(--lv-col, 0px) + 8px); transform: none; width: min(460px, calc(100% - 16px)); align-items: flex-end; flex-direction: column; }
+html.lv.lv-left .toasts { right: auto; left: calc(var(--lv-col, 0px) + 8px); align-items: flex-start; }
+html.lv .toast { display: flex; align-items: center; gap: 8px; text-align: left; animation: none; border-width: 2px; }
+html.lv .toast-x { margin-left: auto; flex: none; min-height: 26px; }
+/* tooltips: larger, beside what they explain, and they can be read with the pointer on them (Tip.tsx) */
+html.lv .tip { max-width: 440px; font-size: 15px; pointer-events: auto; border: 2px solid var(--line-3); }
+
+/* the map: larger names in stronger colours (their spacing follows: engine.ts), and the star under the pointer named */
+html.lv .map-label { font: 600 calc(15px * var(--z, 1)) / 1 var(--f-ui); color: rgba(240, 232, 220, 0.95); text-shadow: 0 0 3px #000, 0 0 6px #000, 0 0 12px #000; }
+html.lv .map-label.seen { color: rgba(233, 223, 207, 0.8); }
+html.lv .map-label.province { font-size: calc(18px * var(--z, 1)); color: rgba(233, 223, 207, 0.72); }
+.map-hover { position: fixed; z-index: 15; pointer-events: none; padding: 4px 10px; font-size: 16px; line-height: 1.35; background: var(--panel-solid); border: 2px solid var(--line-3); color: var(--ink); white-space: nowrap; }
+.map-hover .faint { font-size: 13.5px; }

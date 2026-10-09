@@ -6,12 +6,13 @@ import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
-import { UI_SCALES, applyUiScale, uiZoom, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, settings, view } from '../store';
+import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
 import { Icon } from '../Icon';
 import { CODEX } from './Codex';
 import { MANUAL } from './Manual';
 import { startTutorial } from '../hud/Tutorial';
 import { ModalFrame } from './Frame';
+import { applyLowVision, pressable } from '../a11y';
 
 const LOG_FILTERS: { id: 'all' | LogEntry['kind']; name: string }[] = [
   { id: 'all', name: 'All' },
@@ -41,13 +42,14 @@ export function LogModal({ s }: { s: GameState }) {
             key={i}
             class={`e ${e.kind}`}
             style={{ cursor: e.systemId ? 'pointer' : 'default' }}
-            onClick={() => {
-              if (!e.systemId) return;
-              selection.value = { kind: 'system', id: e.systemId };
-              engine()?.select(e.systemId);
-              engine()?.focusGalaxyOn(e.systemId, 120);
-              modal.value = null;
-            }}
+            {...(e.systemId
+              ? pressable(() => {
+                  selection.value = { kind: 'system', id: e.systemId! };
+                  engine()?.select(e.systemId!);
+                  engine()?.focusGalaxyOn(e.systemId!, 120);
+                  modal.value = null;
+                })
+              : {})}
           >
             <span class="faint mono" style={{ fontSize: '11.5px' }}>
               {ERA_BY_ID[e.era].numeral}·{e.turn}
@@ -103,7 +105,13 @@ export function SettingsModal() {
     setVolumes(next.music, next.sfx);
     if (patch.playlist || patch.overture !== undefined) music.setPlaylist(next.playlist, next.overture);
     if (patch.quality) engine()?.setQuality(patch.quality);
-    if (patch.uiScale) applyUiScale(patch.uiScale);
+    if (patch.uiScale !== undefined || patch.lowVision !== undefined || patch.lvSide !== undefined) applyLowVision();
+  };
+  // the magnifier mode: on, it also shows the map in light amplification (V changes it back); off,
+  // a size only the mode offers comes back to the largest of the others
+  const setLv = (on: boolean) => {
+    set({ lowVision: on, uiScale: on ? st.uiScale : Math.min(st.uiScale, PLAIN_MAX_SCALE) });
+    if (on) setViewMode(1);
   };
   const g = screen.value === 'game' ? game.value : null;
   return (
@@ -143,9 +151,32 @@ export function SettingsModal() {
           </div>
         </div>
         <div class="field">
+          <label>Magnifier mode</label>
+          <div class="seg">
+            <button class={`btn small ${st.lowVision ? 'primary' : ''}`} aria-pressed={!!st.lowVision} onClick={() => setLv(true)}>
+              On
+            </button>
+            <button class={`btn small ${!st.lowVision ? 'primary' : ''}`} aria-pressed={!st.lowVision} onClick={() => setLv(false)}>
+              Off
+            </button>
+          </div>
+          <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
+            For low vision and screen magnifiers: the panels in one scrolling column beside the map, two more sizes, stronger contrast and plainer type, larger stars and names on the map, and the focus (which a magnifier can follow) goes to whatever opens. N goes to what needs attention, B to a settlement’s Build tab, M folds the column away. A link that opens the game with it on: add ?lowvision to the address.
+          </div>
+          {st.lowVision && (
+            <div class="seg" style={{ marginTop: '6px' }} role="group" aria-label="The column’s side">
+              {(['left', 'right'] as const).map((side) => (
+                <button key={side} class={`btn small ${(st.lvSide ?? 'right') === side ? 'primary' : ''}`} aria-pressed={(st.lvSide ?? 'right') === side} onClick={() => set({ lvSide: side })}>
+                  Column on the {side}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div class="field">
           <label>Interface size</label>
           <div class="seg">
-            {UI_SCALES.map((u) => (
+            {UI_SCALES.filter((u) => !u.lv || st.lowVision).map((u) => (
               <button key={u.v} class={`btn small ${st.uiScale === u.v ? 'primary' : ''}`} onClick={() => set({ uiScale: u.v })}>
                 {u.label}
               </button>

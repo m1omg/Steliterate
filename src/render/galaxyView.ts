@@ -203,6 +203,10 @@ export class GalaxyView {
   private fleetGroup = new THREE.Group();
   private lines: THREE.LineSegments | null = null;
   private selRing: THREE.Mesh;
+  private thinRing = new THREE.RingGeometry(1, 1.08, 64);
+  private thickRing = new THREE.RingGeometry(1, 1.2, 64);
+  private pr = 1;
+  private markScale = 1;
   private heartGlow: THREE.Sprite;
   private territory: THREE.Points | null = null;
   pickables: Pickable[] = [];
@@ -252,7 +256,7 @@ export class GalaxyView {
       transparent: true,
       depthWrite: false,
     });
-    const ringGeo = new THREE.RingGeometry(1, 1.08, 64);
+    const ringGeo = this.thinRing;
     this.selRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#ffd9b0', transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
     this.selRing.visible = false;
     this.group.add(this.selRing);
@@ -264,9 +268,18 @@ export class GalaxyView {
   }
 
   setPixelRatio(pr: number) {
-    this.nodeMat.uniforms.uPixel.value = pr;
-    this.swarmMat.uniforms.uPixel.value = pr;
+    this.pr = pr;
+    // stars, their rings and the swarms are drawn larger in the magnifier mode; the background dust is not
+    this.nodeMat.uniforms.uPixel.value = pr * this.markScale;
+    this.swarmMat.uniforms.uPixel.value = pr * this.markScale;
     this.dustMat.uniforms.uScale.value = 300 * pr;
+  }
+
+  /** How much larger markers are drawn (the magnifier mode: 1.5): stars and rings, fleets, the selection ring, thicker too. */
+  setMarkScale(k: number) {
+    this.markScale = k;
+    this.setPixelRatio(this.pr);
+    this.selRing.geometry = k > 1 ? this.thickRing : this.thinRing;
   }
 
   setPalette(accent: string, neon: string) {
@@ -609,7 +622,7 @@ export class GalaxyView {
     this.nodeMat.uniforms.uTime.value = t;
     this.swarmMat.uniforms.uTime.value = t;
     // fleets glide to their new positions over a fixed real-time span
-    const sz = Math.max(1.8, cameraDistance * 0.034);
+    const sz = Math.max(1.8, cameraDistance * 0.034) * this.markScale;
     for (const a of this.fleetAnim.values()) {
       const u = Math.min(1, (now - a.t0) / 1.4);
       const e = u * u * (3 - 2 * u);
@@ -639,7 +652,7 @@ export class GalaxyView {
         this.selRing.visible = true;
         this.selRing.position.copy(p.pos);
         this.selRing.lookAt(camera.position);
-        const s = Math.max(1.6, cameraDistance * 0.028);
+        const s = Math.max(1.6, cameraDistance * 0.028) * this.markScale;
         this.selRing.scale.setScalar(s);
       } else this.selRing.visible = false;
     } else this.selRing.visible = false;

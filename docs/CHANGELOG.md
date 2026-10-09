@@ -1294,3 +1294,77 @@ changes … apply them to a new game").
 - **Checks.** New `unit/settled` (fails without the fix: the system stays gone, ships are refused,
   an old save is not repaired), `unit/curvature`, `browser/settled` and `browser/startype`;
   `browser/evap` reads "No star left".
+
+## A magnifier mode, and the game for everyone at any size (9 Oct)
+
+For the player's friend, who has low vision and plays through a screen magnifier with the page made
+bigger and translated into Czech: "the menus are often inaccessible, especially the build menus".
+No rule changes; saves are untouched (the mode is a setting, kept in the browser).
+
+- **For everyone, unseen at usual sizes.**
+  - *The panel scrolls whole when short.* Made bigger by the system or the browser (1080p at
+    200% leaves the page about 960×460), a settlement's head alone (206 px) filled its panel
+    (142 px): the Build list had no room at all. Below 150 px for its body the panel now scrolls
+    as a whole, head and all, and keeps its head again above 190 (a11y.ts `useWholeScroll`); the
+    event and survey-report windows do the same with their plates. At 1400×900 and on a phone
+    (390×844) nothing changes.
+  - *The rail stops above the forecasts and scrolls*: on a short screen they covered its last
+    buttons, Save and Menu. The research and ship prompts and the guide keep within the screen.
+  - *Every clickable row works from the keyboard*: Build rows, destinations, In-orbit rows, list
+    rows, forecast cards, the Insight and Accord figures, Record entries (Tab, then Enter or
+    Space). A mouse click leaves no focus on them, so Enter still ends the turn and never queues
+    a second structure.
+  - *A focus ring once Tab is used* (inside the edge, where the chamfers no longer cut it); none
+    for the mouse.
+  - *Windows take the focus on their title and give it back*, the HUD behind them out of Tab's
+    reach (inert). An event takes it on its title, never a choice.
+  - *Keys.* Enter no longer ends the turn under an event, its result or the survey report, nor
+    while a button or row has the focus (Enter on a focused world row used to select it and end
+    the turn). Escape cancels choosing a destination, or clears the selection, whatever has the
+    focus (with a button focused it did nothing, though the banner says "Esc cancels"); under an
+    event it does nothing; it closes the survey report.
+  - *A page translated by the browser stays live.* Chrome's translation swaps each text node for
+    `<font>` elements; Preact went on updating its own text nodes, out of the page, so under
+    translation the turn count, η, every panel's title (each star chosen kept the first one's
+    name) and every tooltip froze at their first value. Once a translation shows, each text node
+    and its stand-in are kept paired: an update puts the text node back, for the translator to
+    translate again (translateGuard.ts). Untranslated, nothing runs but one observer.
+- **The magnifier mode** (Menu, or Settings on the main menu; or a link, `?lowvision`):
+  - the HUD in one scrolling column beside the map, on the right or the left: the age and time,
+    resources, prompts and the guide, End Turn with the pace and the to-do chips, the menu with
+    its words, every forecast and the Record, the view buttons, and last the selection's panel
+    at its full height, so nothing else moves when it changes; Hide the panel (M) folds it away;
+  - the camera keeps what is selected in the middle of the free part of the screen (a sideways
+    view offset, eased on elapsed time like the phone's);
+  - two more sizes, 1.6× and 2× (capped only by the column's 360 px); turning the mode off brings
+    a larger size back to 1.4×;
+  - faint text 7.7:1 on the panels (was about 3.5:1), dim text 11.9:1, the edges of controls
+    over 3:1, solid panels without grime, scanlines or glow, a plainer and wider sans in place
+    of the condensed faces, no all-caps; what cannot be used now dashed, not faded; a chosen tab
+    marked by a bar as well as colour; a heavier two-tone focus ring;
+  - the focus, which a magnifier can follow, goes to what opens: a window's title, the panel of
+    whatever is chosen, the Build list (from N, B or the idle-settlement chip), a prompt or the
+    guide (their titles: a stray Enter presses nothing);
+  - tooltips for the focus as well as the pointer, beside the column and level with what they
+    explain, readable with the pointer on them, put away with Esc;
+  - messages kept until closed (a button on each) or the turn ends;
+  - N: what needs attention, one thing at a time (research, each idle settlement's Build tab, each
+    settler, each idle ship, the signals); B: the chosen settlement's Build tab;
+  - windows over the whole screen, scrolling in one piece where they have a plate;
+  - the map: names at 15 px times the interface size, kept further apart and fewer (24 nearest,
+    not 36), in stronger colours; stars, rings and fleets drawn 1.5×, the selection ring thicker,
+    the pointer's reach 1.5×; no film grain, vignette or colour fringes; the Enhanced view when
+    the mode is turned on; whatever is under the pointer named beside it in large type;
+  - the Systems window gains "Seen from afar": every star on our map not yet surveyed, nearest
+    first, to look at or send a ship to without finding it on the map; a probe's More in Systems…
+    opens on it.
+- **Manual.** A part on low vision and the keyboard; the keys line names N, B and M.
+- **Balance.** No rule changes: 900 games identical to the last run, game for game (148 of 300
+  survive, 72 victories, a Degenerate Age of 71 turns; 439 and 203 of 900; decay 167 / 450,
+  stable 165 / 239, curvature 107 / 211).
+- **Checks.** New browser checks `a11y` (at 960×460: the panel scrolls whole and every Build row
+  can be reached; rows from the keyboard, no focus from a click; windows and events take focus
+  and give it back; Enter and Escape; nothing changes at 1400×900 or on a phone), `translate`
+  (turns played under a stand-in translator: it fails without the guard, on the turn count, η, the
+  panel titles and the tooltips) and `lowvision` (the mode at 1280×720 and 2×, 25 checks).
+- **Not in this batch.** Read-aloud, moving the camera from the keyboard, a translation of our own.

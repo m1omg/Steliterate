@@ -6,9 +6,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Workflow for every batch
 
-1. **Develop** on branch `claude/lucid-newton-30cbpk`, the live branch (PR m1omg/Steliterate#1
-   merged it into `main` on 8 Oct as `3e913f3`; later work reaches `main` by a new PR, with a
-   merge commit so the commit IDs cited here stay valid).
+1. **Develop** on the session's work branch. Going live (since 9 Oct): a PR from it into `main`,
+   merged with a merge commit, which I open and merge myself once the batch is validated (the
+   player: "Always. You merge pls."), so the commit IDs cited here stay valid (PR
+   m1omg/Steliterate#1 merged the game as `3e913f3`, PR m1omg/Steliterate#3 the next batch as
+   `0e08054`). Pages builds `main` and `claude/lucid-newton-30cbpk` alike, and the last push wins:
+   the old live branch now lags `main`, so never push an older commit to it. A direct push to a
+   live branch can be refused as a production deploy; the PR merge, asked for, is the way.
 2. **Validate:**
    - `npx tsc --noEmit -p .`
    - `npm run build`
@@ -58,6 +62,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `engine()`
   - `music()`: the music player (its `layer`: the synth `bus`, `silenced`, and the `track`
     element playing), for `browser/music-hidden`
+  - `notify(text, kind)`: a message as the game shows them (`browser/lowvision`: how long one
+    stays)
 - **Playwright:** `require('/opt/node22/lib/node_modules/playwright')`. Launch with
   `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`, and add
   `--autoplay-policy=no-user-gesture-required` for music tests. Watch `request` events for
@@ -164,6 +170,23 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   on the ×3. `clock` compares resolve with a tolerance (2.000000000000007 is +2). `ways` clears
   the Tessellate's last aid and breaches before its breach test (the steam worlds' course had
   beamed it aid a few turns before).
+- **The HUD sits in one wrapper**, `<div class="hud">` in `App.tsx` (9 Oct): `display: contents`,
+  so its parts are still positioned against `.ui-root`, but a selector like `.ui-root > .rail` no
+  longer reaches them. It is `inert` while a window, an event or the survey report is open (Tab
+  stays in the window; a Playwright click on a HUD part behind one fails, as it did on the
+  backdrop). In the magnifier mode it is the column.
+- **A clickable row is `{...pressable(fn)}`** (`a11y.ts`), never a bare `onClick` on a div: role
+  button, Tab, Enter and Space, and no focus from a mouse click (with focus, the next Enter would
+  press the row again instead of ending the turn). A disabled one: `pressable(fn, true)`.
+- **Focus** (9 Oct): `ModalFrame` focuses its `h1` (tabIndex −1) as it opens and gives focus back
+  as it closes (`useFocusOnOpen`); the event and survey-report dialogs focus their titles. What
+  had focus is taken at the first render: by the effect, the HUD is already inert and Chrome has
+  taken focus from it. The main key handler ignores Enter on any control and under an event.
+- **A translated page** (`translateGuard.ts`, 9 Oct): once a `<font>` appears in `#ui` (Chrome's
+  translation), `Text.prototype` `parentNode`, `nextSibling` and `data` and `Node.prototype`
+  `insertBefore` and `removeChild` are patched to pair each text node with the `<font>` standing
+  in for it. `browser/translate` plays turns under a stand-in translator (both ways of swapping);
+  without the guard the turn count, η, panel titles and tooltips froze.
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
 - The user dislikes long blocking waits. Prefer background runs and report when done.
@@ -720,6 +743,37 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     with it: the bottom-left stack's height queries at 950 and 790 px, the turn box 320 px wide,
     the tech grid's first column 124 px, the drawer's reserve 318 px, and the chronometer's
     lines top-aligned. Settings → Interface size scales all of it for large screens.
+- **Low vision and the keyboard (9 Oct; the player's friend plays through a screen magnifier):**
+  - For everyone (`a11y.ts`): `useWholeScroll(ref, head, body)` scrolls a panel whole when its
+    body would get under 150 px of the interface (back above 190), measured with
+    getBoundingClientRect ÷ `uiFactor()`; on the Drawer and the event and survey-report dialogs.
+    The rail's height is set where the forecasts begin (`Rail` in `Hud.tsx`). The focus ring shows
+    only under `html.kbd` (set by Tab, cleared by the pointer: `trackKeyboard`), drawn inside the
+    edge (`outline-offset: -2px`), where the chamfers' clip-path does not cut it.
+  - The magnifier mode: `settings.lowVision` and `lvSide` (localStorage, not the save);
+    `applyLowVision()` sets `html.lv` (`lv-left`), the size and the engine's helpers; at start,
+    from the settings or a link (`?lowvision`, `?lowvision=0`, in `main.tsx`). Its CSS is the last
+    block of `styles.css`: the column is `.hud` (420 px, scrolling), its parts unpositioned and
+    ordered by `order` (the Drawer last), whatever the phone layout says; `.lv-bar` (Hide the
+    panel) and `lvFolded` (M). Sizes 1.6× and 2× are in `UI_SCALES` with `lv: true`
+    (`PLAIN_MAX_SCALE` 1.4 outside it); `applyUiScale` caps them at width/360.
+  - The camera: `engine.setFocusX(x)` beside `setFocusY` (one `setViewOffset`, eased by
+    1 − exp(−8·dt)); `App.tsx` sets it from the column and writes `--lv-col` for the messages.
+    `engine.setLowVision(on)`: `galaxy.setMarkScale(1.5)` (node and swarm `uPixel`, fleets and the
+    selection ring; not the dust, and kept through `setPixelRatio` on resize), the pick reach
+    ×1.5, label spacing ×(15/11 × zoom) and 24 labels, no grain (`grain()`, also in `setState`),
+    vignette or colour fringes. `engine.setUiZoom` comes from `applyUiScale`.
+  - Focus that follows (mode only): `focusTitle(el)` gives a title tabIndex −1 and focuses it;
+    the Drawer on each new selection (`.drawer-head h2`), `ColonyPanel` on its Build list
+    (`.list-head`) when opened by `openBuildFor`, prompts and the guide on their titles
+    (`useFocusPrompt`), and a closing window hands focus to a waiting prompt first.
+  - `Tip.tsx`: in the mode, tips for the focus too, placed beside the column (or below what they
+    explain), hoverable (a 350 ms grace), Escape (capture phase) puts one away and nothing else.
+  - Keys N and B: `nextTodo` and `buildSelected` in `Hud.tsx` (the to-do chips' list is
+    `todoItems`). Messages stay in the mode (`notify` sets no timeout; `doEndTurn` clears them).
+  - `mapHover` (main.tsx `onHover` → `MapHover` in `App.tsx`): the name under the pointer.
+    `AfarList` (`Lists.tsx`, tab `'afar'`): the stars seen from afar; `sendFromSystems` opens a
+    probe's window on it in the mode.
 
 ## Music tooling
 
@@ -827,6 +881,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | runaway at 1.4×; steam worlds lifeless; the flare before turn 1 (8 Oct) | 143 | the runaway limit at 1.4 times Earth's sunlight (276.6 K, locked 300 K kept); life on steam worlds dies; a new galaxy's flares under way have done their damage (14 of 15 such living worlds in six galaxies start dead); 60 victories, Degenerate Age 73 turns; 900 games 429 / 185 / 69 (423 / 188 / 69 before), within the noise: 784 of 900 games play out as before, and the changes go both ways (16 defeat → endurance, 10 back; 8 victory → defeat, 8 back). By fate: decay 171 / 450, stable 157 / 239, curvature 101 / 211 |
 | the audits; outer worlds; cooling; the gentle flare; attack (8 Oct) | 143 | the planet and star audits' fixes (no Kin room on a world frozen hard, day and night only from starlight, the Heart takes its worlds, dead worlds' seas boil in a flare, life dies at once past 395 K, two events need a living homeworld, no Kin on ice giants), one cooling law per dead star (white dwarfs Mestel then Debye, brown dwarfs Burrows; brown dwarfs give collectors all their light, Infrared Shrouds), and for new games outer worlds, cold-trapped water, a locked home moon and the physical flare (Aster's night side 323 K, not 681 K); the autoplayer never attacks. 56 victories, Degenerate Age 69 turns; 900 games 435 / 184 / 71 (429 / 185 / 69 live), within the noise; no game plays out as before (new galaxies differ). By fate: decay 166 / 450, stable 165 / 239, curvature 104 / 211. The audit's rule fixes alone (before cooling, outer worlds and the flare): 900 games 455 / 194 / 69 |
 | a settlement where a star was; curvature warmth; stars by type (8 Oct) | 148 | 900 games identical to the clock run, line for line (the autoplayer never takes a star by force; no rule reads the new warmth) |
+| a magnifier mode; the game at any size and translated (9 Oct) | 148 | interface only: 900 games identical to the clock run, game for game |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

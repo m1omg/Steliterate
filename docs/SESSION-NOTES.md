@@ -147,6 +147,12 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   "Everything is at horizon temperature. Even though curvature radiation would heat it above,
   so please fix it in real time": right (Falcke et al. give 5.5 pK for a heavy white dwarf);
   fixed, live. They thanked us for the game ("This is absolutely awesome").
+  My push to the live branch was refused as a production deploy; asked "Merge?" over GitHub's
+  Compare & pull request banner, then "Merge pls.": PR m1omg/Steliterate#3 (the work branch into
+  `main`, merge commit `0e08054`) put the batch live. Offered: from now on I push each batch to my
+  branch and the player merges it (or asks me to). Answered 9 Oct, "Always. You merge pls.":
+  every batch goes live, through a PR into `main` that I open and merge myself (a merge commit)
+  once it is validated. Still open: the four answers to messages from gone civilizations.
   Discuss first, not built: tidal locking by locking time (everything within about 1.4 AU of a
   red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
   its mass-blind date; the helium stars' one set of numbers.
@@ -303,6 +309,21 @@ where we left off. What changed is in `CHANGELOG.md`; how to work on the code is
   session; Higgsfield's audio tool is speech-only (it forbids general music). An ElevenLabs
   version of the Canon is still to be made; the prompt is in `DEV-NOTES.md`.
 - **Blue-dwarf visibility (offered, not built):** a distinct map marker for blue dwarfs.
+- **9 Oct, a friend with low vision:** "I have a friend who has a sight impairment … she's using a
+  software which zooms in only a part of the screen as well as making everything on the website
+  bigger. The menus are often inaccessible, especially the build menus, and she cannot really see
+  the whole screen, only a part of it at once … I'm happy with the interface as it is now. Would
+  I have it in mind as a mode that's optional". Her screenshots: the page translated into Czech
+  by the browser, the settlement panel's Build list squeezed to one row. Decided with them: fixes
+  that change nothing at usual sizes go to everyone; an optional mode with the core and map
+  helpers; plan for the mouse and the keyboard both (they were not sure which she uses). A
+  reviewer's corrections taken: rows take no focus from a click (Enter would press them again),
+  prompts take focus on their titles, the focus ring only after Tab, the selection's panel last
+  in the column. Found on the way: under the browser's translation the turn count, η, panel
+  titles and tooltips froze (fixed for everyone). Built as "A magnifier mode" (CHANGELOG);
+  `?lowvision` on the address turns it on, a link they can send her. Not built: read-aloud,
+  keyboard camera control, a Czech translation of our own. Her own word on what helps would be
+  worth more than our guesses.
 
 ## Found in the review of 28 Sep (verified)
 

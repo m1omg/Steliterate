@@ -2,7 +2,7 @@ import { SHIP_BY_ID } from '../game/data/ships';
 import { endTurn } from '../game/sim/turn';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
-import { autosave, busy, bump, engine, game, modal, notify, selection } from './store';
+import { autosave, busy, bump, engine, game, modal, notify, selection, settings, toasts } from './store';
 import { goToBody, pivotToSystem } from './screens/Lists';
 import { TECH_BY_ID } from '../game/data/techs';
 import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
@@ -17,6 +17,8 @@ export function doEndTurn() {
   if (!s || busy.value || s.outcome) return;
   busy.value = true;
   sfx('endturn');
+  // the magnifier mode keeps a turn's messages until the next one
+  if (settings.value.lowVision) toasts.value = [];
   const eraBefore = s.era;
   const fleetsBefore = new Set(Object.keys(s.fleets));
   const knownBefore = { ...s.civ.known };

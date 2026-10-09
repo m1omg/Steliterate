@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import { sfx } from '../../audio/sfx';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { modal } from '../store';
+import { useFocusOnOpen } from '../a11y';
 
 export function closeModal() {
   sfx('click');
@@ -29,6 +30,8 @@ export function ModalFrame({
   onClose?: () => void;
   closable?: boolean;
 }) {
+  const head = useRef<HTMLHeadingElement>(null);
+  useFocusOnOpen(head);
   useEffect(() => {
     if (!closable) return;
     const k = (e: KeyboardEvent) => {
@@ -44,7 +47,9 @@ export function ModalFrame({
           {icon && <Icon name={icon} size="xl" cls="accent" />}
           <div class="grow">
             {eyebrow && <div class="eyebrow">{eyebrow}</div>}
-            <h1>{title}</h1>
+            <h1 ref={head} tabIndex={-1}>
+              {title}
+            </h1>
           </div>
           {closable && (
             <button class="btn ghost" aria-label="Close" onClick={onClose}>
