@@ -14,7 +14,7 @@ const SIZES = [
   ['small', 360, 740],
   ['tablet', 625, 1000],
   ['sideways', 844, 390],
-];
+].filter(([n]) => !process.env.MOBILE_SIZES || process.env.MOBILE_SIZES.split(',').includes(n));
 
 /** Where the star (or world) with this id is on screen, and what is there. */
 const onScreen = (page, id) =>
@@ -223,14 +223,17 @@ run(async () => {
       const here = g.fleets[fid].at;
       const r = e.renderer.domElement.getBoundingClientRect();
       const top = document.querySelector('.targeting').getBoundingClientRect().bottom + 20;
-      const bottom = document.querySelector('.rail').getBoundingClientRect().top - 20;
-      const right = document.querySelector('.viewswitch').getBoundingClientRect().left - 20;
+      // a star with nothing of the interface over it, or within a finger's reach of it
+      const clear = (x, y) => [[0, 0], [24, 0], [-24, 0], [0, 24], [0, -24]].every(([dx, dy]) => {
+        const at = document.elementFromPoint(x + dx, y + dy);
+        return !!at && (at.tagName === 'CANVAS' || at.classList.contains('map-label') || at.classList.contains('label-layer'));
+      });
       for (const p of e.galaxy.pickables) {
         if (p.kind !== 'system' || p.id === here || g.systems[p.id]?.gone) continue;
         const v = p.pos.clone().project(e.camera);
         const x = r.left + ((v.x + 1) / 2) * r.width;
         const y = r.top + ((1 - v.y) / 2) * r.height;
-        if (v.z < 1 && x > 40 && x < right && y > top && y < bottom) return { id: p.id, name: g.systems[p.id].name, x, y };
+        if (v.z < 1 && x > 40 && x < innerWidth - 40 && y > top && y < innerHeight - 40 && clear(x, y)) return { id: p.id, name: g.systems[p.id].name, x, y };
       }
       return null;
     }, probe);
