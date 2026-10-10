@@ -62,7 +62,16 @@ async function newPage(browser, errors, width = 1400, height = 900, touch = fals
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => m.type() === 'error' && !IGNORE.test(m.text()) && errors.push(m.text()));
-  await page.goto(url + query, { timeout: 90000 });
+  // (a load that never finishes says what it is still waiting for)
+  const pending = new Set();
+  page.on('request', (r) => pending.add(r.url()));
+  page.on('requestfinished', (r) => pending.delete(r.url()));
+  page.on('requestfailed', (r) => pending.delete(r.url()));
+  try {
+    await page.goto(url + query, { timeout: 90000 });
+  } catch (e) {
+    throw new Error(`${String(e).split('\n')[0]}; still waiting for: ${[...pending].join(', ') || 'nothing'}`);
+  }
   await page.waitForTimeout(1500);
   return page;
 }
