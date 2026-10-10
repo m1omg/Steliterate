@@ -735,6 +735,10 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .drawer.whole, .modal.event.whole { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
 .drawer.whole .drawer-body, .modal.event.whole .modal-body { flex: none; overflow: visible; }
 .modal.event.whole .event-art { flex: none; }
+/* …and no Build row stands taller than such a panel: a description shows two lines (the row's
+   tooltip, or a long press, has all of it). At 960×460 a row with four lines was 145 px in a 142 px
+   panel. The magnifier mode's column has room for all of it. */
+html:not(.lv) .drawer.whole .build-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 /* the rail, the prompts and the guide stay within the screen (a bigger page left Menu below it) */
 .research-prompt { max-height: max(160px, calc(calc(100vh / var(--z, 1)) - 140px - env(safe-area-inset-top, 0px))); overflow-y: auto; scrollbar-width: thin; }
 .tutorial { max-height: max(160px, calc(calc(100vh / var(--z, 1)) - 136px - env(safe-area-inset-top, 0px))); overflow-y: auto; scrollbar-width: thin; }

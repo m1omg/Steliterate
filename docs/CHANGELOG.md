@@ -1420,8 +1420,14 @@ on a PC keeps the PC layout). Interface only: no rules, saves or seeds touched.
   stay away more than two seconds: a phone drops them at every switch to another app.
 - **The guide** points at the turn line and the pace button on a phone, with words for them.
 - **Manual.** A paragraph on phones under Controls.
+- **Short panels: a Build row's description shows two lines** (its tooltip, or a long press, has
+  all of it), where the panel is too short and scrolls whole. Measured in the game's real fonts,
+  the friend's 960×460 screen had one row (Night-side Shelters, four lines of description) 145 px
+  tall in a 142 px panel, so it could never be seen whole; `main` was the same. The checks had
+  measured in fallback faces, where it was 130 px.
 - **Unchanged:** the PC layout and the magnifier mode (its own column, also on a phone).
 - **Checks.** New browser check `mobile` (upright at 390×844, 360×740 and 625×1000, and sideways at
   844×390, with a touchscreen; the magnifier mode on a phone; a PC screen). Browser checks can open
   touch pages (`ck.phone`), and with `STEL_FONTS` serve the game's fonts from a local copy, so text
-  is measured in the real faces where the browser cannot reach Google (DEV-NOTES).
+  is measured in the real faces where the browser cannot reach Google (DEV-NOTES). The playtest
+  clicks the rail's buttons shown (on a phone Codex and Save through Menu).

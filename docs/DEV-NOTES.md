@@ -287,6 +287,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Hidden by CSS is not re-measured:** a panel hidden only by a class elsewhere (`html.picking
   .drawer`) does not re-run its own layout effect; read the signal behind the class in the
   component (`void targeting.value` in the Drawer) so it redraws and measures again.
+- **Fallback fonts measure differently** (10 Oct): without `STEL_FONTS` the browser checks lay out
+  text in fallback faces, with shorter lines than the game's own (Saira's line box is about 19 px
+  where the fallback's was 14). Sizes that only just fit can pass there and fail for players: at
+  960×460 one Build row was 130 px in fallback faces and 145 px in the real ones, in a 142 px panel
+  (`a11y`; fixed by the two-line descriptions in short panels). Run layout checks with the fonts.
 - **Frame-rate bound checks:** under load, the software renderer can fall below 10 frames a
   second. The frame time is capped at 0.1 s (`engine.ts`), so easing takes longer in real time,
   as it would on a slow machine. A check that waits on something eased (a camera move, a fade)
