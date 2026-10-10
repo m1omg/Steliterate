@@ -59,12 +59,23 @@ async function toEra(p, era) {
     await p.screenshot({ path: `${out}/${tag}-menu.png` });
     await p.evaluate(() => window.__stel.newGame({ seed: 24757 }));
     await p.waitForTimeout(1500);
-    const railCount = await p.locator('.rail button').count();
+    // (the rail's shown buttons: on a phone Codex and Save are under Menu, checked after)
+    const railCount = await p.locator('.rail button:visible').count();
     for (let i = 0; i < railCount; i++) {
-      await p.locator('.rail button').nth(i).click();
+      await p.locator('.rail button:visible').nth(i).click();
       await p.waitForTimeout(250);
       if (!(await p.locator('.modal').count())) fail(`${tag}: rail button ${i} opened nothing`);
       await p.keyboard.press('Escape');
+    }
+    if (railCount < (await p.locator('.rail button').count())) {
+      for (const what of ['Codex', 'Save slots']) {
+        await p.locator('.rail button[aria-label^="Menu"]').click();
+        await p.waitForTimeout(250);
+        await p.locator(`.modal button:has-text("${what}")`).first().click();
+        await p.waitForTimeout(250);
+        if (!(await p.locator('.modal').count())) fail(`${tag}: ${what} under Menu opened nothing`);
+        await p.keyboard.press('Escape');
+      }
     }
     for (const era of ['dusk', 'degenerate', 'blackhole', 'dark']) {
       await toEra(p, era);
