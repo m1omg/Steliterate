@@ -48,15 +48,17 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - The game is as of PR m1omg/Steliterate#4 (merge commit `d9bd6e5`, the magnifier mode; live
-    script `index-BdCg1vgA.js`), with these notes merged after it.
+  - The game is as of PR m1omg/Steliterate#6 (merge commit `4268a82`, 10 Oct, the phone
+    interface; live script `index-EjaW5d6F.js`), with these notes merged after it. Before it,
+    PR m1omg/Steliterate#4 (`d9bd6e5`, the magnifier mode).
   - `claude/lucid-newton-30cbpk`, the old live branch, stays at `fc6c59a`, behind `main`. Pages
     builds it too, so leave it alone: a push of anything older than `main` would put that build
     live.
   - `claude/epic-wozniak-lyhulf` was this session's branch, and it is merged.
   - 10 Oct, from the first account's session: the phone interface, on `claude/lucid-newton-v2`
-    (started from `main` at `83f498e`), live by a PR into `main` like the others (CHANGELOG: "A
-    phone interface that leaves the map usable").
+    (started from `main` at `83f498e`), merged by PR m1omg/Steliterate#6 (CHANGELOG: "A phone
+    interface that leaves the map usable"). That session's work branch; a follow-up batch starts
+    it again from `main`.
   - The claude.ai artifact has not been updated since 28 Sep, as it belongs to the organization
     the game was first built in. GitHub Pages is the live build.
 - **Before the first session on the other account** (the player's part):
@@ -78,15 +80,17 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (9 Oct, `d9bd6e5`):**
+- **The baseline, from the last validation (10 Oct, `4268a82`):**
   - tsc and the build were clean;
-  - the playtest printed "ALL CHECKS PASSED" (30/144 Hz parity 2.05e-15);
+  - the playtest printed "ALL CHECKS PASSED" (30/144 Hz parity 3.2e-16);
   - all 41 unit checks passed;
-  - savecompat passed on the 5 saves in `tools/saves/`, and on the player's own turn-77 save
-    (uploaded in that session; it is theirs, and not in the repository);
-  - all 43 browser checks passed;
+  - savecompat passed on the 5 saves in `tools/saves/` (on 9 Oct also on the player's own
+    turn-77 save, uploaded in that session; it is theirs, and not in the repository);
+  - all 44 browser checks passed, measured in the game's real fonts (`STEL_FONTS`, DEV-NOTES),
+    the new `mobile` among them (87 steps);
   - the harness: 148 of 300 standard competent games survive, 72 victories, a Degenerate Age of
-    71 turns; 900 games 439 / 203; by fate decay 167 / 450, stable 165 / 239, curvature 107 / 211.
+    71 turns, 300 games identical to `main` before it (`83f498e`) game for game; 900 games (9 Oct) 439 / 203; by
+    fate decay 167 / 450, stable 165 / 239, curvature 107 / 211.
 
   A rules change compares with these (DEV-NOTES: Balance reference, and the helpers for
   comparing runs game for game).
