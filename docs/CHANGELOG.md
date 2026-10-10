@@ -1431,3 +1431,5 @@ on a PC keeps the PC layout). Interface only: no rules, saves or seeds touched.
   touch pages (`ck.phone`), and with `STEL_FONTS` serve the game's fonts from a local copy, so text
   is measured in the real faces where the browser cannot reach Google (DEV-NOTES). The playtest
   clicks the rail's buttons shown (on a phone Codex and Save through Menu).
+- **Balance.** No rule changes (nothing under `src/game` changed): 300 games identical to `main`,
+  game for game (148 of 300 survive, 72 victories).
