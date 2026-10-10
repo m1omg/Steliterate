@@ -8,7 +8,7 @@ import { colonies, distLy } from '../../game/sim/util';
 import type { Fleet, GameState } from '../../game/types';
 import { Icon } from '../Icon';
 import { BEACON_TIP, isBeacon } from '../labels';
-import { act, rev } from '../store';
+import { act, isPhone, rev } from '../store';
 import { goToFleet, pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { sfx } from '../../audio/sfx';
 import { researchPrompt } from './ResearchPrompt';
@@ -59,6 +59,9 @@ function suggestions(s: GameState, f: Fleet): Option[] {
 
 export function ShipPrompt({ s }: { s: GameState }) {
   void rev.value;
+  // on a phone it would cover the map: the idle-ships chip opens the ship's panel instead, with
+  // the same orders
+  if (isPhone()) return null;
   // the research prompt goes first; the two never stack
   if (researchPrompt.value && !s.civ.researching) return null;
   const ids = [...(shipPrompt.value ? [shipPrompt.value] : []), ...shipQueue.value];

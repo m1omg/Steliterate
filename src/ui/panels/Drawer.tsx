@@ -50,7 +50,8 @@ import { kelvin, mult, n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
-import { act, engine, following, notify, openBuildFor, rev, selection, targeting, view } from '../store';
+import { act, engine, following, hudPrefs, isPhone, notify, openBuildFor, rev, selection, setHudPrefs, sheetHint, sheetSize, targeting, view } from '../store';
+import { uiFactor } from '../Tip';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { loreView } from '../screens/Story';
@@ -69,31 +70,61 @@ import { turnStep } from '../../game/sim/flare';
 
 export function Drawer({ s }: { s: GameState }) {
   void rev.value;
+  // (choosing a destination folds a phone's panel away: the view's slide for it is measured again)
+  void targeting.value;
   const ref = useRef<HTMLElement>(null);
   const whole = useWholeScroll(ref, '.drawer-head', '.drawer-body');
-  // On a phone the panel covers the lower half of the screen: slide the view up so what is
-  // selected stays visible (and can be tapped again) between the top bar and the panel.
+  // On a phone the panel covers part of the map: slide the view so what is selected stays in
+  // sight (and can be tapped again) in what is left. Upright, that is between the top bar and
+  // the sheet; held sideways, to the left of the panel.
   useLayoutEffect(() => {
     const place = () => {
       const eng = engine();
       const el = ref.current;
       if (!eng) return;
+      const r = el?.getBoundingClientRect();
       // (the magnifier mode's column is beside the map, not over it)
-      if (!el || window.innerWidth > 760 || lowVision()) return eng.setFocusY(null);
+      if (!el || !r || r.height === 0 || !isPhone() || lowVision()) {
+        eng.setFocusY(null);
+        eng.setSheetFocusX(null);
+        return;
+      }
+      if (window.innerWidth > 760) {
+        eng.setFocusY(null);
+        eng.setSheetFocusX(r.left > window.innerWidth * 0.3 ? r.left / 2 : null);
+        return;
+      }
+      eng.setSheetFocusX(null);
       const top = (document.querySelector('.resources') as HTMLElement | null)?.getBoundingClientRect().bottom ?? 0;
-      const bottom = el.getBoundingClientRect().top;
-      eng.setFocusY(bottom - top > 80 ? (top + bottom) / 2 : null);
+      eng.setFocusY(r.top - top > 80 ? (top + r.top) / 2 : null);
     };
     place();
     window.addEventListener('resize', place);
     return () => window.removeEventListener('resize', place);
   });
-  useEffect(() => () => engine()?.setFocusY(null), []);
+  useEffect(
+    () => () => {
+      engine()?.setFocusY(null);
+      engine()?.setSheetFocusX(null);
+    },
+    [],
+  );
   const sel = selection.value;
   // the magnifier mode: whatever is chosen, the focus (and a magnifier following it) goes to its panel
   useEffect(() => {
     if (lowVision() && sel) focusTitle(ref.current?.querySelector('.drawer-head h2'));
   }, [sel?.kind, sel?.id]);
+  // a phone's sheet: what was just picked on the map opens it small, so the map stays in view;
+  // anything chosen from a list or a button, at the size last set with its handle
+  useEffect(() => {
+    if (!sel) return;
+    const key = `${sel.kind}:${sel.id}`;
+    if (sheetHint.mapKey === key) {
+      sheetHint.mapKey = null;
+      sheetSize.value = 0;
+    } else sheetSize.value = hudPrefs.value.sheet ?? 1;
+  }, [sel?.kind, sel?.id]);
+  const size = sheetSize.value;
   if (!sel) return null;
   let body: preact.JSX.Element | null = null;
   if (sel.kind === 'system' && s.systems[sel.id]) body = <SystemPanel s={s} sys={s.systems[sel.id]} />;
@@ -104,12 +135,79 @@ export function Drawer({ s }: { s: GameState }) {
   else if (sel.kind === 'swarm' && s.swarms[sel.id]) body = <SwarmPanel s={s} sw={s.swarms[sel.id]} />;
   if (!body) return null;
   return (
-    <aside ref={ref} class={`drawer panel${whole ? ' whole' : ''}`} aria-label="Selection">
+    <aside ref={ref} class={`drawer panel s${size}${whole ? ' whole' : ''}`} aria-label="Selection">
+      <SheetHandle panel={ref} size={size} />
       <button class="btn ghost small drawer-close" aria-label="Close" onClick={() => { selection.value = null; engine()?.select(null); }}>
         <Icon name="close" />
       </button>
       {body}
     </aside>
+  );
+}
+
+const SHEET_NAMES = ['small', 'half the screen', 'the whole screen'];
+
+/**
+ * A phone's sheet handle (hidden elsewhere: styles.css). Tap: the next size up, from the
+ * largest back to the smallest. Drag: any height, settling on the nearest size when let go.
+ */
+function SheetHandle({ panel, size }: { panel: { current: HTMLElement | null }; size: 0 | 1 | 2 }) {
+  const drag = useRef<{ id: number; y: number; h: number; moved: number } | null>(null);
+  const settle = (to: 0 | 1 | 2) => {
+    sheetSize.value = to;
+    setHudPrefs({ sheet: to });
+  };
+  // the heights the three sizes come to now (as their max-heights in styles.css: shares of the
+  // room between the top bar and the sheet's foot)
+  const heights = (el: HTMLElement): number[] => {
+    const top = document.querySelector('.resources')?.getBoundingClientRect().bottom ?? 0;
+    const room = (el.getBoundingClientRect().bottom - top - 8) / uiFactor();
+    return [0.36, 0.72, 1].map((k) => k * room);
+  };
+  return (
+    <button
+      class="sheet-handle"
+      aria-label={`Panel size: ${SHEET_NAMES[size]}. Tap for ${SHEET_NAMES[size === 2 ? 0 : size + 1]}, or drag.`}
+      onPointerDown={(e) => {
+        const el = panel.current;
+        if (!el) return;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        drag.current = { id: e.pointerId, y: e.clientY, h: el.getBoundingClientRect().height / uiFactor(), moved: 0 };
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current;
+        const el = panel.current;
+        if (!d || d.id !== e.pointerId || !el) return;
+        const dy = (e.clientY - d.y) / uiFactor();
+        d.moved = Math.max(d.moved, Math.abs(dy));
+        if (d.moved < 6) return;
+        const [lo, , hi] = heights(el);
+        el.style.maxHeight = `${Math.max(lo * 0.6, Math.min(hi, d.h - dy))}px`;
+      }}
+      onPointerUp={() => {
+        const d = drag.current;
+        const el = panel.current;
+        drag.current = null;
+        if (!d || !el) return;
+        if (d.moved < 6) {
+          sfx('click');
+          settle(size === 2 ? 0 : ((size + 1) as 1 | 2));
+          return;
+        }
+        // the nearest size to where it was let go
+        const h = el.getBoundingClientRect().height / uiFactor();
+        const hs = heights(el);
+        el.style.maxHeight = '';
+        const near = hs.reduce((best, x, i) => (Math.abs(x - h) < Math.abs(hs[best] - h) ? i : best), 0) as 0 | 1 | 2;
+        settle(near);
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+        if (panel.current) panel.current.style.maxHeight = '';
+      }}
+    >
+      <i />
+    </button>
   );
 }
 

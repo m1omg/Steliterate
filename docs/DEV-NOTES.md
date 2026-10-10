@@ -99,7 +99,20 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `browser/*.cjs`: interface checks against a served build, each opening its own page through
     `start()` in `tools/checks/lib.cjs` (which waits for the server; any console error fails the
     check) and ending with `finish()`. Screenshots go to `playtest-shots/checks/<name>/`, or the
-    folder given as the second argument.
+    folder given as the second argument. `ck.phone(w, h, query)` opens a page with a touchscreen
+    (`mobile` uses it; CDP `Input.dispatchTouchEvent` for long presses and drags).
+  - **The game's fonts in this container:** the headless browser cannot reach Google Fonts
+    (the proxy's certificate), so text is measured in fallback faces, which are wider. With
+    `STEL_FONTS=<dir>`, `lib.cjs` serves them from a local copy. Make one with curl, which checks
+    the certificate properly (never turn off TLS checks in the browser instead):
+    ```sh
+    D=$SP/fonts; mkdir -p $D/files
+    URL=$(grep -o 'https://fonts.googleapis.com/css2[^"]*' index.html | sed 's/&amp;/\&/g')
+    curl -sS -A "Mozilla/5.0 Chrome/130.0" "$URL" -o $D/fonts.css
+    grep -o 'https://fonts.gstatic.com/[^)]*' $D/fonts.css | sort -u | while read u; do
+      curl -sS "$u" -o "$D/files/$(echo "$u" | sed 's#https://fonts.gstatic.com/##; s#/#_#g')"; done
+    ```
+    `mobile` measures the rail's names only when the fonts are there (it says so otherwise).
   - `run.mjs unit|browser|all [url] [out] [names…]` runs them (unit checks several at a time,
     browser checks one at a time) and prints a summary; `npm run check` and
     `npm run check:browser` call it. Name some to run only those:
@@ -266,6 +279,19 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **The stop hook** of the cloud sessions (`~/.claude/stop-hook-git-check.sh`) won't let a turn
   end with uncommitted changes, untracked files or unpushed commits. Commit and push before
   ending, and keep scratch files out of the clone.
+- **A slow renderer delays redraws too** (10 Oct): a component's re-render waits for the next
+  frame, and under the software renderer a frame can take a second or more, so a camera slide
+  that follows a redraw (the Drawer's `place()`) can start seconds after the click that caused it.
+  A check that taps the map waits for the view to stop moving first (`mobile`: `settled`,
+  `unshifted`).
+- **Hidden by CSS is not re-measured:** a panel hidden only by a class elsewhere (`html.picking
+  .drawer`) does not re-run its own layout effect; read the signal behind the class in the
+  component (`void targeting.value` in the Drawer) so it redraws and measures again.
+- **Fallback fonts measure differently** (10 Oct): without `STEL_FONTS` the browser checks lay out
+  text in fallback faces, with shorter lines than the game's own (Saira's line box is about 19 px
+  where the fallback's was 14). Sizes that only just fit can pass there and fail for players: at
+  960×460 one Build row was 130 px in fallback faces and 145 px in the real ones, in a 142 px panel
+  (`a11y`; fixed by the two-line descriptions in short panels). Run layout checks with the fonts.
 - **Frame-rate bound checks:** under load, the software renderer can fall below 10 frames a
   second. The frame time is capped at 0.1 s (`engine.ts`), so easing takes longer in real time,
   as it would on a slow machine. A check that waits on something eased (a camera move, a fade)
@@ -857,6 +883,40 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `AfarList` (`Lists.tsx`, tab `'afar'`): the stars seen from afar; `sendFromSystems` opens a
     probe's window on it in the mode.
 
+- **Phones (10 Oct; the player plays on a phone too):**
+  - Which layout: `PHONE_QUERY` in `store.ts`, `(max-width: 760px), (max-height: 500px) and
+    (pointer: coarse)`, the same as the stylesheet's (a short window on a PC, such as 960×460 at
+    200% zoom, keeps the PC layout: the `a11y` check); `phone` (a signal) and `isPhone()` (never in
+    the magnifier mode). The CSS is the "phones" block of `styles.css`, before the magnifier's: one
+    part for both, one upright (`max-width: 760px`), one held sideways (`max-height: 500px and
+    min-width: 761px and pointer: coarse`), every rule under `html:not(.lv)`. The older
+    phone-width rules above it still apply where it does not override them.
+  - The top bar: `.chrono-line` (`Chronometer.tsx`, a button, hidden on a PC and in the magnifier
+    mode) toggles `phoneMore`: `.chrono.more` shows the ruler (without its age names) and
+    `.bottom-left.open` hangs under the top bar. `--chrono-end` (the top bar's foot, set by the
+    Chronometer on each render and by `Hud.tsx` on resize) places the resources; `--hud-end` (the
+    resources' foot, `Hud.tsx`, watched with a ResizeObserver) places the messages, the map banner,
+    the prompts, the guide, the to-do chips, the view switch and the details.
+  - The sheet: `Drawer.tsx` gives `.drawer` the class `s0`/`s1`/`s2` from `sheetSize`; the
+    max-heights are shares of `--sheet-room` (0.36, 0.72, 1; the half is about the old panel's 46vh at 390×844, so a settlement's Build tab keeps its head). `SheetHandle`: a tap steps up (full
+    → small), a drag sets `max-height` live and settles on the nearest size; `setHudPrefs({ sheet })`
+    keeps it. A pick on the map sets `sheetHint.mapKey` (`main.tsx` `onPick`), and the Drawer's
+    effect on a new selection opens it small for that key, else at `hudPrefs.sheet` (default half).
+    `onGesture` (the camera rig: once per drag, pinch or wheel) lowers it to small and folds the
+    details. The Drawer's `place()` sets `setFocusY` upright and `setSheetFocusX` sideways (the
+    engine uses the magnifier's `focusX` first).
+  - Touch: `Tip.tsx` ignores a touch `pointermove`; a 500 ms press shows the tip and swallows the
+    one click (and context menu) it would make, until the next pointerdown. `engine.pickAt(x, y,
+    pointerType)`: touch reach 28 / 36 px, and `labelAt` (a map name's box, from `Label.pick`).
+    `engine.pickFilter` (set in `main.tsx` while `targeting`): only stars other than the fleet's.
+    The camera's tap slop is 12 px for a finger (`tapSlop`). `touchInput` (the last pointerdown)
+    picks the map banner's words; on touch the first tap sets `hoverStar` and the banner offers
+    Send (`sendPicked` in `Lists.tsx`, also the mouse's click).
+  - Elsewhere: `ShipPrompt` returns nothing on a phone; the rail's `rail-menu-only` buttons (Codex,
+    Save) hide there (Menu has both); the pace's `.pace-phone` row and `.pace-menu` list (outside the
+    `.pace` panel: a panel's chamfered clip-path cuts off whatever pokes out of it); the guide's
+    steps can carry `phone: { target, text }`.
+
 ## Music tooling
 
 - **The Canon:** `tools/music/canon.py` renders the arrangement to WAV with numpy and scipy.
@@ -964,6 +1024,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the audits; outer worlds; cooling; the gentle flare; attack (8 Oct) | 143 | the planet and star audits' fixes (no Kin room on a world frozen hard, day and night only from starlight, the Heart takes its worlds, dead worlds' seas boil in a flare, life dies at once past 395 K, two events need a living homeworld, no Kin on ice giants), one cooling law per dead star (white dwarfs Mestel then Debye, brown dwarfs Burrows; brown dwarfs give collectors all their light, Infrared Shrouds), and for new games outer worlds, cold-trapped water, a locked home moon and the physical flare (Aster's night side 323 K, not 681 K); the autoplayer never attacks. 56 victories, Degenerate Age 69 turns; 900 games 435 / 184 / 71 (429 / 185 / 69 live), within the noise; no game plays out as before (new galaxies differ). By fate: decay 166 / 450, stable 165 / 239, curvature 104 / 211. The audit's rule fixes alone (before cooling, outer worlds and the flare): 900 games 455 / 194 / 69 |
 | a settlement where a star was; curvature warmth; stars by type (8 Oct) | 148 | 900 games identical to the clock run, line for line (the autoplayer never takes a star by force; no rule reads the new warmth) |
 | a magnifier mode; the game at any size and translated (9 Oct) | 148 | interface only: 900 games identical to the clock run, game for game |
+| a phone interface that leaves the map usable (10 Oct) | 148 | interface only (no change under `src/game`): 300 games identical to `main`, game for game; 72 victories |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

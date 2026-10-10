@@ -574,6 +574,159 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .map-label.beacon { color: #ffe0a0; font-weight: 600; text-shadow: 0 0 4px #000, 0 0 10px rgba(255, 190, 90, 0.45); }
 .map-label.others { font-weight: 600; letter-spacing: 0.06em; }
 
+/* ------------------------------------------------------------------ phones (store.ts: isPhone)
+   Narrow screens (portrait) and short touchscreens (held sideways). The map is what a phone shows: the
+   panels leave it room, say the turn and its span on the top bar, and get out of the way when the
+   map is touched. Never in the magnifier mode, which has its own column. */
+
+.chrono-line, .sheet-handle, .pace-phone { display: none; }
+
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  /* a finger's long press shows a tip (Tip.tsx), not the browser's text selection or menu */
+  html:not(.lv) .ui-root { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  html:not(.lv) .ui-root input, html:not(.lv) .ui-root textarea, html:not(.lv) .ui-root select { -webkit-user-select: text; user-select: text; }
+
+  /* the top bar: the turn, this turn's span and the next's, on a line of their own */
+  html:not(.lv) .chrono { min-height: 0; }
+  html:not(.lv) .chrono-era { order: 1; }
+  html:not(.lv) .chrono-era .num { font-size: 10.5px; letter-spacing: 0.1em; white-space: normal; overflow: visible; }
+  html:not(.lv) .chrono-time { order: 2; }
+  html:not(.lv) .chrono-time .age { white-space: normal; text-align: right; }
+  html:not(.lv) .chrono .ruler { order: 4; display: none; }
+  html:not(.lv) .chrono-line {
+    order: 3; grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%;
+    padding: 5px 10px; border: 0; border-top: 1px solid var(--line); background: rgba(255, 255, 255, 0.025);
+    color: var(--ink-dim); font: 500 12.5px/1.2 var(--f-mono); text-align: left; cursor: pointer;
+  }
+  html:not(.lv) .chrono-line .cl-turn { font-family: var(--f-display); font-weight: 700; font-size: 13.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-soft); white-space: nowrap; }
+  html:not(.lv) .chrono-line .cl-span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  html:not(.lv) .chrono-line .cl-fc { display: inline-flex; align-items: center; gap: 3px; color: var(--warn); white-space: nowrap; }
+  html:not(.lv) .chrono-line .icon { width: 13px; height: 13px; }
+  /* opened: the timeline across the ages (without the age names, which would run together) */
+  html:not(.lv) .chrono.more .ruler { display: block; grid-column: 1 / -1; height: 40px; margin: 8px 14px 10px; }
+  html:not(.lv) .chrono .ruler .eyebrow { display: none; }
+  /* …and the forecasts and the Record, hung under the top bar */
+  html:not(.lv) .bottom-left { display: none; }
+  html:not(.lv) .bottom-left.open {
+    display: flex; position: absolute; z-index: 6; left: 8px; right: 8px; width: auto; bottom: auto;
+    top: calc(var(--hud-end, 160px) + 6px); max-height: calc(calc(100vh / var(--z, 1)) - var(--hud-end, 160px) - 150px - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto; scrollbar-width: thin;
+  }
+  html:not(.lv) .bottom-left.open .forecast { display: flex !important; flex: none; }
+  html:not(.lv) .bottom-left.open .feed { max-height: none; flex: none; }
+
+  /* the resources: compact, the long names small */
+  html:not(.lv) .resources { top: calc(var(--chrono-end, 64px) + 4px); left: 8px; right: 8px; max-width: none; }
+  html:not(.lv) .res { flex: 1 1 auto; justify-content: center; padding: 3px 6px; }
+  html:not(.lv) .res .l { display: none; }
+  html:not(.lv) .res:has(> .l[style]) { flex-direction: column; align-items: center; gap: 1px; }
+  html:not(.lv) .res > .l[style] { font-size: 9.5px; line-height: 1; letter-spacing: 0.06em; }
+  html:not(.lv) .res .d.dim { max-width: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  html:not(.lv) .gauge { width: 38px; }
+
+  /* the rail: a row of buttons, each with its name under it; Save is in Menu */
+  html:not(.lv) .rail { flex-direction: row; top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: 8px; right: 8px; gap: 2px; padding: 4px; max-height: none !important; overflow: visible; }
+  html:not(.lv) .rail .rail-menu-only { display: none; }
+  html:not(.lv) .rail .iconbtn { flex: 1 1 0; width: auto; min-width: 0; height: 44px; flex-direction: column; justify-content: center; gap: 2px; padding: 0 1px; }
+  html:not(.lv) .rail .iconbtn .icon.lg { width: 19px; height: 19px; }
+  html:not(.lv) .rail-label { display: block; max-width: 100%; font-size: 10px; line-height: 1; letter-spacing: 0; color: var(--ink-dim); white-space: nowrap; overflow: hidden; }
+  html:not(.lv) .rail .iconbtn.on .rail-label { color: var(--accent); }
+  html:not(.lv) .rail .iconbtn .badge { left: auto; right: 2px; top: 1px; transform: none; }
+  html:not(.lv) .rail .iconbtn:has(.badge) { padding-right: 1px; }
+  html:not(.lv) .rl-wide { display: none; }
+  html:not(.lv) .rl-short { display: inline; }
+}
+@media (max-width: 370px) {
+  html:not(.lv) .rail-label { font-size: 9.5px; }
+  html:not(.lv) .rail .iconbtn { padding: 0; }
+}
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+
+  /* the turn box: the pace as one button (its choices in a list, each explained), Sleep, End Turn */
+  html:not(.lv) .turnbox { left: 8px; right: 8px; width: auto; flex-direction: row; align-items: stretch; }
+  html:not(.lv) .turnbox .pace { flex: 1; min-width: 0; padding: 5px 6px; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+  html:not(.lv) .turnbox .pace > .row:first-child, html:not(.lv) .pace .opts, html:not(.lv) .pace .pace-sleep { display: none; }
+  html:not(.lv) .pace .chip { margin: 0 !important; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; }
+  html:not(.lv) .pace-phone { display: flex; gap: 4px; }
+  html:not(.lv) .pace-phone .btn { min-height: 34px; white-space: nowrap; }
+  html:not(.lv) .pace-pick { flex: 0 1 auto; min-width: 0; }
+  html:not(.lv) .pace-pick .icon { width: 12px; height: 12px; }
+  html:not(.lv) .pace-menu {
+    position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 8; width: min(380px, calc(calc(100vw / var(--z, 1)) - 16px));
+    max-height: calc(calc(100vh / var(--z, 1)) - var(--hud-end, 160px) - 90px); overflow-y: auto;
+    display: flex; flex-direction: column; gap: 4px; padding: 8px;
+  }
+  html:not(.lv) .pm-opt { flex-direction: column; align-items: flex-start; text-align: left; gap: 1px; padding: 6px 10px; white-space: normal; }
+  html:not(.lv) .pm-why { font-size: 12.5px; line-height: 1.35; color: var(--ink-dim); font-weight: 400; }
+  html:not(.lv) .pm-opt.primary .pm-why { color: var(--ink); }
+  html:not(.lv) .endturn { min-height: 50px; font-size: 16px; padding: 0 12px; }
+
+  /* the view switch: a cluster of small buttons at the map's edge */
+  html:not(.lv) .viewswitch { left: auto; right: 8px; bottom: auto; top: calc(var(--hud-end, 160px) + 6px); transform: none; flex-direction: column; flex-wrap: nowrap; gap: 2px; padding: 3px; }
+  html:not(.lv) .viewswitch > .btn { flex-direction: column; gap: 1px; min-height: 38px; width: 46px; padding: 2px 1px; }
+  html:not(.lv) .vs-label { display: block; max-width: 100%; font-size: 9.5px; line-height: 1; letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  html:not(.lv) .viewswitch .thermal-legend { position: absolute; right: calc(100% + 6px); top: 0; width: 210px; padding: 6px 4px 4px; background: var(--panel); border: 1px solid var(--line-2); }
+
+  /* messages, the map banner, the prompts and the guide hang from the top bar, clear of the panels below */
+  html:not(.lv) .toasts { top: calc(var(--hud-end, 160px) + 6px); bottom: auto; flex-direction: column; width: min(460px, calc(calc(100vw / var(--z, 1)) - 72px)); }
+  html:not(.lv) .toast { padding: 6px 12px; font-size: 13.5px; }
+  html:not(.lv) .targeting { top: calc(var(--hud-end, 160px) + 6px); left: 8px; right: 62px; transform: none; max-width: none; padding: 6px 8px; font-size: 13.5px; line-height: 1.35; }
+  html:not(.lv) .targeting .target-est { font-size: 12.5px; }
+  html:not(.lv) .research-prompt { top: calc(var(--hud-end, 160px) + 6px); max-height: max(160px, calc(calc(100vh / var(--z, 1)) - var(--hud-end, 160px) - 150px)); }
+  html:not(.lv) .tutorial { top: calc(var(--hud-end, 160px) + 6px); max-height: max(160px, calc(calc(100vh / var(--z, 1)) - var(--hud-end, 160px) - 150px)); }
+  /* choosing a destination: the map is the whole screen */
+  html.picking:not(.lv) .drawer { display: none; }
+}
+
+/* portrait: the selection in a sheet above the rail, three sizes (Drawer.tsx: SheetHandle) */
+@media (max-width: 760px) {
+  html:not(.lv) .drawer {
+    --sheet-room: calc(calc(100vh / var(--z, 1)) - var(--hud-end, 170px) - 138px - env(safe-area-inset-bottom, 0px));
+    left: 8px; right: 8px; width: auto; top: auto; bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+  }
+  html:not(.lv) .drawer.s0 { max-height: calc(var(--sheet-room) * 0.36); }
+  html:not(.lv) .drawer.s1 { max-height: calc(var(--sheet-room) * 0.72); }
+  html:not(.lv) .drawer.s2 { max-height: var(--sheet-room); }
+  html:not(.lv) .sheet-handle { display: flex; flex: none; align-items: center; justify-content: center; width: 100%; height: 20px; margin: 0; padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; }
+  html:not(.lv) .sheet-handle i { display: block; width: 44px; height: 4px; border-radius: 2px; background: var(--line-3); }
+  html:not(.lv) .drawer .drawer-close { top: 2px; }
+  html:not(.lv) .drawer-head { padding-top: 2px; }
+  /* what is waiting (the to-do chips): at the top left of the map, where the sheet does not reach */
+  html:not(.lv) .todo { position: fixed; top: calc(var(--hud-end, 160px) + 6px); left: 8px; right: auto; bottom: auto; max-width: calc(calc(100vw / var(--z, 1)) - 80px); margin: 0; flex-direction: column; align-items: flex-start; }
+  /* (only the chips take touches: the map around them stays the map's) */
+  html:not(.lv) .todo { pointer-events: none; }
+  html:not(.lv) .todo > * { pointer-events: auto; }
+  /* while a destination is being chosen, the banner has the top of the map */
+  html.picking:not(.lv) .todo { display: none; }
+  html:not(.lv) .pp-net { display: none; }
+}
+
+/* held sideways (short and wide): one line of top bar, the selection beside the map on the right,
+   the rail and the turn box along the bottom */
+@media (max-height: 500px) and (min-width: 761px) and (pointer: coarse) {
+  html:not(.lv) .chrono { top: calc(4px + env(safe-area-inset-top, 0px)); grid-template-columns: auto minmax(0, 1fr) auto; }
+  html:not(.lv) .chrono-era { order: 1; min-width: 0; padding: 4px 12px; justify-content: center; }
+  html:not(.lv) .chrono-era .num, html:not(.lv) .chrono-era .sci, html:not(.lv) .chrono-time .span { display: none; }
+  html:not(.lv) .chrono-era .name { font-size: 16px; white-space: nowrap; }
+  html:not(.lv) .chrono-line { order: 2; grid-column: auto; border-top: 0; border-left: 1px solid var(--line); }
+  html:not(.lv) .chrono-time { order: 3; min-width: 0; padding: 3px 12px; justify-content: center; }
+  html:not(.lv) .chrono-time .eta { font-size: 15px; line-height: 1.1; }
+  html:not(.lv) .chrono-time .age { font-size: 11.5px; white-space: nowrap; }
+  html:not(.lv) .chrono.more .ruler { order: 4; }
+  html:not(.lv) .rail { right: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: min(400px, calc(calc(100vw / var(--z, 1)) - 400px)); }
+  html:not(.lv) .turnbox { left: auto; width: 370px; }
+  html:not(.lv) .todo { position: absolute; bottom: 100%; right: 0; margin-bottom: 6px; flex-wrap: nowrap; }
+  html:not(.lv) .todo-chip { white-space: nowrap; }
+  html:not(.lv) .drawer {
+    left: auto; right: 8px; width: min(400px, 46%); top: calc(var(--hud-end, 80px) + 6px); bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+    max-height: none;
+  }
+  html:not(.lv) .viewswitch { right: auto; left: 8px; flex-direction: row; }
+  html:not(.lv) .targeting { left: auto; right: 8px; width: min(520px, 56%); }
+  html:not(.lv) .bottom-left.open { right: auto; width: min(460px, 52%); max-height: calc(calc(100vh / var(--z, 1)) - var(--hud-end, 80px) - 80px); }
+  html:not(.lv) .research-prompt, html:not(.lv) .tutorial { max-height: calc(calc(100vh / var(--z, 1)) - var(--hud-end, 80px) - 76px); }
+}
+
 /* ------------------------------------------------------------------ keyboard and magnifier (a11y.ts) */
 
 /* the HUD's wrapper has no box of its own */
@@ -582,6 +735,10 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .drawer.whole, .modal.event.whole { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
 .drawer.whole .drawer-body, .modal.event.whole .modal-body { flex: none; overflow: visible; }
 .modal.event.whole .event-art { flex: none; }
+/* …and no Build row stands taller than such a panel: a description shows two lines (the row's
+   tooltip, or a long press, has all of it). At 960×460 a row with four lines was 145 px in a 142 px
+   panel. The magnifier mode's column has room for all of it. */
+html:not(.lv) .drawer.whole .build-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 /* the rail, the prompts and the guide stay within the screen (a bigger page left Menu below it) */
 .research-prompt { max-height: max(160px, calc(calc(100vh / var(--z, 1)) - 140px - env(safe-area-inset-top, 0px))); overflow-y: auto; scrollbar-width: thin; }
 .tutorial { max-height: max(160px, calc(calc(100vh / var(--z, 1)) - 136px - env(safe-area-inset-top, 0px))); overflow-y: auto; scrollbar-width: thin; }

@@ -1,7 +1,11 @@
 import { ERA_BY_ID, ERAS, deepMilestonesFor, formatEta, formatYears, formatYearsShort, milestonesFor } from '../../game/eras';
 import { DEGENERATE_END, fateKnown, fateOf } from '../../game/fate';
 import type { EraId, GameState } from '../../game/types';
-import { rev } from '../store';
+import { phoneMore, rev } from '../store';
+import { Icon } from '../Icon';
+import { sfx } from '../../audio/sfx';
+import { uiFactor } from '../Tip';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 
 // The whole remaining life of the universe on one instrument strip. Each age gets a segment;
 // inside it, time is scaled so that the present moves visibly.
@@ -34,7 +38,7 @@ function clamp01(x: number): number {
 
 const SEV_COLOR: Record<string, string> = { info: 'var(--ink-dim)', warn: 'var(--warn)', danger: 'var(--bad)', boon: 'var(--boon)' };
 
-export function Chronometer({ s }: { s: GameState }) {
+export function Chronometer({ s, nextYears }: { s: GameState; nextYears: number }) {
   void rev.value;
   const era = ERA_BY_ID[s.era];
   const deep = s.era === 'dark';
@@ -53,8 +57,38 @@ export function Chronometer({ s }: { s: GameState }) {
   const band: Record<EraId, [number, number]> = { dusk: SEG.dusk, degenerate: [SEG.degenerate[0], split], blackhole: [unsure ? unsure[1] : split, SEG.blackhole[1]], dark: SEG.dark };
   const turnSpan = isFinite(s.turnLength) ? formatYears(s.turnLength) : formatYears(Infinity, s.eta);
   const age = s.era === 'dusk' ? `${formatYears(s.years)} since the Big Bang` : formatYears(s.years, s.eta);
+  const short = (y: number) => (isFinite(y) ? formatYearsShort(y) : 'deep time');
+  const more = phoneMore.value;
+  // (where it ends, for the resources under it on a phone: Hud.tsx sets it too, on any resize)
+  const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const r = root.current?.getBoundingClientRect();
+    if (r && r.height > 0) document.documentElement.style.setProperty('--chrono-end', `${Math.round(r.bottom / uiFactor())}px`);
+  });
+  const fc = s.forecasts.length;
   return (
-    <div class="chrono panel scan">
+    <div ref={root} class={`chrono panel scan${more ? ' more' : ''}`}>
+      {/* phones: the turn and its span on a line of their own; a tap opens the timeline, the forecasts and the Record */}
+      <button
+        class="chrono-line"
+        aria-expanded={more}
+        aria-label={`Turn ${s.turn}: this turn spanned ${turnSpan}, the next ${isFinite(nextYears) ? formatYears(nextYears) : 'deep time'}. ${more ? 'Hide' : 'Show'} the timeline, the forecasts and the Record.`}
+        onClick={() => {
+          sfx('click');
+          phoneMore.value = !more;
+        }}
+      >
+        <span class="cl-turn">Turn {s.turn}</span>
+        <span class="cl-span">
+          this turn {short(s.turnLength)} · next {short(nextYears)}
+        </span>
+        {fc > 0 && (
+          <span class="cl-fc">
+            <Icon name="warning" /> {fc}
+          </span>
+        )}
+        <Icon name={more ? 'minus' : 'plus'} />
+      </button>
       <div class="chrono-era">
         <div class="num">
           {era.numeral} · {era.science.toUpperCase()}

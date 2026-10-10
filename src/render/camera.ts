@@ -6,6 +6,8 @@ import * as THREE from 'three';
 
 /** How far (CSS px) a pinch's midpoint may drift before it counts as a two-finger drag. */
 const PINCH_SLACK = 24;
+/** How far (CSS px, summed) a press may wander and still be a click: a finger is less steady than a mouse. */
+const tapSlop = (pointerType: string) => (pointerType === 'mouse' ? 6 : 12);
 
 export class OrbitRig {
   camera: THREE.PerspectiveCamera;
@@ -39,6 +41,9 @@ export class OrbitRig {
   /** Called after every zoom the player makes, with the distance they asked for before clamping. */
   onZoomIntent: ((requested: number) => void) | null = null;
   onHover: ((x: number, y: number) => void) | null = null;
+  /** The player has started to turn, pan or zoom the view by hand (once per gesture). */
+  onGesture: (() => void) | null = null;
+  private gestured = false;
   autoYaw = 0; // slow cinematic drift (radians per second)
   /** Something to keep centred (a planet on its orbit). Panning slides the view around it. */
   follow: (() => THREE.Vector3 | null) | null = null;
@@ -100,6 +105,7 @@ export class OrbitRig {
     this.el.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.moved = 0;
+    if (this.pointers.size === 1) this.gestured = false;
     if (this.pointers.size === 1) this.dragMode = e.button === 2 || e.shiftKey ? 'pan' : 'rotate';
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
@@ -123,6 +129,11 @@ export class OrbitRig {
     p.x = e.clientX;
     p.y = e.clientY;
     this.moved += Math.abs(dx) + Math.abs(dy);
+    // (a finger wobbles more than a mouse before it is a drag: tapSlop)
+    if (!this.gestured && (this.moved >= tapSlop(e.pointerType) || this.pointers.size === 2)) {
+      this.gestured = true;
+      this.onGesture?.();
+    }
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
@@ -146,7 +157,7 @@ export class OrbitRig {
   };
 
   private up = (e: PointerEvent) => {
-    if (this.pointers.has(e.pointerId) && this.pointers.size === 1 && this.moved < 6) this.onClick?.(e.clientX, e.clientY, e.pointerType);
+    if (this.pointers.has(e.pointerId) && this.pointers.size === 1 && this.moved < tapSlop(e.pointerType)) this.onClick?.(e.clientX, e.clientY, e.pointerType);
     this.pointers.delete(e.pointerId);
     if (this.pointers.size === 0) {
       this.dragMode = null;
@@ -157,6 +168,7 @@ export class OrbitRig {
 
   private wheel = (e: WheelEvent) => {
     e.preventDefault();
+    this.onGesture?.();
     const k = Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 120) * 0.0022);
     this.userZoom(k, e.clientX, e.clientY);
   };

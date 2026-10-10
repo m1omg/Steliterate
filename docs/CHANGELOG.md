@@ -1376,3 +1376,60 @@ No rule changes; saves are untouched (the mode is a setting, kept in the browser
   (turns played under a stand-in translator: it fails without the guard, on the turn count, η, the
   panel titles and the tooltips) and `lowvision` (the mode at 1280×720 and 2×, 25 checks).
 - **Not in this batch.** Read-aloud, moving the camera from the keyboard, a translation of our own.
+
+## A phone interface that leaves the map usable (10 Oct)
+
+The player, on a phone: "No year turn info on mobile + selecting stars on map is frustrating AF
+as the whole screen is covered by windows which need to be closed first." The phone width hid the
+turn, its span and the forecasts; the selection's panel covered half the screen, the idle-ship
+card popped up over the map, and a tap left tooltips standing. Held sideways, a phone got the PC
+layout, which overlapped everything (the sideways layout is for touchscreens only: a short window
+on a PC keeps the PC layout). Interface only: no rules, saves or seeds touched.
+
+- **The turn on the top bar.** A line under the era's name: "Turn 63 · this turn 2.5 Tyr · next
+  3.1 Tyr", with the number of forecasts. A tap opens the timeline across the ages, the forecasts
+  (closable, as on a PC) and the latest of the Record under the top bar. The era's numeral line
+  wraps instead of being cut.
+- **The selection in a sheet.** Upright, the panel is a sheet over the bottom of the screen with a
+  handle and three sizes (about a third of the room; about three quarters, as tall as the old panel;
+  all of it). What is tapped on the map opens it small, so the map stays in view; anything chosen
+  from a list or a button opens it at the size last set with its handle (kept between sessions).
+  Touching the map (turning, panning, zooming) lowers it to small; tapping empty map closes it, as
+  before. The map's centre slides into what the sheet leaves, as before, now for every size. Held
+  sideways, the panel is a column on the right and the map's centre moves into the space to its
+  left.
+- **No card over the map.** The idle-ship card does not pop up on a phone: the "ships idle" chip
+  opens the ship's panel, with the same orders. The to-do chips sit at the top left of the map,
+  under the top bar, where the sheet does not reach (only the chips take touches), and step aside
+  while a destination is being chosen.
+- **Touch.** A tap no longer opens a hover tooltip (it stayed over the screen); a press held half a
+  second shows it until the next touch, and presses nothing. A finger reaches 28 px on the galaxy
+  map and 36 in a system (the mouse 16 and 26), a press may wander 12 px and still be a tap (the
+  mouse 6), and a star's or world's name on the map counts as the star.
+- **Choose on map, by touch.** The panel folds away; the first tap on a star shows the trip in the
+  banner (distance, turns, cosmic time, energy) with a Send button; a second tap on it, or Send,
+  sends. While a destination is chosen, the fleet's own star (and the fleets parked there) cannot
+  be picked, so a finger's reach no longer takes the ship itself. The mouse keeps hover and click.
+- **A compact HUD.** Resources in two rows (Resolve, Dissent and Free energy as a small name over
+  the value); the rail with a name under each of its 8 buttons, all fitting at 360 px (Codex and
+  Save are under Menu, which gains a Codex button everywhere); the pace as one button whose list
+  explains each choice (Long Sleep in it too), beside Sleep; the view switch a small column at
+  the map's right edge (a row held sideways), with the thermal key beside it; messages, the map
+  banner, prompts and the guide hang from the top bar.
+- **Fewer messages.** "The browser paused the graphics" (and "restored") only when the graphics
+  stay away more than two seconds: a phone drops them at every switch to another app.
+- **The guide** points at the turn line and the pace button on a phone, with words for them.
+- **Manual.** A paragraph on phones under Controls.
+- **Short panels: a Build row's description shows two lines** (its tooltip, or a long press, has
+  all of it), where the panel is too short and scrolls whole. Measured in the game's real fonts,
+  the friend's 960×460 screen had one row (Night-side Shelters, four lines of description) 145 px
+  tall in a 142 px panel, so it could never be seen whole; `main` was the same. The checks had
+  measured in fallback faces, where it was 130 px.
+- **Unchanged:** the PC layout and the magnifier mode (its own column, also on a phone).
+- **Checks.** New browser check `mobile` (upright at 390×844, 360×740 and 625×1000, and sideways at
+  844×390, with a touchscreen; the magnifier mode on a phone; a PC screen). Browser checks can open
+  touch pages (`ck.phone`), and with `STEL_FONTS` serve the game's fonts from a local copy, so text
+  is measured in the real faces where the browser cannot reach Google (DEV-NOTES). The playtest
+  clicks the rail's buttons shown (on a phone Codex and Save through Menu).
+- **Balance.** No rule changes (nothing under `src/game` changed): 300 games identical to `main`,
+  game for game (148 of 300 survive, 72 victories).

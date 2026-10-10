@@ -41,6 +41,9 @@ export function TipLayer() {
       hide = window.setTimeout(() => setTip((t) => (t?.focus ? t : null)), 350);
     };
     const over = (e: PointerEvent) => {
+      // a finger has no hover: a tap would leave its tip standing over the screen. A long press
+      // shows it instead (below).
+      if (e.pointerType === 'touch') return;
       const target = e.target as HTMLElement | null;
       if (lv() && target?.closest?.('.tip')) return clearTimeout(hide);
       const el = target?.closest?.('[data-tip]') as HTMLElement | null;
@@ -55,6 +58,48 @@ export function TipLayer() {
       if (shown.current?.el !== el || shown.current.text !== text) setTip({ text, x: e.clientX, y: e.clientY, el });
     };
     const leave = () => setTip(null);
+    // a long press (half a second, the finger still) shows what is under it until the next touch;
+    // the press itself then presses nothing: the one click (or long-press menu) it would make is
+    // swallowed, however late it comes, until the next touch begins
+    let press = 0;
+    let pressAt: { x: number; y: number } | null = null;
+    const unswallow = () => {
+      window.removeEventListener('click', swallow, true);
+      window.removeEventListener('contextmenu', swallow, true);
+    };
+    const swallow = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.type === 'click') unswallow();
+    };
+    const pressStart = (e: PointerEvent) => {
+      clearTimeout(press);
+      unswallow();
+      pressAt = null;
+      if (e.pointerType !== 'touch') return;
+      const el = (e.target as HTMLElement | null)?.closest?.('[data-tip]') as HTMLElement | null;
+      const text = el?.getAttribute('data-tip');
+      if (!el || !text) return;
+      pressAt = { x: e.clientX, y: e.clientY };
+      press = window.setTimeout(() => {
+        pressAt = null;
+        setTip(lv() ? { text, x: e.clientX, y: e.clientY, el } : { text, x: e.clientX, y: e.clientY });
+        window.addEventListener('click', swallow, true);
+        window.addEventListener('contextmenu', swallow, true);
+      }, 500);
+    };
+    const pressMove = (e: PointerEvent) => {
+      if (pressAt && Math.hypot(e.clientX - pressAt.x, e.clientY - pressAt.y) > 10) {
+        clearTimeout(press);
+        pressAt = null;
+      }
+    };
+    // lifted before the half second: an ordinary tap
+    const pressEnd = () => {
+      if (!pressAt) return;
+      clearTimeout(press);
+      pressAt = null;
+    };
     // for the keyboard's focus (Tab in use): a button clicked keeps the focus, and its tip would
     // stay over the map
     const focusIn = (e: FocusEvent) => {
@@ -73,13 +118,23 @@ export function TipLayer() {
     };
     window.addEventListener('pointermove', over);
     window.addEventListener('pointerdown', leave);
+    window.addEventListener('pointerdown', pressStart);
+    window.addEventListener('pointermove', pressMove);
+    window.addEventListener('pointerup', pressEnd);
+    window.addEventListener('pointercancel', pressEnd);
     window.addEventListener('focusin', focusIn);
     window.addEventListener('focusout', focusOut);
     window.addEventListener('keydown', esc, true);
     return () => {
       clearTimeout(hide);
+      clearTimeout(press);
+      unswallow();
       window.removeEventListener('pointermove', over);
       window.removeEventListener('pointerdown', leave);
+      window.removeEventListener('pointerdown', pressStart);
+      window.removeEventListener('pointermove', pressMove);
+      window.removeEventListener('pointerup', pressEnd);
+      window.removeEventListener('pointercancel', pressEnd);
       window.removeEventListener('focusin', focusIn);
       window.removeEventListener('focusout', focusOut);
       window.removeEventListener('keydown', esc, true);
