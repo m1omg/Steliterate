@@ -90,7 +90,8 @@ const rectOf = (page, sel) =>
 run(async () => {
   const ck = await start('mobile');
   for (const [name, w, h] of SIZES) {
-    const page = await ck.phone(w, h);
+    // (each size in a browser of its own: lib.cjs freshPhone)
+    const page = await ck.freshPhone(w, h);
     const shot = (f) => page.screenshot({ path: `${ck.out}/${name}-${f}.png` });
     await page.evaluate(() => window.__stel.newGame({ seed: 1000 }));
     await page.waitForTimeout(1800);
@@ -250,17 +251,17 @@ run(async () => {
       const sent = await page.evaluate((fid) => ({ to: window.__stel.state().fleets[fid].to ?? null, banner: !!document.querySelector('.targeting') }), probe);
       check(!!sent.to && !sent.banner, `${name}: Send sends it, and the banner goes`);
     }
-    await page.context().close();
+    await page.context().browser().close();
   }
 
   // the magnifier mode keeps its column on a phone; a PC keeps its own layout
-  const lv = await ck.phone(390, 844, '?lowvision');
+  const lv = await ck.freshPhone(390, 844, '?lowvision');
   await lv.evaluate(() => window.__stel.newGame({ seed: 1000 }));
   await lv.waitForTimeout(1500);
   const lvl = await lv.evaluate(() => ({ line: getComputedStyle(document.querySelector('.chrono-line')).display, hud: getComputedStyle(document.querySelector('.hud')).display, codex: !!document.querySelector('.rail button[aria-label^="Codex"]')?.offsetParent }));
   check(lvl.line === 'none' && lvl.hud === 'flex' && lvl.codex, `the magnifier mode on a phone keeps its own column (${JSON.stringify(lvl)})`);
   await lv.screenshot({ path: `${ck.out}/lowvision-phone.png` });
-  await lv.context().close();
+  await lv.context().browser().close();
   const pc = ck.page;
   await pc.evaluate(() => window.__stel.newGame({ seed: 1000 }));
   await pc.waitForTimeout(1200);

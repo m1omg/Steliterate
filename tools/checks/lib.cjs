@@ -101,6 +101,12 @@ async function start(name, { width = 1400, height = 900, seed } = {}) {
     another: (w, h) => newPage(browser, errors, w, h),
     /** A phone: a page with a touchscreen at this size (and the address's query, such as ?lowvision). */
     phone: (w, h, query = '') => newPage(browser, errors, w, h, true, query),
+    /**
+     * The same in a browser of its own, closed with `page.context().browser().close()`. A check
+     * that opens one page after another, each played for minutes, needs it: after the first, the
+     * next page's load could hang in the shared browser, every request left waiting (10 Oct).
+     */
+    freshPhone: async (w, h, query = '') => newPage(await chromium.launch(LAUNCH), errors, w, h, true, query),
   };
 }
 
