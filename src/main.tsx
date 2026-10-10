@@ -13,13 +13,12 @@ import { music } from './audio/music';
 import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import type { Pickable } from './render/galaxyView';
-import { tripLabel } from './ui/trip';
-import { computeMods } from './game/sim/mods';
 import { App } from './ui/App';
-import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, lvFolded, mapHover, modal, notify, saveSettings, screen, selection, setEngine, setViewMode, settings, targeting, toggleOrbits, view } from './ui/store';
+import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, saveSettings, screen, selection, setEngine, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
 import { PRIMARY_NAME, bodyKindName } from './ui/labels';
 import { doEndTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
+import { sendPicked } from './ui/screens/Lists';
 import { guardTranslation } from './ui/translateGuard';
 import { applyLowVision, trackKeyboard } from './ui/a11y';
 import { buildSelected, nextTodo } from './ui/hud/Hud';
@@ -66,22 +65,25 @@ const eng = new Engine(stage, {
     // choosing a destination: a star, a fleet parked at one or a swarm means that star
     const dest = t && p ? starOf(p) : null;
     if (t && dest) {
-      targeting.value = null;
-      hoverStar.value = null;
-      const f = game.value?.fleets[t.fleetId];
-      if (act((g) => orderFleet(g, t.fleetId, dest, t.order))) {
-        sfx('select');
-        const g = game.value;
-        if (g && f?.to) notify(`${f.name} sets out for ${g.systems[dest].name}: ${tripLabel(g, f.distance, computeMods(g), true)}.`, 'info');
+      // a finger has no hover to show the trip first: the first tap shows it in the banner, a
+      // second tap on the same star (or the banner's Send) sends
+      if (pointerType && pointerType !== 'mouse' && hoverStar.value !== dest) {
+        sfx('click');
+        hoverStar.value = dest;
+        return;
       }
+      sendPicked(dest);
       return;
     }
     if (screen.value !== 'game') return;
+    phoneMore.value = false;
     if (!p) {
       selection.value = null;
       eng.select(null);
       return;
     }
+    // picked on the map: on a phone its sheet opens small, so the map stays in view (Drawer.tsx)
+    if (isPhone()) sheetHint.mapKey = p.kind === 'system' ? (p.id.startsWith('body:') ? `body:${p.id.slice(5)}` : `system:${p.id}`) : `${p.kind}:${p.id}`;
     // on a touchscreen there is no double-click: tapping the selected star again looks inside
     const sel = selection.value;
     if (pointerType !== 'mouse' && p.kind === 'fleet' && sel?.kind === 'fleet' && sel.id === p.id) {
@@ -118,6 +120,13 @@ const eng = new Engine(stage, {
   onFollow(f) {
     following.value = f;
   },
+  // turning, panning or zooming the map on a phone: the sheet steps down to small and the top
+  // bar's details fold, so the map is there to look at
+  onGesture() {
+    if (!isPhone()) return;
+    phoneMore.value = false;
+    if (sheetSize.value > 0) sheetSize.value = 0;
+  },
   onEnterSystem(id) {
     if (screen.value !== 'game') return;
     selection.value = { kind: 'system', id };
@@ -148,10 +157,21 @@ eng.start();
   }
 }
 applyLowVision();
-// a crosshair over the map while a destination is being chosen
+// a crosshair over the map while a destination is being chosen, and only somewhere else to pick
+// (a finger's reach would otherwise take the fleet itself, sitting at its star)
 effect(() => {
-  document.documentElement.classList.toggle('picking', !!targeting.value);
+  const t = targeting.value;
+  document.documentElement.classList.toggle('picking', !!t);
+  const from = t ? game.peek()?.fleets[t.fleetId]?.at : null;
+  eng.pickFilter = t
+    ? (p) => {
+        const d = starOf(p);
+        return !!d && d !== from;
+      }
+    : null;
 });
+// what the screen was last touched with: a finger (the map banner says tap, not click)
+window.addEventListener('pointerdown', (e) => (touchInput.value = e.pointerType !== 'mouse'), true);
 window.addEventListener('resize', () => applyUiScale(settings.value.uiScale));
 
 // Sound: allowed only after the first gesture.
@@ -206,10 +226,23 @@ else boot(hot?.data ?? null);
 // The GPU context: phones take it away in the background. Usually it comes back by itself;
 // if it will not, save, reload the page, and pick the game up again where it was.
 const RESUME = 'steliterate.resume';
+// (a phone does this at every switch to another app and back: said only when it takes a while)
+let lostNote = 0;
+let lostSaid = false;
 eng.onContextChange = (st) => {
-  if (st === 'lost') notify('The browser paused the graphics. Restoring…');
-  else if (st === 'restored') notify('Graphics restored.', 'good');
-  else if (screen.value === 'game' && game.value) {
+  if (st === 'lost') {
+    window.clearTimeout(lostNote);
+    lostSaid = false;
+    lostNote = window.setTimeout(() => {
+      if (!eng.contextLost || document.visibilityState !== 'visible') return;
+      lostSaid = true;
+      notify('The browser paused the graphics. Restoring…');
+    }, 2000);
+  } else if (st === 'restored') {
+    window.clearTimeout(lostNote);
+    if (lostSaid) notify('Graphics restored.', 'good');
+    lostSaid = false;
+  } else if (screen.value === 'game' && game.value) {
     let ok = saveGame(game.value, true);
     try {
       sessionStorage.setItem(RESUME, '1');

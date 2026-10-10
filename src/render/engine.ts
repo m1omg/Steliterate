@@ -20,6 +20,8 @@ export interface EngineEvents {
   onLeaveSystem?: () => void;
   /** The camera started or stopped following a world or a fleet. */
   onFollow?: (f: Followed | null) => void;
+  /** The player started to turn, pan or zoom the view by hand. */
+  onGesture?: () => void;
 }
 
 export interface Followed {
@@ -39,6 +41,8 @@ const LEAVE_PUSH = Math.log(1.5);
 interface Label {
   el: HTMLDivElement;
   used: boolean;
+  /** The pickable it names (a touch on it picks that). */
+  pick?: string;
 }
 
 // One renderer, two scenes. The loop measures real elapsed time; nothing depends on how
@@ -68,6 +72,8 @@ export class Engine {
   private focusY: number | null = null;
   /** Where on screen what is selected should sit across (the magnifier mode's column covers one side), or null for the middle. */
   private focusX: number | null = null;
+  /** The same for a phone held sideways, whose selection panel covers the right of the map (the magnifier mode's column comes first). */
+  private sheetFocusX: number | null = null;
   private viewShiftX = 0;
   /** The magnifier mode: larger markers and labels, a wider reach for the pointer, no grain, vignette or fringes. */
   private lv = false;
@@ -106,6 +112,7 @@ export class Engine {
     this.rig.zoomAnchor = (x, y) => (this.view === 'galaxy' ? this.zoomAnchorAt(x, y) : null);
     this.rig.onZoomIntent = (requested) => this.zoomIntent(requested);
     this.rig.onHover = (x, y) => this.events.onHover(this.pickAt(x, y), x, y);
+    this.rig.onGesture = () => this.events.onGesture?.();
     window.addEventListener('resize', this.resize);
     // Phones drop the GPU context when the page goes to the background. three.js asks for it
     // back; hide the dead canvas meanwhile (some browsers paint it white), rebuild on return,
@@ -219,7 +226,8 @@ export class Engine {
     const w = el.clientWidth || window.innerWidth;
     const h = el.clientHeight || window.innerHeight;
     const shiftGoal = this.focusY === null ? 0 : h / 2 - this.focusY;
-    const shiftGoalX = this.focusX === null ? 0 : w / 2 - this.focusX;
+    const fx = this.focusX ?? this.sheetFocusX;
+    const shiftGoalX = fx === null ? 0 : w / 2 - fx;
     const ease = 1 - Math.exp(-8 * dt);
     this.viewShift += (shiftGoal - this.viewShift) * ease;
     this.viewShiftX += (shiftGoalX - this.viewShiftX) * ease;
@@ -347,6 +355,11 @@ export class Engine {
     this.focusX = x;
   }
 
+  /** Where across the screen the view's centre should sit beside a phone's side panel, or null for the middle. */
+  setSheetFocusX(x: number | null) {
+    this.sheetFocusX = x;
+  }
+
   /** The magnifier mode on or off (a11y.ts). */
   setLowVision(on: boolean) {
     this.lv = on;
@@ -437,7 +450,7 @@ export class Engine {
   }
 
   private click(x: number, y: number, pointerType?: string) {
-    const p = this.pickAt(x, y);
+    const p = this.pickAt(x, y, pointerType);
     this.events.onPick(p, this.view, pointerType);
   }
 
@@ -489,10 +502,19 @@ export class Engine {
     }
   }
 
-  pickAt(x: number, y: number): Pickable | null {
+  /**
+   * What is at a point on screen. A finger is broader than a mouse pointer: a touch reaches
+   * further, and a star's or world's name on the map counts as the thing itself.
+   */
+  /** While set, only what passes can be picked (choosing a destination: anything but where the fleet is). */
+  pickFilter: ((p: Pickable) => boolean) | null = null;
+
+  pickAt(x: number, y: number, pointerType?: string): Pickable | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const list = this.view === 'galaxy' ? this.galaxy.pickables : this.system.pickables;
-    const reach = (this.view === 'galaxy' ? 16 : 26) * (this.lv ? 1.5 : 1);
+    const all = this.view === 'galaxy' ? this.galaxy.pickables : this.system.pickables;
+    const list = this.pickFilter ? all.filter(this.pickFilter) : all;
+    const touch = !!pointerType && pointerType !== 'mouse';
+    const reach = (this.view === 'galaxy' ? (touch ? 28 : 16) : touch ? 36 : 26) * (this.lv ? 1.5 : 1);
     // pixels per world unit at distance 1, for the size of a body on screen
     const pxPerUnit = rect.height / 2 / Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     let best: Pickable | null = null;
@@ -521,7 +543,23 @@ export class Engine {
         best = p;
       }
     }
+    // a touch on a name picks what it names, unless the finger is right on something (within half the reach)
+    if (touch && !(best && bestScore <= 0.5)) {
+      const named = this.labelAt(x, y);
+      const hit = named ? list.find((p) => p.id === named) : undefined;
+      if (hit) return hit;
+    }
     return best;
+  }
+
+  /** The pickable id of the map name under a point on screen (as the names were last placed). */
+  private labelAt(x: number, y: number): string | null {
+    for (const l of this.labels) {
+      if (!l.used || !l.pick) continue;
+      const r = l.el.getBoundingClientRect();
+      if (x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 6 && y <= r.bottom + 6) return l.pick;
+    }
+    return null;
   }
 
   /** Where an object is on screen (for tooltips and anchored UI). */
@@ -549,7 +587,7 @@ export class Engine {
       return;
     }
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const items: { text: string; pos: THREE.Vector3; cls: string; w: number; color?: string }[] = [];
+    const items: { text: string; pos: THREE.Vector3; cls: string; w: number; color?: string; pick?: string }[] = [];
     if (this.view === 'galaxy') {
       const d = this.rig.distance;
       if (d > 700) {
@@ -588,14 +626,14 @@ export class Engine {
           const mine = colonized.has(p.id);
           const sv = others.get(p.id);
           if (sv) {
-            items.push({ text: `◈ ${sv.name}`, pos: p.pos, cls: 'others', w: 4, color: sv.color });
+            items.push({ text: `◈ ${sv.name}`, pos: p.pos, cls: 'others', w: 4, color: sv.color, pick: p.id });
             continue;
           }
           if (burning(p.id)) {
-            items.push({ text: `✦ ${s.name}`, pos: p.pos, cls: 'beacon', w: 5 });
+            items.push({ text: `✦ ${s.name}`, pos: p.pos, cls: 'beacon', w: 5, pick: p.id });
             continue;
           }
-          items.push({ text: s.name, pos: p.pos, cls: mine ? 'mine' : this.galaxy.living.has(p.id) ? 'living' : state.civ.known[p.id] === 2 ? 'surveyed' : 'seen', w: mine ? 3 : this.galaxy.living.has(p.id) ? 2 : 1 });
+          items.push({ text: s.name, pos: p.pos, cls: mine ? 'mine' : this.galaxy.living.has(p.id) ? 'living' : state.civ.known[p.id] === 2 ? 'surveyed' : 'seen', w: mine ? 3 : this.galaxy.living.has(p.id) ? 2 : 1, pick: p.id });
         }
       }
     } else if (this.system.systemId) {
@@ -608,10 +646,10 @@ export class Engine {
         // a world another civilization lives on carries their name, in their colour
         const sv = residentsSeen(state, b);
         if (sv && sv.contact) {
-          items.push({ text: `${name} · ◈ ${sv.name}`, pos: p.pos.clone().add(lift), cls: 'others', w: 3, color: sv.color });
+          items.push({ text: `${name} · ◈ ${sv.name}`, pos: p.pos.clone().add(lift), cls: 'others', w: 3, color: sv.color, pick: p.id });
           continue;
         }
-        items.push({ text: name, pos: p.pos.clone().add(lift), cls: b.colonyId ? 'mine' : 'body', w: 2 });
+        items.push({ text: name, pos: p.pos.clone().add(lift), cls: b.colonyId ? 'mine' : 'body', w: 2, pick: p.id });
       }
     }
     let i = 0;
@@ -628,6 +666,7 @@ export class Engine {
       placed.push({ x, y });
       const l = this.label(i++);
       l.used = true;
+      l.pick = it.pick;
       if (l.el.textContent !== it.text) l.el.textContent = it.text;
       l.el.className = `map-label ${it.cls}`;
       l.el.style.color = it.color ?? '';

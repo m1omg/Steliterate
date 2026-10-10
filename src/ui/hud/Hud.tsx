@@ -8,7 +8,7 @@ import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, modal, notify, openBuildFor, rev, selection, setHudPrefs, toggleOrbits, uiZoom, view } from '../store';
+import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, isPhone, modal, notify, openBuildFor, phoneMore, rev, selection, setHudPrefs, toggleOrbits, uiZoom, view } from '../store';
 import { goToColony, goToFleet } from '../screens/Lists';
 import { isIdleFleet } from '../../game/sim/fleets';
 import { flareClock, flareStop, paceMatters, starClock, turnsUntilYears } from '../../game/sim/flare';
@@ -22,15 +22,39 @@ import { Tutorial } from './Tutorial';
 import { sfx } from '../../audio/sfx';
 import { pressable } from '../a11y';
 import { uiFactor } from '../Tip';
-import { useLayoutEffect, useRef } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { calendarEra } from '../../game/fate';
 
 export function Hud({ s }: { s: GameState }) {
   void rev.value;
   const p = project(s);
+  // where the top bar ends (in the interface's own pixels): on a phone the messages, the map
+  // banner, the prompts and the top bar's details hang from it (styles.css: --hud-end)
+  // (watched for size: the turn line's details open and close without the rest redrawing)
+  useLayoutEffect(() => {
+    const place = () => {
+      const root = document.documentElement.style;
+      // (the resources hang under the top bar, which a phone's turn line makes taller)
+      const c = document.querySelector('.chrono')?.getBoundingClientRect();
+      if (c) root.setProperty('--chrono-end', `${Math.round(c.bottom / uiFactor())}px`);
+      const r = document.querySelector('.resources')?.getBoundingClientRect();
+      if (r) root.setProperty('--hud-end', `${Math.round(r.bottom / uiFactor())}px`);
+    };
+    place();
+    const watch = typeof ResizeObserver === 'function' ? new ResizeObserver(place) : null;
+    for (const sel of ['.chrono', '.resources']) {
+      const el = document.querySelector(sel);
+      if (el) watch?.observe(el);
+    }
+    window.addEventListener('resize', place);
+    return () => {
+      watch?.disconnect();
+      window.removeEventListener('resize', place);
+    };
+  }, []);
   return (
     <>
-      <Chronometer s={s} />
+      <Chronometer s={s} nextYears={p.turnYears} />
       <Resources s={s} p={p} />
       <Rail s={s} />
       <BottomLeft s={s} />
@@ -43,10 +67,10 @@ export function Hud({ s }: { s: GameState }) {
   );
 }
 
-function RailBtn({ icon, label, short, wide, onClick, badge, on }: { icon: IconName; label: string; short: string; wide?: string; onClick: () => void; badge?: number; on?: boolean }) {
+function RailBtn({ icon, label, short, wide, onClick, badge, on, cls }: { icon: IconName; label: string; short: string; wide?: string; onClick: () => void; badge?: number; on?: boolean; cls?: string }) {
   return (
     <button
-      class={`btn iconbtn ${on ? 'on' : ''}`}
+      class={`btn iconbtn ${on ? 'on' : ''} ${cls ?? ''}`}
       data-tip={label}
       aria-label={label}
       onClick={() => {
@@ -77,7 +101,7 @@ function Rail({ s }: { s: GameState }) {
       const rail = ref.current;
       if (!rail) return;
       const below = document.querySelector('.bottom-left');
-      if (window.innerWidth <= 760 || !below || document.documentElement.classList.contains('lv')) {
+      if (isPhone() || !below || document.documentElement.classList.contains('lv')) {
         rail.style.maxHeight = '';
         return;
       }
@@ -100,8 +124,9 @@ function Rail({ s }: { s: GameState }) {
       <RailBtn icon="doctrines" label="Charters: the book of laws" short="Laws" wide="Charters" on={m === 'charters'} onClick={() => (modal.value = { kind: 'charters' })} />
       <RailBtn icon="diplomacy" label="Signals: the other minds" short="Signals" on={m === 'signals'} badge={unanswered} onClick={() => (modal.value = { kind: 'signals' })} />
       <RailBtn icon="log" label="The Record" short="Record" on={m === 'log'} onClick={() => (modal.value = { kind: 'log' })} />
-      <RailBtn icon="info" label="Codex: how to play, and how the universe ends" short="Codex" on={m === 'codex'} onClick={() => (modal.value = { kind: 'codex' })} />
-      <RailBtn icon="save" label="Save and load" short="Save" wide="Save / load" on={m === 'save'} onClick={() => (modal.value = { kind: 'save' })} />
+      {/* (phones: Codex and Save through Menu, to leave the others room for their names) */}
+      <RailBtn icon="info" label="Codex: how to play, and how the universe ends" short="Codex" cls="rail-menu-only" on={m === 'codex'} onClick={() => (modal.value = { kind: 'codex' })} />
+      <RailBtn icon="save" label="Save and load" short="Save" wide="Save / load" cls="rail-menu-only" on={m === 'save'} onClick={() => (modal.value = { kind: 'save' })} />
       <RailBtn icon="settings" label="Menu: settings, save, main menu" short="Menu" on={m === 'settings'} onClick={() => (modal.value = { kind: 'settings' })} />
     </nav>
   );
@@ -114,8 +139,9 @@ function BottomLeft({ s }: { s: GameState }) {
   const shown = all.filter((f) => !s.flags[`fcd:${f.uid}`]).slice(0, 3);
   const hidden = all.length - all.filter((f) => !s.flags[`fcd:${f.uid}`]).length;
   const feed = s.log.slice(-7).reverse();
+  // (on a phone it is folded under the top bar until its turn line is tapped: styles.css)
   return (
-    <div class="bottom-left">
+    <div class={`bottom-left${phoneMore.value ? ' open' : ''}`}>
       <div class="bl-head panel">
         <button class={`btn ghost small ${ui.forecasts ? 'on' : ''}`} onClick={() => setHudPrefs({ forecasts: !ui.forecasts })} data-tip="Show or hide the forecasts">
           <Icon name="warning" /> Forecasts {all.length ? <span class="mono faint">{all.length}</span> : null}
@@ -201,6 +227,16 @@ const PACE_LABEL: Record<number, string> = { 3: 'Quick ×1000', 2: 'Quick ×100'
 
 function TurnBox({ s, p }: { s: GameState; p: Projection }) {
   void rev.value; // mutable game state: re-render on every change
+  const [paceMenu, setPaceMenu] = useState(false);
+  // the pace list folds at a touch anywhere else (the map, another button)
+  useEffect(() => {
+    if (!paceMenu) return;
+    const away = (e: PointerEvent) => {
+      if (!(e.target as Element | null)?.closest?.('.pace-menu, .pace-pick')) setPaceMenu(false);
+    };
+    window.addEventListener('pointerdown', away, true);
+    return () => window.removeEventListener('pointerdown', away, true);
+  }, [paceMenu]);
   const mods = computeMods(s);
   const civ = s.civ;
   const flare = flareClock(s);
@@ -221,9 +257,27 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
     if (calendarEra(s) === 'dark') return x > 0 ? 'Not in this age: a turn cannot be quickened further.' : 'Not in this age: a turn cannot be slowed further.';
     return `Not now: the turn would be the same as at ${PACE_LABEL[x > 0 ? x - 1 : x + 1]}.`;
   };
+  const paceTip = (x: number, open: boolean): string =>
+    !open
+      ? paceWhy(x)
+      : x > 0
+        ? `Quicken ×${Math.pow(10, x)}: shorter turns, more turns to act while a source lasts. Energy per turn drops ${Math.pow(10, x)}×; minds that cannot hurry idle.`
+        : x < 0
+          ? `Slow ×${Math.pow(10, -x)}: longer turns. ${Math.pow(10, -x)}× the energy per turn, but the universe moves on faster between your decisions.`
+          : 'The Tide: the natural pace of this age.';
   const todo = todoItems(s);
   const warnings = todo.map((t) => t.text);
   const eNet = p.energyIn - p.energyOut;
+  const longSleepBtn = () => hasTech(s, 'hibernation_protocols') && (
+    <button class="btn small" data-tip="Long Sleep: the next five turns end on their own, pausing whenever an event needs a decision; press Wake to stop early. We stay dormant for four of them and wake on the fifth, with output +30% for that turn." onClick={() => act((g) => longSleep(g, 5)) && doEndTurn()}>
+      Long Sleep ×5
+    </button>
+  );
+  const sleepBtn = () => (
+    <button class={`btn small ${civ.dormant ? 'on' : ''}`} data-tip="Dormancy: sleep through the coming turns. Upkeep falls to a tenth; nothing is built or learned; energy is still collected." onClick={() => act((g) => setDormant(g, !g.civ.dormant))}>
+      <Icon name={civ.dormant ? 'wake' : 'sleep'} /> {civ.dormant ? 'Wake' : 'Sleep'}
+    </button>
+  );
   return (
     <div class="turnbox">
       {todo.length > 0 && (
@@ -266,40 +320,60 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           {paces.map((x) => {
             const open = paceMatters(s, x);
             return (
-              <button
-                key={x}
-                class={`btn small pace-opt ${civ.pace === x ? 'primary' : ''} ${open ? '' : 'disabled'}`}
-                aria-disabled={!open}
-                data-tip={
-                  !open
-                    ? paceWhy(x)
-                    : x > 0
-                      ? `Quicken ×${Math.pow(10, x)}: shorter turns, more turns to act while a source lasts. Energy per turn drops ${Math.pow(10, x)}×; minds that cannot hurry idle.`
-                      : x < 0
-                        ? `Slow ×${Math.pow(10, -x)}: longer turns. ${Math.pow(10, -x)}× the energy per turn, but the universe moves on faster between your decisions.`
-                        : 'The Tide: the natural pace of this age.'
-                }
-                onClick={() => open && act((g) => setPace(g, x))}
-              >
+              <button key={x} class={`btn small pace-opt ${civ.pace === x ? 'primary' : ''} ${open ? '' : 'disabled'}`} aria-disabled={!open} data-tip={paceTip(x, open)} onClick={() => open && act((g) => setPace(g, x))}>
                 {PACE_LABEL[x] ?? `${x}`}
               </button>
             );
           })}
         </div>
-        <div class="row" style={{ marginTop: '6px' }}>
-          <button class={`btn small ${civ.dormant ? 'on' : ''}`} data-tip="Dormancy: sleep through the coming turns. Upkeep falls to a tenth; nothing is built or learned; energy is still collected." onClick={() => act((g) => setDormant(g, !g.civ.dormant))}>
-            <Icon name={civ.dormant ? 'wake' : 'sleep'} /> {civ.dormant ? 'Wake' : 'Sleep'}
-          </button>
-          {hasTech(s, 'hibernation_protocols') && (
-            <button class="btn small" data-tip="Long Sleep: the next five turns end on their own, pausing whenever an event needs a decision; press Wake to stop early. We stay dormant for four of them and wake on the fifth, with output +30% for that turn." onClick={() => act((g) => longSleep(g, 5)) && doEndTurn()}>
-              Long Sleep ×5
-            </button>
-          )}
+        <div class="row pace-sleep" style={{ marginTop: '6px' }}>
+          {sleepBtn()}
+          {longSleepBtn()}
           <span class={`mono grow ${eNet >= 0 ? 'good' : 'bad'}`} style={{ textAlign: 'right', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
             {signed(eNet)} energy
           </span>
         </div>
+        {/* phones: the pace as one button, its choices (each explained) in a list over the map */}
+        <div class="row pace-phone">
+          <button class={`btn small pace-pick ${paceMenu ? 'on' : ''}`} aria-expanded={paceMenu} onClick={() => { sfx('click'); setPaceMenu(!paceMenu); }}>
+            <span class="faint">Pace</span> {PACE_LABEL[civ.pace] ?? civ.pace} <Icon name={paceMenu ? 'minus' : 'plus'} />
+          </button>
+          {sleepBtn()}
+          <span class={`mono grow pp-net ${eNet >= 0 ? 'good' : 'bad'}`} style={{ textAlign: 'right', fontSize: '13px', whiteSpace: 'nowrap' }}>
+            {signed(eNet)}
+          </span>
+        </div>
       </div>
+      {/* (outside the pace panel, whose cut corners would clip it) */}
+      {paceMenu && (
+        <div class="pace-menu panel" role="dialog" aria-label="Pace">
+          <div class="row">
+            <span class="stencil grow">Pace</span>
+            <span class="mono faint" style={{ fontSize: '12.5px' }}>
+              next turn {isFinite(p.turnYears) ? formatYears(p.turnYears) : 'deep time'}
+            </span>
+          </div>
+          {paces.map((x) => {
+            const open = paceMatters(s, x);
+            return (
+              <button
+                key={x}
+                class={`btn small pm-opt ${civ.pace === x ? 'primary' : ''} ${open ? '' : 'disabled'}`}
+                aria-disabled={!open}
+                onClick={() => {
+                  if (!open) return;
+                  act((g) => setPace(g, x));
+                  setPaceMenu(false);
+                }}
+              >
+                <b>{PACE_LABEL[x] ?? `${x}`}</b>
+                <span class="pm-why">{paceTip(x, open)}</span>
+              </button>
+            );
+          })}
+          {hasTech(s, 'hibernation_protocols') && <div class="row">{longSleepBtn()}</div>}
+        </div>
+      )}
       <button class="btn primary endturn" disabled={busy.value || !!s.outcome} onClick={() => doEndTurn()} data-tip={warnings.length ? `Before you go: ${warnings.join(', ')}.` : 'End the turn.'}>
         <span>
           End Turn
@@ -326,8 +400,8 @@ function ViewSwitch({ s }: { s: GameState }) {
   const selSystem = sel ? (sel.kind === 'system' ? sel.id : sel.kind === 'body' ? s.bodies[sel.id]?.systemId : sel.kind === 'fleet' ? s.fleets[sel.id]?.at : null) : null;
   return (
     <div class="viewswitch panel">
-      <button class={`btn small ${view.value === 'galaxy' ? 'primary' : ''}`} onClick={() => { view.value = 'galaxy'; engine()?.showGalaxy(); }} data-tip="The Coalescence">
-        <Icon name="galaxy" /> Galaxy
+      <button class={`btn small ${view.value === 'galaxy' ? 'primary' : ''}`} aria-label="Galaxy" onClick={() => { view.value = 'galaxy'; engine()?.showGalaxy(); }} data-tip="The Coalescence">
+        <Icon name="galaxy" /> <span class="vs-label">Galaxy</span>
       </button>
       <button
         class={`btn small ${view.value === 'system' ? 'primary' : ''}`}
@@ -339,10 +413,11 @@ function ViewSwitch({ s }: { s: GameState }) {
           }
         }}
         data-tip="Look closer at the selected system (or double-click it)"
+        aria-label="System"
       >
-        <Icon name="system" /> System
+        <Icon name="system" /> <span class="vs-label">System</span>
       </button>
-      <button class="btn small ghost" onClick={home} data-tip="Back to your capital (H)">
+      <button class="btn small ghost" aria-label="Home" onClick={home} data-tip="Back to your capital (H)">
         <Icon name="colony" /> <span class="vs-label">Home</span>
       </button>
       <button
@@ -351,7 +426,7 @@ function ViewSwitch({ s }: { s: GameState }) {
         data-tip={`${VIEW_MODES[hudPrefs.value.viewMode].tip}\nClick (or V) for the next view: ${VIEW_MODES.map((m) => m.label).join(' → ')}.`}
         aria-label={`View: ${VIEW_MODES[hudPrefs.value.viewMode].label}`}
       >
-        <Icon name="survey" /> {VIEW_MODES[hudPrefs.value.viewMode].label}
+        <Icon name="survey" /> <span class="vs-label">{VIEW_MODES[hudPrefs.value.viewMode].label}</span>
       </button>
       {following.value?.kind === 'fleet' && s.fleets[following.value.id] && (
         <button class="btn small ghost on" onClick={() => { sfx('click'); engine()?.unfollow(); }} data-tip="The view follows this fleet. Click to let go." aria-label="Stop following">
@@ -361,7 +436,7 @@ function ViewSwitch({ s }: { s: GameState }) {
       {view.value === 'system' && (
         <>
           <button class={`btn small ghost ${hudPrefs.value.orbitsPaused ? 'on' : ''}`} onClick={() => { sfx('click'); toggleOrbits(); }} data-tip={hudPrefs.value.orbitsPaused ? 'Set the worlds moving again (P)' : 'Hold the worlds still in their orbits (P)'}>
-            <Icon name="clock" /> {hudPrefs.value.orbitsPaused ? 'Play' : 'Pause'}
+            <Icon name="clock" /> <span class="vs-label">{hudPrefs.value.orbitsPaused ? 'Play' : 'Pause'}</span>
           </button>
           <button class="btn small ghost" onClick={() => { sfx('click'); engine()?.frameSystem(); }} data-tip="See the whole system (lets go of a followed world)" aria-label="See the whole system">
             <Icon name="focus" /> <span class="vs-label">Whole system</span>

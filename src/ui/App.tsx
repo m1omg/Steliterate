@@ -13,7 +13,8 @@ import { FleetsModal, SystemsModal } from './screens/Lists';
 import { CrossingScreen, EraIntro, EventModal, LoreModal, OutcomeScreen, eventResult, loreView } from './screens/Story';
 import { TipLayer, uiFactor } from './Tip';
 import { Icon } from './Icon';
-import { dismissToast, engine, game, hoverStar, lvFolded, mapHover, modal, rev, screen, settings, targeting, toasts, uiZoom } from './store';
+import { dismissToast, engine, game, hoverStar, lvFolded, mapHover, modal, rev, screen, settings, targeting, toasts, touchInput, uiZoom } from './store';
+import { sendPicked } from './screens/Lists';
 import { SHIP_BY_ID } from '../game/data/ships';
 import { formatDistance } from '../game/eras';
 import { launchCost } from '../game/sim/fleets';
@@ -222,16 +223,25 @@ function TargetBanner({ s }: { s: GameState }) {
   const mods = computeMods(s);
   const ly = hov ? distLy(here, hov) : 0;
   const probe = f!.ships.some((x) => SHIP_BY_ID[x.cls]?.survey);
+  const touch = touchInput.value;
+  const chosen = hov && hov.id !== here.id;
   return (
     <div class="targeting panel" role="status">
       <div>
-        <b>{f!.name}</b>: click a star on the map to send it there{probe ? '; it surveys any star it has not charted' : ''}. Esc cancels.
+        <b>{f!.name}</b>:{' '}
+        {touch ? 'tap a star to see the trip, then tap it again or press Send' : 'click a star on the map to send it there'}
+        {probe ? '; it surveys any star it has not charted' : ''}.{touch ? '' : ' Esc cancels.'}
       </div>
-      {hov && hov.id !== here.id && (
+      {chosen && (
         <div class="mono target-est">
           {hov.name} · {formatDistance(ly)} · {tripLabel(s, ly, mods, true)} · {n0(launchCost(s, f!, ly, mods))} energy
           {s.civ.known[hov.id] !== 2 ? ' · unsurveyed' : ''}
         </div>
+      )}
+      {touch && chosen && (
+        <button class="btn small primary" onClick={() => sendPicked(hov.id)}>
+          <Icon name="move" /> Send
+        </button>
       )}
       <button class="btn small ghost" onClick={() => { targeting.value = null; hoverStar.value = null; }}>
         Cancel

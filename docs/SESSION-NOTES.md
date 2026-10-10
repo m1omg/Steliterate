@@ -25,10 +25,13 @@ account, starts with "Picking up" below.
   answer factual questions truthfully, using web search for up-to-date or uncertain facts;
   remind the user of the truth if asked to present incorrect information; double-check
   corrections.
-- **Environment:** plays mostly on PC (mouse), sometimes touch. Has a live playthrough with saves
-  in the browser and continues playing between changes, and during them ("I will be playing the
-  games while you do this … so please take care"): a deploy must not break an open game or a
-  save. Leave the preview server running.
+- **Environment:** plays mostly on PC (mouse), and on a phone too (Android, upright, about 625 CSS
+  px wide; 10 Oct: "No year turn info on mobile + selecting stars on map is frustrating AF as the
+  whole screen is covered by windows which need to be closed first"). Has a live playthrough with
+  saves in the browser and continues playing between changes, and during them ("I will be playing
+  the games while you do this … so please take care"): a deploy must not break an open game or a
+  save. Leave the preview server running (a cloud session's background commands now stop after a
+  time limit: start it again when needed).
 - **Music:** loves the 1991 Utopia (Amiga) version of Pachelbel's Canon by Barry Leitch; likes a
   slight bitcrush ("fits the dissonance of the game"); prefers dark ambient synthwave.
 - **Language:** the player is Slovak, as is the friend the magnifier mode is for. They write in
@@ -51,6 +54,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     builds it too, so leave it alone: a push of anything older than `main` would put that build
     live.
   - `claude/epic-wozniak-lyhulf` was this session's branch, and it is merged.
+  - 10 Oct, from the first account's session: the phone interface, on `claude/lucid-newton-v2`
+    (started from `main` at `83f498e`), live by a PR into `main` like the others (CHANGELOG: "A
+    phone interface that leaves the map usable").
   - The claude.ai artifact has not been updated since 28 Sep, as it belongs to the organization
     the game was first built in. GitHub Pages is the live build.
 - **Before the first session on the other account** (the player's part):
@@ -86,8 +92,22 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   comparing runs game for game).
 - **Open threads, likeliest first:**
   1. **A Slovak translation of our own** ("slovak translation would be best, friend is slovak
-     like myself just using a cz translation tool", its typing tidied). Not started; plan it
-     with the player. It needs:
+     like myself just using a cz translation tool", its typing tidied). Not started. Planned with
+     the player on 10 Oct, then put aside for the phone interface (done the same day). Decided:
+     - the game's terms are translated, from a glossary of about 100–150 terms (with their
+       cases) that the player approves before anything else;
+     - every batch is reviewed on a side-by-side English | Slovak sheet before it goes live, with
+       the spoiler parts (the Lattice, the stranger minds, the Black Hole Age and later, the
+       endings) folded behind a warning for the friend to review, not the player; no playable
+       preview;
+     - it goes live all at once, when everything is translated and reviewed;
+     - numbers in Slovak style (1,5 · 12 400), powers of ten as they are.
+     The plan, to present again when it starts: a `t` tag around each English text (the English
+     key unchanged, so English output stays byte for byte; a Slovak catalogue of strings or
+     functions for plurals and cases), a language setting (English by default; `?lang=sk`), text
+     already in a save kept in the language it was written in, and checks that English and the
+     rules do not change (a text corpus, 900 games game for game, 300 games in Slovak ending as
+     in English). About 40,000 words. It needs:
      - every string of the interface, the Manual, the Codex and the events in a table per
        language, with a language setting;
      - the game's own terms kept consistent;

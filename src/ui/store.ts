@@ -182,6 +182,8 @@ export interface HudPrefs {
   eventPivot: boolean;
   /** 0 natural light, 1 enhanced, 2 thermal. */
   viewMode: number;
+  /** On a phone: the selection's sheet as last set with its handle (0 small, 1 half, 2 full). */
+  sheet?: 0 | 1 | 2;
 }
 function loadHudPrefs(): HudPrefs {
   const d: HudPrefs = { forecasts: true, feed: true, orbitsPaused: false, eventPivot: true, viewMode: 0 };
@@ -223,6 +225,27 @@ export function setViewMode(m: number) {
 
 /** The magnifier mode's column folded away, to see the whole map (M). */
 export const lvFolded = signal(false);
+
+// ---- phones (styles.css: the phone-width and sideways blocks)
+
+/** The phone layouts: narrow, or short and held sideways. The same test as the stylesheet's. */
+const PHONE_QUERY = '(max-width: 760px), (max-height: 500px)';
+const phoneMql = typeof matchMedia === 'function' ? matchMedia(PHONE_QUERY) : null;
+/** A phone layout is in use (never in the magnifier mode, which has its own column). */
+export const phone = signal(!!phoneMql?.matches);
+phoneMql?.addEventListener?.('change', () => (phone.value = phoneMql.matches));
+export const isPhone = () => phone.value && !settings.value.lowVision;
+/**
+ * The selection's sheet on a phone: 0 small (the map keeps most of the screen), 1 half, 2 full.
+ * What is picked on the map opens it small; anything else at the size last chosen with its handle.
+ */
+export const sheetSize = signal<0 | 1 | 2>(hudPrefs.value.sheet ?? 1);
+/** The selection just made on the map (its kind:id), for the sheet to open small. */
+export const sheetHint: { mapKey: string | null } = { mapKey: null };
+/** The top bar's details on a phone: the timeline, the forecasts and the latest of the Record. */
+export const phoneMore = signal(false);
+/** What the player last touched the screen with: a finger (or pen) or a mouse. */
+export const touchInput = signal(false);
 /** The magnifier mode: what is under the pointer on the map, named in large type beside it. */
 export const mapHover = signal<{ text: string; x: number; y: number } | null>(null);
 

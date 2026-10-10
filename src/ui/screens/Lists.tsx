@@ -21,7 +21,7 @@ import { THREADS } from '../../game/types';
 import { kelvin, n1 } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, SWARM_TIP } from '../labels';
-import { act, engine, modal, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
+import { act, engine, game, hoverStar, modal, notify, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
 import { pressable } from '../a11y';
@@ -59,6 +59,20 @@ export function pickOnMap(f: Fleet) {
   view.value = 'galaxy';
   // pull back far enough to see the stars around it
   if (f.at) engine()?.showGalaxy(f.at, 70);
+}
+
+/** Send the fleet being given a destination on the map to this star (the map click, or the banner's Send). */
+export function sendPicked(dest: string): boolean {
+  const t = targeting.value;
+  if (!t) return false;
+  targeting.value = null;
+  hoverStar.value = null;
+  const f = game.value?.fleets[t.fleetId];
+  if (!act((g) => orderFleet(g, t.fleetId, dest, t.order))) return false;
+  sfx('select');
+  const g = game.value;
+  if (g && f?.to) notify(`${f.name} sets out for ${g.systems[dest].name}: ${tripLabel(g, f.distance, computeMods(g), true)}.`, 'info');
+  return true;
 }
 
 /** Swing the view round to a system: close up on the galaxy map, or (inside) into the system itself. */

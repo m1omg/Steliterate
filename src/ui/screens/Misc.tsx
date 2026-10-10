@@ -125,6 +125,10 @@ export function SettingsModal() {
             <button class="btn" onClick={() => (modal.value = { kind: 'save' })}>
               Save slots, load, export…
             </button>
+            {/* (on a phone the rail leaves the Codex out, for room: it is here) */}
+            <button class="btn" onClick={() => (modal.value = { kind: 'codex' })}>
+              <Icon name="info" /> Codex
+            </button>
             <button class="btn ghost" onClick={() => quitToMenu(g)}>
               Main menu
             </button>

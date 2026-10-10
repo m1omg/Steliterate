@@ -20,6 +20,10 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
 - **Pace**: quicken for more decisions while a short-lived source burns; slow down for more
   energy per turn. Slowing only pays for minds that can slow themselves (Echoes, Coldminds).
 - **Sleep / Long Sleep**: dormancy cuts upkeep to a tenth while energy still comes in.
+- **On a phone**: the line under the top bar gives the turn and how long this turn and the next
+  are (tap it for the timeline, the forecasts and the Record); what you tap on the map opens in a
+  sheet that starts small, with a handle for half or the whole screen, and touching the map lowers
+  it; press and hold a button to read what it does; Choose on map shows the trip before Send.
 - Click a star to select it. To look inside: double-click it, tap it again on a touchscreen,
   press **Look inside**, or just zoom in on it (zooming heads toward the pointer); zoom back
   out past the edge of a system to return to the galaxy. Click a planet to select it and

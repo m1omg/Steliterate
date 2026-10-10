@@ -39,12 +39,30 @@ async function waitForServer() {
   throw new Error(`no server at ${url}`);
 }
 
+/**
+ * The game's Google Fonts, served from a local copy when STEL_FONTS names one (a folder with the
+ * stylesheet as fonts.css and its files under files/, each named by its path on fonts.gstatic.com
+ * with / as _): where the browser cannot reach Google, text is then measured in the real faces.
+ */
+async function routeFonts(ctx) {
+  const dir = process.env.STEL_FONTS;
+  if (!dir || !fs.existsSync(path.join(dir, 'fonts.css'))) return;
+  await ctx.route('https://fonts.googleapis.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/css', body: fs.readFileSync(path.join(dir, 'fonts.css'), 'utf8') }));
+  await ctx.route('https://fonts.gstatic.com/**', (r) => {
+    const f = path.join(dir, 'files', r.request().url().replace('https://fonts.gstatic.com/', '').replace(/\//g, '_'));
+    if (fs.existsSync(f)) r.fulfill({ status: 200, contentType: 'font/woff2', body: fs.readFileSync(f) });
+    else r.abort();
+  });
+}
+
 /** A page with console errors collected (they fail the check), opened on the game. */
-async function newPage(browser, errors, width = 1400, height = 900) {
-  const page = await browser.newPage({ viewport: { width, height } });
+async function newPage(browser, errors, width = 1400, height = 900, touch = false, query = '') {
+  const ctx = await browser.newContext({ viewport: { width, height }, ...(touch ? { isMobile: true, hasTouch: true } : {}) });
+  await routeFonts(ctx);
+  const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => m.type() === 'error' && !IGNORE.test(m.text()) && errors.push(m.text()));
-  await page.goto(url, { timeout: 90000 });
+  await page.goto(url + query, { timeout: 90000 });
   await page.waitForTimeout(1500);
   return page;
 }
@@ -72,6 +90,8 @@ async function start(name, { width = 1400, height = 900, seed } = {}) {
     shot: (file, opts = {}) => page.screenshot({ path: path.join(out, file), ...opts }),
     /** Another page in the same browser (say, at phone size), its errors counted too. */
     another: (w, h) => newPage(browser, errors, w, h),
+    /** A phone: a page with a touchscreen at this size (and the address's query, such as ?lowvision). */
+    phone: (w, h, query = '') => newPage(browser, errors, w, h, true, query),
   };
 }
 

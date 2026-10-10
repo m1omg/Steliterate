@@ -99,7 +99,20 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `browser/*.cjs`: interface checks against a served build, each opening its own page through
     `start()` in `tools/checks/lib.cjs` (which waits for the server; any console error fails the
     check) and ending with `finish()`. Screenshots go to `playtest-shots/checks/<name>/`, or the
-    folder given as the second argument.
+    folder given as the second argument. `ck.phone(w, h, query)` opens a page with a touchscreen
+    (`mobile` uses it; CDP `Input.dispatchTouchEvent` for long presses and drags).
+  - **The game's fonts in this container:** the headless browser cannot reach Google Fonts
+    (the proxy's certificate), so text is measured in fallback faces, which are wider. With
+    `STEL_FONTS=<dir>`, `lib.cjs` serves them from a local copy. Make one with curl, which checks
+    the certificate properly (never turn off TLS checks in the browser instead):
+    ```sh
+    D=$SP/fonts; mkdir -p $D/files
+    URL=$(grep -o 'https://fonts.googleapis.com/css2[^"]*' index.html | sed 's/&amp;/\&/g')
+    curl -sS -A "Mozilla/5.0 Chrome/130.0" "$URL" -o $D/fonts.css
+    grep -o 'https://fonts.gstatic.com/[^)]*' $D/fonts.css | sort -u | while read u; do
+      curl -sS "$u" -o "$D/files/$(echo "$u" | sed 's#https://fonts.gstatic.com/##; s#/#_#g')"; done
+    ```
+    `mobile` measures the rail's names only when the fonts are there (it says so otherwise).
   - `run.mjs unit|browser|all [url] [out] [names…]` runs them (unit checks several at a time,
     browser checks one at a time) and prints a summary; `npm run check` and
     `npm run check:browser` call it. Name some to run only those:
@@ -266,6 +279,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **The stop hook** of the cloud sessions (`~/.claude/stop-hook-git-check.sh`) won't let a turn
   end with uncommitted changes, untracked files or unpushed commits. Commit and push before
   ending, and keep scratch files out of the clone.
+- **A slow renderer delays redraws too** (10 Oct): a component's re-render waits for the next
+  frame, and under the software renderer a frame can take a second or more, so a camera slide
+  that follows a redraw (the Drawer's `place()`) can start seconds after the click that caused it.
+  A check that taps the map waits for the view to stop moving first (`mobile`: `settled`,
+  `unshifted`).
+- **Hidden by CSS is not re-measured:** a panel hidden only by a class elsewhere (`html.picking
+  .drawer`) does not re-run its own layout effect; read the signal behind the class in the
+  component (`void targeting.value` in the Drawer) so it redraws and measures again.
 - **Frame-rate bound checks:** under load, the software renderer can fall below 10 frames a
   second. The frame time is capped at 0.1 s (`engine.ts`), so easing takes longer in real time,
   as it would on a slow machine. A check that waits on something eased (a camera move, a fade)
@@ -856,6 +877,39 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `mapHover` (main.tsx `onHover` → `MapHover` in `App.tsx`): the name under the pointer.
     `AfarList` (`Lists.tsx`, tab `'afar'`): the stars seen from afar; `sendFromSystems` opens a
     probe's window on it in the mode.
+
+- **Phones (10 Oct; the player plays on a phone too):**
+  - Which layout: `PHONE_QUERY` in `store.ts`, `(max-width: 760px), (max-height: 500px)`, the
+    same as the stylesheet's; `phone` (a signal) and `isPhone()` (never in the magnifier mode).
+    The CSS is the "phones" block of `styles.css`, before the magnifier's: one part for both
+    (`@media (max-width: 760px), (max-height: 500px)`), one upright (`max-width: 760px`), one held
+    sideways (`max-height: 500px and min-width: 761px`), every rule under `html:not(.lv)`. The older
+    phone-width rules above it still apply where it does not override them.
+  - The top bar: `.chrono-line` (`Chronometer.tsx`, a button, hidden on a PC and in the magnifier
+    mode) toggles `phoneMore`: `.chrono.more` shows the ruler (without its age names) and
+    `.bottom-left.open` hangs under the top bar. `--chrono-end` (the top bar's foot, set by the
+    Chronometer on each render and by `Hud.tsx` on resize) places the resources; `--hud-end` (the
+    resources' foot, `Hud.tsx`, watched with a ResizeObserver) places the messages, the map banner,
+    the prompts, the guide, the to-do chips, the view switch and the details.
+  - The sheet: `Drawer.tsx` gives `.drawer` the class `s0`/`s1`/`s2` from `sheetSize`; the
+    max-heights are shares of `--sheet-room` (0.36, 0.62, 1). `SheetHandle`: a tap steps up (full
+    → small), a drag sets `max-height` live and settles on the nearest size; `setHudPrefs({ sheet })`
+    keeps it. A pick on the map sets `sheetHint.mapKey` (`main.tsx` `onPick`), and the Drawer's
+    effect on a new selection opens it small for that key, else at `hudPrefs.sheet` (default half).
+    `onGesture` (the camera rig: once per drag, pinch or wheel) lowers it to small and folds the
+    details. The Drawer's `place()` sets `setFocusY` upright and `setSheetFocusX` sideways (the
+    engine uses the magnifier's `focusX` first).
+  - Touch: `Tip.tsx` ignores a touch `pointermove`; a 500 ms press shows the tip and swallows the
+    one click (and context menu) it would make, until the next pointerdown. `engine.pickAt(x, y,
+    pointerType)`: touch reach 28 / 36 px, and `labelAt` (a map name's box, from `Label.pick`).
+    `engine.pickFilter` (set in `main.tsx` while `targeting`): only stars other than the fleet's.
+    The camera's tap slop is 12 px for a finger (`tapSlop`). `touchInput` (the last pointerdown)
+    picks the map banner's words; on touch the first tap sets `hoverStar` and the banner offers
+    Send (`sendPicked` in `Lists.tsx`, also the mouse's click).
+  - Elsewhere: `ShipPrompt` returns nothing on a phone; the rail's `rail-menu-only` buttons (Codex,
+    Save) hide there (Menu has both); the pace's `.pace-phone` row and `.pace-menu` list (outside the
+    `.pace` panel: a panel's chamfered clip-path cuts off whatever pokes out of it); the guide's
+    steps can carry `phone: { target, text }`.
 
 ## Music tooling
 

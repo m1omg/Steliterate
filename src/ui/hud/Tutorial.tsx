@@ -4,7 +4,7 @@ import { colonies } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
 import { uiFactor } from '../Tip';
 import { Icon } from '../Icon';
-import { act, modal, rev, selection } from '../store';
+import { act, isPhone, modal, rev, selection } from '../store';
 import { sfx } from '../../audio/sfx';
 import { useFocusPrompt } from '../a11y';
 
@@ -16,6 +16,8 @@ interface Step {
   text: string;
   /** CSS selector of the element to point at. */
   target?: string;
+  /** On a phone, where the layout puts it elsewhere (store.ts isPhone): the target and the words for it. */
+  phone?: { target?: string; text: string };
   /** When this returns true the guide moves on by itself. */
   done?: (s: GameState) => boolean;
 }
@@ -72,6 +74,7 @@ const STEPS: Step[] = [
     title: 'Forecasts',
     text: 'Bottom left: what is coming, and roughly when. Click a forecast to find it on the map, or close it with ×. It stays pinned on the Chronometer.',
     target: '.bottom-left',
+    phone: { target: '.chrono-line', text: 'The turn line under the top bar: the turn, how long this one was and the next will be. Tap it for what is coming and roughly when, the timeline and the latest of the Record. Tap a forecast to find it on the map, or close it with ×.' },
   },
   {
     title: 'Growing',
@@ -82,6 +85,7 @@ const STEPS: Step[] = [
     title: 'Pace and sleep',
     text: 'Bottom right: Pace makes the coming turns shorter (more decisions, less energy each) or longer (more energy, but the universe moves on faster). Sleep puts everyone under: upkeep falls to a tenth while energy still comes in.',
     target: '.pace',
+    phone: { target: '.pace-phone', text: 'Bottom left: Pace makes the coming turns shorter (more decisions, less energy each) or longer (more energy, but the universe moves on faster); tap it for the choices, each explained. Sleep puts everyone under: upkeep falls to a tenth while energy still comes in.' },
   },
   {
     title: 'You are on your own',
@@ -104,7 +108,8 @@ export function Tutorial({ s }: { s: GameState }) {
   void rev.value;
   void selection.value;
   const step = s.flags.tut;
-  const cur = step !== undefined ? STEPS[step] : undefined;
+  const base = step !== undefined ? STEPS[step] : undefined;
+  const cur = base?.phone && isPhone() ? { ...base, target: base.phone.target ?? base.target, text: base.phone.text } : base;
   const ring = useRef<HTMLDivElement>(null);
   // the magnifier mode: each step takes the focus as it shows
   const head = useRef<HTMLDivElement>(null);
