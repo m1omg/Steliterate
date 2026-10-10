@@ -1383,19 +1383,21 @@ The player, on a phone: "No year turn info on mobile + selecting stars on map is
 as the whole screen is covered by windows which need to be closed first." The phone width hid the
 turn, its span and the forecasts; the selection's panel covered half the screen, the idle-ship
 card popped up over the map, and a tap left tooltips standing. Held sideways, a phone got the PC
-layout, which overlapped everything. Interface only: no rules, saves or seeds touched.
+layout, which overlapped everything (the sideways layout is for touchscreens only: a short window
+on a PC keeps the PC layout). Interface only: no rules, saves or seeds touched.
 
 - **The turn on the top bar.** A line under the era's name: "Turn 63 · this turn 2.5 Tyr · next
   3.1 Tyr", with the number of forecasts. A tap opens the timeline across the ages, the forecasts
   (closable, as on a PC) and the latest of the Record under the top bar. The era's numeral line
   wraps instead of being cut.
 - **The selection in a sheet.** Upright, the panel is a sheet over the bottom of the screen with a
-  handle and three sizes (about a third of the room, under two thirds, all of it). What is tapped
-  on the map opens it small, so the map stays in view; anything chosen from a list or a button
-  opens it at the size last set with its handle (kept between sessions). Touching the map (turning,
-  panning, zooming) lowers it to small; tapping empty map closes it, as before. The map's centre
-  slides into what the sheet leaves, as before, now for every size. Held sideways, the panel is a
-  column on the right and the map's centre moves into the space to its left.
+  handle and three sizes (about a third of the room; about three quarters, as tall as the old panel;
+  all of it). What is tapped on the map opens it small, so the map stays in view; anything chosen
+  from a list or a button opens it at the size last set with its handle (kept between sessions).
+  Touching the map (turning, panning, zooming) lowers it to small; tapping empty map closes it, as
+  before. The map's centre slides into what the sheet leaves, as before, now for every size. Held
+  sideways, the panel is a column on the right and the map's centre moves into the space to its
+  left.
 - **No card over the map.** The idle-ship card does not pop up on a phone: the "ships idle" chip
   opens the ship's panel, with the same orders. The to-do chips sit at the top left of the map,
   under the top bar, where the sheet does not reach (only the chips take touches), and step aside

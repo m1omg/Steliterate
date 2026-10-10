@@ -162,7 +162,7 @@ function SheetHandle({ panel, size }: { panel: { current: HTMLElement | null }; 
   const heights = (el: HTMLElement): number[] => {
     const top = document.querySelector('.resources')?.getBoundingClientRect().bottom ?? 0;
     const room = (el.getBoundingClientRect().bottom - top - 8) / uiFactor();
-    return [0.36, 0.62, 1].map((k) => k * room);
+    return [0.36, 0.72, 1].map((k) => k * room);
   };
   return (
     <button

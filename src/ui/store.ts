@@ -228,8 +228,11 @@ export const lvFolded = signal(false);
 
 // ---- phones (styles.css: the phone-width and sideways blocks)
 
-/** The phone layouts: narrow, or short and held sideways. The same test as the stylesheet's. */
-const PHONE_QUERY = '(max-width: 760px), (max-height: 500px)';
+/**
+ * The phone layouts: narrow, or short and held sideways on a touchscreen (a short window on a PC,
+ * say at 200% zoom, keeps the PC layout). The same test as the stylesheet's.
+ */
+const PHONE_QUERY = '(max-width: 760px), (max-height: 500px) and (pointer: coarse)';
 const phoneMql = typeof matchMedia === 'function' ? matchMedia(PHONE_QUERY) : null;
 /** A phone layout is in use (never in the magnifier mode, which has its own column). */
 export const phone = signal(!!phoneMql?.matches);

@@ -879,11 +879,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     probe's window on it in the mode.
 
 - **Phones (10 Oct; the player plays on a phone too):**
-  - Which layout: `PHONE_QUERY` in `store.ts`, `(max-width: 760px), (max-height: 500px)`, the
-    same as the stylesheet's; `phone` (a signal) and `isPhone()` (never in the magnifier mode).
-    The CSS is the "phones" block of `styles.css`, before the magnifier's: one part for both
-    (`@media (max-width: 760px), (max-height: 500px)`), one upright (`max-width: 760px`), one held
-    sideways (`max-height: 500px and min-width: 761px`), every rule under `html:not(.lv)`. The older
+  - Which layout: `PHONE_QUERY` in `store.ts`, `(max-width: 760px), (max-height: 500px) and
+    (pointer: coarse)`, the same as the stylesheet's (a short window on a PC, such as 960×460 at
+    200% zoom, keeps the PC layout: the `a11y` check); `phone` (a signal) and `isPhone()` (never in
+    the magnifier mode). The CSS is the "phones" block of `styles.css`, before the magnifier's: one
+    part for both, one upright (`max-width: 760px`), one held sideways (`max-height: 500px and
+    min-width: 761px and pointer: coarse`), every rule under `html:not(.lv)`. The older
     phone-width rules above it still apply where it does not override them.
   - The top bar: `.chrono-line` (`Chronometer.tsx`, a button, hidden on a PC and in the magnifier
     mode) toggles `phoneMore`: `.chrono.more` shows the ruler (without its age names) and
@@ -892,7 +893,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     resources' foot, `Hud.tsx`, watched with a ResizeObserver) places the messages, the map banner,
     the prompts, the guide, the to-do chips, the view switch and the details.
   - The sheet: `Drawer.tsx` gives `.drawer` the class `s0`/`s1`/`s2` from `sheetSize`; the
-    max-heights are shares of `--sheet-room` (0.36, 0.62, 1). `SheetHandle`: a tap steps up (full
+    max-heights are shares of `--sheet-room` (0.36, 0.72, 1; the half is about the old panel's 46vh at 390×844, so a settlement's Build tab keeps its head). `SheetHandle`: a tap steps up (full
     → small), a drag sets `max-height` live and settles on the nearest size; `setHudPrefs({ sheet })`
     keeps it. A pick on the map sets `sheetHint.mapKey` (`main.tsx` `onPick`), and the Drawer's
     effect on a new selection opens it small for that key, else at `hudPrefs.sheet` (default half).

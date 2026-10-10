@@ -575,13 +575,13 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .map-label.others { font-weight: 600; letter-spacing: 0.06em; }
 
 /* ------------------------------------------------------------------ phones (store.ts: isPhone)
-   Narrow screens (portrait) and short ones (held sideways). The map is what a phone shows: the
+   Narrow screens (portrait) and short touchscreens (held sideways). The map is what a phone shows: the
    panels leave it room, say the turn and its span on the top bar, and get out of the way when the
    map is touched. Never in the magnifier mode, which has its own column. */
 
 .chrono-line, .sheet-handle, .pace-phone { display: none; }
 
-@media (max-width: 760px), (max-height: 500px) {
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
   /* a finger's long press shows a tip (Tip.tsx), not the browser's text selection or menu */
   html:not(.lv) .ui-root { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   html:not(.lv) .ui-root input, html:not(.lv) .ui-root textarea, html:not(.lv) .ui-root select { -webkit-user-select: text; user-select: text; }
@@ -640,7 +640,7 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
   html:not(.lv) .rail-label { font-size: 9.5px; }
   html:not(.lv) .rail .iconbtn { padding: 0; }
 }
-@media (max-width: 760px), (max-height: 500px) {
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
 
   /* the turn box: the pace as one button (its choices in a list, each explained), Sleep, End Turn */
   html:not(.lv) .turnbox { left: 8px; right: 8px; width: auto; flex-direction: row; align-items: stretch; }
@@ -685,7 +685,7 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
     left: 8px; right: 8px; width: auto; top: auto; bottom: calc(130px + env(safe-area-inset-bottom, 0px));
   }
   html:not(.lv) .drawer.s0 { max-height: calc(var(--sheet-room) * 0.36); }
-  html:not(.lv) .drawer.s1 { max-height: calc(var(--sheet-room) * 0.62); }
+  html:not(.lv) .drawer.s1 { max-height: calc(var(--sheet-room) * 0.72); }
   html:not(.lv) .drawer.s2 { max-height: var(--sheet-room); }
   html:not(.lv) .sheet-handle { display: flex; flex: none; align-items: center; justify-content: center; width: 100%; height: 20px; margin: 0; padding: 0; border: 0; background: transparent; cursor: grab; touch-action: none; }
   html:not(.lv) .sheet-handle i { display: block; width: 44px; height: 4px; border-radius: 2px; background: var(--line-3); }
@@ -703,7 +703,7 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 
 /* held sideways (short and wide): one line of top bar, the selection beside the map on the right,
    the rail and the turn box along the bottom */
-@media (max-height: 500px) and (min-width: 761px) {
+@media (max-height: 500px) and (min-width: 761px) and (pointer: coarse) {
   html:not(.lv) .chrono { top: calc(4px + env(safe-area-inset-top, 0px)); grid-template-columns: auto minmax(0, 1fr) auto; }
   html:not(.lv) .chrono-era { order: 1; min-width: 0; padding: 4px 12px; justify-content: center; }
   html:not(.lv) .chrono-era .num, html:not(.lv) .chrono-era .sci, html:not(.lv) .chrono-time .span { display: none; }
