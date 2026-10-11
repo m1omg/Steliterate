@@ -48,11 +48,14 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - The game is as of PR m1omg/Steliterate#10 (merge commit `7c334ec`, 11 Oct, no "???" in the
-    research grid once the fate of matter is known; live script `index-Bdg_SSe1.js`), with these
-    notes merged after it. Before it, PR m1omg/Steliterate#8 (`8fbfa89`, what a Thread makes
-    spelled out), PR m1omg/Steliterate#6 (`4268a82`, the phone interface) and PR
-    m1omg/Steliterate#4 (`d9bd6e5`, the magnifier mode).
+  - The game is as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
+    empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
+    Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
+    first account's session, which stopped mid-validation; finished and merged from this one),
+    PR m1omg/Steliterate#10 (`7c334ec`, no "???" in the research grid once the fate of matter is
+    known), PR m1omg/Steliterate#8 (`8fbfa89`, what a Thread makes spelled out), PR
+    m1omg/Steliterate#6 (`4268a82`, the phone interface) and PR m1omg/Steliterate#4 (`d9bd6e5`,
+    the magnifier mode).
   - `claude/lucid-newton-30cbpk`, the old live branch, stays at `fc6c59a`, behind `main`. Pages
     builds it too, so leave it alone: a push of anything older than `main` would put that build
     live.
@@ -61,6 +64,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     (started from `main` at `83f498e`), merged by PR m1omg/Steliterate#6 (CHANGELOG: "A phone
     interface that leaves the map usable"). That session's work branch; a follow-up batch starts
     it again from `main`.
+  - 11 Oct: the player ran two sessions at once, the swarms on `claude/lucid-newton-v2` and the
+    halo on `claude/epic-wozniak-lyhulf`. The first stopped mid-validation ("bit the dust
+    mid-change"); the second finished its checks and merged both, the swarms first. Before
+    starting, fetch every branch and look for pushed work no PR has taken in yet.
   - The claude.ai artifact has not been updated since 28 Sep, as it belongs to the organization
     the game was first built in. GitHub Pages is the live build.
 - **Before the first session on the other account** (the player's part):
@@ -82,17 +89,18 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (10 Oct, `4268a82`):**
+- **The baseline, from the last validation (11 Oct, the swarms and the halo together, PR
+  m1omg/Steliterate#13):**
   - tsc and the build were clean;
-  - the playtest printed "ALL CHECKS PASSED" (30/144 Hz parity 3.2e-16);
-  - all 41 unit checks passed;
-  - savecompat passed on the 5 saves in `tools/saves/` (on 9 Oct also on the player's own
-    turn-77 save, uploaded in that session; it is theirs, and not in the repository);
-  - all 44 browser checks passed, measured in the game's real fonts (`STEL_FONTS`, DEV-NOTES),
-    the new `mobile` among them (87 steps);
-  - the harness: 148 of 300 standard competent games survive, 72 victories, a Degenerate Age of
-    71 turns, 300 games identical to `main` before it (`83f498e`) game for game; 900 games (9 Oct) 439 / 203; by
-    fate decay 167 / 450, stable 165 / 239, curvature 107 / 211.
+  - the playtest printed "ALL CHECKS PASSED" (30/144 Hz parity 2.05e-15);
+  - all 43 unit checks passed;
+  - savecompat passed on the 5 saves in `tools/saves/`, and on the player's own turn-134 save
+    (uploaded 11 Oct; theirs, not in the repository: shut the siphons, then Help, and it plays
+    to the end);
+  - all 47 browser checks passed, measured in the game's real fonts (`STEL_FONTS`, DEV-NOTES);
+  - the harness: 151 of 300 standard competent games survive, 69 victories, a Degenerate Age of
+    71 turns; 900 games 442 / 195 / 70; by fate decay 178 / 450, stable 167 / 239, curvature
+    97 / 211 (the swarms alone: 154 / 69 / 72; 443 / 191 / 70).
 
   A rules change compares with these (DEV-NOTES: Balance reference, and the helpers for
   comparing runs game for game).

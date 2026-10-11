@@ -8,8 +8,10 @@ into `main` on 8 Oct with a merge commit (`3e913f3`, every commit ID kept). Sinc
 goes live by a PR from the work branch into `main`, merged with a merge commit (PR
 m1omg/Steliterate#3, `0e08054`; PR m1omg/Steliterate#4, `d9bd6e5`, the magnifier mode; PR
 m1omg/Steliterate#6, `4268a82`, the phone interface; PR m1omg/Steliterate#8, `8fbfa89`, what a
-Thread makes in words; the latest game batch, PR m1omg/Steliterate#10, `7c334ec`, no "???" in
-the research grid once the fate of matter is known, from `claude/lucid-newton-v2`).
+Thread makes in words; PR m1omg/Steliterate#10, `7c334ec`, no "???" in the research grid once the
+fate of matter is known; PR m1omg/Steliterate#12, `d2c52b4`, swarms go for ships near them, both
+from `claude/lucid-newton-v2`; the latest game batch, PR m1omg/Steliterate#13, Halo Siphons can be
+shut, from `claude/epic-wozniak-lyhulf`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
