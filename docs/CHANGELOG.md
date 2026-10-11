@@ -1484,7 +1484,10 @@ were ships at a settlement it broke into. Chosen with them: both changes below.
   as a message at End turn, with Look to go to the ship, not only as a line in the Record.
 - **Saves.** Three optional fields (a part’s ship and its swarm, a log line’s fleet): saves load as
   before.
-- **Checks.** New unit check `hunt` and browser check `hunt`.
+- **Checks.** New unit check `hunt` and browser check `hunt`. The browser check `cooling` now
+  plays its game to η 17 rather than 16: with these rules seed 1000's game stopped at η 16.4, where
+  the first cold dwarf it found, a white dwarf born late from a red dwarf (0.09 M☉), honestly read
+  1.4 K, not the millikelvins the check expects (`main` reached η 17.3 and the same 578 mK star).
 - **Balance.** 154 of 300 survive (148 before), 69 victories, Degenerate Age 72 turns; 900 games
   443 / 191 / 70 (439 / 203 / 71 before), within the noise. By fate: decay 180 / 450, stable
   166 / 239, curvature 97 / 211. In 30 games a part goes after one of our ships 1.07 times a game,
