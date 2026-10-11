@@ -1362,6 +1362,8 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   const surveyor = f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey);
   const tender = f.ships.some((x) => SHIP_BY_ID[x.cls]?.tames);
   const tgt = targeting.value?.fleetId === f.id;
+  // part of a swarm sent after this ship
+  const hunter = Object.values(s.swarms).find((w) => w.prey === f.id);
   const known = here ? Object.values(s.systems).filter((x) => x.id !== here.id && !x.gone && (s.civ.known[x.id] ?? 0) > 0).map((x) => ({ sys: x, ly: distLy(here, x) })) : [];
   // collision stars first (all of them, in the Degenerate Age), then the nearest ten
   const nearby = [
@@ -1465,6 +1467,14 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         </div>
       </div>
       <div class="drawer-body scroll">
+        {hunter && (
+          <div class="warn" style={{ fontSize: '13.5px', marginBottom: '8px' }}>
+            <Icon name="warning" />{' '}
+            {hunter.systemId
+              ? 'Part of a swarm came here for this ship. It strikes each turn the ship stays; once the ship is gone, it goes back to its swarm.'
+              : `Part of the swarm at ${s.systems[hunter.from ?? '']?.name ?? 'a star nearby'} is coming for this ship. A ship under way is safe from it; once the ship is gone, it goes back to its swarm.`}
+          </div>
+        )}
         {!here && f.to && (
           <>
             <div class="bar neon" style={{ marginBottom: '6px' }}><i style={{ width: pct(f.distance > 0 ? f.traveled / f.distance : 1) }} /></div>
@@ -1666,6 +1676,11 @@ function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
         <h2>{sw.tamed ? 'Tamed Swarm' : 'The Hunger'}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
           <span class={`chip ${sw.tamed ? 'neon' : 'danger'}`}>{sw.tamed ? 'answers to us' : sw.awake ? 'awake' : 'dormant'}</span>
+          {sw.prey && s.fleets[sw.prey] && (
+            <span class="chip danger" data-tip="Part of a swarm sent after one of our ships: it strikes that ship wherever it finds it stopped, and once the ship is gone it goes back to its swarm.">
+              after {s.fleets[sw.prey].name}
+            </span>
+          )}
         </div>
       </div>
       <div class="drawer-body scroll">

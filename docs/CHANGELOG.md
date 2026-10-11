@@ -1452,6 +1452,50 @@ on a PC keeps the PC layout). Interface only: no rules, saves or seeds touched.
   are left out of the grid: they will never exist in this universe. Interface only.
 - New browser check `research-fate`.
 
+## Swarms go for ships near them; ships share a settlement's losses (11 Oct)
+
+The player: "swarm never really attacks my ship", with their ship at a star near a swarm. By the
+rules a swarm struck only ships stopped at the very star it was eating, where we had no
+settlement (70% of turns awake, 20% asleep), so a ship one star away was never touched; nor
+were ships at a settlement it broke into. Chosen with them: both changes below.
+
+- **Swarms hunt ships stopped nearby.** An awake swarm of size 2 or more notices the nearest of
+  our ships stopped at a star within 25 ly of it, where we have no settlement and no swarm sits,
+  and on 30% of turns (15% under the Blackout) sends part of itself after it (size 1 to 1.6,
+  taken from the swarm). We are told, naming the ship; the ship's panel says it is coming and what
+  it will do, the swarm's panel whom it is after, and the map shows it on its way (swarms cross
+  space at a twentieth of light speed, so it can take a few turns). Where it finds the ship
+  stopped it strikes, every turn the ship stays, by the same fight as any swarm (a Warden beats
+  it off; a probe rarely survives two strikes). A ship under way is safe from it. Once the ship
+  has moved on or is lost, the part goes back to its swarm and rejoins it, following it if it has
+  moved on. Not before the first swarm's own moment, nor under the Communion Charter. The reach
+  is 25 ly rather than the "about 20" offered: neighbouring stars are about 17 ly apart, and at 20
+  a quarter of swarms had no star in reach (5 of 60 at 25).
+- **Not on to our settlements.** As offered, a part whose ship was gone would have gone on to our
+  nearest settlement, as the first swarm's part does. That cost 18 to 30 of 300 harness games
+  (118 of 300 survived; 130 with the autoplayer bringing its idle probes home, where none is
+  hunted): a part of size 1 to 1.6 at an undefended outlying settlement strips a structure every
+  turn. Going back to its swarm keeps the threat to the ship.
+- **Ships share a settlement's losses.** When a swarm breaks through a settlement's defences, the
+  ships there are hurt too, 0.2 to 0.6 of the swarm's size each (before, they came through a lost
+  fight untouched, while a won fight scratched them). A fleet that loses ships, there or anywhere
+  a swarm fights it, says so.
+- **Messages.** A swarm going for one of our ships (coming for it, striking it, losing it) shows
+  as a message at End turn, with Look to go to the ship, not only as a line in the Record.
+- **Saves.** Three optional fields (a part’s ship and its swarm, a log line’s fleet): saves load as
+  before.
+- **Checks.** New unit check `hunt` and browser check `hunt`. The browser check `cooling` now
+  plays its game to η 17 rather than 16: with these rules seed 1000's game stopped at η 16.4, where
+  the first cold dwarf it found, a white dwarf born late from a red dwarf (0.09 M☉), honestly read
+  1.4 K, not the millikelvins the check expects (`main` reached η 17.3 and the same 578 mK star).
+- **Balance.** 154 of 300 survive (148 before), 69 victories, Degenerate Age 72 turns; 900 games
+  443 / 191 / 70 (439 / 203 / 71 before), within the noise. By fate: decay 180 / 450, stable
+  166 / 239, curvature 97 / 211. In 30 games a part goes after one of our ships 1.07 times a game,
+  every time an idle survey probe (the autoplayer leaves its probes where they stop once nothing is
+  left to chart); ships lost to swarms 0.57 a game (0.20 before); structures stripped from
+  settlements 1.80 a game (1.67), settlements lost to the Hunger 0.17 (0.17). Sharing a
+  settlement's losses alone: 146 of 300.
+
 ## Halo Siphons can be shut; the halo empties sooner while they run; the Unlit's messages wait (11 Oct)
 
 The player: "how do i actually stop draining the halo?" They couldn't. Halo Siphons is a research,

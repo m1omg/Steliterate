@@ -90,7 +90,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, siphons), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -462,6 +462,24 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   first-swarm turn and under Communion). It runs after `firstSwarm` and before `autoExplore`, so
   arriving probes are at risk before they set off again. `swarmSeenAt` (util.ts) is what the map
   shows: `autoExplore`, the autoplayer and the destination list's "swarm" chip use it.
+  - **Parts sent after ships** (11 Oct, `updateHunger`): `sendHunter` lets an awake, untamed swarm
+    of size `HUNT_MIN_SIZE` (2) or more notice the nearest of our ships stopped within
+    `HUNT_REACH` (25 ly) at a star with no settlement of ours, no untamed swarm and no part already
+    after it, on `HUNT_NOTICE` (0.3) of turns (×0.5 under Blackout; not before `first_swarm`, nor
+    on its turn, nor under Communion). The part (1 to 1.6, taken from the swarm) carries
+    `Swarm.prey` (the fleet) and `Swarm.nest` (its swarm). In `swarmsHunt` it strikes its prey
+    with no draw (`sw.prey === f.id`); while the prey is there it does not move on. Once the prey
+    is not where it is (`loseTheScent`, on arrival and each turn) it heads for its swarm's star or
+    destination (`headForNest`) and on arrival merges into it (`rejoin`), following it if it moved
+    on; with its swarm gone or tamed it is a swarm of its own. None of these take a draw. Taming
+    and `drawSwarmTo` clear both fields. Swarms travel at 0.05 × the turn length in light-years
+    in the Dusk (2 ly a turn at a 40-year turn), so a part can take several turns to arrive.
+  - **Ships at a settlement** (11 Oct): `hurtShipsAt` — scratched (0 to 0.4 × size, as before)
+    when the defenders win, and 0.2 to 0.6 × the swarm's size each when it breaks through (before,
+    untouched). A fleet that loses ships says so in the log.
+  - **Messages:** `log(..., fleet)` sets `LogEntry.fleet`; `turnflow.ts` shows the turn's entries
+    that carry one as messages (two at most), with Look going to the fleet. The ship's panel says
+    when a part is coming for it or is there; the swarm's panel says whom it is after.
 - **`src/game/sim/sites.ts`:** `powerParts`/`powerAt` (Hearth plus every buildable collector,
   arrays × insolation), `matterAt`, `lastsUntil`, `siteValue(state, body, thread)` →
   `{score, label, tip}`. Used by the settler lists and the Surveyed worlds sorts.
@@ -1052,6 +1070,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | a settlement where a star was; curvature warmth; stars by type (8 Oct) | 148 | 900 games identical to the clock run, line for line (the autoplayer never takes a star by force; no rule reads the new warmth) |
 | a magnifier mode; the game at any size and translated (9 Oct) | 148 | interface only: 900 games identical to the clock run, game for game |
 | a phone interface that leaves the map usable (10 Oct) | 148 | interface only (no change under `src/game`): 300 games identical to `main`, game for game; 72 victories |
+| swarms go for ships near them; ships share a settlement's losses (11 Oct) | 154 | 69 victories, Degenerate Age 72 turns; 900 games 443 / 191 / 70 (439 / 203 / 71 before), within the noise. By fate: decay 180 / 450, stable 166 / 239, curvature 97 / 211. A part whose ship was gone going on to our nearest settlement (as offered) instead of back to its swarm: 118 / 61; with the autoplayer bringing idle probes home 130 / 57. Sharing losses alone 146 / 72. Per game (30): 1.07 parts sent, all after idle probes; ships lost to swarms 0.57 (0.20) |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

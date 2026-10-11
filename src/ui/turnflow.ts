@@ -3,7 +3,7 @@ import { endTurn } from '../game/sim/turn';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
 import { autosave, busy, bump, engine, game, modal, notify, selection, settings, toasts } from './store';
-import { goToBody, pivotToSystem } from './screens/Lists';
+import { goToBody, goToFleet, pivotToSystem } from './screens/Lists';
 import { TECH_BY_ID } from '../game/data/techs';
 import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
 import { shipQueue } from './hud/ShipPrompt';
@@ -26,6 +26,8 @@ export function doEndTurn() {
   const techsBefore = new Set(s.civ.techs);
   const idleBefore = new Set(Object.values(s.fleets).filter(isIdleFleet).map((f) => f.id));
   const contactBefore = new Set(Object.values(s.survivors).filter((v) => v.contact).map((v) => v.id));
+  const shipsBefore = new Map(Object.values(s.fleets).map((f) => [f.id, f.ships.length]));
+  const lastLog = s.log[s.log.length - 1];
   const r = endTurn(s);
   bump();
   autosave();
@@ -52,6 +54,14 @@ export function doEndTurn() {
     const home = s.systems[v.homeSystemId];
     if (home) engine()?.ping(home.id, v.color);
     sfx('signal');
+  }
+  // a swarm going for one of our ships: say so (two at most; the Record keeps the rest)
+  const at = lastLog ? s.log.lastIndexOf(lastLog) : -1;
+  const fresh = lastLog && at < 0 ? [] : s.log.slice(at + 1);
+  for (const e of fresh.filter((x) => x.fleet).slice(0, 2)) {
+    const f = s.fleets[e.fleet!];
+    const lost = !f || f.ships.length < (shipsBefore.get(e.fleet!) ?? 0);
+    notify(e.text, e.kind === 'bad' || lost ? 'bad' : 'info', f ? { label: 'Look', tip: `Go to ${f.name}`, run: () => goToFleet(s, f) } : undefined);
   }
   if (r.wasted > 5) notify(`${Math.round(r.wasted)} energy was lost: the reserve is full.`, 'bad');
   if (researchingBefore && !s.civ.researching && s.civ.techs.includes(researchingBefore)) {
