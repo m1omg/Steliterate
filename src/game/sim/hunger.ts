@@ -82,9 +82,7 @@ export function firstSwarm(state: GameState) {
       // mauled, but it gets away
       for (const s of f.ships) s.hp = Math.max(1, s.hp - rng.range(0.6, 1.6));
       state.swarms[frag.id] = frag;
-      const target = colonies(state)
-        .map((c) => state.systems[c.systemId])
-        .sort((a, b) => distLy(here, a) - distLy(here, b))[0];
+      const target = nearestSettlement(state, here);
       if (target && target.id !== here.id) {
         frag.systemId = null;
         frag.from = here.id;
@@ -102,6 +100,137 @@ export function firstSwarm(state: GameState) {
 
 /** How close a ship must come to a swarm for the first one to notice it (ly). */
 const FIRST_SWARM_REACH = 60;
+
+/** The star of our settlement nearest to this one (it may be this one); null if we have none. */
+function nearestSettlement(state: GameState, here: StarSystem): StarSystem | null {
+  return (
+    colonies(state)
+      .map((c) => state.systems[c.systemId])
+      .sort((a, b) => distLy(here, a) - distLy(here, b))[0] ?? null
+  );
+}
+
+/**
+ * How far an awake swarm notices one of our ships stopped at another star (ly). Neighbouring stars
+ * are about 17 ly apart; at 25, nearly every swarm has a star or two in reach (the player's ask,
+ * 11 Oct: "swarm never really attacks my ship", when it sat at a star near one).
+ */
+export const HUNT_REACH = 25;
+/** Each turn, how likely an awake swarm is to send part of itself after the nearest such ship. */
+export const HUNT_NOTICE = 0.3;
+/** A swarm smaller than this has nothing to spare for a hunt. */
+export const HUNT_MIN_SIZE = 2;
+
+/**
+ * An awake swarm notices the nearest of our ships stopped within HUNT_REACH, at a star where we
+ * have no settlement and no swarm sits, and may send part of itself after it, as the first swarm
+ * does. The part keeps after that ship (`prey`): it strikes it wherever it finds it stopped
+ * (`swarmsHunt`), and once the ship is gone it goes back to its swarm. One part per
+ * ship; not before the first swarm's own moment; noticed half as often under the Blackout.
+ */
+function sendHunter(state: GameState, sw: Swarm, sys: StarSystem, rng: { chance(p: number): boolean }, noticed: number) {
+  if (sw.size < HUNT_MIN_SIZE || !state.flags.first_swarm || state.flags.first_swarm === state.turn) return;
+  const settled = new Set(colonies(state).map((c) => c.systemId));
+  const held = new Set(Object.values(state.swarms).filter((w) => w.systemId && !w.tamed).map((w) => w.systemId!));
+  const hunted = new Set(Object.values(state.swarms).map((w) => w.prey));
+  let prey: Fleet | null = null;
+  let best = Infinity;
+  for (const f of Object.values(state.fleets)) {
+    if (!f.at || !f.ships.length || settled.has(f.at) || held.has(f.at) || hunted.has(f.id)) continue;
+    const d = distLy(sys, state.systems[f.at]);
+    if (d <= HUNT_REACH && d < best) {
+      prey = f;
+      best = d;
+    }
+  }
+  if (!prey || !rng.chance(HUNT_NOTICE * noticed)) return;
+  const there = state.systems[prey.at!];
+  const size = Math.min(1.6, Math.max(1, sw.size * 0.3));
+  sw.size -= size;
+  const part: Swarm = { id: uid(state, 'sw'), systemId: null, from: sys.id, to: there.id, traveled: 0, distance: best, size, awake: true, tamed: false, appetite: sw.appetite, prey: prey.id, nest: sw.id };
+  state.swarms[part.id] = part;
+  // our ship sees it coming, and where from
+  if (!state.civ.known[sys.id]) state.civ.known[sys.id] = 1;
+  log(state, `Part of the swarm at ${sys.name} broke away and is coming for ${prey.name} at ${there.name}.`, 'bad', there.id, prey.id);
+}
+
+/** Where a part's swarm is, or is going (null: it is gone or tamed, and the part is on its own). */
+function nestStar(state: GameState, sw: Swarm): string | null {
+  const nest = sw.nest ? state.swarms[sw.nest] : null;
+  return nest && !nest.tamed ? nest.systemId ?? nest.to : null;
+}
+
+/** Send a part on its way to its swarm (true), or, with its swarm gone, leave it here on its own. */
+function headForNest(state: GameState, sw: Swarm): boolean {
+  const to = nestStar(state, sw);
+  if (!to || !sw.systemId) {
+    delete sw.nest;
+    return false;
+  }
+  const here = state.systems[sw.systemId];
+  sw.from = here.id;
+  sw.to = to;
+  sw.systemId = null;
+  sw.traveled = 0;
+  sw.distance = distLy(here, state.systems[to]);
+  return true;
+}
+
+/**
+ * A part sent after a ship, where the ship is not (moved on, or gone): it forgets it and goes back
+ * to the swarm it broke away from (`nest`), following it if it has moved on; with that swarm gone
+ * or tamed, it stays where it is as a swarm of its own. True if it set off. Takes no random draw.
+ *
+ * (11 Oct: going on to our nearest settlement instead, as the first swarm's part does, cost 18 to 30
+ * of 300 harness games, even with the autoplayer bringing its idle probes home.)
+ */
+function loseTheScent(state: GameState, sw: Swarm): boolean {
+  if (!sw.prey || !sw.systemId) return false;
+  const f = state.fleets[sw.prey];
+  if (f && f.at === sw.systemId && f.ships.length) return false;
+  delete sw.prey;
+  const here = state.systems[sw.systemId];
+  if (!headForNest(state, sw)) return false;
+  const what = f ? `What came for ${f.name} at ${here.name} found it gone` : `What came for our ship at ${here.name} has had it`;
+  log(state, `${what}, and is going back to its swarm.`, 'info', here.id, f?.id);
+  return true;
+}
+
+/**
+ * A part on its way back, arrived: where its swarm sits, it rejoins it (true); if the swarm has
+ * moved on, it follows (true); with the swarm gone, it stays here on its own. Takes no random draw.
+ */
+function rejoin(state: GameState, sw: Swarm): boolean {
+  if (!sw.nest || sw.prey || !sw.systemId) return false;
+  const nest = state.swarms[sw.nest];
+  if (nest && !nest.tamed && nest.systemId === sw.systemId) {
+    nest.size += sw.size;
+    delete state.swarms[sw.id];
+    return true;
+  }
+  return headForNest(state, sw);
+}
+
+/**
+ * Every ship of ours at this star takes a hit (one draw each); a fleet that loses ships says so.
+ * Defenders who drive a swarm back are scratched; when it breaks through, the ships there share
+ * the settlement's losses (11 Oct: before, they came through a lost fight untouched).
+ */
+function hurtShipsAt(state: GameState, sys: StarSystem, hit: () => number) {
+  for (const f of Object.values(state.fleets)) {
+    if (f.at !== sys.id) continue;
+    const before = f.ships.length;
+    for (const s of f.ships) s.hp -= hit();
+    f.ships = f.ships.filter((s) => s.hp > 0);
+    if (!f.ships.length) {
+      delete state.fleets[f.id];
+      if (before) log(state, `${f.name} was lost in the fighting at ${sys.name}.`, 'combat', sys.id, f.id);
+    } else if (f.ships.length < before) {
+      const gone = before - f.ships.length;
+      log(state, `${f.name} lost ${gone} ship${gone === 1 ? '' : 's'} in the fighting at ${sys.name}.`, 'combat', sys.id, f.id);
+    }
+  }
+}
 
 /** Each turn, how likely a swarm is to go for a ship stopped in its system: awake, and asleep. */
 export const HUNT_AWAKE = 0.7;
@@ -125,7 +254,8 @@ export function swarmsHunt(state: GameState, mods: Mods) {
       if (!sys || sys.gone) continue;
       for (const f of Object.values(state.fleets)) {
         if (f.at !== sys.id || !f.ships.length) continue;
-        if (!rng.chance((sw.awake ? HUNT_AWAKE : HUNT_ASLEEP) * dark)) continue;
+        // a part sent after this very ship strikes it surely
+        if (sw.prey !== f.id && !rng.chance((sw.awake ? HUNT_AWAKE : HUNT_ASLEEP) * dark)) continue;
         const what = sw.awake ? 'The swarm' : 'Something asleep';
         const k = f.order === 'fortify' ? FORTIFY_BONUS : 1;
         const attack = f.ships.reduce((a, s) => a + (SHIP_BY_ID[s.cls]?.attack ?? 0) * k, 0);
@@ -134,7 +264,7 @@ export function swarmsHunt(state: GameState, mods: Mods) {
           sw.size -= lost;
           state.civ.matter += lost * 2;
           for (const s of f.ships) s.hp = Math.max(1, s.hp - rng.range(0, sw.size * 0.3));
-          log(state, `${what} at ${sys.name} came for ${f.name}, and ${f.name} beat it off (+${Math.round(lost * 2)} salvaged matter).`, 'combat', sys.id);
+          log(state, `${what} at ${sys.name} came for ${f.name}, and ${f.name} beat it off (+${Math.round(lost * 2)} salvaged matter).`, 'combat', sys.id, f.id);
           state.battles.push({ systemId: sys.id, turn: state.turn, text: `${f.name} beat off the swarm.` });
           if (sw.size <= 0.4) {
             delete state.swarms[sw.id];
@@ -151,10 +281,10 @@ export function swarmsHunt(state: GameState, mods: Mods) {
         f.ships = f.ships.filter((s) => s.hp > 0);
         if (!f.ships.length) {
           delete state.fleets[f.id];
-          log(state, `${what} at ${sys.name} caught ${f.name}. Nothing came back.`, 'combat', sys.id);
+          log(state, `${what} at ${sys.name} caught ${f.name}. Nothing came back.`, 'combat', sys.id, f.id);
         } else {
           const gone = before - f.ships.length;
-          log(state, `${what} at ${sys.name} caught ${f.name}${gone ? `: ${gone} ship${gone === 1 ? '' : 's'} lost` : ''}. What is left is damaged, and still there.`, 'combat', sys.id);
+          log(state, `${what} at ${sys.name} caught ${f.name}${gone ? `: ${gone} ship${gone === 1 ? '' : 's'} lost` : ''}. What is left is damaged, and still there.`, 'combat', sys.id, f.id);
         }
         state.battles.push({ systemId: sys.id, turn: state.turn, text: `The swarm caught ${f.name}.` });
       }
@@ -267,6 +397,7 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
   const maxSwarms = MAX_SWARMS[state.settings.difficulty];
   const communion = hasCharter(state, 'communion_charter');
   const blackout = mods.flags.has('charter:blackout') ? 0.3 : 1;
+  const noticed = mods.flags.has('charter:blackout') ? 0.5 : 1;
 
   withRng(state, (rng) => {
     for (const sw of swarms) {
@@ -291,6 +422,8 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
           sw.from = null;
           sw.traveled = 0;
           const sys = state.systems[sw.systemId];
+          // a part back with its swarm rejoins it; one whose ship is not here turns back
+          if (rejoin(state, sw) || loseTheScent(state, sw)) continue;
           if (civ.known[sys.id]) log(state, `A swarm${sw.tamed ? ' under your command' : ''} has arrived at ${sys.name}.`, sw.tamed ? 'info' : 'bad', sys.id);
         }
         continue;
@@ -313,6 +446,9 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
         }
         continue;
       }
+
+      // sent after a ship that has gone: back to its swarm
+      if (loseTheScent(state, sw)) continue;
 
       // eat
       const matter = systemMatter(state, sys);
@@ -347,12 +483,7 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
           state.battles.push({ systemId: sys.id, turn: state.turn, text: `Defenders drove back the swarm (+${(lost * 2).toFixed(0)} salvaged matter).` });
           log(state, `Defenders at ${sys.name} drove back the swarm and salvaged its dead.`, 'combat', sys.id);
           // damage escorts
-          for (const f of Object.values(state.fleets)) {
-            if (f.at !== sys.id) continue;
-            for (const s of f.ships) s.hp -= rng.range(0, sw.size * 0.4);
-            f.ships = f.ships.filter((s) => s.hp > 0);
-            if (!f.ships.length) delete state.fleets[f.id];
-          }
+          hurtShipsAt(state, sys, () => rng.range(0, sw.size * 0.4));
           if (sw.size <= 0.4) {
             delete state.swarms[sw.id];
             continue;
@@ -378,6 +509,8 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
           if (Object.keys(c.structures).length === 0 && c.pops.kin + c.pops.echoes + c.pops.chorus + c.pops.lattice + c.pops.coldminds + c.cryo <= 0) {
             destroyColony(state, c, 'consumed by the Hunger');
           }
+          // the ships there fought beside it, and share its losses
+          hurtShipsAt(state, sys, () => rng.range(0.2, 0.6) * sw.size);
           sw.size += 0.5;
           state.battles.push({ systemId: sys.id, turn: state.turn, text: 'The swarm broke through.' });
         }
@@ -387,6 +520,9 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
         if (sv.alive && sv.systems.includes(sys.id)) sv.health = Math.max(0, sv.health - 0.012 * sw.size * (sv.pacts?.watch !== undefined ? 0.7 : 1));
       }
 
+      // a ship stopped nearby: part of it may go after the ship
+      if (!communion && !sw.prey) sendHunter(state, sw, sys, rng, noticed);
+
       // bud
       if (sw.size > 9 && Object.keys(state.swarms).length < maxSwarms) {
         sw.size /= 2;
@@ -394,8 +530,8 @@ export function updateHunger(state: GameState, L: number, mods: Mods) {
         state.swarms[child.id] = child;
         moveSwarm(state, child, () => rng.next(), blackout);
       }
-      // move on when the pickings are thin
-      if (matter < 1.2 || rng.chance(0.08)) moveSwarm(state, sw, () => rng.next(), blackout);
+      // move on when the pickings are thin (not while the ship it came for is here)
+      if (!sw.prey && (matter < 1.2 || rng.chance(0.08))) moveSwarm(state, sw, () => rng.next(), blackout);
     }
   });
   fadeRust(state);
@@ -465,6 +601,8 @@ export function drawSwarmTo(state: GameState, systemId: string): StarSystem | nu
   }
   if (!best) return null;
   const from = state.systems[best.systemId!];
+  delete best.prey;
+  delete best.nest;
   best.from = from.id;
   best.to = to.id;
   best.systemId = null;
@@ -484,6 +622,8 @@ export function tameSwarm(state: GameState, swarmId: string): string | null {
   state.civ.energy -= cost;
   sw.tamed = true;
   sw.awake = true;
+  delete sw.prey;
+  delete sw.nest;
   state.civ.flags.tamed = (state.civ.flags.tamed ?? 0) + 1;
   log(state, `The swarm at ${state.systems[sw.systemId].name} answers the dead makers’ commands. It is yours now.`, 'good', sw.systemId);
   return null;

@@ -326,7 +326,11 @@ the disagreement as real model uncertainty.
   swarms can be absorbed as Lattice. Fighting is defending (Defense Grids, Fortify) or, since
   8 Oct, going for a swarm: every warship at its star together, once a turn, at plain strength,
   by the odds the swarm has when it comes for them (shown before you commit); a sleeping swarm
-  that survives it wakes. Its rust fades once no swarm is there (a tenth a turn).
+  that survives it wakes. Its rust fades once no swarm is there (a tenth a turn). Swarms go for
+  ships, too: one feeding at a star strikes the ships stopped there, and since 11 Oct an awake
+  swarm sends part of itself after a ship stopped at a star near it (25 ly) where we live nowhere;
+  the part strikes that ship wherever it finds it stopped and, once the ship is gone, goes back to
+  its swarm. Ships at a settlement share its losses when a swarm breaks through.
 * **Becoming the Hunger.** The dark path: consumption Charters (*Consume the Dead*, *Strip
   the Sleepers*, *Absorb the Weak*, *Communion*), Hunger-derived technology, devouring
   failing survivors. **Taint** brings plenty now, closes endings past 30 and 60, turns the

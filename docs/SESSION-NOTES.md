@@ -446,6 +446,17 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   own: "slovak translation would be best, friend is slovak like myself just using a cz
   translation tool" (its typing tidied; see Picking up). Her own word on what helps would be worth more than our
   guesses.
+- **11 Oct, swarms and ships:** "swarm never really attacks my ship". By the rules then, a swarm
+  struck only ships stopped at the very star it was eating, where we had no settlement (70% a
+  turn awake, 20% asleep; checked, it worked); it ignored ships at stars nearby, ships under way
+  and ships at our settlements (it went for the settlement, and the ships there came through a
+  lost fight untouched). Asked where their ship was: "At a star near a swarm"; asked what to
+  change: "Both (Recommended)": swarms hunt ships stopped nearby, and ships share a settlement's
+  losses. Two changes from what they picked, both said to them: the reach is 25 ly, not "about
+  20" (stars are about 17 ly apart, and at 20 a quarter of swarms had no star in reach); and a
+  part whose ship is gone goes back to its swarm rather than on to our nearest settlement, which
+  cost 18 to 30 of 300 harness games even with the autoplayer bringing idle probes home (CHANGELOG,
+  "Swarms go for ships near them"). Offered: the harsher version, if they want the game harder.
 
 ## Found in the review of 28 Sep (verified)
 
