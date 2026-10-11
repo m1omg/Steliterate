@@ -48,9 +48,10 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - The game is as of PR m1omg/Steliterate#6 (merge commit `4268a82`, 10 Oct, the phone
-    interface; live script `index-EjaW5d6F.js`), with these notes merged after it. Before it,
-    PR m1omg/Steliterate#4 (`d9bd6e5`, the magnifier mode).
+  - The game is as of PR m1omg/Steliterate#8 (merge commit `8fbfa89`, 11 Oct, what a Thread
+    makes spelled out; live script `index-BpG6HQ-T.js`), with these notes merged after it. Before
+    it, PR m1omg/Steliterate#6 (`4268a82`, the phone interface) and PR m1omg/Steliterate#4
+    (`d9bd6e5`, the magnifier mode).
   - `claude/lucid-newton-30cbpk`, the old live branch, stays at `fc6c59a`, behind `main`. Pages
     builds it too, so leave it alone: a push of anything older than `main` would put that build
     live.
