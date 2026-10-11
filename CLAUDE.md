@@ -7,8 +7,9 @@ https://m1omg.github.io/Steliterate/, rebuilt by the Pages workflow on every pus
 into `main` on 8 Oct with a merge commit (`3e913f3`, every commit ID kept). Since 9 Oct a batch
 goes live by a PR from the work branch into `main`, merged with a merge commit (PR
 m1omg/Steliterate#3, `0e08054`; PR m1omg/Steliterate#4, `d9bd6e5`, the magnifier mode; PR
-m1omg/Steliterate#6, `4268a82`, the phone interface; the latest game batch, PR
-m1omg/Steliterate#8, `8fbfa89`, what a Thread makes in words, from `claude/lucid-newton-v2`).
+m1omg/Steliterate#6, `4268a82`, the phone interface; PR m1omg/Steliterate#8, `8fbfa89`, what a
+Thread makes in words; the latest game batch, PR m1omg/Steliterate#10, `7c334ec`, no "???" in
+the research grid once the fate of matter is known, from `claude/lucid-newton-v2`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
