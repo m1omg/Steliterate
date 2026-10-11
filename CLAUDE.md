@@ -16,9 +16,10 @@ The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
 
-A new session, or the player's other account (since 9 Oct), starts with "Picking up" in
-`docs/SESSION-NOTES.md`: what is live, the first steps, the last validation's numbers, and the
-open threads.
+A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (11 Oct):
+where things stand, what to read in which order, the player, the open threads and the traps.
+Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
+validation's numbers, and the open threads in full.
 
 Read these before changing anything:
 

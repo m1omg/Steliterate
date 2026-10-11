@@ -43,6 +43,9 @@ account, starts with "Picking up" below.
 
 ## Picking up (9 Oct: the player moves to another account)
 
+(11 Oct: `HANDOVER.md`, at the repository's root, is the short entry point; this section has the
+detail.)
+
 "Put everything we've been working on and the updated information about this project into the
 appropriate MD files so I can continue there." A session on the other account starts from a fresh
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
@@ -279,9 +282,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
   its mass-blind date; the helium stars' one set of numbers.
 
-- **Next steps (9 Oct):** the player continues on another account for now, and will be back. Start
-  from "Picking up" above; the open threads are listed there, the Slovak translation first. Wait
-  for the player's word before starting any of them.
+- **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
+  `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
+  translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
+  before starting any of them.
 - **The player works from more than one session.** Before changing anything, fetch every branch
   and compare with `origin/main`, the live branch since 9 Oct (until then
   `origin/claude/lucid-newton-30cbpk`; they asked for this check on 2 Oct, and it found nothing
