@@ -6,7 +6,7 @@ import { setResearch, startWork } from '../../game/sim/actions';
 import { workCost, workRequirementMet } from '../../game/sim/endings';
 import { project } from '../../game/sim/projection';
 import { RESEARCH_DRAW, techAvailable, techCost, techVisible } from '../../game/sim/research';
-import { hasTech } from '../../game/sim/util';
+import { hasTech, protonFateKnown } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
 import { n0, n1, pct } from '../fmt';
 import { Icon } from '../Icon';
@@ -93,6 +93,9 @@ export function ResearchModal({ s }: { s: GameState }) {
                     const avail = techAvailable(s, t.id);
                     const active = s.civ.researching === t.id;
                     const prog = s.civ.research[t.id] ?? 0;
+                    // a project for another fate of matter: a question mark until the Proton
+                    // Question is answered, and then gone (it does not exist in this universe)
+                    if (!visible && protonFateKnown(s)) return null;
                     if (!visible)
                       return (
                         <div key={t.id} class="tech locked" data-tip="Depends on whether protons decay. Research the Proton Question to find out.">
