@@ -3,6 +3,7 @@ import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceRange } from './signals';
 import { capital, clamp, colonies, distLy, log, withRng } from './util';
 import { calendarEra } from '../fate';
+import { siphonsRunning } from '../physics';
 
 // Two minds that are not like you at all.
 // The Slow Ones live around the Heart and think one thought per age.
@@ -130,7 +131,7 @@ export function updateMinds(state: GameState, logL: number, _mods: Mods) {
       igniteDarkStar(state);
     }
     // exploitation has consequences: they can move worlds
-    if (dark.stage >= 2 && calendarEra(state) === 'degenerate' && (civ.techs.includes('halo_siphons') || dark.flags.hostile) && rng.chance(0.08)) {
+    if (dark.stage >= 2 && calendarEra(state) === 'degenerate' && (siphonsRunning(state) || dark.flags.hostile) && rng.chance(0.08)) {
       const c = rng.pick(colonies(state));
       if (c) {
         const b = state.bodies[c.bodyId];
@@ -248,7 +249,7 @@ export function resolveMindSignal(state: GameState, sigUid: string, choice: stri
       break;
     case 'dark_reveal2':
       if (choice === 'help') {
-        if (civ.techs.includes('halo_siphons')) return 'They will not gather while your siphons drain the halo.';
+        if (siphonsRunning(state)) return 'They will not gather while your siphons drain the halo. Shut the Halo Siphons first: the button is under this message, and on the Unlit’s card under Other minds.';
         if (civ.matter < 200 || civ.energy < 100) return 'Gathering needs 200 matter and 100 energy.';
         civ.matter -= 200;
         civ.energy -= 100;

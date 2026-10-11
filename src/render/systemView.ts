@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { bodyClimate, diskLight, emberShare, primaryTemperature, shownKind } from '../game/physics';
+import { bodyClimate, diskLight, emberShare, haloDrawn, primaryTemperature, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
 import { seenThere } from '../game/sim/claims';
@@ -147,7 +147,7 @@ export class SystemView {
   private buildPrimary(state: GameState, sys: StarSystem) {
     const p = sys.primary;
     const seed = (hashSeed(sys.id) % 1000) / 10;
-    const temp = primaryTemperature(p, state.years, calendarEra(state));
+    const temp = primaryTemperature(p, state.years, calendarEra(state), 0, 0, haloDrawn(state));
     const col = new THREE.Color(...blackbody(Math.max(1500, temp)));
     const addGlow = (size: number, color: THREE.Color, power: number, beams = 0, ring = 0) => {
       const m = new THREE.ShaderMaterial({
@@ -208,7 +208,7 @@ export class SystemView {
           addGlow(14 + 6 * shine, COOL_DWARF_GLOW.clone().lerp(col, shine), 0.35 + 0.75 * shine);
         } else {
           // dark as a black dwarf once nothing warms it; an ember keeps a dull red warmth while the halo lasts
-          const ember = emberShare(p, state.years);
+          const ember = emberShare(p, state.years, haloDrawn(state));
           const surface = new THREE.Color('#2a2628').lerp(new THREE.Color('#6d4a52'), ember);
           addStar(1.6, surface, 0.15, 0, 0.6 + 0.3 * ember);
           if (ember > 0) addGlow(14, new THREE.Color('#8a4f4a'), 0.35 * ember);
@@ -801,11 +801,11 @@ function feedingSwarm(state: GameState, sys: StarSystem): Swarm | null {
 function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Color; power: number } {
   const p = sys.primary;
   const k = shownKind(p, state.years);
-  const temp = primaryTemperature(p, state.years, calendarEra(state));
+  const temp = primaryTemperature(p, state.years, calendarEra(state), 0, 0, haloDrawn(state));
   const c = new THREE.Color(...blackbody(Math.max(1500, temp)));
   let power = 1.4;
   if (k === 'blue_dwarf' || k === 'helium_star' || k === 'helium_giant') power = 2;
-  if (k === 'white_dwarf') power = calendarEra(state) === 'dusk' ? 0.12 + 0.98 * coolDwarfShine(temp) : p.rekindle ? 0.3 : 0.03 + 0.09 * emberShare(p, state.years);
+  if (k === 'white_dwarf') power = calendarEra(state) === 'dusk' ? 0.12 + 0.98 * coolDwarfShine(temp) : p.rekindle ? 0.3 : 0.03 + 0.09 * emberShare(p, state.years, haloDrawn(state));
   if (k === 'black_dwarf') power = p.rekindle ? 0.3 : 0.03;
   if (k === 'brown_dwarf') power = 0.12;
   if (k === 'neutron_star') power = 0.3;

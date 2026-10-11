@@ -1,5 +1,5 @@
 import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
-import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, dwarfFadeEta, lampsOver, nextStellarChange } from '../physics';
+import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
 import { colonies, protonFateKnown } from './util';
@@ -139,7 +139,12 @@ export function updateForecasts(state: GameState) {
   // epoch milestones of the Degenerate Age
   if (calendarEra(state) === 'degenerate') {
     if (state.eta < 18.4) add({ kind: 'evaporation', title: 'Galactic evaporation begins', text: 'Close encounters will start flinging whole systems out of the Coalescence. A few will fall into the Heart.', dueYears: Math.pow(10, 18.4), severity: 'warn' });
-    if (state.eta < 22) add({ kind: 'embers', title: 'The embers begin to fade', text: 'The dark-matter halo is being used up. White dwarfs will cool toward black dwarfs by η 25.', dueYears: Math.pow(10, 22), severity: 'warn' });
+    if (haloEta(state) < 22) {
+      const text = !haloMoved(state)
+        ? 'The dark-matter halo is being used up. White dwarfs will cool toward black dwarfs by η 25.'
+        : `The dark-matter halo is being used up, ${siphonsRunning(state) ? 'faster while our Halo Siphons run' : 'sooner for what our Halo Siphons drew'}. White dwarfs will cool toward black dwarfs by about η ${embersOutEta(state).toFixed(1)}.`;
+      add({ kind: 'embers', title: 'The embers begin to fade', text, dueYears: haloReachesYears(state, 22), severity: 'warn' });
+    }
     if (protonFateKnown(state) && state.protonsDecay && state.eta < 37.5) add({ kind: 'decay', title: 'Proton decay takes hold', text: 'Matter will begin to dissolve in earnest.', dueYears: Math.pow(10, 37.5), severity: 'danger' });
   }
 

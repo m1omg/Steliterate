@@ -4,7 +4,7 @@ import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
 import { logTurnLength } from './eras';
 import { starClockTerms, turnStep } from './sim/flare';
-import { emberShare, sourceLight, vitalityLoss } from './physics';
+import { emberShare, haloDrawn, sourceLight, vitalityLoss } from './physics';
 import {
   answerEvent,
   answerSignal,
@@ -237,7 +237,7 @@ function settleScore(state: GameState, b: Body, thread: ThreadId): number {
   let s = light * 3 + b.richness * 0.5;
   if (thread === 'kin') s += b.habitability * 4 * (0.3 + b.vitality);
   if (calendarEra(state) === 'degenerate' && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 3;
-  if (calendarEra(state) === 'degenerate' && emberShare(sys.primary, state.years) > 0) s += 2;
+  if (calendarEra(state) === 'degenerate' && emberShare(sys.primary, state.years, haloDrawn(state)) > 0) s += 2;
   // late in the Dusk, look ahead: dark-matter embers and black holes will be all that is left
   if (calendarEra(state) === 'dusk' && state.eta > 13.99 && (sys.primary.halo || sys.primary.kind === 'black_hole')) s += 2.5;
   if (sys.special === 'core' && eraIndex(calendarEra(state)) >= 1) s += 4;

@@ -8,8 +8,10 @@ into `main` on 8 Oct with a merge commit (`3e913f3`, every commit ID kept). Sinc
 goes live by a PR from the work branch into `main`, merged with a merge commit (PR
 m1omg/Steliterate#3, `0e08054`; PR m1omg/Steliterate#4, `d9bd6e5`, the magnifier mode; PR
 m1omg/Steliterate#6, `4268a82`, the phone interface; PR m1omg/Steliterate#8, `8fbfa89`, what a
-Thread makes in words; the latest game batch, PR m1omg/Steliterate#10, `7c334ec`, no "???" in
-the research grid once the fate of matter is known, from `claude/lucid-newton-v2`).
+Thread makes in words; PR m1omg/Steliterate#10, `7c334ec`, no "???" in the research grid once the
+fate of matter is known; PR m1omg/Steliterate#12, `d2c52b4`, swarms go for ships near them, both
+from `claude/lucid-newton-v2`; the latest game batch, PR m1omg/Steliterate#13, Halo Siphons can be
+shut, from `claude/epic-wozniak-lyhulf`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -61,8 +63,9 @@ npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; cou
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
 
-Balance reference (11 Oct, swarms go for ships near them): 154 of 300 standard competent games
-survive, 69 victories, a Degenerate Age of 72 turns; 900 games: 443 survive, 191 victories; noise
-±12 in 300 (two runs of 900 can differ by 30). By fate in the 900: decay 40%, stable 69%,
-curvature 46% (`--fate=` runs one). The full history is
+Balance reference (11 Oct, swarms go for ships near them; Halo Siphons can be shut, and drain
+the halo while they run): 151 of 300 standard competent games survive, 69 victories, a Degenerate
+Age of 71 turns; 900 games: 442 survive, 195 victories; noise ±12 in 300 (two runs of 900 can
+differ by 30). By fate in the 900: decay 40%, stable 70%, curvature 46% (`--fate=` runs one). The
+full history is
 in DEV-NOTES (Balance reference).

@@ -90,7 +90,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -239,6 +239,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   is for dead ones. The victories it reaches are The Long Thought and, at the Heart, The
   Aeon Seed: the other Great Works never move it. It does answer the flare event with choice 0 (keep time with the
   flare), and keeps time with every new star it can (choice 0 of A New Star and White Fire).
+  It never shuts the Halo Siphons, but it does research them: its fallback (`pickResearch`,
+  `auto.ts`, the cheapest open project once its priority list is done) ignores `noAuto`, which only
+  `discoverFromSurplus` honours. 151 of 300 games research them, 109 before η 25, mostly as the
+  Degenerate Age opens (census, 11 Oct), so the siphons' rules move the harness.
 - **Browser checks that play a seeded game** ride that game's course, and any rules change can
   move it: the dealings turned seed 2360862's game into a defeat before the Black Hole Age, and
   moved where seed 1000 stands after 120 turns. Set the situation up instead of hoping for it.
@@ -270,6 +274,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `insertBefore` and `removeChild` are patched to pair each text node with the `<font>` standing
   in for it. `browser/translate` plays turns under a stand-in translator (both ways of swapping);
   without the guard the turn count, η, panel titles and tooltips froze.
+- **`state.eta` is not always `log10(state.years)`** (`stepTime` returns its own `eta`): a test
+  that switches between our clock and another (the halo's, `haloEta`) uses `state.eta` itself when
+  the two agree, or a boundary can flip and shift a seeded game.
 - `pgrep -f "tools/sim.ts 300"` matches its own command line. Don't use it to wait for the
   harness.
 - `pkill -f "vite.js preview --outDir"` matches its own shell too, and killed it (exit 144, 9 Oct).
@@ -300,6 +307,26 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - The user dislikes long blocking waits. Prefer background runs and report when done.
 
 ## Where the newer systems live
+
+- **Halo Siphons and the halo's clock** (11 Oct; CHANGELOG, "Halo Siphons can be shut"):
+  - `physics.ts`: `siphonsRunning` (researched, and `civ.flags.siphons_shut` unset), `haloDrawn`
+    (`civ.flags.halo_drawn`: the years the halo's clock runs ahead of ours), `drainHalo` (each
+    turn they run, in the Degenerate calendar age, until the halo is spent; called in `endTurn`
+    step 7, before `evolveUniverse`, for siphons running as the turn began), `haloEta`,
+    `haloReachesYears`, `embersOutEta`, `haloMoved` (gates every text and date that changes).
+  - `haloShare(years, drawn)` and a trailing `drawn = 0` on `emberShare`, `backgroundK`,
+    `ownTemperature`, `primaryTemperature`, `primaryLuminosity`; `sourceLight`, `starClimate`,
+    `evolveUniverse`, `auto.ts` and the views pass `haloDrawn(state)`. With nothing drawn every one
+    is bit-identical to before. A cast-out ember's dimming (`haloLeft`) keeps our own years.
+  - `SourceInfo.dark`: the dark-matter part of an ember's light, all that the siphons double
+    (`economy.ts`, `siphoned`).
+  - `shutHaloSiphons` (`actions.ts`); `ShutSiphons` in `Signals.tsx`, under an open `dark_reveal2`
+    while they run and on the Unlit's card. `minds.ts`: the Help gate and the 8% hostility test read
+    `siphonsRunning`.
+  - `waitsForAnswer` (`signals.ts`): the Unlit's messages with choices never lapse and survive the
+    160-message cap; `migrate()` reopens one marked 'lapsed'.
+  - The embers forecast (`forecast.ts`), `milestonesFor(fate, embersOut)` (`eras.ts`; the
+    Chronometer passes it) and `embers_dim` read the halo's clock.
 
 - **The audits of 8 Oct** (planet and star; their scripts were in the scratchpad):
   - Dead stars, one law per kind in every age (`physics.ts`): `dwarfCoolingK` (Mestel, then
@@ -1044,6 +1071,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | a magnifier mode; the game at any size and translated (9 Oct) | 148 | interface only: 900 games identical to the clock run, game for game |
 | a phone interface that leaves the map usable (10 Oct) | 148 | interface only (no change under `src/game`): 300 games identical to `main`, game for game; 72 victories |
 | swarms go for ships near them; ships share a settlement's losses (11 Oct) | 154 | 69 victories, Degenerate Age 72 turns; 900 games 443 / 191 / 70 (439 / 203 / 71 before), within the noise. By fate: decay 180 / 450, stable 166 / 239, curvature 97 / 211. A part whose ship was gone going on to our nearest settlement (as offered) instead of back to its swarm: 118 / 61; with the autoplayer bringing idle probes home 130 / 57. Sharing losses alone 146 / 72. Per game (30): 1.07 parts sent, all after idle probes; ships lost to swarms 0.57 (0.20) |
+| Halo Siphons can be shut; the halo empties sooner while they run; the Unlit's messages wait (11 Oct) | 151 | 69 victories, Degenerate Age 71 turns; 900 games 442 / 195 / 70 (443 / 191 / 70 before, the swarm batch), within the noise: 802 of 900 games play out as before, the changes both ways. By fate: decay 178 / 450, stable 167 / 239, curvature 97 / 211. Alone, against `main` before the swarms: 146 / 67 / 71 in 300 (148 / 72 / 71), 900 games 441 / 202 (439 / 203), 807 of 900 as before. The autoplayer researches the siphons in 151 of 300 games, 109 before η 25 (its fallback ignores `noAuto`), and never shuts them |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

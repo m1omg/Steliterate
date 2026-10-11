@@ -4,6 +4,7 @@ import { STRUCTURE_BY_ID } from './data/structures';
 import { TECH_BY_ID } from './data/techs';
 import { defaultWater } from './gen';
 import { surveyWhereStationed } from './sim/fleets';
+import { waitsForAnswer } from './sim/signals';
 import type { GameState } from './types';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
@@ -87,6 +88,8 @@ export function migrate(s: GameState): GameState {
   }
   // ships parked at stars they could not chart before (only probes could survey) chart them now
   surveyWhereStationed(s);
+  // the Unlit's messages wait for an answer now (11 Oct): one that lapsed before opens again
+  for (const sig of s.signals) if (sig.resolved === 'lapsed' && waitsForAnswer(sig)) sig.resolved = null;
   s.saveVersion = SAVE_VERSION;
   return s;
 }
