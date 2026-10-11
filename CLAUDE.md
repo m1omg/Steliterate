@@ -61,8 +61,9 @@ npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; cou
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
 
-Balance reference (11 Oct, swarms go for ships near them): 154 of 300 standard competent games
-survive, 69 victories, a Degenerate Age of 72 turns; 900 games: 443 survive, 191 victories; noise
-±12 in 300 (two runs of 900 can differ by 30). By fate in the 900: decay 40%, stable 69%,
-curvature 46% (`--fate=` runs one). The full history is
+Balance reference (11 Oct, swarms go for ships near them; Halo Siphons can be shut, and drain
+the halo while they run): 151 of 300 standard competent games survive, 69 victories, a Degenerate
+Age of 71 turns; 900 games: 442 survive, 195 victories; noise ±12 in 300 (two runs of 900 can
+differ by 30). By fate in the 900: decay 40%, stable 70%, curvature 46% (`--fate=` runs one). The
+full history is
 in DEV-NOTES (Balance reference).

@@ -1545,3 +1545,11 @@ under their request.
   141; shut, then Help takes 200 matter and 100 energy, and the quest goes on.
 - **Checks.** New unit check `siphons` and browser check `siphons` (the button under the request
   and on the card, Not now, the keyboard, Help after; the magnifier mode).
+- **Balance.** The autoplayer researches Halo Siphons in 151 of 300 games, 109 of them before η 25
+  (its fallback, the cheapest open project, ignores `noAuto`), and never shuts them, so the drain
+  and the undoubled rekindled light reach the harness. Against the swarm batch: 151 of 300 survive
+  (154 before), 69 victories (69), Degenerate Age 71 turns (72); 900 games 442 / 195 / 70 (443 /
+  191 / 70), within the noise: 802 of 900 games play out as before, and the changes go both ways.
+  By fate: decay 178 / 450, stable 167 / 239, curvature 97 / 211. Alone, against `main` before the
+  swarms: 146 / 67 / 71 in 300 (148 / 72 / 71), 900 games 441 / 202 (439 / 203), 807 of 900 as
+  before.
