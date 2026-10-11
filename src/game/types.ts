@@ -344,6 +344,11 @@ export interface Swarm {
   awake: boolean;
   tamed: boolean;
   appetite: number;
+  /** A part sent after one of our ships (its fleet id): it strikes that ship wherever it finds it
+   * stopped, and once the ship is gone goes back to its swarm (11 Oct). */
+  prey?: string;
+  /** The swarm a part broke away from (its id): it rejoins it on its way back. */
+  nest?: string;
 }
 
 export interface SignalChoice {
@@ -383,6 +388,8 @@ export interface LogEntry {
   text: string;
   kind: 'info' | 'good' | 'bad' | 'era' | 'combat' | 'event' | 'mind';
   systemId?: string;
+  /** One of our fleets this is about (a swarm going for it): the turn's messages show it. */
+  fleet?: string;
 }
 
 export interface PendingEvent {

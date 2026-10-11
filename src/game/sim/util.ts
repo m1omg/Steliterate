@@ -59,8 +59,8 @@ export function savableName(name: string): string {
   return name === '__inf' || name === '__-inf' ? name.slice(1) : name;
 }
 
-export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string) {
-  state.log.push({ turn: state.turn, era: state.era, text, kind, systemId });
+export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string) {
+  state.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}) });
   if (state.log.length > 400) state.log.splice(0, state.log.length - 400);
 }
 
