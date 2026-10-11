@@ -143,6 +143,10 @@ function AccordButton({ s, use, t, label, tip }: { s: GameState; use: AccordUse;
   );
 }
 
+/** What a Thread's "Each makes" row means. */
+const MAKES_TIP =
+  'What one of them makes each turn, before a settlement’s focus, tempo strain and resolve raise or lower it.\nIndustry builds structures and ships.\nInsight drives research.\nAccord is spent on Charters, and here to rally resolve, calm dissent or hear one Thread out.';
+
 export function ThreadsModal({ s }: { s: GameState }) {
   void rev.value;
   const mods = computeMods(s);
@@ -194,8 +198,11 @@ export function ThreadsModal({ s }: { s: GameState }) {
               <dl class="kv">
                 <dt>Upkeep</dt>
                 <dd class="mono">{n1(d.energyUpkeep * mods.upkeep[t])} energy{d.matterUpkeep ? `, ${n1(d.matterUpkeep)} matter` : ''}</dd>
-                <dt>Works</dt>
-                <dd class="mono">{n1(d.industry)} ind · {n1(d.insight)} ins · {n1(d.accord)} acc</dd>
+                <dt data-tip={MAKES_TIP}>Each makes</dt>
+                {/* (the words in the narrow face, the numbers in mono; a line breaks only between them) */}
+                <dd class="makes" data-tip={MAKES_TIP}>
+                  <span><span class="mono">{n1(d.industry)}</span> industry,</span> <span><span class="mono">{n1(d.insight)}</span> insight,</span> <span><span class="mono">{n1(d.accord)}</span> accord</span>
+                </dd>
                 <dt data-tip="log₁₀ years per subjective moment: the fastest and slowest this kind of mind can live.">Clock</dt>
                 <dd class="mono">{d.strainImmune ? 'any' : lo === hi ? `${pow10(lo)}` : `${pow10(lo)} – ${pow10(hi)}`}</dd>
                 <dt>Tempo now</dt>

@@ -1433,3 +1433,12 @@ on a PC keeps the PC layout). Interface only: no rules, saves or seeds touched.
   clicks the rail's buttons shown (on a phone Codex and Save through Menu).
 - **Balance.** No rule changes (nothing under `src/game` changed): 300 games identical to `main`,
   game for game (148 of 300 survive, 72 victories).
+
+## What a Thread makes, in words (11 Oct)
+
+- The Threads window's "Works: 1 ind · 0.8 ins · 0.3 acc" now reads "Each makes: 1 industry, 0.8
+  insight, 0.3 accord", like the Upkeep row above it ("Works" could be taken for the Great Works).
+  The words are in the narrow face and only the numbers in mono, and a line breaks only between
+  items, so the row takes no more room than before (two lines in a PC card, one on a phone). Its
+  tooltip says what each is for: industry builds, insight drives research, accord goes to the
+  Charters and the Threads.

@@ -227,6 +227,8 @@ html.kbd [tabindex='-1']:focus-visible { outline: none; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13.5px; }
 .kv > dt { color: var(--ink-faint); }
 .kv > dd { margin: 0; text-align: right; }
+/* a Thread's "Each makes": the words in the narrow face, the numbers in mono, a line breaking only between them */
+.kv > dd.makes > span { white-space: nowrap; }
 .section { margin-top: 12px; }
 .section > h3 { margin: 0 0 6px; font-family: var(--f-display); font-weight: 700; font-size: 13.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-dim); display: flex; align-items: center; gap: 8px; }
 .section > h3::after { content: ''; flex: 1; height: 1px; background: var(--line); }
