@@ -1,6 +1,6 @@
 import { STRUCTURE_BY_ID, type StructureDef } from '../data/structures';
 import { THREAD_DEFS } from '../data/threads';
-import { frozenHard, hawkingLight, insolation, sourceLight } from '../physics';
+import { frozenHard, hawkingLight, insolation, siphonsRunning, sourceLight } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
 import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
@@ -100,6 +100,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   let depletion = 0;
 
   const light = sourceLight(state, sys, ctx.years, isFinite(ctx.L) ? ctx.L : 0);
+  // Halo Siphons, while they run, double the dark matter an ember burns (not a world falling into it)
+  const siphoned = siphonsRunning(state) && sys.primary.halo && calendarEra(state) === 'degenerate' ? (light.dark ?? 0) : 0;
   // under a dark sky (a star with no light left to give) cold computing is cheaper: erasing a bit
   // costs kT ln 2, and nothing is colder than the dark, so Coldminds and Cold Vaults keep for half
   const darkSky = light.light <= 0;
@@ -168,10 +170,9 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
       switch (d.energy.mode) {
         case 'light':
           // (an ordinary collector built at a brown dwarf before it was known to gather nothing there)
-          e = d.notAt?.includes(sys.primary.kind) ? 0 : a * light.light * (body.rogue ? 0 : 1);
+          e = d.notAt?.includes(sys.primary.kind) ? 0 : a * (siphoned ? light.light + siphoned : light.light) * (body.rogue ? 0 : 1);
           // arrays on the surface get the light where the world is (inverse square); orbital collectors do not care
           if (d.id === 'solar_array') e *= insolation(state, body);
-          if (flags.has('halo_siphons') && sys.primary.halo && calendarEra(state) === 'degenerate') e *= 2;
           if (civ.flags.ember_restraint && sys.primary.halo && calendarEra(state) === 'degenerate') e *= 0.75;
           break;
         case 'geo':

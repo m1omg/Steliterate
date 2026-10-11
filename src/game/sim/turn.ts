@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
 import { ERA_BY_ID, logTurnLength, tideLength } from '../eras';
-import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, evolveUniverse, lampsOver, seededLifeUnkept, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
+import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { greatEvaporation, runCrossing } from './crossing';
@@ -217,6 +217,9 @@ export function endTurn(state: GameState): TurnResult {
   const civ = state.civ;
   const mods = computeMods(state);
   civ.pace = clamp(civ.pace, mods.paceMin, mods.paceMax);
+  // Halo Siphons as the turn begins (its economy reads them so): research finished or siphons shut
+  // during it count from the next
+  const siphoning = siphonsRunning(state);
 
   // Long Sleep
   if (civ.sleepTurns > 0) {
@@ -430,6 +433,8 @@ export function endTurn(state: GameState): TurnResult {
 
   // ------------------------------------------------ 7. the universe moves on
   const from = state.years;
+  // while Halo Siphons run, the halo falls twice as fast: its clock gains this turn's years again
+  if (siphoning) drainHalo(state, from, step.years);
   const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
   result.notes = notes;
   handleNotes(state, notes);

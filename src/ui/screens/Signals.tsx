@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
-import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace, proposeAPact, seize, sendAid } from '../../game/sim/actions';
+import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace, proposeAPact, seize, sendAid, shutHaloSiphons } from '../../game/sim/actions';
+import { siphonsRunning } from '../../game/physics';
 import { SIEGE_TURNS, WAR_ACCORD, seizeBlocked, warBlocked, warCause, warDefence } from '../../game/sim/war';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
 import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
@@ -22,6 +23,61 @@ function senderName(s: GameState, sig: Signal): string {
   if (sig.from === 'slow') return 'The Slow Ones';
   if (sig.from === 'dark') return 'The halo';
   return s.survivors[sig.from]?.name ?? 'Unknown';
+}
+
+/**
+ * Shut the Halo Siphons for good, with a yes first: under the Unlit's request while the siphons run
+ * (they will not gather until they are shut), and on the Unlit's card.
+ */
+function ShutSiphons({ s, card }: { s: GameState; card?: boolean }) {
+  const [armed, setArmed] = useState(false);
+  if (!s.civ.techs.includes('halo_siphons')) return null;
+  if (!siphonsRunning(s))
+    return card ? (
+      <div class="faint siphons" style={{ fontSize: '12.5px', marginTop: '6px' }}>
+        Our Halo Siphons: shut for good on turn {s.civ.flags.siphons_shut}.
+      </div>
+    ) : null;
+  return (
+    <div class="siphons" style={{ marginTop: card ? '6px' : '8px' }}>
+      {card ? (
+        <>
+          <div class="eyebrow">Our Halo Siphons</div>
+          <div class="dim" style={{ fontSize: '13.5px' }}>
+            They drive the halo’s dark matter into our embers: ember light doubles, and the halo empties sooner, for every ember in the galaxy.
+          </div>
+        </>
+      ) : (
+        <div class="warn" style={{ fontSize: '13.5px' }}>Our Halo Siphons still run: they will not gather while the siphons drain the halo.</div>
+      )}
+      <div class="row wrap" style={{ gap: '6px', marginTop: '4px', alignItems: 'center' }}>
+        <button
+          class={`btn small danger siphons-shut ${armed ? 'on' : ''}`}
+          data-tip="From the next turn ember light no longer doubles, and the halo falls at its own pace again. What they have drawn stays drawn, and they cannot be started again."
+          onClick={() => setArmed(!armed)}
+        >
+          Shut the Halo Siphons
+        </button>
+      </div>
+      {armed && (
+        <div class="row wrap confirm-heavy" style={{ gap: '6px', alignItems: 'center' }}>
+          <span class="warn" style={{ fontSize: '13.5px' }}>Shut the Halo Siphons for good? Ember yields lose their doubling, and the siphons cannot be started again.</span>
+          <button
+            class="btn small danger siphons-yes"
+            onClick={() => {
+              setArmed(false);
+              if (act((g) => shutHaloSiphons(g))) sfx('select');
+            }}
+          >
+            Shut them for good
+          </button>
+          <button class="btn small siphons-no" onClick={() => setArmed(false)}>
+            Not now
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Message({ s, sig }: { s: GameState; sig: Signal }) {
@@ -50,6 +106,7 @@ function Message({ s, sig }: { s: GameState; sig: Signal }) {
           ))}
         </div>
       )}
+      {open && sig.kind === 'dark_reveal2' && siphonsRunning(s) && <ShutSiphons s={s} />}
       {sig.resolved && sig.choices.length > 0 && <div class="faint" style={{ fontSize: '12.5px', marginTop: '4px' }}>Answered: {sig.choices.find((c) => c.id === sig.resolved)?.label ?? sig.resolved}</div>}
     </div>
   );
@@ -435,6 +492,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                   {s.civ.flags.gesture_turn === s.turn && <div class="faint" style={{ fontSize: '12.5px' }}>Masses can be moved once per turn.</div>}
                 </>
               )}
+              <ShutSiphons s={s} card />
             </div>
           )}
         </div>

@@ -183,7 +183,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | Age | Sources |
 |---|---|
 | Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase (about 174× as luminous; about 3× the light per turn for collectors while you keep time with it); geothermal (declining); fusion |
-| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25. The others cool on (Mestel's law, then faster once crystallised: about 50 K as the age opens, 13 K at η 15) and give collectors nothing; the game calls them black dwarfs from η 16.7. An ember cast out of the galaxy dims over a decade of η as it leaves the halo behind. Worlds' core heat runs out after the Last Light (×0.8 a turn). **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova); their ultraviolet boils away the closest worlds (warmest ground past 3,000 K, rubble past 1,600 K; gas and ice giants spared), and a heavier one swells into a helium giant (1,000 L☉, 120,000 years) that swallows whatever orbits inside its 0.116 AU. A turn soon outlasts every kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full, or, for one too brief for six (a giant, a late helium star), a single flash turn; one clock at a time, though a star that outlasts it can be followed on (priced from our own pace, never below 250 energy); with Quickening, Quick ×10 splits each clock turn into ten, each lived as a tenth; free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve, which charts its system. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting**; under curvature radiation, **curvature collectors** at neutron stars (η 30 to 68) |
+| Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25 (sooner while Halo Siphons run). The others cool on (Mestel's law, then faster once crystallised: about 50 K as the age opens, 13 K at η 15) and give collectors nothing; the game calls them black dwarfs from η 16.7. An ember cast out of the galaxy dims over a decade of η as it leaves the halo behind. Worlds' core heat runs out after the Last Light (×0.8 a turn). **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova); their ultraviolet boils away the closest worlds (warmest ground past 3,000 K, rubble past 1,600 K; gas and ice giants spared), and a heavier one swells into a helium giant (1,000 L☉, 120,000 years) that swallows whatever orbits inside its 0.116 AU. A turn soon outlasts every kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full, or, for one too brief for six (a giant, a late helium star), a single flash turn; one clock at a time, though a star that outlasts it can be followed on (priced from our own pace, never below 250 energy); with Quickening, Quick ×10 splits each clock turn into ten, each lived as a tenth; free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve, which charts its system. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting**; under curvature radiation, **curvature collectors** at neutron stars (η 30 to 68) |
 | Black Hole | Penrose (finite spin), Hawking collectors (rising as holes shrink), final bursts, accretion only if protons are stable |
 | Dark | The reserve; a trickle of speculative horizon siphoning |
 
@@ -374,8 +374,9 @@ the disagreement as real model uncertainty.
 * **Sleepers and ghosts:** vault civilizations and archived dead in ruins. Waking them is
   costly and risky.
 * **The Unlit:** minds of the dark-matter sector, reachable only through gravity: moved
-  masses answered by moved masses. A misread reply can move a world. Their full design is in
-  `docs/spoilers/dark-matter.md`.
+  masses answered by moved masses. A misread reply can move a world. Their messages wait for an
+  answer, however long it takes (11 Oct). Halo Siphons, once researched, can be shut for good,
+  under their message or on their card. Their full design is in `docs/spoilers/dark-matter.md`.
 
 Not every other intelligence is conscious in the way the protagonists are, and that does not
 stop them from talking.
@@ -464,7 +465,9 @@ stop them from talking.
   insulating envelope, neutron stars and worlds' cores keep their heat in their electrons and
   cool as T ≈ K·t^-½ (K ≈ 7×10⁶ K·yr^½ a neutron star, 10⁴ a world's core; consults of 6 Oct; the
   audit of 8 Oct estimates 1.2 to 3.9 × 10⁶ for the neutron star, within the uncertainty).
-  Dark-matter heating, from the Dusk on while the halo lasts (Adams & Laughlin: from η 11):
+  Dark-matter heating, from the Dusk on while the halo lasts (Adams & Laughlin: from η 11; a
+  bend, 11 Oct: while our Halo Siphons run the whole halo falls twice as fast, so it is spent by
+  about η 24.7 instead of 25; a few dozen embers among hundreds of billions could never do that):
   embers 63 K, neutron stars near 900 K (no longer 30,000 K in the Dusk; Baryakhtar et al. 2017
   find 1,700 to 2,500 K at the Milky Way's density today), brown dwarfs near 4 K (uncertain). A
   world falling into a dead star warms it to 50 to 110 K (about 10^15 to 10^16 W of accretion).

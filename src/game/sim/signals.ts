@@ -45,12 +45,25 @@ export function deliverSignals(state: GameState): Signal[] {
       log(state, `Signal: ${s.title}${ageText}`, 'mind');
     }
   }
-  // old unanswered messages lapse
+  // old unanswered messages lapse (the Unlit's wait for an answer)
   for (const s of state.signals) {
-    if (s.arrivedTurn !== null && !s.resolved && state.turn - s.arrivedTurn > 8) s.resolved = 'lapsed';
+    if (s.arrivedTurn !== null && !s.resolved && state.turn - s.arrivedTurn > 8 && !waitsForAnswer(s)) s.resolved = 'lapsed';
   }
-  if (state.signals.length > 160) state.signals.splice(0, state.signals.length - 160);
+  // the oldest go, except an Unlit message still waiting for its answer
+  if (state.signals.length > 160) {
+    const cut = state.signals.length - 160;
+    const keep = state.signals.slice(0, cut).filter((s) => waitsForAnswer(s) && !s.resolved);
+    state.signals.splice(0, cut, ...keep);
+  }
   return out;
+}
+
+/**
+ * A message that waits until it is answered, however long that takes: the Unlit's, which carry
+ * their whole conversation (an 8-turn lapse left their request unanswerable for good).
+ */
+export function waitsForAnswer(s: Signal): boolean {
+  return s.from === 'dark' && (s.choices?.length ?? 0) > 0;
 }
 
 export function signalAge(state: GameState, s: Signal): number {

@@ -1,5 +1,6 @@
 import { ERA_BY_ID, ERAS, deepMilestonesFor, formatEta, formatYears, formatYearsShort, milestonesFor } from '../../game/eras';
 import { DEGENERATE_END, fateKnown, fateOf } from '../../game/fate';
+import { embersOutEta, haloMoved, siphonsRunning } from '../../game/physics';
 import type { EraId, GameState } from '../../game/types';
 import { phoneMore, rev } from '../store';
 import { Icon } from '../Icon';
@@ -50,7 +51,7 @@ export function Chronometer({ s, nextYears }: { s: GameState; nextYears: number 
   // the fate of matter decides where the Degenerate Age ends: until it is known, the timeline
   // shows the stretch it might end in, and every date that depends on it, as questions
   const fate = fateKnown(s) ? fateOf(s) : null;
-  const milestones = deep ? deepMilestonesFor(fate).map((m) => ({ ...m, x: deepPos(Math.pow(10, m.at)) })) : milestonesFor(fate).map((m) => ({ ...m, x: rulerPos(Math.pow(10, m.at), m.at) }));
+  const milestones = deep ? deepMilestonesFor(fate).map((m) => ({ ...m, x: deepPos(Math.pow(10, m.at)) })) : milestonesFor(fate, haloMoved(s) ? { at: embersOutEta(s), running: siphonsRunning(s) } : undefined).map((m) => ({ ...m, x: rulerPos(Math.pow(10, m.at), m.at) }));
   const at = (e: number) => rulerPos(Math.pow(10, e), e);
   const split = at(fate ? DEGENERATE_END[fate] : DEGENERATE_END.stable);
   const unsure: [number, number] | null = fate ? null : [at(DEGENERATE_END.stable), at(DEGENERATE_END.curvature)];

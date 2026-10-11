@@ -1451,3 +1451,53 @@ on a PC keeps the PC layout). Interface only: no rules, saves or seeds touched.
   player, with the Proton Question done). Now, once the fate is known, the other fates' projects
   are left out of the grid: they will never exist in this universe. Interface only.
 - New browser check `research-fate`.
+
+## Halo Siphons can be shut; the halo empties sooner while they run; the Unlit's messages wait (11 Oct)
+
+The player: "how do i actually stop draining the halo?" They couldn't. Halo Siphons is a research,
+and research is never undone, so the Unlit's request ("Requires not using Halo Siphons") was refused
+for good once it was researched. Their request also lapsed 8 turns after it came, like any message,
+and the research's "the halo empties sooner" was not true: the halo's end never moved. Chosen:
+shut for good, messages that wait, and "make it true", with "only count the emptying from point of
+continuing, so, for existing saves NOT retrospective … so i won't load into an empty halo". Then:
+"where do i actually shut the siphons? … i just can't agree due to the siphons", so the button is
+under their request.
+
+- **Shut the Halo Siphons** (`shutHaloSiphons`, `civ.flags.siphons_shut`, the turn), under the
+  Unlit's request while the siphons run and on their card (Signals, Other minds), with a yes
+  first ("Shut them for good" / "Not now"). For good: they cannot be started again. From the next
+  turn ember light no longer doubles; their request can be answered with Help (the refusal names
+  the button); and the siphons no longer move the Unlit to fling worlds loose (being refused still
+  does, `dark.flags.hostile`). The quest's own texts and choices are unchanged.
+- **The halo empties sooner while the siphons run** (`physics.ts`: `haloDrawn`, `drainHalo`).
+  The game lets the whole halo fall twice as fast while they run: its clock runs ahead of ours by
+  the years they have drawn (`civ.flags.halo_drawn`, each turn's length while they run, until the
+  halo is spent), and every ember, brown dwarf, neutron star and the galaxy's glow reads it
+  (`drawn`, a trailing parameter of `emberShare`, `backgroundK`, `ownTemperature`,
+  `primaryTemperature`, `primaryLuminosity`). Running from early on, the embers go out by about
+  η 24.7 instead of 25 (doubling the fall halves the time: log₁₀ 2 ≈ 0.3), about a turn sooner at
+  the standard length. Shut, they draw no more; what was drawn stays drawn. **Not retrospective:**
+  the counter starts at none in every save, whatever it had researched, so each save loads into
+  the halo it had. (Each Degenerate turn is longer than all the years before it, so a save before
+  η 25 that keeps them running catches up within a turn or two.) Where the game bends physics, in
+  the Codex: a few dozen embers among hundreds of billions of white dwarfs could never empty a
+  galaxy's halo.
+- **The siphons double what an ember burns, not a world falling into it.** `SourceInfo.dark` is
+  the dark-matter part of an ember's light; a rekindled dwarf's light from an infalling world (and
+  a collision star at a halo dwarf's place) is no longer doubled. Ember restraint (×0.75) is as it
+  was.
+- **The moved date shows:** the embers forecast, the Chronometer's "Embers fade" ("Our Halo
+  Siphons are bringing it sooner."), and The Embers Dim (when it can come, and its hint). With no
+  siphons, all as before.
+- **The Unlit's messages wait for an answer** (`waitsForAnswer` in `signals.ts`): they never
+  lapse, and the 160-message cap keeps an open one. One that lapsed in an older save opens again
+  as it loads (`migrate`). Other messages keep their 8 turns. An unanswered one keeps its "signal
+  to answer" chip.
+- **Texts:** the Codex (Degenerate Age: Halo Siphons, and the bend), the Manual (the Unlit), the
+  research's description ("They can be shut for good later, but not started again.").
+- **The player's save** (turn 134, η 32): it loads with nothing drawn and the same light (its
+  halo has been spent since η 25, as in every game; the siphons give it nothing there: +215.3
+  energy a turn with or without them); its request, open since turn 133, is still open after turn
+  141; shut, then Help takes 200 matter and 100 energy, and the quest goes on.
+- **Checks.** New unit check `siphons` and browser check `siphons` (the button under the request
+  and on the card, Not now, the keyboard, Help after; the magnifier mode).

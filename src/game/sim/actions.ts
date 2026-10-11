@@ -18,7 +18,7 @@ import { BEACON_COST } from './beacons';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
-import { sourceLight } from '../physics';
+import { siphonsRunning, sourceLight } from '../physics';
 import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
@@ -499,6 +499,20 @@ export function answerSignal(state: GameState, sigUid: string, choice: string): 
 
 export function makeGesture(state: GameState, answer: 'continue' | 'mirror' | 'resonance' | 'silence'): ActionResult {
   return gesture(state, answer);
+}
+
+/**
+ * Shut the Halo Siphons for good (researched, they cannot be unlearnt): from the next turn ember
+ * light no longer doubles and the halo falls at its own pace again, and the Unlit no longer hold
+ * them against us. What they drew from the halo stays drawn. They cannot be started again.
+ */
+export function shutHaloSiphons(state: GameState): ActionResult {
+  const civ = state.civ;
+  if (!civ.techs.includes('halo_siphons')) return 'We have no Halo Siphons to shut.';
+  if (!siphonsRunning(state)) return 'The Halo Siphons are already shut.';
+  civ.flags.siphons_shut = state.turn;
+  log(state, 'We shut the Halo Siphons for good. The dark matter falls into the embers at its own pace again.', 'event');
+  return null;
 }
 
 export function seize(state: GameState, survivorId: string): ActionResult {

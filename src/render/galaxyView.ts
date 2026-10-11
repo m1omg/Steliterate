@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { fleetLook, lookRole, type FleetLook } from '../game/data/ships';
-import { diskLight, emberShare, primaryTemperature, shownKind } from '../game/physics';
+import { diskLight, emberShare, haloDrawn, primaryTemperature, shownKind } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
 import { starsSeen } from '../game/sim/claims';
@@ -664,7 +664,7 @@ function nodeTemperature(s: StarSystem, state: GameState): number {
   const k = shownKind(s.primary, state.years);
   if (k === 'black_hole' || k === 'smbh') return 2.7 + 900 * diskLight(k, calendarEra(state), state.years, !matterGone(state));
   if (k === 'void' || k === 'rogue') return 3;
-  return primaryTemperature(s.primary, state.years, calendarEra(state));
+  return primaryTemperature(s.primary, state.years, calendarEra(state), 0, 0, haloDrawn(state));
 }
 
 /** How far a white dwarf in the Dusk glows in its own colour: 0 below 780 K (too cool to glow; drawn like an ember), 1 from 1,500 K. */
@@ -680,11 +680,11 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   if (k === 'void' || k === 'rogue') return [0.35, 0.36, 0.42];
   if (k === 'brown_dwarf') return [0.62, 0.3, 0.28];
   if (k === 'black_dwarf') return s.primary.rekindle ? [0.9, 0.45, 0.25] : [0.3, 0.3, 0.34];
-  const tK = primaryTemperature(s.primary, state.years, calendarEra(state));
+  const tK = primaryTemperature(s.primary, state.years, calendarEra(state), 0, 0, haloDrawn(state));
   if (k === 'white_dwarf' && calendarEra(state) !== 'dusk') {
     // grey as a black dwarf once nothing warms it; an ember blue-white while the halo warms it
     if (s.primary.rekindle) return [0.9, 0.45, 0.25];
-    const e = emberShare(s.primary, state.years);
+    const e = emberShare(s.primary, state.years, haloDrawn(state));
     const cold = [0.3, 0.3, 0.34];
     return [cold[0] + (0.55 - cold[0]) * e, cold[1] + (0.62 - cold[1]) * e, cold[2] + (0.8 - cold[2]) * e];
   }

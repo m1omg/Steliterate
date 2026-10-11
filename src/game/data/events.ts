@@ -4,7 +4,7 @@ import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime, sup } from '../eras';
-import { SURFACE_LIFE, boilingAway, steamWorld } from '../physics';
+import { SURFACE_LIFE, boilingAway, embersOutEta, haloEta, haloMoved, siphonsRunning, steamWorld } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
@@ -661,10 +661,11 @@ export const EVENTS: EventDef[] = [
     eras: ['degenerate'],
     once: true,
     weight: 20,
-    // the halo thins near η 22; if curvature radiation keeps the age going long after, the news is old by η 39
-    bind: (s) => (s.eta > 22.3 && s.eta < 39 ? {} : null),
+    // the halo thins near η 22 (by its own clock, which Halo Siphons run ahead); if curvature
+    // radiation keeps the age going long after, the news is old by η 39
+    bind: (s) => (haloEta(s) > 22.3 && s.eta < 39 ? {} : null),
     text: () => 'The dark-matter halo is running thin. The white dwarfs it kept warm are cooling, one after another, toward the cold of true black dwarfs, a small fraction of a degree above nothing. Whatever we are going to live on next, we need to find it now.',
-    choices: [{ label: 'Understood', hint: 'Ember yields keep falling until η 25.', run: (s) => { res(s, -2); } }],
+    choices: [{ label: 'Understood', hint: (s) => (haloMoved(s) ? `Ember yields keep falling until about η ${embersOutEta(s).toFixed(1)}, sooner ${siphonsRunning(s) ? 'while our Halo Siphons run' : 'for what our Halo Siphons drew'}.` : 'Ember yields keep falling until η 25.'), run: (s) => { res(s, -2); } }],
   },
   {
     id: 'proton_answer',

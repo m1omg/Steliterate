@@ -446,6 +446,21 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   own: "slovak translation would be best, friend is slovak like myself just using a cz
   translation tool" (its typing tidied; see Picking up). Her own word on what helps would be worth more than our
   guesses.
+- **11 Oct, the halo:** "how do i actually stop draining the halo?" They had researched Halo
+  Siphons, and the Unlit's request (Help: "Requires not using Halo Siphons") was refused for good:
+  research is never undone, and nothing shut the siphons. Their request would also lapse after 8
+  turns, and the research's "the halo empties sooner" was not true. Their save (turn 134, η 32,
+  uploaded; theirs, not in the repository): the siphons gave it nothing by then, so shutting costs
+  nothing. Asked, they chose "Shut for good", "Wait until answered" (the Unlit's messages; others
+  keep their 8 turns) and "Make it true", adding "only count the emptying from point of
+  continuing, so, for existing saves NOT retrospective … so i won't load into an empty halo".
+  Then "where do i actually shut the siphons? … i just can't agree due to the siphons": the button
+  is under their request as well as on their card. The halo falls twice as fast while the siphons
+  run (the one bend, stated in the Codex); the quest's own texts are unchanged. The autoplayer
+  researches the siphons in half the harness's games (its fallback ignores `noAuto`; left as it
+  is), so the rule moves the harness (CHANGELOG, "Halo Siphons can be shut"). Same day: their other
+  session's swarm batch had stopped mid-validation ("bit the dust mid-change"); I finished its
+  browser checks and put it live before this one.
 
 ## Found in the review of 28 Sep (verified)
 

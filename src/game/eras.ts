@@ -305,9 +305,17 @@ const FATE_MILESTONES: Record<Fate | 'unknown', Milestone[]> = {
   ],
 };
 
-/** The milestones on the main ruler, for a fate of matter (null while it is unknown). */
-export function milestonesFor(fate: Fate | null): Milestone[] {
-  return [...COMMON_MILESTONES, ...FATE_MILESTONES[fate ?? 'unknown']].sort((a, b) => a.at - b.at);
+/**
+ * The milestones on the main ruler, for a fate of matter (null while it is unknown). `embersOut`:
+ * where Halo Siphons have moved the halo's end (physics.ts embersOutEta), and whether they still run.
+ */
+export function milestonesFor(fate: Fate | null, embersOut?: { at: number; running: boolean }): Milestone[] {
+  const common = embersOut
+    ? COMMON_MILESTONES.map((m) =>
+        m.label === 'Embers fade' ? { ...m, at: embersOut.at, detail: `${m.detail} ${embersOut.running ? 'Our Halo Siphons are bringing it sooner.' : 'Our Halo Siphons brought it sooner.'}` } : m,
+      )
+    : COMMON_MILESTONES;
+  return [...common, ...FATE_MILESTONES[fate ?? 'unknown']].sort((a, b) => a.at - b.at);
 }
 
 /** Today's milestones with the fate unknown (kept for anything that lists them all). */
