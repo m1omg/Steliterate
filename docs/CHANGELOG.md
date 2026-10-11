@@ -1442,3 +1442,12 @@ on a PC keeps the PC layout). Interface only: no rules, saves or seeds touched.
   items, so the row takes no more room than before (two lines in a PC card, one on a phone). Its
   tooltip says what each is for: industry builds, insight drives research, accord goes to the
   Charters and the Threads.
+
+## Research: no "???" once the fate of matter is known (11 Oct)
+
+- A few research projects exist only under one fate of matter. Until the fate is known they show
+  as "???", with the hint that the Proton Question would tell. After it was answered, a project of
+  another fate still showed as "???" with that same hint, as if more research would reveal it (the
+  player, with the Proton Question done). Now, once the fate is known, the other fates' projects
+  are left out of the grid: they will never exist in this universe. Interface only.
+- New browser check `research-fate`.
