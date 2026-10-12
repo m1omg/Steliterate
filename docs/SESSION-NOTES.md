@@ -51,7 +51,10 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - The game is as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
+  - 12 Oct: the Last Star batch (it shines when it lights, and its clock is free; CHANGELOG, "The
+    Last Star shines when it lights"), from `claude/affectionate-johnson-qqr7p2`, the plan's second
+    session; see the dated entry below for its PR.
+  - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
     first account's session, which stopped mid-validation; finished and merged from this one),
@@ -92,7 +95,14 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (11 Oct, the swarms and the halo together, PR
+- **The baseline, from the last validation (12 Oct, the Last Star):**
+  - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 44 unit checks; savecompat on
+    the 6 saves in `tools/saves/` (the sixth made with `main`'s code, its Last Star out); all 48
+    browser checks in the real fonts;
+  - the harness: 150 of 300 standard competent games survive, 67 victories, a Degenerate Age of
+    72 turns; 900 games 445 / 199 / 70; by fate decay 177 / 450, stable 166 / 239, curvature
+    102 / 211. 721 of 900 play out as before it; every one that changed lights the Last Star.
+- **The baseline before it (11 Oct, the swarms and the halo together, PR
   m1omg/Steliterate#13):**
   - tsc and the build were clean;
   - the playtest printed "ALL CHECKS PASSED" (30/144 Hz parity 2.05e-15);
@@ -282,6 +292,21 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   red dwarf would be locked by now; it changes many climates); the flare's step at `blueAt` and
   its mass-blind date; the helium stars' one set of numbers.
 
+- **12 Oct, the Last Star:** "when will i see the new star?" In their turn-149 game it had lit and
+  burned out inside turn 139 (lit as its turn began, with a life shorter than the turn); they never
+  saw it. The first account, near its limits, asked for "a plan for a second claude session to fix
+  it pls" (`docs/plans/last-star.md`), and the other account asked this session to "read
+  HANDOVER.md again, then docs/plans/last-star.md, and do it". Asked the plan's questions, they
+  chose "Like other new stars (Recommended)", "Free (Recommended)" and "Relight it on load", and,
+  instead of a button: "there should be an event about it, also keeping time with this particular
+  one should be free for the player regardless of his timescale". Done: it lights as the turn ends
+  and burns through the next; its event, Light in the Halo, offers Keep time (free at any pace, in
+  the Black Hole Age's calendar too) or Watch it burn; old saves relight it where it went out too
+  soon. The Unlit's message stays word for word. Two calls of mine, said to them: the neighbours'
+  new-star rules leave it out (other civilizations: no changes beyond what was asked), and the
+  autoplayer keeps time with it as with every new star. Found on the way: in the Dark Era it would
+  have read NaN (infinite years), so there it lights and goes out within the turn, as it always did.
+  Their own game is past the Great Decay (η 40.6): it will show in a future game.
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word

@@ -4,6 +4,8 @@ import { STRUCTURE_BY_ID } from './data/structures';
 import { TECH_BY_ID } from './data/techs';
 import { defaultWater } from './gen';
 import { surveyWhereStationed } from './sim/fleets';
+import { queueEvent } from './sim/events';
+import { relightTheLastStar } from './sim/minds';
 import { waitsForAnswer } from './sim/signals';
 import type { GameState } from './types';
 
@@ -90,6 +92,10 @@ export function migrate(s: GameState): GameState {
   surveyWhereStationed(s);
   // the Unlit's messages wait for an answer now (11 Oct): one that lapsed before opens again
   for (const sig of s.signals) if (sig.resolved === 'lapsed' && waitsForAnswer(sig)) sig.resolved = null;
+  // a Last Star lit by the old rule (before 12 Oct) burned out within a turn: it lights again,
+  // while matter lasts, and its event offers its clock (the player's choice)
+  const relit = relightTheLastStar(s);
+  if (relit) queueEvent(s, 'last_star', { systemId: relit });
   s.saveVersion = SAVE_VERSION;
   return s;
 }

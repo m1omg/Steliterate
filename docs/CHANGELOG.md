@@ -1553,3 +1553,65 @@ under their request.
   By fate: decay 178 / 450, stable 167 / 239, curvature 97 / 211. Alone, against `main` before the
   swarms: 146 / 67 / 71 in 300 (148 / 72 / 71), 900 games 441 / 202 (439 / 203), 807 of 900 as
   before.
+
+## The Last Star shines when it lights, and can be kept time with, free (12 Oct)
+
+The player: "when will i see the new star?" In their game (turn 149, a save uploaded to the session
+that wrote the plan) they shut the Halo Siphons on turn 134 and pressed Help on 135; on turn 139 the
+Last Star lit and burned out inside that same turn, and the Unlit's message about it came on turn
+140. They never saw it shine, and no turn drew on its light. It lit in step 6 of the turn (as the
+turn began) and lived until the universe was three times as old: a Degenerate turn at the Tide is
+1.82 times the universe's age, ten times that for each slower pace, so at pace −1 or slower it died
+in the turn it lit, and at the Tide the next turn got about 3% of its light. Only a quest finished
+before about η 24.5 got turns of it, from its floor of 10^25 years. Reproduced with `main`'s code:
+lit at η 26 at pace −1, out the same turn (the save is now in `tools/saves/`). The plan, written by
+the other session, is `docs/plans/last-star.md`. Asked, the player chose "Like other new stars",
+"Free", "Relight it on load", and, for where the clock is offered: "there should be an event about
+it, also keeping time with this particular one should be free for the player regardless of his
+timescale".
+
+- **It lights as the turn ends**, as every new star does (`gatherTheLastStar` in `minds.ts`, called
+  in step 7 after the universe moves on), and burns until the universe is three times as old as
+  then, never before 10^25 years and never less than the turn after it at the Tide
+  (`lastStarDies`). So it shines through the whole next turn at the Tide (×10 light where anyone
+  lives by it), and at a slower pace through part of it. The Unlit's message, its gift and
+  everything the quest says are word for word as before; the check compares the message with the
+  one `main` wrote.
+- **Its own event, Light in the Halo:** how long it burns and what keeping time with it gives, with
+  Keep time with it (six turns of its light, each lived in full as one Tide turn) or Watch it burn
+  (insight +25, resolve +2, as for every new star).
+- **Free, whatever our pace:** the Last Star is the Unlit's gift to everyone who can see it, so its
+  clock costs nothing at any pace, following on from another clock too (no floor), and no partner
+  halves it. It is a new star for the clocks (`isNewStar`), and may be kept time with in the Black
+  Hole Age's calendar too, where it can light in the stable and curvature fates (the calendar turns
+  at 10^40 years without the age); collision and helium stars are unchanged.
+- **Where protons decay** the Great Decay dissolves it with the rest of matter, and a clock kept with
+  it ends there (`starGoneEarly` in `endOfMatter`). Lit in the very turn the Great Decay comes, its
+  event says what took it.
+- **In the Dark Era** (one harness game in 300 finishes the quest there, at η 2,370) the calendar no
+  longer counts years: it lights and goes out within the turn, as it always did there, and the
+  Record says so. (Lit as the turn ends with infinite years, its light would have read NaN.)
+- **Old saves:** a Last Star the old rule lit too late to shine (after about η 24.5), out within the
+  turn after it lit (or burning but going out within the coming turn), lights again as the save
+  loads, while matter lasts, as this turn begins, and its event waits. Marked once
+  (`civ.flags.last_star_lit`), so it never lights twice. The player's own game is past the Great
+  Decay (η 40.6): there it cannot shine, so it will show in a future game.
+- **On the map** its name keeps its ✦ while it burns, as a collision star's does; its panel says
+  "Burns until", and the forecasts say when it burns out.
+- **Texts:** the Codex (Degenerate Age: dark stars, Spolyar, Freese & Gondolo 2008, and the bend: a
+  dark star in the far future, and how long it burns, are the game's choice), a source, and a line
+  in the Manual's paragraph on new stars.
+- **Not changed:** the neighbours' rules for new stars (sleepers waking for one, claims), which stay
+  as they were for other civilizations.
+- **Checks.** New unit check `last-star` (paces 0, −1, −2; free at every pace where a collision star
+  would cost 240; six turns kept, each in full; Watch; the Great Decay; the Black Hole Age's
+  calendar; the Dark Era, which fails without its guard; an old save made with `main` relit once and
+  played on; four cases not relit) and browser check `last-star` (End turn lights it, its event,
+  Keep time from the keyboard at no cost, the Pace chip through six real turns, its panel, the
+  magnifier mode). A sixth save in `tools/saves/`: `98139af-seed1000-turn121-last-star-out`.
+- **Balance.** 300 games: 150 survive, 67 victories, a Degenerate Age of 72 turns (151 / 69 / 71 on
+  `main`). 900 games: 445 / 199 / 70 (442 / 195 / 70), within the noise; 721 of 900 play out as on
+  `main`, and all 179 that changed light the Last Star, the outcomes moving both ways. By fate:
+  decay 177 / 450, stable 166 / 239, curvature 102 / 211. In the first 300: 75 games light it, from
+  η 15.0 to 2,370 (median 23.1); 40 before η 24.5, where the old floor already held it for turns;
+  19 in the Black Hole Age's calendar and 1 in the Dark Era; the autoplayer keeps time with it in 32.

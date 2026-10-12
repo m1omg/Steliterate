@@ -1,5 +1,12 @@
 # Plan: the Last Star burns out in the turn it lights
 
+**Done, 12 Oct** (CHANGELOG, "The Last Star shines when it lights"). The player's answers to step 1:
+"Like other new stars", "Free", "Relight it on load", and, instead of a button on its panel, an
+event: "there should be an event about it, also keeping time with this particular one should be
+free for the player regardless of his timescale". Beyond the plan: its clock may run in the Black
+Hole Age's calendar too (19 of 75 harness games light it there), and in the Dark Era it lights and
+goes out within the turn (its years are infinite there). Kept for the record below.
+
 For a second Claude session. The player asked for it on 12 Oct ("make a plan for a second claude
 session to fix it pls"), since the first account was near its usage limits.
 

@@ -2,7 +2,8 @@ import type { GameState, Mind } from '../types';
 import type { Mods } from './mods';
 import { canConverse, sendSignal, voiceRange } from './signals';
 import { capital, clamp, colonies, distLy, log, withRng } from './util';
-import { calendarEra } from '../fate';
+import { calendarEra, matterGone } from '../fate';
+import { tideLength } from '../eras';
 import { siphonsRunning } from '../physics';
 
 // Two minds that are not like you at all.
@@ -125,10 +126,6 @@ export function updateMinds(state: GameState, logL: number, _mods: Mods) {
           { id: 'refuse', label: 'Refuse', hint: 'Their light is not our concern.' },
         ],
       });
-    }
-    if (dark.flags.gathering && state.turn >= dark.flags.gathering) {
-      delete dark.flags.gathering;
-      igniteDarkStar(state);
     }
     // exploitation has consequences: they can move worlds
     if (dark.stage >= 2 && calendarEra(state) === 'degenerate' && (siphonsRunning(state) || dark.flags.hostile) && rng.chance(0.08)) {
@@ -267,13 +264,77 @@ export function resolveMindSignal(state: GameState, sigUid: string, choice: stri
   return null;
 }
 
-function igniteDarkStar(state: GameState) {
+/** The Last Star never burns out before this year (the halo's end, about η 25: Adams & Laughlin). */
+export const LAST_STAR_FLOOR = 1e25;
+
+/**
+ * When the Last Star lit at year `at` burns out: once the universe is three times as old (never
+ * before LAST_STAR_FLOOR), and never before the turn after it has passed at the Tide, so that,
+ * as every new star does, it shines through the turn after it lights. How long a dark star in the
+ * far future would burn is the game's choice: there is no physics to ask.
+ */
+export function lastStarDies(state: GameState, at: number): number {
+  const era = calendarEra(state);
+  const tide = era === 'dusk' || era === 'dark' ? 0 : tideLength(era, at, state.settings.length);
+  return Math.max(at * 3, at + tide, LAST_STAR_FLOOR);
+}
+
+/**
+ * The gathering is done: the Last Star lights as the turn ends (`to`), as every new star does
+ * (physics.ts), after the universe has moved on, so it shines through the next turn and can be
+ * kept time with (flare.ts), free. Called in step 7 of the turn, after `evolveUniverse`; until
+ * 12 Oct it lit before it (`updateMinds`, at the turn's start) with a life shorter than the turn.
+ * Returns its system, for its event, or null.
+ */
+export function gatherTheLastStar(state: GameState, to: number): string | null {
+  const dark = state.minds.dark;
+  if (!dark.flags.gathering || state.turn < dark.flags.gathering) return null;
+  delete dark.flags.gathering;
+  return igniteDarkStar(state, to);
+}
+
+/**
+ * A game saved before 12 Oct may have lit the Last Star by the old rule: lit as its turn began,
+ * with too short a life, it burned out in the turn it lit or the next, and no turn drew on its
+ * light (unless it lit before about η 24.5, when 10^25 years held it for turns). While matter
+ * lasts it lights again as the game loads (the player's choice), and shines through the coming
+ * turn. Not retrospective in anything else. Returns its system, for its event, or null.
+ */
+export function relightTheLastStar(state: GameState): string | null {
+  const f = state.civ.flags;
+  if (!f.unlit_gift || f.last_star_lit || matterGone(state)) return null;
+  const era = calendarEra(state);
+  if (era !== 'degenerate' && era !== 'blackhole') return null;
+  const sig = state.signals.find((x) => x.from === 'dark' && x.kind === 'dark_star');
+  const host = Object.values(state.systems).find((x) => x.name === 'The Last Star' && !x.gone);
+  if (!sig || !host || sig.sentYears * 3 <= LAST_STAR_FLOOR) return null;
+  const p = host.primary;
+  if (p.kind === 'dark_star') {
+    // still burning: relit only if it would go out within the coming turn at the Tide
+    if ((p.diesAt ?? 0) >= state.years + tideLength(era, state.years, state.settings.length)) return null;
+  } else if (p.kind === 'black_dwarf') {
+    // out: relit only if it went out in the turn it lit or the next (its message came the turn after it lit)
+    const lit = (sig.arrivedTurn ?? state.turn) - 1;
+    const out = state.log.find((e) => e.systemId === host.id && e.text === `The star at ${host.name} has burned out.`);
+    if (out && out.turn > lit + 1) return null;
+  } else return null;
+  host.primary = { ...p, kind: 'dark_star', mass: 3, lum: 10, bornAt: state.years, diesAt: lastStarDies(state, state.years), spin: 0, spinMax: 0 };
+  f.last_star_lit = 1;
+  return host.id;
+}
+
+function igniteDarkStar(state: GameState, to: number): string | null {
   const halo = Object.values(state.systems).filter((s) => state.regions.find((r) => r.id === s.regionId)?.kind === 'globular' && !s.gone);
   const host = halo[0] ?? Object.values(state.systems).find((s) => s.primary.kind === 'white_dwarf' && !s.gone);
-  if (!host) return;
-  host.primary = { kind: 'dark_star', mass: 3, lum: 10, bornAt: state.years, diesAt: Math.max(state.years * 3, 1e25), spin: 0, spinMax: 0 };
+  if (!host) return null;
+  // in the Dark Era a turn outlasts any star, and the calendar no longer counts years: it lights and
+  // goes out within the turn, as it always did there (its message and its gift are the same)
+  const brief = calendarEra(state) === 'dark' || !isFinite(to);
+  host.primary = brief ? { kind: 'black_dwarf', mass: 3, lum: 10, spin: 0, spinMax: 0 } : { kind: 'dark_star', mass: 3, lum: 10, bornAt: to, diesAt: lastStarDies(state, to), spin: 0, spinMax: 0 };
   host.name = 'The Last Star';
   state.civ.known[host.id] = 2;
+  state.civ.flags.last_star_lit = 1;
+  if (brief) log(state, 'The Last Star lit and went out within the turn: in the Dark Era a turn outlasts any star.', 'mind', host.id);
   state.gfe = Math.min(1, state.gfe + 0.1);
   state.civ.flags.unlit_gift = 1;
   state.minds.dark.stage = 5;
@@ -284,4 +345,5 @@ function igniteDarkStar(state: GameState) {
     title: 'The Last Star',
     text: 'In the halo, a star has ignited, powered by dark matter annihilating in its heart. Everyone left in the Coalescence can see it. Its light is modulated, and when our astronomers decode it they find it is addressed to everything that can see: every ember they fed, every orbit they touched, and a gift for us, a way of writing across the end of the universe. The Unlit are becoming light.',
   });
+  return brief ? null : host.id;
 }

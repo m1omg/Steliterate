@@ -19,7 +19,7 @@ import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
 import { clearStarClock, flareData, livedShare, scorched, turnStep } from './flare';
 import { firstSwarm, swarmsHunt, updateHunger } from './hunger';
-import { updateMinds } from './minds';
+import { gatherTheLastStar, updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
 import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost } from './research';
 import { deliverSignals } from './signals';
@@ -438,6 +438,9 @@ export function endTurn(state: GameState): TurnResult {
   const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
   result.notes = notes;
   handleNotes(state, notes);
+  // the Unlit's gathering is done: the Last Star lights as the turn ends, as every new star does
+  const lastStar = gatherTheLastStar(state, step.years);
+  if (lastStar) queueEvent(state, 'last_star', { systemId: lastStar });
   // from 10^65 years solid matter flows: what no one is awake to mend runs into smooth lumps
   theLongFlow(state, step.eta, logL, mods, Math.log10(ctx.paceFactor));
   if (calendarEra(state) === 'dark') {

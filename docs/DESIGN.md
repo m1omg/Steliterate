@@ -380,7 +380,9 @@ the disagreement as real model uncertainty.
 * **The Unlit:** minds of the dark-matter sector, reachable only through gravity: moved
   masses answered by moved masses. A misread reply can move a world. Their messages wait for an
   answer, however long it takes (11 Oct). Halo Siphons, once researched, can be shut for good,
-  under their message or on their card. Their full design is in `docs/spoilers/dark-matter.md`.
+  under their message or on their card. Their Last Star lights as its turn ends, like every new star,
+  and can be kept time with, free whatever the pace (12 Oct). Their full design is in
+  `docs/spoilers/dark-matter.md`.
 
 Not every other intelligence is conscious in the way the protagonists are, and that does not
 stop them from talking.
