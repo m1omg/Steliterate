@@ -155,8 +155,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
      - A shared work costs 60 matter and never pays.
      - A trade still costs, and still delivers notes.
      - The Choir's wish, whose only allowed answer keeps the Echoes, costs 3 Echoes standing.
-  4. **Music:** a second Dark track and a recorded Canon wait on Krea credit (DEV-NOTES, Music
-     tooling).
+  4. **Music:** the second Dark track is in (12 Oct). A recorded Canon was tried and not
+     shipped: no ground bass, a drone a semitone off (DEV-NOTES, Music tooling); another try waits
+     on Krea's API balance, with event plates (`docs/plans/plates.md`).
   5. **Discuss first, not built:**
      - a Lattice rework (the player's idea: Greg Egan's "jewel"; never spoil its ending);
      - deeper diplomacy;
@@ -309,6 +310,14 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   have read NaN (infinite years), so there it lights and goes out within the turn, as it always did.
   Their own game is past the Great Decay (η 40.6): it will show in a future game. Live: PR
   m1omg/Steliterate#16, merge commit `3538f47`, opened and merged by this session.
+- **12 Oct, Krea:** "Regardng Krea, i got 1504 credits, you can do all the stuff you waited on
+  cause of low credits, just keep it in line with the style of the game and existing art", then
+  "do the music and the event plates too" and "I gave you full access to everything, go to town".
+  This account had no Krea connector and the network refused `krea.ai`; they connected it and
+  opened the network. Made: the second Dark track (in, as Recorded II) and a recorded Canon (not
+  shipped: it is not the Canon; DEV-NOTES, Music tooling, has its link so they can hear it). Then
+  Krea's API refused the first plate: 0 units available, 111 needed. Told them, with the plates
+  planned in `docs/plans/plates.md` for when the balance is back.
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
