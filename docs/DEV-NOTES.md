@@ -92,7 +92,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -319,9 +319,44 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   as it would on a slow machine. A check that waits on something eased (a camera move, a fade)
   polls in a bounded loop until it has settled, as `browser/lowvision` does, rather than trust
   one fixed wait.
+- **`protonFate` is `'decays'`, not `'decay'`** (12 Oct): `newGame({ protonFate: 'decay' })` gets
+  the seed's drawn fate without a word (a check thought it was testing decay on a stable game).
+  `tsx` runs a check without type-checking it; `tsc` catches it, so run `tsc` before trusting one.
+- **Worlds in a late save are often rogue already** (12 Oct): close passes fling most loose by the
+  Degenerate Age (both worlds of the turn-119 save's holes). A rogue world builds nothing around its
+  star and gets no light, so a check meaning a world still bound to its star sets `rogue: false`
+  (`cold-energy`, `evap`, `rogue-reach`).
 - The user dislikes long blocking waits. Prefer background runs and report when done.
 
 ## Where the newer systems live
+
+- **Rogue worlds, black holes by lifetime, the late sky** (12 Oct; CHANGELOG, "Rogue worlds leave
+  their star behind"):
+  - Rogue worlds: `aroundTheStar(d)` (`data/structures.ts`: a Deep structure, `bodies` holds
+    `'deep'`) and `leftBehind(state, c, d)` (`sim/util.ts`: the settlement's world is rogue and the
+    structure is around the star). `structureCheck` refuses them ("Out of reach") and any light
+    collector on a rogue world, and skips one left behind for `systemUnique`; `colonyTurn` skips
+    their energy (so no spin drawn and no matter burned) and lift, marks the line `idle` with "out
+    of reach", and the Hearth's hole term needs `!body.rogue`; `reserveCapacity` (`storage.ts`)
+    skips a Horizon Vault left behind; `turn.ts` drains no `gfeDrain` for one; `buildableAt` and
+    `powerParts` in `sites.ts` the same; `planDismantle` (`auto.ts`) counts them gone for good; the
+    structure chips in `ColonyPanel` say so. Check `unit/rogue-reach`.
+  - Black holes by lifetime: `HolesList` and `holesOnMap` (`Lists.tsx`), the tab `'holes'`
+    (`SystemsTab`), shown while `inAge(s, ['blackhole'])` and a hole is on our map;
+    `sendFromSystems` opens it in that age. `turnsUntilAll(state, targets)` (`flare.ts`) counts
+    turns to many dates in one stepping. `EvaporatesRow` in the star panel. `lastsUntil(state, b)`
+    (`sites.ts`, now with the state): a hole's Deep and bound worlds until `evaporateAt`;
+    `NEVER_FEED` (moved to `physics.ts`) never. Check `browser/holes`, `unit/late-sky`.
+  - Brown dwarfs and pulsars: `sourceLight`'s brown dwarf label by `brownCoolingK` against the
+    halo's `BROWN_HALO_K` share (no longer `light >= 0.05`); `brownWarmth(T)` and
+    `pulsarBeam(era, years)` (`physics.ts`; the neutron star's light uses `pulsarBeam`, the same
+    numbers) shade `nodeColor` (`galaxyView.ts`) and `buildPrimary` and `primaryLightColor`
+    (`systemView.ts`) after the Dusk. `solarMass(m)` (`ui/fmt.ts`) for masses.
+  - Great Works: `startWork` refuses a finished one ("It is complete"), which also stops the
+    autoplayer's `planWorks` resuming it each turn; the Research card's `complete` state.
+    Positronium: `POSITRONIUM_ETA` (`eras.ts`, 85, also the milestones), the event
+    `positronium_forms` (once), queued in `endTurn` right after `rollRandomEvent`, so the roll draws
+    as before. Check `unit/great-works`.
 
 - **Every save at once** (12 Oct; CHANGELOG, "Export all saves"): `save.ts` `exportAllSaves` (each
   slot unpacked, the quick save and the autosave, as `{ kind: 'steliterate-saves', version: 1,
@@ -1174,6 +1209,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | Halo Siphons can be shut; the halo empties sooner while they run; the Unlit's messages wait (11 Oct) | 151 | 69 victories, Degenerate Age 71 turns; 900 games 442 / 195 / 70 (443 / 191 / 70 before, the swarm batch), within the noise: 802 of 900 games play out as before, the changes both ways. By fate: decay 178 / 450, stable 167 / 239, curvature 97 / 211. Alone, against `main` before the swarms: 146 / 67 / 71 in 300 (148 / 72 / 71), 900 games 441 / 202 (439 / 203), 807 of 900 as before. The autoplayer researches the siphons in 151 of 300 games, 109 before η 25 (its fallback ignores `noAuto`), and never shuts them |
 | the Last Star shines when it lights; its clock free (12 Oct) | 150 | 67 victories, Degenerate Age 72 turns; 900 games 445 / 199 / 70 (442 / 195 / 70 on `main`), within the noise: 721 of 900 play out as on `main`, and all 179 that changed light the Last Star, outcomes moving both ways. By fate: decay 177 / 450, stable 166 / 239, curvature 102 / 211. In the first 300, 75 games light it (η 15.0 to 2,370, median 23.1; 40 before η 24.5; 19 in the Black Hole Age's calendar, 1 in the Dark Era); the autoplayer keeps time with it in 32 |
 | The Embers Dim only while the halo thins (12 Oct) | 157 | 69 victories, Degenerate Age 72 turns; 900 games 449 / 202 / 70 (445 / 199 / 70 with the Last Star), within the noise: 534 of 900 play out as before, the rest moved by the changed pool of chance events, both ways (35 defeat → endurance, 31 back). By fate: decay 181 / 450, stable 169 / 239, curvature 99 / 211 |
+| rogue worlds leave their star behind; a finished Work not resumed; positronium (12 Oct) | 154 | 72 victories, Degenerate Age 72 turns; 900 games 456 / 203 / 71 (449 / 202 / 70 before), within the noise: 406 of 900 play out as before, the outcomes that moved going both ways (43 defeat → endurance, 38 back; 8 defeat → victory, 6 back). By fate: decay 189 / 450, stable 168 / 239, curvature 99 / 211; Aeon Seed victories 67 → 71 |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

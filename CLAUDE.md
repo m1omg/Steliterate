@@ -11,8 +11,10 @@ m1omg/Steliterate#6, `4268a82`, the phone interface; PR m1omg/Steliterate#8, `8f
 Thread makes in words; PR m1omg/Steliterate#10, `7c334ec`, no "???" in the research grid once the
 fate of matter is known; PR m1omg/Steliterate#12, `d2c52b4`, swarms go for ships near them, both
 from `claude/lucid-newton-v2`; PR m1omg/Steliterate#13, Halo Siphons can be shut, from
-`claude/epic-wozniak-lyhulf`; the latest game batch, PR m1omg/Steliterate#16, `3538f47`, the Last
-Star shines when it lights, from `claude/affectionate-johnson-qqr7p2`).
+`claude/epic-wozniak-lyhulf`; PR m1omg/Steliterate#16, `3538f47`, the Last Star shines when it
+lights, and PR m1omg/Steliterate#22, `af0b58b`, Export all saves; the latest game batch, PR
+m1omg/Steliterate#23, rogue worlds leave their star behind and black holes by lifetime, all from
+`claude/affectionate-johnson-qqr7p2`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -65,8 +67,8 @@ npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; cou
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
 
-Balance reference (12 Oct, The Embers Dim only while the halo thins, after the Last Star): 157 of
-300 standard competent games survive, 69 victories, a Degenerate Age of 72 turns; 900 games: 449
-survive, 202 victories; noise ±12 in 300 (two runs of 900 can differ by 30). By fate in the 900:
-decay 40%, stable 71%, curvature 47% (`--fate=` runs one). The full history is in DEV-NOTES
-(Balance reference).
+Balance reference (12 Oct, rogue worlds leave their star behind, a finished Work not resumed,
+positronium): 154 of 300 standard competent games survive, 72 victories, a Degenerate Age of 72
+turns; 900 games: 456 survive, 203 victories; noise ±12 in 300 (two runs of 900 can differ by 30).
+By fate in the 900: decay 42%, stable 70%, curvature 47% (`--fate=` runs one). The full history is
+in DEV-NOTES (Balance reference).
