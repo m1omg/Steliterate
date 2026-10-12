@@ -1796,3 +1796,33 @@ The player heard the remix (the entry above): "add em yes pls".
   (the first Dark track 78% and 0.001). The first is now "Recorded I". A file never served before,
   `music/dark3.mp3`.
 - No rules changed.
+
+## A burst reaches only what is still there (12 Oct)
+
+The player, of the neutron stars' burst at the Last Warmth (curvature radiation, η 68) and the offer
+to catch it from other systems: "yes please but regarding destruction of planet around it or
+capturing BH evaporation flashes, consider rogue planets are no longer bound so should not get
+destroyed OR any benefit from a BH/stellar remnant evaporation flash, so only Deep settlements
+would benefit or be destroyed (or bound planets but by that point i don't know how likely THAT
+is)". Asked how far the flash reaches: "By distance".
+
+- **A neutron star's burst** destroys only what is in its Deep or on a world it still holds. A
+  settlement on a world flung loose from it long before is far away by then, and stays; the
+  crossing report says so. (Every settlement in its system was lost, rogue worlds too. By η 68
+  most worlds are rogue: in the turn-121 test save 7 of our 9 settlements already were.)
+- **Burst Catchers in other systems** bank a share of the flash: 250 each within 10 ly of the
+  nearest burst, then less with the square of the distance (63 at 20 ly, 10 at 50), once each
+  however many burst in reach; nothing on a rogue world, and nothing in a system cast out of the
+  galaxy. It comes after the crossing's cost to saved energy (×0.6), and the report says how much.
+- **A black hole's final burst** pays Burst Catchers in its Deep and on the worlds it held until
+  then, 250 each as before, and no longer on worlds flung loose before. The Record says how much.
+- **Texts:** "‹System› will burst" says our settlements there are safe when they are all on worlds
+  flung loose, and is no longer a danger then; the Last Warmth's forecast, the Burst Catcher, the
+  Manual and the Codex say who is lost and who catches the flash. The Codex states the bend: how
+  much a catcher banks, and that the flash spares the systems around it, are the game's choice.
+- **Check:** `unit/burst-reach`.
+- **Balance.** 300 games: 154 survive, 72 victories, a Degenerate Age of 72 turns, all 300 as
+  before. 900 games: 456 / 203 / 71, and 896 of 900 as before; the 4 that moved are curvature
+  games with the same outcomes, three of them ending with more people (settlements on rogue worlds
+  spared: 92 → 106, 174 → 195, 180 → 188) and one with fewer (78 → 74). By fate: decay 189 / 450,
+  stable 168 / 239, curvature 99 / 211.

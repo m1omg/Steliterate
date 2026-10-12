@@ -92,7 +92,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -330,6 +330,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
+- **Who a burst reaches** (12 Oct; CHANGELOG, "A burst reaches only what is still there"):
+  `inItsSystem(state, c, held?)` (`sim/util.ts`): a settlement in its Deep, on a world its star
+  holds, or on one in `held` (a burst has just set it loose); one on a world flung loose before is
+  far away. In `crossing.ts`: `burstNeutronStars` destroys only settlements `inItsSystem` at a
+  bursting neutron star, and returns what Burst Catchers elsewhere bank, `burstShare(ly)` each from
+  the nearest burst, once, not on a rogue world or in an ejected system (`BURST_CATCH` 250 within
+  `NEAR_BURST_LY` 10, then by the inverse square); the crossing adds it after its own ×0.6 cost.
+  `finalBurstCatch(state, systemId, held)` pays a black hole's final burst; `evaporateHole`
+  returns the worlds it held until then, carried in the `evaporated` note's `held`. The burst
+  forecast says when our settlements there are safe. Check `unit/burst-reach`.
 - **Rogue worlds, black holes by lifetime, the late sky** (12 Oct; CHANGELOG, "Rogue worlds leave
   their star behind"):
   - Rogue worlds: `aroundTheStar(d)` (`data/structures.ts`: a Deep structure, `bodies` holds

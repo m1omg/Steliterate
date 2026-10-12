@@ -112,6 +112,17 @@ export function leftBehind(state: GameState, c: Colony, d: StructureDef): boolea
   return !!state.bodies[c.bodyId]?.rogue && aroundTheStar(d);
 }
 
+/**
+ * Whether a settlement is still where its system is: in its Deep, or on a world its star holds, or
+ * held until this very moment (`held`, the worlds a burst has just set loose). A world flung loose
+ * long before has drifted far away: a burst there neither destroys it nor pays its Burst Catchers
+ * (the player, 12 Oct).
+ */
+export function inItsSystem(state: GameState, c: Colony, held?: readonly string[]): boolean {
+  const b = state.bodies[c.bodyId];
+  return !!b && (b.kind === 'deep' || !b.rogue || !!held?.includes(b.id));
+}
+
 export function systemHasStructure(state: GameState, systemId: string, id: string): boolean {
   return colonies(state).some((c) => c.systemId === systemId && (c.structures[id] ?? 0) > 0);
 }

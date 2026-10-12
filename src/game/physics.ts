@@ -621,6 +621,8 @@ export interface EvolutionNote {
   bodyId?: string;
   /** (boiled) inside a giant's own radius, rather than boiled by its light */
   swallowed?: boolean;
+  /** (evaporated) the worlds the hole still held until its final burst set them loose */
+  held?: string[];
 }
 
 /** Advance every primary and body to cosmic year `to` (from `from`). Returns what happened. */
@@ -836,8 +838,7 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
     for (const s of systems) {
       const p = s.primary;
       if ((p.kind === 'black_hole' || p.kind === 'smbh') && p.evaporateAt && to >= p.evaporateAt && !s.gone) {
-        evaporateHole(state, s);
-        notes.push({ systemId: s.id, kind: 'evaporated' });
+        notes.push({ systemId: s.id, kind: 'evaporated', held: evaporateHole(state, s) });
       }
     }
   }
@@ -875,9 +876,10 @@ export function dwarfFadeEta(mass: number): number {
  * shrank (a ∝ 1/M) until nothing held them: its worlds drift on as rogue worlds, and what was
  * built on them stays. Its spin, its Hawking light and any glow around it are gone. The final
  * burst, huge by this age's standards, is spread too thin at the distances worlds orbit to harm
- * them (Burst Catchers close in bank some of it). The system is gone only if nothing is left in it.
+ * them (Burst Catchers close in bank some of it: in its Deep, and on the worlds it still held until
+ * then, which it returns). The system is gone only if nothing is left in it.
  */
-export function evaporateHole(state: GameState, s: StarSystem) {
+export function evaporateHole(state: GameState, s: StarSystem): string[] {
   const p = s.primary;
   p.kind = 'void';
   p.lum = 0;
@@ -885,13 +887,16 @@ export function evaporateHole(state: GameState, s: StarSystem) {
   p.spinMax = 0;
   p.rekindle = undefined;
   let left = Object.values(state.colonies).some((c) => c.systemId === s.id);
+  const held: string[] = [];
   for (const bid of s.bodies) {
     const b = state.bodies[bid];
     if (!b || b.dissolved || b.kind === 'deep') continue;
+    if (!b.rogue) held.push(b.id);
     b.rogue = true;
     left = true;
   }
   s.gone = !left;
+  return held;
 }
 
 function growHeart(p: Primary, dm: number) {
