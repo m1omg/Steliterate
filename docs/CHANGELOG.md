@@ -1758,3 +1758,28 @@ no event etc".
   before, and the outcomes that moved went both ways (43 defeat → endurance, 38 back; 8 defeat →
   victory, 6 back). By fate: decay 189 / 450, stable 168 / 239, curvature 99 / 211. Aeon Seed
   victories 67 → 71.
+
+## A third track for the Dusk (12 Oct)
+
+The player, that evening: "i bought krea credits, you got access?" The connector answered, and the
+API's balance had them. Asked what to make first, they chose the Dark track that moves, from the
+prompt that waited in DEV-NOTES. It came out in A minor at about 64 BPM, its chords coming round
+about every 30 s, with a melody (21% of its pitch energy on one note, its harmony moving 0.18, 104
+notes a minute; the Dark's drone 78%, 0.001 and 4). Sent to them before anything went in: "that
+track sounds good but tbh belongs in Dusk, add it as a Dusk track once you are done - for Dark a
+darker remix of it may be good".
+
+- **The Long Dusk has three recordings** taking turns: "Recorded III" (Settings → Playlist), after
+  the other two (ElevenLabs Music v2.5 via Krea, `force_instrumental`, 180 s asked). Made to loop
+  with a 6 s crossfade, so it also loops cleanly when it is the only one picked; 160 s long;
+  −13.8 LUFS, held back by the −1.5 dBFS peak limit as Recorded II is (−13.3; Recorded I −12.7).
+  A file never served before, `music/dusk3.mp3`.
+- **`tools/music/loop-track.py`** takes an optional fifth field, how far in from each end it may
+  trim (12 s by default, as before): this track ends in 15 s of reverb dying away, beyond the old
+  reach.
+- **A darker remix for the Dark:** `tools/music/darken.py` plays a track slower and lower together,
+  as a tape run slow (4 semitones: about 51 BPM in F minor), takes its brightness off (a low-pass
+  at 3 kHz) and lays a long dark reverb under it (6 s). Krea's music models take words only, so a
+  remix of the same music is made here. Sent to the player to hear; it goes in only once they like
+  it.
+- No rules changed.

@@ -63,7 +63,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     rogue worlds leave their star behind, black holes by lifetime, the late sky as it is;
     CHANGELOG, "Rogue worlds leave their star behind"; live script `index-BS3hlgvq.js`), all from
     `claude/affectionate-johnson-qqr7p2`, each started again from `main`. `HANDOVER.md` was
-    rewritten that evening.
+    rewritten that evening. Later that evening, from `claude/epic-wozniak-lyhulf` (started again
+    from `main`): PR m1omg/Steliterate#25, a third track for the Dusk (no rules changed; CHANGELOG,
+    "A third track for the Dusk"; live script `index-D3ajlLbq.js`).
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
@@ -112,6 +114,8 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - the harness: 154 of 300 survive, 72 victories, a Degenerate Age of 72 turns; 900 games 456 /
     203 / 71; by fate decay 189 / 450, stable 168 / 239, curvature 99 / 211; 406 of 900 as with
     the Embers Dim (below), the outcomes that moved going both ways.
+  - the same checks again with the third Dusk track (PR m1omg/Steliterate#25, no rules changed:
+    the harness stands as it is).
 - **The baseline before it (12 Oct, Export all saves; the rules as of The Embers Dim only while the
   halo thins):**
   - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 45 unit checks; savecompat on
@@ -184,11 +188,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
      - A shared work costs 60 matter and never pays.
      - A trade still costs, and still delivers notes.
      - The Choir's wish, whose only allowed answer keeps the Echoes, costs 3 Echoes standing.
-  4. **Krea, in this order** (the player, 12 Oct): one Dark track that moves (its prompt is ready
-     in DEV-NOTES, Music tooling), then the event plates (`docs/plans/plates.md`), then a second
-     Dark track to replace the old drone. Each track is checked with `tools/music/movement.py` and
-     heard by the player before it goes in. Krea's API had 0 units on 12 Oct. The arranged Canon
-     stays; no more recorded Canons.
+  4. **Krea, in this order** (the player, 12 Oct): one Dark track that moves, then the event plates
+     (`docs/plans/plates.md`), then a second Dark track to replace the old drone. Each track is
+     checked with `tools/music/movement.py` and heard by the player before it goes in. The
+     arranged Canon stays; no more recorded Canons. That evening the player bought credits, and the
+     first track was made: it went to the Dusk at their word, as Recorded III, and the Dark gets a
+     darker remix of it (`tools/music/darken.py`) if they like how it sounds. Next: the plates.
   5. **Discuss first, not built:**
      - a Lattice rework (the player's idea: Greg Egan's "jewel"; never spoil its ending);
      - deeper diplomacy;
@@ -408,6 +413,18 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   others, endings as shapes, tone, what is left open, physics anchors), spoiler-light and without
   the game's own names; not in the repository. Then "do an .md for a session handover again pls":
   `HANDOVER.md` rewritten.
+- **12 Oct, evening, Krea again** (another session, on `claude/epic-wozniak-lyhulf`, started again
+  from `main`): "please read HANDOVER.md before we continue", then "i bought krea credits, you got
+  access?" The connector answered and its storage downloaded; the
+  balance shows only when a job runs. Asked what first, they chose "Dark track first" (their
+  order), and the prompt that waited in DEV-NOTES went through in 19 s: a track that moves (A
+  minor, about 64 BPM, 21% of its pitch energy on one note against the Dark drone's 78%). Sent to
+  them before anything went in: "that track sounds good but tbh belongs in Dusk, add it as a Dusk
+  track once you are done - for Dark a darker remix of it may be good". Done: Recorded III in the
+  Dusk (CHANGELOG, "A third track for the Dusk"). Krea's music models take words only, so the remix
+  is made here (`tools/music/darken.py`: slower and lower, as a tape run slow, its brightness off,
+  a long reverb under it) and sent for them to hear; it goes in only once they like it. Then, in
+  their order: the event plates, then a second Dark track to replace the old drone.
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
