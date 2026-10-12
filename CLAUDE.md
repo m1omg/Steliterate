@@ -14,8 +14,9 @@ from `claude/lucid-newton-v2`; PR m1omg/Steliterate#13, Halo Siphons can be shut
 `claude/epic-wozniak-lyhulf`; PR m1omg/Steliterate#16, `3538f47`, the Last Star shines when it
 lights, and PR m1omg/Steliterate#22, `af0b58b`, Export all saves; the latest game batch, PR
 m1omg/Steliterate#23, `a083698`, rogue worlds leave their star behind and black holes by lifetime,
-all from `claude/affectionate-johnson-qqr7p2`; then PR m1omg/Steliterate#25, a third track for the
-Dusk, from `claude/epic-wozniak-lyhulf`).
+all from `claude/affectionate-johnson-qqr7p2`; then PR m1omg/Steliterate#25, `3f927a4`, a third
+track for the Dusk, and PR m1omg/Steliterate#26, a darker remix of it for the Dark, both from
+`claude/epic-wozniak-lyhulf`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.

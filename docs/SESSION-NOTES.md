@@ -64,8 +64,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     CHANGELOG, "Rogue worlds leave their star behind"; live script `index-BS3hlgvq.js`), all from
     `claude/affectionate-johnson-qqr7p2`, each started again from `main`. `HANDOVER.md` was
     rewritten that evening. Later that evening, from `claude/epic-wozniak-lyhulf` (started again
-    from `main`): PR m1omg/Steliterate#25, a third track for the Dusk (no rules changed; CHANGELOG,
-    "A third track for the Dusk"; live script `index-D3ajlLbq.js`).
+    from `main`): PR m1omg/Steliterate#25 (`3f927a4`), a third track for the Dusk (CHANGELOG, "A
+    third track for the Dusk"; live script `index-D3ajlLbq.js`), then PR m1omg/Steliterate#26, a
+    darker remix of it for the Dark (CHANGELOG, "A darker remix of it for the Dark"; live script
+    `index-CXxVY_iy.js`). Neither changed a rule.
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
@@ -192,8 +194,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
      (`docs/plans/plates.md`), then a second Dark track to replace the old drone. Each track is
      checked with `tools/music/movement.py` and heard by the player before it goes in. The
      arranged Canon stays; no more recorded Canons. That evening the player bought credits, and the
-     first track was made: it went to the Dusk at their word, as Recorded III, and the Dark gets a
-     darker remix of it (`tools/music/darken.py`) if they like how it sounds. Next: the plates.
+     first track was made: it went to the Dusk at their word, as Recorded III, and a darker remix
+     of it (`tools/music/darken.py`) to the Dark, as Recorded II, once they had heard it. Next: the
+     plates.
   5. **Discuss first, not built:**
      - a Lattice rework (the player's idea: Greg Egan's "jewel"; never spoil its ending);
      - deeper diplomacy;
@@ -423,8 +426,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   track once you are done - for Dark a darker remix of it may be good". Done: Recorded III in the
   Dusk (CHANGELOG, "A third track for the Dusk"). Krea's music models take words only, so the remix
   is made here (`tools/music/darken.py`: slower and lower, as a tape run slow, its brightness off,
-  a long reverb under it) and sent for them to hear; it goes in only once they like it. Then, in
-  their order: the event plates, then a second Dark track to replace the old drone.
+  a long reverb under it) and sent for them to hear: "add em yes pls". The Dusk track went live
+  first (PR m1omg/Steliterate#25, `3f927a4`), then the remix as the Dark's Recorded II (PR
+  m1omg/Steliterate#26; CHANGELOG, "A darker remix of it for the Dark"). Then, in their order: the
+  event plates, then a second Dark track to replace the old drone.
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
