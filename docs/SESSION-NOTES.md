@@ -54,7 +54,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - The game is as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
     live script `index-BRmxB_Lf.js`), from `claude/affectionate-johnson-qqr7p2`, the plan's
-    second session (merged; a follow-up starts it again from `main`).
+    second session (merged; a follow-up starts it again from `main`). Then PR m1omg/Steliterate#18
+    (12 Oct, `1c1b77e`): the second Dark track, the plates planned (no rules; live script
+    `index-DOD3SRn-.js`).
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the

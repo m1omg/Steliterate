@@ -42,8 +42,9 @@ last.
 ## 3. Where things stand (12 Oct)
 
 - **`main` and the live game:**
-  - `main` is at `3538f47`, PR m1omg/Steliterate#16 (12 Oct): the Last Star shines when it
-    lights, and its clock is free. The live script is `index-BRmxB_Lf.js`.
+  - The game is as of PR m1omg/Steliterate#16 (`3538f47`, 12 Oct): the Last Star shines when it
+    lights, and its clock is free. Then PR m1omg/Steliterate#18 (`1c1b77e`): a second Dark track
+    (no rules). The live script is `index-DOD3SRn-.js`.
   - Before it: PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them) and PR
     m1omg/Steliterate#13 (Halo Siphons can be shut); PR m1omg/Steliterate#14 and #15 were this
     handover and the Last Star's plan (no code).
