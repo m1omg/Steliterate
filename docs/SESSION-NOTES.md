@@ -98,7 +98,13 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (12 Oct, the Last Star):**
+- **The baseline, from the last validation (12 Oct, The Embers Dim only while the halo thins):**
+  - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 45 unit checks; savecompat on
+    the 6 saves; all 48 browser checks in the real fonts;
+  - the harness: 157 of 300 survive, 69 victories, a Degenerate Age of 72 turns; 900 games 449 /
+    202 / 70; by fate decay 181 / 450, stable 169 / 239, curvature 99 / 211; 534 of 900 as with
+    the Last Star alone (below), the rest moved by the changed pool of chance events.
+- **The baseline before it (12 Oct, the Last Star):**
   - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 44 unit checks; savecompat on
     the 6 saves in `tools/saves/` (the sixth made with `main`'s code, its Last Star out); all 48
     browser checks in the real fonts;
@@ -329,6 +335,23 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   chose: "Remake both, with movement" (the new one out now), leave the other ages' second tracks,
   "Keep the arranged one" (the Canon), and "One Dark track, then plates" when Krea has units again.
   A track with movement was tried at once: 0 units. Its prompt is ready (DEV-NOTES).
+- **12 Oct, the turn-137 save:** "what happened here? I reloaded an older save and they never
+  proposed to do the star", with the Record's "137 The Embers Dim: Understood." In that save their
+  Help (turn 135) is already given and the gathering under way: the star lights as turn 139 ends,
+  and turn 140 brings Light in the Halo (checked by playing their save on with the live code). Told
+  them so. The Embers Dim itself was a bug: a chance event allowed to η 39, it told them at η 35.9
+  that the long-spent halo was running thin. Fixed: only while the halo thins (CHANGELOG). Then,
+  with their main game's turn-151 save (the old timeline: the star lit and went out in turn 139,
+  the Great Decay past at η 44.6): "Yeah, I want to be able to get them the star to help them."
+  Told them that in that game they did help them (the gathering happened, the gift is theirs), and
+  asked: they chose "Replay from turn 137" over relighting it past the Great Decay (a double bend:
+  no ordinary matter left, the halo's dark matter gone since η 25). Also asked, for another save:
+  "Any way for me to reach the runaway? Is there any black hole or is it basically completely
+  gone?" The Runaway is three dwarfs and never had a black hole (proton decay dissolves them at the
+  Great Decay); the lone black hole in the void is the Wanderer (2.2 × 10⁵ Suns, about 2.3 Mly out,
+  lasting to about η 83), seen from the Black Hole Age's calendar on (sight 10 Mly) and reached in
+  a turn there. Galactic evaporation also acts on the outliers (it cast out a Runaway star in
+  their game, and could drop one into the Heart): offered a fix; "Leave it".
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word

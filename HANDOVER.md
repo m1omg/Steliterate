@@ -141,7 +141,7 @@ halo?", and there was no way to.
 **Checks:**
 - tsc and the build are clean;
 - the playtest passes (30/144 Hz parity);
-- all 44 unit checks pass;
+- all 45 unit checks pass;
 - savecompat passes on the 6 saves in `tools/saves/`;
 - all 48 browser checks pass, in the real fonts.
 
@@ -149,10 +149,12 @@ halo?", and there was no way to.
 
 | | Survive | Victories | Degenerate Age |
 |---|---|---|---|
-| 300 games | 150 | 67 | 72 turns |
-| 900 games | 445 | 199 | 70 turns |
+| 300 games | 157 | 69 | 72 turns |
+| 900 games | 449 | 202 | 70 turns |
 
-- By fate, survivors in the 900: decay 177 of 450, stable 166 of 239, curvature 102 of 211.
+- By fate, survivors in the 900: decay 181 of 450, stable 169 of 239, curvature 99 of 211.
+- Since 12 Oct, The Embers Dim only while the halo thins (with the Last Star alone: 150 / 67 / 72
+  and 445 / 199 / 70).
 - Before it (11 Oct): 151 / 69 / 71 in 300, 442 / 195 / 70 in 900; 721 of 900 games are
   unchanged, and every one that changed lights the Last Star.
 - Noise is ±12 in 300 games; two runs of 900 can differ by 30.

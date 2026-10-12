@@ -687,9 +687,13 @@ export const EVENTS: EventDef[] = [
     eras: ['degenerate'],
     once: true,
     weight: 20,
-    // the halo thins near η 22 (by its own clock, which Halo Siphons run ahead); if curvature
-    // radiation keeps the age going long after, the news is old by η 39
-    bind: (s) => (haloEta(s) > 22.3 && s.eta < 39 ? {} : null),
+    // news only while the halo thins: from η 22.3 until the embers go out at 25, both by the
+    // halo's own clock (which Halo Siphons run ahead). Until 12 Oct it could come up to η 39, and
+    // told a game at η 35.9 that the halo, spent since η 25, was "running thin"
+    bind: (s) => {
+      const h = haloEta(s);
+      return h > 22.3 && h < 25 ? {} : null;
+    },
     text: () => 'The dark-matter halo is running thin. The white dwarfs it kept warm are cooling, one after another, toward the cold of true black dwarfs, a small fraction of a degree above nothing. Whatever we are going to live on next, we need to find it now.',
     choices: [{ label: 'Understood', hint: (s) => (haloMoved(s) ? `Ember yields keep falling until about η ${embersOutEta(s).toFixed(1)}, sooner ${siphonsRunning(s) ? 'while our Halo Siphons run' : 'for what our Halo Siphons drew'}.` : 'Ember yields keep falling until η 25.'), run: (s) => { res(s, -2); } }],
   },
