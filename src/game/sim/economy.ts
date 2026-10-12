@@ -6,7 +6,7 @@ import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
 import { habitabilityOf } from './terraform';
 import { type Mods, strainFor, type Strain } from './mods';
-import { clamp, colonies, eraIndex } from './util';
+import { clamp, colonies, eraIndex, leftBehind } from './util';
 import { calendarEra, fateOf, matterGone } from '../fate';
 import { FLOW_DORMANT, FLOW_WATCH, flowing, keeping } from './flow';
 
@@ -164,8 +164,10 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   for (const [id, n] of Object.entries(c.structures)) {
     const d: StructureDef | undefined = STRUCTURE_BY_ID[id];
     if (!d || !n) continue;
+    // built around a star this world has drifted loose from: out of reach, it gives us nothing
+    const away = leftBehind(state, c, d);
     let e = 0;
-    if (d.energy) {
+    if (d.energy && !away) {
       const a = d.energy.amount * n;
       switch (d.energy.mode) {
         case 'light':
@@ -219,7 +221,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     let mt = 0;
     if (d.matterYield) mt += d.matterYield * n * body.richness * gfeMatter;
     if (d.hydrogenYield) mt += d.hydrogenYield * n * body.hydrogen * gfeMatter;
-    if (d.lift) mt += d.lift * n * gfeMatter;
+    if (d.lift && !away) mt += d.lift * n * gfeMatter;
     if (mt) {
       // only its own focus touches matter: the others leave it as it was
       mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1);
@@ -237,15 +239,15 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     accord += acc;
     energyUpkeep += up;
     // a collector with nothing to collect says so, rather than vanishing from the list
-    const idle = !!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion';
-    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${idle ? ': nothing to gather' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
+    const idle = away || (!!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion');
+    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${away ? ': out of reach, its world drifted loose from the star' : idle ? ': nothing to gather' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
   }
   if (matterBurn > 0) lines.push({ label: 'Fuel burned', matter: -matterBurn });
 
   // ---- the Hearth: every settlement's own power core, fed by whatever is local
   if (!body.dissolved) {
-    const hole = sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh';
-    // at a black hole the Hearth draws on its spin and the thin gas still falling in
+    // at a black hole the Hearth draws on its spin and the thin gas still falling in (not from a world flung loose from it)
+    const hole = (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh') && !body.rogue;
     const fed = Math.max(Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
     // where nothing local is left to draw on, it burns what was stored and salvaged, a little
     const local = Math.max(0.25, fed);

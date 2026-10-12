@@ -1,6 +1,6 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
-import { ERA_BY_ID, logTurnLength, tideLength } from '../eras';
+import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
 import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
@@ -25,7 +25,7 @@ import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost }
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
-import { clamp, colonies, distLy, hasCharter, log, popsOf, totalPops, withRng } from './util';
+import { clamp, colonies, distLy, hasCharter, leftBehind, log, popsOf, totalPops, withRng } from './util';
 import { WORKS_WATER, seededVitality } from './terraform';
 import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf } from '../fate';
 
@@ -270,7 +270,8 @@ export function endTurn(state: GameState): TurnResult {
     } else c.damage = Math.max(0, c.damage - 0.02);
     for (const [id, n] of Object.entries(c.structures)) {
       const d = STRUCTURE_BY_ID[id];
-      if (d?.gfeDrain && n) state.gfe = Math.max(0.05, state.gfe - d.gfeDrain * n * ctx.paceFactor);
+      // (a lifter left behind by a world flung loose lifts nothing, and drains nothing)
+      if (d?.gfeDrain && n && !leftBehind(state, c, d)) state.gfe = Math.max(0.05, state.gfe - d.gfeDrain * n * ctx.paceFactor);
     }
     insight += applyIndustry(state, c, t.y.industry, t.y.energy, mods);
   }
@@ -505,6 +506,9 @@ export function endTurn(state: GameState): TurnResult {
     queueEvent(state, 'rust_in_the_belt', where ? { systemId: where } : {});
   }
   rollRandomEvent(state);
+  // positronium forms where matter has decayed or been unmade (η 85): news, once, after the random
+  // roll so that it never changes what the roll draws (a game already past it hears it now)
+  if (state.era === 'blackhole' && state.eta >= POSITRONIUM_ETA && fateOf(state) !== 'stable') queueEvent(state, 'positronium_forms');
   updateForecasts(state);
 
   // ------------------------------------------------ 9. crossings

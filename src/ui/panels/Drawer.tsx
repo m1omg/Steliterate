@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, ICE_MELTS_K, WATER_RICH, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, ICE_MELTS_K, NEVER_FEED, WATER_RICH, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -41,12 +41,12 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, distLy, hasCharter, hasTech, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { capital, distLy, hasCharter, hasTech, leftBehind, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
 import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
 import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
-import { kelvin, mult, n0, n1, pct, signed } from '../fmt';
+import { kelvin, mult, n0, n1, pct, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
 import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
@@ -66,7 +66,7 @@ import { sfx } from '../../audio/sfx';
 import { focusTitle, lowVision, pressable, useWholeScroll } from '../a11y';
 import { calendarEra } from '../../game/fate';
 import { flowing, keeping, nextToFlow } from '../../game/sim/flow';
-import { turnStep } from '../../game/sim/flare';
+import { turnStep, turnsUntilYears } from '../../game/sim/flare';
 
 export function Drawer({ s }: { s: GameState }) {
   void rev.value;
@@ -373,8 +373,11 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           {sys.primary.kind !== 'void' && sys.primary.kind !== 'rogue' && (
             <>
               <dt>Mass</dt>
-              <dd class="mono">{sys.primary.mass >= 1000 ? sys.primary.mass.toExponential(1) : n1(sys.primary.mass)} M☉</dd>
+              <dd class="mono">{solarMass(sys.primary.mass)} M☉</dd>
             </>
+          )}
+          {(sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh') && sys.primary.evaporateAt && sys.primary.evaporateAt > s.years && (
+            <EvaporatesRow s={s} at={sys.primary.evaporateAt} />
           )}
           {sys.primary.spinMax > 0 && (
             <>
@@ -598,8 +601,22 @@ function shownTraits(s: GameState, b: Body): string[] {
   return b.traits.filter((t) => !past(t));
 }
 
-/** Stars whose worlds never fall in: only a dead star of ordinary matter pulls its worlds in (physics.ts). */
-const NEVER_FEED = new Set(['brown_dwarf', 'black_hole', 'smbh', 'rogue', 'void']);
+/** When a black hole has evaporated: what is settled there drifts on, with nothing left there to draw on. */
+function EvaporatesRow({ s, at }: { s: GameState; at: number }) {
+  const turns = turnsUntilYears(s, at);
+  const tip = `When its Hawking radiation has carried off all its mass: about 2×10⁶⁷ years for a hole of one Sun, a thousand times longer for ten, the lightest first. ${
+    turns <= 1 ? 'At this pace it goes during this turn.' : isFinite(turns) ? `At this pace in ${turns} turns.` : 'At this pace further off than we can foresee.'
+  } What is settled here drifts on after it, with nothing left here to draw on.`;
+  return (
+    <>
+      <dt data-tip={tip}>Evaporates</dt>
+      <dd class={`mono ${turns <= 1 ? 'warn' : ''}`} data-tip={tip}>
+        in {formatYears(at - s.years)}
+        {turns <= 1 ? ', this turn' : isFinite(turns) ? ` · ${turns} turns` : ''}
+      </dd>
+    </>
+  );
+}
 
 /** When a world reaches its dead star's tidal limit: never for a rogue world, which has no star to fall into. */
 function FallsInwardRow({ s, b }: { s: GameState; b: Body }) {
@@ -987,8 +1004,13 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                   .sort(([a], [b]) => KIND_ORDER.indexOf(structureKind(STRUCTURE_BY_ID[a])) - KIND_ORDER.indexOf(structureKind(STRUCTURE_BY_ID[b])))
                   .map(([id, n]) => {
                     const why = dismantleCheck(s, c, id);
+                    const away = leftBehind(s, c, STRUCTURE_BY_ID[id]);
                     return (
-                      <span key={id} class={`chip ${armed === id ? 'warn' : ''}`} data-tip={structureLabel(id, sys).desc}>
+                      <span
+                        key={id}
+                        class={`chip ${armed === id ? 'warn' : away ? 'faint' : ''}`}
+                        data-tip={`${structureLabel(id, sys).desc}${away ? '\nOut of reach: it was built around the star, and this world has drifted loose from it. It gives us nothing now.' : ''}`}
+                      >
                         <KindIcon id={id} />
                         {structureLabel(id, sys).name}
                         {n > 1 ? ` ×${n}` : ''}
@@ -1340,7 +1362,7 @@ const SETTLE_SORTS: [SettleSort, string, string, string][] = [
   ['kin', 'Livable', 'Habitability × vitality and room for Kin without domes', 'most livable first'],
   ['echoes', 'Power', 'The energy a settlement there could collect each turn at the Tide', 'most power first'],
   ['lattice', 'Matter', 'What mines, skimmers and lifters could raise there each turn', 'most matter first'],
-  ['coldminds', 'Lasting', 'How long before the world falls into its dead star', 'longest-lasting first'],
+  ['coldminds', 'Lasting', 'How long before the world falls into its dead star, or its black hole evaporates', 'longest-lasting first'],
   ['near', 'Nearest', 'The shortest trips first', 'nearest first'],
 ];
 

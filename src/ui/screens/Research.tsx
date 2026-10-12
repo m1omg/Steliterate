@@ -141,6 +141,12 @@ export function ResearchModal({ s }: { s: GameState }) {
             const active = s.civ.work === w.id;
             const inEra = inAge(s, w.eras);
             const tainted = s.civ.taint > w.maxTaint;
+            // finished: nothing more goes in; it ends the game once its condition holds (the Aeon Seed when the Heart evaporates)
+            const complete = prog >= cost;
+            const doneTip =
+              w.id === 'aeon_seed'
+                ? 'Complete: nothing more to put in. The seed is written when the Heart evaporates, if the condition above still holds then.'
+                : 'Complete: nothing more to put in. It ends this as soon as the condition above holds.';
             return (
               <div key={w.id} class={`card ${active ? 'enacted' : ''}`}>
                 <div class="eyebrow">{w.path} · ending: {w.ending}</div>
@@ -153,17 +159,17 @@ export function ResearchModal({ s }: { s: GameState }) {
                 </div>
                 {prog > 0 && (
                   <>
-                    <div class="bar neon"><i style={{ width: pct(prog / cost) }} /></div>
-                    <div class="mono faint" style={{ fontSize: '12.5px' }}>{n0(prog)} / {cost}</div>
+                    <div class="bar neon"><i style={{ width: pct(Math.min(1, prog / cost)) }} /></div>
+                    <div class="mono faint" style={{ fontSize: '12.5px' }}>{complete ? `complete · ${cost} / ${cost}` : `${n0(prog)} / ${cost}`}</div>
                   </>
                 )}
                 <button
                   class={`btn small ${active ? 'on' : ''}`}
-                  disabled={!known || !inEra || tainted || active}
-                  data-tip={!known ? `Research ${TECH_BY_ID[w.tech]?.name} first.` : !inEra ? 'Not in this age.' : tainted ? 'What we have become cannot do this.' : prog > 0 ? 'Resume' : `Begin: ${w.energy} energy`}
+                  disabled={!known || !inEra || tainted || active || complete}
+                  data-tip={complete ? doneTip : !known ? `Research ${TECH_BY_ID[w.tech]?.name} first.` : !inEra ? 'Not in this age.' : tainted ? 'What we have become cannot do this.' : prog > 0 ? 'Resume' : `Begin: ${w.energy} energy`}
                   onClick={() => act((g) => startWork(g, w.id)) && sfx('good')}
                 >
-                  {active ? 'In progress' : prog > 0 ? 'Resume' : `Begin (${w.energy} energy)`}
+                  {complete ? (w.id === 'aeon_seed' ? 'Complete: waits for the Heart' : 'Complete') : active ? 'In progress' : prog > 0 ? 'Resume' : `Begin (${w.energy} energy)`}
                 </button>
               </div>
             );

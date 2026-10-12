@@ -416,6 +416,20 @@ export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0
   }
 }
 
+/** How much of its spin a neutron star still beams: all of it in the Dusk, fading through the Degenerate Age, none from η 27. */
+export function pulsarBeam(era: EraId, years: number): number {
+  return era === 'dusk' ? 1 : era === 'degenerate' ? Math.max(0, 1 - (Math.log10(years) - 15) / 12) : 0;
+}
+
+/**
+ * How much a brown dwarf still shows its own warmth after the Dusk, for pictures: all of it from
+ * 100 K, half near 17 K, none at the few kelvin dark matter gives it, or colder (the Black Hole Age).
+ */
+export function brownWarmth(T: number): number {
+  const t = Math.min(1, Math.max(0, (Math.log10(Math.max(1e-30, T)) - Math.log10(3)) / (2 - Math.log10(3))));
+  return t * t * (3 - 2 * t);
+}
+
 /** A young white dwarf's light to collectors (red dwarf = 1): 0.45 at the collapse, fading as it cools. */
 const YOUNG_LIGHT = 0.45;
 const YOUNG_TAU = 1e9;
@@ -496,11 +510,23 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       const lum = primaryLuminosity(p, years, era, decay, drawn);
       const light = era === 'dusk' ? lum / lightUnitSuns('dusk') : 1.05 * (0.35 + 0.65 * gfe) * (lum / lightUnitSuns(era));
       const temperatureK = primaryTemperature(p, years, era, decay, 0, drawn);
-      const label = era === 'dusk' ? 'Brown dwarf: a star that never ignited, cooling since it formed' : light >= 0.05 ? 'Brown dwarf, still glowing with the heat of its youth' : haloShare(years, drawn) > 0 ? 'Brown dwarf, nearly cold, faintly warmed by dark matter' : 'Brown dwarf gone cold';
+      // by what warms it now: what is left of the heat it formed with (some tens of kelvin early in
+      // the Degenerate Age, a few by η 17), then the few kelvin of dark matter, then nothing. Until
+      // 12 Oct it read "still glowing with the heat of its youth" at 13 K, by its light to collectors
+      const own = brownCoolingK(p, Math.max(0, years - formedAt(p)));
+      const halo = BROWN_HALO_K * Math.pow(haloShare(years, drawn), 0.25);
+      const label =
+        era === 'dusk'
+          ? 'Brown dwarf: a star that never ignited, cooling since it formed'
+          : own >= Math.max(1, halo)
+            ? 'Brown dwarf, long cold by any star’s measure, still giving off the last of the heat it formed with'
+            : halo > 0
+              ? 'Brown dwarf, nearly cold, faintly warmed by dark matter'
+              : 'Brown dwarf gone cold';
       return { light, label, temperatureK, alive: null };
     }
     case 'neutron_star': {
-      const light = era === 'dusk' ? 0.1 : era === 'degenerate' ? 0.25 * Math.max(0, 1 - (Math.log10(years) - 15) / 12) * (0.4 + 0.6 * gfe) : 0;
+      const light = era === 'dusk' ? 0.1 : era === 'degenerate' ? 0.25 * pulsarBeam(era, years) * (0.4 + 0.6 * gfe) : 0;
       return { light, label: light > 0 ? 'Neutron star, slowly spinning down' : 'Neutron star, spun down and cold', temperatureK: primaryTemperature(p, years, era, decay, curvatureWarmth(state), drawn), alive: null };
     }
     case 'dark_star': {
@@ -873,6 +899,9 @@ function growHeart(p: Primary, dm: number) {
   p.evaporateAt = hawkingTime(p.mass);
   p.spinMax = Math.max(p.spinMax, 40000 + p.mass / 2e6);
 }
+
+/** Stars whose worlds never fall in: only a dead star of ordinary matter pulls its worlds in (evolve, above). */
+export const NEVER_FEED: ReadonlySet<PrimaryKind> = new Set<PrimaryKind>(['brown_dwarf', 'black_hole', 'smbh', 'rogue', 'void']);
 
 /** When will this system's star next change? (for forecasts) */
 export function nextStellarChange(sys: StarSystem, years: number): { at: number; what: string } | null {

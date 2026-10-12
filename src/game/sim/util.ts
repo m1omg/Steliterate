@@ -1,3 +1,4 @@
+import { aroundTheStar, type StructureDef } from '../data/structures';
 import { ERA_BY_ID } from '../eras';
 import { fateKnown } from '../fate';
 import { Rng } from '../rng';
@@ -100,6 +101,15 @@ export function systemOf(state: GameState, c: Colony): StarSystem {
 
 export function structureCount(c: Colony, id: string): number {
   return c.structures[id] ?? 0;
+}
+
+/**
+ * Has this settlement left it behind? A world flung loose from its star (a rogue world) has
+ * drifted away from everything in orbit around that star, which works on the star itself: it can
+ * build none of it there, and what it built there before gives it nothing.
+ */
+export function leftBehind(state: GameState, c: Colony, d: StructureDef): boolean {
+  return !!state.bodies[c.bodyId]?.rogue && aroundTheStar(d);
 }
 
 export function systemHasStructure(state: GameState, systemId: string, id: string): boolean {

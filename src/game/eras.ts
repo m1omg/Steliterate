@@ -275,12 +275,19 @@ const COMMON_MILESTONES: Milestone[] = [
   { at: 99, label: 'Last Horizon', detail: 'Galaxy-sized black holes evaporate. The Black Hole Era ends.' },
 ];
 
+/**
+ * Where protons decayed or space unmade matter, the electrons and positrons left over pair into
+ * positronium atoms wider than today's observable universe, about here (η; Page & McKee 1981).
+ * News, once (turn.ts): nothing anyone does touches them. They decay near η 141.
+ */
+export const POSITRONIUM_ETA = 85;
+
 /** What each fate of matter adds; `null` is a fate not yet known, whose milestones are questions. */
 const FATE_MILESTONES: Record<Fate | 'unknown', Milestone[]> = {
   decay: [
     { at: 37.5, label: 'Proton decay', detail: 'Protons decay in earnest: ordinary matter begins to dissolve.' },
     { at: 39, label: 'The Great Decay', detail: 'Ordinary matter is gone. Only minds on leptonic substrate, and the black holes, remain. The Degenerate Age ends.' },
-    { at: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
+    { at: POSITRONIUM_ETA, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
     { at: 141, label: 'Positronium decays', detail: 'The last bound atoms annihilate into photons.' },
   ],
   stable: [
@@ -291,7 +298,7 @@ const FATE_MILESTONES: Record<Fate | 'unknown', Milestone[]> = {
     { at: 65, label: 'The Long Flow', detail: 'Even iron, at the absolute zero, tunnels out of its place: every solid flows, like a liquid too slow to see. What no one is awake to mend runs into smooth lumps, and every world and stone slumps into a sphere (Dyson 1979).' },
     { at: 68, label: 'Neutron stars burst', detail: 'Curvature radiation: at a tenth of a Sun each neutron star bursts. The Degenerate Age ends.' },
     { at: 82, label: 'White dwarfs fade', detail: 'Space has turned their mass into particles: the heaviest are gone near η 78.5, a typical one near 82, the lightest by 85.' },
-    { at: 85, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
+    { at: POSITRONIUM_ETA, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
     { at: 87, label: 'Brown dwarfs fade', detail: 'The brown dwarfs are gone the same way.' },
     { at: 89.5, label: 'The Great Evaporation', detail: 'Every world and every scrap of ordinary matter has evaporated.' },
     { at: 141, label: 'Positronium decays', detail: 'The last bound atoms annihilate into photons.' },

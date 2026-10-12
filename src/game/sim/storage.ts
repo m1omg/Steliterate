@@ -1,7 +1,7 @@
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { GameState } from '../types';
 import type { Mods } from './mods';
-import { colonies } from './util';
+import { colonies, leftBehind } from './util';
 
 // How much energy the civilization can hold. Its own module so that flare.ts can read it without
 // a cycle through economy.ts (which re-exports it).
@@ -19,7 +19,8 @@ export function reserveCapacity(state: GameState, mods: Mods): number {
   for (const c of colonies(state)) {
     for (const [id, n] of Object.entries(c.structures)) {
       const d = STRUCTURE_BY_ID[id];
-      if (!d || !n || storesInHole(state, c.systemId, id)) continue;
+      // nor at a hole its world has drifted loose from
+      if (!d || !n || storesInHole(state, c.systemId, id) || leftBehind(state, c, d)) continue;
       cap += ((d.reserveCap ?? 0) + (d.burstCap ?? 0)) * n;
     }
   }

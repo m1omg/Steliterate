@@ -49,7 +49,8 @@ const ember = find((x) => x.primary.kind === 'white_dwarf' && !!x.primary.halo &
 check(!!cold && !!ember, `a cold dwarf (${cold?.name}) and an ember (${ember?.name}) to settle`);
 if (cold && ember) {
   for (const x of [cold, ember]) x.primary.rekindle = 0;
-  const worldOf = (x: StarSystem) => s.bodies[x.bodies.find((id) => s.bodies[id] && s.bodies[id].kind !== 'deep' && !s.bodies[id].dissolved)!];
+  // still bound to its star, as before close passes flung it loose (a rogue world has no sun at all: rogue-reach.ts)
+  const worldOf = (x: StarSystem) => Object.assign(s.bodies[x.bodies.find((id) => s.bodies[id] && s.bodies[id].kind !== 'deep' && !s.bodies[id].dissolved)!], { rogue: false });
   const cc = createColony(s, worldOf(cold), { coldminds: 6 });
   const ce = createColony(s, worldOf(ember), { coldminds: 6 });
   const why = structureCheck(s, cc, STRUCTURE_BY_ID.orbital_collector);

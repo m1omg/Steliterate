@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { fleetLook, lookRole, type FleetLook } from '../game/data/ships';
-import { diskLight, emberShare, haloDrawn, primaryTemperature, shownKind } from '../game/physics';
+import { brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, shownKind } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
 import { starsSeen } from '../game/sim/claims';
@@ -678,18 +678,21 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   const k = shownKind(s.primary, state.years);
   if (k === 'black_hole' || k === 'smbh') return [0.62, 0.52, 1.0];
   if (k === 'void' || k === 'rogue') return [0.35, 0.36, 0.42];
-  if (k === 'brown_dwarf') return [0.62, 0.3, 0.28];
-  if (k === 'black_dwarf') return s.primary.rekindle ? [0.9, 0.45, 0.25] : [0.3, 0.3, 0.34];
   const tK = primaryTemperature(s.primary, state.years, calendarEra(state), 0, 0, haloDrawn(state));
+  const cold = [0.3, 0.3, 0.34];
+  const toward = (c: number[], e: number): [number, number, number] => [cold[0] + (c[0] - cold[0]) * e, cold[1] + (c[1] - cold[1]) * e, cold[2] + (c[2] - cold[2]) * e];
+  // after the Dusk a brown dwarf goes grey as it cools, as a white dwarf does: in the Black Hole Age it is as cold as a black dwarf
+  if (k === 'brown_dwarf') return toward([0.62, 0.3, 0.28], calendarEra(state) === 'dusk' ? 1 : brownWarmth(tK));
+  if (k === 'black_dwarf') return s.primary.rekindle ? [0.9, 0.45, 0.25] : [0.3, 0.3, 0.34];
   if (k === 'white_dwarf' && calendarEra(state) !== 'dusk') {
     // grey as a black dwarf once nothing warms it; an ember blue-white while the halo warms it
     if (s.primary.rekindle) return [0.9, 0.45, 0.25];
-    const e = emberShare(s.primary, state.years, haloDrawn(state));
-    const cold = [0.3, 0.3, 0.34];
-    return [cold[0] + (0.55 - cold[0]) * e, cold[1] + (0.62 - cold[1]) * e, cold[2] + (0.8 - cold[2]) * e];
+    return toward([0.55, 0.62, 0.8], emberShare(s.primary, state.years, haloDrawn(state)));
   }
   const [r, g, b] = blackbody(Math.max(1800, tK));
   const boost = k === 'red_dwarf' || k === 'collision_star' ? 1.0 : 1.2;
+  // a neutron star shines by its spin while it beams (the Dusk, fading through the Degenerate Age), then is dark
+  if (k === 'neutron_star') return toward([r * boost, g * boost, b * boost], pulsarBeam(calendarEra(state), state.years));
   if (k === 'white_dwarf') {
     // too cool to glow, it shows as an ember does, a little warmer in tint
     const e = coolDwarfShine(tK);

@@ -8,7 +8,7 @@ import type { GameState } from '../game/types';
 
 export type Screen = 'menu' | 'setup' | 'game';
 /** The Systems window's tabs past the first (our settlements): surveyed worlds, collision stars. */
-export type SystemsTab = 'worlds' | 'beacons' | 'afar';
+export type SystemsTab = 'worlds' | 'beacons' | 'holes' | 'afar';
 export type Modal =
   | { kind: 'research' }
   | { kind: 'fleets' }
