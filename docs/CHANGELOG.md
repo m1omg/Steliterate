@@ -1672,3 +1672,21 @@ hint said ember yields "keep falling until η 25".
   out as before, and the others move because the pool of chance events changed, outcomes going both
   ways (35 defeat → endurance, 31 back). By fate: decay 181 / 450, stable 169 / 239, curvature
   99 / 211.
+
+## Export all saves (12 Oct)
+
+The player: "Also, please let me export all the saves from the browser, not just one."
+
+- **Export all saves** (Save and load, under Files; also from the title screen's Save and load): one
+  file, `steliterate-all-saves-<day>.json`, holding every save slot, the quick save and the
+  autosave, each the same JSON a single save file holds.
+- **Import save file…** reads such a file too: each save comes in as a slot of its own, keeping its
+  name and the time it was saved; the quick save and the autosave arrive as slots named for them
+  ("Quick save: The People, turn 151"), so this browser's own quick save and autosave are never
+  overwritten. A save already here (the same name, turn and time) is skipped, so importing a file
+  twice adds nothing. The message says how many came in, were already here, or could not be read or
+  did not fit in the browser's storage. A single save file loads, as before.
+- **Manual and README** say so.
+- **Check:** new browser check `save-all` (two slots, a quick save and the autosave; the file and
+  what it holds; a browser emptied of saves; the import, then a second one; an imported slot loads).
+- No rules changed; saves unchanged.

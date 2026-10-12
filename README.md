@@ -72,7 +72,7 @@ first turns. The Codex (K) opens on **How to play**, the full manual.
 
 Settings has a **Music track** picker: any track by hand, or Automatic to follow the age.
 
-Saves stay in your browser: as many named save slots as it will hold (Save / load on the rail), plus a quick save and the autosave. To keep a game safe or move it to another device, export it as a file and import it there; a save code does the same as pasteable text. Old saves load in newer versions.
+Saves stay in your browser: as many named save slots as it will hold (Save / load on the rail), plus a quick save and the autosave. To keep a game safe or move it to another device, export it as a file and import it there; a save code does the same as pasteable text. **Export all saves** puts every save in one file, and importing it brings each back as a slot. Old saves load in newer versions.
 
 ## Development
 

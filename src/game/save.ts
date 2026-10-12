@@ -211,15 +211,18 @@ async function unpack(stored: string): Promise<string> {
   return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
 }
 
-/** Save into a slot: a new one, or over `id`. Resolves the slot, or an error to show. */
-export async function saveToSlot(state: GameState, name: string, id?: string): Promise<SlotInfo | string> {
+/**
+ * Save into a slot: a new one, or over `id`. `savedAt` is now, unless the save keeps the time it
+ * was made (one imported from a file of all saves). Resolves the slot, or an error to show.
+ */
+export async function saveToSlot(state: GameState, name: string, id?: string, savedAt = Date.now()): Promise<SlotInfo | string> {
   const store = ls();
   if (!store) return 'Storage is unavailable here. Export a file instead.';
   const slotId = id ?? `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
   try {
     const data = await pack(serialize(state));
     store.setItem(slotKey(slotId), data);
-    const info: SlotInfo = { id: slotId, name: name.trim() || `Turn ${state.turn}`, civ: state.settings.civName, turn: state.turn, era: state.era, savedAt: Date.now(), bytes: data.length };
+    const info: SlotInfo = { id: slotId, name: name.trim() || `Turn ${state.turn}`, civ: state.settings.civName, turn: state.turn, era: state.era, savedAt, bytes: data.length };
     writeIndex([info, ...listSlots().filter((x) => x.id !== slotId)]);
     return info;
   } catch {
@@ -243,6 +246,97 @@ export function deleteSlot(id: string) {
   } catch {
     /* storage may be unavailable */
   }
+}
+
+// ---- every save at once (12 Oct, the player: "let me export all the saves from the browser, not
+// just one"): one file with each slot, the quick save and the autosave, to keep them safe or to
+// carry them all to another device, where importing it brings each back as a slot
+
+const BUNDLE_KIND = 'steliterate-saves';
+
+/** One save in a file of all saves: where it was kept, its name and time, and the save itself. */
+export interface BundledSave {
+  from: 'slot' | 'quick' | 'auto';
+  name: string;
+  /** When it was saved (ms since 1970); for the quick save and the autosave, when they were exported. */
+  savedAt: number;
+  /** The save as a save file holds it (JSON, with ±Infinity written as "__inf" and "__-inf"). */
+  game: unknown;
+}
+
+interface SaveBundle {
+  kind: typeof BUNDLE_KIND;
+  version: 1;
+  exported: string;
+  saves: BundledSave[];
+}
+
+/** Every save this browser keeps, in one file. Resolves null when there is none (or no storage). */
+export async function exportAllSaves(): Promise<{ name: string; text: string; count: number } | null> {
+  const store = ls();
+  if (!store) return null;
+  const now = new Date();
+  const saves: BundledSave[] = [];
+  for (const x of listSlots()) {
+    try {
+      const stored = store.getItem(slotKey(x.id));
+      if (stored) saves.push({ from: 'slot', name: x.name, savedAt: x.savedAt, game: JSON.parse(await unpack(stored)) });
+    } catch {
+      /* a slot that cannot be read is left out */
+    }
+  }
+  for (const [from, key, name] of [['quick', KEY, 'Quick save'], ['auto', AUTO, 'Autosave']] as const) {
+    try {
+      const text = store.getItem(key);
+      if (text) saves.push({ from, name, savedAt: now.getTime(), game: JSON.parse(text) });
+    } catch {
+      /* as above */
+    }
+  }
+  if (!saves.length) return null;
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const bundle: SaveBundle = { kind: BUNDLE_KIND, version: 1, exported: now.toISOString(), saves };
+  return { name: `steliterate-all-saves-${day}.json`, text: JSON.stringify(bundle), count: saves.length };
+}
+
+/** The saves in a file of all saves, or null when the text is not one. */
+export function readSaveBundle(text: string): BundledSave[] | null {
+  try {
+    const b = JSON.parse(text.trim().replace(/^\uFEFF/, '')) as Partial<SaveBundle> | null;
+    return b && b.kind === BUNDLE_KIND && Array.isArray(b.saves) ? b.saves : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Each save from a file of all saves into a slot of its own, keeping its name and the time it was
+ * saved; the quick save and the autosave come in as slots too, so this browser's own are never
+ * overwritten. One already here (the same name, turn and time) is skipped, so a file imported
+ * twice adds nothing. Resolves how many came in, were already here, and could not be read or did
+ * not fit.
+ */
+export async function importSaveBundle(saves: BundledSave[]): Promise<{ added: number; skipped: number; failed: number }> {
+  let added = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const b of saves) {
+    const g = b && typeof b === 'object' ? deserialize(JSON.stringify(b.game)) : null;
+    if (!g) {
+      failed++;
+      continue;
+    }
+    const name = b.from === 'slot' ? String(b.name) : `${b.name}: ${g.settings.civName}, turn ${g.turn}`;
+    const savedAt = Number.isFinite(b.savedAt) ? b.savedAt : Date.now();
+    if (listSlots().some((x) => x.name === name && x.turn === g.turn && x.savedAt === savedAt)) {
+      skipped++;
+      continue;
+    }
+    const r = await saveToSlot(g, name, undefined, savedAt);
+    if (typeof r === 'string') failed++;
+    else added++;
+  }
+  return { added, skipped, failed };
 }
 
 /** A save as a file of its own: the same JSON the browser keeps, under a readable name. */

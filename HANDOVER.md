@@ -143,7 +143,7 @@ halo?", and there was no way to.
 - the playtest passes (30/144 Hz parity);
 - all 45 unit checks pass;
 - savecompat passes on the 6 saves in `tools/saves/`;
-- all 48 browser checks pass, in the real fonts.
+- all 49 browser checks pass, in the real fonts.
 
 **Harness (standard competent):**
 
