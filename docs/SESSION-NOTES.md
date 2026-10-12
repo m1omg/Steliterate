@@ -57,11 +57,13 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     second session (merged; a follow-up starts it again from `main`). Then PR m1omg/Steliterate#18
     (12 Oct, `1c1b77e`): the second Dark track and the plates planned (no rules); the track came out
     again the same day ("monotonous AF"), and the live script is `index-BRmxB_Lf.js` again.
-    Then, the same day, PR m1omg/Steliterate#21 (The Embers Dim only while the halo thins), PR
-    m1omg/Steliterate#22 (`af0b58b`, Export all saves) and PR m1omg/Steliterate#23 (rogue
-    worlds leave their star behind, black holes by lifetime, the late sky as it is; CHANGELOG,
-    "Rogue worlds leave their star behind"), all from `claude/affectionate-johnson-qqr7p2`, each
-    started again from `main`.
+    Then, the same day, PR m1omg/Steliterate#20 (`779803d`, the track out again), PR
+    m1omg/Steliterate#21 (`84bc90b`, The Embers Dim only while the halo thins), PR
+    m1omg/Steliterate#22 (`af0b58b`, Export all saves) and PR m1omg/Steliterate#23 (`a083698`,
+    rogue worlds leave their star behind, black holes by lifetime, the late sky as it is;
+    CHANGELOG, "Rogue worlds leave their star behind"; live script `index-BS3hlgvq.js`), all from
+    `claude/affectionate-johnson-qqr7p2`, each started again from `main`. `HANDOVER.md` was
+    rewritten that evening.
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
@@ -140,6 +142,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   A rules change compares with these (DEV-NOTES: Balance reference, and the helpers for
   comparing runs game for game).
 - **Open threads, likeliest first:**
+  0. **Offers put to the player on 12 Oct, no answer yet** (each a rules change): pulsar beams in
+     line with real pulsars, or a stated bend; Burst Catchers in neighbouring systems catching a
+     neutron star's burst; a rogue world's Coldminds at the dark-sky half upkeep; the two rogue-world
+     bends (close passes 25 times slower, evaporation casting out about half) stated in the Codex
+     or changed; the neighbours' new-star rules and the Last Star. `HANDOVER.md`, section 8, has
+     each in a line.
   1. **A Slovak translation of our own** ("slovak translation would be best, friend is slovak
      like myself just using a cz translation tool", its typing tidied). Not started. Planned with
      the player on 10 Oct, then put aside for the phone interface (done the same day). Decided:
@@ -386,7 +394,20 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   η 85. Two calls of mine, said to them: the rogue rule covers all thirteen Deep structures and
   the Hearth's draw on a hole, not only the lifter; and the "Enhanced" complaint was read as the
   pictures' warmth in every age (the view itself was right). "go ahead, ship it": PR
-  m1omg/Steliterate#23, opened and merged by this session.
+  m1omg/Steliterate#23, merge commit `a083698`, opened and merged by this session.
+- **12 Oct, after it, questions:** "How do neutron stars in the game currently evolve?" Answered
+  by age and fate, with the bends: their beams last far too long (to η 27; real pulsars stop within
+  10⁷ to 10¹⁰ years), one simple cooling law, no new neutron stars from mergers. Offered: bring the
+  beams in line (it takes Beam Array light out of the Dusk), or keep it a stated bend; no answer
+  yet. Then, of the burst at η 68 under curvature radiation: "can the burst be captured?" No:
+  everything at the star is lost (about 10⁴² J, 80 million years of Earth's sunlight a square
+  metre at 1 AU), and nothing elsewhere catches it. Offered: Burst Catchers in neighbouring systems
+  bank a share; no answer yet. Then "a detailed but open summary of this game … i want to test AI
+  models by having them create their own takes on this kind of game, so leave many things open to
+  the model": written in the conversation (premise, pillars, the arc, what the player does, the
+  others, endings as shapes, tone, what is left open, physics anchors), spoiler-light and without
+  the game's own names; not in the repository. Then "do an .md for a session handover again pls":
+  `HANDOVER.md` rewritten.
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
