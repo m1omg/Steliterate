@@ -13,13 +13,14 @@ fate of matter is known; PR m1omg/Steliterate#12, `d2c52b4`, swarms go for ships
 from `claude/lucid-newton-v2`; PR m1omg/Steliterate#13, Halo Siphons can be shut, from
 `claude/epic-wozniak-lyhulf`; PR m1omg/Steliterate#16, `3538f47`, the Last Star shines when it
 lights, and PR m1omg/Steliterate#22, `af0b58b`, Export all saves; the latest game batch, PR
-m1omg/Steliterate#23, rogue worlds leave their star behind and black holes by lifetime, all from
-`claude/affectionate-johnson-qqr7p2`).
+m1omg/Steliterate#23, `a083698`, rogue worlds leave their star behind and black holes by lifetime,
+all from `claude/affectionate-johnson-qqr7p2`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
 
-A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (11 Oct):
+A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (rewritten
+12 Oct):
 where things stand, what to read in which order, the player, the open threads and the traps.
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
