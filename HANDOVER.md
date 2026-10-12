@@ -43,8 +43,9 @@ last.
 
 - **`main` and the live game:**
   - The game is as of PR m1omg/Steliterate#16 (`3538f47`, 12 Oct): the Last Star shines when it
-    lights, and its clock is free. Then PR m1omg/Steliterate#18 (`1c1b77e`): a second Dark track
-    (no rules). The live script is `index-DOD3SRn-.js`.
+    lights, and its clock is free. PR m1omg/Steliterate#18 (`1c1b77e`) added a second Dark track,
+    which came out again the same day (a drone: "monotonous AF"). The live script is
+    `index-BRmxB_Lf.js`.
   - Before it: PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them) and PR
     m1omg/Steliterate#13 (Halo Siphons can be shut); PR m1omg/Steliterate#14 and #15 were this
     handover and the Last Star's plan (no code).
@@ -176,10 +177,11 @@ Wait for the player's word before starting any of them.
    from the keyboard, reduced motion.
 3. **Messages from gone civilizations.** Four answers misbehave (SESSION-NOTES lists them).
    Diplomacy is discuss-first.
-4. **Krea: event plates and a recorded Canon.** The player connected Krea on 12 Oct and asked for
-   both, with "go to town". The second Dark track went in; the Canon came out wrong and was not
-   shipped; Krea's API then had 0 units for images. The plates, prompts written, are in
-   `docs/plans/plates.md`; DEV-NOTES, "Music tooling", has how to reach Krea.
+4. **Krea, when it has units again, in the player's order:** a Dark track that moves (prompt ready
+   in DEV-NOTES, "Music tooling"), then the event plates (`docs/plans/plates.md`), then a second
+   Dark track. A generated track is measured with `tools/music/movement.py` and heard by the
+   player before it goes in: on 12 Oct a drone went live and came out the same day ("monotonous
+   AF"). The arranged Canon stays; Krea cannot make a real one. DEV-NOTES has how to reach Krea.
 5. **The discuss-first list** in "Picking up": the Lattice, diplomacy, tidal locking and the rest.
 6. **New on 11 Oct, each to raise with the player:**
    - **The autoplayer researches Halo Siphons.** Its research fallback (`pickResearch` in

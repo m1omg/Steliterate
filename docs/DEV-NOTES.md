@@ -1041,16 +1041,49 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   for the very end of time … Almost silence: a faint, warm analog drone that slowly changes colour
   over minutes … every so often a single soft sine tone, like a lighthouse very far away, answered
   long afterwards by another … still, lonely, gently hopeful", ending as the others. It came out a
-  steady low drone on E (79% of its pitch energy), its brightness only in the first ten seconds;
-  `loop-track.py` at −19.9 RMS with no crossfade (it takes turns with `dark`), −19.3 LUFS like it.
+  steady low drone on E, went live as Recorded II (PR m1omg/Steliterate#18) and came out again the
+  same day: the player, "monotonous AF". The lesson is in "How much a track moves", below.
+- **How much a track moves** (12 Oct): `python3 tools/music/movement.py public/music/*.mp3` gives,
+  for each track, the share of its pitch energy on its one strongest note (`top`), how much its
+  harmony moves between 2 s windows (`chroma`), its onsets a minute and the spread of its level.
+  The tracks the player likes: Dusk I and II and the title 20–25% / 0.10–0.14 / 113–201 a minute;
+  Black Hole I, the ending and the arranged Canon 20–23% / 0.27–0.33 / 11–31. The drones: Dark
+  78% / 0.001 / 4, Degenerate II 70% / 0.001 / 40, Black Hole II 56% / 0.005 / 5 (the player:
+  leave the last two, each takes turns with one that moves). A track meant to move wants a `top`
+  under about 35% and a `chroma` over about 0.1. Words that made drones, in every Dark, Black
+  Hole II and Degenerate II prompt: "drone", "almost silence", "long near-silences", "no pulse",
+  "no melody", "one steady texture, no build-up and no ending". What moves (the title's, Dusk
+  II's): a tempo, a key, chords, a melody, an arpeggio, sections. **The player hears a generated
+  track before it goes in** (12 Oct): send them the file or its link, never merge on numbers alone.
+- **The next Dark track** (the player, 12 Oct: remake both Dark tracks with movement, one first,
+  then the plates, then the other). Ready, not yet made (Krea's API had 0 units):
+  "Instrumental dark ambient synthwave for the last era of the universe, after the last black holes
+  have evaporated: vast, lonely and quietly hopeful. About 64 BPM, A minor. A slow chord
+  progression that keeps moving and never sits on one chord: Am, F, C, G, then Dm, Am, Em, F, round
+  again with small changes. Warm, worn analog pads carrying the chords; a simple, memorable melody
+  on a soft glassy lead that comes and goes, answered by a distant echo of itself; a gently
+  pulsing arpeggio on a detuned synth in the middle section; a soft bass following the chord roots;
+  sparse, distant percussion (a soft kick and a brushed, gated snare far back) in the second half.
+  Tape hiss and a slight 12-bit bit-crushed texture like a 1991 Amiga soundtrack; long dark reverb.
+  Structure: 0:00 pads and the melody alone; 0:40 the arpeggio and bass enter; 1:30 the fullest
+  part, with the soft percussion and the melody an octave higher; 2:20 thinning back to pads and
+  the melody, ending softly on A minor. No vocals, no choir." (180 s, `force_instrumental`.) Check
+  it with `movement.py`, send it to the player, and only then level it (`loudness.py`: the Dark at
+  −19.3 LUFS) and add it to `PIECES` (`src/audio/music.ts`) under a new file name (a file once
+  served may sit in browsers' caches).
 - **Krea from a cloud session** (12 Oct): through the Krea connector (claude.ai → Connectors;
   its tools are `mcp__Krea__*`, read when a session starts), with `app-uploads.krea.ai` (where
   results are stored) and `api.krea.ai` (uploads) allowed in the environment's network access.
   Pass a style reference as a public URL (the live site's plates, such as
   `https://m1omg.github.io/Steliterate/art/events/comet.webp`). The API spends its own balance
   ("units"): on 12 Oct the two tracks went through and then an image was refused with 0 units
-  left (111 needed for Nano Banana Pro at 2K), as on 29 Sep.
-- **A recorded Canon: tried, not shipped** (12 Oct, 150 s, the prompt below): it came out a D–G
+  left (111 needed for Nano Banana Pro at 2K), as on 29 Sep; a track tried later the same day was
+  refused too. The player had counted 1,504 credits: if the two tracks took them, a 3-minute track
+  costs about seven plates.
+- **A recorded Canon: tried, not shipped, and not to be tried again** (12 Oct, 150 s, the prompt
+  below; the player: "Recorded Canon isnt canon but a monotonous drone", and chose to keep the
+  arranged one, `tools/music/canon.py`, as it is). Krea's music models take words only, no audio to
+  follow, so a real Canon can only come from our own arrangement. It came out a D–G
   vamp over an E♭ drone a semitone against it, with no ground bass and no voices in canon (bass
   per 1.3 s: E♭ throughout; middle register: D and G only; 83% of its pitch energy in D major
   against the arranged one's 98%). Kept at Krea, not in the game:

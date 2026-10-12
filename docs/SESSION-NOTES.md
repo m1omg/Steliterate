@@ -55,8 +55,8 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
     live script `index-BRmxB_Lf.js`), from `claude/affectionate-johnson-qqr7p2`, the plan's
     second session (merged; a follow-up starts it again from `main`). Then PR m1omg/Steliterate#18
-    (12 Oct, `1c1b77e`): the second Dark track, the plates planned (no rules; live script
-    `index-DOD3SRn-.js`).
+    (12 Oct, `1c1b77e`): the second Dark track and the plates planned (no rules); the track came out
+    again the same day ("monotonous AF"), and the live script is `index-BRmxB_Lf.js` again.
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
@@ -157,9 +157,11 @@ clone, with none of this session's scratch files, uploads or memory: everything 
      - A shared work costs 60 matter and never pays.
      - A trade still costs, and still delivers notes.
      - The Choir's wish, whose only allowed answer keeps the Echoes, costs 3 Echoes standing.
-  4. **Music:** the second Dark track is in (12 Oct). A recorded Canon was tried and not
-     shipped: no ground bass, a drone a semitone off (DEV-NOTES, Music tooling); another try waits
-     on Krea's API balance, with event plates (`docs/plans/plates.md`).
+  4. **Krea, in this order** (the player, 12 Oct): one Dark track that moves (its prompt is ready
+     in DEV-NOTES, Music tooling), then the event plates (`docs/plans/plates.md`), then a second
+     Dark track to replace the old drone. Each track is checked with `tools/music/movement.py` and
+     heard by the player before it goes in. Krea's API had 0 units on 12 Oct. The arranged Canon
+     stays; no more recorded Canons.
   5. **Discuss first, not built:**
      - a Lattice rework (the player's idea: Greg Egan's "jewel"; never spoil its ending);
      - deeper diplomacy;
@@ -319,7 +321,14 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   opened the network. Made: the second Dark track (in, as Recorded II) and a recorded Canon (not
   shipped: it is not the Canon; DEV-NOTES, Music tooling, has its link so they can hear it). Then
   Krea's API refused the first plate: 0 units available, 111 needed. Told them, with the plates
-  planned in `docs/plans/plates.md` for when the balance is back.
+  planned in `docs/plans/plates.md` for when the balance is back. Then: "Recorded Canon isnt canon
+  but a monotonous drone" and "The dark era track is monotonous AF too...". Right: my own numbers
+  had called it a steady drone, and I had shipped it as "in keeping with the first Dark track"
+  rather than letting them hear it first. Measured every track (`tools/music/movement.py`): both
+  Dark tracks, Degenerate II and Black Hole II are drones; the tracks they like move. Asked, they
+  chose: "Remake both, with movement" (the new one out now), leave the other ages' second tracks,
+  "Keep the arranged one" (the Canon), and "One Dark track, then plates" when Krea has units again.
+  A track with movement was tried at once: 0 units. Its prompt is ready (DEV-NOTES).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word

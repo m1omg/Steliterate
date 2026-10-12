@@ -1631,3 +1631,23 @@ the event plates too", then "go to town".
   the 111 one plate needs), as on 29 Sep. Fifteen plates are planned, prompts written, in
   `docs/plans/plates.md`.
 - No rules changed.
+
+## The second Dark track out again; a measure for generated music (12 Oct)
+
+The player: "Recorded Canon isnt canon but a monotonous drone" and "The dark era track is monotonous
+AF too...". Right on both: the new Dark track was a steady drone, as my own measurement had said,
+and it went live without them hearing it first.
+
+- **The Dark Era plays its first recording alone again,** as before PR m1omg/Steliterate#18 (the
+  build is the one that was live before it, byte for byte). Asked, the player chose to remake both
+  Dark tracks with movement: chords, a melody, sections. One comes first when Krea has units again,
+  then the event plates, then the other.
+- **How much a track moves:** `tools/music/movement.py` measures the share of a track's pitch
+  energy on one note, how much its harmony moves, its notes a minute and the spread of its level.
+  The tracks the player likes sit at 20–25% on one note, with harmony that moves; both Dark tracks,
+  Degenerate II and Black Hole II are drones, at 56–78% (the player: leave those two, each takes
+  turns with one that moves). From now on a generated track is measured, and heard by the player,
+  before it goes in.
+- **The Canon:** the arranged one stays as it is. Krea's music models take words only, so they
+  cannot follow Pachelbel; no more recorded Canons.
+- No rules changed.

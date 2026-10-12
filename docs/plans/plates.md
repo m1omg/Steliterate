@@ -1,5 +1,8 @@
 # Plan: painted plates for the events that have none
 
+**Order** (the player, 12 Oct): when Krea has units again, first one Dark track that moves (its
+prompt is in DEV-NOTES, "Music tooling"), then these plates, then a second Dark track.
+
 The player, 12 Oct: "do the music and the event plates too", then "go to town". Krea's API had no
 units left for images after the music (DEV-NOTES, "Music tooling": how to reach Krea from a
 session). This is everything needed to make them when it has.
