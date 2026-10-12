@@ -1,31 +1,31 @@
 import { useState } from 'preact/hooks';
 import { siteValue } from '../../game/sim/sites';
 import { ANOMALIES } from '../../game/data/events';
-import { bodyClimate, sourceLight } from '../../game/physics';
+import { bodyClimate, hawkingLight, sourceLight } from '../../game/physics';
 import { LIVING_WORLD, naturalKinRoom } from '../../game/sim/fleets';
 import { habitabilityOf } from '../../game/sim/terraform';
 import { SiteStrip, bestOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
 import { YIELDS, yieldOf, yieldText, yieldTip } from '../yields';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
-import { formatDistance, formatYears } from '../../game/eras';
+import { formatDistance, formatYears, formatYearsShort } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { orderFleet } from '../../game/sim/actions';
 import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
-import { starClock, turnStep, turnsUntilYears } from '../../game/sim/flare';
+import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
 import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
-import { kelvin, n1 } from '../fmt';
+import { kelvin, mult, n1, solarMass } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, SWARM_TIP } from '../labels';
 import { act, engine, game, hoverStar, modal, notify, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
 import { pressable } from '../a11y';
-import { calendarEra } from '../../game/fate';
+import { calendarEra, inAge } from '../../game/fate';
 
 const ANOMALY_IDS = new Set(ANOMALIES.map((a) => a.id));
 
@@ -159,13 +159,15 @@ export function FleetsModal({ s }: { s: GameState }) {
 
 /**
  * Open the Systems window to choose where a stationed ship goes: collision stars first while any
- * burn; in the magnifier mode a probe's list is the stars not yet surveyed.
+ * burn; in the magnifier mode a probe's list is the stars not yet surveyed; in the Black Hole Age,
+ * the black holes.
  */
 export function sendFromSystems(s: GameState, f: Fleet) {
   sfx('click');
   const burning = calendarEra(s) === 'degenerate' && Object.values(s.systems).some((x) => isBeacon(s, x));
   const afar = !!settings.value.lowVision && f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey) && Object.values(s.systems).some((x) => s.civ.known[x.id] === 1 && !x.gone);
-  modal.value = { kind: 'settlements', tab: burning ? 'beacons' : afar ? 'afar' : 'worlds', send: f.id };
+  const holes = inAge(s, ['blackhole']) && holesOnMap(s).length > 0;
+  modal.value = { kind: 'settlements', tab: burning ? 'beacons' : afar ? 'afar' : holes ? 'holes' : 'worlds', send: f.id };
 }
 
 /** In the Systems window opened from a ship: send it to this star (the fleet's panel then shows the order). */
@@ -202,12 +204,13 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
   void rev.value;
   const degenerate = calendarEra(s) === 'degenerate';
   const lv = !!settings.value.lowVision;
-  const which = (tab === 'beacons' && !degenerate) || (tab === 'afar' && !lv) ? undefined : tab;
+  const which = (tab === 'beacons' && !degenerate) || (tab === 'afar' && !lv) || (tab === 'holes' && !(inAge(s, ['blackhole']) && holesOnMap(s).length)) ? undefined : tab;
   const f = send ? s.fleets[send] : undefined;
   const sending = f?.at ? f : undefined;
   const show = (t?: SystemsTab) => (modal.value = { kind: 'settlements', tab: t, send: sending?.id });
   const surveyedCount = Object.values(s.bodies).filter((b) => s.civ.known[b.systemId] === 2 && !b.dissolved && b.kind !== 'deep').length;
   const burning = degenerate ? Object.values(s.systems).filter((x) => isBeacon(s, x)).length : 0;
+  const holes = inAge(s, ['blackhole']) ? holesOnMap(s).length : 0;
   const tabs = (
     <div class="row wrap" style={{ gap: '4px', marginBottom: '8px' }}>
       <button class={`btn small ${!which ? 'primary' : ''}`} onClick={() => show()}>Our settlements</button>
@@ -215,6 +218,11 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       {degenerate && (
         <button class={`btn small ${which === 'beacons' ? 'primary' : ''}`} onClick={() => show('beacons')} data-tip={`${BEACON_TIP} Every one on our map, and how long each will burn.`}>
           ✦ Collision stars <span class={`mono ${burning ? 'boon' : 'faint'}`}>{burning}</span>
+        </button>
+      )}
+      {holes > 0 && (
+        <button class={`btn small ${which === 'holes' ? 'primary' : ''}`} onClick={() => show('holes')} data-tip="Every black hole on our map, the longest-lasting first: how long each has before it evaporates.">
+          ● Black holes <span class="mono faint">{holes}</span>
         </button>
       )}
       {lv && (
@@ -244,6 +252,13 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       <ModalFrame title="Systems" eyebrow="Seen from afar: stars on our map not yet surveyed" icon="system" narrow>
         {tabs}
         <AfarList s={s} send={sending} />
+      </ModalFrame>
+    );
+  if (which === 'holes')
+    return (
+      <ModalFrame title="Systems" eyebrow={`Black holes: ${holes} on our map, the longest-lasting first`} icon="black_hole" narrow>
+        {tabs}
+        <HolesList s={s} send={sending} />
       </ModalFrame>
     );
   if (which === 'beacons')
@@ -465,7 +480,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
     ['room', 'Room', 'Most room for Kin without domes'],
     ['echoes', 'Power', 'Best for Echoes and the Chorus: the energy a settlement there could collect each turn at the Tide'],
     ['lattice', 'Matter', 'Best for the Lattice: the matter its mines, skimmers and lifters could raise each turn at the Tide'],
-    ['coldminds', 'Lasting', 'Best for Coldminds: the worlds that will last longest before falling into their dead stars'],
+    ['coldminds', 'Lasting', 'Best for Coldminds: the worlds that will last longest before falling into their dead stars, or their black holes evaporate'],
     ['type', 'Type', 'By the kind of star: black holes, neutron stars, white and brown dwarfs, then the rest, nearest first within each'],
     ['near', 'Nearest', 'Nearest to the capital'],
     ['name', 'Name', 'Alphabetical'],
@@ -547,6 +562,81 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+/** The black holes on our map (seen from afar or surveyed), not yet evaporated. */
+function holesOnMap(s: GameState): StarSystem[] {
+  return Object.values(s.systems).filter((x) => (x.primary.kind === 'black_hole' || x.primary.kind === 'smbh') && !x.gone && (s.civ.known[x.id] ?? 0) > 0);
+}
+
+/**
+ * The Black Hole Age's black holes on our map, the longest-lasting first (12 Oct, the player: "an
+ * option to see black holes by their lifetime ... handy during the late black hole era"): how long
+ * each has before it evaporates, in years and in turns at this pace, its mass, what a Hawking
+ * Collector gathers there, its spin, and who is there. In this age they are the last sources, and
+ * they go one by one, the lightest first.
+ */
+function HolesList({ s, send }: { s: GameState; send?: Fleet }) {
+  void rev.value;
+  const cap = colonies(s).find((c) => c.id === s.civ.capitalId);
+  const home = s.systems[cap?.systemId ?? s.civ.homeSystemId];
+  const ours = new Set(colonies(s).map((c) => c.systemId));
+  const rows = holesOnMap(s)
+    .map((sys) => ({ sys, at: sys.primary.evaporateAt ?? Infinity, ly: distLy(home, sys) }))
+    .sort((a, b) => b.at - a.at || a.ly - b.ly);
+  const turns = turnsUntilAll(s, rows.map((r) => r.at));
+  const worldsOf = (sys: StarSystem) => sys.bodies.filter((id) => s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind !== 'deep').length;
+  const others = (sys: StarSystem) => (s.civ.known[sys.id] === 2 ? Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id)) : undefined);
+  const chipGap = { marginLeft: '6px' };
+  return (
+    <>
+      <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
+        The last sources. Each black hole lasts until its Hawking radiation has carried off all its mass: about 2×10⁶⁷ years for one of a Sun, a thousand times longer for ten, so they go the lightest first, each in a last burst. What is settled at one drifts on after it, with nothing left there to draw on.
+      </p>
+      <div class="list">
+        {rows.map(({ sys, at, ly }, i) => {
+          const p = sys.primary;
+          const known = s.civ.known[sys.id] ?? 0;
+          const worlds = worldsOf(sys);
+          const v = others(sys);
+          const n = turns[i];
+          const hawking = hawkingLight(p, s.years);
+          const province = s.provinces.find((x) => x.id === sys.provinceId)?.name ?? '';
+          return (
+            <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
+              <span class="grow">
+                {sys.name} {province !== sys.name && <span class="faint">{province}</span>}
+                {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
+                {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
+                {swarmSeenAt(s, sys.id) && <span class="chip danger" style={chipGap} data-tip={SWARM_TIP}>swarm</span>}
+                {v && (
+                  <span class="chip" style={{ ...chipGap, color: v.color, borderColor: v.color }} data-tip={v.contact ? `${v.name} live there` : 'Someone lives there'}>
+                    {v.contact ? v.name : 'someone lives there'}
+                  </span>
+                )}
+                <div class="faint" style={{ fontSize: '12.5px' }}>
+                  {solarMass(p.mass)} M☉ · {known === 2 ? (worlds ? `${worlds} world${worlds === 1 ? '' : 's'}` : 'only its Deep') : 'worlds not charted'} · {formatDistance(ly)}
+                  {p.spinMax > 0 ? <span data-tip="What is left of its spin, which Penrose Harvesters draw on and Horizon Vaults store energy in. It does not come back."> · spin {Math.round((p.spin / p.spinMax) * 100)}%</span> : ''}
+                  {hawking > 0 ? <span data-tip="What a Hawking Collector gathers here this turn compared with its rating: a hole glows brighter as it shrinks."> · Hawking ×{mult(hawking)}</span> : ''}
+                </div>
+              </span>
+              <span class="mono" style={{ fontSize: '13.5px', textAlign: 'right', minWidth: '84px' }}>
+                <span class={n <= 1 ? 'warn' : 'good'} data-tip={`It evaporates in ${formatYears(at - s.years)}.`}>{formatYearsShort(at - s.years)}</span>
+                <div
+                  class={n <= 1 ? 'warn' : 'faint'}
+                  style={{ fontSize: '12.5px' }}
+                  data-tip={n <= 1 ? 'At this pace it evaporates during this turn.' : isFinite(n) ? `At this pace it lasts ${n} turns, counting this one, and evaporates during the last of them.` : 'At this pace it lasts longer than we can foresee.'}
+                >
+                  {n <= 1 ? 'goes this turn' : isFinite(n) ? `${n} turns left` : 'many turns left'}
+                </div>
+              </span>
+              {send && <SendButton s={s} f={send} sys={sys} />}
+            </div>
+          );
+        })}
+      </div>
     </>
   );
 }

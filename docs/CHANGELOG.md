@@ -1690,3 +1690,71 @@ The player: "Also, please let me export all the saves from the browser, not just
 - **Check:** new browser check `save-all` (two slots, a quick save and the autosave; the file and
   what it holds; a browser emptied of saves; the import, then a second one; an imported slot loads).
 - No rules changed; saves unchanged.
+
+## Rogue worlds leave their star behind; black holes by lifetime; the late sky as it is (12 Oct)
+
+The player, in the Black Hole Age: "There should be an option to see black holes by their lifetime.
+It may come in handy during the late black hole era, for instance. Also, please check if Stellar
+lifters work on Rogue Planets too, because they should not. … does matter harvesting take away from
+the mass of the planets or other objects? and stars in enhanced mode in bh era isnt accurate,
+describing brown dwarfs at 13". Then, at turn 204 (η 90.9), with the Aeon Seed at 2,122 of 1,700:
+"resume? i invested more energy than needed already", and "also positronium forming did NOTHING …
+no event etc".
+
+- **A world flung loose from its star has left behind everything built around that star.**
+  Stellar Lifters did work there: a settlement on a rogue world could build one at the star it had
+  left and draw its matter, and at a black hole draw its spin and Hawking light and store energy in
+  a Horizon Vault, while its Hearth fed on the hole. Now a rogue world can build none of the Deep's
+  structures (Stellar Lifter, Hydrogen Siphon, Dyson Swarm, Ember Collectors, Infrared Shrouds, Disk
+  Skimmer, Pulsar Brake, Decay Harvester, Curvature Collector, Accretion Engine, Penrose Harvester,
+  Hawking Collector, Horizon Vault: "Out of reach: this world has drifted loose from its star"), nor
+  any light collector (Orbital Collectors too, as Solar Arrays before; their light was already
+  nothing there). What it built there before gives it nothing: its line says it is out of reach,
+  and so does its chip in the settlement's panel. Its Hearth no longer feeds on a hole it has left.
+  A lifter left behind drains no free energy, and does not stop a settlement still at the star from
+  building its own. The settle lists' Power and Matter count none of it for a rogue world, and the
+  autoplayer takes apart what it left behind when short of matter.
+- **Black holes by their lifetime.** In the Black Hole Age the Systems window has a ● Black holes
+  tab: every black hole on our map, the longest-lasting first, with its years left and its turns
+  left at this pace ("goes this turn" for one evaporating in the turn), its mass, its spin, what a
+  Hawking Collector gathers there and who lives there. Choosing a ship's destination from the
+  Systems window opens on it in that age. A hole's panel has an Evaporates row, in years and in
+  turns at this pace.
+- **Lasting at a black hole** (the Coldminds' measure, and so a Vault Ship's Best for them) read "∞"
+  at every hole. A place at a hole now lasts until the hole evaporates (what is settled there drifts
+  on after it, with nothing there to draw on), so the longest-lived hole comes first. A world of a
+  brown dwarf read its gravitational-wave date, which never comes there (only a dead star of
+  ordinary matter takes its worlds in): it never falls in.
+- **Brown dwarfs.** At 13 K one read "still glowing with the heat of its youth": its light to
+  collectors, counted in the age's tiny units, decided the words. Now they follow what warms it:
+  "long cold by any star's measure, still giving off the last of the heat it formed with" while
+  that is most of its warmth (some tens of kelvin early in the Degenerate Age, a few by η 17), then
+  "nearly cold, faintly warmed by dark matter", then "gone cold". Its mass reads in figures (0.07
+  M☉; it read "0"), and masses from ten thousand Suns in powers of ten (3×10⁸ M☉, not 3.0e+8).
+- **The pictures after the Dusk.** Brown dwarfs kept their warm red, and neutron stars their
+  blue-white blaze and beams, in every age, in the natural view and the enhanced alike, though by
+  the Black Hole Age both are far colder than anything a picture can show. Now a brown dwarf greys
+  as it cools (at a few kelvin, as dark as a black dwarf), on the map and inside its system, and a
+  neutron star dims with its spin, as its collectors' light always did: beams in the Dusk, half at
+  η 21, none from η 27. The Dusk looks as before; the thermal view always showed their temperature.
+- **A finished Great Work cannot be resumed.** A Work stops taking insight once its progress
+  reaches its cost, but its card still offered Resume, its bar running past its end, and resuming
+  poured a turn's insight (and the labs' energy) into it again. The autoplayer did that every turn
+  after finishing one, and never began another. Now a finished Work says Complete ("Complete: waits
+  for the Heart" for the Aeon Seed, which is written when the Heart evaporates, if its condition
+  still holds then), and cannot be resumed.
+- **Positronium.** The chronometer marks "Positronium forms" at η 85, and nothing came of it. Now,
+  where protons decayed or space unmade matter, the turn that passes it brings The Widest Atoms,
+  once, as news (Study them: Insight +40; Let them be: Resolve +1). A game already past η 85 in the
+  Black Hole Age hears it at its next turn. Stable matter leaves no positrons, and none forms.
+- **Asked:** harvesting never changes a mass. Mines and skimmers lower a world's richness and
+  hydrogen; a Stellar Lifter drains the galaxy's free energy, not its star; the Heart grows only
+  from what falls into it.
+- **Checks:** new unit checks `rogue-reach`, `great-works` and `late-sky`, and browser check
+  `holes`; `cold-energy` and `evap` take a world still bound to its star (close passes had flung
+  theirs loose, which they now meet as rogue worlds).
+- **Balance.** 300 games: 154 survive, 72 victories, a Degenerate Age of 72 turns (157 / 69 / 72
+  before). 900 games: 456 / 203 / 71 (449 / 202 / 70), within the noise: 406 of 900 play out as
+  before, and the outcomes that moved went both ways (43 defeat → endurance, 38 back; 8 defeat →
+  victory, 6 back). By fate: decay 189 / 450, stable 168 / 239, curvature 99 / 211. Aeon Seed
+  victories 67 → 71.

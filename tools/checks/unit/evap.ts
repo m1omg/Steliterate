@@ -24,6 +24,8 @@ const withWorld = holes.find((x) => x.bodies.some((id) => { const b = s.bodies[i
 const empty = holes.find((x) => x !== withWorld && !settledAt(x.id))!;
 check(!!withWorld && !!empty, `two black holes to watch: ${withWorld?.name} (with worlds) and ${empty?.name}`);
 const world = s.bodies[withWorld.bodies.find((id) => { const b = s.bodies[id]; return b && !b.dissolved && b.kind !== 'deep'; })!];
+// still bound to its hole, as it was before close passes flung it loose (one flung loose draws nothing from the hole: rogue-reach.ts)
+Object.assign(world, { rogue: false });
 const c = createColony(s, world, { lattice: 4 });
 c.structures = { superconducting_ring: 3, burst_catcher: 2, horizon_vault: 1, penrose_harvester: 1, hawking_collector: 1 };
 for (const id of empty.bodies) {

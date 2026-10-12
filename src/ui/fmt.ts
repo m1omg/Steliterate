@@ -21,6 +21,19 @@ export function mult(x: number): string {
   return `${m.replace(/\.0$/, '')}×10${exp}`;
 }
 
+/**
+ * A mass in Suns, readable at any size: two figures below one (a brown dwarf's 0.052, not 0),
+ * one decimal to a hundred, whole Suns to ten thousand, then a power of ten (the Heart's 4.4×10¹⁰).
+ */
+export function solarMass(m: number): string {
+  if (!isFinite(m) || m <= 0) return n1(m);
+  if (m < 1) return Number(m.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 });
+  if (m < 1e4) return n1(m);
+  const [mant, e] = m.toExponential(1).split('e');
+  const exp = String(Number(e)).split('').map((c) => SUP[c] ?? c).join('');
+  return `${mant.replace(/\.0$/, '')}×10${exp}`;
+}
+
 export function signed(x: number, digits = 1): string {
   const v = digits === 0 ? n0(x) : n1(x);
   return x > 0.049 ? `+${v}` : v;

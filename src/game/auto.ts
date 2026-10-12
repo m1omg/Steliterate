@@ -31,7 +31,7 @@ import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle } from './sim/fleets';
-import { colonies, distLy, eraIndex, hasTech, swarmSeenAt, threadTotals } from './sim/util';
+import { colonies, distLy, eraIndex, hasTech, leftBehind, swarmSeenAt, threadTotals } from './sim/util';
 import type { Body, Colony, Fate, GameState, ThreadId } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
@@ -155,8 +155,9 @@ function planDismantle(state: GameState) {
   for (const c of colonies(state)) {
     for (const l of pr.perColony[c.id]?.y.lines ?? []) {
       const d = l.idle ? STRUCTURE_BY_ID[l.idle] : undefined;
-      // only where the source is gone for good: decay and curvature harvesters wait for their time
-      if (!d?.matter || !d.energy || !GONE_FOR_GOOD.includes(d.energy.mode)) continue;
+      // only where the source is gone for good: decay and curvature harvesters wait for their time;
+      // whatever a world flung loose left behind at its star is gone for good too
+      if (!d?.matter || !(leftBehind(state, c, d) || (d.energy && GONE_FOR_GOOD.includes(d.energy.mode)))) continue;
       if (civ.energy < dismantleTerms(state, d).cost + 40) return;
       if (dismantle(state, c.id, d.id) === null) return;
     }

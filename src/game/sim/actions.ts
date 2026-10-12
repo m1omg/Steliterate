@@ -10,7 +10,7 @@ import { sanctuaryHeard } from './refuge';
 import { declareWar, makePeace } from './war';
 import { THREADS } from '../types';
 import { capacity } from './economy';
-import { workRequirementMet } from './endings';
+import { workCost, workRequirementMet } from './endings';
 import { resolveEvent } from './events';
 import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
 import { absorbSwarm, attackSwarm, drawSwarmTo, tameSwarm } from './hunger';
@@ -22,7 +22,7 @@ import { siphonsRunning, sourceLight } from '../physics';
 import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { colonies, hasCharter, hasTech, log, savableName, uid } from './util';
+import { colonies, hasCharter, hasTech, leftBehind, log, savableName, uid } from './util';
 import { ageReached, inAge, matterGone } from '../fate';
 
 export type ActionResult = string | null; // error message or null on success
@@ -42,6 +42,8 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   // structures that live in orbit around the star can be built from anywhere in the system
   if (d.bodies && !d.bodies.includes(b.kind) && !d.bodies.includes('deep')) return `Must be built on ${d.bodies.join(' or ')}.`;
   if (d.notBodies && d.notBodies.includes(b.kind)) return 'Cannot be built here.';
+  // a world flung loose from its star has drifted away from what is built around it
+  if (leftBehind(state, c, d)) return 'Out of reach: this world has drifted loose from its star.';
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return 'Needs a different kind of star or remnant.';
   if (d.notAt?.includes(sys.primary.kind)) return sys.primary.kind === 'brown_dwarf' ? 'A brown dwarf’s light is too faint and too red for these: Infrared Shrouds gather it.' : 'Gathers nothing from this kind of star.';
   if (d.habitable && b.habitability < 0.3) return 'Only on a living world.';
@@ -54,12 +56,13 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.id === 'disk_skimmer' && !(sys.primary.rekindle && sys.primary.rekindle > 0)) return 'Needs a world feeding its dead star.';
   // a collector of light needs light to collect: a cold dwarf, a quiet black hole or the dark has none
   if (d.energy?.mode === 'light') {
-    if (b.rogue && d.id === 'solar_array') return 'Nothing to gather: a rogue world has no sun.';
+    if (b.rogue) return 'Nothing to gather: a rogue world has no sun.';
     if (sourceLight(state, sys, state.years, turnStep(state).turnLength).light <= 0) return 'Nothing to gather: its star gives no light.';
   }
   if (d.systemUnique) {
     for (const o of Object.values(state.colonies)) {
-      if (o.systemId !== c.systemId) continue;
+      // one left behind by a world flung loose works for no one: it does not count
+      if (o.systemId !== c.systemId || leftBehind(state, o, d)) continue;
       if ((o.structures[d.id] ?? 0) > 0 || o.queue.some((q) => q.key === d.id)) return 'Only one per system.';
     }
   }
@@ -570,6 +573,8 @@ export function startWork(state: GameState, workId: string): ActionResult {
   if (!inAge(state, w.eras)) return 'Not in this age.';
   if (state.civ.taint > w.maxTaint) return 'What we have become cannot do this.';
   if (state.civ.work === workId) return null;
+  // finished: nothing more to put in (it ends the game once its condition holds; the Aeon Seed, when the Heart evaporates)
+  if ((state.civ.works[workId] ?? 0) >= workCost(state, workId)) return 'It is complete: nothing more to put in.';
   if ((state.civ.works[workId] ?? 0) === 0) {
     if (state.civ.energy < w.energy) return `Beginning it needs ${w.energy} energy.`;
     state.civ.energy -= w.energy;

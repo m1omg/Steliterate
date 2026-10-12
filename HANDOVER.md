@@ -46,6 +46,10 @@ last.
     lights, and its clock is free. PR m1omg/Steliterate#18 (`1c1b77e`) added a second Dark track,
     which came out again the same day (a drone: "monotonous AF"). The live script is
     `index-BRmxB_Lf.js`.
+  - Since then, the same day: PR m1omg/Steliterate#21 (The Embers Dim only while the halo thins),
+    PR m1omg/Steliterate#22 (`af0b58b`, Export all saves) and PR m1omg/Steliterate#23 (rogue
+    worlds leave their star behind, black holes by lifetime, the late sky as it is: CHANGELOG,
+    "Rogue worlds leave their star behind"). The live script is the one its build names.
   - Before it: PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them) and PR
     m1omg/Steliterate#13 (Halo Siphons can be shut); PR m1omg/Steliterate#14 and #15 were this
     handover and the Last Star's plan (no code).
@@ -136,25 +140,26 @@ halo?", and there was no way to.
 - **Where to read more:** CHANGELOG, "Halo Siphons can be shut"; DEV-NOTES, "Halo Siphons and the
   halo's clock".
 
-## 7. The baseline (12 Oct, the Last Star)
+## 7. The baseline (12 Oct, rogue worlds leave their star behind)
 
 **Checks:**
 - tsc and the build are clean;
 - the playtest passes (30/144 Hz parity);
-- all 45 unit checks pass;
+- all 48 unit checks pass;
 - savecompat passes on the 6 saves in `tools/saves/`;
-- all 49 browser checks pass, in the real fonts.
+- all 50 browser checks pass, in the real fonts.
 
 **Harness (standard competent):**
 
 | | Survive | Victories | Degenerate Age |
 |---|---|---|---|
-| 300 games | 157 | 69 | 72 turns |
-| 900 games | 449 | 202 | 70 turns |
+| 300 games | 154 | 72 | 72 turns |
+| 900 games | 456 | 203 | 71 turns |
 
-- By fate, survivors in the 900: decay 181 of 450, stable 169 of 239, curvature 99 of 211.
-- Since 12 Oct, The Embers Dim only while the halo thins (with the Last Star alone: 150 / 67 / 72
-  and 445 / 199 / 70).
+- By fate, survivors in the 900: decay 189 of 450, stable 168 of 239, curvature 99 of 211.
+- Since 12 Oct: rogue worlds leave the Deep's structures behind, a finished Work is not resumed,
+  positronium is news (406 of 900 games as before; with The Embers Dim only while the halo thins:
+  157 / 69 / 72 and 449 / 202 / 70; with the Last Star alone: 150 / 67 / 72 and 445 / 199 / 70).
 - Before it (11 Oct): 151 / 69 / 71 in 300, 442 / 195 / 70 in 900; 721 of 900 games are
   unchanged, and every one that changed lights the Last Star.
 - Noise is ±12 in 300 games; two runs of 900 can differ by 30.
@@ -164,7 +169,13 @@ halo?", and there was no way to.
 
 Wait for the player's word before starting any of them.
 
-0. **Done (12 Oct): the Last Star shines when it lights.** The plan, `docs/plans/last-star.md`, was
+0. **Done (12 Oct), in the player's Black Hole Age game:** rogue worlds leave their star's
+   structures behind (Stellar Lifters did work there), a Black holes tab by lifetime, Lasting at a
+   hole, brown dwarfs and pulsars as they are after the Dusk, a finished Great Work not resumed,
+   positronium at η 85 (CHANGELOG, "Rogue worlds leave their star behind"). A choice to raise if it
+   comes up: a rogue world's Coldminds pay full upkeep, though it has no sun at all (the dark-sky
+   half applies where the star gives no light).
+   **Done (12 Oct): the Last Star shines when it lights.** The plan, `docs/plans/last-star.md`, was
    carried out with the player's answers (CHANGELOG, "The Last Star shines when it lights"). Not
    done, a choice to raise if it comes up: the neighbours' new-star rules (sleepers waking for a
    new star, claims) still leave the Last Star out.

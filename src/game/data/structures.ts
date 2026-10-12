@@ -120,6 +120,13 @@ export const STRUCTURES: StructureDef[] = [
 
 export const STRUCTURE_BY_ID: Record<string, StructureDef> = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));
 
+/**
+ * Built in orbit around the star itself (the Deep's structures, which any settlement in the
+ * system can build): each works on the star, drawing its light, matter, spin or Hawking glow, or
+ * storing energy in its spin. A world flung loose from the star has left all of them behind.
+ */
+export const aroundTheStar = (d: StructureDef): boolean => !!d.bodies?.includes('deep');
+
 /** What a structure is mainly for, to group and filter the build list by. */
 export type StructureKind = 'energy' | 'storage' | 'matter' | 'industry' | 'insight' | 'accord' | 'people' | 'world' | 'defence';
 

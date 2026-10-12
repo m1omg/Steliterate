@@ -1,6 +1,6 @@
-import { STRUCTURES, structureLabel, type StructureDef } from '../data/structures';
+import { STRUCTURES, aroundTheStar, structureLabel, type StructureDef } from '../data/structures';
 import { formatYears } from '../eras';
-import { bodyClimate, boilingAway, hawkingLight, insolation, lampsOver, sourceLight, sunGone, turnsToFreeze } from '../physics';
+import { NEVER_FEED, bodyClimate, boilingAway, hawkingLight, insolation, lampsOver, sourceLight, sunGone, turnsToFreeze } from '../physics';
 import type { Body, GameState, ThreadId } from '../types';
 import { turnStep } from './flare';
 import { naturalKinRoom } from './fleets';
@@ -21,6 +21,8 @@ function buildableAt(state: GameState, b: Body, d: StructureDef): boolean {
   // orbital structures can be built from any world in the system
   if (d.bodies && !d.bodies.includes(b.kind) && !d.bodies.includes('deep')) return false;
   if (d.notBodies && d.notBodies.includes(b.kind)) return false;
+  // a world flung loose from its star: nothing around the star is in reach, and it has no light
+  if (b.rogue && (aroundTheStar(d) || d.energy?.mode === 'light')) return false;
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return false;
   if (d.notAt?.includes(sys.primary.kind)) return false;
   if (d.habitable && b.habitability < 0.3) return false;
@@ -40,7 +42,7 @@ export function powerParts(state: GameState, b: Body): { label: string; e: numbe
   const p = sys.primary;
   const L = turnStep(state, 0).turnLength;
   const light = b.rogue ? 0 : sourceLight(state, sys, state.years, isFinite(L) ? L : 0).light;
-  const hole = p.kind === 'black_hole' || p.kind === 'smbh';
+  const hole = (p.kind === 'black_hole' || p.kind === 'smbh') && !b.rogue;
   const fed = Math.max(Math.min(1.5, light), b.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
   const parts = [{ label: fed < 0.25 ? 'Hearth: stored fuel and salvage' : 'Hearth', e: 2 * Math.max(0.25, fed) }];
   for (const d of STRUCTURES) {
@@ -88,13 +90,19 @@ export function matterAt(state: GameState, b: Body): number {
 }
 
 /**
- * The cosmic year this world is lost to us (falls into its dead star), or Infinity: never for a
- * rogue world, flung loose from its star, which has none to fall into.
+ * How long a place lasts, as the cosmic year it ends: a world falls into its dead star; at a black
+ * hole, its Deep and the worlds still bound to it last until the hole evaporates (what is settled
+ * there drifts on after it, with nothing there to draw on). Infinity for a rogue world, flung loose
+ * with no star to fall into, and around a star that never takes its worlds in.
  */
-export function lastsUntil(b: Body): number {
+export function lastsUntil(state: GameState, b: Body): number {
   if (b.dissolved) return 0;
   if (b.feeding) return b.feeding.start;
-  return b.rogue ? Infinity : (b.inspiralAt ?? Infinity);
+  if (b.rogue) return Infinity;
+  const p = state.systems[b.systemId]?.primary;
+  if (p && (p.kind === 'black_hole' || p.kind === 'smbh')) return p.evaporateAt ?? Infinity;
+  if (!p || NEVER_FEED.has(p.kind)) return Infinity;
+  return b.inspiralAt ?? Infinity;
 }
 
 export interface SiteValue {
@@ -155,14 +163,18 @@ export function siteValue(state: GameState, b: Body, thread: ThreadId): SiteValu
       };
     }
     case 'coldminds': {
-      const until = lastsUntil(b);
+      const until = lastsUntil(state, b);
       const left = until - state.years;
       const t = b.kind === 'gas_giant' || b.kind === 'ice_giant' ? 100 : bodyClimate(state, b).mean;
+      const p = state.systems[b.systemId].primary;
+      const hole = !b.rogue && (p.kind === 'black_hole' || p.kind === 'smbh') && isFinite(left);
       return {
         // what lasts longest first; among those, the colder
         score: (isFinite(left) ? Math.log10(Math.max(1, left)) : 400) - t / 10000,
         label: isFinite(left) ? `lasts ${formatYears(Math.max(0, left))}` : 'never falls in',
-        tip: 'Coldminds need almost nothing from a world, only time: how long before this one falls into its dead star. Among equals, the colder first.',
+        tip: hole
+          ? 'Coldminds need almost nothing from a place, only time: here, how long before its black hole evaporates. What is settled here drifts on after it, with nothing left here to draw on. Among equals, the colder first.'
+          : 'Coldminds need almost nothing from a world, only time: how long before this one falls into its dead star (or, at a black hole, before the hole evaporates). Among equals, the colder first.',
       };
     }
   }

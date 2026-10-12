@@ -1,7 +1,8 @@
 // What a place offers each kind of settler, in one short line: livable ground (Kin), power (Echoes
-// and the Chorus), matter (the Lattice) and time before it falls into its star (Coldminds), from
-// siteValue (game/sim/sites.ts). A fleet's Where to settle and Nearby lists and the Surveyed worlds
-// list show it under each world or star, with the measure the list is sorted by marked.
+// and the Chorus), matter (the Lattice) and time before it falls into its star or its black hole
+// evaporates (Coldminds), from siteValue (game/sim/sites.ts). A fleet's Where to settle and Nearby
+// lists and the Surveyed worlds list show it under each world or star, with the measure the list
+// is sorted by marked.
 
 import { canSettle } from '../game/sim/fleets';
 import { siteValue, type SiteValue } from '../game/sim/sites';
@@ -18,7 +19,7 @@ export const NEEDS: { need: Need; icon: IconName; name: string; what: string }[]
   { need: 'kin', icon: 'kin', name: 'Livable', what: 'Livable, for Kin: habitability × vitality, and room without domes' },
   { need: 'echoes', icon: 'energy', name: 'Power', what: 'Power, for Echoes and the Chorus: the energy a settlement there could collect each turn at the Tide' },
   { need: 'lattice', icon: 'matter', name: 'Matter', what: 'Matter, for the Lattice: what its mines, skimmers and lifters could raise there each turn' },
-  { need: 'coldminds', icon: 'clock', name: 'Lasting', what: 'Lasting, for Coldminds: how long before the world falls into its dead star' },
+  { need: 'coldminds', icon: 'clock', name: 'Lasting', what: 'Lasting, for Coldminds: how long before the world falls into its dead star, or its black hole evaporates' },
 ];
 
 /** The measure a kind of mind settles by. */

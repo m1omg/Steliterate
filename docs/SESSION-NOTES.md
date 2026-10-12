@@ -57,6 +57,11 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     second session (merged; a follow-up starts it again from `main`). Then PR m1omg/Steliterate#18
     (12 Oct, `1c1b77e`): the second Dark track and the plates planned (no rules); the track came out
     again the same day ("monotonous AF"), and the live script is `index-BRmxB_Lf.js` again.
+    Then, the same day, PR m1omg/Steliterate#21 (The Embers Dim only while the halo thins), PR
+    m1omg/Steliterate#22 (`af0b58b`, Export all saves) and PR m1omg/Steliterate#23 (rogue
+    worlds leave their star behind, black holes by lifetime, the late sky as it is; CHANGELOG,
+    "Rogue worlds leave their star behind"), all from `claude/affectionate-johnson-qqr7p2`, each
+    started again from `main`.
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
@@ -98,8 +103,15 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (12 Oct, Export all saves; the rules as of The Embers
-  Dim only while the halo thins):**
+- **The baseline, from the last validation (12 Oct, rogue worlds leave their star behind; black
+  holes by lifetime; a finished Work not resumed; positronium):**
+  - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 48 unit checks; savecompat on
+    the 6 saves; all 50 browser checks in the real fonts;
+  - the harness: 154 of 300 survive, 72 victories, a Degenerate Age of 72 turns; 900 games 456 /
+    203 / 71; by fate decay 189 / 450, stable 168 / 239, curvature 99 / 211; 406 of 900 as with
+    the Embers Dim (below), the outcomes that moved going both ways.
+- **The baseline before it (12 Oct, Export all saves; the rules as of The Embers Dim only while the
+  halo thins):**
   - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 45 unit checks; savecompat on
     the 6 saves; all 49 browser checks in the real fonts;
   - the harness: 157 of 300 survive, 69 victories, a Degenerate Age of 72 turns; 900 games 449 /
@@ -357,6 +369,24 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   Done: Export all saves (one file with every slot, the quick save and the autosave), and Import
   save file… reads it back, each save as a slot, never overwriting the quick save or the autosave,
   and adding nothing on a second import (CHANGELOG, "Export all saves").
+- **12 Oct, the Black Hole Age** (their game at turn 204, η 90.9, the Aeon Seed's condition met):
+  "There should be an option to see black holes by their lifetime. It may come in handy during the
+  late black hole era, for instance. Also, please check if Stellar lifters work on Rogue Planets
+  too, because they should not. … does matter harvesting take away from the mass of the planets or
+  other objects? and stars in enhanced mode in bh era isnt accurate, describing brown dwarfs at
+  13". Then, with the Aeon Seed at 2,122 of 1,700: "resume? i invested more energy than needed
+  already", and "also positronium forming did NOTHING sorry … no event etc". Answered: Resume is
+  not needed (the Work is finished; the ending comes by itself when the Heart evaporates, while the
+  card's condition holds), and harvesting changes no mass (mines lower richness and hydrogen, a
+  Stellar Lifter drains free energy). Done (CHANGELOG, "Rogue worlds leave their star behind"):
+  rogue worlds leave the Deep's structures behind (lifters did work there); a Black holes tab, the
+  longest-lasting first; Lasting at a hole counts to its evaporation; brown dwarfs described by
+  what warms them; cold brown dwarfs and spun-down neutron stars drawn grey after the Dusk; a
+  finished Work cannot be resumed (the autoplayer resumed one every turn); positronium is news at
+  η 85. Two calls of mine, said to them: the rogue rule covers all thirteen Deep structures and
+  the Hearth's draw on a hole, not only the lifter; and the "Enhanced" complaint was read as the
+  pictures' warmth in every age (the view itself was right). "go ahead, ship it": PR
+  m1omg/Steliterate#23, opened and merged by this session.
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word

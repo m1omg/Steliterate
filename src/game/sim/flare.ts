@@ -447,6 +447,25 @@ export function turnsUntilYears(state: GameState, target: number, pace = state.c
   return stepTurns(state, pace, maxTurns, (_len, end) => end >= target);
 }
 
+/** turnsUntilYears for many targets at once (a list of stars), stepping the turns only once. */
+export function turnsUntilAll(state: GameState, targets: number[], pace = state.civ.pace, maxTurns = 400): number[] {
+  const ahead = targets.filter((t) => isFinite(t) && t > state.years);
+  const ends: number[] = [];
+  if (ahead.length) {
+    const last = Math.max(...ahead);
+    stepTurns(state, pace, maxTurns, (_len, end) => {
+      ends.push(end);
+      return end >= last;
+    });
+  }
+  return targets.map((t) => {
+    if (!isFinite(t)) return Infinity;
+    if (t <= state.years) return 0;
+    const i = ends.findIndex((e) => e >= t);
+    return i < 0 ? Infinity : i + 1;
+  });
+}
+
 /** What a flare does to one world: its temperatures before and during. */
 export function flareHeat(state: GameState, b: Body): { before: ReturnType<typeof bodyClimate>; during: ReturnType<typeof bodyClimate>; ratio: number } {
   const p = state.systems[b.systemId].primary;

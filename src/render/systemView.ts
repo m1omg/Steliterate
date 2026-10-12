@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { bodyClimate, diskLight, emberShare, haloDrawn, primaryTemperature, shownKind } from '../game/physics';
+import { bodyClimate, brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
 import { seenThere } from '../game/sim/claims';
@@ -217,14 +217,22 @@ export class SystemView {
       case 'black_dwarf':
         addStar(1.6, new THREE.Color('#2a2628'), 0.1, 0, 0.6);
         break;
-      case 'brown_dwarf':
-        addStar(3.4, new THREE.Color(calendarEra(state) === 'dusk' ? '#7a3a33' : '#3c2225'), 0.2, 1.0, 0.9);
-        addGlow(14, new THREE.Color('#5a2420'), 0.35);
+      case 'brown_dwarf': {
+        // after the Dusk it darkens as it cools, its glow going with its warmth: in the Black Hole
+        // Age as dark as a black dwarf (until 12 Oct it glowed the same in every age)
+        const warm = calendarEra(state) === 'dusk' ? 1 : brownWarmth(temp);
+        addStar(3.4, calendarEra(state) === 'dusk' ? new THREE.Color('#7a3a33') : new THREE.Color('#2a2628').lerp(new THREE.Color('#3c2225'), warm), 0.2, 1.0, 0.6 + 0.3 * warm);
+        if (warm > 0.02) addGlow(14, new THREE.Color('#5a2420'), 0.35 * warm);
         break;
-      case 'neutron_star':
-        addStar(0.8, new THREE.Color('#dde8ff'), 0.1, 0, 3);
-        addGlow(40, new THREE.Color('#9cc3ff'), calendarEra(state) === 'dusk' ? 0.9 : 0.4, 0.6);
+      }
+      case 'neutron_star': {
+        // it shines by its spin, as its collectors' light does: beams in the Dusk, fading through
+        // the Degenerate Age, then a dark, spun-down sphere (it blazed the same in every age)
+        const beam = pulsarBeam(calendarEra(state), state.years);
+        addStar(0.8, new THREE.Color('#2c2b34').lerp(new THREE.Color('#dde8ff'), beam), 0.1, 0, 0.6 + 2.4 * beam);
+        if (beam > 0.02) addGlow(40, new THREE.Color('#9cc3ff'), (calendarEra(state) === 'dusk' ? 0.9 : 0.4) * beam, 0.6 * beam);
         break;
+      }
       case 'black_hole':
       case 'smbh': {
         const r = kind === 'smbh' ? 6 : 2.6;
@@ -807,8 +815,8 @@ function primaryLightColor(state: GameState, sys: StarSystem): { color: THREE.Co
   if (k === 'blue_dwarf' || k === 'helium_star' || k === 'helium_giant') power = 2;
   if (k === 'white_dwarf') power = calendarEra(state) === 'dusk' ? 0.12 + 0.98 * coolDwarfShine(temp) : p.rekindle ? 0.3 : 0.03 + 0.09 * emberShare(p, state.years, haloDrawn(state));
   if (k === 'black_dwarf') power = p.rekindle ? 0.3 : 0.03;
-  if (k === 'brown_dwarf') power = 0.12;
-  if (k === 'neutron_star') power = 0.3;
+  if (k === 'brown_dwarf') power = 0.03 + 0.09 * (calendarEra(state) === 'dusk' ? 1 : brownWarmth(temp));
+  if (k === 'neutron_star') power = 0.03 + 0.27 * pulsarBeam(calendarEra(state), state.years);
   if (k === 'black_hole' || k === 'smbh' || k === 'void' || k === 'rogue') {
     c.set('#8a7aa8');
     power = 0.05;

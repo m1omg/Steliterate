@@ -753,6 +753,20 @@ export const EVENTS: EventDef[] = [
 
   // ============================================================ Black Hole Age
   {
+    id: 'positronium_forms',
+    title: 'The Widest Atoms',
+    art: 'blackhole',
+    once: true,
+    // queued as the calendar passes η 85 (turn.ts), where protons decayed or space unmade matter;
+    // until 12 Oct the milestone was on the chronometer and nothing came of it
+    text: (s) =>
+      `The electrons and positrons that ${fateOf(s) === 'curvature' ? 'space has made out of the dead stars’ matter' : 'the dying protons left behind'} are spread thinner than anything has ever been, and still, since about 10⁸⁵ years, here and there one electron and one positron have found each other. Each pair is an atom of positronium, bound across a gulf wider than the whole universe anyone could once see, going once around in far longer than the stars lasted. They will be the last atoms there are. Nothing we do can touch them: they fall slowly together and, near η 141, end in a flash of light.`,
+    choices: [
+      { label: 'Study them', hint: 'Insight +40.', run: (s) => { insight(s, 40); } },
+      { label: 'Let them be', hint: 'Resolve +1.', run: (s) => { res(s, 1); } },
+    ],
+  },
+  {
     id: 'final_burst',
     title: 'The Last Burst',
     art: 'blackhole',
