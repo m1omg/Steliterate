@@ -11,8 +11,8 @@ m1omg/Steliterate#6, `4268a82`, the phone interface; PR m1omg/Steliterate#8, `8f
 Thread makes in words; PR m1omg/Steliterate#10, `7c334ec`, no "???" in the research grid once the
 fate of matter is known; PR m1omg/Steliterate#12, `d2c52b4`, swarms go for ships near them, both
 from `claude/lucid-newton-v2`; PR m1omg/Steliterate#13, Halo Siphons can be shut, from
-`claude/epic-wozniak-lyhulf`; the latest game batch, 12 Oct, the Last Star shines when it lights,
-from `claude/affectionate-johnson-qqr7p2`).
+`claude/epic-wozniak-lyhulf`; the latest game batch, PR m1omg/Steliterate#16, `3538f47`, the Last
+Star shines when it lights, from `claude/affectionate-johnson-qqr7p2`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.

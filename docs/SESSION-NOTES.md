@@ -51,9 +51,10 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - 12 Oct: the Last Star batch (it shines when it lights, and its clock is free; CHANGELOG, "The
-    Last Star shines when it lights"), from `claude/affectionate-johnson-qqr7p2`, the plan's second
-    session; see the dated entry below for its PR.
+  - The game is as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
+    shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
+    live script `index-BRmxB_Lf.js`), from `claude/affectionate-johnson-qqr7p2`, the plan's
+    second session (merged; a follow-up starts it again from `main`).
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
@@ -306,7 +307,8 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   new-star rules leave it out (other civilizations: no changes beyond what was asked), and the
   autoplayer keeps time with it as with every new star. Found on the way: in the Dark Era it would
   have read NaN (infinite years), so there it lights and goes out within the turn, as it always did.
-  Their own game is past the Great Decay (η 40.6): it will show in a future game.
+  Their own game is past the Great Decay (η 40.6): it will show in a future game. Live: PR
+  m1omg/Steliterate#16, merge commit `3538f47`, opened and merged by this session.
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
