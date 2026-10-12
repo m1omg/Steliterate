@@ -42,16 +42,15 @@ last.
 ## 3. Where things stand (12 Oct)
 
 - **`main` and the live game:**
-  - The latest batch: the Last Star shines when it lights, and its clock is free (12 Oct, from
-    `claude/affectionate-johnson-qqr7p2`; its PR and live script are in SESSION-NOTES, "Picking
-    up").
+  - `main` is at `3538f47`, PR m1omg/Steliterate#16 (12 Oct): the Last Star shines when it
+    lights, and its clock is free. The live script is `index-BRmxB_Lf.js`.
   - Before it: PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them) and PR
     m1omg/Steliterate#13 (Halo Siphons can be shut); PR m1omg/Steliterate#14 and #15 were this
     handover and the Last Star's plan (no code).
 - **Branches:**
   - `claude/lucid-newton-v2` (the first account's sessions), `claude/epic-wozniak-lyhulf` and
-    `claude/affectionate-johnson-qqr7p2` (the Last Star) are fully merged once its PR is. A
-    follow-up starts its branch again from `main`.
+    `claude/affectionate-johnson-qqr7p2` (the Last Star) are fully merged. A follow-up starts its
+    branch again from `main`.
   - `claude/lucid-newton-30cbpk` is the old live branch, frozen at `fc6c59a`. Pages builds it
     too: never push to it.
 - **The claude.ai artifact** has not been updated since 28 Sep. GitHub Pages is the live build.
