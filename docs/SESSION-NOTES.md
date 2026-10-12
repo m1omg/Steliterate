@@ -114,6 +114,8 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - the harness: 154 of 300 survive, 72 victories, a Degenerate Age of 72 turns; 900 games 456 /
     203 / 71; by fate decay 189 / 450, stable 168 / 239, curvature 99 / 211; 406 of 900 as with
     the Embers Dim (below), the outcomes that moved going both ways.
+  - the same checks again with the third Dusk track (PR m1omg/Steliterate#25, no rules changed:
+    the harness stands as it is).
 - **The baseline before it (12 Oct, Export all saves; the rules as of The Embers Dim only while the
   halo thins):**
   - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 45 unit checks; savecompat on

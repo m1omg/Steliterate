@@ -170,12 +170,14 @@ The full picture is in SESSION-NOTES, "How the player likes to work".
 
 ## 7. The baseline (12 Oct, rogue worlds leave their star behind)
 
-**Checks:**
+**Checks** (and the same again with the third Dusk track, PR #25):
 - tsc and the build are clean;
 - the playtest passes (30/144 Hz parity);
 - all 48 unit checks pass;
 - savecompat passes on the 6 saves in `tools/saves/`;
 - all 50 browser checks pass, in the real fonts.
+
+The third Dusk track changed no rules, so the harness below still stands.
 
 **Harness (standard competent):**
 
