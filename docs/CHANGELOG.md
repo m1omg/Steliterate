@@ -1615,3 +1615,19 @@ timescale".
   decay 177 / 450, stable 166 / 239, curvature 102 / 211. In the first 300: 75 games light it, from
   η 15.0 to 2,370 (median 23.1); 40 before η 24.5, where the old floor already held it for turns;
   19 in the Black Hole Age's calendar and 1 in the Dark Era; the autoplayer keeps time with it in 32.
+
+## A second track for the Dark (12 Oct)
+
+The player, with Krea topped up (1,504 credits) and connected to this session: "do the music and
+the event plates too", then "go to town".
+
+- **The Dark Era has two recordings** taking turns, as every other age does: "Recorded II" (Settings
+  → Playlist), a steady low drone on E, from the prompt that waited in DEV-NOTES (ElevenLabs Music
+  v2.5 via Krea, levelled to the first Dark track, −19.3 LUFS). The first is now "Recorded I".
+- **A recorded Canon was tried and not shipped.** It came out a D–G vamp over an E♭ drone a semitone
+  against it, without Pachelbel's ground bass or voices in canon (measured: DEV-NOTES, Music
+  tooling). The arranged Canon stays the overture.
+- **Event plates: not yet.** Krea's API had no units left for images after the two tracks (0 of
+  the 111 one plate needs), as on 29 Sep. Fifteen plates are planned, prompts written, in
+  `docs/plans/plates.md`.
+- No rules changed.

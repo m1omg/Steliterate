@@ -175,8 +175,10 @@ Wait for the player's word before starting any of them.
    from the keyboard, reduced motion.
 3. **Messages from gone civilizations.** Four answers misbehave (SESSION-NOTES lists them).
    Diplomacy is discuss-first.
-4. **Music:** a second Dark track and a recorded Canon, waiting on Krea credit (DEV-NOTES, "Music
-   tooling").
+4. **Krea: event plates and a recorded Canon.** The player connected Krea on 12 Oct and asked for
+   both, with "go to town". The second Dark track went in; the Canon came out wrong and was not
+   shipped; Krea's API then had 0 units for images. The plates, prompts written, are in
+   `docs/plans/plates.md`; DEV-NOTES, "Music tooling", has how to reach Krea.
 5. **The discuss-first list** in "Picking up": the Lattice, diplomacy, tidal locking and the rest.
 6. **New on 11 Oct, each to raise with the player:**
    - **The autoplayer researches Halo Siphons.** Its research fallback (`pickResearch` in

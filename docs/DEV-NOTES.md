@@ -1036,10 +1036,27 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   rotating shimmer like light bent around a horizon; awed rather than menacing" (a drone on D);
   the ending, "the closing theme, whichever way it went; about 56 BPM, D major leaning
   bittersweet toward B minor, a warm pad and a simple unhurried melody on a glassy lead; no
-  drums, no big climax". Not made (the balance ran out): dark2, "almost silence: a faint warm
-  drone that slowly changes colour, a single soft sine tone every so often like a lighthouse
-  very far away, answered long afterwards by another; still, lonely, gently hopeful".
-- **If Krea is topped up,** an AI Canon prompt could start from: "Instrumental. A slow, dark
+  drums, no big climax".
+- **dark2** (12 Oct, the same model, 180 s asked, `force_instrumental`): "Instrumental dark ambient
+  for the very end of time … Almost silence: a faint, warm analog drone that slowly changes colour
+  over minutes … every so often a single soft sine tone, like a lighthouse very far away, answered
+  long afterwards by another … still, lonely, gently hopeful", ending as the others. It came out a
+  steady low drone on E (79% of its pitch energy), its brightness only in the first ten seconds;
+  `loop-track.py` at −19.9 RMS with no crossfade (it takes turns with `dark`), −19.3 LUFS like it.
+- **Krea from a cloud session** (12 Oct): through the Krea connector (claude.ai → Connectors;
+  its tools are `mcp__Krea__*`, read when a session starts), with `app-uploads.krea.ai` (where
+  results are stored) and `api.krea.ai` (uploads) allowed in the environment's network access.
+  Pass a style reference as a public URL (the live site's plates, such as
+  `https://m1omg.github.io/Steliterate/art/events/comet.webp`). The API spends its own balance
+  ("units"): on 12 Oct the two tracks went through and then an image was refused with 0 units
+  left (111 needed for Nano Banana Pro at 2K), as on 29 Sep.
+- **A recorded Canon: tried, not shipped** (12 Oct, 150 s, the prompt below): it came out a D–G
+  vamp over an E♭ drone a semitone against it, with no ground bass and no voices in canon (bass
+  per 1.3 s: E♭ throughout; middle register: D and G only; 83% of its pitch energy in D major
+  against the arranged one's 98%). Kept at Krea, not in the game:
+  https://app-uploads.krea.ai/audio/afed7c2f-b894-486e-848b-21b167cc6c00.mp3. A second try
+  might name the chords as well as the bass, and ask for no drone.
+- **The AI Canon prompt** (tried 12 Oct, above) starts from: "Instrumental. A slow, dark
   ambient synthwave arrangement of Johann Pachelbel's Canon in D (public domain) in the spirit of
   a 1991 Amiga tracker module: lo-fi sampled string pads and choir swells, notes swelling in and
   fading out, gentle portamento, slightly bit-crushed 8-bit texture; the ground bass D A B F# G D

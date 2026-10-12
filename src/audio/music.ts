@@ -176,7 +176,7 @@ export const PIECES: Record<TrackKey, Piece[]> = {
   canon: [{ id: 'canon', name: 'Arranged', url: 'music/canon.mp3' }],
   degenerate: [{ id: 'degenerate', name: 'Recorded I', url: 'music/degenerate.mp3' }, { id: 'degenerate2', name: 'Recorded II', url: 'music/degenerate2.mp3' }, { id: 'degenerate.synth', name: 'Synthesized' }],
   blackhole: [{ id: 'blackhole', name: 'Recorded I', url: 'music/blackhole.mp3' }, { id: 'blackhole2', name: 'Recorded II', url: 'music/blackhole2.mp3' }, { id: 'blackhole.synth', name: 'Synthesized' }],
-  dark: [{ id: 'dark', name: 'Recorded', url: 'music/dark.mp3' }, { id: 'dark.synth', name: 'Synthesized' }],
+  dark: [{ id: 'dark', name: 'Recorded I', url: 'music/dark.mp3' }, { id: 'dark2', name: 'Recorded II', url: 'music/dark2.mp3' }, { id: 'dark.synth', name: 'Synthesized' }],
   outcome: [{ id: 'outcome', name: 'Recorded', url: 'music/outcome.mp3' }, { id: 'outcome.synth', name: 'Synthesized' }],
 };
 
