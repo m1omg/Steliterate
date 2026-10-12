@@ -154,7 +154,11 @@ halo?", and there was no way to.
 
 ## 8. Open threads, likeliest first
 
-Wait for the player's word before starting any of them.
+Wait for the player's word before starting any of them, except the first: the player asked for it
+on 12 Oct.
+
+0. **The Last Star burns out in the turn it lights.** The player never saw it in their game. The
+   plan is ready, with the questions to ask first: `docs/plans/last-star.md`.
 
 1. **A Slovak translation of our own.** Planned with the player on 10 Oct and not started. The
    decisions are in SESSION-NOTES, "Picking up":
