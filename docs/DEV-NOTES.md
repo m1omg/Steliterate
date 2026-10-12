@@ -28,8 +28,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      "SAVE COMPAT OK". The saves: the 71-turn save from `551fb1a`, and four from the week of
      2 Oct (seed 1000, all in the Degenerate Age): `4fe2404` turn 87 with a star clock running,
      `7d0806d` turn 85, `9eea773` turn 119 just after a white-dwarf merger and turn 120 with a
-     helium giant lingering. To try one in the browser, gunzip it and paste the JSON into
-     Load / import → "Load from a save code".
+     helium giant lingering; and since 12 Oct `98139af` turn 121 (seed 1000 moved to η 26, made with
+     that commit's code: the Last Star lit and out within its turn, which a load lights again). To
+     try one in the browser, gunzip it and paste the JSON into Load / import → "Load from a save
+     code".
    - Checks: `npm run check` (unit checks, about 15 s) and, with `vite preview` running,
      `npm run check:browser -- http://localhost:4173/` (browser checks, about 10 min). Both must
      end with "ALL CHECKS PASSED". See Test hooks and scripts.
@@ -90,7 +92,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -243,6 +245,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `auto.ts`, the cheapest open project once its priority list is done) ignores `noAuto`, which only
   `discoverFromSurplus` honours. 151 of 300 games research them, 109 before η 25, mostly as the
   Degenerate Age opens (census, 11 Oct), so the siphons' rules move the harness.
+- **The Dark Era's years are Infinity** (the calendar counts η there). Anything that sets a year
+  from `to` in the Dark Era (a star's `bornAt`, `diesAt`) gets Infinity, and an overlap of
+  `Infinity − Infinity` is NaN: the Last Star lights and goes out within the turn there
+  (`unit/last-star` fails without that guard).
+- **A game moved forward by hand dies of it:** a turn-1 Dusk game set to η 26 (`browser/last-star`'s
+  first try) had no way to live there and ended in Silence within six turns. Play into the age with
+  the autoplayer first (`endTurns(1, true)`), then move the clock within it.
 - **Browser checks that play a seeded game** ride that game's course, and any rules change can
   move it: the dealings turned seed 2360862's game into a defeat before the Black Hole Age, and
   moved where seed 1000 stands after 120 turns. Set the situation up instead of hoping for it.
@@ -307,6 +316,31 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - The user dislikes long blocking waits. Prefer background runs and report when done.
 
 ## Where the newer systems live
+
+- **The Last Star** (12 Oct; CHANGELOG, "The Last Star shines when it lights"; the plan,
+  `docs/plans/last-star.md`; the quest itself, `docs/spoilers/dark-matter.md`):
+  - `minds.ts`: `gatherTheLastStar(state, to)` (step 7 of `endTurn`, after `evolveUniverse` and
+    `handleNotes`; `turn.ts` queues `last_star` with the system it returns) replaces the ignition
+    that ran in `updateMinds`; `igniteDarkStar(state, to)` sets `bornAt = to`, `diesAt =
+    lastStarDies(state, to)` (max of 3 × `to`, `to` + the Tide's next turn, `LAST_STAR_FLOOR`
+    10^25) and `civ.flags.last_star_lit`; in the Dark Era (or with `to` infinite) it lights as a
+    black dwarf at once, logs it and queues nothing. The `dark_star` signal is unchanged.
+  - `relightTheLastStar` (called by `migrate`, which queues the event): a save from before, with
+    `unlit_gift`, no `last_star_lit`, matter not gone, the calendar Degenerate or Black Hole, the
+    signal's `sentYears` × 3 past the floor, and the star out by the end of the turn after it lit
+    (its burnout line in the Record at most `arrivedTurn`; no line counts as yes) or burning but
+    out within the coming Tide turn.
+  - `flare.ts`: `isNewStar` includes `dark_star`; `starClockEra` (Degenerate or Black Hole
+    calendar) gates `turnStep`, `livedShare` and `clearStarClock`'s follow-on, and `starClockTerms`
+    for the Last Star only (collision and helium stars keep the Degenerate calendar); `gift`: cost
+    0, no follow-on floor, no partner. `starGoneEarly` (from `endOfMatter`, `crossing.ts`) ends a
+    clock kept with, or waiting for, a star the Great Decay dissolves.
+  - `physics.ts`: `newStarOut` and `nextStellarChange` include `dark_star`. `engine.ts`: its ✦ name
+    on the map while it burns, in either calendar.
+  - `events.ts`: `last_star` (Light in the Halo): `newStarTiming` and `keepTimeHint` say "costs
+    nothing, whatever our pace" / "Free, whatever our pace." for it; a dissolved one (`void`) has
+    its own text. The autoplayer answers it like any new star (Keep time when it can, else Watch).
+  - Not touched: `NEW_STARS` in `claims.ts` and `ways.ts` (the neighbours').
 
 - **Halo Siphons and the halo's clock** (11 Oct; CHANGELOG, "Halo Siphons can be shut"):
   - `physics.ts`: `siphonsRunning` (researched, and `civ.flags.siphons_shut` unset), `haloDrawn`
@@ -1072,6 +1106,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | a phone interface that leaves the map usable (10 Oct) | 148 | interface only (no change under `src/game`): 300 games identical to `main`, game for game; 72 victories |
 | swarms go for ships near them; ships share a settlement's losses (11 Oct) | 154 | 69 victories, Degenerate Age 72 turns; 900 games 443 / 191 / 70 (439 / 203 / 71 before), within the noise. By fate: decay 180 / 450, stable 166 / 239, curvature 97 / 211. A part whose ship was gone going on to our nearest settlement (as offered) instead of back to its swarm: 118 / 61; with the autoplayer bringing idle probes home 130 / 57. Sharing losses alone 146 / 72. Per game (30): 1.07 parts sent, all after idle probes; ships lost to swarms 0.57 (0.20) |
 | Halo Siphons can be shut; the halo empties sooner while they run; the Unlit's messages wait (11 Oct) | 151 | 69 victories, Degenerate Age 71 turns; 900 games 442 / 195 / 70 (443 / 191 / 70 before, the swarm batch), within the noise: 802 of 900 games play out as before, the changes both ways. By fate: decay 178 / 450, stable 167 / 239, curvature 97 / 211. Alone, against `main` before the swarms: 146 / 67 / 71 in 300 (148 / 72 / 71), 900 games 441 / 202 (439 / 203), 807 of 900 as before. The autoplayer researches the siphons in 151 of 300 games, 109 before η 25 (its fallback ignores `noAuto`), and never shuts them |
+| the Last Star shines when it lights; its clock free (12 Oct) | 150 | 67 victories, Degenerate Age 72 turns; 900 games 445 / 199 / 70 (442 / 195 / 70 on `main`), within the noise: 721 of 900 play out as on `main`, and all 179 that changed light the Last Star, outcomes moving both ways. By fate: decay 177 / 450, stable 166 / 239, curvature 102 / 211. In the first 300, 75 games light it (η 15.0 to 2,370, median 23.1; 40 before η 24.5; 19 in the Black Hole Age's calendar, 1 in the Dark Era); the autoplayer keeps time with it in 32 |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

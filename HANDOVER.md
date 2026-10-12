@@ -39,16 +39,19 @@ last.
 5. `docs/CHANGELOG.md`, the last few entries (every change, with its balance figures), and
    `docs/DESIGN.md` when a rule's intent matters.
 
-## 3. Where things stand (11 Oct)
+## 3. Where things stand (12 Oct)
 
 - **`main` and the live game:**
-  - `main` is at `a42c156`, PR m1omg/Steliterate#13.
-  - The live script is `index-C_b0vzQm.js` (this handover changes no code).
-  - The last two batches: PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them) and
-    PR m1omg/Steliterate#13 (Halo Siphons can be shut).
+  - The latest batch: the Last Star shines when it lights, and its clock is free (12 Oct, from
+    `claude/affectionate-johnson-qqr7p2`; its PR and live script are in SESSION-NOTES, "Picking
+    up").
+  - Before it: PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them) and PR
+    m1omg/Steliterate#13 (Halo Siphons can be shut); PR m1omg/Steliterate#14 and #15 were this
+    handover and the Last Star's plan (no code).
 - **Branches:**
-  - `claude/lucid-newton-v2` (the first account's sessions) and `claude/epic-wozniak-lyhulf`
-    (this one) are fully merged. A follow-up starts its branch again from `main`.
+  - `claude/lucid-newton-v2` (the first account's sessions), `claude/epic-wozniak-lyhulf` and
+    `claude/affectionate-johnson-qqr7p2` (the Last Star) are fully merged once its PR is. A
+    follow-up starts its branch again from `main`.
   - `claude/lucid-newton-30cbpk` is the old live branch, frozen at `fc6c59a`. Pages builds it
     too: never push to it.
 - **The claude.ai artifact** has not been updated since 28 Sep. GitHub Pages is the live build.
@@ -132,33 +135,36 @@ halo?", and there was no way to.
 - **Where to read more:** CHANGELOG, "Halo Siphons can be shut"; DEV-NOTES, "Halo Siphons and the
   halo's clock".
 
-## 7. The baseline (11 Oct, both batches together)
+## 7. The baseline (12 Oct, the Last Star)
 
 **Checks:**
 - tsc and the build are clean;
-- the playtest passes (30/144 Hz parity 2.05e-15);
-- all 43 unit checks pass;
-- savecompat passes on the 5 saves in `tools/saves/`;
-- all 47 browser checks pass, in the real fonts.
+- the playtest passes (30/144 Hz parity);
+- all 44 unit checks pass;
+- savecompat passes on the 6 saves in `tools/saves/`;
+- all 48 browser checks pass, in the real fonts.
 
 **Harness (standard competent):**
 
 | | Survive | Victories | Degenerate Age |
 |---|---|---|---|
-| 300 games | 151 | 69 | 71 turns |
-| 900 games | 442 | 195 | 70 turns |
+| 300 games | 150 | 67 | 72 turns |
+| 900 games | 445 | 199 | 70 turns |
 
-- By fate, survivors in the 900: decay 178 of 450, stable 167 of 239, curvature 97 of 211.
+- By fate, survivors in the 900: decay 177 of 450, stable 166 of 239, curvature 102 of 211.
+- Before it (11 Oct): 151 / 69 / 71 in 300, 442 / 195 / 70 in 900; 721 of 900 games are
+  unchanged, and every one that changed lights the Last Star.
 - Noise is ±12 in 300 games; two runs of 900 can differ by 30.
 - The history is in DEV-NOTES, "Balance reference".
 
 ## 8. Open threads, likeliest first
 
-Wait for the player's word before starting any of them, except the first: the player asked for it
-on 12 Oct.
+Wait for the player's word before starting any of them.
 
-0. **The Last Star burns out in the turn it lights.** The player never saw it in their game. The
-   plan is ready, with the questions to ask first: `docs/plans/last-star.md`.
+0. **Done (12 Oct): the Last Star shines when it lights.** The plan, `docs/plans/last-star.md`, was
+   carried out with the player's answers (CHANGELOG, "The Last Star shines when it lights"). Not
+   done, a choice to raise if it comes up: the neighbours' new-star rules (sleepers waking for a
+   new star, claims) still leave the Last Star out.
 
 1. **A Slovak translation of our own.** Planned with the player on 10 Oct and not started. The
    decisions are in SESSION-NOTES, "Picking up":

@@ -295,12 +295,12 @@ function dwarfRadius(p: Primary): number {
 }
 
 /**
- * A new star (collision star, helium star or helium giant) whose life ended before `years`: a
- * turn outlasted it, and it turns into a white dwarf as the turn ends. Until then it is drawn,
- * and its temperature and light read, as that remnant.
+ * A new star (collision star, helium star, helium giant or the Last Star) whose life ended before
+ * `years`: a turn outlasted it, and it turns into a white or black dwarf as the turn ends. Until
+ * then it is drawn, and its temperature and light read, as that remnant.
  */
 export function newStarOut(p: Primary, years: number): boolean {
-  return (p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant') && p.diesAt !== undefined && p.diesAt <= years;
+  return (p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant' || p.kind === 'dark_star') && p.diesAt !== undefined && p.diesAt <= years;
 }
 
 /** The kind a primary is shown as: an already-out new star as the cold white (or black) dwarf it is becoming. */
@@ -879,7 +879,7 @@ export function nextStellarChange(sys: StarSystem, years: number): { at: number;
   const p = sys.primary;
   if (p.kind === 'red_dwarf' && p.blueAt && p.blueAt > years) return { at: p.blueAt, what: 'leaves the main sequence and brightens into a blue dwarf' };
   if (p.kind === 'blue_dwarf' && p.whiteAt && p.whiteAt > years) return { at: p.whiteAt, what: 'collapses into a white dwarf' };
-  if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant') && p.diesAt && p.diesAt > years) return { at: p.diesAt, what: 'burns out' };
+  if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant' || p.kind === 'dark_star') && p.diesAt && p.diesAt > years) return { at: p.diesAt, what: 'burns out' };
   if ((p.kind === 'black_hole' || p.kind === 'smbh') && p.evaporateAt && p.evaporateAt > years) return { at: p.evaporateAt, what: 'evaporates in a final burst of Hawking radiation' };
   return null;
 }

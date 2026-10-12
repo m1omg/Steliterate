@@ -7,6 +7,7 @@ import { THREADS } from '../types';
 import { evaporateHole } from '../physics';
 import { capacity, reserveCapacity } from './economy';
 import { destroyColony } from './fleets';
+import { starGoneEarly } from './flare';
 import type { Mods } from './mods';
 import { colonies, log, popsOf, totalPops, withRng } from './util';
 import type { Rng } from '../rng';
@@ -114,6 +115,8 @@ function endOfMatter(state: GameState, mods: Mods, lines: CrossingReport['lines'
   for (const s of Object.values(state.systems)) {
     if (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') continue;
     if (!s.gone) dissolved++;
+    // the Last Star goes with the rest of matter, and a clock kept with it ends
+    starGoneEarly(state, s);
     s.primary.kind = 'void';
     s.primary.lum = 0;
     s.gone = true;

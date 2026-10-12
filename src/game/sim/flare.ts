@@ -165,7 +165,7 @@ export function clearStarClock(state: GameState) {
   delete f.star_step;
   delete f.star_next;
   delete f.star_flash;
-  if (next && next > state.years && calendarEra(state) === 'degenerate') {
+  if (next && next > state.years && starClockEra(state)) {
     f.star_until = next;
     f.star_step = (next - state.years) / STAR_TURNS;
   }
@@ -180,7 +180,18 @@ export function clearStarClock(state: GameState) {
 const STAR_STEP_MIN = 1e-13;
 
 function isNewStar(sys: StarSystem): boolean {
-  return sys.primary.kind === 'collision_star' || sys.primary.kind === 'helium_star' || sys.primary.kind === 'helium_giant';
+  const k = sys.primary.kind;
+  return k === 'collision_star' || k === 'helium_star' || k === 'helium_giant' || k === 'dark_star';
+}
+
+/**
+ * Can a new star's clock run in this calendar? Collision and helium stars burn only in the
+ * Degenerate Age's; the Last Star may light in the Black Hole Age's too (the calendar turns at
+ * 10^40 years without the age where matter does not decay), and is kept time with there as well.
+ */
+function starClockEra(state: GameState): boolean {
+  const era = calendarEra(state);
+  return era === 'degenerate' || era === 'blackhole';
 }
 
 export interface StarTerms {
@@ -227,7 +238,8 @@ export function clockPartner(state: GameState, sys: StarSystem): string | null {
 export function starClockTerms(state: GameState, sys: StarSystem | undefined): StarTerms {
   const none: StarTerms = { possible: false, brief: false, orders: 0, cost: 0, after: null, why: 'gone', from: state.years, floor: false, flash: false, flashUntil: 0 };
   const p = sys?.primary;
-  if (!sys || !p || calendarEra(state) !== 'degenerate' || sys.gone || !isNewStar(sys)) return none;
+  if (!sys || !p || sys.gone || !isNewStar(sys)) return none;
+  if (calendarEra(state) !== 'degenerate' && !(p.kind === 'dark_star' && starClockEra(state))) return none;
   if (!p.diesAt || p.diesAt <= state.years) return none;
   const f = state.civ.flags;
   let from = state.years;
@@ -243,9 +255,11 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
   const left = p.diesAt - from;
   const next = stepTime(calendarEra(state), from, eta(from), state.civ.pace, state.settings.length).turnLength;
   const full = Math.floor(reserveCapacity(state, computeMods(state)));
-  const price = (orders: number) => Math.ceil(STAR_ORDER_COST * Math.max(0, orders - STAR_FREE));
+  // the Last Star is the Unlit's gift to all who can see it: free to keep time with, whatever our pace
+  const gift = p.kind === 'dark_star';
+  const price = (orders: number) => (gift ? 0 : Math.ceil(STAR_ORDER_COST * Math.max(0, orders - STAR_FREE)));
   // a partner at the star keeps the clock with us: half the cost
-  const with_ = clockPartner(state, sys);
+  const with_ = gift ? null : clockPartner(state, sys);
   const partner = with_ ? { shared: with_ } : {};
   const share = (cost: number) => (with_ ? Math.ceil(cost / 2) : cost);
   if (left / STAR_TURNS < from * STAR_STEP_MIN) {
@@ -260,8 +274,25 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
   if (left >= next * STAR_TURNS) return { ...none, why: 'unneeded', after, from };
   const orders = Math.log10(next / left);
   const byOrders = price(orders);
-  const floor = !!after && byOrders < STAR_FOLLOW_MIN;
+  const floor = !gift && !!after && byOrders < STAR_FOLLOW_MIN;
   return { possible: true, brief: false, orders, cost: share(Math.min(full, floor ? STAR_FOLLOW_MIN : byOrders)), after, why: null, from, floor, flash: false, flashUntil: 0, ...partner };
+}
+
+/**
+ * A new star is gone before its time (the Great Decay dissolves the Last Star with the rest of
+ * matter): a clock kept with it, or waiting to follow on to it, ends with it.
+ */
+export function starGoneEarly(state: GameState, sys: StarSystem) {
+  const f = state.civ.flags;
+  const dies = sys.primary.diesAt;
+  if (!isNewStar(sys) || dies === undefined) return;
+  if (f.star_next === dies) delete f.star_next;
+  if ((f.star_flash ?? f.star_until) === dies) {
+    delete f.star_until;
+    delete f.star_step;
+    delete f.star_flash;
+    delete f.star_next;
+  }
 }
 
 /** Could we keep time with this new star now: possible, and its price within our reserve? */
@@ -331,7 +362,7 @@ export function starClock(state: GameState): { turn: number; of: number; split: 
  */
 export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
   const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
-  const left = calendarEra(state) === 'degenerate' && isFinite(step.years) ? starTurnsLeft(state, pace) : 0;
+  const left = starClockEra(state) && isFinite(step.years) ? starTurnsLeft(state, pace) : 0;
   if (left >= 1) {
     const f = state.civ.flags;
     const end = left === 1 ? f.star_until : f.star_until - (f.star_step / starSplit(state, pace)) * (left - 1);
@@ -377,7 +408,7 @@ export function paceMatters(state: GameState, pace: number): boolean {
  */
 export function livedShare(state: GameState, pace = state.civ.pace, step: TimeStep = turnStep(state, pace)): number {
   const share = Math.pow(10, -pace);
-  if (calendarEra(state) === 'degenerate' && keepingStarTime(state)) return 1 / starSplit(state, pace);
+  if (starClockEra(state) && keepingStarTime(state)) return 1 / starSplit(state, pace);
   if (calendarEra(state) !== 'dusk' || !isFinite(step.turnLength)) return share;
   if (keepingTime(state)) return 1;
   const planned = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length).turnLength;

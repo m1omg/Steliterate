@@ -605,12 +605,14 @@ export class Engine {
           .sort((a, b) => a.dd - b.dd)
           .slice(0, this.lv ? 24 : 36);
         // in the Degenerate Age every collision star on the map keeps its name showing while it
-        // burns (one that lit and went out within the last turn has no light left to mark)
+        // burns (one that lit and went out within the last turn has no light left to mark), and
+        // the Last Star does too, in whichever calendar it lights
         const burning = (id: string) => {
           const pr = state.systems[id]?.primary;
-          return calendarEra(state) === 'degenerate' && pr?.kind === 'collision_star' && (pr.diesAt ?? 0) > state.years;
+          if (!pr || (pr.diesAt ?? 0) <= state.years) return false;
+          return pr.kind === 'dark_star' || (calendarEra(state) === 'degenerate' && pr.kind === 'collision_star');
         };
-        if (calendarEra(state) === 'degenerate') {
+        if (calendarEra(state) === 'degenerate' || calendarEra(state) === 'blackhole') {
           for (const p of this.galaxy.pickables) {
             if (p.kind !== 'system' || !burning(p.id) || cand.some((c) => c.p.id === p.id)) continue;
             cand.push({ p, dd: 0 });
