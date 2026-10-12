@@ -1139,8 +1139,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   (its tail is longer: reach 30 s). Of dusk3, with the defaults, looped with an 8 s crossfade:
   201 s, `top` 25%, `chroma` 0.15, 35 notes a minute (the reverb blurs its onsets), and the
   spectral centroid 267 Hz against dusk3's 317 (most of both is in the bass; the Dark's drone sits
-  at 95 Hz, Black Hole I at 61). Sent to the player at dusk3's loudness to compare; for the Dark it
-  would go in at −19.3 LUFS.
+  at 95 Hz, Black Hole I at 61). Sent to the player at dusk3's loudness to compare: "add em yes
+  pls". In as the Dark's Recorded II (`dark3`, a new `id`, since `dark2` was the drone taken out):
+  `python3 tools/music/loop-track.py 'dark-remix.wav|public/music/dark3.mp3|-20.9|8|30'`, −19.3
+  LUFS as the first Dark track. `loop-track.py` sets the RMS of both channels together but prints
+  the RMS of their mix, so a wide reverb reads 2 to 3 dB lower in what it prints: check the level
+  with `loudness.py`, not its line.
 - **Krea from a cloud session** (12 Oct): through the Krea connector (claude.ai → Connectors;
   its tools are `mcp__Krea__*`, read when a session starts), with `app-uploads.krea.ai` (where
   results are stored) and `api.krea.ai` (uploads) allowed in the environment's network access.
