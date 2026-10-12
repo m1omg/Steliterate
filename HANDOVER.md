@@ -3,7 +3,8 @@
 For the next Claude instance (a new session, or the player's other account). First written 11 Oct
 ("pls make a .md for handover to another claude instance, ill be back dont worry"), rewritten on
 the evening of 12 Oct at the end of the next long session ("do an .md for a session handover again
-pls"). This is the entry point. The details stay where they are, and every section says where.
+pls"), and brought up to date later that evening by the session after it (a third Dusk track).
+This is the entry point. The details stay where they are, and every section says where.
 
 Spoiler-light, as everything the player may read: the stranger minds and the endings are in
 `docs/spoilers/`, for you only. Never repeat them to the player.
@@ -41,9 +42,10 @@ last.
 
 ## 3. Where things stand (12 Oct, evening)
 
-- **`main` and the live game:** as of PR m1omg/Steliterate#23 (merge commit `a083698`): rogue
+- **`main` and the live game:** as of PR m1omg/Steliterate#25: a third track for the Dusk (no
+  rules changed). The rules are as of PR m1omg/Steliterate#23 (merge commit `a083698`): rogue
   worlds leave their star behind, black holes by lifetime, the late sky as it is. The live script
-  is `index-BS3hlgvq.js` (checked on the live page after the Pages run).
+  is `index-D3ajlLbq.js` (check it on the live page after the Pages run).
 - **12 Oct, in order** (all from `claude/affectionate-johnson-qqr7p2`, each merged with a merge
   commit):
   - PR m1omg/Steliterate#16 (`3538f47`): the Last Star shines when it lights; its clock is free.
@@ -52,8 +54,10 @@ last.
   - PR m1omg/Steliterate#21 (`84bc90b`): The Embers Dim only while the halo thins.
   - PR m1omg/Steliterate#22 (`af0b58b`): Export all saves.
   - PR m1omg/Steliterate#23 (`a083698`): the batch in section 6.
-  - PRs #17 and #19 were notes only; PR #14 and #15 (11 Oct) were the first handover and the Last
-    Star's plan.
+  - PRs #17 and #19 were notes only, and PR #24 this handover; PR #14 and #15 (11 Oct) were the
+    first handover and the Last Star's plan.
+  - That evening, from `claude/epic-wozniak-lyhulf`: PR m1omg/Steliterate#25, a third track for
+    the Dusk (section 6).
 - **Branches:**
   - `claude/lucid-newton-v2`, `claude/epic-wozniak-lyhulf` and
     `claude/affectionate-johnson-qqr7p2` are fully merged. A follow-up starts its branch again
@@ -157,6 +161,12 @@ The full picture is in SESSION-NOTES, "How the player likes to work".
   - positronium (η 85) is news, once, where matter decays or is unmade.
 - **Answered after it** (no change made): how neutron stars evolve in the game, by age and fate;
   whether a neutron star's burst can be caught (no: everything at the star is lost, about 10⁴² J).
+- **A third track for the Dusk** (PR #25, that evening). The player bought Krea credits; the Dark
+  track that moves, made from the prompt in DEV-NOTES, went to the Dusk at their word, as Recorded
+  III ("that track sounds good but tbh belongs in Dusk … for Dark a darker remix of it may be
+  good"). The remix is made here, `tools/music/darken.py` (Krea takes words only), and waits for
+  the player's ear; `loop-track.py` reaches further into a long tail on request. CHANGELOG, "A
+  third track for the Dusk".
 
 ## 7. The baseline (12 Oct, rogue worlds leave their star behind)
 
@@ -209,10 +219,12 @@ Wait for the player's word before starting any of them.
    from the keyboard, reduced motion.
 3. **Messages from gone civilizations.** Four answers misbehave (SESSION-NOTES lists them).
    Diplomacy is discuss-first.
-4. **Krea, when it has units again, in the player's order:** a Dark track that moves (prompt ready
-   in DEV-NOTES, "Music tooling"), then the event plates (`docs/plans/plates.md`, 15 planned), then
-   a second Dark track. Each track measured and heard by the player before it goes in. Krea's API
-   had 0 units on 12 Oct. The arranged Canon stays; Krea cannot make a real one.
+4. **Krea, in the player's order:** a Dark track that moves, then the event plates
+   (`docs/plans/plates.md`, 15 planned), then a second Dark track to replace the old drone. Each
+   track measured and heard by the player before it goes in. The arranged Canon stays; Krea cannot
+   make a real one. The player bought credits on the evening of 12 Oct: the first track went to the
+   Dusk (PR #25), and the Dark gets a darker remix of it if they like it (made locally with
+   `tools/music/darken.py`, sent to them). Next: the plates.
 5. **The discuss-first list** in "Picking up": the Lattice, diplomacy, tidal locking and the rest.
 6. **From 11 Oct, each to raise with the player:**
    - **The autoplayer researches Halo Siphons** (its fallback ignores `noAuto`) in half the

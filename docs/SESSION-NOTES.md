@@ -63,7 +63,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     rogue worlds leave their star behind, black holes by lifetime, the late sky as it is;
     CHANGELOG, "Rogue worlds leave their star behind"; live script `index-BS3hlgvq.js`), all from
     `claude/affectionate-johnson-qqr7p2`, each started again from `main`. `HANDOVER.md` was
-    rewritten that evening.
+    rewritten that evening. Later that evening, from `claude/epic-wozniak-lyhulf` (started again
+    from `main`): PR m1omg/Steliterate#25, a third track for the Dusk (no rules changed; CHANGELOG,
+    "A third track for the Dusk"; live script `index-D3ajlLbq.js`).
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
