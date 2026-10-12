@@ -172,7 +172,7 @@ export interface Piece {
 // recordings play and the synthesized score stands by for any that will not load.
 export const PIECES: Record<TrackKey, Piece[]> = {
   menu: [{ id: 'title', name: 'Recorded', url: 'music/title.mp3' }, { id: 'menu.synth', name: 'Synthesized' }],
-  dusk: [{ id: 'dusk', name: 'Recorded I', url: 'music/dusk.mp3' }, { id: 'dusk2', name: 'Recorded II', url: 'music/dusk2.mp3' }, { id: 'dusk.synth', name: 'Synthesized' }],
+  dusk: [{ id: 'dusk', name: 'Recorded I', url: 'music/dusk.mp3' }, { id: 'dusk2', name: 'Recorded II', url: 'music/dusk2.mp3' }, { id: 'dusk3', name: 'Recorded III', url: 'music/dusk3.mp3' }, { id: 'dusk.synth', name: 'Synthesized' }],
   canon: [{ id: 'canon', name: 'Arranged', url: 'music/canon.mp3' }],
   degenerate: [{ id: 'degenerate', name: 'Recorded I', url: 'music/degenerate.mp3' }, { id: 'degenerate2', name: 'Recorded II', url: 'music/degenerate2.mp3' }, { id: 'degenerate.synth', name: 'Synthesized' }],
   blackhole: [{ id: 'blackhole', name: 'Recorded I', url: 'music/blackhole.mp3' }, { id: 'blackhole2', name: 'Recorded II', url: 'music/blackhole2.mp3' }, { id: 'blackhole.synth', name: 'Synthesized' }],

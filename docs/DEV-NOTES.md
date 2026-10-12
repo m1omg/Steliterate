@@ -1106,8 +1106,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   "no melody", "one steady texture, no build-up and no ending". What moves (the title's, Dusk
   II's): a tempo, a key, chords, a melody, an arpeggio, sections. **The player hears a generated
   track before it goes in** (12 Oct): send them the file or its link, never merge on numbers alone.
-- **The next Dark track** (the player, 12 Oct: remake both Dark tracks with movement, one first,
-  then the plates, then the other). Ready, not yet made (Krea's API had 0 units):
+- **dusk3, made as the next Dark track** (12 Oct, evening; the player had asked to remake both Dark
+  tracks with movement, one first, then the plates, then the other). The prompt:
   "Instrumental dark ambient synthwave for the last era of the universe, after the last black holes
   have evaporated: vast, lonely and quietly hopeful. About 64 BPM, A minor. A slow chord
   progression that keeps moving and never sits on one chord: Am, F, C, G, then Dm, Am, Em, F, round
@@ -1118,10 +1118,29 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   Tape hiss and a slight 12-bit bit-crushed texture like a 1991 Amiga soundtrack; long dark reverb.
   Structure: 0:00 pads and the melody alone; 0:40 the arpeggio and bass enter; 1:30 the fullest
   part, with the soft percussion and the melody an octave higher; 2:20 thinning back to pads and
-  the melody, ending softly on A minor. No vocals, no choir." (180 s, `force_instrumental`.) Check
-  it with `movement.py`, send it to the player, and only then level it (`loudness.py`: the Dark at
-  −19.3 LUFS) and add it to `PIECES` (`src/audio/music.ts`) under a new file name (a file once
-  served may sit in browsers' caches).
+  the melody, ending softly on A minor. No vocals, no choir." (180 s, `force_instrumental`.) It
+  came out in A minor at about 64 BPM, its chords coming round about every 30 s (the strongest
+  notes of each 10 s window), at almost its full level from the start, a little fuller from 0:30,
+  the music over at 2:45 and 12 s of reverb after it: `top` 21%, `chroma` 0.18, 104 notes a minute.
+  The player heard it first: "that track sounds good but tbh belongs in Dusk, add it as a Dusk
+  track once you are done - for Dark a darker remix of it may be good". In as the Dusk's Recorded
+  III: `python3 tools/music/loop-track.py 'raw.mp3|public/music/dusk3.mp3|-15|6|20'` (14.5 s of
+  the tail trimmed, a 6 s crossfade, 160 s, −13.8 LUFS, held back by the peak limit). Kept at
+  Krea: https://app-uploads.krea.ai/audio/6920478a-0649-4e23-aaab-cb1fbd413acf.mp3. A new track
+  goes into `PIECES` (`src/audio/music.ts`) under a file name never served before (a file once
+  served may sit in browsers' caches), and a new `id` (a player's choices in the Playlist are kept
+  by `id`).
+- **A darker remix** (12 Oct): Krea's music models take words only, so a remix of a track we have
+  is made here, `python3 tools/music/darken.py in.mp3 out.wav [semitones] [low-pass Hz] [reverb s]
+  [wet]` (defaults 4, 3000, 6, 0.35): slower and lower together, as a tape run slow
+  (`resample_poly` by 2^(semitones/12); 4 turns 64 BPM in A minor into about 51 BPM in F minor), a
+  12 dB-an-octave low-pass, and a reverb of decaying noise (itself low-passed at 2.5 kHz, a fixed
+  seed, 30 ms before it) mixed under the dry sound. Then loop and level it with `loop-track.py`
+  (its tail is longer: reach 30 s). Of dusk3, with the defaults, looped with an 8 s crossfade:
+  201 s, `top` 25%, `chroma` 0.15, 35 notes a minute (the reverb blurs its onsets), and the
+  spectral centroid 267 Hz against dusk3's 317 (most of both is in the bass; the Dark's drone sits
+  at 95 Hz, Black Hole I at 61). Sent to the player at dusk3's loudness to compare; for the Dark it
+  would go in at −19.3 LUFS.
 - **Krea from a cloud session** (12 Oct): through the Krea connector (claude.ai → Connectors;
   its tools are `mcp__Krea__*`, read when a session starts), with `app-uploads.krea.ai` (where
   results are stored) and `api.krea.ai` (uploads) allowed in the environment's network access.
@@ -1130,7 +1149,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   ("units"): on 12 Oct the two tracks went through and then an image was refused with 0 units
   left (111 needed for Nano Banana Pro at 2K), as on 29 Sep; a track tried later the same day was
   refused too. The player had counted 1,504 credits: if the two tracks took them, a 3-minute track
-  costs about seven plates.
+  costs about seven plates. That evening the player bought credits, and the API's balance had them
+  at once: a 3-minute track went through in 19 s. No tool shows the balance; a generation refused
+  for it says so (402).
 - **A recorded Canon: tried, not shipped, and not to be tried again** (12 Oct, 150 s, the prompt
   below; the player: "Recorded Canon isnt canon but a monotonous drone", and chose to keep the
   arranged one, `tools/music/canon.py`, as it is). Krea's music models take words only, no audio to

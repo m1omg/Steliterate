@@ -2,9 +2,10 @@
 # start (equal power), set its level, and encode as the game's other tracks (MP3 192 kbps, 48 kHz).
 #   python3 tools/music/loop-track.py 'in.mp3|public/music/out.mp3|<RMS dBFS>|<crossfade s>' ...
 # A crossfade of 0 only trims and levels: for a track that plays in turn with others, which the
-# game fades out and in itself.
+# game fades out and in itself. An optional fifth field is how far in from each end the trim may
+# reach, in seconds (12 by default): a track that ends in a long reverb tail needs more.
 import sys, miniaudio, numpy as np, lameenc
-def process(src, dst, target_rms_db, xfade_s):
+def process(src, dst, target_rms_db, xfade_s, reach_s=12):
     d = miniaudio.decode_file(src, output_format=miniaudio.SampleFormat.FLOAT32, nchannels=2, sample_rate=48000)
     sr = 48000
     x = np.frombuffer(d.samples, dtype=np.float32).reshape(-1, 2).astype(np.float64)
@@ -13,7 +14,7 @@ def process(src, dst, target_rms_db, xfade_s):
     env = np.array([np.sqrt(np.mean(mono[i:i + hop] ** 2)) + 1e-9 for i in range(0, len(mono) - hop, hop)])
     edb = 20 * np.log10(env)
     med = np.median(edb)
-    lim = int(12 * sr / hop)
+    lim = int(reach_s * sr / hop)
     head = next((i for i in range(min(lim, len(edb))) if edb[i] >= med - 8), 0)
     tail = next((len(edb) - 1 - i for i in range(min(lim, len(edb))) if edb[len(edb) - 1 - i] >= med - 8), len(edb) - 1)
     y = x[head * hop:(tail + 1) * hop]
@@ -38,5 +39,5 @@ def process(src, dst, target_rms_db, xfade_s):
     j = lambda a: 20 * np.log10(np.sqrt(np.mean(a ** 2)) + 1e-9)
     print(f'{dst.split("/")[-1]}: trimmed {head * 0.5:.1f} s from the start and {(len(edb) - 1 - tail) * 0.5:.1f} s from the end, {len(out) / sr:.0f} s long, RMS {j(o):.1f} dBFS (gain {20 * np.log10(gain):+.1f} dB), peak {20 * np.log10(np.max(np.abs(out))):.1f} dBFS; loop join {j(o[-sr:]):.0f} -> {j(o[:sr]):.0f} dBFS; {len(data) / 1e6:.2f} MB')
 for arg in sys.argv[1:]:
-    src, dst, rms, xf = arg.split('|')
-    process(src, dst, float(rms), float(xf))
+    src, dst, rms, xf, *reach = arg.split('|')
+    process(src, dst, float(rms), float(xf), float(reach[0]) if reach else 12)
