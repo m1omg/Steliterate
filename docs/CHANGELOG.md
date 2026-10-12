@@ -1651,3 +1651,24 @@ and it went live without them hearing it first.
 - **The Canon:** the arranged one stays as it is. Krea's music models take words only, so they
   cannot follow Pachelbel; no more recorded Canons.
 - No rules changed.
+
+## The Embers Dim only while the halo thins (12 Oct)
+
+The player, reloading their turn-137 save, with the Record's "137 The Embers Dim: Understood.": "what
+happened here?" The Embers Dim ("The dark-matter halo is running thin … Whatever we are going to
+live on next, we need to find it now", resolve −2) is a chance event, and could come any time from
+η 22.3 to 39. It came to them at η 35.9, eleven tenfolds after the halo was spent (η 25), and its
+hint said ember yields "keep falling until η 25".
+
+- **Now it comes only while the halo thins:** from η 22.3 until the embers go out at η 25, both by
+  the halo's own clock (Halo Siphons run it ahead, so the news comes sooner where they drew). A
+  chance event, it may not come at all.
+- **Their save** keeps the event it already had. In it, Help was answered on turn 135, so the
+  gathering is under way, and the Last Star lights as turn 139 ends; turn 140 brings Light in the
+  Halo and the Unlit's message (checked by playing the save on).
+- **Check:** new unit check `embers-dim` (fails four times on the old rule).
+- **Balance.** 300 games: 157 survive, 69 victories, a Degenerate Age of 72 turns (150 / 67 / 72 on
+  the live rules). 900 games: 449 / 202 / 70 (445 / 199 / 70), within the noise: 534 of 900 play
+  out as before, and the others move because the pool of chance events changed, outcomes going both
+  ways (35 defeat → endurance, 31 back). By fate: decay 181 / 450, stable 169 / 239, curvature
+  99 / 211.

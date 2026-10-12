@@ -65,8 +65,8 @@ npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; cou
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
 
-Balance reference (12 Oct, the Last Star shines when it lights, its clock free): 150 of 300
-standard competent games survive, 67 victories, a Degenerate Age of 72 turns; 900 games: 445
-survive, 199 victories; noise ±12 in 300 (two runs of 900 can differ by 30). By fate in the 900:
-decay 39%, stable 69%, curvature 48% (`--fate=` runs one). The full history is in DEV-NOTES
+Balance reference (12 Oct, The Embers Dim only while the halo thins, after the Last Star): 157 of
+300 standard competent games survive, 69 victories, a Degenerate Age of 72 turns; 900 games: 449
+survive, 202 victories; noise ±12 in 300 (two runs of 900 can differ by 30). By fate in the 900:
+decay 40%, stable 71%, curvature 47% (`--fate=` runs one). The full history is in DEV-NOTES
 (Balance reference).
