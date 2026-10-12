@@ -1783,3 +1783,16 @@ darker remix of it may be good".
   remix of the same music is made here. Sent to the player to hear; it goes in only once they like
   it.
 - No rules changed.
+
+## A darker remix of it for the Dark (12 Oct)
+
+The player heard the remix (the entry above): "add em yes pls".
+
+- **The Dark Era has two recordings** taking turns, as every other age does: "Recorded II"
+  (Settings → Playlist), the darker remix of the Dusk's Recorded III, made with
+  `tools/music/darken.py` (4 semitones lower and slower, about 51 BPM in F minor; a low-pass at
+  3 kHz; a 6 s reverb at 0.35). Looped with an 8 s crossfade, 201 s, and levelled to the first
+  Dark track (−19.3 LUFS). It moves: 25% of its pitch energy on one note, its harmony moving 0.15
+  (the first Dark track 78% and 0.001). The first is now "Recorded I". A file never served before,
+  `music/dark3.mp3`.
+- No rules changed.
