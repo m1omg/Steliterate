@@ -323,6 +323,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
+- **Every save at once** (12 Oct; CHANGELOG, "Export all saves"): `save.ts` `exportAllSaves` (each
+  slot unpacked, the quick save and the autosave, as `{ kind: 'steliterate-saves', version: 1,
+  exported, saves: [{ from, name, savedAt, game }] }`; `game` is the save's JSON as parsed, its
+  ±Infinity still the strings "__inf" and "__-inf"), `readSaveBundle` and `importSaveBundle` (each
+  through `deserialize`, so `migrate` runs, into `saveToSlot`, which takes a `savedAt` for this;
+  skips one with the same name, turn and time). `Misc.tsx`: `exportAll`, and `importSave` taking
+  either kind of file; `SaveModal` remounts `SaveSlots` with a new key after an import. Check
+  `browser/save-all`, the first to catch a download (`page.waitForEvent('download')`) and drive a
+  file picker (`'filechooser'`, `setFiles`).
+
 - **The Last Star** (12 Oct; CHANGELOG, "The Last Star shines when it lights"; the plan,
   `docs/plans/last-star.md`; the quest itself, `docs/spoilers/dark-matter.md`):
   - `minds.ts`: `gatherTheLastStar(state, to)` (step 7 of `endTurn`, after `evolveUniverse` and

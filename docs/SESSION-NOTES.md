@@ -98,9 +98,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (12 Oct, The Embers Dim only while the halo thins):**
+- **The baseline, from the last validation (12 Oct, Export all saves; the rules as of The Embers
+  Dim only while the halo thins):**
   - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 45 unit checks; savecompat on
-    the 6 saves; all 48 browser checks in the real fonts;
+    the 6 saves; all 49 browser checks in the real fonts;
   - the harness: 157 of 300 survive, 69 victories, a Degenerate Age of 72 turns; 900 games 449 /
     202 / 70; by fate decay 181 / 450, stable 169 / 239, curvature 99 / 211; 534 of 900 as with
     the Last Star alone (below), the rest moved by the changed pool of chance events.
@@ -352,6 +353,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   lasting to about η 83), seen from the Black Hole Age's calendar on (sight 10 Mly) and reached in
   a turn there. Galactic evaporation also acts on the outliers (it cast out a Runaway star in
   their game, and could drop one into the Heart): offered a fix; "Leave it".
+- **12 Oct, saves:** "Also, please let me export all the saves from the browser, not just one."
+  Done: Export all saves (one file with every slot, the quick save and the autosave), and Import
+  save file… reads it back, each save as a slot, never overwriting the quick save or the autosave,
+  and adding nothing on a second import (CHANGELOG, "Export all saves").
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word

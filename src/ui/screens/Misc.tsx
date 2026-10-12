@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { music, PIECES, pieceOn, TRACK_CHOICES, type Piece, type TrackKey } from '../../audio/music';
 import { ERA_BY_ID } from '../../game/eras';
-import { deleteSlot, exportCode, hasSave, listSlots, loadGame, loadSlot, readSave, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
+import { deleteSlot, exportAllSaves, exportCode, hasSave, importSaveBundle, listSlots, loadGame, loadSlot, readSave, readSaveBundle, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
 import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
@@ -317,9 +317,28 @@ async function exportSave(g: GameState | null) {
   else if (r === 'failed') notify('This browser would not save the file. Use a save code instead.', 'bad');
 }
 
-async function importSave() {
+/** Every save in this browser, the slots, the quick save and the autosave, in one file. */
+async function exportAll() {
+  const f = await exportAllSaves();
+  if (!f) return notify('There are no saves in this browser to export.', 'bad');
+  const r = await offerFile(f.name, f.text);
+  if (r === 'saved') notify(`Exported ${f.count} save${f.count === 1 ? '' : 's'} in ${f.name}.`, 'good');
+  else if (r === 'failed') notify('This browser would not save the file. Export the saves one at a time, or use save codes.', 'bad');
+}
+
+/** One game (it loads), or a file of all saves (each comes in as a slot; `onSlots` then refreshes the list). */
+async function importSave(onSlots?: () => void) {
   const text = await pickTextFile('.json,.txt,application/json,text/plain');
   if (text == null) return;
+  const all = readSaveBundle(text);
+  if (all) {
+    const r = await importSaveBundle(all);
+    onSlots?.();
+    const parts = [r.added ? `${r.added} save${r.added === 1 ? '' : 's'} added as slots` : 'No new saves', r.skipped ? `${r.skipped} already here` : '', r.failed ? `${r.failed} could not be read or did not fit` : ''].filter(Boolean);
+    notify(`${parts.join(', ')}.`, r.added ? 'good' : r.failed ? 'bad' : 'info');
+    if (r.added) sfx('good');
+    return;
+  }
   const g = readSave(text);
   if (g) startLoaded(g);
   else notify('That file is not a Steliterate save.', 'bad');
@@ -415,6 +434,9 @@ function SaveSlots({ s }: { s: GameState | null }) {
 export function SaveModal({ s }: { s: GameState | null }) {
   const [code, setCode] = useState('');
   const [importText, setImportText] = useState('');
+  // the slot list reads storage as it mounts: a new key after an import reads it again
+  const [slotsKey, setSlotsKey] = useState(0);
+  const anySaves = listSlots().length > 0 || hasSave() || hasSave(true);
   return (
     <ModalFrame title="Save and load" icon="save" narrow>
       <div class="col" style={{ gap: '12px' }}>
@@ -425,7 +447,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
             </button>
           </div>
         )}
-        <SaveSlots s={s} />
+        <SaveSlots key={slotsKey} s={s} />
         <div class="eyebrow">Quick save and autosave</div>
         <div class="row wrap" style={{ gap: '6px' }}>
           {s && (
@@ -463,7 +485,10 @@ export function SaveModal({ s }: { s: GameState | null }) {
               Export save file
             </button>
           )}
-          <button class="btn" onClick={importSave} data-tip="Open a save file exported from this or another device.">
+          <button class="btn" disabled={!anySaves} onClick={exportAll} data-tip="Every save slot, the quick save and the autosave in one file: to keep them all safe, or carry them to another device.">
+            Export all saves
+          </button>
+          <button class="btn" onClick={() => importSave(() => setSlotsKey((k) => k + 1))} data-tip="Open a save file exported from this or another device: one game, which loads, or a file of all saves, each of which comes in as a slot.">
             Import save file…
           </button>
         </div>
