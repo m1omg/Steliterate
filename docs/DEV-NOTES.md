@@ -22,7 +22,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
    - If rules changed: `npx tsx tools/sim.ts 300 standard competent`. Count outcomes with
      `grep -oE "^seed [0-9]+: [A-Z]+" | awk '{print $3}' | sort | uniq -c`. Survival is
      ENDURANCE + VICTORY; noise is about ±12 per 300 games. For a closer call, compare 900 games
-     against a `git worktree` of HEAD (symlink `node_modules` into it).
+     against a `git worktree` of HEAD (symlink `node_modules` into it). `--asleep` plays the
+     neighbours as they were before the new version (`civsAsleep`): with it, a change that should
+     leave our own play alone must leave the games line for line as they were.
    - Save compatibility: `npm run savecompat` loads every save in `tools/saves/` through
      `readSave` → `migrate`, checks the round trip, and plays each to the end. It must end with
      "SAVE COMPAT OK". The saves: the 71-turn save from `551fb1a`, and four from the week of
@@ -92,7 +94,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -261,6 +263,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **The browser checks are read from the tree as the suite reaches them**: editing one while the
   suite runs against an older build fails it for nothing (13 Oct, `save-all` against the
   foundation build). Edit them before building, or after the suite.
+- **A check that sets a neighbour's record by hand** (its health, way or people) needs
+  `civsAsleep: true` (13 Oct, 2a-2): a civilization's record is read from it each turn
+  (`syncSurvivor`), so what was set is gone after the first turn.
 - **tsc does not read the JavaScript checks** (`tools/checks/browser/*.cjs`, `tools/playtest.cjs`):
   a change to the state's shape must be made there by hand. 13 Oct: the one-rulebook codemod
   followed tsc's errors, and 74 references in 34 browser checks still read `s.pending` and the
@@ -413,14 +418,52 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     for the universe, `theLongFlow` tells each; `EventDef.scope` ('everyone', else the player's
     alone; `forThisCiv` in `sim/events.ts`). The player's alone: the Aeon Seed, a survey's ruins,
     sleepers and finds, the Unlit's gestures, the Forks, and research's fallback onto `noAuto`.
-  - Still for part 2a: the light neighbours and the claims (they become civilizations), an
-    `EventDef.scope` whitelist, each civilization's homeworld (the `homeworld` trait is the
-    player's: an AI's capital world must not carry it, or `handleNotes` tells the player of its
-    fall), the tempo strain read from the player's pace, an AI's Fork rejoining the world as people.
+  - **The others become civilizations** (part 2a-2): `sim/others.ts`. `foundCiv` (from
+    `newGame`, after everything else is made, drawing nothing; not with `settings.civsAsleep`): a
+    Civ under the neighbour's Survivor id; its capital (`capitalWorld`: the most livable world for
+    gardens and forks and the warmest for sleepers, as `survivorWorld` picks; the richest and
+    warmest rock for minds and the Lattice; else the Deep); its people (`startPeople`, for the size
+    of `8 × clamp(pop / 24, 0.75, 1.25)` of our Kin); its structures placed by `structureCheck`, each
+    one's research known with it (`put`), room for its people (`roomFor`), then sources of energy
+    (`START_SOURCES`) until it has about what we begin with to spare (`START_NET`, 3.5 energy and 4
+    matter a turn), and a home with nothing to mine brings `STORE_TURNS` of the shortfall in
+    store. `syncSurvivor` (each turn, in `updateSurvivors`): the record reads its civilization
+    (`pop` three to a person, a Chorus two; `health` from its reserve, its starving settlements and
+    its resolve; `systems`, its capital's first; `claimedAt` for a new star). `civOf`; `endCiv`
+    (through the outbox: `send(… {end})`, and `endNow` in `civs.ts` empties its settlements and
+    ships, or gives them to `to`). The dealings move real energy, matter, resolve and people
+    through `send`: beams (`reachThem`), aid, trades, refugees, joint works (`JOINT_ENERGY` to both
+    builders), their raids and ours, sieges, seizing, devouring, refuge, the Choir's Echoes.
+    `dealSize(state, sv)` (`survivors.ts`): the size a dealing weighs, a civilization of its own up
+    to `DEAL_SIZE_MAX` (40); `spareOf`: what it gives, never more than half its reserve.
+    `lightly()` (`survivors.ts`) is the old simulation, for `civsAsleep` and the Forks.
+  - The turn plays each one: `autoPlay(state, 'competent')` at the start of its part (round 0 of
+    `endTurn`). It is our autoplayer, `wayOf(state)` null for us so that our play and the
+    harness's numbers stay what they were, plus, for another civilization only: no domes, warrens
+    or lamps where no Kin live; room for its own (Confluence Nodes, Lattice Foundries; the
+    Tessellate builds no substrate, which would fill with Echoes); with a swarm near
+    (`swarmThreat`: on its way, awake within 90 ly in the Dusk, or asleep at a star it has
+    surveyed), Defense Grids first and Orbital Defence researched first; settlers of its own
+    Threads (`WAY_SETTLERS`); the Chorus merges its Echoes down to three; the sleepers keep two
+    awake. Pacts, war and pace are the player's (`planPacts`, `planWar`, `planPace`); the turn's
+    time too (`project`, `travelEstimate` and `planFlow` read `clockCiv`).
+  - The interface takes a settlement for ours only if it is (`ownColony`: the Drawer, the world
+    strip and list, the lists' chips, the magnifier's build key, the labels, hover); the views
+    already walked ours only. Their settlements and fleets on our map at light speed are part
+    2a-4.
+  - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
+    temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
+    civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not
+    carry it, or `handleNotes` tells the player of its fall), an AI's Fork rejoining the world as
+    people (2a-5); End Turn yielding between civilizations (2a-6).
   - Checks: `unit/civs` (the pointer, the save format, owners, `asCiv`, the guard, the streams,
     the outbox), `unit/civ-turns` (a second civilization, played by the autoplayer under its own
     perspective, lives a whole Dusk and the Last Light beside ours under the guard),
-    `unit/rulebook-lint`.
+    `unit/rulebook-lint`, `unit/others` (the neighbours as civilizations: their starts by the
+    rules, generation untouched, every turn played at our pace, the record read from them, what
+    passes between us, the end). `civs`, `civ-turns` and the checks that set a neighbour's
+    record by hand (`claims`, `dealings`, `flow`, `neighbours`, `refuge`, `settled`, `war`,
+    `ways`) run with `civsAsleep: true`.
 
 - **Lighter on phones** (13 Oct; CHANGELOG, "Lighter on phones and tablets"):
   - The synth's continuous sounds: `voice(layer, t)` and `hush(layer)` in `src/audio/music.ts`.
@@ -1353,6 +1396,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | The Embers Dim only while the halo thins (12 Oct) | 157 | 69 victories, Degenerate Age 72 turns; 900 games 449 / 202 / 70 (445 / 199 / 70 with the Last Star), within the noise: 534 of 900 play out as before, the rest moved by the changed pool of chance events, both ways (35 defeat → endurance, 31 back). By fate: decay 181 / 450, stable 169 / 239, curvature 99 / 211 |
 | rogue worlds leave their star behind; a finished Work not resumed; positronium (12 Oct) | 154 | 72 victories, Degenerate Age 72 turns; 900 games 456 / 203 / 71 (449 / 202 / 70 before), within the noise: 406 of 900 play out as before, the outcomes that moved going both ways (43 defeat → endurance, 38 back; 8 defeat → victory, 6 back). By fate: decay 189 / 450, stable 168 / 239, curvature 99 / 211; Aeon Seed victories 67 → 71 |
 | a few young, glowing dwarfs (13 Oct; the new version, on its work branch) | 155 | 72 victories, Degenerate Age 72 turns; 900 games 455 / 202 / 70 (456 / 203 / 71 before), within the noise: 860 of 900 play out as before. By fate: decay 189 / 450, stable 168 / 239, curvature 98 / 211 |
+| the others become civilizations (13 Oct; part 2a-2, `d216742`) | 204 | 81 victories, Degenerate Age 73 turns; the balance reference starts again: real neighbours that live on keep sharing (joint works, Open Archives, trades). 900 games 618 / 266 / 73 (455 / 202 / 70 with the light neighbours, which `--asleep` still plays line for line). By fate: decay 255 / 450, stable 219 / 239, curvature 144 / 211 |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

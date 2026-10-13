@@ -521,6 +521,13 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - owners everywhere (part 2a-1): the clock the player's, the swarms by each one's own charters
     and defence, actions on one's own only, beacons, the Deep, the Long Flow, events' scope, the
     minds and finds the player's. With one civilization nothing changes in play;
+  - the others become civilizations (part 2a-2): each neighbour a civilization of its own, its
+    start like ours by the same rules, played by our autoplayer with its way's needs, its record
+    read from it, every dealing moving something real. With them, our survival rose from 455 to
+    618 of 900 (victories 202 to 266): living neighbours keep sharing for longer (joint works
+    6,300 energy a game against 1,500, Open Archives 2,930 insight against 1,530). The balance
+    reference starts again; 2a-3 grounds the dealings in what is really there. Tell the player
+    plainly, and ask whether to tune back toward the old balance;
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home

@@ -406,28 +406,40 @@ Part 2a in steps, each validated and pushed on its own, so the harness can tell 
 2. **2a-1, owners everywhere** (done): the clock the player's; the swarms by each one's charters,
    defence and Record; actions on one's own only; beacons, the Deep, the Long Flow, events' scope;
    the minds, ruins and finds the player's. Nothing changes with one civilization.
-3. **2a-2, the others become civilizations.** Each neighbour gets a Civ of its own (same id as its
-   Survivor record), from its hashed stream after everything else is generated: its capital on
-   the world it lives on today (`survivorWorld`), people of its way, a start like ours scaled by
-   its `pop` and `health`, the structures its way needs (a garden with no world Kin can live on
-   gets domes and warrens), a probe and an escort. It plays every turn: the autoplayer under its
-   own perspective at the start of its part, then the same parts as ours. Its Survivor record
-   stays as the relation and the identity, with `pop`, `health`, `systems` and `alive` now read
-   from its real civilization each turn (no more abstract drains or claims for it), so that
-   today's messages, pleas, raids, trades and pacts keep their meaning on real numbers. A
-   `civsAsleep` switch keeps them from playing, for checks that must not drift. The harness's
-   baseline starts again here, with each civilization's outcome printed.
+3. **2a-2, the others become civilizations** (done). Each neighbour gets a Civ of its own (same
+   id as its Survivor record), made after everything else is generated and drawing nothing: its
+   capital on a world of its home (the most livable for gardens, the warmest for sleepers, the
+   richest and warmest rock for minds and the Lattice, which need ground to mine and warmth to
+   tap), people of its way (a Chorus with Echoes still to gather), and a start like ours scaled
+   by its `pop`, by the same rules: every structure where it may be built, its research known,
+   about our energy and matter to spare, or matter in store where its ground gives none. It
+   plays every turn: the autoplayer under its own perspective at the start of its part, then the
+   same parts as ours. As built, it needed some of what 2a-5 was to give: each way's needs, for
+   the neighbours alone (room for its own Threads, settlers of its own, defences when a swarm is
+   near, the Chorus gathering its Echoes, the sleepers keeping two awake), so that they live as
+   their ways allow. Its Survivor record stays as the relation and the identity, with `pop`,
+   `health`, `systems` and `alive` read from its civilization each turn, so that today's
+   messages, pleas, raids, trades and pacts keep their meaning on real numbers, and what they
+   move is real. A `civsAsleep` switch keeps them from playing (`--asleep` in the harness). The
+   harness's baseline starts again here, with each civilization's end printed.
 4. **2a-3, relations**: regard, memory, pacts, war, beams, news and proposals per pair; the
-   relationship keys in `civ.flags` move there; between AIs, regard, pacts, war and news.
+   relationship keys in `civ.flags` move there; between AIs, regard, pacts, war and news. The
+   dealings set by real economies (2a-2 capped them at their old size, `dealSize`): what a joint
+   work, Open Archives, aid and trade give comes from what the civilizations really have.
 5. **2a-4, seen at light speed**: their settlements and fleets on our map once their light
    reaches our capital, in their colour; the views, prompts and hover filtered by owner; the card
    shows the age of what we know.
-6. **2a-5, minds of their own**: per-way strategies and temperament, plight, the Lattice's
-   insight and accord with the Search Foundry and Protocol Registry (and the Lattice-led strategy
-   in the harness to tune them), AIs' Forks rejoining the world as people, the event whitelist,
-   each civilization's homeworld.
-7. **2a-6, the checks and the numbers**: the rewritten and new checks listed above, the harness
-   by civilization, the balance reference.
+6. **2a-5, minds of their own**: per-way strategies beyond the needs 2a-2 gave them (each way's
+   Great Work, gardens terraforming, the sleepers sleeping through hard times, and what the light
+   neighbours did that real ones do not yet: the sleepers' race for new stars, the Black Hole
+   Age's spin as a commons), temperament, plight, the Lattice's insight and accord with the
+   Search Foundry and Protocol Registry (and the Lattice-led strategy in the harness to tune
+   them), AIs' Forks rejoining the world as people, the event whitelist, each civilization's
+   homeworld.
+7. **2a-6, the checks, the numbers and the time**: the rewritten and new checks listed above, the
+   harness by civilization, the balance reference; End Turn yielding to the browser between
+   civilizations, measured on the emulated phone (after 2a-2 a turn costs about 7 ms on average
+   here, 14 at the 95th percentile, 43 at worst, against 4.5, 9 and 46 asleep).
 
 ### 2b. The Hunger in civilizations, and diplomacy
 

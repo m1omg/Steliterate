@@ -2038,3 +2038,66 @@ by it. With one civilization nothing changes in play.
   sparing only its own, a tamed swarm working for its tamer, each told in its own Record) and the
   Deep. Its second civilization now lives in another reach, as the others will: set down next
   door, the two civilizations' warmth drew both reaches' swarms onto them both, and both fell.
+
+## The others become civilizations (13 Oct, part 2a-2)
+
+Each neighbour is now a civilization of its own, playing the same game as ours: its own reserve,
+matter, accord and research, its settlements and ships, its own turn. Who it is to us and how we
+stand stays its record, read from its civilization every turn.
+
+- **A start like ours, by the same rules** (`sim/others.ts`, `foundCiv`). Made after everything
+  else is generated and drawing nothing, so every seed's galaxy is as it was. Its capital is on a
+  world of its home: the most livable for a garden, the warmest for the sleepers, and for minds
+  and the Lattice, which need no air but by our rules need ground to mine and warmth to tap, the
+  richest and warmest rock, or failing any, the Deep. Its people are of its way, as many as our 8
+  Kin scaled by its size (a Chorus is many minds merged two to one, with Echoes still to gather;
+  the sleepers keep two awake). Every structure it begins with stands where a player could build
+  it, its research known: room for its people, a shipyard, an Archive Spire, a Commons, mines,
+  then its world's and star's sources of energy (its core's warmth, its sun's light, or fusion)
+  until it has about what we begin with to spare. A home with nothing to mine brings matter in
+  store instead. Before this, the first attempt gave them solar arrays and mines in the void and
+  shrouds without their research; the Tessellate starved at its brown dwarf by turn 45 and the
+  Choir, with no ground to mine, ran out of matter.
+- **It plays every turn,** by our autoplayer under its own perspective, at our pace (time is the
+  player's). Pacts and war stay the player's until relations come (2a-3). Where its way needs
+  other choices than ours, it makes them, it alone, so that our own play and the harness's numbers
+  are what they were: no domes or lamps where no Kin live; room for its own (Confluence Nodes,
+  Lattice Foundries; the Tessellate, which is not conscious, builds no substrate, since empty
+  substrate fills with Echoes); defences, and Orbital Defence first, when a swarm is near;
+  settlers of its own Threads; the Chorus gathers its Echoes; the sleepers sleep, all but two.
+- **What passes between us is real.** A beam fills its reserve, aid we ask for leaves it, a trade
+  pays it what we pay, a shared work feeds it as it feeds us, refugees and Echoes leave its
+  settlements, its raids carry home what they take, ours and a siege take from it, and seizing,
+  devouring and refuge end its game with its story.
+- **A dealing weighs a neighbour as before.** The dealings were made for neighbours of 19 to 38 on
+  the old scale of size (the light ones' 10th to 90th percentile; 59 at most), and many scale with
+  it: the aid it spares, Open Archives' notes, its last transmission, the knowledge refugees
+  bring, its defence against raids and war, what a raid or devouring takes. A real Tessellate
+  grows past 400. So a dealing reads a civilization of its own up to 40 (`dealSize`), and what it
+  gives comes out of its real reserve (never more than half); a raid takes from its real stores.
+- **Living neighbours share for longer.** Real neighbours are as healthy as their economies and
+  often outlive the light ones, which were mostly gone by the Black Hole Age (3 to 14% alive at
+  the end of our games, against 18 to 54% now). What reached us in a game, light against real
+  (45 games each): joint works 1,500 energy against 6,300, Open Archives 1,530 insight against
+  2,930, trades 280 insight against 690, beamed aid 29 energy against 116; swarm strikes on us
+  about one against two. Our late defeats fall most (Silence in the Black Hole Age, The Fade, The
+  Will Fails there), and the harness's numbers rise (below). Grounding the dealings in real
+  economies comes with relations (2a-3).
+- **Asleep, as before:** `civsAsleep` (`--asleep` in the harness) keeps the neighbours as they
+  were, simulated lightly: 40 games with it are line for line those of 2a-1.
+- **Faster to decide.** The settler logic worked out its projection, the dearest of a turn's
+  decisions, every turn; now only when a ship could be built (the same results). A turn with
+  three neighbours playing costs about 7 ms here on average, 14 at the 95th percentile and 43 at
+  worst, against 12.7, 33 and 195 before.
+- **The numbers.** 900 harness games: 618 survive and 266 win (455 and 202 with the light
+  neighbours of 2a-1), a Degenerate Age of 73 turns (70). By fate: decay 255 of 450 (189), stable
+  219 of 239 (168), curvature 144 of 211 (98). Alive at the end of our games: the Lattice 55%,
+  the uploaded 50%, the Chorus 45%, the gardens 19%, the sleepers 15% (0, 8, 10, 3 and 14% light).
+  The balance reference starts again here; 2a-3 grounds the dealings in what is really there.
+- **The interface** takes a settlement for ours only if it is ours.
+- **Checks:** `unit/others` (new: the starts by the rules, generation untouched and the same each
+  time, every turn played at our pace, the record read from them, refugees, trade, a shared
+  work, the end). `civs`, `civ-turns` and the checks that set a neighbour's record by hand run
+  with the neighbours asleep. `browser/terraform`'s hand-made settlement has an owner (since 2a-1
+  every action acts only on the actor's own); `browser/swarm-click` waits for the system view
+  rather than a fixed 3 s (on a loaded machine the fade took longer).
