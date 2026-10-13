@@ -671,8 +671,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
     // short-lived stars
     if (p.kind === 'dark_star' && p.diesAt && to >= p.diesAt) {
       p.kind = 'black_dwarf';
-      p.bornAt = undefined;
-      p.diesAt = undefined;
+      delete p.bornAt;
+      delete p.diesAt;
       notes.push({ systemId: sys.id, kind: 'burnout' });
     }
     if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant') && p.diesAt && to >= p.diesAt) {
@@ -688,8 +688,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         p.kind = p.kind === 'collision_star' ? 'white_dwarf' : 'white_dwarf';
         p.halo = false;
         p.lum = 0.02;
-        p.bornAt = undefined;
-        p.diesAt = undefined;
+        delete p.bornAt;
+        delete p.diesAt;
         notes.push({ systemId: sys.id, kind: 'burnout' });
       }
     }
@@ -712,7 +712,10 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         }
       }
     }
-    p.rekindle = rek > 0.001 ? rek : undefined;
+    // (deleted rather than left undefined: a saved or cloned game drops an undefined field, and
+    // one set again later would then stand in another place among the star's fields)
+    if (rek > 0.001) p.rekindle = rek;
+    else delete p.rekindle;
 
     // planets: close passes strip them (while bound in the galaxy); degenerate hosts pull them in
     for (const bid of sys.bodies) {
@@ -820,7 +823,10 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
               if (b.rogue) adrift = true;
               else b.dissolved = true;
             }
-            if (adrift) Object.assign(s.primary, { kind: 'void', lum: 0, spin: 0, spinMax: 0, rekindle: undefined });
+            if (adrift) {
+              Object.assign(s.primary, { kind: 'void', lum: 0, spin: 0, spinMax: 0 });
+              delete s.primary.rekindle;
+            }
             else s.gone = true;
             notes.push({ systemId: s.id, kind: 'swallowed' });
           } else {
@@ -904,7 +910,7 @@ export function evaporateHole(state: GameState, s: StarSystem): string[] {
   p.lum = 0;
   p.spin = 0;
   p.spinMax = 0;
-  p.rekindle = undefined;
+  delete p.rekindle;
   let left = allColonies(state).some((c) => c.systemId === s.id);
   const held: string[] = [];
   for (const bid of s.bodies) {
