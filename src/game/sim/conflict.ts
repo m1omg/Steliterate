@@ -17,7 +17,7 @@ import type { Colony, Fleet, GameState, Ship, War } from '../types';
 import { THREADS } from '../types';
 import { send } from '../civs';
 import { FORTIFY_BONUS, destroyColony, newFleet, orderMove, screenAt } from './fleets';
-import { endCiv, settlementSeen } from './others';
+import { endCiv, fleetSeen, settlementSeen } from './others';
 import { sendSignal } from './signals';
 import { distanceToThem, spreadNews, voice } from './survivors';
 import { distanceBetween, hearOf, lightIn, othersPlaying, tieKey, tieOf } from './ties';
@@ -351,6 +351,39 @@ export function assaultForce(state: GameState, by: string, c: Colony): number {
   let a = 0;
   for (const f of allFleets(state)) if (f.owner === by && f.at === c.systemId) for (const s of f.ships) if (isWarship(s.cls)) a += strength(s.cls, 'settlements');
   return a;
+}
+
+/**
+ * The chance `by`'s warships at a settlement's star take it if they storm it now: their strength
+ * against settlements, times a draw from 0.6 to 1.4 (`luck`), must be at least what it holds.
+ */
+export function assaultOdds(state: GameState, by: string, c: Colony): number {
+  const f = assaultForce(state, by, c);
+  if (f <= 0) return 0;
+  return Math.max(0, Math.min(1, (1.4 - holdOf(c) / f) / 0.8));
+}
+
+/** The settlement of theirs a war of ours with a civilization of its own is fought at, if it still stands. */
+export function warFront(state: GameState, id: string): Colony | undefined {
+  const sv = state.survivors[id];
+  const at = sv?.war?.at;
+  return at ? allColonies(state).find((c) => c.owner === id && c.systemId === at) : undefined;
+}
+
+/**
+ * The screens we see a civilization's ships at a star carry, as the light that reaches our capital
+ * shows them (fleetSeen): the chance they would turn a Kinetic Lance or a raid aside, as far as we
+ * can tell. Ships come or gone since that light left, we cannot know of.
+ */
+export function screensSeen(state: GameState, systemId: string, owner: string): number {
+  let through = 1;
+  for (const f of allFleets(state)) {
+    if (f.owner !== owner) continue;
+    const seen = owner === state.player ? (f.at ? { at: f.at } : null) : fleetSeen(state, f);
+    if (!seen || !('at' in seen) || seen.at !== systemId) continue;
+    for (const s of f.ships) through *= 1 - (SHIP_BY_ID[s.cls]?.screen ?? 0);
+  }
+  return 1 - through;
 }
 
 /**

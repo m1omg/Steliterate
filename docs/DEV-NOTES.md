@@ -549,6 +549,15 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     side began, the defender cannot storm (`siegeAt` counts only the declarer's siege;
     `assaultBlocked` and `seizeBlocked` say so). A war whose settlement is gone (taken, razed,
     abandoned) moves on to the enemy's next (`warTurn` for ours, `battlesTurn` for the others').
+    The interface (2c-4): `assaultOdds` (the draw is uniform from 0.6 to 1.4), `warFront` (the
+    settlement our war with a civilization of its own is fought at), `screensSeen` (their screens at
+    a star as `fleetSeen` shows their ships). The card (`Signals.tsx`): the War row for one of its
+    own (where, the siege, what it holds), Storm and Raze (armed keys `storm:`/`raze:`, the
+    confirm row's texts, `seize(g, id, raze)`); the light neighbours keep Seize. The fleet panel
+    (`Drawer.tsx`, `StrikeSection`): every settlement of those we are at war with that we see,
+    nearest first, eight at most, Strike armed per row; the chip `striking` and "To strike ..."
+    while it flies, its trip at `LANCE_SPEED` (also in the Fleets list). `browser/war` is the
+    whole of it in a browser.
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not

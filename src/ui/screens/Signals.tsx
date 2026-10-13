@@ -7,6 +7,7 @@ import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace
 import { siphonsRunning } from '../../game/physics';
 import { HUNGER_CAUSE, SIEGE_TURNS, WAR_ACCORD, hungerCause, seizeBlocked, warBlocked, warCause, warDefence } from '../../game/sim/war';
 import { HEARD_CEILING, JUST_CAUSE_AT, SANCTION_AT, shuns } from '../../game/sim/judge';
+import { assaultForce, assaultOdds, holdOf, walled, warFront } from '../../game/sim/conflict';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
 import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
 import { ASK_COOLDOWN, askBlocked, inStep, reachBy, talkSpan } from '../../game/sim/survivors';
@@ -15,7 +16,7 @@ import { THREAD_DEFS } from '../../game/data/threads';
 import { SANCTUARY_TRUST } from '../../game/sim/refuge';
 import { capital, distLy, hasCharter } from '../../game/sim/util';
 import type { GameState, Signal, Survivor } from '../../game/types';
-import { n0, pct, pow10 } from '../fmt';
+import { n0, n1, pct, pow10 } from '../fmt';
 import { WAY_NAME, paceName, wayArt } from '../labels';
 import { act, rev } from '../store';
 import { sfx } from '../../audio/sfx';
@@ -186,7 +187,7 @@ export function SignalsModal({ s }: { s: GameState }) {
   const arrived = s.civ.signals.filter((x) => x.arrivedTurn !== null);
   const openMsgs = arrived.filter((x) => !x.resolved && x.choices.length);
   const [tab, setTab] = useState<'messages' | 'others' | 'minds'>(openMsgs.length ? 'messages' : 'others');
-  // a heavy choice waits for a yes: 'seize:<id>', 'war:<id>' or 'devour:<id>'
+  // a heavy choice waits for a yes: 'seize:<id>', 'storm:<id>', 'raze:<id>', 'war:<id>' or 'devour:<id>'
   const [armed, setArmed] = useState<string | null>(null);
   const logL = logTurnLength(turnStep(s));
   const my = voiceRange(s, logL);
@@ -294,7 +295,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                               </dd>
                             </>
                           )}
-                          {sv.war && !(sv.war.by && sv.war.by !== s.civ.id) && (
+                          {sv.war && !(sv.war.by && sv.war.by !== s.civ.id) && !s.civs[sv.id] && (
                             <>
                               <dt data-tip={`At war since turn ${sv.war.since}. A siege is warships held at their first star turn after turn; after ${SIEGE_TURNS} turns we can try to take it. They arm as the war goes on.`}>War</dt>
                               <dd class="mono bad">
@@ -302,6 +303,18 @@ export function SignalsModal({ s }: { s: GameState }) {
                               </dd>
                             </>
                           )}
+                          {sv.war && !(sv.war.by && sv.war.by !== s.civ.id) && s.civs[sv.id] && (() => {
+                            const front = warFront(s, sv.id);
+                            const star = s.systems[sv.war.at ?? '']?.name ?? '?';
+                            return (
+                              <>
+                                <dt data-tip={`At war since turn ${sv.war.since}. The war is fought at ${front ? `${front.name}, at ${star}` : star}: their settlement nearest our capital. A siege is warships held there turn after turn with none of theirs; after ${SIEGE_TURNS} turns we can storm it, and behind a Defence Grid or a Bastion Shell only with a Breacher. What it holds: 2, and 0.3 for each of its people, its Defence Grids, a Bastion Shell. Taken or razed, the war goes on at their next.`}>War</dt>
+                                <dd class="mono bad">
+                                  since turn {sv.war.since} · at {star} · siege {sv.war.siege}/{SIEGE_TURNS}{front ? ` · it holds ${n1(holdOf(front))}${walled(front) ? ', walled' : ''}` : ''}
+                                </dd>
+                              </>
+                            );
+                          })()}
                           {sv.exodus && (
                             <>
                               <dt data-tip="They set out when our answer reaches them: minds cross as light, flesh by ship.">Coming to us</dt>
@@ -371,7 +384,32 @@ export function SignalsModal({ s }: { s: GameState }) {
                                 </button>
                               ) : sv.war ? (
                                 <>
-                                  {(() => {
+                                  {s.civs[sv.id] && (() => {
+                                    const why = seizeBlocked(s, sv);
+                                    const c = warFront(s, sv.id);
+                                    const odds = c ? assaultOdds(s, s.civ.id, c) : 0;
+                                    const terms = c ? `our warships there bring ${n1(assaultForce(s, s.civ.id, c))} against settlements, against the ${n1(holdOf(c))} it holds, on a draw: about ${pct(odds)} to win.` : '';
+                                    const cause = warCause(s, sv);
+                                    return (
+                                      <>
+                                        <button
+                                          class={`btn small danger ${armed === `storm:${sv.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
+                                          data-tip={`${why ? `${why}\n` : ''}${c ? `Storm ${c.name}: ${terms} ` : ''}Taken, three tenths of its people flee to their own and the rest are ours, unwilling; three tenths of what was built there is wreckage. Thrown back, the siege begins again. Either way it costs hulls, the galaxy’s free energy pays for what it held, and everyone hears of it when the light arrives${cause ? '' : '. With no cause, it is a step toward the Hunger'}.`}
+                                          onClick={() => !why && setArmed(armed === `storm:${sv.id}` ? null : `storm:${sv.id}`)}
+                                        >
+                                          {why || !c ? 'Storm' : `Storm (${pct(odds)})`}
+                                        </button>
+                                        <button
+                                          class={`btn small danger ${armed === `raze:${sv.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
+                                          data-tip={`${why ? `${why}\n` : ''}${c ? `Raze ${c.name}: the same assault (${terms}) ` : 'The same assault, '}and won, nothing there is left, and no one. Everyone hears of it, and thinks worse of it than of a taking${cause ? '' : '. With no cause, it is a longer step toward the Hunger'}.`}
+                                          onClick={() => !why && setArmed(armed === `raze:${sv.id}` ? null : `raze:${sv.id}`)}
+                                        >
+                                          Raze
+                                        </button>
+                                      </>
+                                    );
+                                  })()}
+                                  {!s.civs[sv.id] && (() => {
                                     const why = seizeBlocked(s, sv);
                                     return (
                                       <button
@@ -457,7 +495,15 @@ export function SignalsModal({ s }: { s: GameState }) {
                         {armed?.endsWith(`:${sv.id}`) && (
                           <div class="row wrap confirm-heavy" style={{ gap: '6px', alignItems: 'center' }}>
                             <span class="warn" style={{ fontSize: '13.5px' }}>
-                              {armed.startsWith('seize')
+                              {armed.startsWith('storm') || armed.startsWith('raze')
+                                ? (() => {
+                                    const c = warFront(s, sv.id);
+                                    const odds = pct(c ? assaultOdds(s, s.civ.id, c) : 0);
+                                    return armed.startsWith('storm')
+                                      ? `Storm ${c?.name ?? 'their settlement'}? About ${odds} to take it. Three tenths of its people would flee to their own; the rest would be ours, unwilling. Every civilization will hear of it.`
+                                      : `Raze ${c?.name ?? 'their settlement'}? About ${odds} to destroy it, and everyone in it. Every civilization will hear of it.`;
+                                  })()
+                                : armed.startsWith('seize')
                                 ? `Take ${sv.name}’s star by force? Some of them would live on as our people; the rest would not. Every civilization will hear of it.`
                                 : armed.startsWith('war')
                                   ? `Go to war with ${sv.name}? ${warCause(s, sv) ?? 'Everyone will hear of it, and those who hate us will join against us.'}`
@@ -468,10 +514,10 @@ export function SignalsModal({ s }: { s: GameState }) {
                               onClick={() => {
                                 const what = armed;
                                 setArmed(null);
-                                if (act((g) => (what.startsWith('seize') ? seize(g, sv.id) : what.startsWith('war') ? goToWar(g, sv.id) : devour(g, sv.id)))) sfx('bad');
+                                if (act((g) => (what.startsWith('storm') ? seize(g, sv.id) : what.startsWith('raze') ? seize(g, sv.id, true) : what.startsWith('seize') ? seize(g, sv.id) : what.startsWith('war') ? goToWar(g, sv.id) : devour(g, sv.id)))) sfx('bad');
                               }}
                             >
-                              {armed.startsWith('seize') ? 'Seize their star' : armed.startsWith('war') ? 'Declare war' : 'Devour them'}
+                              {armed.startsWith('storm') ? 'Storm it' : armed.startsWith('raze') ? 'Raze it' : armed.startsWith('seize') ? 'Seize their star' : armed.startsWith('war') ? 'Declare war' : 'Devour them'}
                             </button>
                             <button class="btn small" onClick={() => setArmed(null)}>
                               Not now

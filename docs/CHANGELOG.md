@@ -2386,7 +2386,7 @@ speed of light, judged as it arrives.
 - **Check:** `unit/battle-roles` (new: strengths by role, defence against a swarm, dug in, upkeep
   by pace and asleep, mending, screens, a Picket's eyes, the Oath).
 
-## War between civilizations, and conquest (13 Oct, parts 2c-2 and 2c-3)
+## War between civilizations, and conquest (13 Oct, parts 2c-2 to 2c-4)
 
 - **War between any two civilizations** (`ab6bd75`, `sim/conflict.ts`). The others declare war on
   each other and on us by our rules: the Threads' consent (60 accord) and what it costs, the
@@ -2453,6 +2453,20 @@ speed of light, judged as it arrives.
   and that war spends it too.
 - **The harness** marks each neighbour with `*N`, the wars it began; `#N`, the settlements it took
   or destroyed; and `%N`, those it lost in war. Our own line adds `took N` and `lost N`.
+- **The interface** (2c-4):
+  - **The card** of a civilization of its own at war shows where the war is fought, the siege and
+    what that settlement holds (walled or not).
+  - **Storm** and **Raze** replace Seize there. Each shows the odds before it is pressed (our
+    warships' strength against settlements against what it holds, the draw from 0.6 to 1.4), says
+    why it must wait (warships at its star, the siege, a Breacher), and asks first. The light
+    neighbours keep Seize.
+  - **A fleet with a Kinetic Lance** lists the settlements of those we are at war with that we can
+    see, nearest first, each with its distance. Its tip gives the flight at 99% of light, what the
+    strike would do there, and the screens we see of their ships at that star. Strike asks before
+    it sets out.
+  - **While it flies**, the Lance is marked `striking`, with its target, and its trip is reckoned
+    at its own speed, in the Fleets list too.
+  - `browser/war` is rewritten for all of it.
 - **The numbers** (900 games): 409 survive and 152 win, a Degenerate Age of 75 turns, identical to
   part 2c-1 game for game, after 2c-2 and again after 2c-3. No war starts in any of the 900, ours
   or the others': no one hears of 60 Taint in a neighbour, and no one reaches it (part 2b: none

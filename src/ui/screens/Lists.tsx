@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { siteValue } from '../../game/sim/sites';
 import { ANOMALIES } from '../../game/data/events';
 import { bodyClimate, hawkingLight, sourceLight } from '../../game/physics';
-import { LIVING_WORLD, naturalKinRoom } from '../../game/sim/fleets';
+import { LANCE_SPEED, LIVING_WORLD, isLance, naturalKinRoom } from '../../game/sim/fleets';
 import { habitabilityOf } from '../../game/sim/terraform';
 import { SiteStrip, bestOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
 import { YIELDS, yieldOf, yieldText, yieldTip } from '../yields';
@@ -125,7 +125,7 @@ export function FleetsModal({ s }: { s: GameState }) {
                   <>
                     → {s.systems[f.to!]?.name}
                     <div class="faint">
-                      {formatDistance(left)} · {tripLabel(s, left, mods)}{f.order === 'colonize' ? ' · to settle' : f.auto === 'explore' ? ' · exploring' : f.order === 'survey' ? ' · to survey' : ''}
+                      {formatDistance(left)} · {tripLabel(s, left, isLance(f) ? { ...mods, speed: Math.max(mods.speed, LANCE_SPEED) } : mods)}{f.order === 'colonize' ? ' · to settle' : f.order === 'strike' ? ' · to strike' : f.auto === 'explore' ? ' · exploring' : f.order === 'survey' ? ' · to survey' : ''}
                     </div>
                   </>
                 ) : (

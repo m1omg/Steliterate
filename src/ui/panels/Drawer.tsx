@@ -33,6 +33,7 @@ import {
   tame,
   toggleOverdrive,
   attack as attackOrder,
+  strike,
   type Conversion,
 } from '../../game/sim/actions';
 import { capacity } from '../../game/sim/economy';
@@ -41,7 +42,9 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, colonies, distLy, fleets, hasCharter, hasTech, leftBehind, nearestSwarmSeen, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { allColonies, capital, colonies, distLy, fleets, hasCharter, hasTech, leftBehind, nearestSwarmSeen, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { atWarWith, screensSeen, strikeBlocked } from '../../game/sim/conflict';
+import { settlementSeen } from '../../game/sim/others';
 import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
 import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
@@ -61,7 +64,7 @@ import { YIELDS, yieldText, yieldTip } from '../yields';
 import { survivorPeople, survivorWorld } from '../../game/sim/homes';
 import { residentsSeen, seenThere } from '../../game/sim/claims';
 import { spinSharers } from '../../game/sim/ways';
-import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
+import { EXPLORE_RESERVE, FORTIFY_BONUS, LANCE_SPEED, LIVING_WORLD, isLance, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 import { focusTitle, lowVision, pressable, useWholeScroll } from '../a11y';
 import { calendarEra } from '../../game/fate';
@@ -1474,6 +1477,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
           ))}
           {f.order === 'fortify' && <span class="chip neon" data-tip={`Dug in: counts ${FORTIFY_BONUS}× against swarms here, and turns raiders away from the capital.`}><Icon name="shield" /> fortified</span>}
           {f.order === 'hold' && <span class="chip" data-tip="Parked on purpose: the game will not ask about it.">holding</span>}
+          {f.order === 'strike' && <span class="chip danger" data-tip="A Kinetic Lance on its way at 99% of the speed of light: it strikes as it arrives, and is spent.">striking</span>}
           {f.auto === 'explore' && <span class="chip neon" data-tip={`Exploring by itself: always the nearest unsurveyed star. It waits while the reserve is under ${EXPLORE_RESERVE} energy plus the launch.`}><Icon name="survey" /> exploring</span>}
         </div>
         <div class="row wrap" style={{ marginTop: '8px', gap: '4px' }}>
@@ -1503,9 +1507,10 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
           <>
             <div class="bar neon" style={{ marginBottom: '6px' }}><i style={{ width: pct(f.distance > 0 ? f.traveled / f.distance : 1) }} /></div>
             <div class="mono dim" style={{ fontSize: '13.5px' }}>
-              {formatDistance(f.traveled)} of {formatDistance(f.distance)} · {tripLabel(s, f.distance - f.traveled, mods, true)} to go
+              {formatDistance(f.traveled)} of {formatDistance(f.distance)} · {tripLabel(s, f.distance - f.traveled, isLance(f) ? { ...mods, speed: Math.max(mods.speed, LANCE_SPEED) } : mods, true)} to go
             </div>
             {f.order === 'colonize' && f.targetBody && <div class="faint" style={{ fontSize: '13.5px', marginTop: '4px' }}>To settle {s.bodies[f.targetBody]?.name}.</div>}
+            {f.order === 'strike' && <div class="faint" style={{ fontSize: '13.5px', marginTop: '4px' }}>To strike {s.colonies[f.targetColony ?? '']?.name ?? 'its target'}. No one there will see it coming until it arrives.</div>}
             {f.auto === 'explore' && (
               <button class="btn small" style={{ marginTop: '8px' }} onClick={() => act((g) => setAutoExplore(g, f.id, false)) && sfx('click')} data-tip="It finishes this trip, then waits for orders.">
                 <Icon name="survey" /> Stop exploring
@@ -1570,6 +1575,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                 Disband
               </button>
             </div>
+            <StrikeSection s={s} f={f} />
             {settleTargets.length > 0 && (
               <div class="section">
                 <h3>
@@ -1646,6 +1652,57 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         )}
       </div>
     </>
+  );
+}
+
+// ------------------------------------------------------------------ the Kinetic Lance
+
+/**
+ * Strike an enemy's settlement with a Kinetic Lance from this fleet: the settlements of those we
+ * are at war with that we can see, nearest first, each with its flight and the screens we see of
+ * its own ships there; a second click to confirm. Nothing for a fleet without a Lance.
+ */
+function StrikeSection({ s, f }: { s: GameState; f: Fleet }) {
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => setArmed(null), [f.id, f.at]);
+  const here = f.at ? s.systems[f.at] : null;
+  if (!here || !f.ships.some((x) => SHIP_BY_ID[x.cls]?.lance)) return null;
+  const targets = allColonies(s)
+    .filter((c) => c.owner !== s.player && atWarWith(s, s.player, c.owner) && settlementSeen(s, c))
+    .map((c) => ({ c, ly: distLy(here, s.systems[c.systemId]) }))
+    .sort((a, b) => a.ly - b.ly)
+    .slice(0, 8);
+  const go = (id: string) => {
+    if (armed !== id) {
+      setArmed(id);
+      sfx('warn');
+      return;
+    }
+    setArmed(null);
+    if (act((g) => strike(g, f.id, id))) sfx('bad');
+  };
+  return (
+    <div class="section">
+      <h3 data-tip="One strike at an enemy’s settlement we can see, from anywhere: the Lance flies alone at 99% of light and strikes as it arrives, and is spent. Only the screens of their ships already waiting at that star can turn it aside. One in flight at a time.">Strike with the Kinetic Lance</h3>
+      {!targets.length && <div class="faint" style={{ fontSize: '13.5px' }}>Only in a war, at a settlement of theirs we can see. There is none.</div>}
+      {targets.map(({ c, ly }) => {
+        const deep = s.bodies[c.bodyId]?.kind === 'deep';
+        const screens = screensSeen(s, c.systemId, c.owner);
+        const why = strikeBlocked(s, f.id, c.id);
+        const owner = s.civs[c.owner]?.name ?? 'the enemy';
+        const tip = `${why ? `${why}\n` : ''}${c.name}, a settlement of ${owner}, at ${s.systems[c.systemId]?.name}: ${formatDistance(ly)} away, ${ly > 0 ? formatYears(ly / LANCE_SPEED) : 'no time'} at 99% of light. ${deep ? 'In the Deep, scattered around its star, it would lose half its people and half of all it built.' : 'On a world, it would be struck down whole, with everyone in it.'} The screens of their ships we see there would turn it aside ${pct(screens)} of the time, as far as we can tell: ships come since that light left, we cannot see. Driving it so fast spends the galaxy’s free energy, and every civilization hears of the strike, turned aside or not.`;
+        return (
+          <div key={c.id} class="row" style={{ gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+            <span style={{ flex: 1, fontSize: '13.5px' }}>
+              {c.name} <span class="faint">· {owner} · {formatDistance(ly)}{screens > 0 ? ` · screens ${pct(screens)}` : ''}</span>
+            </span>
+            <button class={`btn small danger ${armed === c.id ? 'on' : ''} ${why ? 'disabled' : ''}`} data-tip={tip} onClick={() => !why && go(c.id)}>
+              <Icon name="attack" /> {armed === c.id ? 'Really strike? (click again)' : 'Strike'}
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
