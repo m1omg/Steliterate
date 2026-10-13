@@ -682,7 +682,13 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   const cold = [0.3, 0.3, 0.34];
   const toward = (c: number[], e: number): [number, number, number] => [cold[0] + (c[0] - cold[0]) * e, cold[1] + (c[1] - cold[1]) * e, cold[2] + (c[2] - cold[2]) * e];
   // after the Dusk a brown dwarf goes grey as it cools, as a white dwarf does: in the Black Hole Age it is as cold as a black dwarf
-  if (k === 'brown_dwarf') return toward([0.62, 0.3, 0.28], calendarEra(state) === 'dusk' ? 1 : brownWarmth(tK));
+  if (k === 'brown_dwarf') {
+    if (calendarEra(state) !== 'dusk') return toward([0.62, 0.3, 0.28], brownWarmth(tK));
+    // a young one, hot enough to glow (from about 780 K), shows its own colour, as a white dwarf does
+    const e = coolDwarfShine(tK);
+    const [r, g, b] = blackbody(Math.max(1000, tK));
+    return [0.62 + (r * 1.1 - 0.62) * e, 0.3 + (g * 1.1 - 0.3) * e, 0.28 + (b * 1.1 - 0.28) * e];
+  }
   if (k === 'black_dwarf') return s.primary.rekindle ? [0.9, 0.45, 0.25] : [0.3, 0.3, 0.34];
   if (k === 'white_dwarf' && calendarEra(state) !== 'dusk') {
     // grey as a black dwarf once nothing warms it; an ember blue-white while the halo warms it

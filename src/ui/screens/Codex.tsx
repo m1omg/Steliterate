@@ -41,6 +41,7 @@ export const CODEX: CodexEntry[] = [
     body: [
       'At the end of the Stelliferous Era only red dwarfs are left burning. Stars below about a quarter of the Sun’s mass never become red giants. At the end of their lives they heat up and shrink into blue dwarfs, then fade into white dwarfs (Adams & Laughlin 1997; Adams, Laughlin & Graves 2004).',
       'Your homeworld is a tidally locked planet in the habitable zone of such a star. Its core is freezing, its magnetic field failing, and the stellar wind is stripping its air.',
+      'Most of the dead stars the galaxy begins with are tens of trillions of years old and nearly cold. A few are young, the last of the last star formation: white dwarfs that still glow white or orange, a few thousand kelvin, and brown dwarfs that still glow a deep red. The game gives the galaxy about one young one in ten, more than a star formation fading as it really did would leave: a bend. They cool by the same laws as every other dead star.',
     ],
   },
   {

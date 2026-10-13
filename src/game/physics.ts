@@ -114,14 +114,29 @@ export function brownCoolingK(p: Primary, age: number): number {
 /** The year a dwarf the galaxy began with formed. */
 const FIRST_FORMED = 1e9;
 /**
+ * The stragglers of the last star formation (13 Oct, the player: "Make somewhat fresh/hot, hot
+ * enough to glow in the visible spectrum, white and brown dwarfs a little bit more common in the
+ * early game", and "I'm not asking you to change the cooling physics"): one dwarf in ten the galaxy
+ * begins with formed only this long before the Dusk, so it still glows by the same cooling laws.
+ * White ones 1 to 12 billion years (about 7,500 to 3,400 K at 0.6 M☉), brown ones 0.4 to 2 billion
+ * (about 2,100 to 1,200 K at 0.05 M☉, 1,400 to 870 K at 0.03, 2,900 to 2,000 K at 0.075). A bend,
+ * said in the Codex: a star formation fading as 1/t leaves far fewer so young.
+ */
+export const YOUNG_SHARE = 0.1;
+export const YOUNG_WHITE_AGES: [number, number] = [1e9, 1.2e10];
+export const YOUNG_BROWN_AGES: [number, number] = [4e8, 2e9];
+const logBetween = ([lo, hi]: [number, number], v: number) => Math.pow(10, Math.log10(lo) + v * (Math.log10(hi) - Math.log10(lo)));
+/**
  * When a dead star the galaxy began with formed (a red dwarf's remnant has its own collapse,
- * whiteAt): from 1 billion years after the Big Bang to the Dusk, as many in each tenfold of time,
- * a star formation fading as 1/t. From a hash of its own, so with no random draw, the same in any
- * game and in a save from before.
+ * whiteAt): one in ten a straggler (YOUNG_SHARE), the rest from 1 billion years after the Big Bang
+ * to the Dusk, as many in each tenfold of time, a star formation fading as 1/t. From a hash of its
+ * own, so with no random draw: the same in any game, and generation draws as it always did.
  */
 export function formedAt(p: Primary): number {
   const u = (hashSeed(`formed:${p.kind === 'brown_dwarf' ? 'bd' : 'wd'}:${p.mass}`) % 1000003) / 1000003;
-  return Math.pow(10, Math.log10(FIRST_FORMED) + u * (Math.log10(ERA_BY_ID.dusk.startYears) - Math.log10(FIRST_FORMED)));
+  const start = ERA_BY_ID.dusk.startYears;
+  if (u < YOUNG_SHARE) return start - logBetween(p.kind === 'brown_dwarf' ? YOUNG_BROWN_AGES : YOUNG_WHITE_AGES, u / YOUNG_SHARE);
+  return Math.pow(10, Math.log10(FIRST_FORMED) + ((u - YOUNG_SHARE) / (1 - YOUNG_SHARE)) * (Math.log10(start) - Math.log10(FIRST_FORMED)));
 }
 
 /** Years since a white or black dwarf formed: since its collapse if it was a star of ours to watch, else since formedAt. */
@@ -476,9 +491,13 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
     }
     case 'white_dwarf': {
       if (era === 'dusk') {
-        // averaged over the turn: a long one right after the collapse gets only its share of the glow
-        const light = p.whiteAt ? youngDwarfLight(years - p.whiteAt, years - p.whiteAt + Math.max(0, L)) : 0.02;
-        return { light, label: p.whiteAt ? 'White dwarf, newly collapsed and cooling' : 'Old white dwarf, nearly cold', temperatureK: primaryTemperature(p, years, era), alive: null };
+        // averaged over the turn: a long one right after the collapse gets only its share of the glow;
+        // one the galaxy began with by the same law from when it formed (an old one gets the floor,
+        // 0.02, as before; a straggler of the last star formation still glows)
+        const born = p.whiteAt ?? formedAt(p);
+        const light = youngDwarfLight(years - born, years - born + Math.max(0, L));
+        const label = p.whiteAt ? 'White dwarf, newly collapsed and cooling' : light > 1.5 * COLD_LIGHT ? 'Young white dwarf, a straggler of the last stars, still glowing as it cools' : 'Old white dwarf, nearly cold';
+        return { light, label, temperatureK: primaryTemperature(p, years, era), alive: null };
       }
       if (era === 'degenerate') {
         const gf = 0.35 + 0.65 * gfe;
