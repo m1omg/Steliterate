@@ -1,7 +1,7 @@
 import { aroundTheStar, type StructureDef } from '../data/structures';
 import { ERA_BY_ID } from '../eras';
 import { fateKnown } from '../fate';
-import { Rng } from '../rng';
+import { Rng, hashSeed } from '../rng';
 import type { Body, Colony, EraId, Fleet, GameState, LogEntry, StarSystem, ThreadId } from '../types';
 import { THREADS } from '../types';
 
@@ -9,16 +9,32 @@ export function uid(state: GameState, prefix = 'u'): string {
   return `${prefix}${(state.nextId++).toString(36)}`;
 }
 
-/** Run `fn` with an RNG whose state is persisted back into the game state. */
+/**
+ * Run `fn` with an RNG whose state is persisted back into the game state: the player's draws (and
+ * the universe's) from the state's own stream, as ever; another civilization's from its own, so
+ * that what it does never moves the player's draws.
+ */
 export function withRng<T>(state: GameState, fn: (rng: Rng) => T): T {
-  const rng = new Rng(state.rng);
+  const own = ownStream(state);
+  const rng = new Rng(own ? civStream(state) : state.rng);
   const out = fn(rng);
-  state.rng = rng.s;
+  if (own) state.civ.rng = rng.s;
+  else state.rng = rng.s;
   return out;
 }
 
 export function rngOf(state: GameState): Rng {
-  return new Rng(state.rng);
+  return new Rng(ownStream(state) ? civStream(state) : state.rng);
+}
+
+/** Whether the civilization whose turn it is draws from a stream of its own: anyone but the player. */
+function ownStream(state: GameState): boolean {
+  return !!state.civ && !!state.player && state.civ.id !== state.player;
+}
+
+/** Its stream: where it left it, or from the start, a hash of the seed and its id. */
+function civStream(state: GameState): number {
+  return state.civ.rng ?? hashSeed(`${state.settings.seed}:civ:${state.civ.id}`);
 }
 
 /** A swarm we can see feeding at this star (as the map shows it): ships sent there are at risk. */

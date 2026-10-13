@@ -8,7 +8,7 @@ import { queueEvent } from './sim/events';
 import { relightTheLastStar } from './sim/minds';
 import { waitsForAnswer } from './sim/signals';
 import type { GameState } from './types';
-import { PLAYER_ID, linkCivs } from './civs';
+import { PLAYER_ID, assertPlayerView, linkCivs } from './civs';
 import { STORE } from '../keys';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
@@ -148,6 +148,7 @@ export function migrate(s: GameState): GameState {
 }
 
 function serialize(state: GameState): string {
+  assertPlayerView(state, 'save');
   // Infinity does not survive JSON; encode it (and `civ`, a pointer into `civs`, is left out)
   return JSON.stringify(state, (_k, v) => (v === Infinity ? '__inf' : v === -Infinity ? '__-inf' : v));
 }

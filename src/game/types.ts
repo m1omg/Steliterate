@@ -278,6 +278,8 @@ export interface Civ {
   outcome: Outcome | null;
   /** Once-only and counted events: id -> times fired. */
   fired: Record<string, number>;
+  /** Its own random stream (another civilization's; the player's draws are the state's `rng`, as ever). */
+  rng?: number;
 }
 
 // ---------------------------------------------------------------- other minds
@@ -387,6 +389,12 @@ export interface Signal {
   resolved: string | null;
 }
 
+/** A message on its way from one civilization to another, in the outbox. */
+export interface Outgoing {
+  to: string;
+  signal: Signal;
+}
+
 export interface Forecast {
   uid: string;
   kind: string;
@@ -486,6 +494,12 @@ export interface GameState {
   nextId: number;
   /** Facts about the universe itself (each civilization's own are in its `flags`). */
   flags: Record<string, number>;
+  /**
+   * What one civilization sends another in its part of a turn, held until every civilization has
+   * had its part (civs.ts, deliver): no one hears of it sooner, and none writes to another's own.
+   * Empty between turns.
+   */
+  outbox?: Outgoing[];
   /** Save format version (absent in the first published saves: version 1). */
   saveVersion?: number;
 }

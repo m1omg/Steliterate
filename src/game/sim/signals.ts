@@ -1,3 +1,4 @@
+import { deliver } from '../civs';
 import { formatYears } from '../eras';
 import type { GameState, Signal, SignalChoice, ThreadId } from '../types';
 import { THREADS } from '../types';
@@ -8,9 +9,13 @@ import { log, threadTotals, uid } from './util';
 // years old when it arrives, and its sender may be gone. Contact also needs minds to think
 // at comparable speeds: a mind a thousand times slower is geology; a thousand times faster, noise.
 
+/**
+ * A message on its way, its light crossing `distanceLy`: to the civilization whose turn or view it
+ * is, or to `to` (through the outbox, civs.ts).
+ */
 export function sendSignal(
   state: GameState,
-  s: { from: string; kind: string; title: string; text: string; distanceLy: number; data?: Record<string, number | string>; choices?: SignalChoice[] },
+  s: { from: string; kind: string; title: string; text: string; distanceLy: number; data?: Record<string, number | string>; choices?: SignalChoice[]; to?: string },
 ): Signal {
   const sig: Signal = {
     uid: uid(state, 'sg'),
@@ -28,7 +33,7 @@ export function sendSignal(
   if (!isFinite(state.years) || s.distanceLy <= 0) {
     sig.arriveYears = state.years;
   }
-  state.civ.signals.push(sig);
+  deliver(state, s.to ?? state.civ.id, sig);
   return sig;
 }
 

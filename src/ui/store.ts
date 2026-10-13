@@ -1,5 +1,6 @@
 import { signal } from '@preact/signals';
 import type { Engine, Quality } from '../render/engine';
+import { assertPlayerView } from '../game/civs';
 import { saveGame } from '../game/save';
 import { OLD_HUD_KEY, OLD_SETTINGS_KEY, STORE } from '../keys';
 import type { GameState } from '../game/types';
@@ -103,6 +104,7 @@ export function engine(): Engine | null {
 export function bump() {
   rev.value++;
   const g = game.value;
+  if (g) assertPlayerView(g, 'bump');
   if (g && engineRef) engineRef.setState(g);
 }
 
@@ -119,6 +121,7 @@ export function notify(text: string, kind: 'info' | 'bad' | 'good' = 'info', act
 export function act(fn: (s: GameState) => string | null | void): boolean {
   const g = game.value;
   if (!g) return false;
+  assertPlayerView(g, 'act');
   const err = fn(g);
   if (typeof err === 'string' && err) {
     notify(err, 'bad');
@@ -130,7 +133,9 @@ export function act(fn: (s: GameState) => string | null | void): boolean {
 
 export function autosave() {
   const g = game.value;
-  if (g) saveGame(g, true);
+  if (!g) return;
+  assertPlayerView(g, 'autosave');
+  saveGame(g, true);
 }
 
 function loadSettings(): Settings {

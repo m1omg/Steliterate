@@ -6,13 +6,18 @@
 // - a load, a copy for the checks (copyState) and a save of the build before all point it again,
 //   at the very object in `civs`;
 // - a plain JSON copy loses the pointer (and so fails loudly, never quietly writing to a copy);
-// - settlements and fleets have owners, and each civilization's walks over them see its own.
-import { PLAYER_ID, playerCiv, pointAt } from '../../../src/game/civs';
+// - settlements and fleets have owners, and each civilization's walks over them see its own;
+// - asCiv: one civilization's part of a turn, never nested, the pointer back at the player after
+//   whatever happens; under the checks' guard every other civilization is read-only meanwhile;
+// - each civilization but the player draws from a stream of its own, so the player's draws stay;
+// - what one sends another waits in the outbox until every civilization has played.
+import { PLAYER_ID, asCiv, assertPlayerView, flushOutbox, isPlayerView, playerCiv, pointAt, setCivGuard } from '../../../src/game/civs';
 import { newGame } from '../../../src/game/newGame';
 import { copyState, exportCode, importCode, saveFile } from '../../../src/game/save';
 import { createColony, newFleet } from '../../../src/game/sim/fleets';
 import { endTurn } from '../../../src/game/sim/turn';
-import { allColonies, allFleets, colonies, fleets } from '../../../src/game/sim/util';
+import { sendSignal } from '../../../src/game/sim/signals';
+import { allColonies, allFleets, colonies, fleets, log, withRng } from '../../../src/game/sim/util';
 import type { Civ, GameState } from '../../../src/game/types';
 import { check, done, loadSave } from '../lib';
 
@@ -50,6 +55,87 @@ check(plain.civ === undefined, 'a plain JSON copy has no pointer, so it fails at
   check(colonies(g).length === 1 && fleets(g).length === 1 && allColonies(g).length === mine + 1, 'its walks see only its own; every settlement is still there for what the universe does');
   pointAt(g, g.civs.us);
   check(colonies(g).length === mine && !colonies(g).includes(c) && !fleets(g).includes(f) && g.civs.us.known[free.systemId] !== 2, 'and the player’s see only the player’s, its map untouched');
+}
+
+// one civilization's part of a turn (asCiv): the pointer at it, and back at the player whatever happens
+{
+  const g = copyState(s);
+  const other: Civ = { ...structuredClone(g.civ), id: 'sv0', name: 'Others', capitalId: null, known: {}, signals: [], log: [] };
+  g.civs.sv0 = other;
+  const seen = asCiv(g, 'sv0', () => [g.civ.id, isPlayerView(g)] as const);
+  check(seen[0] === 'sv0' && seen[1] === false && g.civ === g.civs.us && isPlayerView(g), 'asCiv points at the civilization for its part, and back at the player after');
+  let threw = false;
+  try {
+    asCiv(g, 'sv0', () => {
+      throw new Error('boom');
+    });
+  } catch {
+    threw = true;
+  }
+  check(threw && g.civ === g.civs.us && isPlayerView(g), 'and back even when its part throws');
+  let nested = '';
+  asCiv(g, 'sv0', () => {
+    try {
+      asCiv(g, 'us', () => 0);
+    } catch (e) {
+      nested = String(e);
+    }
+  });
+  check(/cannot play inside/.test(nested) && g.civ === g.civs.us, 'one civilization plays at a time: asCiv never nests');
+  // the checks' guard: every other civilization is read-only while one plays
+  setCivGuard(true);
+  const us = g.civs.us;
+  let crossed = '';
+  asCiv(g, 'sv0', () => {
+    g.civ.energy += 1;
+    log(g, 'their own record');
+    try {
+      g.civs.us.energy = 0;
+    } catch (e) {
+      crossed = String(e);
+    }
+    try {
+      g.civs.us.log.push({ turn: 0, era: 'dusk', text: 'x', kind: 'info' });
+    } catch (e) {
+      crossed += String(e);
+    }
+  });
+  check(/civs\.us\.energy: written/.test(crossed) && /civs\.us\.log\.\d+: written|civs\.us\.log\.length/.test(crossed), `under the guard a write to another civilization throws where it is made (${crossed.split('\n')[0].slice(7, 70)}…)`);
+  check(g.civs.us === us && us.energy === s.civ.energy && !us.log.some((x) => x.text === 'x') && other.log.some((x) => x.text === 'their own record'), 'its own writes land, the other’s civilization is untouched and itself again after');
+  let caught = '';
+  pointAt(g, other);
+  try {
+    assertPlayerView(g, 'test');
+  } catch (e) {
+    caught = String(e);
+  }
+  check(/pointed at sv0, not the player/.test(caught), 'a pointer left elsewhere is a bug: under the guard it throws');
+  setCivGuard(false);
+  const err = console.error;
+  console.error = () => {};
+  assertPlayerView(g, 'test');
+  console.error = err;
+  check(g.civ === g.civs.us, 'for a player it is put back, so the game goes on');
+  // its own random stream: what it draws never moves the player's draws
+  const r0 = g.rng;
+  const theirs = asCiv(g, 'sv0', () => withRng(g, (r) => [r.next(), r.next()]));
+  check(g.rng === r0 && typeof other.rng === 'number', 'another civilization draws from its own stream: the state’s, the player’s, is as it was');
+  const again = copyState(g);
+  delete again.civs.sv0.rng;
+  const theirsAgain = asCiv(again, 'sv0', () => withRng(again, (r) => [r.next(), r.next()]));
+  check(theirs[0] === theirsAgain[0] && theirs[1] === theirsAgain[1], 'its stream starts from the seed and its id, the same in every game of that seed');
+  const mine = withRng(g, (r) => r.next());
+  const plain = copyState(s);
+  check(mine === withRng(plain, (r) => r.next()), 'and the player’s next draw is the one it would have been');
+  // between civilizations: the outbox
+  asCiv(g, 'sv0', () => {
+    sendSignal(g, { from: 'sv0', to: 'us', kind: 'test', title: 'Hello', text: 'From afar.', distanceLy: 10 });
+    sendSignal(g, { from: 'sv0', kind: 'test', title: 'To ourselves', text: 'A note.', distanceLy: 0 });
+  });
+  check(!g.civs.us.signals.some((x) => x.title === 'Hello') && g.outbox?.length === 1 && other.signals.some((x) => x.title === 'To ourselves'), 'a message to another waits in the outbox; one to itself is its own at once');
+  flushOutbox(g);
+  check(g.civs.us.signals.some((x) => x.title === 'Hello' && x.arriveYears === g.years + 10) && g.outbox === undefined, 'delivered when every civilization has played, crossing the dark at light speed as ever');
+  check(!('outbox' in JSON.parse(saveFile(g).text)), 'and a save between turns holds no outbox');
 }
 
 // a save of the build before the new version (a check's fixture): its one civilization is the player's
