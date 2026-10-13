@@ -22,7 +22,7 @@ import { siphonsRunning, sourceLight } from '../physics';
 import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { colonies, hasCharter, hasTech, leftBehind, log, savableName, uid } from './util';
+import { allColonies, colonies, hasCharter, hasTech, leftBehind, log, savableName, uid } from './util';
 import { ageReached, inAge, matterGone } from '../fate';
 
 export type ActionResult = string | null; // error message or null on success
@@ -60,7 +60,7 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
     if (sourceLight(state, sys, state.years, turnStep(state).turnLength).light <= 0) return 'Nothing to gather: its star gives no light.';
   }
   if (d.systemUnique) {
-    for (const o of Object.values(state.colonies)) {
+    for (const o of allColonies(state)) {
       // one left behind by a world flung loose works for no one: it does not count
       if (o.systemId !== c.systemId || leftBehind(state, o, d)) continue;
       if ((o.structures[d.id] ?? 0) > 0 || o.queue.some((q) => q.key === d.id)) return 'Only one per system.';
@@ -461,7 +461,7 @@ export function placeBeacon(state: GameState, fleetId: string): ActionResult {
   if (!f || !f.at) return 'The fleet must be stationed.';
   const sys = state.systems[f.at];
   if (sys.beacon) return 'A beacon already burns here.';
-  if (Object.values(state.colonies).some((c) => c.systemId === sys.id)) return 'Place beacons in empty systems, away from our people.';
+  if (colonies(state).some((c) => c.systemId === sys.id)) return 'Place beacons in empty systems, away from our people.';
   if (state.civ.energy < BEACON_COST) return `A beacon needs ${BEACON_COST} energy.`;
   state.civ.energy -= BEACON_COST;
   sys.beacon = true;

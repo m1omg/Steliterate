@@ -35,14 +35,14 @@ const setup = () => {
   check(sys.gone === true && sys.primary.kind === 'void' && !deep.dissolved, 'a hole that evaporates with nothing of ours there is gone, its Deep kept');
   // war, a siege held, and we take our own people back
   sv.war = { since: s.turn, siege: 3 };
-  const f: Fleet = { id: 'fx', name: 'Spear', ships: [{ cls: 'aegis', hp: 30 }, { cls: 'aegis', hp: 30 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
+  const f: Fleet = { id: 'fx', owner: 'us', name: 'Spear', ships: [{ cls: 'aegis', hp: 30 }, { cls: 'aegis', hp: 30 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
   s.fleets[f.id] = f;
   const err = seizeSurvivor(s, sv.id);
   const c = Object.values(s.colonies).find((x) => x.systemId === sys.id);
   check(err === null && !!c && c.bodyId === deep.id, `taking back our own people settles its Deep (${c?.name ?? 'no settlement'})`);
   check(sys.gone === false, 'and the system is no longer gone: the galaxy map draws it and it can be clicked');
   // a ship elsewhere can be sent there
-  const away: Fleet = { id: 'fy', name: 'Reach', ships: [{ cls: 'probe', hp: 2 }], at: s.civ.homeSystemId, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
+  const away: Fleet = { id: 'fy', owner: 'us', name: 'Reach', ships: [{ cls: 'probe', hp: 2 }], at: s.civ.homeSystemId, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
   s.fleets[away.id] = away;
   s.civ.energy = 1e6;
   const sent = orderMove(s, away.id, sys.id);
@@ -54,7 +54,7 @@ const setup = () => {
   const { s, sys, sv } = setup();
   evaporateHole(s, sys);
   sv.war = { since: s.turn, siege: 3 };
-  s.fleets.fx = { id: 'fx', name: 'Spear', ships: [{ cls: 'aegis', hp: 30 }, { cls: 'aegis', hp: 30 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
+  s.fleets.fx = { id: 'fx', owner: 'us', name: 'Spear', ships: [{ cls: 'aegis', hp: 30 }, { cls: 'aegis', hp: 30 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
   seizeSurvivor(s, sv.id);
   sys.gone = true; // as the bug left it
   const loaded = readSave(saveFile(s).text)!;

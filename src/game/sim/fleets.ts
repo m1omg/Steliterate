@@ -9,7 +9,7 @@ import { habitabilityOf } from './terraform';
 import { THAW_ROOM, scorched, stepTurns, thawed } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
-import { colonies, distLy, eraIndex, log, swarmSeenAt, uid, withRng } from './util';
+import { colonies, distLy, eraIndex, fleets, log, swarmSeenAt, uid, withRng } from './util';
 import { calendarEra } from '../fate';
 
 // No faster-than-light travel. Fleets advance speed × turn length light-years per turn.
@@ -53,6 +53,7 @@ export function travelTurnsEstimate(state: GameState, ly: number, mods: Mods): n
 export function newFleet(state: GameState, systemId: string, ships: string[], name?: string): Fleet {
   const f: Fleet = {
     id: uid(state, 'f'),
+    owner: state.civ.id,
     name: name ?? fleetName(state, ships),
     ships: ships.map((cls) => ({ cls, hp: SHIP_BY_ID[cls]?.hp ?? 5 })),
     at: systemId,
@@ -68,7 +69,7 @@ export function newFleet(state: GameState, systemId: string, ships: string[], na
 
 function fleetName(state: GameState, ships: string[]): string {
   const first = SHIP_BY_ID[ships[0]]?.name ?? 'Fleet';
-  const n = Object.values(state.fleets).filter((f) => f.ships[0]?.cls === ships[0]).length + 1;
+  const n = fleets(state).filter((f) => f.ships[0]?.cls === ships[0]).length + 1;
   return `${first} ${n}`;
 }
 
@@ -102,7 +103,7 @@ export function orderMove(state: GameState, fleetId: string, to: string, order: 
 }
 
 export function advanceFleets(state: GameState, L: number, mods: Mods) {
-  for (const f of Object.values(state.fleets)) {
+  for (const f of fleets(state)) {
     if (!f.to || f.at) continue;
     const step = isFinite(L) ? mods.speed * L : Infinity;
     f.traveled = Math.min(f.distance, f.traveled + step);
@@ -134,7 +135,7 @@ function arrive(state: GameState, f: Fleet) {
  * probes survey, so a warship could be parked at a star it never charted; this catches those up.
  */
 export function surveyWhereStationed(state: GameState) {
-  for (const f of Object.values(state.fleets)) {
+  for (const f of fleets(state)) {
     if (f.at && state.systems[f.at] && state.civ.known[f.at] !== 2) survey(state, f.at);
   }
 }
@@ -201,6 +202,7 @@ function settle(state: GameState, f: Fleet, bodyId: string): string | null {
 export function createColony(state: GameState, b: Body, pops: Partial<Record<ThreadId, number>>): Colony {
   const c: Colony = {
     id: uid(state, 'c'),
+    owner: state.civ.id,
     bodyId: b.id,
     systemId: b.systemId,
     name: b.name,
@@ -256,7 +258,7 @@ export function updateDetection(state: GameState, mods: Mods) {
       .filter((sv) => sv.alive && sv.pacts?.watch !== undefined)
       .flatMap((sv) => sv.systems.map((id) => ({ sys: state.systems[id], range: mods.detect })))
       .filter((e) => !!e.sys),
-    ...Object.values(state.fleets)
+    ...fleets(state)
       .filter((f) => f.at)
       .map((f) => ({ sys: state.systems[f.at!], range: mods.detect * (canSurvey(f) ? 3 : 1) })),
   ];
@@ -264,7 +266,7 @@ export function updateDetection(state: GameState, mods: Mods) {
     if (state.civ.known[s.id]) continue;
     if (eyes.some((e) => distLy(e.sys, s) <= e.range)) state.civ.known[s.id] = 1;
   }
-  for (const f of Object.values(state.fleets)) {
+  for (const f of fleets(state)) {
     if (!f.at || f.scanned === f.at) continue;
     const here = state.systems[f.at];
     // only from the edge of what is known: while an uncharted star lies close by, look there first
@@ -316,8 +318,8 @@ export function canSurvey(f: Fleet): boolean {
  * already bound for. When nothing is left they report back and wait for orders.
  */
 export function autoExplore(state: GameState, mods: Mods) {
-  const claimed = new Set(Object.values(state.fleets).map((f) => f.to).filter((x): x is string => !!x));
-  for (const f of Object.values(state.fleets)) {
+  const claimed = new Set(fleets(state).map((f) => f.to).filter((x): x is string => !!x));
+  for (const f of fleets(state)) {
     if (f.auto !== 'explore' || !f.at || f.to) continue;
     if (!canSurvey(f)) {
       f.auto = undefined;

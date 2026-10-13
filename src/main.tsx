@@ -25,6 +25,7 @@ import { buildSelected, nextTodo } from './ui/hud/Hud';
 import { eventResult, loreView } from './ui/screens/Story';
 import { STORE } from './keys';
 import './ui/styles.css';
+import { colonies } from './game/sim/util';
 
 const stage = document.getElementById('stage')!;
 /** The star system a pick stands for: the star itself, the one a fleet is parked at, or a swarm's (where it is, or where it is going). */
@@ -49,7 +50,7 @@ function hoverName(p: Pickable): string {
   if (p.kind === 'system') {
     const sys = g.systems[p.id];
     if (!sys) return '';
-    const ours = Object.values(g.colonies).some((c) => c.systemId === sys.id);
+    const ours = colonies(g).some((c) => c.systemId === sys.id);
     return `${sys.name} · ${PRIMARY_NAME[sys.primary.kind]}${ours ? ' · ours' : g.civ.known[sys.id] === 2 ? '' : ' · not surveyed'}`;
   }
   if (p.kind === 'fleet') {

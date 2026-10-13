@@ -13,7 +13,7 @@ import { CLAIM_SPEED, MAX_CLAIMS, claimedStars } from './claims';
 import { sendSignal } from './signals';
 import { pactsWith } from './pacts';
 import { distanceToThem, inStep, lightAt, voice } from './survivors';
-import { colonies, distLy, log } from './util';
+import { allColonies, colonies, distLy, log } from './util';
 import { feel } from './dealings';
 
 /** How far a new star's light wakes the sleepers (ly): their own cluster. */
@@ -38,7 +38,7 @@ export function newStarNear(state: GameState, sv: Survivor): StarSystem | null {
   for (const sys of Object.values(state.systems)) {
     const p = sys.primary;
     if (sys.gone || !NEW_STARS.has(p.kind) || !p.diesAt || p.diesAt <= state.years) continue;
-    if (Object.values(state.colonies).some((c) => c.systemId === sys.id)) continue;
+    if (allColonies(state).some((c) => c.systemId === sys.id)) continue;
     if (Object.values(state.survivors).some((o) => o.alive && (o.systems.includes(sys.id) || o.claim?.systemId === sys.id))) continue;
     if (!sys.bodies.some((id) => state.bodies[id] && !state.bodies[id].dissolved && COLD.has(state.bodies[id].kind))) continue;
     const d = Math.min(...mine.map((m) => distLy(m, sys)));

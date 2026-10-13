@@ -31,7 +31,7 @@ import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle } from './sim/fleets';
-import { colonies, distLy, eraIndex, hasTech, leftBehind, swarmSeenAt, threadTotals } from './sim/util';
+import { colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, threadTotals } from './sim/util';
 import type { Body, Colony, Fate, GameState, ThreadId } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
@@ -259,7 +259,7 @@ function planFleets(state: GameState) {
   const capital = civ.capitalId ? state.colonies[civ.capitalId] : colonies(state)[0];
   if (!capital) return;
   const home = state.systems[capital.systemId];
-  for (const f of Object.values(state.fleets)) {
+  for (const f of fleets(state)) {
     if (!f.at || f.order !== 'idle') continue;
     const here = state.systems[f.at];
     const settler = f.ships.find((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls));
@@ -288,7 +288,7 @@ function planFleets(state: GameState) {
       const target = Object.entries(civ.known)
         .filter(([, k]) => k === 1)
         .map(([id]) => state.systems[id])
-        .filter((s) => !s.gone && !swarmSeenAt(state, s.id) && !Object.values(state.fleets).some((o) => o.to === s.id))
+        .filter((s) => !s.gone && !swarmSeenAt(state, s.id) && !fleets(state).some((o) => o.to === s.id))
         .sort((a, b) => distLy(here, a) - distLy(here, b))[0];
       if (target && civ.energy > 20) orderFleet(state, f.id, target.id, 'survey');
     }
@@ -296,7 +296,7 @@ function planFleets(state: GameState) {
   // build settlers
   const nCol = colonies(state).length;
   const want = calendarEra(state) === 'dusk' ? 3 + Math.floor(state.eraTurn / 12) : 4 + Math.floor(state.eraTurn / 10);
-  const inFlight = Object.values(state.fleets).filter((f) => f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls))).length + capital.queue.filter((q) => q.kind === 'ship').length;
+  const inFlight = fleets(state).filter((f) => f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls))).length + capital.queue.filter((q) => q.kind === 'ship').length;
   // only expand what the economy can carry: new settlements cost upkeep long before they pay
   const pr = project(state);
   const netNow = pr.energyIn - pr.energyOut;
@@ -311,7 +311,7 @@ function planFleets(state: GameState) {
     if (eraIndex(calendarEra(state)) >= 2) opts.unshift('vaultship');
     for (const k of opts) if (!queueBuild(state, capital.id, 'ship', k)) break;
   }
-  const lighterBusy = Object.values(state.fleets).some((f) => f.ships.some((x) => x.cls === 'lighter')) || capital.queue.some((q) => q.key === 'lighter');
+  const lighterBusy = fleets(state).some((f) => f.ships.some((x) => x.cls === 'lighter')) || capital.queue.some((q) => q.key === 'lighter');
   const homeCols = colonies(state).filter((c) => c.systemId === capital.systemId).length;
   // only worth a Lighter where the world itself still has room to live
   const freeHere = home.bodies.some((bid) => {
@@ -319,7 +319,7 @@ function planFleets(state: GameState) {
     return b && !b.colonyId && !canSettle(state, b, 'kin') && b.habitability * b.vitality > 0.05;
   });
   if (calendarEra(state) === 'dusk' && affordable && !lighterBusy && freeHere && homeCols < 2 && capital.pops.kin >= 6 && capital.queue.length < 3) queueBuild(state, capital.id, 'ship', 'lighter');
-  if (state.eraTurn % 25 === 3 && Object.values(state.fleets).filter((f) => f.ships.some((s) => s.cls === 'probe')).length < 2) queueBuild(state, capital.id, 'ship', 'probe');
+  if (state.eraTurn % 25 === 3 && fleets(state).filter((f) => f.ships.some((s) => s.cls === 'probe')).length < 2) queueBuild(state, capital.id, 'ship', 'probe');
 }
 
 function planThreads(state: GameState) {
@@ -375,7 +375,7 @@ function planWar(state: GameState) {
   const civ = state.civ;
   const cap = civ.capitalId ? state.colonies[civ.capitalId] : colonies(state)[0];
   if (!cap) return;
-  const warships = Object.values(state.fleets).filter((f) => f.ships.some((x) => (SHIP_BY_ID[x.cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[x.cls]?.settles));
+  const warships = fleets(state).filter((f) => f.ships.some((x) => (SHIP_BY_ID[x.cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[x.cls]?.settles));
   const strength = warships.reduce((a, f) => a + f.ships.reduce((b, x) => b + (SHIP_BY_ID[x.cls]?.attack ?? 0), 0), 0);
   for (const sv of Object.values(state.survivors)) {
     if (!sv.alive || !sv.contact) continue;

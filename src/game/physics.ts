@@ -4,7 +4,7 @@ import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem }
 import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from './fate';
 import { ERA_BY_ID } from './eras';
 import { hashSeed } from './rng';
-import { protonFateKnown } from './sim/util';
+import { allColonies, protonFateKnown } from './sim/util';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
 // share of a structure's nominal capture a source supports per Tide turn. Physical ratios
@@ -905,7 +905,7 @@ export function evaporateHole(state: GameState, s: StarSystem): string[] {
   p.spin = 0;
   p.spinMax = 0;
   p.rekindle = undefined;
-  let left = Object.values(state.colonies).some((c) => c.systemId === s.id);
+  let left = allColonies(state).some((c) => c.systemId === s.id);
   const held: string[] = [];
   for (const bid of s.bodies) {
     const b = state.bodies[bid];

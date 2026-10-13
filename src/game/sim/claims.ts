@@ -12,7 +12,7 @@ import { livingWorlds } from './fleets';
 import { residentsOf } from './homes';
 import { sendSignal } from './signals';
 import { distanceToThem, lightArrived, spreadNews, voice } from './survivors';
-import { capital, distLy, log } from './util';
+import { allColonies, capital, distLy, log } from './util';
 import { feel } from './dealings';
 
 /** How far they look for new stars (ly): their own cluster. */
@@ -60,7 +60,7 @@ export function suits(state: GameState, sv: Survivor, sys: StarSystem): boolean 
 
 /** Whether anyone lives at a star already: we do, another civilization does, or settlers are on their way to it. */
 function taken(state: GameState, sys: StarSystem): boolean {
-  if (Object.values(state.colonies).some((c) => c.systemId === sys.id)) return true;
+  if (allColonies(state).some((c) => c.systemId === sys.id)) return true;
   return Object.values(state.survivors).some((o) => o.alive && (o.systems.includes(sys.id) || o.claim?.systemId === sys.id));
 }
 
@@ -95,7 +95,7 @@ export function expand(state: GameState, sv: Survivor, chance: () => number) {
     delete sv.claim;
     const sys = state.systems[c.systemId];
     // someone else got there first, or there is nothing left: they will look again
-    if (!sys || sys.gone || Object.values(state.colonies).some((x) => x.systemId === sys.id) || Object.values(state.survivors).some((o) => o !== sv && o.alive && o.systems.includes(sys.id))) return;
+    if (!sys || sys.gone || allColonies(state).some((x) => x.systemId === sys.id) || Object.values(state.survivors).some((o) => o !== sv && o.alive && o.systems.includes(sys.id))) return;
     sv.systems.push(sys.id);
     (sv.claimedAt ??= {})[sys.id] = state.years;
     sv.health = Math.min(1, sv.health + 0.05);

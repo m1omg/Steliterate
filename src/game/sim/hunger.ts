@@ -3,7 +3,7 @@ import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import type { Fleet, GameState, StarSystem, Swarm } from '../types';
 import { FORTIFY_BONUS, destroyColony, isWarFleet, signatureOf } from './fleets';
 import type { Mods } from './mods';
-import { colonies, distLy, hasCharter, log, uid, withRng } from './util';
+import { colonies, distLy, fleets, hasCharter, log, uid, withRng } from './util';
 import { queueEvent } from './events';
 import { foughtFor, theirWarmth } from './claims';
 import { warHeat } from './war';
@@ -32,7 +32,7 @@ function defenseAt(state: GameState, systemId: string, mods: Mods): number {
     if (c.systemId !== systemId) continue;
     for (const [id, n] of Object.entries(c.structures)) d += (STRUCTURE_BY_ID[id]?.defense ?? 0) * n;
   }
-  for (const f of Object.values(state.fleets)) {
+  for (const f of fleets(state)) {
     if (f.at !== systemId) continue;
     // dug in with the settlement's own grid, a fortified fleet defends twice as well
     const k = f.order === 'fortify' ? FORTIFY_BONUS : 1;
@@ -51,7 +51,7 @@ function defenseAt(state: GameState, systemId: string, mods: Mods): number {
  */
 export function firstSwarm(state: GameState) {
   if (state.flags.first_swarm) return;
-  for (const f of Object.values(state.fleets)) {
+  for (const f of fleets(state)) {
     if (!f.at) continue;
     const here = state.systems[f.at];
     // a swarm notices a warm ship anywhere nearby, not only in its own system
@@ -135,7 +135,7 @@ function sendHunter(state: GameState, sw: Swarm, sys: StarSystem, rng: { chance(
   const hunted = new Set(Object.values(state.swarms).map((w) => w.prey));
   let prey: Fleet | null = null;
   let best = Infinity;
-  for (const f of Object.values(state.fleets)) {
+  for (const f of fleets(state)) {
     if (!f.at || !f.ships.length || settled.has(f.at) || held.has(f.at) || hunted.has(f.id)) continue;
     const d = distLy(sys, state.systems[f.at]);
     if (d <= HUNT_REACH && d < best) {
@@ -217,7 +217,7 @@ function rejoin(state: GameState, sw: Swarm): boolean {
  * the settlement's losses (11 Oct: before, they came through a lost fight untouched).
  */
 function hurtShipsAt(state: GameState, sys: StarSystem, hit: () => number) {
-  for (const f of Object.values(state.fleets)) {
+  for (const f of fleets(state)) {
     if (f.at !== sys.id) continue;
     const before = f.ships.length;
     for (const s of f.ships) s.hp -= hit();
@@ -252,7 +252,7 @@ export function swarmsHunt(state: GameState, mods: Mods) {
       if (!sw.systemId || sw.tamed || settled.has(sw.systemId)) continue;
       const sys = state.systems[sw.systemId];
       if (!sys || sys.gone) continue;
-      for (const f of Object.values(state.fleets)) {
+      for (const f of fleets(state)) {
         if (f.at !== sys.id || !f.ships.length) continue;
         // a part sent after this very ship strikes it surely
         if (sw.prey !== f.id && !rng.chance((sw.awake ? HUNT_AWAKE : HUNT_ASLEEP) * dark)) continue;
@@ -304,9 +304,9 @@ export function attackOdds(attack: number, size: number): number {
 
 /** Every warship of ours at this star, their attack added up (at their plain strength: attacking, they leave any fortifications). */
 export function warshipsAt(state: GameState, systemId: string): { fleets: Fleet[]; attack: number } {
-  const fleets = Object.values(state.fleets).filter((x) => x.at === systemId && isWarFleet(x));
-  const attack = fleets.reduce((a, x) => a + x.ships.reduce((b, sh) => b + (SHIP_BY_ID[sh.cls]?.settles ? 0 : (SHIP_BY_ID[sh.cls]?.attack ?? 0)), 0), 0);
-  return { fleets, attack };
+  const here = fleets(state).filter((x) => x.at === systemId && isWarFleet(x));
+  const attack = here.reduce((a, x) => a + x.ships.reduce((b, sh) => b + (SHIP_BY_ID[sh.cls]?.settles ? 0 : (SHIP_BY_ID[sh.cls]?.attack ?? 0)), 0), 0);
+  return { fleets: here, attack };
 }
 
 /** The year-mark a star's warships last went for a swarm (civ.flags): once a turn. */
@@ -615,7 +615,7 @@ export function drawSwarmTo(state: GameState, systemId: string): StarSystem | nu
 export function tameSwarm(state: GameState, swarmId: string): string | null {
   const sw = state.swarms[swarmId];
   if (!sw || !sw.systemId) return 'The swarm is moving; wait until it settles.';
-  const tender = Object.values(state.fleets).find((f) => f.at === sw.systemId && f.ships.some((s) => SHIP_BY_ID[s.cls]?.tames));
+  const tender = fleets(state).find((f) => f.at === sw.systemId && f.ships.some((s) => SHIP_BY_ID[s.cls]?.tames));
   if (!tender) return 'A Swarm Tender must be in the same system.';
   const cost = Math.round(15 + sw.size * 6);
   if (state.civ.energy < cost) return `Broadcasting the command language needs ${cost} energy.`;

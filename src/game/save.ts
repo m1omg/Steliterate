@@ -106,12 +106,15 @@ export function migrate(s: GameState): GameState {
   s.civ.charters = s.civ.charters.filter((c) => CHARTER_BY_ID[c]);
   if (s.civ.researching && !TECH_BY_ID[s.civ.researching]) s.civ.researching = null;
   for (const c of Object.values(s.colonies)) {
+    // (before the new version every settlement and fleet was the one civilization's)
+    c.owner ??= s.player;
     c.structures ??= {};
     c.queue ??= [];
     for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]) delete c.structures[k];
     c.queue = c.queue.filter((q) => (q.kind === 'ship' ? SHIP_BY_ID[q.key] : STRUCTURE_BY_ID[q.key]));
   }
   for (const f of Object.values(s.fleets)) {
+    f.owner ??= s.player;
     f.ships = f.ships.filter((x) => SHIP_BY_ID[x.cls]);
     if (!f.ships.length) delete s.fleets[f.id];
   }

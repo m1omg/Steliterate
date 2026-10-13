@@ -41,7 +41,7 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, distLy, hasCharter, hasTech, leftBehind, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { capital, colonies, distLy, fleets, hasCharter, hasTech, leftBehind, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
 import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
 import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
@@ -282,7 +282,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const src = sourceLight(s, sys, s.years, p.turnYears);
   const T = primaryTemperature(sys.primary, s.years, calendarEra(s), decayWarmth(s), curvatureWarmth(s), haloDrawn(s));
   const province = s.provinces.find((x) => x.id === sys.provinceId);
-  const fleets = Object.values(s.fleets).filter((f) => f.at === sys.id);
+  const fleetsHere = fleets(s).filter((f) => f.at === sys.id);
   const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id);
   // another civilization here: at its first star, or where the light of its arrival has reached us
   const survivor = Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id) && (v.homeSystemId === sys.id || seenThere(s, v, sys.id)));
@@ -436,11 +436,11 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
             Seen from afar: the star is known, its worlds are not. Send any ship to survey it (probes are the cheapest, and see farthest).
           </p>
         )}
-        {(fleets.length > 0 || swarms.length > 0) && (
+        {(fleetsHere.length > 0 || swarms.length > 0) && (
           <div class="section">
             <h3>In orbit</h3>
             <div class="list">
-              {fleets.map((f) => (
+              {fleetsHere.map((f) => (
                 <div key={f.id} class="list-item" {...pressable(() => { selection.value = { kind: 'fleet', id: f.id }; engine()?.select(f.id); })}>
                   <Icon name="fleet" cls="neon" /> <span class="grow">{f.name}</span> <span class="faint">{f.ships.length} ship{f.ships.length > 1 ? 's' : ''}</span>
                 </div>
@@ -716,7 +716,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
   void rev.value; // mutable game state: re-render on every change
   const sys = s.systems[b.systemId];
   const surveyed = s.civ.known[sys.id] === 2;
-  const settlers = Object.values(s.fleets).filter((f) => f.at && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles && (!SHIP_BY_ID[x.cls]?.inSystem || f.at === b.systemId)));
+  const settlers = fleets(s).filter((f) => f.at && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles && (!SHIP_BY_ID[x.cls]?.inSystem || f.at === b.systemId)));
   const residents = surveyed ? residentsSeen(s, b) : null;
   return (
     <>
@@ -1058,7 +1058,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
 
 /** Founding new settlements from here: ready settler ships, and one-click orders for more. */
 function ExpandSection({ s, c }: { s: GameState; c: Colony }) {
-  const ready = Object.values(s.fleets).filter((f) => f.at === c.systemId && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+  const ready = fleets(s).filter((f) => f.at === c.systemId && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
   const ships = buildableShips(s, c).filter((x) => x.def.settles);
   const queued = (id: string) => c.queue.filter((q) => q.key === id).length;
   const noYard = !(c.structures.shipyard ?? 0);
@@ -1689,8 +1689,8 @@ function AttackButton({ s, systemId, fleetId }: { s: GameState; systemId: string
 function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
   void rev.value; // mutable game state: re-render on every change
   const at = sw.systemId ? s.systems[sw.systemId] : null;
-  const col = at ? Object.values(s.colonies).find((c) => c.systemId === at.id) : null;
-  const tenderHere = at && Object.values(s.fleets).some((f) => f.at === at.id && f.ships.some((x) => SHIP_BY_ID[x.cls]?.tames));
+  const col = at ? colonies(s).find((c) => c.systemId === at.id) : null;
+  const tenderHere = at && fleets(s).some((f) => f.at === at.id && f.ships.some((x) => SHIP_BY_ID[x.cls]?.tames));
   return (
     <>
       <div class="drawer-head">

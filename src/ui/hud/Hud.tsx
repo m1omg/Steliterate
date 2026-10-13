@@ -3,7 +3,7 @@ import { formatYears } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
 import { project, type Projection } from '../../game/sim/projection';
 import { setDormant, setPace, longSleep } from '../../game/sim/actions';
-import { colonies, hasTech } from '../../game/sim/util';
+import { colonies, fleets, hasTech } from '../../game/sim/util';
 import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
@@ -114,7 +114,7 @@ function Rail({ s }: { s: GameState }) {
   });
   const unanswered = s.civ.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
   const m = modal.value?.kind;
-  const readySettlers = Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles)).length;
+  const readySettlers = fleets(s).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles)).length;
   return (
     <nav ref={ref} class="rail panel" aria-label="Civilization">
       <RailBtn icon="research" label={`Research${s.civ.researching ? '' : ': nothing chosen'}`} short="Research" on={m === 'research'} badge={s.civ.researching ? 0 : 1} onClick={() => (modal.value = { kind: 'research' })} />
@@ -480,8 +480,8 @@ function ThermalLegend() {
 
 /** Settlements with nothing queued and no work chosen for when nothing is (such a settlement only recycles). */
 const idleColonies = (s: GameState) => colonies(s).filter((c) => c.queue.length === 0 && !c.spare);
-const readySettlers = (s: GameState) => Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
-const idleShips = (s: GameState) => Object.values(s.fleets).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+const readySettlers = (s: GameState) => fleets(s).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+const idleShips = (s: GameState) => fleets(s).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
 const unansweredSignals = (s: GameState) => s.civ.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
 
 /** Things worth a look before ending the turn (the to-do chips); each one takes you there. */

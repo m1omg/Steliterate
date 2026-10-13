@@ -8,6 +8,7 @@ import { createPost, type PostChain } from './post';
 import { SystemView } from './systemView';
 import { VIEW_MODE } from './shaders/bodies';
 import { calendarEra } from '../game/fate';
+import { colonies } from '../game/sim/util';
 
 export type ViewKind = 'galaxy' | 'system';
 export type Quality = 'low' | 'medium' | 'high';
@@ -629,7 +630,7 @@ export class Engine {
         }
         for (const r of state.regions) if (r.kind === 'outlier' || r.kind === 'globular') items.push({ text: r.name, pos: new THREE.Vector3(r.pos.x, r.pos.y + 20, r.pos.z), cls: 'province', w: 9 });
       } else {
-        const colonized = new Set(Object.values(state.colonies).map((c) => c.systemId));
+        const colonized = new Set(colonies(state).map((c) => c.systemId));
         const cand = this.galaxy.pickables
           .filter((p) => p.kind === 'system')
           .map((p) => ({ p, dd: p.pos.distanceTo(this.rig.target) }))

@@ -34,7 +34,7 @@ const base = (() => {
     for (const id of a.bodies) if (s.bodies[id].kind !== 'deep') s.bodies[id].richness = Math.max(s.bodies[id].richness, 2);
     const sw: Swarm = { id: 'hgx', systemId: a.id, from: null, to: null, traveled: 0, distance: 0, size: 4, awake: true, tamed: false, appetite: 1 };
     s.swarms[sw.id] = sw;
-    const f: Fleet = { id: 'fx', name: 'Lamp', ships: [{ cls: 'ark', hp: 6 }], at: b.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' } as Fleet;
+    const f: Fleet = { id: 'fx', owner: 'us', name: 'Lamp', ships: [{ cls: 'ark', hp: 6 }], at: b.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' } as Fleet;
     s.fleets = { [f.id]: f };
     return { s, a: a.id, b: b.id, c: c.id };
   }

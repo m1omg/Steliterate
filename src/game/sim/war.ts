@@ -11,7 +11,7 @@ import type { GameState, Survivor } from '../types';
 import { THREADS } from '../types';
 import { endPact, pactsWith } from './pacts';
 import { distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
-import { capital, clamp, log } from './util';
+import { capital, clamp, fleets, log } from './util';
 
 /** Accord the Threads' consent to a war costs. */
 export const WAR_ACCORD = 60;
@@ -132,7 +132,7 @@ export function warTurn(state: GameState, chance: () => number) {
     // their guns answer ours
     const def = warDefence(state, sv);
     const hurt = (def / (attack + def)) * 1.2;
-    for (const f of Object.values(state.fleets)) {
+    for (const f of fleets(state)) {
       if (f.at !== sv.homeSystemId) continue;
       for (const s of f.ships) s.hp -= hurt * (0.5 + chance());
       f.ships = f.ships.filter((s) => s.hp > 0);

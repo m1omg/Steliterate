@@ -5,7 +5,7 @@ import { EVENT_BY_ID, choiceHint } from '../../game/data/events';
 import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
 import { ageIntro, ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
-import { threadTotals, totalPops } from '../../game/sim/util';
+import { fleets, threadTotals, totalPops } from '../../game/sim/util';
 import type { Body, GameState, PendingEvent } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { THREAD_DEFS } from '../../game/data/threads';
@@ -58,7 +58,7 @@ function eventSystem(s: GameState, p: PendingEvent): string | null {
   const d = p.data;
   const home = Object.values(s.bodies).find((b) => b.traits.includes('homeworld'));
   // the derelict ark was found by one of our probes: wherever a survey ship is
-  const probe = Object.values(s.fleets).find((f) => f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey));
+  const probe = fleets(s).find((f) => f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey));
   const id =
     (typeof d.systemId === 'string' && d.systemId) ||
     (typeof d.bodyId === 'string' && s.bodies[d.bodyId]?.systemId) ||

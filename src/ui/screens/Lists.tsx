@@ -15,7 +15,7 @@ import { orderFleet } from '../../game/sim/actions';
 import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
-import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { colonies, distLy, fleets, popsOf, swarmSeenAt } from '../../game/sim/util';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, solarMass } from '../fmt';
@@ -104,12 +104,12 @@ function shipSummary(f: Fleet): string {
 export function FleetsModal({ s }: { s: GameState }) {
   void rev.value;
   const mods = computeMods(s);
-  const fleets = Object.values(s.fleets).sort((a, b) => Number(!!a.at) - Number(!!b.at) || a.name.localeCompare(b.name));
+  const ours = fleets(s).sort((a, b) => Number(!!a.at) - Number(!!b.at) || a.name.localeCompare(b.name));
   return (
-    <ModalFrame title="Fleets" eyebrow={`${fleets.length} fleet${fleets.length === 1 ? '' : 's'}`} icon="fleet" narrow>
-      {fleets.length === 0 && <p class="dim">No ships. Build probes and settlers at a settlement with a Shipyard.</p>}
+    <ModalFrame title="Fleets" eyebrow={`${ours.length} fleet${ours.length === 1 ? '' : 's'}`} icon="fleet" narrow>
+      {ours.length === 0 && <p class="dim">No ships. Build probes and settlers at a settlement with a Shipyard.</p>}
       <div class="list">
-        {fleets.map((f) => {
+        {ours.map((f) => {
           const moving = !f.at && f.to;
           const left = moving ? f.distance - f.traveled : 0;
           const settler = f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles);

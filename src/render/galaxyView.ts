@@ -8,6 +8,7 @@ import { Rng, hashSeed } from '../game/rng';
 import type { GameState, StarSystem } from '../game/types';
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
+import { colonies, fleets } from '../game/sim/util';
 
 // The Coalescence seen from outside: layered star populations of the ancestral galaxies,
 // dimming era by era, with every known system as a node you can pick.
@@ -419,7 +420,7 @@ export class GalaxyView {
 
     // system nodes
     const known = state.civ.known;
-    const colonized = new Set(Object.values(state.colonies).map((c) => c.systemId));
+    const colonized = new Set(colonies(state).map((c) => c.systemId));
     const pos: number[] = [];
     const col: number[] = [];
     const size: number[] = [];
@@ -484,7 +485,7 @@ export class GalaxyView {
   private syncFleets(state: GameState, now: number) {
     const seen = new Set<string>();
     const lp: number[] = [];
-    for (const f of Object.values(state.fleets)) {
+    for (const f of fleets(state)) {
       seen.add(f.id);
       let p: THREE.Vector3;
       if (f.at) {

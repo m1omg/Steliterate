@@ -9,6 +9,7 @@ import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, S
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
 import { flowing } from '../game/sim/flow';
+import { allColonies, colonies, fleets } from '../game/sim/util';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -117,7 +118,7 @@ export class SystemView {
     this.group.add(this.selRing);
     this.buildPrimary(state, sys);
     const light = primaryLightColor(state, sys);
-    const colonized = new Set(Object.values(state.colonies).filter((c) => c.systemId === sys.id).map((c) => c.bodyId));
+    const colonized = new Set(colonies(state).filter((c) => c.systemId === sys.id).map((c) => c.bodyId));
     // until a probe has surveyed it, a system is only its star: the worlds are not charted yet
     const surveyed = state.civ.known[sys.id] === 2 || colonized.size > 0;
     // other civilizations living here, on the world their way of life calls for
@@ -241,7 +242,7 @@ export class SystemView {
         this.primaryRadius = r;
         this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: r });
         addGlow(r * 6, new THREE.Color('#ffd2a8'), 0.0, 0, 1.0);
-        const fed = Object.values(state.colonies).some((c) => c.systemId === sys.id && ((c.structures.accretion_engine ?? 0) > 0 || (c.structures.penrose_harvester ?? 0) > 0));
+        const fed = allColonies(state).some((c) => c.systemId === sys.id && ((c.structures.accretion_engine ?? 0) > 0 || (c.structures.penrose_harvester ?? 0) > 0));
         const shine = diskLight(kind, calendarEra(state), state.years, !matterGone(state));
         const heat = fed ? 1.0 : kind === 'smbh' ? Math.min(0.75, 0.12 + shine * 0.4) : 0.18;
         this.addDisk(r * 1.6, r * (kind === 'smbh' ? 9 : 6), heat);
@@ -477,7 +478,7 @@ export class SystemView {
   }
 
   private buildStructures(state: GameState, sys: StarSystem) {
-    const cols = Object.values(state.colonies).filter((c) => c.systemId === sys.id);
+    const cols = colonies(state).filter((c) => c.systemId === sys.id);
     const count = (k: string) => cols.reduce((a, c) => a + (c.structures[k] ?? 0), 0);
     const r0 = this.primaryRadius;
     // Dyson swarm: thousands of patched collectors, dark faces and lit seams
@@ -638,7 +639,7 @@ export class SystemView {
   }
 
   private buildFleets(state: GameState, sys: StarSystem) {
-    const here = Object.values(state.fleets).filter((f) => f.at === sys.id);
+    const here = fleets(state).filter((f) => f.at === sys.id);
     here.forEach((f, i) => {
       const hull = shipMesh(f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis'));
       hull.userData.orbit = { r: this.primaryRadius * 3.2 + 4 + i * 1.5, speed: 0.12, phase: i * 1.9 };

@@ -10,7 +10,7 @@ run(async () => {
     const s = window.__stel.state();
     const sys = Object.values(s.systems).find((x) => x.special !== 'home' && !Object.values(s.swarms).some((w) => w.systemId === x.id) && !Object.values(s.colonies).some((c) => c.systemId === x.id));
     s.swarms.hgx = { id: 'hgx', systemId: sys.id, from: null, to: null, traveled: 0, distance: 0, size: 1, awake: true, tamed: false, appetite: 1 };
-    s.fleets.fx = { id: 'fx', name: 'Spear', ships: [{ cls: 'warden', hp: 10 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' };
+    s.fleets.fx = { id: 'fx', owner: s.player, name: 'Spear', ships: [{ cls: 'warden', hp: 10 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' };
     s.civ.known[sys.id] = 2;
     window.__stel.refresh();
     return { sys: sys.id, name: sys.name };

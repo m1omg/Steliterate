@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { SHIP_BY_ID } from '../../game/data/ships';
-import { colonies } from '../../game/sim/util';
+import { colonies, fleets } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
 import { uiFactor } from '../Tip';
 import { Icon } from '../Icon';
@@ -62,7 +62,7 @@ const STEPS: Step[] = [
     title: 'Send out the probes',
     text: 'You have two survey probes. Open Fleets (F), choose a probe and pick a nearby star from its list. Until a probe surveys a system, you only see its star.',
     target: '.rail > button:nth-child(3)',
-    done: (s) => Object.values(s.fleets).some((f) => !!f.to && f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey)),
+    done: (s) => fleets(s).some((f) => !!f.to && f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey)),
   },
   {
     title: 'End the turn',

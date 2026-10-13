@@ -25,7 +25,7 @@ import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost }
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
-import { clamp, colonies, distLy, hasCharter, leftBehind, log, popsOf, totalPops, withRng } from './util';
+import { clamp, colonies, distLy, fleets, hasCharter, leftBehind, log, popsOf, totalPops, withRng } from './util';
 import { WORKS_WATER, seededVitality } from './terraform';
 import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf } from '../fate';
 
@@ -77,7 +77,7 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
       } else {
         const def = SHIP_BY_ID[item.key];
         if (def?.crew) c.pops.kin = Math.max(0, c.pops.kin - def.crew);
-        const existing = Object.values(state.fleets).find((f) => f.at === c.systemId && f.order === 'idle' && !f.auto && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
+        const existing = fleets(state).find((f) => f.at === c.systemId && f.order === 'idle' && !f.auto && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
         if (existing) existing.ships.push({ cls: item.key, hp: def?.hp ?? 5 });
         else newFleet(state, c.systemId, [item.key]);
         log(state, `${c.name}: ${def?.name ?? item.key} launched from the slips.`, 'good', c.systemId);

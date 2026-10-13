@@ -186,6 +186,8 @@ export interface YieldBreakdown {
 
 export interface Colony {
   id: string;
+  /** The civilization it belongs to (its id in `state.civs`). */
+  owner: string;
   bodyId: string;
   systemId: string;
   name: string;
@@ -214,6 +216,8 @@ export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame' | 'for
 
 export interface Fleet {
   id: string;
+  /** The civilization it belongs to (its id in `state.civs`). */
+  owner: string;
   name: string;
   ships: Ship[];
   at: string | null; // system id while stationed

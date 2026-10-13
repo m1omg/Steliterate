@@ -14,7 +14,7 @@ import { canConverse, rangeWith, sendSignal, voiceRange, voiceThread } from './s
 import { queueEvent } from './events';
 import { survivorWorld } from './homes';
 import { formatDistance, formatYears, logTurnLength } from '../eras';
-import { capital, clamp, colonies, distLy, hasCharter, log, threadTotals, withRng } from './util';
+import { capital, clamp, colonies, distLy, fleets, hasCharter, log, threadTotals, withRng } from './util';
 import { turnStep } from './flare';
 import { capacity } from './economy';
 import { computeMods } from './mods';
@@ -353,7 +353,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         const took = Math.round(Math.min(civ.energy * 0.2, 60));
         const cap = capital(state);
         // a defence grid, or warships fortified over the capital, turns raiders away
-        const defended = cap && ((cap.structures.defense_grid ?? 0) > 0 || Object.values(state.fleets).some((f) => f.at === cap.systemId && f.order === 'fortify'));
+        const defended = cap && ((cap.structures.defense_grid ?? 0) > 0 || fleets(state).some((f) => f.at === cap.systemId && f.order === 'fortify'));
         if (!defended && took > 0) civ.energy -= took;
         // turned away, they do not try again soon
         if (defended) civ.flags[`raid_wait_${sv.id}`] = state.turn + RAID_WAIT;
@@ -564,7 +564,7 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
   withRng(state, (rng) => {
     won = attack * rng.range(0.6, 1.4) >= def;
     // an assault costs ships either way, more if it fails
-    for (const f of Object.values(state.fleets).filter((x) => x.at === sys.id)) {
+    for (const f of fleets(state).filter((x) => x.at === sys.id)) {
       for (const s of f.ships) if (isRaider(s.cls)) s.hp -= won ? rng.range(0, 1.5) : rng.range(1, 3.5);
       f.ships = f.ships.filter((s) => s.hp > 0);
       if (!f.ships.length) delete state.fleets[f.id];
@@ -682,7 +682,7 @@ const isRaider = (cls: string) => (SHIP_BY_ID[cls]?.attack ?? 0) > 0 && !SHIP_BY
 /** The combined attack of every warship stationed at `systemId`: they all join a raid. */
 export function raidStrength(state: GameState, systemId: string): number {
   let a = 0;
-  for (const f of Object.values(state.fleets)) if (f.at === systemId) for (const s of f.ships) if (isRaider(s.cls)) a += SHIP_BY_ID[s.cls].attack;
+  for (const f of fleets(state)) if (f.at === systemId) for (const s of f.ships) if (isRaider(s.cls)) a += SHIP_BY_ID[s.cls].attack;
   return a;
 }
 
@@ -711,7 +711,7 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
   withRng(state, (rng) => {
     const defence = Math.max(1, sv.pop * sv.health * 0.3);
     const hurt = (lo: number, hi: number) => {
-      for (const x of Object.values(state.fleets).filter((y) => y.at === f.at)) {
+      for (const x of fleets(state).filter((y) => y.at === f.at)) {
         for (const s of x.ships) if (isRaider(s.cls)) s.hp -= rng.range(lo, hi);
         x.ships = x.ships.filter((s) => s.hp > 0);
         if (!x.ships.length) delete state.fleets[x.id];

@@ -14,7 +14,7 @@ const setup = (size: number, awake = true, ships = [{ cls: 'warden', hp: 10 }]) 
   const sys = Object.values(s.systems).find((x) => x.special !== 'home' && !Object.values(s.swarms).some((w) => w.systemId === x.id) && !Object.values(s.colonies).some((c) => c.systemId === x.id))!;
   const sw: Swarm = { id: 'hgx', systemId: sys.id, from: null, to: null, traveled: 0, distance: 0, size, awake, tamed: false, appetite: 1 };
   s.swarms[sw.id] = sw;
-  const f: Fleet = { id: 'fx', name: 'Spear', ships: ships.map((x) => ({ ...x })), at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
+  const f: Fleet = { id: 'fx', owner: 'us', name: 'Spear', ships: ships.map((x) => ({ ...x })), at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
   s.fleets[f.id] = f;
   return { s, sys, sw, f };
 };

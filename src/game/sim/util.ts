@@ -2,7 +2,7 @@ import { aroundTheStar, type StructureDef } from '../data/structures';
 import { ERA_BY_ID } from '../eras';
 import { fateKnown } from '../fate';
 import { Rng } from '../rng';
-import type { Body, Colony, EraId, GameState, LogEntry, StarSystem, ThreadId } from '../types';
+import type { Body, Colony, EraId, Fleet, GameState, LogEntry, StarSystem, ThreadId } from '../types';
 import { THREADS } from '../types';
 
 export function uid(state: GameState, prefix = 'u'): string {
@@ -69,8 +69,26 @@ export function eraIndex(era: EraId): number {
   return ERA_BY_ID[era].index;
 }
 
+/** The settlements of the civilization whose turn or view it is. */
 export function colonies(state: GameState): Colony[] {
+  const me = state.civ.id;
+  return Object.values(state.colonies).filter((c) => c.owner === me);
+}
+
+/** Every civilization's settlements: for what the universe does to them, and what a star holds. */
+export function allColonies(state: GameState): Colony[] {
   return Object.values(state.colonies);
+}
+
+/** The fleets of the civilization whose turn or view it is. */
+export function fleets(state: GameState): Fleet[] {
+  const me = state.civ.id;
+  return Object.values(state.fleets).filter((f) => f.owner === me);
+}
+
+/** Every civilization's fleets. */
+export function allFleets(state: GameState): Fleet[] {
+  return Object.values(state.fleets);
 }
 
 export function popsOf(c: Colony): number {
