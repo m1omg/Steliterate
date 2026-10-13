@@ -2605,4 +2605,4 @@ somewhere ("Without matter for repairs") and none ever grew: twenty Lattice last
   (179, 11), curvature 100 / 211 with 24 (101, 18), stable unchanged (141, 95). The wins are the
   Long Thought's (decay 7 to 10, curvature 6 to 12). Our autoplayer never goes for the Quiet
   Lattice; the Tessellate finishes the Archive of Everything in 194 games of 558 (190).
-- **Validated** (3-1 and this together): typecheck and build; the full suite follows.
+- **Validated** (3-1 and this together): 68 unit checks, the playtest and 53 browser checks pass.
