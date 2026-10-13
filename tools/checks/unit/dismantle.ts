@@ -15,6 +15,7 @@ import { project } from '../../../src/game/sim/projection';
 import { sourceLight } from '../../../src/game/physics';
 import type { Colony, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
 const fresh = (turns: number) => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
@@ -97,7 +98,7 @@ const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
     return { err, built: (c.structures[id] ?? 0) > 0, vitality: b.vitality - 0.5, nodes: (s.civ.flags.chorus_nodes_built ?? 0) - nodes };
   };
   const base = fresh(20);
-  const again = JSON.parse(JSON.stringify(base)) as GameState;
+  const again = copyState(base);
   // taking one apart marks it: the next built here does not do again what the first did once
   const ca = capital(again);
   ca.structures.comet_shepherd = 1;

@@ -18,8 +18,9 @@ import { FLOW_ETA, flowing, keeping } from '../../../src/game/sim/flow';
 import { logTurnLength } from '../../../src/game/eras';
 import type { Body, Colony, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 /** This turn's tempo and mods, as the economy sees them. */
 const ctxOf = (s: GameState) => {
   const step = turnStep(s, s.civ.pace);

@@ -1,3 +1,4 @@
+import { PLAYER_ID, pointAt } from './civs';
 import { ERA_BY_ID } from './eras';
 import { bodyName, catalogueName, properName } from './names';
 import { Rng, hashSeed } from './rng';
@@ -603,7 +604,7 @@ export function generateWorld(settings: GameSettings): GameState {
   const civ = makeCiv(settings, home.id);
   // the fate of matter: as chosen, or one draw (the same single draw as ever, so no galaxy changes)
   const fate: Fate = settings.protonFate === 'decays' ? 'decay' : settings.protonFate === 'stable' ? 'stable' : settings.protonFate === 'curvature' ? 'curvature' : drawFate(rng.next());
-  const state: GameState = {
+  const world: Omit<GameState, 'civ'> = {
     v: 1,
     settings,
     rng: hashSeed(settings.seed * 7 + 13),
@@ -622,7 +623,8 @@ export function generateWorld(settings: GameSettings): GameState {
     bodies: b.bodies,
     colonies: {},
     fleets: {},
-    civ,
+    civs: { [civ.id]: civ },
+    player: civ.id,
     survivors,
     minds: {
       slow: { id: 'slow', kind: 'slow', name: 'The Slow Ones', systemId: heart.id, stage: 0, understanding: 0, clock: 6.5, lastPattern: [], flags: {} },
@@ -633,6 +635,7 @@ export function generateWorld(settings: GameSettings): GameState {
     nextId: 1,
     flags: {},
   };
+  const state = pointAt(world, civ);
   void coreSystems;
   void globulars;
 
@@ -705,6 +708,7 @@ function addOuterWorlds(b: Builder, settings: GameSettings) {
 
 function makeCiv(settings: GameSettings, homeSystemId: string): Civ {
   return {
+    id: PLAYER_ID,
     name: settings.civName,
     homeSystemId,
     capitalId: null,

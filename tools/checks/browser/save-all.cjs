@@ -52,7 +52,7 @@ run(async () => {
   check(/^steliterate-all-saves-\d{4}-\d\d-\d\d\.json$/.test(dl.suggestedFilename()), `named by the day (${dl.suggestedFilename()})`);
   check(bundle.kind === 'steliterate-saves' && bundle.saves.length === 4, `one file, four saves (${bundle.saves.length})`);
   check(names.includes('slot:First of two') && names.includes('slot:Second of two') && names.includes('quick:Quick save') && names.includes('auto:Autosave'), 'both slots, the quick save and the autosave');
-  check(bundle.saves.every((x) => x.game && x.game.turn === turn && x.game.civ), `each a whole game at turn ${turn}`);
+  check(bundle.saves.every((x) => x.game && x.game.turn === turn && x.game.civs), `each a whole game at turn ${turn}`);
   const toast = await page.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '));
   check(/Exported 4 saves in steliterate-all-saves-/.test(toast), `the message says so (${toast.slice(0, 120)})`);
   await close();

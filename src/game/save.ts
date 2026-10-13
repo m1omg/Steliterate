@@ -8,6 +8,7 @@ import { queueEvent } from './sim/events';
 import { relightTheLastStar } from './sim/minds';
 import { waitsForAnswer } from './sim/signals';
 import type { GameState } from './types';
+import { PLAYER_ID, linkCivs } from './civs';
 import { STORE } from '../keys';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
@@ -40,8 +41,15 @@ export const FIRST_OF_THIS_LINE = 4;
  */
 export function migrate(s: GameState): GameState {
   const v = s.saveVersion ?? 1;
-  // before the new version (13 Oct) these lists were the state's own; they are the civilization's
-  // now (only the checks' fixtures still come this way, as legacy saves)
+  // before the new version (13 Oct) the game had one civilization, the state's own `civ`: it is
+  // the player's of the civilizations now (only the checks' fixtures still come this way)
+  if (!s.civs) {
+    s.civ.id ??= PLAYER_ID;
+    s.civs = { [s.civ.id]: s.civ };
+    s.player = s.civ.id;
+  }
+  linkCivs(s);
+  // and these lists were the state's own; they are the civilization's now
   const loose = s as unknown as Record<string, unknown>;
   const civ = s.civ as unknown as Record<string, unknown>;
   for (const k of ['signals', 'forecasts', 'pending', 'log', 'crossing', 'outcome', 'fired']) {
@@ -120,14 +128,14 @@ export function migrate(s: GameState): GameState {
 }
 
 function serialize(state: GameState): string {
-  // Infinity does not survive JSON; encode it
+  // Infinity does not survive JSON; encode it (and `civ`, a pointer into `civs`, is left out)
   return JSON.stringify(state, (_k, v) => (v === Infinity ? '__inf' : v === -Infinity ? '__-inf' : v));
 }
 
 function parse(text: string): GameState | null {
   try {
     const s = JSON.parse(text, (_k, v) => (v === '__inf' ? Infinity : v === '__-inf' ? -Infinity : v)) as GameState;
-    return s && typeof s === 'object' && s.systems && s.civ ? s : null;
+    return s && typeof s === 'object' && s.systems && (s.civs || s.civ) ? s : null;
   } catch {
     return null;
   }
@@ -400,4 +408,13 @@ export function readSave(text: string, legacy = false): GameState | null {
 
 export function cloneState(state: GameState): GameState {
   return deserialize(serialize(state))!;
+}
+
+/**
+ * A deep copy, with nothing run on it (cloneState migrates its copy, as a load does): the checks
+ * play out alternatives on these. A plain JSON copy would lose `state.civ`, a pointer JSON leaves
+ * out; this one points it again.
+ */
+export function copyState(state: GameState): GameState {
+  return linkCivs(parse(serialize(state))!);
 }

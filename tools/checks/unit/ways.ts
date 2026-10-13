@@ -21,8 +21,9 @@ import { calendarEra } from '../../../src/game/fate';
 import { colonies, distLy } from '../../../src/game/sim/util';
 import type { GameState, StarSystem, Survivor } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 const play = (seed: number, until: (s: GameState) => boolean, fate: 'stable' | 'decays' | 'curvature' = 'stable') => {
   const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate });
   for (let g = 0; g < 900 && !s.civ.outcome && !until(s); g++) {

@@ -24,8 +24,9 @@ import { fork } from '../../../src/game/sim/society';
 import { Rng } from '../../../src/game/rng';
 import type { GameState, Survivor } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
   for (let g = 0; g < 40 && !s.civ.outcome; g++) {

@@ -18,8 +18,10 @@ import { NO_TERRAFORMING, boilsUnder, livableWarmth, seededLifeUnkept, starClima
 import { SEED_CAP, SEED_MIN, SEED_RATE, TERRAFORM_CEILING, WORKS_WATER, habitabilityOf, seededVitality, seedingBlocked, terraformBlocked, terraformSummary } from '../../../src/game/sim/terraform';
 import type { Body, Colony, GameState } from '../../../src/game/types';
 import { check, done, loadSave } from '../lib';
+import { copyState } from '../../../src/game/save';
+import { pointAt } from '../../../src/game/civs';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
   for (let g = 0; g < 10 && !s.civ.outcome; g++) {
@@ -70,7 +72,7 @@ const room = (s: GameState, c: Colony) => kinBaseCapacity(s, c, computeMods(s));
   check(Math.abs(h - 0.45) < 1e-9, `both: habitability ${h.toFixed(3)} (0.45)`);
   check(room(s, c) === 0 && naturalKinRoom(b, s) === 0, 'still no room for Kin while nothing lives there');
   // the build list says what they do
-  const fx = structureEffect({ ...s }, { ...c, structures: { atmosphere_works: 1 } }, 'orbital_mirrors', project(s).ctx);
+  const fx = structureEffect(pointAt({ ...s }, s.civ), { ...c, structures: { atmosphere_works: 1 } }, 'orbital_mirrors', project(s).ctx);
   check(fx.notes.some((n) => /Habitability .*→ 45% here/.test(n)) && fx.notes.some((n) => /Biosphere Seeding/.test(n)), `the build list: ${fx.notes.filter((n) => /Habitab|Seeding/.test(n)).join('; ')}`);
   // too dry for life until the works bring water
   b.water = 0;

@@ -22,8 +22,9 @@ import { terraformBlocked } from '../../../src/game/sim/terraform';
 import { bodyKindName } from '../../../src/ui/labels';
 import { ANOMALIES } from '../../../src/game/data/events';
 import { check, done, loadSave } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 const ICY_FINDS = ANOMALIES.filter((a) => ['vent_life', 'clathrates', 'fossils'].includes(a.id));
 let rich = 0;
 let richWrong = 0;

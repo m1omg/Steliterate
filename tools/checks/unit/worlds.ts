@@ -11,9 +11,10 @@
 import { newGame } from '../../../src/game/newGame';
 import { BACKGROUND_DUSK_K, BACKGROUND_EMBERS_K, backgroundK, bodyClimate, decayWarmth, diskLight, lightUnitSuns, primaryLuminosity, primaryTemperature, waterState } from '../../../src/game/physics';
 import { calendarEra } from '../../../src/game/fate';
-import type { Body, BodyKind, GameState, StarSystem } from '../../../src/game/types';
+import type { Body, BodyKind, StarSystem } from '../../../src/game/types';
 import { bodyKindName } from '../../../src/ui/labels';
 import { check, done } from '../lib';
+import { pointAt } from '../../../src/game/civs';
 
 const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
 const free = (id: string) => !s.bodies[id].colonyId && s.bodies[id].kind !== 'deep';
@@ -62,10 +63,10 @@ const show = (b: Body) => {
   const want = 278 * Math.pow(diskLight('black_hole', 'dusk', s.years) * lightUnitSuns('dusk'), 0.25) * Math.pow(0.7, 0.25) / Math.sqrt(b.orbitAU);
   const c = bodyClimate(s, b);
   check(Math.abs(L - 0.05 * 1.15e-3) < 1e-9 && c.mean >= want && c.mean > 4, `${b.name}, ${b.orbitAU.toFixed(1)} AU from a hole with a faint disk (${L.toExponential(2)} L☉): ${c.mean.toFixed(1)} K in the Dusk`);
-  const late = { ...s, era: 'degenerate', years: 1e16 } as GameState;
+  const late = pointAt({ ...s, era: 'degenerate', years: 1e16 }, s.civ);
   const c2 = bodyClimate(late, b);
   check(c2.mean > 3 * BACKGROUND_EMBERS_K, `and ${(c2.mean * 1000).toFixed(0)} mK at η 16, above the embers' glow`);
-  const gone = { ...s, era: 'blackhole', years: 1e45 } as GameState;
+  const gone = pointAt({ ...s, era: 'blackhole', years: 1e45 }, s.civ);
   check(primaryLuminosity(bh.primary, gone.years, 'blackhole') === 0, 'no disk in the Black Hole Age, no light from it');
 }
 

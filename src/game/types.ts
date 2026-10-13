@@ -236,6 +236,8 @@ export interface CivStats {
 }
 
 export interface Civ {
+  /** Its key in `state.civs` (the player's: PLAYER_ID in civs.ts). */
+  id: string;
   name: string;
   homeSystemId: string;
   capitalId: string | null;
@@ -464,6 +466,14 @@ export interface GameState {
   bodies: Record<string, Body>;
   colonies: Record<string, Colony>;
   fleets: Record<string, Fleet>;
+  /** Every civilization, by id. */
+  civs: Record<string, Civ>;
+  /** The player's civilization's id. */
+  player: string;
+  /**
+   * The civilization whose turn or view it is: `civs[player]`, but for while another plays its
+   * part of a turn. A pointer, not saved: JSON leaves it out and a load points it again (civs.ts).
+   */
   civ: Civ;
   survivors: Record<string, Survivor>;
   minds: Record<string, Mind>;
