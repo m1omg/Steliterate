@@ -477,6 +477,38 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     dwarfs only 10^12 years and more later.
   Offered: a Codex line for the positronium bend (Chiba & Sugiyama 2004: with a cosmological
   constant like ours, positronium may never form; the game has it form at η 85).
+- **13 Oct, morning: the new version, planned and started.** "yes add the positronium line to
+  the codex pls", then: "Before you proceed, please backup the entire game as it is, because even
+  though yes we have Git, I may want an easy way to get to the older build even without it." Then
+  nine larger asks, the session put in planning mode by the player ("I realize this will require a
+  lot, which is why I put you in planning mode"). The approved plan, with every answer the player
+  gave while it was made, is `docs/plans/new-version.md`. In short:
+  - the other civilizations "should be just as complex as the player and subject to the same rules
+    as the player … playing the same game", genuinely different; war "usually very energy
+    wasting", worth it only when desperate, on the Hunger's path or against a civilization
+    corrupted by it; Hunger technology not traded casually; "desperate players adopting SOME hunger
+    tech should not be viewed as badly as prospering ones"; more unit types and a better AI; still
+    no conquest victory, and conquest spends galactic free energy; they settle anywhere, by the same
+    rules (chosen);
+  - films "with JavaScript" for each age and ending ("the programmatic beautiful ones, not the
+    ones generated through KREA or Higgsfield"), in the game and as video files, and an optional
+    Endless Space 2-style reveal of surveyed worlds;
+  - ways of existence after the end of matter, with a transition and a look that isn't matter;
+    positronium doing something (their source: Adams & Laughlin's book, "Life and Death for
+    Positronium", from photos of its pages); the stable fate's late flashes (their link: Wikipedia's
+    timeline of the far future); the last age stays "the Dark Era" in every fate (chosen);
+  - a few young, glowing dwarfs ("I'm not asking you to change the cooling physics"); ships seeing
+    the stars they pass;
+  - the Lattice: insight 0.3, accord 0.1, a Search Foundry and a Protocol Registry, for everyone,
+    so the Tessellate can compete ("please lmk if this is possible to do while maintaining game
+    balance": a census says it barely moves the harness; a Lattice-led strategy will tune it);
+  - "For the new version, don't worry about saves. It will have so many changes that I will start
+    from the beginning"; "Preview address, but once all is done"; order "small, then
+    civilizations"; spoilers: they reached the Dark Era (an early ending) but not its far end.
+  Done that morning: PR m1omg/Steliterate#27 merged (`4aaaa2a`); the backup and the positronium
+  line in PR m1omg/Steliterate#28 (`db34424`; CHANGELOG, "A backup of the game as it is"). The tag
+  and a Release with a zip were refused by this session's GitHub access (HTTP 403): the commit's own
+  zip stands in. The answer on galactic free energy, asked that morning, is in the plan (Part 2c).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
