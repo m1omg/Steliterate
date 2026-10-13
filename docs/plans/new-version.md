@@ -701,6 +701,12 @@ Each step validated on its own, with the harness by fate:
    who was in it.
 4. **The autoplayer** begins the Passage where it can finish before the end, with a few turns to
    spare, by the turns left (from the turn's length) and the settlement's industry.
+   - As built (13 Oct, `24fbc18`): by turns it began Passages fifteen decades early (a slow pace,
+     and the general rush finishing one the turn after it began), and 59 more games of 900 were
+     lost. It now counts decades, done about two before the end, rushed only in the last three
+     if behind. Three things the end of matter's survivors lacked came with it: the Migration to
+     a hole with spin left, a starving civilization cooling its Echoes, and after matter the pace
+     that drains least a decade. 900 games: 530 / 219 (431 / 133 before the Passage).
 5. **Checks:** `unit/passage`; the reserve after matter in it (Field Stores carried over).
 
 ### 3a. Ways of existence

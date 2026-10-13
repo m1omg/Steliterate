@@ -57,16 +57,25 @@ run(async () => {
   await page.locator('.chrono').screenshot({ path: path.join(ck.out, 'unknown-chronometer.png') });
 
   // ------------------------------------------------ each fate's crossing screen
-  /** Autoplay (as the harness does) until the next turn could reach η `b`. */
+  /**
+   * Autoplay (as the harness does) until the next turn could reach η `b`. In the last four decades
+   * the turns keep to the Tide (the autoplayer's other choices stand): short of energy it may take
+   * a turn ten times longer, which would cross `b` before the crossing screen could be seen.
+   */
   const playTo = (b) =>
     page.evaluate((b) => {
       const s = window.__stel.state();
       let prev = s.eta;
       for (let i = 0; i < 600 && !s.civ.outcome; i++) {
-        // with room for a turn twice as long as the last (the autoplayer may slow down)
+        // with room for a turn twice as long as the last
         if (s.eta + 2 * Math.max(s.eta - prev, 0.05) >= b) break;
         prev = s.eta;
-        window.__stel.endTurns(1, true, true);
+        if (s.eta < b - 4) window.__stel.endTurns(1, true, true);
+        else {
+          window.__stel.autoPlay();
+          s.civ.pace = 0;
+          window.__stel.endTurns(1, false, true);
+        }
       }
       window.__stel.refresh();
       return { eta: s.eta, outcome: s.civ.outcome ? s.civ.outcome.ending : null };
@@ -75,7 +84,10 @@ run(async () => {
   const pressEndTurn = async (fate) => {
     await page.evaluate(() => {
       window.__stel.autoPlay();
-      window.__stel.state().civ.pending.length = 0;
+      const s = window.__stel.state();
+      s.civ.pending.length = 0;
+      // (at the Tide, as playTo's last decades)
+      s.civ.pace = 0;
       window.__stel.refresh();
     });
     await page.waitForTimeout(300);

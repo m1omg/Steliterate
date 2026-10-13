@@ -2668,11 +2668,24 @@ Substrate and losing everything else at the end.
   section), `unit/starving-cool` (new), `unit/end-of-matter` (the Migration past a drained hole);
   `unit/invariants` accepts a leptonic settlement on a world that is gone; `unit/flow` plays the
   first seed from 1000 whose stable game lives to the Long Flow (seed 1000's now fails its will at
-  η 54.7, as it nearly did before: resolve 20 at η 50).
+  η 54.7, as it nearly did before: resolve 20 at η 50); `browser/fates` keeps to the Tide in the
+  last four decades before each crossing (short of energy, the autoplayer took a turn ten times
+  longer at η 37.8 and crossed the Great Decay before its screen could be seen).
 - **Balance:** with the timing, the Migration and the cooling (before the pace and the Dark Era's
   cooling), 900 games: 428 survive, 210 victories (431 / 133 before the Passage); decay 160 / 450
   (190), 55 wins (14); stable 159 / 239 (141), curvature 109 / 211 (100). The decay games lost
   were mostly Recurrences (176 to 105) that now fade in the Dark Era, or lose their will in a
   starving Black Hole Age, with many more minds carried across than before (one game 101 to 83
-  where it had been 86 to 45). With the pace and the Dark Era’s cooling: (900 games running).
+  where it had been 86 to 45). With the pace and the Dark Era's cooling, as it stands: 175 of 300
+  standard competent games survive, 62 victories, a Degenerate Age of 73 turns; 900 games 530 /
+  219 / 74 (431 / 133 / 75 before the Passage). By fate: decay 221 / 450 (190), 65 wins (14);
+  stable 169 / 239 (141), 112 wins (95); curvature 140 / 211 (100), 42 wins (24). Of the 900,
+  456 end as before. The Long Thought wins 174 (98 before), the Aeon Seed 45 (35); Silence 164
+  (211), the Fade 143 (161), the Will Fails 63 (97), Recurrence 311 (298). Survival rises far
+  past the noise: most of it is the autoplayer living through the end of matter and the Dark Era
+  that it used to starve in (stable and curvature gain as much as decay), not the rules growing
+  kinder. Whether the game is now too easy is the player's call (the survival question was open
+  already). Lattice-led (`tools/sim.ts 300 standard lattice`): the Quiet Lattice in 86% of stable
+  games, 76% of curvature ones and 57% of decay ones (5% before: the Passage carries the Lattice
+  through the Great Decay); 236 of 300 survive (146).
 

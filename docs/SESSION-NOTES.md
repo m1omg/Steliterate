@@ -583,6 +583,17 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     Lattice in 88% of stable games (71 of 81) and 76% of curvature ones (54 of 71), before and
     after the Lattice lived on energy; under decay none of 148 before, 7 (5%) after (300 games
     each, for the open Quiet Lattice question).
+    The autoplayer first began Passages far too early (the general rush finished one the turn
+    after it began, fifteen decades before the end): 372 survived of 900. Fixed with the AI
+    through the end of matter (`24fbc18`): the Passage timed in decades, the Migration to holes
+    with spin, a starving civilization cooling its Echoes, and after matter the pace that drains
+    least a decade. 900 games 530 / 219 / 74 (431 / 133 / 75 before the Passage), 175 of 300.
+    Survival is up far past the noise, in every fate: the autoplayer no longer starves through
+    the end of matter and the Dark Era. Is the game too easy now? The player's word is wanted
+    (the survival question was open already). Lattice-led games on it (300): the Quiet Lattice
+    in 86% of stable games, 76% of curvature and now 57% of decay ones (84 of 148, 5% before): the
+    Passage carries a Lattice-led civilization through the Great Decay. 236 of 300 survive (146).
+    The Quiet Lattice question (A to D) is still the player's.
   - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
