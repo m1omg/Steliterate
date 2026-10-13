@@ -14,7 +14,7 @@
 import type { Civ, GameState, PactKind, Survivor, SurvivorWay, Tie } from '../types';
 import { send } from '../civs';
 import { hashSeed } from '../rng';
-import { distLy, log } from './util';
+import { distLy, log, temperament } from './util';
 import { ARCHIVE_SHARE } from './pacts';
 
 export const TIE_PACTS: PactKind[] = ['archives', 'aid', 'watch'];
@@ -46,6 +46,8 @@ const TIE_BASE = 30;
 const TIE_RISE = 1.6;
 /** A partner in trouble is helped at most once in this many turns, each way. */
 const AID_EVERY = 6;
+/** How far beyond what a pact needs a civilization's regard must go before it proposes (less for the generous). */
+const NEED_MARGIN = 15;
 /** How fast regard drifts back toward where it began, a turn. */
 const DRIFT = 0.02;
 
@@ -140,7 +142,9 @@ export function planTies(state: GameState, keep: number): void {
     if (o.id === me.id) continue;
     const t = tieOf(state, me.id, o.id);
     if (t.proposal) continue;
-    const kind = TIE_PACTS.find((k) => t.pacts?.[k] === undefined && (t.regard[me.id] ?? 0) >= NEED[k] + 10 && (t.regard[o.id] ?? 0) >= NEED[k]);
+    // (the generous propose a little sooner: at 5 beyond what the pact needs, the grudging at 15)
+    const warmth = NEED_MARGIN - 10 * temperament(state, me.id).generosity;
+    const kind = TIE_PACTS.find((k) => t.pacts?.[k] === undefined && (t.regard[me.id] ?? 0) >= NEED[k] + warmth && (t.regard[o.id] ?? 0) >= NEED[k]);
     if (!kind) continue;
     const cost = tieCost(state, me.id);
     if (me.accord < cost + keep) return;
@@ -193,8 +197,10 @@ export function tiesTurn(state: GameState): void {
         const strong = state.civs[y];
         const m = (t.marks ??= {});
         const trouble = weak.energy < 30 && (weak.flags.last_energy_net ?? 0) < 0;
-        if (!trouble || state.turn - (m[`aid_${y}`] ?? -99) < AID_EVERY || strong.energy < 120) continue;
-        const e = Math.round(Math.min(60, (strong.energy - 100) / 2));
+        // the generous help from less in hand, and send more of what they have beyond 100
+        const g = temperament(state, y).generosity;
+        if (!trouble || state.turn - (m[`aid_${y}`] ?? -99) < AID_EVERY || strong.energy < 140 - 40 * g) continue;
+        const e = Math.round(Math.min(60, (strong.energy - 100) * (0.3 + 0.4 * g)));
         if (e < 5) continue;
         m[`aid_${y}`] = state.turn;
         send(state, y, { energy: -e });

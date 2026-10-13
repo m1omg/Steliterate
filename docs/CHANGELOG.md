@@ -2164,3 +2164,44 @@ never pay for a pact or a law of its own.
   substrate or Cold Vaults, Autonomous Replicators first and Archive Theory as soon as it can), and
   builds only the Archive of Everything.
 - **Check:** `unit/lattice-search` (new).
+
+## Minds of their own (13 Oct, part 2a-5)
+
+Each of the other civilizations now plays its own way, not ours with a few needs of its own.
+
+- **Each way learns its own first**, as soon as it can, then the common order (`WAY_RESEARCH`,
+  `auto.ts`): gardens Hardy Lineages, Deep Warrens, Terraforming and Garden Arks; the uploaded
+  Slow Instancing, Reversible Logic, Cold Computation and Glacial Cognition; the Choir the
+  Assembly of Threads; the sleepers Hibernation Protocols and Fusion Drives; the Tessellate
+  Archive Theory. Each also learns the theory of its own Great Work first.
+- **Each builds toward its own Great Work only** (`WAY_WORK`):
+  - gardens and the sleepers, the Last Garden;
+  - the uploaded, the Long Thought;
+  - the Choir, One Voice;
+  - the Tessellate, the Quiet Lattice.
+
+  Before, every civilization tried ours, in our order.
+- **The sleepers sleep through hard times**, as the light sleepers did.
+  - With Hibernation Protocols known and the reserve down to twelve turns of loss, the Long Sleep
+    for eight turns: upkeep a tenth, and the collectors still gather.
+  - A new star lit within 100 ly, with a cold world free by it, wakes them. An Ark for it goes to
+    the front of their queue, and sets out for it when built.
+  - When it sets out, they tell us, if we know them and can talk (at most once in 20 turns).
+- **A temperament for each** (`temperament`, `util.ts`): caution, generosity and ambition, 0 to 1,
+  from the seed and its id, never the dice.
+  - Caution: how much energy it keeps in hand before it builds (a net of 2 to 4 a turn, a reserve
+    of 15 to 35%; ours stays at 3 and 25%).
+  - Generosity, between the others: Mutual Aid from 100 to 140 energy in hand, sending 30 to 70%
+    of what is beyond 100 (120 and half before, the same on the whole); a proposal at 5 to 15
+    beyond what the pact needs (10 before).
+  - Ambition: it spreads to one star fewer than we would, as many, or one more.
+- **A Fork from another civilization** leaves it, taking the settlements where it is the
+  majority, and goes its own way: it becomes no neighbour of ours. (Until now another
+  civilization's Threads never forked.)
+- **A hole's spin is a commons** for a civilization of its own as it is for us: it draws on it
+  with Penrose Harvesters of its own, in any age, and the world panel says so (the half a light
+  partner took is for neighbours asleep).
+- **Checks:** `unit/minds` (new). `browser/prompt-systems` picks research until its prompt closes
+  (a pick that stored insight covers is learnt at once, and the prompt stays) and passes over
+  another of our ships asking first; `browser/refuge` plays with the neighbours asleep, as it sets
+  a neighbour's record by hand (`start(name, { asleep: true })` in `lib.cjs`).

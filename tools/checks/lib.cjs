@@ -80,7 +80,9 @@ async function newPage(browser, errors, width = 1400, height = 900, touch = fals
  * Starts a check: the browser, a page on the game (with a new game of `seed` if given), and the
  * folder its screenshots go to.
  */
-async function start(name, { width = 1400, height = 900, seed } = {}) {
+// `asleep`: the neighbours do not play (civsAsleep), for a check that sets a neighbour's record by
+// hand, as the old light neighbours were; a civilization of its own would read its record anew.
+async function start(name, { width = 1400, height = 900, seed, asleep = false } = {}) {
   await waitForServer();
   const out = path.join(outRoot, name);
   fs.mkdirSync(out, { recursive: true });
@@ -88,7 +90,7 @@ async function start(name, { width = 1400, height = 900, seed } = {}) {
   const errors = [];
   const page = await newPage(browser, errors, width, height);
   if (seed !== undefined) {
-    await page.evaluate((sd) => window.__stel.newGame({ seed: sd }), seed);
+    await page.evaluate(([sd, zz]) => window.__stel.newGame({ seed: sd, ...(zz ? { civsAsleep: true } : {}) }), [seed, asleep]);
     await page.waitForTimeout(1000);
   }
   return {

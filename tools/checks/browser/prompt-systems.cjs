@@ -32,9 +32,21 @@ run(async () => {
     await page.keyboard.press('Escape');
     await page.click('button.endturn').catch(() => {});
     await page.waitForTimeout(900);
-    // research done: pick the next, or its prompt would hide the ship's
-    const rp = await page.$('.rp-option');
-    if (rp) { await rp.click().catch(() => {}); await page.waitForTimeout(400); }
+    // research done: pick the next, or its prompt would hide the ship's (a pick that stored
+    // insight already covers is learnt at once, and the prompt stays up for the next)
+    for (let k = 0; k < 8; k++) {
+      const rp = await page.$('.research-prompt:not(.ship-prompt) .rp-option');
+      if (!rp) break;
+      await rp.click().catch(() => {});
+      await page.waitForTimeout(300);
+    }
+    // another of our ships may be asking first: later for it
+    for (let k = 0; k < 4; k++) {
+      const other = await page.evaluate((name) => { const sp = document.querySelector('.ship-prompt'); return !!sp && !sp.querySelector('.rp-title')?.textContent.includes(name); }, sent.name);
+      if (!other) break;
+      await page.click('.ship-prompt button[aria-label="Later"]').catch(() => {});
+      await page.waitForTimeout(300);
+    }
     prompt = await page.evaluate((name) => !!document.querySelector('.ship-prompt') && document.querySelector('.ship-prompt').textContent.includes(name), sent.name);
     const dbg = await page.evaluate((id) => { const s = window.__stel.state(); const f = s.fleets[id]; return { turn: s.turn, at: f?.at, to: f?.to, order: f?.order, auto: f?.auto, research: s.civ.researching, modal: document.querySelector('.modal')?.textContent?.slice(0, 60) ?? null, sp: document.querySelector('.ship-prompt')?.textContent?.slice(0, 60) ?? null, rp: !!document.querySelector('.research-prompt:not(.ship-prompt)') }; }, sent.id);
     console.log('dbg', JSON.stringify(dbg));

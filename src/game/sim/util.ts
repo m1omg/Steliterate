@@ -217,6 +217,23 @@ export function protonFateKnown(state: GameState): boolean {
   return fateKnown(state);
 }
 
+/**
+ * Each civilization's temperament, 0 to 1 on each axis, from the seed and its id, never the dice
+ * (the new version, part 2a-5): how cautious it is (energy kept in hand before it builds), how
+ * generous (how readily it helps a partner, how much it sends, how warmly it proposes) and how
+ * ambitious (how far it spreads). Ours is the player's own, and the autoplayer plays it as ever.
+ */
+export interface Temperament {
+  caution: number;
+  generosity: number;
+  ambition: number;
+}
+
+export function temperament(state: GameState, id: string): Temperament {
+  const h = (k: string) => (hashSeed(`${state.settings.seed}:temper:${k}:${id}`) % 1001) / 1000;
+  return { caution: h('caution'), generosity: h('generosity'), ambition: h('ambition') };
+}
+
 /** What we keep of our dealings with a neighbour (Survivor.marks): turns and counts, by name. */
 export function marks(sv: Survivor): Record<string, number> {
   return (sv.marks ??= {});

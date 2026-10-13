@@ -13,7 +13,7 @@ import { CLAIM_SPEED, MAX_CLAIMS, claimedStars } from './claims';
 import { sendSignal } from './signals';
 import { pactsWith } from './pacts';
 import { distanceToThem, inStep, lightAt, voice } from './survivors';
-import { allColonies, colonies, distLy, log, marks } from './util';
+import { allColonies, allFleets, colonies, coloniesOf, distLy, log, marks } from './util';
 import { feel } from './dealings';
 import { send } from '../civs';
 
@@ -70,6 +70,33 @@ export function wakeForNewStar(state: GameState, sv: Survivor): boolean {
       text: `A new star burns at ${sys.name}. We have slept through ages for a light like this; our ships are already on their way to it.`,
     });
   }
+  return true;
+}
+
+/** How often at most we hear that the sleepers of a civilization of its own have woken for a new star (turns). */
+const WOKEN_EVERY = 20;
+
+/**
+ * The sleepers of a civilization of its own wake by their own choice (auto.ts, planSleep) and race
+ * for the new star in an Ark of their own; when they set out, they tell us, if we know them and can
+ * talk. Returns true if they told us.
+ */
+export function heardWaking(state: GameState, sv: Survivor): boolean {
+  if (sv.way !== 'dormant' || !sv.contact || !inStep(state, sv)) return false;
+  if (state.turn - (sv.marks?.woken ?? -99) < WOKEN_EVERY) return false;
+  const f = allFleets(state).find((x) => {
+    const p = x.to ? state.systems[x.to]?.primary : undefined;
+    return x.owner === sv.id && x.order === 'colonize' && !!p && NEW_STARS.has(p.kind) && (p.diesAt ?? 0) > state.years;
+  });
+  if (!f?.to) return false;
+  marks(sv).woken = state.turn;
+  sendSignal(state, {
+    from: sv.id,
+    kind: 'woken',
+    distanceLy: distanceToThem(state, sv),
+    title: `${sv.name} have woken`,
+    text: `A new star burns at ${state.systems[f.to].name}. We have slept through ages for a light like this; our ships are already on their way to it.`,
+  });
   return true;
 }
 
@@ -148,11 +175,18 @@ export function drawTheirSpin(state: GameState, sv: Survivor): number {
   return drawn;
 }
 
-/** Who else draws on this hole's spin (living civilizations at it, in the Black Hole Age). */
+/**
+ * Who else draws on this hole's spin: a civilization of its own wherever its harvesters at the hole
+ * draw on it, as ours do, in any age; one simulated lightly, while living at it in the Black Hole Age.
+ */
 export function spinSharers(state: GameState, systemId: string): Survivor[] {
   const p = state.systems[systemId]?.primary;
-  if (!p || (p.kind !== 'black_hole' && p.kind !== 'smbh') || calendarEra(state) !== 'blackhole') return [];
-  return Object.values(state.survivors).filter((sv) => sv.alive && !sv.exodus && sv.systems.includes(systemId));
+  if (!p || (p.kind !== 'black_hole' && p.kind !== 'smbh')) return [];
+  return Object.values(state.survivors).filter((sv) => {
+    if (!sv.alive || sv.exodus) return false;
+    if (state.civs[sv.id]) return coloniesOf(state, sv.id).some((c) => c.systemId === systemId && (c.structures.penrose_harvester ?? 0) > 0);
+    return calendarEra(state) === 'blackhole' && sv.systems.includes(systemId);
+  });
 }
 
 /** The Tessellate holds us to Mutual Aid to the letter: a breach when we could not pay our side. */

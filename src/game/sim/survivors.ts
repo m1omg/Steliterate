@@ -5,7 +5,7 @@ import { acceptOffer, hasPact, theirPacts, weighProposal } from './pacts';
 import { askRefuge, onTheirWay, sanctuaryTrust, takeThemIn } from './refuge';
 import { askAgainstHunger, claimEase, expand, judgePromise, promiseHelp } from './claims';
 import { atWar, inCoalition, raidedUs, seizeBlocked, warCause, warDefence } from './war';
-import { answerChoirWish, choirWish, drawTheirSpin, wakeForNewStar } from './ways';
+import { answerChoirWish, choirWish, drawTheirSpin, heardWaking, wakeForNewStar } from './ways';
 import { answered, feel, offerDue, offered, tradeOffer, type Offer } from './dealings';
 import { TECH_BY_ID } from '../data/techs';
 import { createColony, isWarFleet } from './fleets';
@@ -235,6 +235,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       if (civOf(state, sv)) {
         syncSurvivor(state, sv);
         if (!sv.war && sv.marks?.joint) send(state, sv.id, { energy: jointYield(state, sv) * paceFactor });
+        // the sleepers, woken for a new star, tell us they are on their way to it
+        heardWaking(state, sv);
       } else lightly(state, sv, L, rng);
       // a promise of warships we made them: kept, or not
       judgePromise(state, sv);

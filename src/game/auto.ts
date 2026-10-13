@@ -14,11 +14,13 @@ import {
   dismantle,
   dismantleTerms,
   enactCharter,
+  longSleep,
   makeGesture,
   orderFleet,
   queueBuild,
   removeQueued,
   rushBuild,
+  setDormant,
   setPace,
   setResearch,
   startWork,
@@ -31,8 +33,8 @@ import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle } from './sim/fleets';
-import { colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, threadTotals } from './sim/util';
-import type { Body, Colony, Fate, GameState, SurvivorWay, ThreadId } from './types';
+import { colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, temperament, threadTotals } from './sim/util';
+import type { Body, Colony, Fate, GameState, StarSystem, SurvivorWay, ThreadId } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
@@ -44,9 +46,14 @@ import { raidStrength, seizeSurvivor } from './sim/survivors';
 import { SHIP_BY_ID } from './data/ships';
 import { SEED_MIN, terraformSummary } from './sim/terraform';
 import { planTies } from './sim/ties';
+import { newStarNear } from './sim/ways';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
+// a Lattice-led autoplayer builds a Search Foundry where a settlement makes this many times what the
+// foundries there would draw, and a Protocol Registry while its accord is below this
+const SEARCH_SPARE = 3;
+const REGISTRY_BELOW = 40;
 const ACCORD_RALLY_BELOW = 40;
 const ACCORD_CALM_ABOVE = 40;
 const ACCORD_HEAR_BELOW = 35;
@@ -94,8 +101,29 @@ const WAY_SETTLERS: Record<SurvivorWay, string[]> = {
  */
 export type Strategy = 'competent' | 'passive' | 'warlike' | 'lattice';
 
-/** What a Lattice-led player learns first: the Lattice itself, and as soon as it can, the Archive's theory. */
-const LATTICE_FIRST = ['autonomous_replicators', 'archive_theory'];
+/**
+ * What each way of life learns first, as soon as it can (the rest in the common order): what keeps
+ * its own kind going, and the theory of its own Great Work. (A Lattice-led player of ours learns the
+ * Lattice itself first: the Tessellate begins knowing it.)
+ */
+export const WAY_RESEARCH: Record<SurvivorWay, string[]> = {
+  garden: ['hardy_lineages', 'subterranean_cities', 'terraforming', 'garden_arks', 'garden_of_embers'],
+  upload: ['slow_instancing', 'reversible_logic', 'cold_computation', 'glacial_cognition', 'asymptotic_mind'],
+  chorus: ['assembly_of_threads', 'total_confluence'],
+  dormant: ['hibernation_protocols', 'fusion_drives', 'deep_time_protocols', 'garden_of_embers'],
+  lattice: ['autonomous_replicators', 'archive_theory'],
+  fork: [],
+};
+
+/** The Great Work each way of life builds toward, and only that (works.ts): sleepers keep their Kin for the Last Garden. */
+export const WAY_WORK: Record<SurvivorWay, string | null> = {
+  garden: 'garden_of_embers',
+  upload: 'hibernal_cascade',
+  chorus: 'confluence',
+  dormant: 'garden_of_embers',
+  lattice: 'archive_of_everything',
+  fork: null,
+};
 
 const TECH_PRIORITY = [
   'energy_storage', 'magnetospherics', 'the_long_record', 'orbital_collectors', 'survey_optics', 'mind_substrate', 'fusion_drives', 'hardy_lineages',
@@ -133,7 +161,8 @@ function pickResearch(state: GameState) {
     // with a swarm near, it learns to defend itself first)
     const mine = civ.id === state.player;
     const guard = !mine && avail.has('orbital_defense') && colonies(state).some((c) => swarmThreat(state, c.systemId)) ? 'orbital_defense' : undefined;
-    const order = mine && ourWay === 'lattice' ? [...LATTICE_FIRST, ...TECH_PRIORITY] : TECH_PRIORITY;
+    const way = wayOf(state);
+    const order = way ? [...WAY_RESEARCH[way], ...TECH_PRIORITY] : TECH_PRIORITY;
     const next = guard ?? order.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
     if (!next) break;
     setResearch(state, next);
@@ -240,7 +269,9 @@ function planBuilds(state: GameState) {
     const b = state.bodies[c.bodyId];
     const capc = capacity(state, c, mods);
     const light = lightAt(state, c);
-    const energyFirst = net < 3 || civ.energy < cap * 0.25;
+    // (another civilization keeps as much in hand as its caution asks: about ours on the whole)
+    const caution = way && civ.id !== state.player ? temperament(state, civ.id).caution : 0.5;
+    const energyFirst = net < 2 + 2 * caution || civ.energy < cap * (0.15 + 0.2 * caution);
     const plan: string[] = [];
     if (preEnd) plan.push('lepton_substrate');
     if (calendarEra(state) === 'blackhole') plan.push('penrose_harvester', 'hawking_collector', 'bastion', 'horizon_vault');
@@ -272,8 +303,13 @@ function planBuilds(state: GameState) {
       // room for its own: a Chorus with Echoes to gather, a Lattice that has filled its beds
       if (hasTech(state, 'mind_merging') && c.pops.chorus >= capc.chorus - 1 && c.pops.echoes >= 2) plan.push('confluence_node');
       if (hasTech(state, 'autonomous_replicators') && c.pops.lattice >= capc.lattice - 1) plan.push('lattice_foundry');
-      // the Tessellate's own thinking and its agreements, where it has the Lattice to run them
-      if (way === 'lattice' && c.pops.lattice >= 4) plan.push('search_foundry', 'protocol_registry');
+      // the Tessellate's own thinking, where the settlement makes three times what a Search Foundry
+      // more would take (its building goes on), and its agreements while its accord runs short
+      if (way === 'lattice' && c.pops.lattice > 0) {
+        const made = c.last?.industry ?? 0;
+        if (made >= SEARCH_SPARE * (STRUCTURE_BY_ID.search_foundry.search?.draw ?? 0) * ((c.structures.search_foundry ?? 0) + 1)) plan.push('search_foundry');
+        if (civ.accord < REGISTRY_BELOW && made >= SEARCH_SPARE * (STRUCTURE_BY_ID.protocol_registry.search?.draw ?? 0)) plan.push('protocol_registry');
+      }
       // a swarm near: defences first
       if (swarmThreat(state, c.systemId)) plan.unshift('defense_grid');
     }
@@ -324,6 +360,13 @@ function planFleets(state: GameState) {
     const here = state.systems[f.at];
     const settler = f.ships.find((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls));
     if (settler) {
+      // an Ark of the sleepers goes to the new star they race for, to a cold world there
+      const race = settler.cls === 'ark' ? raceFor(state) : null;
+      const goal = race ? race.bodies.map((id) => state.bodies[id]).filter((b) => b && settleScore(state, b, 'kin') > 0).sort((a, b) => settleScore(state, b, 'kin') - settleScore(state, a, 'kin'))[0] : undefined;
+      if (goal) {
+        orderFleet(state, f.id, goal.systemId, 'colonize', goal.id);
+        continue;
+      }
       const thread: ThreadId = settler.cls === 'ark' || settler.cls === 'lighter' ? 'kin' : settler.cls === 'spore' ? 'lattice' : settler.cls === 'vaultship' ? 'coldminds' : 'echoes';
       let best: Body | null = null;
       let bestS = 0;
@@ -355,7 +398,10 @@ function planFleets(state: GameState) {
   }
   // build settlers
   const nCol = colonies(state).length;
-  const want = calendarEra(state) === 'dusk' ? 3 + Math.floor(state.eraTurn / 12) : 4 + Math.floor(state.eraTurn / 10);
+  const way = wayOf(state);
+  // (another civilization spreads as far as its ambition takes it: a star fewer, or one more)
+  const reach = way && civ.id !== state.player ? Math.round(2 * temperament(state, civ.id).ambition - 1) : 0;
+  const want = (calendarEra(state) === 'dusk' ? 3 + Math.floor(state.eraTurn / 12) : 4 + Math.floor(state.eraTurn / 10)) + reach;
   const inFlight = fleets(state).filter((f) => f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls))).length + capital.queue.filter((q) => q.kind === 'ship').length;
   const fate = plannedFate(state);
   // a black hole that will outlast the end of matter (under curvature, only the big ones do)
@@ -378,14 +424,50 @@ function planFleets(state: GameState) {
     const pr = project(state);
     affordable = pr.energyIn - pr.energyOut > 2 + nCol * 1.5 && civ.energy > reserveCapacity(state, computeMods(state)) * 0.4;
   }
+  // the sleepers race for a new star near them: an Ark at once, whatever else waits
+  const race = raceFor(state);
+  const settlerTo = (id: string) => fleets(state).some((f) => f.to === id && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+  if (race && !settlerTo(race.id) && !capital.queue.some((q) => q.key === 'ark') && (capital.structures.shipyard ?? 0) > 0) {
+    if (capital.queue.length >= 3) removeQueued(state, capital.id, capital.queue[capital.queue.length - 1].uid);
+    if (!queueBuild(state, capital.id, 'ship', 'ark')) {
+      const q = capital.queue.pop()!;
+      capital.queue.unshift(q);
+    }
+  }
   if ((affordable || needHole) && settling) {
-    const way = wayOf(state);
     const opts = way ? [...WAY_SETTLERS[way]] : calendarEra(state) === 'dusk' ? ['seedcore', 'ark', 'spore'] : ['vaultship', 'seedcore', 'spore'];
     if (eraIndex(calendarEra(state)) >= (way ? 1 : 2)) opts.unshift('vaultship');
     for (const k of opts) if (!queueBuild(state, capital.id, 'ship', k)) break;
   }
   if (lighting && affordable && capital.queue.length < 3) queueBuild(state, capital.id, 'ship', 'lighter');
   if (state.eraTurn % 25 === 3 && fleets(state).filter((f) => f.ships.some((s) => s.cls === 'probe')).length < 2) queueBuild(state, capital.id, 'ship', 'probe');
+}
+
+/** The new star the sleepers race for (another civilization of the dormant way): one burning near them, with a cold world free. */
+function raceFor(state: GameState): StarSystem | null {
+  if (wayOf(state) !== 'dormant' || state.civ.id === state.player) return null;
+  const sv = state.survivors[state.civ.id];
+  return sv ? newStarNear(state, sv) : null;
+}
+
+/** Turns of reserve left below which the sleepers sleep through hard times, and how long they sleep. */
+const SLEEP_BELOW = 12;
+const SLEEP_FOR = 8;
+
+/**
+ * The sleepers (another civilization of the dormant way) sleep through hard times, as their way
+ * has always done: with the reserve running out, the Long Sleep. A new star near wakes them, to
+ * race for it (planFleets).
+ */
+function planSleep(state: GameState) {
+  if (wayOf(state) !== 'dormant' || state.civ.id === state.player) return;
+  const civ = state.civ;
+  if (raceFor(state)) {
+    if (civ.dormant) setDormant(state, false);
+    return;
+  }
+  const net = civ.flags.last_energy_net ?? 0;
+  if (!civ.dormant && net < 0 && civ.energy < -net * SLEEP_BELOW && hasTech(state, 'hibernation_protocols')) longSleep(state, SLEEP_FOR);
 }
 
 function planThreads(state: GameState) {
@@ -553,7 +635,9 @@ function planPace(state: GameState) {
 function planWorks(state: GameState) {
   const civ = state.civ;
   if (civ.work) return;
-  const order = civ.id === state.player && ourWay === 'lattice' ? ['archive_of_everything'] : ['aeon_seed', 'hibernal_cascade', 'archive_of_everything', 'confluence', 'garden_of_embers'];
+  const way = wayOf(state);
+  const own = way ? WAY_WORK[way] : null;
+  const order = way ? (own ? [own] : []) : ['aeon_seed', 'hibernal_cascade', 'archive_of_everything', 'confluence', 'garden_of_embers'];
   for (const id of order) {
     const w = WORK_BY_ID[id];
     if (!hasTech(state, w.tech) || !inAge(state, w.eras)) continue;
@@ -579,6 +663,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planPacts(state);
   planAccord(state);
   planThreads(state);
+  planSleep(state);
   planFlow(state);
   planDismantle(state);
   planBuilds(state);

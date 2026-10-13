@@ -94,7 +94,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -463,6 +463,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     learned last turn.
   - **Seen at light speed** (part 2a-4): `Colony.foundedAt`; `settlementSeen`, `asSeen` and
     `Survivor.seen` (`others.ts`); the system view, `residentsSeen` and the card read them.
+  - **Minds of their own** (part 2a-5): `WAY_RESEARCH` and `WAY_WORK` (`auto.ts`, exported for
+    `unit/minds`); `planSleep` and `raceFor` (the sleepers); `temperament` (`util.ts`, from the
+    seed, read live, never saved); `heardWaking` (`ways.ts`, our side: their Ark under way to a
+    new star); `fork` from another civilization makes no neighbour. The Lattice's insight and
+    accord (`data/threads.ts`), `StructureDef.search` (`economy.ts`, after the multipliers). The
+    harness's `lattice` strategy sets `ourWay`, so that `wayOf` gives our autoplayer the
+    Tessellate's rules for that call; every other strategy leaves it null.
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not

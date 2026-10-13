@@ -20,9 +20,13 @@ check(drawFate(0.1) === 'decay' && drawFate(0.49) === 'decay' && drawFate(0.5) =
 const old = loadSave('551fb1a-seed24757-turn71.json.gz');
 check(old.saveVersion === SAVE_VERSION && old.fate === (old.protonsDecay ? 'decay' : 'stable'), `an old save (a fixture, read as legacy) keeps its fate (${old.fate}) and migrates to version ${SAVE_VERSION}`);
 
-/** Play a game of this fate with the autoplayer until `stop` says so; every crossing seen is kept. */
+/**
+ * Play a game of this fate with the autoplayer until `stop` says so; every crossing seen is kept.
+ * (The neighbours asleep: these are the universe's rules, and a game that ends early, as the others'
+ * play can make it, would not reach them.)
+ */
 function play(fate: ProtonFate, stop: (s: GameState) => boolean, seed = 1000) {
-  const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate });
+  const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate, civsAsleep: true });
   const crossings: CrossingReport[] = [];
   for (let g = 0; g < 1200 && !s.civ.outcome && !stop(s); g++) {
     autoPlay(s, 'competent');

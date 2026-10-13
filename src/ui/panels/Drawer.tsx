@@ -383,7 +383,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           )}
           {sys.primary.spinMax > 0 && (
             <>
-              <dt data-tip={spinSharers(s, sys.id).length ? 'In the Black Hole Age a hole’s spin is a commons: others living here draw on it as we do (a partner only half what it could), and it does not come back.' : undefined}>Spin reservoir</dt>
+              <dt data-tip={spinSharers(s, sys.id).length ? (s.settings.civsAsleep ? 'In the Black Hole Age a hole’s spin is a commons: others living here draw on it as we do (a partner only half what it could), and it does not come back.' : 'A hole’s spin is a commons: others living here draw on it with Penrose Harvesters of their own, as we do, and it does not come back.') : undefined}>Spin reservoir</dt>
               <dd class="mono">
                 {pct(sys.primary.spin / sys.primary.spinMax)}
                 {(() => {

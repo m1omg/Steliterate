@@ -3,7 +3,9 @@
 // saved, and they tell us so.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
-  const ck = await start('refuge', { seed: 1000 });
+  // (the neighbours asleep: the check makes one dying by hand, which a civilization of its own
+  // would undo, its record read from how it really is; unit/others checks refuge from a real one)
+  const ck = await start('refuge', { seed: 1000, asleep: true });
   const { page } = ck;
   // a partner in Mutual Aid, dying
   const sv = await page.evaluate(() => {
