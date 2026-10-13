@@ -339,6 +339,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   star and gets no light, so a check meaning a world still bound to its star sets `rogue: false`
   (`cold-energy`, `evap`, `rogue-reach`).
 - The user dislikes long blocking waits. Prefer background runs and report when done.
+- **`public/archive/` holds frozen builds** (13 Oct: `2026-10-13/`, the game before the new
+  version, `public/archive/README.md`). Vite copies them into every build as they are, so Pages
+  serves them beside the live game, on the same origin and so with the same saves. Never edit
+  them. A later copy is built from a clean worktree of its own commit (`git worktree add --detach
+  <dir> <sha>`, a symlink to this `node_modules`, `npm run build`), never from a tree that
+  already holds `public/archive/`, which would nest. This session's GitHub access refuses tags
+  and releases (HTTP 403): a commit's own zip, `github.com/<owner>/<repo>/archive/<sha>.zip`,
+  stands in.
 
 ## Where the newer systems live
 

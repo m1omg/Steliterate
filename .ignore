@@ -1,0 +1,2 @@
+# Keep the frozen builds' minified scripts out of searches (ripgrep and the tools that use it).
+public/archive/
