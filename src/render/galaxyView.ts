@@ -8,7 +8,8 @@ import { Rng, hashSeed } from '../game/rng';
 import type { GameState, StarSystem } from '../game/types';
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
-import { colonies, fleets } from '../game/sim/util';
+import { allFleets, colonies, fleets } from '../game/sim/util';
+import { fleetSeen } from '../game/sim/others';
 
 // The Coalescence seen from outside: layered star populations of the ancestral galaxies,
 // dimming era by era, with every known system as a node you can pick.
@@ -520,6 +521,44 @@ export class GalaxyView {
       const pick: Pickable = { kind: 'fleet', id: f.id, pos: p.clone() };
       anim.pick = pick;
       this.pickables.push(pick);
+    }
+    // the others' fleets, where their light shows them (fleetSeen), in their colour and on the
+    // other side of a star from ours; never ours to pick
+    for (const f of allFleets(state)) {
+      if (f.owner === state.player) continue;
+      const sn = fleetSeen(state, f);
+      if (!sn) continue;
+      seen.add(f.id);
+      let p: THREE.Vector3;
+      let star: THREE.Vector3 | null = null;
+      let dest: THREE.Vector3 | null = null;
+      if ('at' in sn) {
+        const s = state.systems[sn.at];
+        star = new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z);
+        p = star.clone().add(new THREE.Vector3(-2.2, 1.2, 0));
+      } else {
+        const a = state.systems[sn.from];
+        const b = state.systems[sn.to];
+        p = new THREE.Vector3(a.pos.x + (b.pos.x - a.pos.x) * sn.u, a.pos.y + (b.pos.y - a.pos.y) * sn.u, a.pos.z + (b.pos.z - a.pos.z) * sn.u);
+        dest = new THREE.Vector3(b.pos.x, b.pos.y, b.pos.z);
+      }
+      const kind = fleetLook(f.ships.map((s) => s.cls));
+      let anim = this.fleetAnim.get(f.id);
+      if (!anim || anim.kind !== kind) {
+        if (anim) this.fleetGroup.remove(anim.mesh);
+        const mesh = fleetGlyph(kind, state.survivors[f.owner]?.color ?? '#b7a58f');
+        mesh.material.opacity = 0.8;
+        this.fleetGroup.add(mesh);
+        mesh.position.copy(p);
+        anim = { from: p.clone(), to: p.clone(), t0: now, mesh, kind, star, dest, phase: (hashId(f.id) % 628) / 100 + Math.PI, pick: null };
+        this.fleetAnim.set(f.id, anim);
+      } else {
+        anim.from = anim.mesh.position.clone();
+        anim.to = p;
+        anim.t0 = now;
+        anim.star = star;
+        anim.dest = dest;
+      }
     }
     for (const [id, a] of this.fleetAnim) {
       if (!seen.has(id)) {

@@ -7,7 +7,7 @@ import { STRUCTURE_BY_ID } from '../data/structures';
 import { blankCiv } from '../gen';
 import { hashSeed } from '../rng';
 import { asCiv, send } from '../civs';
-import type { Body, Civ, Colony, GameState, Survivor, SurvivorWay, ThreadId } from '../types';
+import type { Body, Civ, Colony, Fleet, GameState, Survivor, SurvivorWay, ThreadId } from '../types';
 import { structureCheck } from './actions';
 import { capacity } from './economy';
 import { createColony, newFleet } from './fleets';
@@ -217,6 +217,51 @@ export function syncSurvivor(state: GameState, sv: Survivor): void {
   seen.push({ at: state.years, pop: sv.pop, health: sv.health });
   const ly = lightYearsToUs(state, sv.homeSystemId);
   while (seen.length > 1 && (!isFinite(state.years) || state.years >= seen[1].at + ly)) seen.shift();
+}
+
+/** Where we see another civilization's fleet: at a star, or a share `u` of the way along a leg between two. */
+export type FleetSeen = { at: string } | { from: string; to: string; u: number };
+
+/**
+ * Where we see another civilization's fleet now, as its light shows it: where it was when the
+ * light that reaches our capital this turn left it (its leg's times, Fleet.departed and since).
+ * A fleet built or come since that light left is not yet seen where it is: we see it still on its
+ * way, or not yet. Only at or between stars we know of; null if we see it nowhere.
+ */
+export function fleetSeen(state: GameState, f: Fleet): FleetSeen | null {
+  const known = state.civs[state.player]?.known ?? {};
+  const now = state.years;
+  const cur: FleetSeen | null = f.at ? { at: f.at } : f.from && f.to ? { from: f.from, to: f.to, u: f.distance > 0 ? Math.min(1, f.traveled / f.distance) : 1 } : null;
+  if (!cur) return null;
+  let seen: FleetSeen | null = cur;
+  if (f.owner !== state.player && isFinite(now)) {
+    const t = now - lightYearsFrom(state, cur);
+    if ('at' in cur) {
+      if (f.since !== undefined && t < f.since) {
+        // the light of its coming has not reached us: still on its last leg, or not yet made
+        if (f.cameFrom && f.departed !== undefined && f.departed < f.since) seen = t < f.departed ? { at: f.cameFrom } : { from: f.cameFrom, to: cur.at, u: (t - f.departed) / (f.since - f.departed) };
+        else seen = null;
+      }
+    } else if (f.departed !== undefined) {
+      if (t < f.departed) seen = { at: cur.from };
+      else seen = { ...cur, u: now > f.departed ? Math.max(0, Math.min(cur.u, (cur.u * (t - f.departed)) / (now - f.departed))) : 0 };
+    }
+  }
+  if (!seen) return null;
+  if ('at' in seen) return known[seen.at] ? seen : null;
+  return known[seen.from] || known[seen.to] ? seen : null;
+}
+
+/** Light-years from where a fleet is (at a star, or along a leg) to our capital. */
+function lightYearsFrom(state: GameState, p: FleetSeen): number {
+  if ('at' in p) return lightYearsToUs(state, p.at);
+  const a = state.systems[p.from]?.phys;
+  const b = state.systems[p.to]?.phys;
+  const me = state.civs[state.player];
+  const cap = me.capitalId ? state.colonies[me.capitalId] : undefined;
+  const here = state.systems[cap?.systemId ?? me.homeSystemId]?.phys;
+  if (!a || !b || !here) return 0;
+  return Math.hypot(a.x + (b.x - a.x) * p.u - here.x, a.y + (b.y - a.y) * p.u - here.y, a.z + (b.z - a.z) * p.u - here.z);
 }
 
 /** Light-years from a star to our capital (or our first star). */

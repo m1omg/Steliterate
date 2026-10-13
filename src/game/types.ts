@@ -234,6 +234,14 @@ export interface Fleet {
   auto?: 'explore';
   /** The last system it made a long-baseline scan from (absent in older saves). */
   scanned?: string;
+  /**
+   * Another civilization's fleet, for what we see of it at the speed of light (others.ts,
+   * fleetSeen): when it set out on its leg, when it came to where it is (or was built there), and
+   * the star its last leg came from. Absent on ours, which we see as they are.
+   */
+  departed?: number;
+  since?: number;
+  cameFrom?: string;
 }
 
 export interface CivStats {

@@ -63,6 +63,8 @@ export function newFleet(state: GameState, systemId: string, ships: string[], na
     distance: 0,
     order: 'idle',
   };
+  // (another civilization's: we see it once the light of its making reaches us)
+  if (state.player && f.owner !== state.player) f.since = state.years;
   state.fleets[f.id] = f;
   return f;
 }
@@ -94,6 +96,8 @@ export function orderMove(state: GameState, fleetId: string, to: string, order: 
   f.distance = ly;
   f.order = order;
   f.targetBody = targetBody;
+  // (another civilization's: we see it set out once the light of its leaving reaches us)
+  if (f.owner !== state.player && f.from !== to) f.departed = state.years;
   if (f.from === to) {
     // acting in place (settling a body in the same system)
     f.at = to;
@@ -116,6 +120,10 @@ export function advanceFleets(state: GameState, L: number, mods: Mods) {
 
 function arrive(state: GameState, f: Fleet) {
   const sys = state.systems[f.at!];
+  if (f.owner !== state.player) {
+    f.since = state.years;
+    if (f.from && f.from !== f.at) f.cameFrom = f.from;
+  }
   f.from = null;
   f.to = null;
   f.traveled = 0;

@@ -13,7 +13,8 @@
 //   pays it what we pay, a shared work feeds it as it feeds us (by its star's light).
 // - Its story and its game end together: one whose game ends is gone to us, its settlements empty.
 import { STRUCTURE_BY_ID } from '../../../src/game/data/structures';
-import { asSeen, settlementSeen } from '../../../src/game/sim/others';
+import { asSeen, fleetSeen, settlementSeen } from '../../../src/game/sim/others';
+import { newFleet, orderMove } from '../../../src/game/sim/fleets';
 import { createColony } from '../../../src/game/sim/fleets';
 import { asCiv, flushOutbox, send } from '../../../src/game/civs';
 import { newGame } from '../../../src/game/newGame';
@@ -202,4 +203,43 @@ check(ways.size >= 4, `(the ways seen: ${[...ways].sort().join(', ')})`);
   check(!sv.alive && sv.fate === 'faded' && coloniesOf(s, sv.id).length === 0 && !Object.values(s.fleets).some((f) => f.owner === sv.id), `one whose game is over is gone to us, its settlements and ships with it (${sv.name}: ${sv.fate})`);
 }
 
+// ---- their fleets, seen at the speed of light
+{
+  const g = newGame({ seed: 1000, survivors: 3 });
+  const sv = Object.values(g.survivors).find((v) => g.civs[v.id])!;
+  const me = g.civs[g.player];
+  const cap = g.systems[g.colonies[me.capitalId!].systemId];
+  const home = g.systems[sv.homeSystemId];
+  const ly = distLy(cap, home);
+  const there = Object.values(g.systems).filter((x) => x.id !== home.id && !x.gone).sort((a, b) => distLy(a, home) - distLy(b, home))[0];
+  me.known[home.id] = me.known[home.id] || 1;
+  me.known[there.id] = me.known[there.id] || 1;
+  const f = asCiv(g, sv.id, () => newFleet(g, home.id, ['probe'], 'Test'));
+  check(fleetSeen(g, f) === null, `a ship of theirs made just now is not seen yet: its light has ${Math.round(ly)} ly to cross`);
+  g.years += ly + 1;
+  const atHome = fleetSeen(g, f);
+  check(!!atHome && 'at' in atHome && atHome.at === home.id, 'once that light reaches us, we see it at their home');
+  asCiv(g, sv.id, () => orderMove(g, f.id, there.id, 'move'));
+  const left = fleetSeen(g, f);
+  check(!!left && 'at' in left && left.at === home.id, 'it sets out, and we still see it waiting at home');
+  // half way there, a long while later: we see it where it was when the light we see left it
+  const span = 4 * ly + 100;
+  g.years += span;
+  f.traveled = f.distance / 2;
+  const on = fleetSeen(g, f);
+  check(!!on && 'u' in on && on.u > 0 && on.u < 0.5, `on its way, we see it behind where it is (${on && 'u' in on ? Math.round(on.u * 100) : '-'}% of the way, against 50%)`);
+  // it arrives; the light of its coming has not reached us yet
+  f.at = there.id;
+  f.from = null;
+  f.to = null;
+  f.since = g.years;
+  f.cameFrom = home.id;
+  const coming = fleetSeen(g, f);
+  check(!!coming && !('at' in coming && coming.at === there.id), 'arrived, it is still seen on its way until that light reaches us');
+  g.years += distLy(cap, there) + 1;
+  const arrived = fleetSeen(g, f);
+  check(!!arrived && 'at' in arrived && arrived.at === there.id, 'and then where it came');
+  delete me.known[there.id];
+  check(fleetSeen(g, f) === null, 'only at stars we know of');
+}
 done('OTHERS');

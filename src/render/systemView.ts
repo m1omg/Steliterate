@@ -9,8 +9,8 @@ import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, S
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
 import { flowing } from '../game/sim/flow';
-import { allColonies, colonies, coloniesOf, fleets, ownColony } from '../game/sim/util';
-import { settlementSeen } from '../game/sim/others';
+import { allColonies, allFleets, colonies, coloniesOf, fleets, ownColony } from '../game/sim/util';
+import { fleetSeen, settlementSeen } from '../game/sim/others';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -648,6 +648,17 @@ export class SystemView {
       this.fleets.add(hull);
       this.pickables.push({ kind: 'fleet', id: f.id, pos: new THREE.Vector3() });
     });
+    // the others' fleets here, as their light shows them: their colour, an orbit of their own, not ours to pick
+    const theirs = allFleets(state).filter((f) => {
+      if (f.owner === state.player) return false;
+      const sn = fleetSeen(state, f);
+      return !!sn && 'at' in sn && sn.at === sys.id;
+    });
+    theirs.forEach((f, i) => {
+      const hull = shipMesh(f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis'), state.survivors[f.owner]?.color);
+      hull.userData.orbit = { r: this.primaryRadius * 3.2 + 4.75 + (here.length + i) * 1.5, speed: -0.09, phase: 1 + i * 1.9 };
+      this.fleets.add(hull);
+    });
   }
 
   /** Rocks are unlit: recolour them for the view mode (the shaders read VIEW_MODE themselves). */
@@ -741,7 +752,9 @@ export class SystemView {
       const o = f.userData.orbit as { r: number; speed: number; phase: number };
       const a = o.phase + ot * o.speed;
       f.position.set(Math.cos(a) * o.r, 1.2, Math.sin(a) * o.r);
-      f.lookAt(Math.cos(a + 0.1) * o.r, 1.2, Math.sin(a + 0.1) * o.r);
+      // (heading along its orbit, whichever way it goes round)
+      const ahead = a + Math.sign(o.speed) * 0.1;
+      f.lookAt(Math.cos(ahead) * o.r, 1.2, Math.sin(ahead) * o.r);
     }
     const fleetPicks = this.pickables.filter((p) => p.kind === 'fleet');
     fleetPicks.forEach((p, i) => {
@@ -875,11 +888,12 @@ function asteroidBelt(r: number, seed: number, richness: number, round = false):
   return inst as unknown as THREE.Mesh;
 }
 
-function shipMesh(war: boolean): THREE.Object3D {
+/** A ship in orbit: its hull and its drive's glow (another civilization's in its own colour). */
+function shipMesh(war: boolean, colour?: string): THREE.Object3D {
   const g = new THREE.Group();
   const hull = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.1, 5), new THREE.MeshBasicMaterial({ color: war ? '#3a2e28' : '#2a2e33' }));
   hull.rotation.x = Math.PI / 2;
-  const glow = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: war ? '#ffb070' : '#8fe8ff' }));
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: colour ?? (war ? '#ffb070' : '#8fe8ff') }));
   glow.position.z = -0.55;
   g.add(hull, glow);
   return g;
