@@ -4,6 +4,10 @@ The plan the player approved on 13 Oct 2026, kept here as it was approved so any
 it up. The work is on `claude/epic-wozniak-lyhulf`; `main` keeps today's game until the player says
 the new version is ready (see "How it ships"). Progress is in docs/SESSION-NOTES.md and the CHANGELOG.
 
+**Where it stands** (13 Oct): Part 0 done and live; the foundation (its own storage) done; 1a (young
+dwarfs) done; 1b waits for the player's word on the proposal (SESSION-NOTES, 13 Oct); 2a-0 (one
+rulebook) done, the 900 games identical; next, 2a.
+
 ---
 
 

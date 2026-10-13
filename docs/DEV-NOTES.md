@@ -92,11 +92,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
-    `loadSave` (a save from `tools/saves/`) from `tools/checks/lib.ts`. `tsc` checks them, so
+    `loadSave` (a save from `tools/saves/`) from `tools/checks/lib.ts`, and copy a state with
+    `copyState` (`save.ts`), never a plain JSON copy (it loses `state.civ`, see Gotchas). `tsc` checks them, so
     they must type-check cleanly: the Pages build runs `tsc`.
   - `browser/*.cjs`: interface checks against a served build, each opening its own page through
     `start()` in `tools/checks/lib.cjs` (which waits for the server; any console error fails the
@@ -243,9 +244,23 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - Components that read mutable game state need `void rev.value`.
 - Hooks must come before any early return. `FleetPanel` has several `useState` calls.
 - **Save compatibility:** only add optional fields, or compute things live. Put small counters
-  in `civ.flags` (a `Record<string, number>`). `SAVE_VERSION` is 3. Every load goes through
-  `migrate()`, which also runs `surveyWhereStationed` (ships parked at unsurveyed stars chart
-  them).
+  in `civ.flags` (a `Record<string, number>`), or `state.flags` for a fact about the universe.
+  `SAVE_VERSION` is 4, the new version's first (`FIRST_OF_THIS_LINE`): until the new version is
+  live at `/next/` its format may still change (the player starts afresh with it), and from then
+  the rule holds again. Every load goes through `migrate()`, which also runs
+  `surveyWhereStationed` (ships parked at unsurveyed stars chart them).
+- **`state.civ` is a pointer, not data** (13 Oct, `civs.ts`): a non-enumerable property set by
+  `pointAt`, so JSON leaves it out and every civilization is saved once, in `state.civs`. A plain
+  `JSON.parse(JSON.stringify(s))` copy, a `structuredClone` or a spread `{ ...s }` loses it, and
+  the first `s.civ.…` throws. The checks copy with `copyState` (`save.ts`), and a shallow copy
+  keeps the pointer with `pointAt({ ...s, years }, s.civ)`.
+- **`colonies(state)` and `fleets(state)` are the active civilization's**, `allColonies` and
+  `allFleets` everyone's (`sim/util.ts`). A raw `Object.values(state.colonies)` fails
+  `unit/rulebook-lint`, as do flags kept with the wrong owner, a push into a civilization's
+  `signals` past `deliver`, and an assignment to `state.civ`.
+- **The browser checks are read from the tree as the suite reaches them**: editing one while the
+  suite runs against an older build fails it for nothing (13 Oct, `save-all` against the
+  foundation build). Edit them before building, or after the suite.
 - **Generation changes** must keep RNG consumption the same (pick from the already-shuffled
   order), or every seed's galaxy changes.
 - **Harness blind spots:** the autoplayer never raids, asks for aid or picks tracks, so those
@@ -349,6 +364,48 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   stands in.
 
 ## Where the newer systems live
+
+- **One rulebook** (13 Oct, the new version's part 2a-0; CHANGELOG, "One rulebook"): every
+  civilization plays the same game, each its part of every step of the turn under its own
+  perspective. Nothing changes in play with one civilization; part 2a gives the others a Civ.
+  - `src/game/civs.ts`: `PLAYER_ID` ('us'); `pointAt` and `linkCivs` (the pointer);
+    `playerCiv`, `isPlayerView`; `asCiv(state, id, fn)` (the pointer at `id` for `fn`, back
+    afterwards whatever happens, never nested); `setCivGuard` (checks only: during another's part
+    every other civilization is a deep read-only proxy, so a write that crosses over throws where
+    it is made); `assertPlayerView(state, where)` (in `bump`, `act`, `autosave` and every save:
+    throws under the guard, else says so in the console and points back); `deliver` and
+    `flushOutbox` (`state.outbox`, transient: what one civilization sends another, delivered after
+    each step, never saved).
+  - `GameState.civs`, `player`; `Civ.id`, `Civ.rng` (another civilization's own random stream,
+    from `hashSeed('<seed>:civ:<id>')`: `withRng` and `rngOf` draw from it under that
+    civilization's perspective, so the player's draws never move); `Colony.owner`, `Fleet.owner`
+    (set by `createColony` and `newFleet` to the active civilization).
+  - The turn (`turn.ts`): `turnOrder` (the player first, then the others still playing);
+    `endTurn`'s `each(part)` runs a part for every civilization under `asCiv` and then flushes
+    the outbox; between the parts the universe moves once (`scorchWorlds`, `declineWorlds`,
+    `swarmsHunt`, `updateHunger`, `drainHalo` if anyone's siphons run, `evolveUniverse`, the
+    time). The time is the player's: `turnStep` and `livedShare` once, from the player. A
+    civilization's parts: `beginTurn` (mods, pace, siphons, sleep), `economy`,
+    `overdriveAccidents`, `starvation`, `researchAndWorks`, `growth`, society, its fleets, the
+    notes, the Long Flow, `continuity`, `signalsAndEvents`, the fate shown, endings and stats.
+    The player's alone: the neighbours (`updateSurvivors`, `pactsTurn`, `warTurn`), the other
+    minds (`updateMinds`, `gatherTheLastStar`) and the Slow Ones' notice at the Last Light.
+  - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a
+    report per civilization; the universe's part runs once (`toAll` puts its lines in every
+    report where they fall), each civilization's under `eachCiv`; `leftOnSubstrate` is one
+    civilization at the end of matter. `burstNeutronStars(state, lines, ids)` returns what each
+    one's catchers bank.
+  - `tellOfWorld` (`turn.ts`): a world's steam, freezing and death are told to whoever lives there
+    as its loss, and as news to whoever surveyed it (`logTo`, `sim/util.ts`).
+  - Still the player's, for part 2a to give everyone: the swarms' hunting and strikes, the
+    defence counted against them, Communion and Blackout, `destroyColony`'s capital and log, the
+    Long Flow's arrival (`comes`) and the end of matter's news, the Deep (one per system),
+    `migrateToBlackHoles` (merges into whoever holds the hole), the events (no `scope` yet), the
+    light neighbours and the claims.
+  - Checks: `unit/civs` (the pointer, the save format, owners, `asCiv`, the guard, the streams,
+    the outbox), `unit/civ-turns` (a second civilization, played by the autoplayer under its own
+    perspective, lives a whole Dusk and the Last Light beside ours under the guard),
+    `unit/rulebook-lint`.
 
 - **Lighter on phones** (13 Oct; CHANGELOG, "Lighter on phones and tablets"):
   - The synth's continuous sounds: `voice(layer, t)` and `hush(layer)` in `src/audio/music.ts`.

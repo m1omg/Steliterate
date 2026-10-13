@@ -1952,3 +1952,60 @@ little bit more common in the early game", and "I'm not asking you to change the
   (168), curvature 98 of 211 (99). No change beyond noise.
 - **Check:** `unit/young-dwarfs` (new): the share, the ages and temperatures, the light, the laws
   unchanged, and generation identical.
+
+## One rulebook (13 Oct, part 2a-0)
+
+The first step toward civilizations that play the same game as ours (items 1 to 4): the game can
+now hold several civilizations, each playing its part of every step of the turn under its own
+perspective, with the universe moving once between. Today's light neighbours stay as they are;
+part 2a gives them a civilization of their own. This part changes nothing in play, and the 900
+harness games prove it.
+
+- **What belongs to one civilization is in its Civ:** its messages, forecasts, waiting events,
+  Record, crossing report, outcome and fired events (a codemod put `civ.` before 263 references
+  in 55 files).
+- **The civilizations and a pointer.** `state.civs` holds every civilization by id, `player`
+  names ours ('us'), and `state.civ` points at the one whose turn or view it is (`civs.ts`). The
+  pointer is a property JSON leaves out, so a save holds each civilization once and a load points
+  it again. A plain JSON copy loses it and fails at once rather than writing quietly to a
+  duplicate.
+- **Owners.** Every settlement and fleet names its civilization. `colonies(state)` and the new
+  `fleets(state)` give the active civilization's, `allColonies` and `allFleets` everyone's; every
+  walk over them now says whose it means.
+- **Flags where they belong.** The universe's: the halo drawn down, the end of matter, the Long
+  Flow. A civilization's own: its first swarm, its people lost to decay, the free energy its
+  forecast last saw, the guide, the forecasts put away. (`hunger_woke`, the swarms woken, stays
+  the universe's; `star_flash`, the flash a civilization paid to catch, stays its own.)
+- **One civilization's part of a turn** (`asCiv`): the pointer at it, back afterwards whatever
+  happens, never nested. In the checks every other civilization is read-only meanwhile, so a
+  write that crosses over throws where it is made. The interface, saves and the player's actions
+  check that they see the player's view.
+- **Its own dice.** Every civilization but the player draws from a random stream of its own, from
+  the seed and its id, so what another does never moves the player's draws.
+- **Between civilizations, an outbox.** What one sends another waits until every civilization has
+  played that step (`deliver`, `flushOutbox`); a save between turns holds none.
+- **The turn in parts.** `endTurn` plays every step for each civilization, the player first, and
+  the universe moves once between: the stars scorch and wear down the worlds, the swarms hunt and
+  move, the universe evolves, time advances. The time is the player's, its pace and clocks, so
+  everyone lives the same turn. The crossings split the same way: the universe changes once, each
+  civilization loses what its preparation could not keep, and each gets its own report, the
+  universe's lines in it where they fall (the player's reads as before). A world's steam,
+  freezing and death are told to whoever lives there as its loss, and to whoever surveyed it as
+  news.
+- **Still the player's**, for part 2a to give everyone (DEV-NOTES, "One rulebook"): the swarms'
+  hunting and strikes and the defence against them, Communion and Blackout, the Long Flow's
+  arrival and the end of matter's news, the Deep (one per system), the events, the light
+  neighbours and the claims.
+- **The gate:** all 900 harness games play out exactly as before, line for line (outcome, turn,
+  age, η, turns per age, people, techs, Taint, the halo, free energy, every crossing, every
+  neighbour's fate): 455 / 202 / 70, as the young dwarfs left them. The six fixture saves play to
+  the same endings, turn for turn. 30 games take as long as before (20.4 and 20.0 s before, 19.3
+  and 21.4 s after).
+- **Checks:** `unit/civs` (the pointer, the save format, owners, `asCiv`, the guard, the streams,
+  the outbox), `unit/civ-turns` (a second civilization, played by the autoplayer under its own
+  perspective, lives a whole Dusk beside ours and crosses the Last Light under the guard: nothing
+  crosses over, it settles eight worlds, its Record, forecasts and report are its own),
+  `unit/rulebook-lint` (whose walks, flags, messages and pointer, read from the source). The
+  checks copy states with `copyState`; `burst-reach` reads its report by civilization;
+  `browser/save-all` expects `civs` in a saved game; the hand-made fleets in `attack`, `hunt` and
+  `settled` have owners.

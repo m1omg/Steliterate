@@ -509,6 +509,20 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   line in PR m1omg/Steliterate#28 (`db34424`; CHANGELOG, "A backup of the game as it is"). The tag
   and a Release with a zip were refused by this session's GitHub access (HTTP 403): the commit's own
   zip stands in. The answer on galactic free energy, asked that morning, is in the plan (Part 2c).
+- **13 Oct, morning: the new version's first parts** (on `claude/epic-wozniak-lyhulf`, nothing in
+  `main`, all in CHANGELOG under "The new version"):
+  - its own storage (`steliterate2.` keys; older saves refused with a pointer to the older build);
+  - a few young, glowing dwarfs (item 8; 900 games 455 / 202 / 70 against 456 / 203 / 71, 860 as
+    before: no change beyond noise);
+  - one rulebook (part 2a-0): the civilizations, the pointer, owners, flags, `asCiv` and its guard,
+    each one's own dice, the outbox, the turn and the crossings in parts. All 900 harness games
+    identical, line for line; the second civilization in `unit/civ-turns`, played by the
+    autoplayer under its own perspective, lives a whole Dusk beside ours with nothing crossing over.
+  - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
+    found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home
+    to the Heart (the Heart's neighbours, seen on arrival anyway), 14 within 6,000 ly; the proposal
+    is the stretch flown swept by the eyes a ship has stopped, plus one long-baseline look a turn
+    in flight for survey probes. Part 2a goes ahead meanwhile: it does not depend on it.
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
