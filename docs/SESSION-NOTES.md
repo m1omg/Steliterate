@@ -543,6 +543,22 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - the Hunger among the civilizations (part 2b): see CHANGELOG. Its harness numbers moved
     victories up, for a reason worth telling the player: a neighbour now offers notes only on what
     it knows, so we trade less and keep the energy (CHANGELOG, part 2b).
+  - war, units and conquest (parts 2c-0 to 2c-4, pushed `b93ae36`): strengths by role, the Picket,
+    Hunter, Breacher and Kinetic Lance, upkeep and screens; war between any two civilizations,
+    battles at once; conquest a settlement at a time (Storm and Raze on the card, the odds shown
+    first; the Lance's Strike in its fleet panel). 900 games identical to 2c-1 game for game: no one
+    reaches the 60-Taint causes, so no war starts.
+  - the AI's judgement (part 2d): the desperate's war, strict (reach, a paid launch, the odds
+    against all the defender has, dug in, arming until then, the galaxy's free energy above a
+    fifth); sieges carry off what they drain; a Picket at home against the Lance; the corrupted
+    strike with one. 900 games 407 / 151 / 75, within the noise; a war in 6 of 900, all by the
+    desperate. End Turn on a slowed CPU unchanged since 2a-6.
+  - The new hulls (Picket, Breacher, Hunter, and a Kinetic Lance as an extra) were made with
+    Higgsfield (2 of 6.5 credits, two takes each) and shown to the player as one sheet
+    (`hull-candidates.png` in the scratchpad, not kept): they go in only once the player picks.
+    `tools/process-sprites.mjs` cuts them; `fleetLook` and `lookRole` (`data/ships.ts`) need the new
+    looks, the Lance's only for a fleet of Lances alone.
+  - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home

@@ -88,9 +88,9 @@ export function guardAt(state: GameState, systemId: string, owner: string): numb
  * and what it costs, as ours does; the pacts between them end; the one it falls on thinks far less
  * of it, and everyone else hears of it when the light arrives (no infamy for the Hunger in them).
  * `at`: the star the war will be fought at, the settlement of theirs nearest its capital unless
- * given. Returns why not, or null.
+ * given; `motive`, why it began it (part 2d). Returns why not, or null.
  */
-export function declareOn(state: GameState, by: string, on: string, cause?: string, at?: string): string | null {
+export function declareOn(state: GameState, by: string, on: string, cause?: string, at?: string, motive?: War['motive']): string | null {
   const civ = state.civs[by];
   const them = state.civs[on];
   if (!civ || !them || by === state.player) return 'Not a civilization of its own.';
@@ -103,8 +103,9 @@ export function declareOn(state: GameState, by: string, on: string, cause?: stri
   civ.dissent = Math.min(100, civ.dissent + 8);
   for (const t of THREADS) civ.standing[t] = clamp(civ.standing[t] - (cause ? 1 : 3), 0, 100);
   civ.flags.wars = (civ.flags.wars ?? 0) + 1;
-  const war: War = { since: state.turn, siege: 0, by, at: front, ...(cause ? { cause } : {}) };
-  const why = cause ? ` ${cause}` : '';
+  const war: War = { since: state.turn, siege: 0, by, at: front, ...(cause ? { cause } : {}), ...(motive ? { motive } : {}) };
+  if (motive) civ.flags[`war_${motive}`] = (civ.flags[`war_${motive}`] ?? 0) + 1;
+  const why = cause ? ` ${cause}` : motive === 'desperate' ? ' We are dying, and you have what we need.' : '';
   if (on === state.player) {
     // on us: what was between us ends, and their declaration crosses to us as light
     const sv = state.survivors[by];
@@ -204,18 +205,28 @@ export function battlesTurn(state: GameState): void {
     }
     if (guarded) continue;
     w.siege++;
-    // a blockade: the besieged's stores and will run down
+    // a blockade: the besieged's stores and will run down, and the besiegers carry off what it drains
+    const take = plunder(state, on);
     if (on === state.player) {
       const me = state.civs[state.player];
-      me.energy = Math.max(0, me.energy - Math.round(BLOCKADE * 400));
+      me.energy -= take;
       me.resolve = Math.max(0, me.resolve - 1);
-      log(state, `${state.civs[by]?.name}'s warships hold ${state.systems[w.at]?.name} under siege (turn ${w.siege}): our stores and our will run down.`, 'combat', w.at);
-    } else send(state, on, { energy: -Math.round(BLOCKADE * 400), resolve: -1 });
+      log(state, `${state.civs[by]?.name}'s warships hold ${state.systems[w.at]?.name} under siege (turn ${w.siege}): they carry off ${take} energy of our stores, and our will runs down.`, 'combat', w.at);
+    } else send(state, on, { energy: -take, resolve: -1 });
+    if (take > 0) send(state, by, { energy: take });
     if (!fought.has(w.at)) state.battles.push({ systemId: w.at, turn: state.turn, text: `The siege of ${state.systems[w.at]?.name}, turn ${w.siege}.` });
     // held long enough, and its walls breached: they storm it (one far down the Hunger's path razes it)
     const c = allColonies(state).find((x) => x.owner === on && x.systemId === w.at);
     if (c && !assaultBlocked(state, by, c)) assault(state, by, c.id, (state.civs[by]?.taint ?? 0) >= CORRUPT_AT);
   }
+}
+
+/**
+ * What a siege carries off a turn: the energy its blockade costs the besieged (BLOCKADE of 400),
+ * as much of it as they have, taken home by the besiegers (part 2d; before, it was only lost).
+ */
+export function plunder(state: GameState, on: string): number {
+  return Math.min(Math.round(BLOCKADE * 400), Math.max(0, Math.floor(state.civs[on]?.energy ?? 0)));
 }
 
 /**
@@ -422,6 +433,8 @@ export function assault(state: GameState, by: string, colonyId: string, raze = f
     state.battles.push({ systemId: c.systemId, turn: state.turn, text: `An assault on ${c.name} thrown back.` });
     return { won: false };
   }
+  // (what the side that began it has taken: the desperate stop once they have what they came for)
+  if ((w.by ?? state.player) === by) w.took = (w.took ?? 0) + 1;
   conquer(state, by, c, raze ? 'raze' : 'take', w.cause);
   // on to the next of theirs, while the war goes on
   if (warOf(state, by, from) === w) {
@@ -564,6 +577,7 @@ export function launchStrike(state: GameState, fleetId: string, colonyId: string
     return err;
   }
   lance.targetColony = c.id;
+  state.civ.flags.lances = (state.civ.flags.lances ?? 0) + 1;
   state.gfe = Math.max(0.05, state.gfe - LANCE_GFE);
   logTo(state, state.civ, `${lance.name} set out for ${c.name} at nearly the speed of light. It will strike when it arrives.`, 'combat', c.systemId);
   return null;

@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -558,6 +558,30 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     nearest first, eight at most, Strike armed per row; the chip `striking` and "To strike ..."
     while it flies, its trip at `LANCE_SPEED` (also in the Fleets list). `browser/war` is the
     whole of it in a browser.
+  - **The AI's judgement in war** (part 2d, `auto.ts`): `planWarAI` keeps
+    `civ.flags.desperate_since` (plight from `DESPERATE`, turn by turn); `warTarget` returns a
+    `motive` (`War.motive`: 'hunger', 'corrupted', 'desperate'; `declareOn` keeps it and counts it in
+    `civ.flags.war_<motive>`): the desperate one `DESPERATE_FOR` turns running with caution under
+    `DESPERATE_BOLD` picks the richest that `worthWar` does not rule out ('no' once `state.gfe` is
+    under `GFE_SPARE`, and unless stores
+    `RICHER` times its own and `RICH_MIN`, plight under `CONTENT`, regard under `FRIEND`, no pact,
+    us only once in contact, the front within `REACH_TURNS` of its capital or a fleet of its
+    warships; 'go' once its line carries `WAR_ODDS` times what stands at the front plus every
+    warship of theirs elsewhere, counted dug in (`FORTIFY_BONUS`), and one of its fleets can pay the
+    launch there; 'arm' until then, building Wardens while `arm` allows). It takes (never razes:
+    razing is only from `CORRUPT_AT`), and makes peace once `War.took` (counted in `assault` for
+    the side that began it) or its plight is under `EASED`. `plunder` (`conflict.ts`): a siege's blockade energy goes
+    to the besiegers, ours (`warTurn`) and the others' (`battlesTurn`). `lineOfBattle`: warships
+    but not a fleet of Pickets alone, which keeps its watch; `keepWatch` builds a Picket at the
+    capital while an enemy knows Relativistic Arks (ours too, in `planDefence`); `lanceAt` (from
+    `CORRUPT_AT`, at war): a Lance built, then struck at the enemy's most peopled settlement
+    (`civ.flags.lances`). Harness marks: `*hcd`, a letter per war begun by motive; `^N` Lances.
+    Census before the rule (40 games, scratch scripts not kept): desperate (plight from 0.6) in
+    15% of the others' turns, about 4.5 spells a civilization a game; with the first conditions and
+    caution under 0.4, a war in 8 of 40 games. Followed turn by turn (60 games), those wars were
+    empty: 12 of 15 attackers could not pay their fleet's launch to the front, and those that came
+    brought one warship against a defender that dug in at home; hence the reach, the launch, the
+    odds against all the defender has, and the arming.
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not
@@ -1511,6 +1535,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the Hunger among the civilizations (13 Oct; part 2b) | 135 | 64 victories, Degenerate Age 78 turns; 900 games 411 / 167 / 76 (397 / 131 / 71 at 2a's reference): survival within the noise, victories up as a neighbour offers notes only on what it knows (in 40 games 159 offers against 355, 1,260 energy paid against 5,927), so our autoplayer keeps its energy and quickens. By fate: decay 163 / 450, stable 148 / 239 (102 victories), curvature 100 / 211 (59). Of 2,700 others, 895 took a Hunger step (673 to Taint 15, 158 to 27, 64 to 45), none past 45; 6 of the first 300 games as before |
 | ships by role: upkeep, screens, mending, the Picket and the Hunter (13 Oct; parts 2c-0, 2c-1) | 149 | 47 victories, Degenerate Age 75 turns; 900 games 409 / 152 / 75 (411 / 167 / 76 after 2b), within the noise. By fate: decay 175 / 450, stable 140 / 239, curvature 94 / 211. Without the autoplayer standing idle warships down after the Dusk: 361 / 146 (Vigil's upkeep in the Dark Era as much as the whole net) |
 | war between civilizations, conquest, the Breacher and the Kinetic Lance (13 Oct; parts 2c-2, 2c-3) | 149 | 47 victories, Degenerate Age 75 turns; 900 games 409 / 152 / 75, identical to 2c-1 game for game: no war starts in any of the 900 (no one hears of 60 Taint in a neighbour, or reaches it); the war is checked by `unit/civ-war` and `unit/conquest` |
+| the AI's judgement in war: the desperate's war, plunder, the Picket at home, the corrupted's Lance (13 Oct; part 2d) | 148 | 47 victories, Degenerate Age 75 turns; 900 games 407 / 151 / 75 (409 / 152 / 75 after 2c), within the noise: 863 of 900 as before. A war in 6 games of 900, all begun by the desperate; settlements taken in 3, one civilization conquered. By fate: decay 175 / 450, stable 138 / 239, curvature 94 / 211 |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

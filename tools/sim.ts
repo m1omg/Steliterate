@@ -51,15 +51,17 @@ for (const strategy of strategies) {
     // each neighbour: alive or its fate (a civilization of its own: @ the turn its game ended), +N
     // for every star it lives at beyond its first, and the pacts in force or once sealed with it
     // (a: Mutual Aid, r: Open Archives, w: Shared Watch), ~N its own Taint if it took any Hunger
-    // step, *N the wars it began, #N the settlements it took or destroyed, %N those it lost in war,
-    // and ! if it shuns us for the Hunger it has heard of in us
+    // step, * the wars it began, a letter for each by why (h the Hunger heard of in another, c its
+    // own corruption, d desperation), #N the settlements it took or destroyed, %N those it lost in
+    // war, ^N the Kinetic Lances it launched, and ! if it shuns us for the Hunger it has heard of in us
     const sv = Object.values(state.survivors)
       .map((s) => {
         const pacts = (['aid', 'archives', 'watch'] as const).filter((k) => s.pacts?.[k] !== undefined).map((k) => (k === 'archives' ? 'r' : k[0])).join('');
         const ended = state.civs[s.id]?.outcome?.turn;
         const taint = state.civs[s.id]?.taint ?? 0;
         const fl = state.civs[s.id]?.flags ?? {};
-        const war = `${fl.wars ? `*${fl.wars}` : ''}${fl.conquests ? `#${fl.conquests}` : ''}${fl.lost ? `%${fl.lost}` : ''}`;
+        const why = `${'h'.repeat(fl.war_hunger ?? 0)}${'c'.repeat(fl.war_corrupted ?? 0)}${'d'.repeat(fl.war_desperate ?? 0)}`;
+        const war = `${why ? `*${why}` : ''}${fl.conquests ? `#${fl.conquests}` : ''}${fl.lost ? `%${fl.lost}` : ''}${fl.lances ? `^${fl.lances}` : ''}`;
         return `${s.adjective}:${s.alive ? 'alive' : s.fate}${ended !== undefined ? `@${ended}` : ''}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}${taint > 0 ? `~${taint.toFixed(0)}` : ''}${war}${shuns(state, s) ? '!' : ''}`;
       })
       .join(' ');

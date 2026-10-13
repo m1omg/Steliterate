@@ -625,21 +625,51 @@ Taint heard in a neighbour, or 60 of one's own) are never reached; Hunger steps 
 Already done in 2a-5: each way's own Great Work (`WAY_WORK`), gardens terraform, sleepers sleep
 (`planSleep`).
 
-1. **The desperate's war:** plight from 0.6, and bold (caution under 0.5). It weighs a war on the
-   weakest neighbour it can reach for what that settlement holds (its people, its collectors), its
-   own warships against the front's guard (`WAR_ODDS`), and what it would cost: the accord, the
-   infamy without a cause, the upkeep, the galaxy's free energy. It takes, never razes, and makes
-   peace once it has what it came for. One that is not bold pleads, as today.
+1. **The desperate's war** (as built): desperate five turns running and bold (caution under 0.4),
+   it looks to the richest neighbour within reach (five turns of its capital or a fleet), three
+   times as well stored, not desperate, not a friend, with no pact, while the galaxy's free energy
+   is above a fifth. It goes only once its warships carry half again all it would meet there (the
+   front, and every warship of the target's, counted dug in) and a fleet can pay the launch; it arms
+   until then. It takes, never razes, carries off what its sieges drain (for everyone now), and makes
+   peace once it has taken a settlement or its plight has eased. The first, looser version made
+   empty wars (no fleet able to pay its launch, one warship against a defender dug in at home); the
+   strict one makes few, and real ones.
 2. **Defence against the Lance:** once an enemy knows Relativistic Arks, a civilization keeps a
    Picket at its capital (screens), and the most screened settlement is the one it holds closest.
 3. **The corrupted use the Lance:** only those far down the Hunger's path (60 Taint of their own),
    at war, on an enemy's largest settlement they can see.
 4. **Each war's why in the harness:** who began it, on whom and for what (`*N` with its cause:
    Hunger, corrupted, desperate), conquests, Lance strikes; the aim stays most games without war.
-5. **Then the numbers:** 900 games, by fate and by way, against 2c's reference.: life after matter, and positronium (items 6 and 7)
+5. **Then the numbers:** 900 games, by fate and by way, against 2c's reference.
+
+## Part 3: life after matter, and positronium (items 6 and 7)
 
 This part comes after the civilizations, so its rules apply to everyone. All of it is
 speculation, and the Codex says so.
+
+### Part 3, the order it will be built in (13 Oct, written before starting it)
+
+Each step validated on its own, with the harness by fate:
+
+1. **3-0, the end of matter as it is, fixed** (the bugs listed under 3b): minds carried over by
+   the protocols counted as lost too, the Chorus counted twice, the forecast's promise, the
+   protocols' description, the Bastion Shell's placement, Horizon Vaults deleted at the end of
+   matter, a disk drawn at full heat after it.
+2. **3-1, forms:** `Colony.form`, baryonic until the end of matter, leptonic after it for what
+   survives on decay-proof substrate (who may live there, a leptonic Confluence Node for the
+   Chorus). Nothing else changes yet.
+3. **3-2, the Passage:** the conversion over several turns, Field Stores (the reserve's home), the
+   Kin's pattern archive, the Lattice at half; the AI's rule for it; the crossing report naming
+   each settlement lost and who was in it.
+4. **3-3, the Thinning:** structures still made of matter failing one by one, matter yields
+   falling, the forecasts and the Record naming what goes.
+5. **3-4, the Horizon form:** written into a hole's horizon, bound to it; when it evaporates, to a
+   larger hole, another form, or the final burst.
+6. **3-5, positronium:** the form, the nets, the decay's countdown, Leave the weave, the two events.
+7. **3-6, the stable fate's late game:** iron stars, black dwarf supernovae, tunnelling collapse.
+8. **3-7, the look:** the leptonic lattices, the horizon arcs, the positronium ellipses, the map's
+   ring, the dissolve; every quality tier, with screenshots asked about first (the player has not
+   reached that far).
 
 ### 3a. Ways of existence
 

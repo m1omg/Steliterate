@@ -399,6 +399,10 @@ export interface War {
   by?: string;
   cause?: string;
   at?: string;
+  /** Why another civilization began it (part 2d): the Hunger heard of in them, its own corruption, or desperation. */
+  motive?: 'hunger' | 'corrupted' | 'desperate';
+  /** Settlements taken or destroyed in it by the side that began it. */
+  took?: number;
 }
 
 export interface Mind {

@@ -33,9 +33,9 @@ import { computeMods, strainFor } from './sim/mods';
 import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
-import { canSettle, fleetUpkeep } from './sim/fleets';
-import { allColonies, allFleets, colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, temperament, threadTotals } from './sim/util';
-import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, ThreadId } from './types';
+import { FORTIFY_BONUS, canSettle, fleetUpkeep, launchCost, travelEstimate } from './sim/fleets';
+import { allColonies, allFleets, capital, colonies, distLy, eraIndex, fleets, hasTech, leftBehind, popsOf, swarmSeenAt, temperament, threadTotals } from './sim/util';
+import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, ThreadId, War } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
@@ -43,7 +43,7 @@ import { DEGENERATE_END, MATTER_END, calendarEra, fateKnown, fateOf, inAge, matt
 import { FLOW_ETA, flowAhead, flowing, keeping } from './sim/flow';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost, proposePact } from './sim/pacts';
 import { HUNGER_CAUSE, WAR_ACCORD, anyWar, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
-import { declareOn, enemiesOf, fleetFire, frontOf, guardAt, peaceBetween, walled, warOf } from './sim/conflict';
+import { declareOn, enemiesOf, fleetFire, frontOf, guardAt, launchStrike, peaceBetween, strikeBlocked, walled, warOf } from './sim/conflict';
 import { CORRUPT_AT, JUST_CAUSE_AT, SANCTION_AT } from './sim/judge';
 import { raidStrength, seizeSurvivor } from './sim/survivors';
 import { SHIP_BY_ID, isWarship, strength } from './data/ships';
@@ -93,54 +93,119 @@ const WAR_TIRES = 30;
 /** How much stronger than what stands at the front its warships must be before it goes. */
 const WAR_ODDS = 1.5;
 
+/** Plight from which another civilization is desperate (plight.ts), and how many turns running it must have been so before it weighs a war for its life. */
+const DESPERATE = 0.6;
+const DESPERATE_FOR = 5;
+/** Only one bolder than this (its caution under it) goes to war for its life; the others plead. */
+const DESPERATE_BOLD = 0.4;
+/** Its plight eased below this, the desperate make peace. */
+const EASED = 0.4;
+/** What makes a neighbour worth a desperate's war: stores RICHER times its own, and at least RICH_MIN, and plight under CONTENT. */
+const RICHER = 3;
+const RICH_MIN = 100;
+const CONTENT = 0.3;
+/** Regard from which it counts another a friend, and does not fall on it. */
+const FRIEND = 20;
+/** The turns within which its nearest warships must reach the front: a war it cannot reach in time is no use to the desperate. */
+const REACH_TURNS = 5;
+/** The galaxy's free energy under which the desperate start no war: every taking spends some of it, and what is left is too little to spend. */
+const GFE_SPARE = 0.2;
+
+
 /**
- * Another civilization's wars (part 2c-2; the fuller judgement is 2d's). It fights only for the
- * plan's causes: the Hunger it has heard of in another, if it is not on that path itself (a just
- * cause, no infamy); or, far down that path itself (its own Taint from CORRUPT_AT), the weakest
- * it knows, to feed on. It arms first (Hunters against the Hunger, once it knows them; Wardens
- * otherwise), and goes when its warships are WAR_ODDS times what stands at the front: the enemy's
- * settlement nearest its capital. Attacked, it gathers its warships there, dug in. It makes peace
- * once a war it began has lasted WAR_TIRES turns, or its warships are gone.
+ * Another civilization's wars (parts 2c-2 and 2d). It fights for few causes:
+ * - the Hunger it has heard of in another, if it is not on that path itself (a just cause, no
+ *   infamy);
+ * - far down that path itself (its own Taint from CORRUPT_AT), the weakest it knows, to feed on;
+ * - desperate DESPERATE_FOR turns running, and bold (caution under DESPERATE_BOLD), the richest
+ *   neighbour within its reach, much better off than itself, not a friend and bound to it by no
+ *   pact (`worthWar`). It arms while it can, and goes only once its warships would carry all they
+ *   would meet there; it takes (never razes), carries off what its sieges drain, and makes peace
+ *   once it has taken a settlement or its plight has eased.
+ * For a cause it arms first (a Breacher against walls; Hunters against the Hunger, once it knows
+ * them; Wardens otherwise), and goes when its warships are WAR_ODDS times what stands at the
+ * front: the enemy's settlement nearest its capital. Attacked, it gathers its warships there, dug
+ * in. It makes peace once a war it began has lasted WAR_TIRES turns, or its warships are gone. An
+ * enemy that could strike with a Kinetic Lance makes it keep a Picket at its capital; far down the
+ * Hunger's path, it strikes with one itself. (A fleet of Pickets keeps its watch where it is.)
  */
 function planWarAI(state: GameState) {
   const civ = state.civ;
   if (civ.id === state.player) return;
   const me = civ.id;
-  const warships = fleets(state).filter((f) => f.ships.some((s) => isWarship(s.cls)));
-  for (const foe of enemiesOf(state, me)) {
+  // desperate since when, turn by turn
+  if (plight(state, me) >= DESPERATE) civ.flags.desperate_since ??= state.turn;
+  else delete civ.flags.desperate_since;
+  const line = lineOfBattle(state);
+  const foes = enemiesOf(state, me);
+  if (foes.some((o) => state.civs[o]?.techs.includes('relativistic_arks'))) keepWatch(state);
+  for (const foe of foes) {
     const w = warOf(state, me, foe)!;
     if (w.by !== me) {
       // attacked: to the front, dug in (a war we began on them is fought at their first star)
       const front = w.at ?? (foe === state.player ? state.survivors[me]?.homeSystemId : undefined);
-      for (const f of warships) {
+      for (const f of line) {
         if (f.to) continue;
         if (front && f.at !== front && colonies(state).some((c) => c.systemId === front)) orderFleet(state, f.id, front, 'move');
         else if (f.at === front) f.order = 'fortify';
       }
       continue;
     }
-    if (state.turn - w.since > WAR_TIRES || !warships.length) {
+    const done = w.motive === 'desperate' && ((w.took ?? 0) > 0 || plight(state, me) < EASED);
+    if (state.turn - w.since > WAR_TIRES || !line.length || done) {
       peaceBetween(state, me, foe);
       continue;
     }
-    for (const f of warships) if (w.at && f.at && f.at !== w.at && !f.to) orderFleet(state, f.id, w.at, 'move');
+    for (const f of line) if (w.at && f.at && f.at !== w.at && !f.to) orderFleet(state, f.id, w.at, 'move');
     // behind a Defence Grid or a Bastion Shell: only a Breacher breaks in
-    if (needsBreacher(state, foe, w.at, warships)) arm(state, 'breacher', true);
+    if (needsBreacher(state, foe, w.at, line)) arm(state, 'breacher', true);
+    if (civ.taint >= CORRUPT_AT) lanceAt(state, foe);
   }
-  if (enemiesOf(state, me).length) return;
-  const target = warTarget(state);
+  if (foes.length) return;
+  const target = warTarget(state, line);
   if (!target) return;
   const front = frontOf(state, target.id, me);
   if (!front) return;
-  civ.flags.arming = state.turn;
-  const force = warships.reduce((a, f) => a + fleetFire(f), 0);
-  if (force >= WAR_ODDS * Math.max(1, guardAt(state, front, target.id)) && civ.accord >= WAR_ACCORD) {
-    if (declareOn(state, me, target.id, target.cause, front) === null) for (const f of warships) if (f.at && !f.to) orderFleet(state, f.id, front, 'move');
+  const force = line.reduce((a, f) => a + fleetFire(f), 0);
+  // (the desperate have weighed their own odds, against all they would meet: worthWar)
+  const go = target.motive === 'desperate' ? !!target.ready : force >= WAR_ODDS * Math.max(1, guardAt(state, front, target.id));
+  if (go && civ.accord >= WAR_ACCORD) {
+    if (declareOn(state, me, target.id, target.cause, front, target.motive) === null) for (const f of line) if (f.at && !f.to) orderFleet(state, f.id, front, 'move');
     return;
   }
+  civ.flags.arming = state.turn;
   // arm: a Breacher first if the front is walled, then Hunters against the Hunger, or Wardens
-  if (needsBreacher(state, target.id, front, warships)) arm(state, 'breacher', true);
-  else if (warships.length < 6) arm(state, target.cause === HUNGER_CAUSE && hasTech(state, 'hunger_studies') ? 'hunter' : 'warden');
+  if (needsBreacher(state, target.id, front, line)) arm(state, 'breacher', true);
+  else if (line.length < 6) arm(state, target.cause === HUNGER_CAUSE && hasTech(state, 'hunger_studies') ? 'hunter' : 'warden');
+}
+
+/** A civilization's fleets that fight a war where it is fought: its warships, but not a fleet of Pickets alone, which keeps its watch where it is. */
+function lineOfBattle(state: GameState): Fleet[] {
+  return fleets(state).filter((f) => f.ships.some((s) => isWarship(s.cls)) && !f.ships.every((s) => s.cls === 'picket'));
+}
+
+/** A Picket at the capital, built if there is none and none is coming: its screen may turn a Kinetic Lance (or a raid) aside. */
+function keepWatch(state: GameState) {
+  const cap = capital(state);
+  if (!cap || !hasTech(state, 'orbital_defense')) return;
+  if (fleets(state).some((f) => f.ships.some((s) => s.cls === 'picket') && (f.at === cap.systemId || f.to === cap.systemId))) return;
+  arm(state, 'picket', true);
+}
+
+/** Far down the Hunger's path, at war: a Kinetic Lance built at the capital, and struck at the enemy's most peopled settlement. */
+function lanceAt(state: GameState, foe: string) {
+  if (!hasTech(state, 'relativistic_arks')) return;
+  const lances = fleets(state).filter((f) => f.ships.some((s) => SHIP_BY_ID[s.cls]?.lance));
+  if (!lances.length) {
+    if (!colonies(state).some((c) => c.queue.some((q) => q.key === 'lance'))) arm(state, 'lance', true);
+    return;
+  }
+  const target = allColonies(state)
+    .filter((c) => c.owner === foe)
+    .sort((a, b) => popsOf(b) - popsOf(a))[0];
+  if (!target) return;
+  const ready = lances.find((f) => f.at && f.order !== 'strike' && strikeBlocked(state, f.id, target.id) === null);
+  if (ready) launchStrike(state, ready.id, target.id);
 }
 
 /** Whether the enemy's settlement at the front is walled, a Breacher can be built, and none is on its way there or being built. */
@@ -160,15 +225,18 @@ function arm(state: GameState, cls: string, once = false) {
   queueBuild(state, cap.id, 'ship', cls);
 }
 
-/** Whom another civilization would go to war with, and why: the Hunger it has heard of in one, or, far down that path itself, the weakest it knows. */
-function warTarget(state: GameState): { id: string; cause?: string } | null {
+/**
+ * Whom another civilization would go to war with, and why: the Hunger it has heard of in one; far
+ * down that path itself, the weakest it knows; desperate and bold, the richest it can beat.
+ */
+function warTarget(state: GameState, line: Fleet[]): { id: string; cause?: string; motive: NonNullable<War['motive']>; ready?: boolean } | null {
   const civ = state.civ;
   const me = civ.id;
   const others = othersPlaying(state).filter((o) => o.id !== me).map((o) => o.id);
   if (civ.taint < SANCTION_AT) {
     // what it has heard of us is on our record of it; of the others, on its tie with each
-    if ((state.survivors[me]?.heardTaint ?? 0) >= JUST_CAUSE_AT) return { id: state.player, cause: HUNGER_CAUSE };
-    for (const o of others) if ((state.ties?.[tieKey(me, o)]?.taintHeard?.[me] ?? 0) >= JUST_CAUSE_AT) return { id: o, cause: HUNGER_CAUSE };
+    if ((state.survivors[me]?.heardTaint ?? 0) >= JUST_CAUSE_AT) return { id: state.player, cause: HUNGER_CAUSE, motive: 'hunger' };
+    for (const o of others) if ((state.ties?.[tieKey(me, o)]?.taintHeard?.[me] ?? 0) >= JUST_CAUSE_AT) return { id: o, cause: HUNGER_CAUSE, motive: 'hunger' };
   }
   if (civ.taint >= CORRUPT_AT) {
     const weakest = [...others, state.player]
@@ -176,9 +244,51 @@ function warTarget(state: GameState): { id: string; cause?: string } | null {
       .filter((x): x is { id: string; front: string } => !!x.front)
       .map((x) => ({ id: x.id, g: guardAt(state, x.front, x.id) }))
       .sort((a, b) => a.g - b.g)[0];
-    return weakest ? { id: weakest.id } : null;
+    return weakest ? { id: weakest.id, motive: 'corrupted' } : null;
+  }
+  const since = civ.flags.desperate_since;
+  if (since !== undefined && state.turn - since + 1 >= DESPERATE_FOR && temperament(state, me).caution < DESPERATE_BOLD) {
+    const force = line.reduce((a, f) => a + fleetFire(f), 0);
+    const pick = [...others, state.player]
+      .map((o) => ({ o, how: worthWar(state, me, o, force, line) }))
+      .filter((x) => x.how !== 'no')
+      .sort((a, b) => (state.civs[b.o]?.energy ?? 0) - (state.civs[a.o]?.energy ?? 0))[0];
+    if (pick) return { id: pick.o, motive: 'desperate', ready: pick.how === 'go' };
   }
   return null;
+}
+
+/**
+ * What a desperate civilization makes of another (`warTarget`): 'no' once the galaxy's free energy
+ * is down to GFE_SPARE (a taking spends it), and unless the other is much better off than itself (RICHER times its stores, and RICH_MIN, its plight under CONTENT), not a friend
+ * (regard under FRIEND), bound to it by no pact, and its front within REACH_TURNS of its capital
+ * or of a fleet of its warships;
+ * then 'go' once its warships outweigh WAR_ODDS times all they would meet there (what stands at the
+ * front, and every warship of theirs, which comes to it dug in when attacked) and one of them can
+ * be launched there from what it has; 'arm' until then.
+ */
+function worthWar(state: GameState, me: string, o: string, force: number, line: Fleet[]): 'no' | 'arm' | 'go' {
+  const civ = state.civs[me];
+  const them = state.civs[o];
+  if (!civ || !them || them.outcome || state.gfe < GFE_SPARE) return 'no';
+  if (them.energy < Math.max(RICH_MIN, RICHER * civ.energy) || plight(state, o) >= CONTENT) return 'no';
+  const sv = state.survivors[me];
+  if (o === state.player && !sv?.contact) return 'no';
+  const t = o === state.player ? undefined : state.ties?.[tieKey(me, o)];
+  const regard = o === state.player ? (sv?.disposition ?? 0) : (t?.regard?.[me] ?? 0);
+  const pacts = o === state.player ? sv?.pacts : t?.pacts;
+  if (regard >= FRIEND || (pacts && Object.keys(pacts).length > 0)) return 'no';
+  const front = frontOf(state, o, me);
+  const cap = capital(state);
+  if (!front || !cap) return 'no';
+  const there = state.systems[front];
+  const mods = computeMods(state);
+  const from = [cap.systemId, ...line.map((f) => f.at).filter((x): x is string => !!x)];
+  if (!from.some((id) => id === front || travelEstimate(state, distLy(state.systems[id], there), mods).turns <= REACH_TURNS)) return 'no';
+  const coming = allFleets(state).filter((f) => f.owner === o && f.at !== front).reduce((a, f) => a + fleetFire(f), 0);
+  if (force < WAR_ODDS * Math.max(1, guardAt(state, front, o) + coming * FORTIFY_BONUS)) return 'arm';
+  const launched = line.some((f) => f.at && (f.at === front || launchCost(state, f, distLy(state.systems[f.at], there), mods) <= civ.energy));
+  return launched ? 'go' : 'arm';
 }
 
 /** How much of what a turn gains before upkeep idle warships may cost before they are stood down. */
@@ -674,7 +784,9 @@ function planDefence(state: GameState) {
   const civ = state.civ;
   if (civ.id !== state.player) return;
   const cap = civ.capitalId ? state.colonies[civ.capitalId] : colonies(state)[0];
-  const warships = fleets(state).filter((f) => f.ships.some((x) => isWarship(x.cls)));
+  const warships = lineOfBattle(state);
+  // an enemy that could strike with a Kinetic Lance: a Picket kept at the capital (as the others do)
+  if (Object.values(state.survivors).some((sv) => sv.alive && sv.war && state.civs[sv.id]?.techs.includes('relativistic_arks'))) keepWatch(state);
   for (const sv of Object.values(state.survivors)) {
     if (!sv.alive || !sv.war?.by || sv.war.by === civ.id || !sv.war.at) continue;
     const front = sv.war.at;

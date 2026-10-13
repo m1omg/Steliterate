@@ -15,7 +15,7 @@ import { allColonies, allFleets, capital, clamp, fleets, log, marks } from './ut
 import { isWarship } from '../data/ships';
 import { send } from '../civs';
 import { JUST_CAUSE_AT } from './judge';
-import { assaultBlocked, frontOf } from './conflict';
+import { assaultBlocked, frontOf, plunder } from './conflict';
 
 /** Accord the Threads' consent to a war costs. */
 export const WAR_ACCORD = 60;
@@ -166,9 +166,13 @@ export function warTurn(state: GameState, chance: () => number) {
     // a civilization of its own holds its first star while its warships are there
     if (real && allFleets(state).some((f) => f.owner === sv.id && f.at === at && f.ships.some((s) => isWarship(s.cls)))) continue;
     sv.war!.siege++;
-    // a blockade: the stores of a civilization of its own run down, and its will with them
-    if (state.civs[sv.id]) send(state, sv.id, { energy: -Math.round(BLOCKADE * 400), resolve: -1 });
-    else sv.health = Math.max(0, sv.health - BLOCKADE);
+    // a blockade: the stores of a civilization of its own run down, and its will with them, and we
+    // carry off what it drains (conflict.ts, plunder)
+    if (state.civs[sv.id]) {
+      const take = plunder(state, sv.id);
+      send(state, sv.id, { energy: -take, resolve: -1 });
+      civ.energy += take;
+    } else sv.health = Math.max(0, sv.health - BLOCKADE);
     // their guns answer ours (a civilization of its own fights with what it has: battlesTurn)
     if (real) {
       state.battles.push({ systemId: at, turn: state.turn, text: `The siege of ${sv.name}, turn ${sv.war!.siege}.` });

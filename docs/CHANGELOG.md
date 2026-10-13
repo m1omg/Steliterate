@@ -2472,3 +2472,53 @@ speed of light, judged as it arrives.
   or the others': no one hears of 60 Taint in a neighbour, and no one reaches it (part 2b: none
   past 45). The war is checked by `unit/civ-war` (2c-2) and `unit/conquest` (2c-3, new), and the
   desperate's wars come with part 2d.
+
+## The AI's judgement in war (13 Oct, part 2d)
+
+- **The desperate's war.** Another civilization desperate five turns running (plight from 0.6) and
+  bold (caution under 0.4) looks to the richest neighbour within its reach, us included once we
+  have met. The target must:
+  - hold at least three times its stores, and 100;
+  - be desperate itself not at all (plight under 0.3);
+  - not be a friend (regard under 20), and be bound to it by no pact;
+  - have a front within five turns of its capital or of a fleet of its warships;
+  - and the galaxy's free energy must not be down to a fifth: a taking spends it, and what is left
+    is too little to spend.
+
+  It goes only once its warships outweigh half again all they would meet there: what stands at the
+  front, and every warship of the target's elsewhere, counted dug in, since a defender gathers
+  them there. One of its fleets must also be able to pay the launch. Until then it arms (Wardens,
+  while it has the energy and the knowledge). It goes without a cause, so with infamy, and says
+  why ("We are dying, and you have what we need."). It takes and never razes, and makes peace once
+  it has taken a settlement or its plight has eased below 0.4. One that is not bold pleads, as
+  before.
+- **Why so strict** (followed turn by turn in 60 games): with only the first conditions, wars came
+  in 15 of 60 games and were empty. 12 of 15 attackers could not pay their fleet's launch to the
+  front, and those that came brought one warship against a defender that dug in at home, and lost
+  it.
+- **A siege carries off what its blockade drains**, for everyone (ours too): the 12 energy a turn
+  the besieged lose goes to the besiegers, as much of it as the besieged have.
+- **Against the Kinetic Lance:** while an enemy knows Relativistic Arks, a civilization keeps a
+  Picket at its capital (our autoplayer too). A fleet of Pickets alone keeps its watch where it is,
+  and is never sent to a front.
+- **The corrupted strike** (60 Taint of their own, at war): a Kinetic Lance built at the capital,
+  then launched at the enemy's most peopled settlement.
+- **Each war's motive** is on the war and in the harness: `*hcd`, one letter for each war begun
+  (h: the Hunger in another; c: its own corruption; d: desperation), and `^N` for Lances launched.
+- **Census first** (40 games): the others are desperate in 15% of their turns, about 4.5 spells a
+  civilization a game.
+- **Check:** `unit/desperate-war` (new): the bold and the cautious, desperate since this turn only,
+  a friend, a front out of reach, the galaxy's free energy too low, arming when too weak, plunder,
+  peace on taking and on easing, the Picket at home, the corrupted's Lance.
+- **The numbers** (900 games):
+  - our survival: 407 survive and 151 win, a Degenerate Age of 75 turns (409, 152 and 75 after
+    2c), within the noise; 863 of 900 games play out as before;
+  - by fate: decay 175 of 450, stable 138 of 239, curvature 94 of 211;
+  - wars: one in 6 games of 900, every one begun by the desperate (gardens 3, the Chorus, the
+    sleepers and the uploaded 1 each). Settlements were taken in 3, and one civilization was
+    conquered.
+- **End Turn on a slowed CPU** after part 2 (`tools/turn-timing.cjs`: CPU four times slower, 40
+  turns of seed 8919): the turn's own work 31 ms at the median and 72 at worst; the longest it
+  runs without the browser getting its turn, 14 ms at the median and 34 at worst (16 and 34 after
+  2a-6). From the click to the next frame, about 1 s at the median, as before: drawing the map in
+  software here.
