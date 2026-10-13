@@ -9,7 +9,8 @@ import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, S
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
 import { flowing } from '../game/sim/flow';
-import { allColonies, colonies, fleets, ownColony } from '../game/sim/util';
+import { allColonies, colonies, coloniesOf, fleets, ownColony } from '../game/sim/util';
+import { settlementSeen } from '../game/sim/others';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -121,13 +122,14 @@ export class SystemView {
     const colonized = new Set(colonies(state).filter((c) => c.systemId === sys.id).map((c) => c.bodyId));
     // until a probe has surveyed it, a system is only its star: the worlds are not charted yet
     const surveyed = state.civ.known[sys.id] === 2 || colonized.size > 0;
-    // other civilizations living here, on the world their way of life calls for
+    // other civilizations living here: a civilization of its own in every settlement of its whose
+    // light has reached us, one simulated lightly on the world its way of life calls for
     const residents = new Map<string, Survivor>();
     if (surveyed) {
       for (const v of Object.values(state.survivors)) {
         if (!v.alive || !v.systems.includes(sys.id) || (v.homeSystemId !== sys.id && !seenThere(state, v, sys.id))) continue;
-        const w = survivorWorld(state, v, sys.id);
-        if (w) residents.set(w.id, v);
+        const worlds = state.civs[v.id] ? coloniesOf(state, v.id).filter((c) => c.systemId === sys.id && settlementSeen(state, c)).map((c) => state.bodies[c.bodyId]) : [survivorWorld(state, v, sys.id)];
+        for (const w of worlds) if (w) residents.set(w.id, v);
       }
     }
     for (const bid of surveyed ? sys.bodies : []) {

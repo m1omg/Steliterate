@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { heardTies } from '../../game/sim/ties';
+import { asSeen } from '../../game/sim/others';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace, proposeAPact, seize, sendAid, shutHaloSiphons } from '../../game/sim/actions';
@@ -231,12 +232,14 @@ export function SignalsModal({ s }: { s: GameState }) {
                 {sv.contact ? (
                   <>
                     <div class="drawer-plate" style={{ backgroundImage: `url(art/${wayArt(sv.way)}.webp)` }} role="img" aria-label={`${sv.name}: ${WAY_NAME[sv.way]}`} />
-                    <div class="dim" style={{ fontSize: '13.5px' }}>{sv.adjective}, {WAY_NAME[sv.way]}. {formatDistance(ly)} away.</div>
+                    <div class="dim" style={{ fontSize: '13.5px' }}>
+                      {sv.adjective}, {WAY_NAME[sv.way]}. {formatDistance(ly)} away{s.civs[sv.id] && ly > 0 ? `: we see them as they were ${formatYears(ly)} ago` : ''}.
+                    </div>
                     {sv.alive ? (
                       <>
                         <dl class="kv">
                           <dt>People</dt>
-                          <dd class="mono">{n0(sv.pop)}</dd>
+                          <dd class="mono">{n0(asSeen(s, sv).pop)}</dd>
                           <dt data-tip="How they feel about us, and why: what they remember of what we did and what they heard of us, each when its light reached them.">Toward us</dt>
                           <dd class={`mono ${sv.disposition < -20 ? 'bad' : sv.disposition > 20 ? 'good' : ''}`} data-tip={regardTip(s, sv)}>
                             {sv.disposition > 20 ? 'friendly' : sv.disposition < -20 ? 'hostile' : 'wary'} ({n0(sv.disposition)})
@@ -251,7 +254,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                           )}
                           {starsSeen(s, sv).length > 1 && (
                             <>
-                              <dt data-tip="The stars we can see they live at. Their settlers cross at a fiftieth of the speed of light, and we see a new star of theirs when the light of it reaches us. Each one slows their decline.">Stars</dt>
+                              <dt data-tip={s.civs[sv.id] ? 'The stars we can see they live at: we see a new star of theirs when the light of it reaches us.' : 'The stars we can see they live at. Their settlers cross at a fiftieth of the speed of light, and we see a new star of theirs when the light of it reaches us. Each one slows their decline.'}>Stars</dt>
                               <dd class="mono">{starsSeen(s, sv).length}</dd>
                             </>
                           )}

@@ -238,6 +238,7 @@ export function createColony(state: GameState, b: Body, pops: Partial<Record<Thr
     systemId: b.systemId,
     name: b.name,
     founded: state.turn,
+    foundedAt: state.years,
     pops: Object.fromEntries(THREADS.map((t) => [t, pops[t] ?? 0])) as Record<ThreadId, number>,
     growth: Object.fromEntries(THREADS.map((t) => [t, 0])) as Record<ThreadId, number>,
     cryo: 0,

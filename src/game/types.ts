@@ -193,6 +193,8 @@ export interface Colony {
   systemId: string;
   name: string;
   founded: number;
+  /** The cosmic year it was founded: another civilization's is seen when that light reaches us (absent in older saves). */
+  foundedAt?: number;
   pops: Record<ThreadId, number>;
   growth: Record<ThreadId, number>;
   cryo: number; // Kin in Cold Sleep
@@ -343,6 +345,11 @@ export interface Survivor {
    * against the Hunger. (Until part 2a-3 these were the player's flags, named by their id.)
    */
   marks?: Record<string, number>;
+  /**
+   * A civilization of its own as its light has left it, a turn at a time (cosmic year, people on
+   * the old scale, health), so that we see it as it was when that light set out (others.ts, asSeen).
+   */
+  seen?: { at: number; pop: number; health: number }[];
 }
 
 /** Mutual Aid, Shared Watch, Open Archives. */

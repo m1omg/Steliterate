@@ -7,23 +7,26 @@
 //   game whose neighbours sleep (civsAsleep), and the main random stream is where it was; a seed's
 //   neighbours begin the same every time.
 // - It plays every turn, at our pace, and we know it by its civilization: its people, health and
-//   stars read from it (syncSurvivor).
+//   stars read from it (syncSurvivor), and see it as its light left it: its people as they were,
+//   a new settlement of its only when the light of its founding reaches us.
 // - What passes between us is real, through the outbox: refugees leave its settlements, a trade
 //   pays it what we pay, a shared work feeds it as it feeds us (by its star's light).
 // - Its story and its game end together: one whose game ends is gone to us, its settlements empty.
 import { STRUCTURE_BY_ID } from '../../../src/game/data/structures';
+import { asSeen, settlementSeen } from '../../../src/game/sim/others';
+import { createColony } from '../../../src/game/sim/fleets';
 import { asCiv, flushOutbox, send } from '../../../src/game/civs';
 import { newGame } from '../../../src/game/newGame';
 import { project } from '../../../src/game/sim/projection';
 import { endTurn } from '../../../src/game/sim/turn';
-import { coloniesOf, marks } from '../../../src/game/sim/util';
+import { coloniesOf, distLy, marks } from '../../../src/game/sim/util';
 import { copyState } from '../../../src/game/save';
 import { livedShare } from '../../../src/game/sim/flare';
 import { ARCHIVE_SHARE, NOTES_EVERY, pactsTurn } from '../../../src/game/sim/pacts';
 import { availableTechs } from '../../../src/game/sim/research';
 import { sourceLight } from '../../../src/game/physics';
 import { sendSignal } from '../../../src/game/sim/signals';
-import { jointYield, resolveSurvivorSignal } from '../../../src/game/sim/survivors';
+import { distanceToThem, jointYield, resolveSurvivorSignal } from '../../../src/game/sim/survivors';
 import { autoPlay } from '../../../src/game/auto';
 import type { Colony, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
@@ -149,6 +152,20 @@ check(ways.size >= 4, `(the ways seen: ${[...ways].sort().join(', ')})`);
     check(want > 0 && Math.abs(got - want) < 1e-6, `a shared work we built together feeds them too: ${got.toFixed(2)} energy more a turn (its field gathers their star’s light: 6 under a full red sun)`);
   }
 
+  // we see them as their light left them: their people as they were, their new settlements once that light arrives
+  {
+    const sv = s.survivors[ids[2]];
+    const seen = asSeen(s, sv);
+    const first = sv.seen?.[0];
+    check(!!first && seen.pop === first.pop && (sv.seen!.length === 1 || s.years < sv.seen![1].at + distanceToThem(s, sv) + 1e-6), `we see ${sv.name} as its light left it (${Math.round(seen.pop)} then, ${Math.round(sv.pop)} now; ${sv.seen?.length} turns of its light still on the way)`);
+    const g = copyState(s);
+    const b = Object.values(g.bodies).find((x) => !x.colonyId && !x.dissolved && x.kind !== 'deep' && x.systemId !== g.civs[g.player].homeSystemId)!;
+    const c = asCiv(g, sv.id, () => createColony(g, b, { kin: 1 }));
+    const ly = distLy(g.systems[g.colonies[g.civs[g.player].capitalId!].systemId], g.systems[b.systemId]);
+    const unseen = !settlementSeen(g, c);
+    g.years = (c.foundedAt ?? 0) + ly + 1;
+    check(ly > 0 && unseen && settlementSeen(g, c), `a new settlement of theirs is seen only when its light reaches us (${Math.round(ly)} years)`);
+  }
   // a shared work's field gathers its star's light: under a dark star, almost nothing
   {
     const g = copyState(s);

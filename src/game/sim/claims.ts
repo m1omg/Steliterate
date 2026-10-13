@@ -8,6 +8,7 @@
 // warships, and remember whether we came.
 
 import type { Body, GameState, StarSystem, Survivor, SurvivorWay } from '../types';
+import { settlementSeen } from './others';
 import { livingWorlds } from './fleets';
 import { residentsOf } from './homes';
 import { sendSignal } from './signals';
@@ -200,5 +201,8 @@ export function foughtFor(state: GameState, systemId: string, broke: boolean) {
 /** The civilization we can see living on this world: at its first star, or where the light of its arrival has reached us. */
 export function residentsSeen(state: GameState, b: Body): Survivor | null {
   const sv = residentsOf(state, b);
+  // (a settlement of a civilization of its own, once its founding's light has reached us)
+  const c = b.colonyId ? state.colonies[b.colonyId] : undefined;
+  if (sv && c && c.owner === sv.id && !settlementSeen(state, c)) return null;
   return sv && (sv.homeSystemId === b.systemId || seenThere(state, sv, b.systemId)) ? sv : null;
 }

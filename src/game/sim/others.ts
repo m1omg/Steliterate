@@ -14,7 +14,7 @@ import { createColony, newFleet } from './fleets';
 import { ROCKY, survivorWorld } from './homes';
 import { computeMods } from './mods';
 import { project } from './projection';
-import { clamp, coloniesOf } from './util';
+import { clamp, coloniesOf, distLy } from './util';
 
 /** What a way of life already knows how to do (and whatever its first structures need, foundCiv). */
 const WAY_TECHS: Record<SurvivorWay, string[]> = {
@@ -212,6 +212,32 @@ export function syncSurvivor(state: GameState, sv: Survivor): void {
     sv.systems = stars;
     sv.homeSystemId = capSys ?? stars[0];
   }
+  // what its light shows us, a turn at a time, each kept until a later one has reached us
+  const seen = (sv.seen ??= []);
+  seen.push({ at: state.years, pop: sv.pop, health: sv.health });
+  const ly = lightYearsToUs(state, sv.homeSystemId);
+  while (seen.length > 1 && (!isFinite(state.years) || state.years >= seen[1].at + ly)) seen.shift();
+}
+
+/** Light-years from a star to our capital (or our first star). */
+function lightYearsToUs(state: GameState, systemId: string): number {
+  const me = state.civs[state.player];
+  const cap = me.capitalId ? state.colonies[me.capitalId] : undefined;
+  const here = state.systems[cap?.systemId ?? me.homeSystemId];
+  const there = state.systems[systemId];
+  return here && there ? distLy(here, there) : 0;
+}
+
+/** A neighbour as we see it: a civilization of its own as its light left it (syncSurvivor), one simulated lightly as it is. */
+export function asSeen(state: GameState, sv: Survivor): { pop: number; health: number } {
+  const first = civOf(state, sv) ? sv.seen?.[0] : undefined;
+  return first ?? { pop: sv.pop, health: sv.health };
+}
+
+/** Whether we see another civilization's settlement: its founding's light has reached our capital. */
+export function settlementSeen(state: GameState, c: Colony): boolean {
+  if (c.owner === state.player) return true;
+  return c.foundedAt === undefined || !isFinite(state.years) || state.years >= c.foundedAt + lightYearsToUs(state, c.systemId);
 }
 
 /**
