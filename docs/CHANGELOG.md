@@ -2708,7 +2708,10 @@ The last decades of ordinary matter now thin what is still made of it.
   Decay's report) and drifts to the nearest black hole with spin left, with a harvester for its
   spin, as the Migration takes the rest at the end; what made the Passage drifts whole. Before, it
   stood on its dissolved world, its mines still working, until η 39. (Tried in 3-1 without the
-  drift, stranded with nothing to draw on: 15 decay survivals of 450 lost.)
+  drift, stranded with nothing to draw on: 15 decay survivals of 450 lost.) It joins a vault of
+  ours there only of its own form: first built, a passed settlement merged into one of ours still
+  made of matter in a hole's Deep, which kept nothing of it at the Great Decay (one game lost 107
+  minds that way; 900 games lost 25 victories of 219).
 - **The forecasts** name what of ours is still made of matter, with nothing to go on, or around
   what will (Leptonic Substrate, a Bastion Shell), before the Thinning and during it, with the
   share gone.

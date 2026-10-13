@@ -53,8 +53,14 @@ function driftToHole(state: GameState, c: Colony, holes: StarSystem[]): { moved:
   const atHole = here.primary.kind === 'black_hole' || here.primary.kind === 'smbh';
   // a vault already at a hole stays there, but a planet it stood on has dissolved: into the Deep
   if (!holes.length || (atHole && state.bodies[c.bodyId]?.kind === 'deep')) return { moved: false, at: c };
-  const near = holes.slice().sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z));
-  const target = atHole ? here : (near.find((h) => h.primary.spin >= SPENT_SPIN) ?? near[0]);
+  // it joins a vault of ours only of its own form (one still of matter would keep nothing of it at the end)
+  const fits = (h: StarSystem) => {
+    const host = ourDeepAt(state, h, c.owner);
+    return !host || formOf(host) === formOf(c);
+  };
+  const near = holes.filter(fits).sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z));
+  const target = atHole && fits(here) ? here : (near.find((h) => h.primary.spin >= SPENT_SPIN) ?? near[0]);
+  if (!target) return { moved: false, at: c };
   // its own civilization's vault at the hole, beside any other's
   const deep = deepFor(state, target, c.owner) ?? state.bodies[target.bodies[0]];
   const oldBody = state.bodies[c.bodyId];
@@ -74,6 +80,16 @@ function driftToHole(state: GameState, c: Colony, holes: StarSystem[]): { moved:
   deep.colonyId = c.id;
   state.civ.known[target.id] = 2;
   return { moved: true, at: c };
+}
+
+/** Our own settlement in a Deep of this system, if there is one (without making a Deep for us, as `deepFor` would). */
+function ourDeepAt(state: GameState, sys: StarSystem, owner: string): Colony | undefined {
+  for (const id of sys.bodies) {
+    const b = state.bodies[id];
+    const c = b?.kind === 'deep' && !b.dissolved && b.colonyId ? state.colonies[b.colonyId] : undefined;
+    if (c && c.owner === owner) return c;
+  }
+  return undefined;
 }
 
 /** The migrants bring what they know how to build: a harvester for the hole's spin. */

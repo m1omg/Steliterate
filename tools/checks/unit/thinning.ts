@@ -8,7 +8,7 @@
 // - What mines and skimmers bring in falls with the matter left.
 // - A system dissolving before the Great Decay: what was re-encoded there goes on as leptonic at
 //   once and drifts to the nearest black hole with spin left, its losses counted once for the
-//   report; what made the Passage drifts whole.
+//   report; what made the Passage drifts whole; it joins a vault of ours there only of its own form.
 // - The forecasts name what of ours is still made of matter.
 import { asCiv } from '../../../src/game/civs';
 import { newGame } from '../../../src/game/newGame';
@@ -133,6 +133,32 @@ function town(s: GameState, not: string[] = []): Colony {
   check(!s.colonies[ids.bare], 'the settlement with nothing to go on is gone');
   check((s.civ.flags.decay_lost ?? 0) - d0 === 3 + 2 + 1 + 5, `each loss counted once for the Great Decay's report: 3 Kin, 2 sleepers, half the Lattice and the 5 Kin of the bare one (${(s.civ.flags.decay_lost ?? 0) - d0})`);
   check(said(s, /has dissolved\. What was re-encoded at .* goes on as leptonic, its Kin and the rest of what was matter lost, and drifts to .*, a black hole with spin to give\./), 'and the Record says so');
+}
+
+// it joins a vault of ours only of its own form: one still of matter would keep nothing of it at the end
+{
+  const s = game('decays');
+  at(s, 38);
+  const passed = town(s);
+  passed.pops = pops({ echoes: 6 });
+  passed.form = 'leptonic';
+  passed.structures = { reserve_vault: 2, substrate_core: 2 };
+  s.civ.capitalId = passed.id;
+  const here = s.systems[passed.systemId];
+  const holes = Object.values(s.systems).filter((x) => ['black_hole', 'smbh'].includes(x.primary.kind) && !x.gone && x.primary.spin >= 20);
+  const far = (h: (typeof holes)[number]) => Math.hypot(h.phys.x - here.phys.x, h.phys.y - here.phys.y, h.phys.z - here.phys.z);
+  const nearest = holes.slice().sort((x, y) => far(x) - far(y))[0];
+  // our settlement still of matter in that hole's Deep
+  const deep = s.bodies[nearest.bodies.find((id) => s.bodies[id]?.kind === 'deep')!];
+  const old = createColony(s, deep, {});
+  old.pops = pops({ kin: 2 });
+  old.structures = { habitat_dome: 1 };
+  const sys = s.systems[passed.systemId];
+  sys.primary.kind = 'void';
+  for (const id of sys.bodies) if (s.bodies[id] && s.bodies[id].kind !== 'deep') s.bodies[id].dissolved = true;
+  asCiv(s, s.player, () => handleNotes(s, [{ systemId: sys.id, kind: 'dissolved' }]));
+  const moved = s.colonies[passed.id];
+  check(!!moved && formOf(moved) === 'leptonic' && moved.systemId !== nearest.id && old.pops.echoes === 0 && (old.structures.reserve_vault ?? 0) === 0, `a passed settlement does not join ours of matter at ${nearest.name}: it drifts on to ${s.systems[moved?.systemId ?? '']?.name}`);
 }
 
 // the forecasts name what of ours is still made of matter
