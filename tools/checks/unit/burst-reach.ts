@@ -56,8 +56,9 @@ const farBound = place(worlds(far)[0], 1, false);
 const castDeep = place(deepOf(cast), 2);
 check(inItsSystem(s, inDeep) && inItsSystem(s, onBound) && !inItsSystem(s, onLoose), 'in its Deep or on a world it holds a settlement is in its system; on a world flung loose it is not');
 
-const lines: CrossingReport['lines'] = [];
-const caught = burstNeutronStars(s, lines);
+const reports: Record<string, CrossingReport['lines']> = { us: [] };
+const caught = burstNeutronStars(s, reports).us;
+const lines = reports.us;
 const text = lines.map((l) => l.text).join(' ');
 console.log(`  ${text}`);
 check(!s.colonies[inDeep.id] && !s.colonies[onBound.id], 'the settlements in its Deep and on the world it held are lost');

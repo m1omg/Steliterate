@@ -2,7 +2,7 @@ import { aroundTheStar, type StructureDef } from '../data/structures';
 import { ERA_BY_ID } from '../eras';
 import { fateKnown } from '../fate';
 import { Rng, hashSeed } from '../rng';
-import type { Body, Colony, EraId, Fleet, GameState, LogEntry, StarSystem, ThreadId } from '../types';
+import type { Body, Civ, Colony, EraId, Fleet, GameState, LogEntry, StarSystem, ThreadId } from '../types';
 import { THREADS } from '../types';
 
 export function uid(state: GameState, prefix = 'u'): string {
@@ -76,9 +76,15 @@ export function savableName(name: string): string {
   return name === '__inf' || name === '__-inf' ? name.slice(1) : name;
 }
 
+/** A line in the Record of the civilization whose turn or view it is. */
 export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string) {
-  state.civ.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}) });
-  if (state.civ.log.length > 400) state.civ.log.splice(0, state.civ.log.length - 400);
+  logTo(state, state.civ, text, kind, systemId, fleet);
+}
+
+/** A line in one civilization's Record (the universe's part of a turn tells each its own). */
+export function logTo(state: GameState, civ: Civ, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string) {
+  civ.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}) });
+  if (civ.log.length > 400) civ.log.splice(0, civ.log.length - 400);
 }
 
 export function eraIndex(era: EraId): number {
