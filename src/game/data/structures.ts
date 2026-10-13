@@ -241,7 +241,7 @@ export function structureLabel(id: string, sys?: StarSystem | null, form?: Colon
   const def = STRUCTURE_BY_ID[id];
   if (!def) return { name: id, desc: '' };
   // in leptonic form, its own name where it has one (an Energy Vault is a Field Store)
-  if (form === 'leptonic' && def.leptonic?.name) return { name: def.leptonic.name, desc: def.leptonic.desc ?? def.desc };
+  if ((form === 'leptonic' || form === 'horizon') && def.leptonic?.name) return { name: def.leptonic.name, desc: def.leptonic.desc ?? def.desc };
   const local = sys ? LOCAL_NAMES[id]?.[lightSourceOf(sys)] : undefined;
   return local ? { name: local[0], desc: local[1] } : { name: def.name, desc: def.desc };
 }

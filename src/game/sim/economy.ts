@@ -1,5 +1,5 @@
 import { STRUCTURE_BY_ID, type StructureDef } from '../data/structures';
-import { FORMS } from '../data/forms';
+import { FORMS, HORIZON_PACE, HORIZON_UPKEEP, horizonRoom } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
 import { frozenHard, hawkingLight, insolation, siphonsRunning, sourceLight } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
@@ -58,7 +58,12 @@ export function capacity(state: GameState, c: Colony, mods: Mods): Capacity {
   }
   // what it is made of decides who can live there at all (a leptonic settlement has no room for Kin)
   const form = FORMS[formOf(c)];
-  for (const t of THREADS) if (!form.lives.includes(t)) cap[t] = 0;
+  // (written into a hole's horizon, the room is the horizon's, by the hole's mass)
+  const horizon = form.id === 'horizon' ? horizonRoom(state.systems[c.systemId].primary) : 0;
+  for (const t of THREADS) {
+    if (!form.lives.includes(t)) cap[t] = 0;
+    else cap[t] += horizon;
+  }
   if (!form.sleepers) cap.cryo = 0;
   return cap;
 }
@@ -134,19 +139,22 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   const slowTime = Math.max(1, pf);
   // after matter, what the Lattice mended with matter it mends with energy
   const noMatter = matterGone(state);
+  // written into a hole's horizon, minds live in its time: a tenth of their upkeep, a quarter of
+  // their pace, and no tempo strain (horizon.ts)
+  const inHorizon = formOf(c) === 'horizon';
   for (const t of THREADS) {
     const n = c.pops[t];
-    const s = strainFor(t, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor));
+    const s = inHorizon ? { clock: ctx.logL, m: 0, outMul: 1, upkeepMul: 1 } : strainFor(t, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor));
     strain[t] = s;
     if (n <= 0) continue;
     const d = THREAD_DEFS[t];
-    let o = s.outMul * out;
+    let o = s.outMul * out * (inHorizon ? HORIZON_PACE : 1);
     if (t === 'lattice' && flags.has('charter:lattice_compact')) o *= 1.15;
     const ind = n * d.industry * o;
     const ins = n * d.insight * o;
     const acc = n * d.accord * o;
-    let eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1);
-    let mUp = n * d.matterUpkeep * upkeepScale;
+    let eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1) * (inHorizon ? HORIZON_UPKEEP : 1);
+    let mUp = n * d.matterUpkeep * upkeepScale * (inHorizon ? HORIZON_UPKEEP : 1);
     const mended = noMatter && mUp > 0;
     if (mended) {
       eUp += mUp * MATTER_AS_ENERGY;
@@ -157,7 +165,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     accord += acc;
     energyUpkeep += eUp;
     matterUpkeep += mUp;
-    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}${mended ? ' (repairs in energy: no matter is left)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
+    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}${mended ? ' (repairs in energy: no matter is left)' : ''}${inHorizon ? ' (in the horizon: a tenth of the upkeep, a quarter of the pace)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
   }
   if (c.cryo > 0) {
     const cu = c.cryo * 0.08 * (flags.has('charter:cold_sleep_lottery') ? 0.5 : 1) * slowTime;
@@ -302,10 +310,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     }
   }
 
-  // the Passage: while the settlement is being rewritten it makes less (its industry goes into the rewriting)
-  if (c.queue[0]?.kind === 'passage') {
+  // the Passage, or the writing into a horizon: while the settlement is being rewritten it makes
+  // less (its industry goes into the rewriting)
+  if (c.queue[0]?.kind === 'passage' || c.queue[0]?.kind === 'horizon') {
     const cut = 1 - PASSAGE_OUTPUT;
-    lines.push({ label: 'The Passage: being rewritten', energy: -energy * cut, matter: -matter * cut, insight: -insight * cut, accord: -accord * cut });
+    lines.push({ label: c.queue[0].kind === 'passage' ? 'The Passage: being rewritten' : 'Writing into the horizon: being rewritten', energy: -energy * cut, matter: -matter * cut, insight: -insight * cut, accord: -accord * cut });
     energy *= PASSAGE_OUTPUT;
     matter *= PASSAGE_OUTPUT;
     insight *= PASSAGE_OUTPUT;

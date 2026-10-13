@@ -55,7 +55,7 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   const onlyKin = (d.cap && Object.keys(d.cap).every((t) => !form.lives.includes(t as ThreadId))) || (d.cryoCap && !form.sleepers) || (d.enables === 'upload' && !form.lives.includes('kin'));
   if (onlyKin) return `Kin are made of matter: a ${form.name.toLowerCase()} settlement has no room for them.`;
   // and a leptonic settlement builds only what has a leptonic form (passage.ts)
-  if (formOf(c) === 'leptonic' && !inLeptonicForm(d)) return 'Made of matter: a leptonic settlement cannot build it.';
+  if (formOf(c) !== 'baryonic' && !inLeptonicForm(d)) return `Made of matter: a ${formOf(c)} settlement cannot build it.`;
   if (d.terraform) {
     const why = terraformBlocked(state, b, c, d.terraform);
     if (why) return why;

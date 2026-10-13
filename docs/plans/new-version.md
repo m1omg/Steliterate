@@ -734,6 +734,60 @@ Each step validated on its own, with the harness by fate:
    pace and the hole will outlive it; leaves it as above.
 4. **Checks:** `unit/horizon-form`; the harness by fate.
 
+**As built** (13 Oct), where it differs:
+- The drift goes to the hole with the most spin to give (100 at least) that will not evaporate
+  within 5 decades, the nearest of equals, for 5 energy a structure (at least 10), once a turn:
+  after matter any hole is a turn away, and the first try (the nearest with spin) had vaults
+  hopping between small holes they drained in a turn or two. A settlement that made the Passage
+  on a world can drift too: what is leptonic gathers energy only at a hole.
+- Its hole evaporating, a horizon settlement is written back out and drifts to the hole above,
+  joining our vault there whatever its room; if no hole will take it, it stays, leptonic, where its
+  hole was, rather than being lost: the Codex has what falls in come back out in the radiation.
+- Room in the horizon: 6, and 6 more for each decade of the hole's mass in Suns, for each Thread
+  the form houses. The writing costs 40 industry and 4 a mind, 5 energy a structure. Horizon
+  Writing: 900 insight, after Horizon Cognition.
+- The autoplayer counts the turns left in the Black Hole Age at our pace against its reserve and
+  net, and writes in only at a hole with ten decades or more to go.
+
+### 3-5, as it will be built (13 Oct, written before starting it)
+
+1. **The window:** positronium forms at η 85 where protons decayed or space unmade matter, and
+   decays at η 141 (Page & McKee's reference case). That is 14 Black Hole Age turns and 5 Dark Era
+   turns at the Tide; at a pace ten times slower 8 and 4, the last Dark Era turn jumping from
+   η 139.5 to 192, so every countdown counts turns at our pace.
+2. **Positronium Weaving** (a Black Hole Age tech of the mind, speculative, after Horizon
+   Cognition): a leptonic settlement is woven through the positronium as a project in its queue
+   (industry and a few for each mind, energy for each structure, 70% of its yields while worked),
+   inside the window only. A tech rather than the event's choice (the plan said "gains the choice
+   that opens the form"): an answer given once would otherwise close it for good, and the tech is
+   how the Horizon form opens too.
+3. **The Positronium form:** minds cost a fiftieth of their upkeep and do a tenth of their work,
+   with no tempo strain, and each Thread the form houses has 30 more room. It is bound to no hole:
+   its hole may evaporate and it stays. In the Dark Era, Continuity's loss each turn falls by half
+   the share of our minds in the weave. Its structures stay and work (its Field Stores still hold
+   the reserve).
+4. **Leave the weave** (the settlement's panel; no research, no event): the turn's end brings it
+   back, leptonic, for 2 energy a mind. Only minds still in the weave when it decays are lost,
+   named in the Record; a settlement with no one left goes.
+5. **The countdown:** a forecast of the decay in turns at our pace, from the weave's opening,
+   "danger" while anything of ours is in it.
+6. **Positronium Nets** (the same tech; leptonic, at any leptonic settlement): energy from the
+   shrinking orbits, a trickle from η 85 growing toward η 141; after it the never-ending
+   annihilation, half the turn before each turn, so it adds up to a fixed amount (as much again as
+   the last turn's).
+7. **Events:** "The Widest Atoms" loses "Nothing we do can touch them", and says minds could be
+   woven through them and their light gathered (Study them, Let them be, as before). Near the
+   decay, "The widest atoms end", for whoever has anything in the weave or nets.
+8. **The autoplayer:** researches it only where positronium will form and something of ours is
+   leptonic; weaves a vault in where its reserve would not last the Dark Era at its net, leaves
+   when the decay is within the next two turns at its pace, and builds nets.
+9. **The Codex:** the reference case and the spread (Adams & Laughlin's book: from about η 71,
+   centred on the 100th decade, decay after about 145; Wikipedia's 10⁹⁸ and 10¹⁷⁶ years); minds
+   woven through atoms wider than the old observable universe are the game's speculation; under
+   curvature, positrons from unmade matter are a bend.
+10. **Checks:** `unit/positronium` (the window, the form, leaving, the loss at the decay, the
+    nets' total as stated, the autoplayer); `browser/weave`; the harness by fate.
+
 ### 3a. Ways of existence
 
 Each settlement has a **form**, `Colony.form`. The form decides who can live there, what feeds

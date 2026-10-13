@@ -38,6 +38,8 @@ import {
 } from '../../game/sim/actions';
 import { PASSAGE_OUTPUT, capacity } from '../../game/sim/economy';
 import { beginPassage, endForeseen, passageCheck, passageTerms, turnsToEndOfMatter } from '../../game/sim/passage';
+import { SPENT_SPIN, holeFailing } from '../../game/sim/crossing';
+import { beginHorizon, driftCheck, driftTerms, driftToAnotherHole, horizonCheck, horizonTerms } from '../../game/sim/horizon';
 import { spareYield, type SpareYield } from '../../game/sim/spare';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
@@ -904,6 +906,113 @@ function PassageSection({ s, c }: { s: GameState; c: Colony }) {
   );
 }
 
+/**
+ * Leaving a black hole (horizon.ts): a leptonic settlement drifts to the hole with the most spin to
+ * give and years to last. Shown where it is leptonic and its hole is failing it, or it is at none;
+ * asks once more.
+ */
+function DriftSection({ s, c }: { s: GameState; c: Colony }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [sure, setSure] = useState(false);
+  if (formOf(c) !== 'leptonic') return null;
+  const sys = s.systems[c.systemId];
+  // (only where its hole is failing it, or there is none: from a healthy hole it would go to a poorer one)
+  const failing = holeFailing(s, sys);
+  if (!failing) return null;
+  const t = driftTerms(s, c);
+  const why = driftCheck(s, c);
+  const p = sys.primary;
+  const atHole = p.kind === 'black_hole' || p.kind === 'smbh';
+  const state =
+    p.kind === 'void'
+      ? 'Its black hole has evaporated.'
+      : !atHole
+        ? 'Away from the black holes nothing it is made of gathers energy.'
+        : p.spin < SPENT_SPIN
+          ? 'Its black hole has no spin left to give.'
+          : failing
+            ? 'Its black hole will soon evaporate.'
+            : '';
+  return (
+    <div class="section drift">
+      <h3>{atHole ? 'Another black hole' : 'To a black hole'}</h3>
+      <p class="dim">
+        {state ? `${state} ` : ''}
+        {t.target
+          ? `It can drift to ${t.target.name}, ${Math.round(t.ly)} ly away, with ${Math.round(t.target.primary.spin)} spin to give, taking all it has, for ${t.energy} energy.`
+          : 'No other black hole we could reach has spin to give and years to last.'}
+      </p>
+      {t.target && (
+        <button
+          class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+          data-tip={why ?? 'It joins our vault there, if we have one.'}
+          onClick={() => {
+            if (why) return;
+            if (!sure) return setSure(true);
+            setSure(false);
+            if (act((g) => driftToAnotherHole(g, c.id))) sfx('click');
+          }}
+        >
+          {sure ? `Really drift to ${t.target.name}? (click again)` : `Drift to ${t.target.name}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Writing into a horizon (horizon.ts): a leptonic settlement in a black hole's Deep, once Horizon
+ * Writing is known, as a project in its queue; and, once written, what that means and how long the
+ * hole will hold it. Asks once more before it begins.
+ */
+function HorizonSection({ s, c }: { s: GameState; c: Colony }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [sure, setSure] = useState(false);
+  const going = c.queue.find((q) => q.kind === 'horizon');
+  const sys = s.systems[c.systemId];
+  const p = sys.primary;
+  const hole = p.kind === 'black_hole' || p.kind === 'smbh';
+  const left = hole && p.evaporateAt ? Math.max(0, Math.log10(p.evaporateAt) - s.eta) : Infinity;
+  if (formOf(c) === 'horizon')
+    return (
+      <div class="section horizon">
+        <h3>In the horizon</h3>
+        <p class="dim">
+          Written into the horizon of {sys.name}: its minds cost a tenth of their upkeep and think at a quarter of their pace, with room by the hole’s mass. Bound to it{isFinite(left) ? `, which will evaporate in about ${left < 10 ? left.toFixed(1) : Math.round(left)} decades` : ''}: then they are written back out, leptonic, and drift on.
+        </p>
+      </div>
+    );
+  if (formOf(c) !== 'leptonic' || !hole || s.bodies[c.bodyId]?.kind !== 'deep' || (!going && !hasTech(s, 'horizon_writing'))) return null;
+  const t = horizonTerms(c);
+  const why = going ? null : horizonCheck(s, c);
+  return (
+    <div class="section horizon">
+      <h3>The horizon</h3>
+      {going ? (
+        <p class="dim">Under way: {Math.round((going.progress / going.cost) * 100)}%, in the queue. While it is worked here, this settlement makes {Math.round(PASSAGE_OUTPUT * 100)}% of its energy, insight and accord.</p>
+      ) : (
+        <>
+          <p class="dim">
+            Write this settlement into the horizon of {sys.name}: {t.industry} industry and {t.energy} energy now. Its minds would cost a tenth of their upkeep and think at a quarter of their pace, bound to the hole{isFinite(left) ? ` (it will evaporate in about ${left < 10 ? left.toFixed(1) : Math.round(left)} decades)` : ''}.
+          </p>
+          <button
+            class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+            data-tip={why ?? 'It goes into the queue as a project; taking it off gives the energy back.'}
+            onClick={() => {
+              if (why) return;
+              if (!sure) return setSure(true);
+              setSure(false);
+              if (act((g) => beginHorizon(g, c.id))) sfx('build');
+            }}
+          >
+            {sure ? 'Really write it into the horizon? (click again)' : 'Write into the horizon'}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   void rev.value; // mutable game state: re-render on every change
   const [tab, setTab] = useState<'overview' | 'build'>('overview');
@@ -1106,6 +1215,8 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
               )}
             </div>
             <PassageSection s={s} c={c} />
+            <DriftSection s={s} c={c} />
+            <HorizonSection s={s} c={c} />
           </>
         ) : (
           <BuildTab s={s} c={c} industry={y?.industry ?? 0} energyMade={y?.energy ?? 0} />
@@ -1237,10 +1348,10 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
                     <KindIcon id={q.key} />
                   ) : (
                     <span class="kind-icon">
-                      <Icon name={q.kind === 'passage' ? 'upload' : 'fleet'} />
+                      <Icon name={q.kind === 'passage' || q.kind === 'horizon' ? 'upload' : 'fleet'} />
                     </span>
                   )}
-                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId], formOf(c)).name : q.kind === 'passage' ? 'The Passage' : def?.name ?? q.key}
+                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId], formOf(c)).name : q.kind === 'passage' ? 'The Passage' : q.kind === 'horizon' ? 'Writing into the horizon' : def?.name ?? q.key}
                 </span>
                 <span class="mono faint" style={{ fontSize: '12.5px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
                 <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>

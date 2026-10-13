@@ -11,6 +11,7 @@ import { decayProof, finalBurstCatch, goOnAlone, greatEvaporation, runCrossing }
 import { completePassage } from './passage';
 import { flowComes, theLongFlow } from './flow';
 import { theThinning } from './thinning';
+import { completeHorizon, horizonGone } from './horizon';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
 import { battlesTurn } from './conflict';
@@ -82,6 +83,7 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
         }
         log(state, `${c.name}: ${structureLabel(item.key, state.systems[c.systemId], formOf(c)).name} complete.`, 'good', c.systemId);
       } else if (item.kind === 'passage') completePassage(state, c);
+      else if (item.kind === 'horizon') completeHorizon(state, c);
       else {
         const def = SHIP_BY_ID[item.key];
         if (def?.crew) c.pops.kin = Math.max(0, c.pops.kin - def.crew);
@@ -838,7 +840,9 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
           state.civ.energy += caught;
           log(state, `Burst Catchers at ${sys.name} caught the black hole’s final burst: +${caught} energy.`, 'good', sys.id);
         }
-        // its worlds drift loose and what we built there stays (physics.ts): nothing is lost with it
+        // its worlds drift loose and what we built there stays (physics.ts): nothing is lost with it;
+        // what was written into its horizon is written back out, and drifts on (horizon.ts)
+        for (const c of colonies(state)) if (c.systemId === sys.id && formOf(c) === 'horizon') horizonGone(state, c);
         if (mine) queueEvent(state, 'final_burst', { systemId: sys.id });
         else if (seen) log(state, `The black hole at ${sys.name} has evaporated in a final burst. Whatever orbited it drifts loose.`, 'info', sys.id);
         break;

@@ -2723,3 +2723,58 @@ The last decades of ordinary matter now thin what is still made of it.
   (65); stable as before, game for game; curvature 143 / 211 (140). 760 of 900 end as before. The
   Thinning costs what it should, a little: settlements that had not made the Passage lose their
   matter before the end.
+
+## Leaving a hole, and the Horizon form (13 Oct, part 3-4)
+
+After matter the black holes are the only sources, and they do not last: harvesters drain their
+spin, and the small ones evaporate first. The Black Hole Age's "move as small holes evaporate" now
+has a way to happen.
+- **Drift** (a leptonic settlement's panel, where its hole is failing it or it is at none): to the
+  black hole with the most spin to give (100 at least) that will not evaporate within 5 decades,
+  the nearest of equals, for 5 energy for each structure it takes along (at least 10), once a
+  turn. It joins our vault there (only one of its own form), with a harvester for the hole's spin
+  if we know how. What is leptonic gathers energy only at a hole (Penrose Harvesters, Hawking
+  Collectors), so a settlement that made the Passage on a world can go before the end. The forced
+  moves keep their rule (the nearest hole with spin left): the Migration at the Great Decay, and a
+  system dissolving before it. The first try sent a drift to the nearest hole with spin, and vaults
+  hopped between small holes they drained in a turn or two.
+- **The Horizon form** (Horizon Writing, 900 insight after Horizon Cognition; speculative): a
+  leptonic settlement in a hole's Deep is written into its horizon as a project in its queue, 40
+  industry and 4 for each mind, 5 energy for each structure paid when it begins; while it is
+  worked the settlement makes 70% of its energy, matter, insight and accord. Written in, its minds
+  cost a tenth of their upkeep and do a quarter of their work, with no tempo strain, and each
+  Thread that can live there has room for 6 more, and 6 again for each decade of the hole's mass
+  in Suns (15 at a hole of 28 Suns, 42 at one of a million). It is bound to its hole: it cannot
+  drift, and a hole drained of spin or within 5 decades of evaporating cannot take the writing.
+  When its hole evaporates it is written back out, leptonic, the Lattice re-encoding at half (a
+  quarter under the Last Horizon Protocols), and drifts on; if no hole will take it, it stays,
+  leptonic. At the Last Horizon every horizon settlement is written back out, and the report says
+  so.
+- **The autoplayer** leaves a hole drained of spin, gone, or within 5 decades of evaporating
+  (staying at one soon to evaporate while its Burst Catchers wait for the final burst), and a
+  world once it has made the Passage. In the Black Hole Age it writes a vault into the horizon
+  where its reserve would not last the turns left in the age at its net, at a hole with ten
+  decades or more to go. It researches Horizon Writing only once something of ours is leptonic, and not in the age's
+  last ten decades, when no hole could hold a settlement long enough (research draws on the
+  reserve).
+- **The forecast** of a black hole evaporating says a leptonic settlement can drift first, and
+  what becomes of what we wrote into its horizon.
+- **The Codex** says what is real (a hole's entropy, a quarter of its horizon's area in Planck
+  units, about 10⁷⁷ bits for a hole of the Sun's mass; the holographic principle, 't Hooft 1993,
+  Susskind 1995) and what is the game's: writing a mind there, its numbers, and room that grows far
+  more slowly than the area does. The Manual describes both; the Sources add Bekenstein, 't Hooft
+  and Susskind.
+- **End Turn** (interface): a breath waits for the timers due at least every 40 ms. A breath was
+  always a message to ourselves, which can run ahead of them: under load `browser/turn-slices`
+  saw no timer tick in a whole throttled turn, and the synth's lookahead timer runs every 40 ms.
+- **Checks:** `unit/leave-hole`, `unit/horizon-form` and `browser/horizon` (new);
+  `browser/turn-slices` reports how long the timers waited. The harness line counts `horizon N`
+  (settlements written in) and `drift N` (chosen drifts).
+- **Balance:** 217 of 300 standard competent games survive, 69 victories, a Degenerate Age of 73
+  turns; 900 games 639 / 226 / 74 (522 / 205 / 74 with the Thinning): decay 330 / 450 (210), 77
+  wins (53); stable 170 / 239 (169), 235 of 239 ending as before; curvature 139 / 211 (143), within
+  the noise. Drifts in 384 games, the Horizon form in 4. Under decay the vaults now drift to a hole
+  with spin, the Heart above all; before, they starved at the small hole the Migration had found,
+  slowed the pace to stretch the reserve, and came into the Dark Era short. Of the 450 decay games
+  125 were saved (72 had faded, 41 had lost their will) and 5 lost. Survival is now 71% of games,
+  up from 59% at 3-2 and 48% before the Passage: the player is asked whether that is too easy.

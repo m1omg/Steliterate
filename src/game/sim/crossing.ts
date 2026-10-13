@@ -10,6 +10,7 @@ import { evaporateHole } from '../physics';
 import { capacity, reserveCapacity } from './economy';
 import { deepFor, destroyColony } from './fleets';
 import { starGoneEarly } from './flare';
+import { writeOut } from './horizon';
 import type { Mods } from './mods';
 import { colonies, distLy, formOf, inItsSystem, log, popsOf, totalPops, withRng } from './util';
 
@@ -25,7 +26,7 @@ function isHole(kind: string | undefined): boolean {
 
 /** Whether a settlement outlasts matter: it made the Passage (it is leptonic), or something decay-proof stands there (Leptonic Substrate, a Leptonic Confluence, a Bastion Shell). */
 export function decayProof(c: Colony): boolean {
-  return formOf(c) === 'leptonic' || Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof);
+  return formOf(c) !== 'baryonic' || Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof);
 }
 
 function hasStarlessSource(state: GameState, c: Colony): boolean {
@@ -35,33 +36,47 @@ function hasStarlessSource(state: GameState, c: Colony): boolean {
 }
 
 /** A hole with less spin left than a Penrose Harvester draws in a turn has little to give a vault that comes to it. */
-const SPENT_SPIN = 20;
+export const SPENT_SPIN = 20;
 
 /** The black holes not yet evaporated: after matter, the only sources left. */
 function holesLeft(state: GameState): StarSystem[] {
   return Object.values(state.systems).filter((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone);
 }
 
+/** A hole worth leaving for has this much spin left at least: a few turns of a vault's harvesters. */
+export const LEAVE_SPIN = 100;
+/** A hole that will evaporate within this many decades is not worth staying at, or going to. */
+export const LEAVE_MARGIN = 5;
+
+/** Is this hole failing a vault there: gone, drained of spin, or soon to evaporate? */
+export function holeFailing(state: GameState, sys: StarSystem): boolean {
+  const p = sys.primary;
+  if (p.kind !== 'black_hole' && p.kind !== 'smbh') return true;
+  return p.spin < SPENT_SPIN || (!!p.evaporateAt && Math.log10(p.evaporateAt) - state.eta < LEAVE_MARGIN);
+}
+
 /**
- * One settlement drifts to a black hole: the nearest with spin left to give (a hole drained of it
- * gives next to nothing), or the nearest if none has; into its own civilization's vault there, if
- * it has one. One already at a hole stays at it, in its Deep. Returns whether it moved, and where
- * it is now (it may have merged into another).
+ * The hole a settlement drifts to: the nearest with spin left to give (a hole drained of it gives
+ * next to nothing), or the nearest if none has; one already at a hole stays at it. `leaving` (it
+ * chooses to go): never its own, the one with the most spin to give (the nearest of equals) that
+ * will not soon evaporate, or none; after matter any hole is within a turn's reach, and a small one
+ * a vault drains in a few turns. It joins a vault of ours there only of its own form (one still of
+ * matter would keep nothing of it at the end).
  */
-function driftToHole(state: GameState, c: Colony, holes: StarSystem[]): { moved: boolean; at: Colony } {
+function holeFor(state: GameState, c: Colony, holes: StarSystem[], leaving = false): StarSystem | null {
   const here = state.systems[c.systemId];
   const atHole = here.primary.kind === 'black_hole' || here.primary.kind === 'smbh';
-  // a vault already at a hole stays there, but a planet it stood on has dissolved: into the Deep
-  if (!holes.length || (atHole && state.bodies[c.bodyId]?.kind === 'deep')) return { moved: false, at: c };
-  // it joins a vault of ours only of its own form (one still of matter would keep nothing of it at the end)
   const fits = (h: StarSystem) => {
     const host = ourDeepAt(state, h, c.owner);
     return !host || formOf(host) === formOf(c);
   };
   const near = holes.filter(fits).sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z));
-  const target = atHole && fits(here) ? here : (near.find((h) => h.primary.spin >= SPENT_SPIN) ?? near[0]);
-  if (!target) return { moved: false, at: c };
-  // its own civilization's vault at the hole, beside any other's
+  if (leaving) return near.filter((h) => h.id !== here.id && h.primary.spin >= LEAVE_SPIN && !holeFailing(state, h)).sort((a, b) => b.primary.spin - a.primary.spin)[0] ?? null;
+  return atHole && fits(here) ? here : (near.find((h) => h.primary.spin >= SPENT_SPIN) ?? near[0] ?? null);
+}
+
+/** Into the Deep at this hole: its own civilization's vault there, if it has one, beside any other's. Returns where it is now. */
+function moveToHole(state: GameState, c: Colony, target: StarSystem): Colony {
   const deep = deepFor(state, target, c.owner) ?? state.bodies[target.bodies[0]];
   const oldBody = state.bodies[c.bodyId];
   if (oldBody) oldBody.colonyId = null;
@@ -72,14 +87,42 @@ function driftToHole(state: GameState, c: Colony, holes: StarSystem[]): { moved:
     for (const [k, n] of Object.entries(c.structures)) host.structures[k] = (host.structures[k] ?? 0) + n;
     if (state.civ.capitalId === c.id) state.civ.capitalId = host.id;
     delete state.colonies[c.id];
-    return { moved: true, at: host };
+    return host;
   }
   c.bodyId = deep.id;
   c.systemId = target.id;
   c.name = `${target.name} Vault`;
   deep.colonyId = c.id;
   state.civ.known[target.id] = 2;
-  return { moved: true, at: c };
+  return c;
+}
+
+/**
+ * One settlement drifts to a black hole (`holeFor`): a vault already at a hole stays there, but a
+ * planet it stood on has dissolved, into the Deep. Returns whether it moved, and where it is now
+ * (it may have merged into another).
+ */
+function driftToHole(state: GameState, c: Colony, holes: StarSystem[]): { moved: boolean; at: Colony } {
+  const here = state.systems[c.systemId];
+  const atHole = here.primary.kind === 'black_hole' || here.primary.kind === 'smbh';
+  if (!holes.length || (atHole && state.bodies[c.bodyId]?.kind === 'deep')) return { moved: false, at: c };
+  const target = holeFor(state, c, holes);
+  if (!target || (target.id === here.id && state.bodies[c.bodyId]?.kind === 'deep')) return { moved: false, at: c };
+  return { moved: true, at: moveToHole(state, c, target) };
+}
+
+/** Where a leptonic settlement would go if it left its hole now (`holeFor`, leaving), or null. */
+export function leaveTarget(state: GameState, c: Colony): StarSystem | null {
+  return formOf(c) === 'leptonic' ? holeFor(state, c, holesLeft(state), true) : null;
+}
+
+/** It leaves its hole for `leaveTarget`'s, with a harvester for the new hole's spin if we know how. Returns where it is now. */
+export function leaveHole(state: GameState, c: Colony): Colony | null {
+  const target = leaveTarget(state, c);
+  if (!target) return null;
+  const at = moveToHole(state, c, target);
+  harvesterFor(state, at);
+  return at;
 }
 
 /** Our own settlement in a Deep of this system, if there is one (without making a Deep for us, as `deepFor` would). */
@@ -297,6 +340,8 @@ export const CARRIED = 0.35;
  * that, under the protocols), once. Returns how many were lost.
  */
 function goLeptonic(state: GameState, c: Colony, mult: number): number {
+  // (written into a hole's horizon, it is not matter, and keeps all it has)
+  if (formOf(c) === 'horizon') return 0;
   const was = formOf(c) === 'leptonic';
   const atHole = isHole(state.systems[c.systemId]?.primary.kind);
   const keeps = (id: string) => {
@@ -506,6 +551,10 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
           c.pops.kin = 0;
         }
       }
+      // with no holes left, what was written into their horizons is written back out, leptonic
+      const written = colonies(state).filter((c) => formOf(c) === 'horizon');
+      const latticeLost = written.reduce((a, c) => a + writeOut(state, c), 0);
+      if (written.length) lines[id].push({ text: `With the last horizon gone, ${written.length === 1 ? `${written[0].name} is` : `${written.length} settlements are`} written back out of the horizons, leptonic${latticeLost ? `: ${latticeLost} of the Lattice did not come through` : ''}.`, kind: 'info' });
     });
     for (const sv of Object.values(state.survivors)) if (sv.alive && !state.civs[sv.id]) sv.health = Math.max(0, sv.health - 0.4);
     eachCiv(state, ids, () => (state.civ.energy *= 1 - 0.15 * protocolsMult(state, from)));

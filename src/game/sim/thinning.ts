@@ -33,7 +33,7 @@ export function thinning(state: GameState): boolean {
 
 /** What at this settlement is still made of matter, and can fail: all but its decay-proof structures, and nothing once it has made the Passage. */
 export function ofMatter(c: Colony): string[] {
-  if (formOf(c) === 'leptonic') return [];
+  if (formOf(c) !== 'baryonic') return [];
   return Object.keys(c.structures).filter((id) => (c.structures[id] ?? 0) > 0 && STRUCTURE_BY_ID[id] && !STRUCTURE_BY_ID[id].decayProof);
 }
 

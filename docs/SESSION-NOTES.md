@@ -597,7 +597,17 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - the Thinning (part 3-3): from η 37.5 (decay) or 87 (curvature) what is still made of matter
     fails, structure by structure, with the share of matter left, and mines bring in less; what
     was re-encoded in a system dissolving before the Great Decay goes on at once, leptonic, and
-    drifts to a black hole with spin. The forecasts name what is still made of matter.
+    drifts to a black hole with spin. The forecasts name what is still made of matter. 900 games
+    522 / 205 / 74.
+  - leaving a hole, and the Horizon form (part 3-4): a leptonic settlement drifts to the hole with
+    the most spin (the Heart, mostly), from a failing hole or from its world after the Passage; with
+    Horizon Writing it can be written into its hole's horizon (a tenth of the upkeep, a quarter of
+    the pace, no strain, room by the hole's mass, bound to the hole, written back out when it
+    evaporates and at the Last Horizon). 900 games 639 / 226 / 74: decay survival 210 to 330 of
+    450, the vaults no longer starving at drained holes; stable as before; curvature within the
+    noise. Survival is now 71%: the difficulty question to the player stands, with this number
+    (59% at 3-2, 48% before the Passage). End Turn's breaths now let due timers run every 40 ms
+    (the turn-slices check had seen none under load).
   - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census

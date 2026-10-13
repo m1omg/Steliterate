@@ -3,7 +3,7 @@ import { STRUCTURE_BY_ID, type EnergyMode } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
 import { ERA_BY_ID, logTurnLength, stepTime } from './eras';
-import { clockCiv, livedShare, starClockTerms, turnStep } from './sim/flare';
+import { clockCiv, livedShare, starClockTerms, turnStep, turnsUntilYears } from './sim/flare';
 import { emberShare, haloDrawn, sourceLight, vitalityLoss } from './physics';
 import {
   answerEvent,
@@ -36,6 +36,8 @@ import { availableTechs, techCost } from './sim/research';
 import { FORTIFY_BONUS, canSettle, fleetUpkeep, launchCost, travelEstimate } from './sim/fleets';
 import { allColonies, allFleets, capital, colonies, distLy, eraIndex, fleets, formOf, hasTech, leftBehind, popsOf, swarmSeenAt, temperament, threadTotals } from './sim/util';
 import { beginPassage, endForeseen, etaToEndOfMatter, passageEta, passageTerms } from './sim/passage';
+import { LEAVE_MARGIN, SPENT_SPIN, holeFailing } from './sim/crossing';
+import { beginHorizon, driftToAnotherHole, horizonCheck } from './sim/horizon';
 import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, ThreadId, War } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
@@ -365,7 +367,7 @@ const TECH_PRIORITY = [
   'deep_storage', 'brown_dwarf_mining', 'accretion_modelling', 'burst_capture', 'horizon_storage', 'abyssal_thought', 'gravitic_semaphore', 'quickening',
   'garden_arks', 'aegis_lattices', 'command_language',
   // black hole
-  'bastion_architecture', 'horizon_cognition', 'error_correction', 'hawking_patience', 'last_horizon_protocols',
+  'bastion_architecture', 'horizon_cognition', 'error_correction', 'hawking_patience', 'horizon_writing', 'last_horizon_protocols',
   'conformal_mathematics', 'archive_theory', 'total_confluence', 'ultimate_slowness',
   // dark
   'asymptotic_mind', 'horizon_siphon', 'garden_of_embers',
@@ -393,7 +395,10 @@ function pickResearch(state: GameState) {
     const way = wayOf(state);
     const dark = hungerSteps(state);
     const order = [...(dark ? HUNGER_FIRST : []), ...(way ? WAY_RESEARCH[way] : []), ...TECH_PRIORITY];
-    const next = guard ?? order.find((id) => avail.has(id)) ?? [...avail].filter((id) => (dark || !TECHS.find((t) => t.id === id)?.taint) && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
+    // (Horizon Writing only once something of ours could be written, nothing being leptonic if matter
+    // is stable, and while a hole could still hold it for ten decades: research draws on the reserve)
+    const useless = (id: string) => id === 'horizon_writing' && (!colonies(state).some((c) => formOf(c) === 'leptonic') || state.eta > ERA_BY_ID.blackhole.endEta - 2 * LEAVE_MARGIN);
+    const next = guard ?? order.find((id) => avail.has(id) && !useless(id)) ?? [...avail].filter((id) => (dark || !TECHS.find((t) => t.id === id)?.taint) && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
     if (!next) break;
     setResearch(state, next);
   }
@@ -512,6 +517,42 @@ function passageLate(state: GameState, c: Colony): boolean {
   return q?.kind === 'passage' && left <= PASSAGE_SPARE + 1 && passageEta(state, c, q.cost - q.progress) > left - 1;
 }
 
+/**
+ * A leptonic settlement at a hole that is failing it, drained of spin or gone (or soon to
+ * evaporate, unless its Burst Catchers wait for the final burst), drifts to a better one.
+ */
+function planDrift(state: GameState) {
+  for (const c of colonies(state)) {
+    if (formOf(c) !== 'leptonic') continue;
+    const sys = state.systems[c.systemId];
+    if (!holeFailing(state, sys)) continue;
+    const p = sys.primary;
+    const hole = p.kind === 'black_hole' || p.kind === 'smbh';
+    // (only evaporating: Burst Catchers here bank its final burst first, and then it leaves)
+    if (hole && p.spin >= SPENT_SPIN && (c.structures.burst_catcher ?? 0) > 0) continue;
+    driftToAnotherHole(state, c.id);
+  }
+}
+
+/**
+ * In the Black Hole Age, where the reserve would not last the age at the rate it is going, a
+ * leptonic vault at a hole that will long outlive it is written into the horizon: a tenth of the
+ * upkeep, a quarter of the pace.
+ */
+function planHorizon(state: GameState) {
+  if (calendarEra(state) !== 'blackhole' || !hasTech(state, 'horizon_writing')) return;
+  const civ = state.civ;
+  const net = civ.flags.last_energy_net ?? 0;
+  // (the turns left in the age at our pace)
+  const left = Math.max(5, turnsUntilYears(state, Math.pow(10, ERA_BY_ID.blackhole.endEta)));
+  if (net >= 0 || civ.energy >= -net * left) return;
+  for (const c of colonies(state)) {
+    const p = state.systems[c.systemId].primary;
+    if (p.evaporateAt && Math.log10(p.evaporateAt) - state.eta < 2 * LEAVE_MARGIN) continue;
+    if (horizonCheck(state, c) === null && beginHorizon(state, c.id) === null) c.queue.unshift(c.queue.pop()!);
+  }
+}
+
 function planBuilds(state: GameState) {
   const civ = state.civ;
   const mods = computeMods(state);
@@ -537,7 +578,7 @@ function planBuilds(state: GameState) {
     }
     if (passageLate(state, c)) rushBuild(state, c.id);
     // (a settlement making the Passage, or past it, needs no substrate to go on)
-    const passing = formOf(c) === 'leptonic' || c.queue.some((q) => q.kind === 'passage');
+    const passing = formOf(c) !== 'baryonic' || c.queue.some((q) => q.kind === 'passage');
     // before the protons go, re-encoding goes to the front of the queue
     if (!passing && preEnd && hasTech(state, 'leptonic_computation') && (c.structures.lepton_substrate ?? 0) < 2) {
       if (!c.queue.some((q) => q.key === 'lepton_substrate')) {
@@ -558,7 +599,7 @@ function planBuilds(state: GameState) {
     if (preEnd && c.queue[0]?.key === 'lepton_confluence') rushBuild(state, c.id);
     if (c.queue[0] && c.queue[0].kind !== 'passage' && civ.matter > 600) rushBuild(state, c.id);
     // while the Passage rewrites it, nothing else is built there
-    if (c.queue.length >= 2 || c.queue.some((q) => q.kind === 'passage')) continue;
+    if (c.queue.length >= 2 || c.queue.some((q) => q.kind === 'passage' || q.kind === 'horizon')) continue;
     const b = state.bodies[c.bodyId];
     const capc = capacity(state, c, mods);
     const light = lightAt(state, c);
@@ -1056,6 +1097,8 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planSleep(state);
   planFlow(state);
   planDismantle(state);
+  planDrift(state);
+  planHorizon(state);
   planBuilds(state);
   planFleets(state);
   planWarAI(state);

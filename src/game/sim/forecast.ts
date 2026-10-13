@@ -172,7 +172,9 @@ export function updateForecasts(state: GameState) {
   if (calendarEra(state) === 'blackhole' || state.era === 'blackhole') {
     for (const sid of colonized) {
       const p = state.systems[sid].primary;
-      if (p.evaporateAt && p.evaporateAt > years) add({ kind: 'evaporate', title: `${state.systems[sid].name} will evaporate`, text: 'Its Hawking radiation brightens as it shrinks, ending in a final burst that Burst Catchers here can bank. Its worlds then drift loose, and our settlements stay, with nothing left there to draw on: its spin, its Hawking light and its glow go with it, and Horizon Vaults here, which store energy in its spin, will hold nothing.', dueYears: p.evaporateAt, systemId: sid, severity: 'warn' });
+      // (what we wrote into its horizon comes back out with it, horizon.ts)
+      const written = colonies(state).some((c) => c.systemId === sid && formOf(c) === 'horizon');
+      if (p.evaporateAt && p.evaporateAt > years) add({ kind: 'evaporate', title: `${state.systems[sid].name} will evaporate`, text: `Its Hawking radiation brightens as it shrinks, ending in a final burst that Burst Catchers here can bank. Its worlds then drift loose, and our settlements stay, with nothing left there to draw on: its spin, its Hawking light and its glow go with it, and Horizon Vaults here, which store energy in its spin, will hold nothing. A leptonic settlement can drift to another black hole before then (its panel).${written ? ' What we wrote into its horizon will be written back out, leptonic, half its Lattice lost, and drift on.' : ''}`, dueYears: p.evaporateAt, systemId: sid, severity: 'warn' });
     }
   }
 

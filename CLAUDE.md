@@ -88,4 +88,6 @@ in DEV-NOTES (Balance reference). That is `main`'s game. The new version (on
 turns; by fate decay 36%, stable 57%, curvature 46%. With part 2b (the Hunger among them): 135 of
 300, 64 victories; 900 games 411 / 167, a Degenerate Age of 76 turns. With part 3-2 (the Passage,
 and the autoplayer through the end of matter, `24fbc18`): 175 of 300, 62 victories; 900 games
-530 / 219, a Degenerate Age of 74 turns; by fate decay 49%, stable 71%, curvature 66%.
+530 / 219, a Degenerate Age of 74 turns; by fate decay 49%, stable 71%, curvature 66%. With part
+3-4 (drifting between black holes, the Horizon form): 217 of 300, 69 victories; 900 games 639 /
+226, a Degenerate Age of 74 turns; by fate decay 73%, stable 71%, curvature 66%.

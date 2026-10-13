@@ -156,7 +156,7 @@ export interface Body {
 export interface QueueItem {
   uid: string;
   /** A structure, a ship, or the settlement's Passage (passage.ts: key 'passage'). */
-  kind: 'structure' | 'ship' | 'passage';
+  kind: 'structure' | 'ship' | 'passage' | 'horizon';
   key: string;
   progress: number;
   cost: number;
@@ -191,7 +191,7 @@ export interface YieldBreakdown {
  * end of matter; leptonic, re-encoded in electron–positron structures held by fields, for what goes
  * on after it. The form decides who can live there.
  */
-export type ColonyForm = 'baryonic' | 'leptonic';
+export type ColonyForm = 'baryonic' | 'leptonic' | 'horizon';
 
 export interface Colony {
   id: string;
@@ -216,6 +216,7 @@ export interface Colony {
   damage: number; // 0..1 hearth damage from overdrive / attacks
   starving: number; // turns in energy deficit
   flags_rushed?: number; // turn of the last emergency shift
+  flags_drifted?: number; // turn it last drifted to another black hole (horizon.ts)
   last?: YieldBreakdown;
 }
 

@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -254,6 +254,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   "Under way: 0%" after the Passage was done; the Kinetic Lance's strike section, a warship's
   attack button and the Halo Siphons' shut button had the same gap).
 - Hooks must come before any early return. `FleetPanel` has several `useState` calls.
+- A breath that is only a message to ourselves (`MessageChannel`) can run ahead of the timers that
+  are due: under load `browser/turn-slices` once saw no timer tick in a whole throttled turn, and
+  the synth's lookahead timer runs every 40 ms. End Turn's breaths wait for the timers at least
+  every `TIMER_MS` (40 ms, `turnflow.ts`); the timers' longest wait is bounded by the longest
+  slice that cannot be split (a civilization's part of a step), some 100 ms at a sixfold slowdown.
+- `pkill -f 'tools/sim.ts'` (or `pgrep -f 'node.*tools/sim.ts'` fed to `kill`) run from a shell
+  whose own command line holds that pattern kills the shell too (exit 144, twice on 13 Oct). Keep
+  the pattern from matching itself: `pgrep -f '[n]ode.*tools/sim[.]ts'`.
 - **Save compatibility:** only add optional fields, or compute things live. Put small counters
   in `civ.flags` (a `Record<string, number>`), or `state.flags` for a fact about the universe.
   `SAVE_VERSION` is 4, the new version's first (`FIRST_OF_THIS_LINE`): until the new version is
@@ -447,6 +455,23 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `1 − thinShare` at the turn's start. A decay-proof settlement in a system dissolving before
     the end goes on through `goOnAlone` (`crossing.ts`, from `handleNotes`, which is exported for
     the checks), with `driftToHole` and `harvesterFor`, which the Migration uses too.
+  - **Leaving a hole, and the Horizon form** (part 3-4, `sim/horizon.ts`): `driftTerms`,
+    `driftCheck` and `driftToAnotherHole` (once a turn: `Colony.flags_drifted`), through
+    `leaveTarget` and `leaveHole` (`crossing.ts`): `holeFor(…, leaving)` picks the hole with the
+    most spin (at least `LEAVE_SPIN`, 100) that is not `holeFailing` (drained below `SPENT_SPIN`,
+    or within `LEAVE_MARGIN`, 5 decades, of evaporating), the nearest of equals; the forced moves
+    (the Migration, `goOnAlone`) keep the nearest with spin left. The form `'horizon'`
+    (`data/forms.ts`: `HORIZON_UPKEEP`, `HORIZON_PACE`, `horizonRoom(primary)`, added in
+    `capacity` to each Thread the form houses) is a queue item of kind `'horizon'`
+    (`horizonTerms`, `horizonCheck`, `beginHorizon`; `applyIndustry` calls `completeHorizon`;
+    `PASSAGE_OUTPUT` while it is `queue[0]`); in `colonyTurn` its Threads take no strain, a quarter
+    of the output and a tenth of the upkeep. `writeOut` (half the Lattice, times the Black Hole
+    Age's protocols) runs from `horizonGone` when the hole's `'evaporated'` note is handled
+    (`handleNotes`, then `leaveHole`) and from the Last Horizon crossing for everyone left.
+    `decayProof`, `ofMatter`, `nextToFlow`, `structureCheck` and the leptonic names treat every
+    form but `'baryonic'` alike; `goLeptonic` leaves a horizon settlement as it is. The autoplayer:
+    `planDrift` and `planHorizon` (`auto.ts`, before `planBuilds`); the harness line counts
+    `horizon N` (settlements written in) and `drift N` (chosen drifts) from `civ.flags`.
   - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a
     report per civilization; the universe's part runs once (`toAll` puts its lines in every
     report where they fall), each civilization's under `eachCiv`; `leftOnSubstrate` is one
@@ -1585,6 +1610,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the Lattice lives on energy after matter (13 Oct; the player's word) | 144 | 39 victories, Degenerate Age 73 turns; 900 games 431 / 133 / 75 (421 / 124 / 75 before): decay 190 / 450 (14 wins), curvature 100 / 211 (24), stable as before; the wins the Long Thought's |
 | the Passage; the autoplayer through the end of matter (13 Oct; part 3-2, `24fbc18`) | 175 | 62 victories, Degenerate Age 73 turns; 900 games 530 / 219 / 74 (431 / 133 / 75 before): decay 221 / 450 (65 wins), stable 169 / 239 (112), curvature 140 / 211 (42); 456 of 900 end as before. The Long Thought 174 (98), Silence 164 (211). The Passage as first built, by turns and rushed: 372 / 172, decay 138; with the timing, the Migration and cooling but not the pace: 428 / 210, decay 160; the pace rule at every age: Silence 107 of 295 where 60 had been |
 | the Thinning (13 Oct; part 3-3, `a0352ef`) | 173 | 58 victories, Degenerate Age 73 turns; 900 games 522 / 205 / 74 (530 / 219 / 74 before): decay 210 / 450 (53 wins), stable as before game for game, curvature 143 / 211 (40); 760 of 900 end as before. First built, the early drift merged a passed settlement into one of ours still of matter: 531 / 192, decay wins 40 |
+| leaving a hole, and the Horizon form (13 Oct; part 3-4) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 639 / 226 / 74 (522 / 205 / 74 before): decay 330 / 450 (210; 77 wins, 53), stable 170 / 239 (169; 235 of 239 end as before), curvature 139 / 211 (143; 36 wins, 40), within the noise. Drifts in 384 games, the Horizon form in 4. Under decay the vaults now drift to a hole with spin, the Heart above all, where before they starved at the small hole the Migration found, slowed the pace to stretch the reserve, and entered the Dark Era short: of the 450, 125 saved (72 had faded, 41 lost their will), 5 lost. The first drift rule, the nearest hole with spin: 638 / 227 with Horizon Writing researched everywhere |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

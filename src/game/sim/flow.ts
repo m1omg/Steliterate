@@ -55,7 +55,7 @@ export function keeping(c: Colony, logL: number, mods: Mods, slowOrders = 0): Ke
 
 /** What flows first at a settlement no one keeps: the cheapest structure, Cryo Halls last; leptonic ones never (nor anything at a settlement that made the Passage). */
 export function nextToFlow(c: Colony): string | null {
-  if (formOf(c) === 'leptonic') return null;
+  if (formOf(c) !== 'baryonic') return null;
   const ids = Object.keys(c.structures).filter((id) => (c.structures[id] ?? 0) > 0 && STRUCTURE_BY_ID[id] && !STRUCTURE_BY_ID[id].decayProof);
   if (!ids.length) return null;
   const last = (id: string) => (id === 'cryo_hall' ? 1 : 0);
