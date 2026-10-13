@@ -101,7 +101,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         </div>
       )}
       {civ.taint > 0 && (
-        <div class="res" data-tip={`Hunger Taint ${n0(civ.taint)}\nWhat you have taken from the Hunger. Past 30 and 60 some endings close. At 100 you become it.`}>
+        <div class="res" data-tip={`Hunger Taint ${n0(civ.taint)}\nWhat you have taken from the Hunger. Past 30 and 60 some endings close. At 100 you become it.\nThe others hear of each step at the speed of light, and judge it (the desperate less harshly); once they have heard of 30, most will not deal with you.`}>
           <span class="l bad" style={{ display: 'block' }}>Taint</span>
           <span class="mono bad">{n0(civ.taint)}</span>
         </div>

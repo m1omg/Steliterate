@@ -16,6 +16,7 @@ import { send } from '../civs';
 import { hashSeed } from '../rng';
 import { distLy, log, temperament } from './util';
 import { ARCHIVE_SHARE } from './pacts';
+import { HEARD_CEILING, SANCTION_AT } from './judge';
 
 export const TIE_PACTS: PactKind[] = ['archives', 'aid', 'watch'];
 
@@ -133,7 +134,7 @@ export function planTies(state: GameState, keep: number): void {
     const t = tieOf(state, me.id, o.id);
     const p = t.proposal;
     if (p && p.from !== me.id && !p.answer && arrived(state, p.arrives)) {
-      const yes = (t.regard[me.id] ?? 0) >= NEED[p.kind] && me.accord >= p.cost;
+      const yes = (t.regard[me.id] ?? 0) >= NEED[p.kind] && me.accord >= p.cost && !shunsOther(state, t, me.id);
       if (yes) me.accord -= p.cost;
       p.answer = { yes, arrives: lightIn(state, distanceBetween(state, me.id, o.id)) };
     }
@@ -144,6 +145,7 @@ export function planTies(state: GameState, keep: number): void {
     if (t.proposal) continue;
     // (the generous propose a little sooner: at 5 beyond what the pact needs, the grudging at 15)
     const warmth = NEED_MARGIN - 10 * temperament(state, me.id).generosity;
+    if (shunsOther(state, t, me.id)) continue;
     const kind = TIE_PACTS.find((k) => t.pacts?.[k] === undefined && (t.regard[me.id] ?? 0) >= NEED[k] + warmth && (t.regard[o.id] ?? 0) >= NEED[k]);
     if (!kind) continue;
     const cost = tieCost(state, me.id);
@@ -166,13 +168,34 @@ export function tiesTurn(state: GameState): void {
   for (const [k, t] of Object.entries(ties)) {
     const [a, b] = k.split('|');
     if (!playing.has(a) || !playing.has(b)) {
-      // one of them is gone: its pacts with it
+      // one of them is gone: its pacts with it, and news no one is left to hear
       delete t.pacts;
       delete t.heard;
       delete t.proposal;
+      delete t.news;
       continue;
     }
-    for (const id of [a, b]) t.regard[id] += (baseRegard(state, id, id === a ? b : a) - t.regard[id]) * DRIFT;
+    // (never back above what the Hunger it has heard of in the other allows, as with us: judge.ts)
+    for (const id of [a, b]) {
+      const toward = Math.min(baseRegard(state, id, id === a ? b : a), 100 - (t.taintHeard?.[id] ?? 0) * HEARD_CEILING);
+      t.regard[id] += (toward - t.regard[id]) * DRIFT;
+    }
+    // the news of the other's Hunger act reaches one of them (judge.ts): it thinks less of it, and
+    // past what it will stand ends Open Archives (the Tessellate keeps an agreement to the letter)
+    if (t.news?.length) {
+      for (const n of t.news.filter((x) => arrived(state, x.at))) {
+        const was = shunsOther(state, t, n.to);
+        t.regard[n.to] += n.delta;
+        (t.taintHeard ??= {})[n.to] = Math.min(100, (t.taintHeard[n.to] ?? 0) + n.taint);
+        if (!was && shunsOther(state, t, n.to) && t.pacts?.archives !== undefined && waysOf(state, n.to) !== 'lattice') {
+          delete t.pacts.archives;
+          const other = n.to === a ? b : a;
+          hearOf(state, a, b, `${state.civs[n.to].name} closed its archives to ${state.civs[other].name}, for the Hunger it has heard of in them.`);
+        }
+      }
+      t.news = t.news.filter((x) => !arrived(state, x.at));
+      if (!t.news.length) delete t.news;
+    }
     const p = t.proposal;
     if (p?.answer && arrived(state, p.answer.arrives)) {
       delete t.proposal;
@@ -223,6 +246,9 @@ export function tiesTurn(state: GameState): void {
       log(state, n.text, 'info', n.systemId);
       const t = n.tie ? ties[n.tie] : undefined;
       if (t && n.kind && t.pacts?.[n.kind] !== undefined) (t.heard ??= {})[n.kind] = true;
+      // a Hunger act of one of them (judge.ts): the Taint of theirs we have heard of
+      const sv = n.taintOf ? state.survivors[n.taintOf] : undefined;
+      if (sv && n.taint) sv.taintSeen = Math.min(100, (sv.taintSeen ?? 0) + n.taint);
     }
     state.tidings = state.tidings.filter((x) => !arrived(state, x.at));
     if (!state.tidings.length) delete state.tidings;
@@ -241,6 +267,16 @@ function hearOf(state: GameState, a: string, b: string, text: string, kind?: Pac
     .sort((x, y) => x.ly - y.ly)[0];
   const sys = state.civs[near.id]?.capitalId ? state.colonies[state.civs[near.id].capitalId!]?.systemId : undefined;
   (state.tidings ??= []).push({ at: lightIn(state, here ? near.ly : 0), text, tie: tieKey(a, b), ...(kind ? { kind } : {}), ...(sys ? { systemId: sys } : {}) });
+}
+
+/** Whether `who` shuns the other of a tie for the Hunger it has heard of in it: unless it is on that path itself. */
+function shunsOther(state: GameState, t: Tie, who: string): boolean {
+  return (t.taintHeard?.[who] ?? 0) >= SANCTION_AT && (state.civs[who]?.taint ?? 0) < SANCTION_AT;
+}
+
+/** The way of life of one of the others. */
+function waysOf(state: GameState, id: string): SurvivorWay | undefined {
+  return state.survivors[id]?.way;
 }
 
 /** Shared Watch partners of another civilization: each stands it a little stronger against the Hunger (hunger.ts). */

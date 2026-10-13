@@ -87,13 +87,27 @@ run(async () => {
     await page.waitForTimeout(900);
     return pressed;
   };
+  /**
+   * Someone must outlast matter for its crossing to show, however this seed's game went (the others
+   * playing change it): our capital keeps a refuge, two Echoes on a Leptonic Substrate.
+   */
+  const keepRefuge = () =>
+    page.evaluate(() => {
+      const s = window.__stel.state();
+      const c = s.colonies[s.civ.capitalId];
+      if (!c) return;
+      c.structures.lepton_substrate = Math.max(1, c.structures.lepton_substrate ?? 0);
+      c.pops.echoes = Math.max(2, c.pops.echoes);
+      window.__stel.refresh();
+    });
   /** A new game of `fate`, played to just short of η `boundary`; then End turn until a crossing screen shows. */
-  const crossing = async (fate, boundary, file, seed = 1000) => {
+  const crossing = async (fate, boundary, file, seed = 1000, refuge = false) => {
     await page.evaluate(([f, sd]) => window.__stel.newGame({ seed: sd, protonFate: f }), [fate, seed]);
     await page.waitForTimeout(600);
     const pre = await playTo(boundary);
     console.log(`  ${fate} (seed ${seed}): played to η ${pre.eta.toFixed(2)}${pre.outcome ? `, where it ended: ${pre.outcome}` : ''}`);
     if (pre.outcome) return null;
+    if (refuge) await keepRefuge();
     for (let i = 0; i < 6 && !(await page.locator('.crossing').count()); i++) if (!(await pressEndTurn(fate))) break;
     const r = await page.evaluate(() => {
       const c = document.querySelector('.crossing');
@@ -126,8 +140,9 @@ run(async () => {
   check(!!r && r.intro.startsWith('The protons held') && !r.lines.some((l) => /decayed|dissolved/.test(l)), 'its intro and lines say matter endures, and nothing decayed');
   await go(r);
 
-  // a game that lives through the Great Decay (seed 1000 does not, under decay; nor in the harness)
-  r = await crossing('decays', 39, 'decay-great-decay.png', 48514);
+  // a game that lives through the Great Decay, with a refuge kept at the capital (seed 48514 had one
+  // of its own until the others played the same game)
+  r = await crossing('decays', 39, 'decay-great-decay.png', 48514, true);
   check(r?.from === 'The end of The Degenerate Age · The Great Decay' && r.h1 === 'The Black Hole Age', `decay: the Great Decay (${r?.from} / ${r?.h1})`);
   check(!!r && r.intro.startsWith('Ordinary matter has decayed away') && r.lines.some((l) => /has decayed\./.test(l)), 'matter has decayed, and it says so');
   await go(r);
@@ -137,6 +152,7 @@ run(async () => {
   check(!!r && r.intro.startsWith('The neutron stars have burst') && r.lines.some((l) => /neutron stars have burst/.test(l)), 'the neutron stars have burst');
   if (await go(r)) {
     const pre = await playTo(89.5);
+    if (!pre.outcome) await keepRefuge();
     let e = null;
     for (let i = 0; i < 6 && !pre.outcome && !e; i++) {
       if (!(await pressEndTurn('curvature'))) break;

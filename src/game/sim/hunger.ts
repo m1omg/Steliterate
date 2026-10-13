@@ -5,6 +5,7 @@ import type { Fleet, GameState, StarSystem, Swarm } from '../types';
 import { FORTIFY_BONUS, destroyColony, isWarFleet, signatureOf } from './fleets';
 import type { Mods } from './mods';
 import { allColonies, allFleets, colonies, distLy, fleets, hasCharter, log, logTo, ownColony, ownFleet, tellKnown, uid, withRng } from './util';
+import { hungerAct } from './judge';
 import { queueEvent } from './events';
 import { foughtFor, theirWarmth } from './claims';
 import { warHeat } from './war';
@@ -14,7 +15,7 @@ import { calendarEra } from '../fate';
 // it to survive; it still does, the way a tumour does. It has no plan beyond the next meal,
 // and it starves when a region is stripped. It is drawn to light and heat.
 
-const MAX_SWARMS = { gentle: 4, standard: 6, harsh: 8 } as const;
+export const MAX_SWARMS = { gentle: 4, standard: 6, harsh: 8 } as const;
 
 export function systemMatter(state: GameState, sys: StarSystem): number {
   let m = 0;
@@ -493,7 +494,13 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
         const its = !!tamer && communes(state, tamer.id);
         if (tamer) {
           tamer.matter += sw.size * (its ? 0.8 : 0.4);
-          if (its) tamer.taint = Math.min(100, tamer.taint + 0.12 * sw.size);
+          // communing with them is a Hunger act, heard of a point of Taint at a time (judge.ts)
+          if (its) {
+            const fed = (tamer.flags.taint_fed ?? 0) + 0.12 * sw.size;
+            const whole = Math.floor(fed);
+            tamer.flags.taint_fed = fed - whole;
+            if (whole > 0) hungerAct(state, tamer.id, whole, sys.id, 'communed with the swarms');
+          }
         }
         const relapse = (tamer && modsOf(tamer.id).flags.has('charter:lattice_compact')) || its ? 0.005 : 0.02;
         if (rng.chance(relapse)) {
@@ -704,7 +711,7 @@ export function absorbSwarm(state: GameState, swarmId: string, colonyId: string)
   c.pops.lattice += pops;
   c.structures.lattice_foundry = Math.max(c.structures.lattice_foundry ?? 0, Math.ceil(pops / 6));
   delete state.swarms[swarmId];
-  state.civ.taint = Math.min(100, state.civ.taint + (hasCharter(state, 'communion_charter') ? 8 : 3));
+  hungerAct(state, state.civ.id, hasCharter(state, 'communion_charter') ? 8 : 3, c.systemId, 'took a swarm in');
   log(state, `${pops} Lattice formed from the swarm at ${c.name}. Something of its appetite comes with them.`, 'event', c.systemId);
   return null;
 }

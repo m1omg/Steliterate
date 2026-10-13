@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -484,6 +484,23 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     accord (`data/threads.ts`), `StructureDef.search` (`economy.ts`, after the multipliers). The
     harness's `lattice` strategy sets `ourWay`, so that `wayOf` gives our autoplayer the
     Tessellate's rules for that call; every other strategy leaves it null.
+  - **The Hunger among the civilizations** (part 2b): `sim/plight.ts` (`plight(state, id)`, 0 to
+    1: reserve, starving, falling, will; the worst counts most). `sim/judge.ts`: every Taint rise
+    goes through `hungerAct(state, actor, taint, systemId, act, delta?)`, never `civ.taint +=`
+    (research, charters, `absorbSwarm`, communing a point at a time through
+    `civ.flags.taint_fed`, seizing without cause, devouring, tainted notes, and the events' own
+    `taint` helper; a fall is the actor's alone, `easeTaint`; `unit/rulebook-lint` forbids any
+    other write to Taint). Ours goes out as `spreadNews(...,
+    taint)`; a neighbour counts it in `heardOfUs` when it arrives (`Survivor.heardTaint`), and
+    everything the others decide by our Taint reads that: the ceiling (`HEARD_CEILING`),
+    `shuns` (`SANCTION_AT`), pacts, trade, joint works, the card. Another's goes into each tie's
+    `news` (the hearer's regard, `Tie.taintHeard`, `shunsOther`) and into a tiding for us
+    (`taintOf`, `Survivor.taintSeen`, the just cause in `warCause`: `HUNGER_CAUSE`, news delta
+    0). `CORRUPT_AT` (its own Taint): it raids anyone not its friend (`corrupted`,
+    `survivors.ts`). `becomeHunger` at 100 (step 10 of `turnSlices`); the fate `'hungered'`
+    sends no last transmission, only a tiding of the silence. The autoplayer's `hungerSteps`
+    (`auto.ts`, AIs only: plight from 0.6 and caution under 0.5) opens Hunger research
+    (`HUNGER_FIRST`), Consume the Dead and the events' Taint choices.
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not

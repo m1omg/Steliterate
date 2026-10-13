@@ -15,10 +15,11 @@ import { reserveCapacity } from './economy';
 import { computeMods } from './mods';
 import { sendSignal } from './signals';
 import { beamEnergy, dealSize, distanceToThem, inStep, lightAt, spareOf, spreadNews, voice } from './survivors';
-import { distLy, log, marks } from './util';
+import { capital, distLy, log, marks } from './util';
 import { breach } from './ways';
 import { send } from '../civs';
 import { civOf } from './others';
+import { SANCTION_AT, hungerAct, shuns } from './judge';
 
 export const PACT_KINDS: PactKind[] = ['aid', 'archives', 'watch'];
 
@@ -62,7 +63,7 @@ export function pactBlocked(state: GameState, sv: Survivor, kind: PactKind): str
   if (sv.war) return 'We are at war with them.';
   if (sv.proposal) return `Our proposal of ${PACTS[sv.proposal.kind].name} is still crossing to them, or their answer is.`;
   if (!inStep(state, sv)) return 'Our clocks are too far apart to agree on anything.';
-  if (state.civ.taint >= 60) return 'They will not bind themselves to what we are becoming.';
+  if (shuns(state, sv)) return 'They have heard what we are becoming, and will not bind themselves to it.';
   if (sv.disposition < -20) return 'They would not hear of it.';
   const cost = pactCost(state);
   if (state.civ.accord < cost) return `Needs ${cost} accord.`;
@@ -89,7 +90,7 @@ export function weighProposal(state: GameState, sv: Survivor) {
   if (!p) return;
   // the Tessellate keeps any agreement to the letter, and so enters one readily
   const need = PACTS[p.kind].need + (sv.way === 'lattice' ? -15 : 0) - (p.kind === 'aid' && sv.health < 0.5 ? 15 : 0);
-  const yes = sv.disposition >= need && state.civ.taint < 60;
+  const yes = sv.disposition >= need && !shuns(state, sv);
   sendSignal(state, {
     from: sv.id,
     kind: 'pact_answer',
@@ -157,7 +158,7 @@ export function theirPacts(state: GameState, sv: Survivor, chance: () => number)
     });
     return true;
   }
-  if (!sv.war && sv.disposition > 30 && mine.length < PACT_KINDS.length && !sv.proposal && state.civ.taint < 60 && chance() < 0.12) {
+  if (!sv.war && sv.disposition > 30 && mine.length < PACT_KINDS.length && !sv.proposal && !shuns(state, sv) && chance() < 0.12) {
     // the pact they need most: help while they are failing, a watch while the Hunger is near them
     const kind = (sv.health < 0.6 && !mine.includes('aid') ? 'aid' : !mine.includes('watch') && hungerNear(state, sv) ? 'watch' : PACT_KINDS.find((k) => !mine.includes(k)))!;
     sendSignal(state, {
@@ -231,13 +232,17 @@ export function pactsTurn(state: GameState) {
       if (!theirs) sv.health = Math.min(1, sv.health + 0.002);
       const since = state.turn - (sv.pacts!.archives ?? state.turn);
       if (since > 0 && since % NOTES_EVERY === 0) {
-        const open = availableTechs(state).filter((x) => !x.taint && (!theirs || theirs.techs.includes(x.id)));
+        // what they know; Hunger knowledge only from one on that path itself (judge.ts)
+        const fit = (x: { id: string; taint?: number }) => (!theirs || theirs.techs.includes(x.id)) && (!x.taint || (theirs?.taint ?? 0) >= SANCTION_AT);
+        const open = availableTechs(state).filter(fit);
         const ours = civ.researching ? TECH_BY_ID[civ.researching] : undefined;
-        const t = ours && (!theirs || theirs.techs.includes(ours.id)) ? ours : open.sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];
+        const t = ours && fit(ours) ? ours : open.sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];
         if (t) {
           const notes = Math.round(techCost(state, t.id) * 0.3);
           civ.research[t.id] = (civ.research[t.id] ?? 0) + notes;
           log(state, `From the archives of ${sv.name}: their notes on ${t.name} (${notes} insight toward it).`, 'good', sv.homeSystemId);
+          // reading Hunger knowledge is a Hunger act of ours: a quarter of what learning it is
+          if (t.taint) hungerAct(state, civ.id, Math.ceil(t.taint / 4), capital(state)?.systemId ?? civ.homeSystemId, `read notes on ${t.name} from ${sv.name}`);
         }
       }
     }

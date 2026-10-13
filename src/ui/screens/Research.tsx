@@ -22,7 +22,7 @@ function techTip(s: GameState, t: TechDef): string {
     t.desc,
     req.length ? `Requires: ${req.join(', ')}` : '',
     t.speculative ? 'Speculative physics: the science here is uncertain.' : '',
-    t.taint ? `Hunger-derived knowledge: +${t.taint} Taint.` : '',
+    t.taint ? `Hunger-derived knowledge: +${t.taint} Taint, and the others will hear of it.` : '',
     `Cost: ${techCost(s, t.id)} insight`,
   ]
     .filter(Boolean)

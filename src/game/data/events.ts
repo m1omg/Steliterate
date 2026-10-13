@@ -9,6 +9,7 @@ import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
 import { send } from '../civs';
+import { easeTaint, hungerAct } from '../sim/judge';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -58,7 +59,11 @@ const insight = (s: GameState, n: number) => {
   if (c.researching) c.research[c.researching] = (c.research[c.researching] ?? 0) + n;
   else c.flags.insight_bank = (c.flags.insight_bank ?? 0) + n;
 };
-const taint = (s: GameState, n: number) => (s.civ.taint = Math.max(0, Math.min(100, s.civ.taint + n)));
+/** Taint: a rise is a Hunger act (`act`, at `at`), heard of by the others when its light reaches them (judge.ts); a fall is ours alone. */
+const taint = (s: GameState, n: number, act = 'took the Hunger’s ways', at?: string) => {
+  if (n > 0) hungerAct(s, s.civ.id, n, at ?? capital(s)?.systemId ?? s.civ.homeSystemId, act);
+  else easeTaint(s, s.civ.id, -n);
+};
 
 function shelterNote(r: { built: number; missing: number }): string {
   if (!r.built && !r.missing) return 'Everyone already has somewhere to go.';
@@ -538,7 +543,7 @@ export const EVENTS: EventDef[] = [
       'The command language decodes into a single standing order, repeated in every swarm: PERSIST. Its makers wrote it the night their star went out. They meant themselves. The machines took it literally, and have been obeying for a trillion years.',
     choices: [
       { label: 'Hear the warning', hint: 'Resolve +3. Taint −5.', run: (s) => { res(s, 3); taint(s, -5); } },
-      { label: 'Hear the promise', hint: 'Insight +80. Taint +5.', run: (s) => { insight(s, 80); taint(s, 5); } },
+      { label: 'Hear the promise', hint: 'Insight +80. Taint +5.', run: (s) => { insight(s, 80); taint(s, 5, 'heard the Hunger’s promise'); } },
     ],
   },
 
@@ -872,7 +877,7 @@ export const EVENTS: EventDef[] = [
     text: (s, d) => `On ${bodyById(s, d)?.name} the survey found a library cut into bedrock by someone who died before our star formed. Much of it is still readable.`,
     choices: [
       { label: 'Read it, slowly', hint: 'Insight +90.', run: (s, d) => { insight(s, 90); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
-      { label: 'Strip it for matter', hint: 'Matter +50 (more under salvage charters).', run: (s, d) => { const m = hasCharter(s, 'consume_the_dead') ? 3 : hasCharter(s, 'salvage_the_dead') ? 2 : 1; matter(s, 50 * m); if (m === 3) taint(s, 2); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; } },
+      { label: 'Strip it for matter', hint: 'Matter +50 (more under salvage charters).', run: (s, d) => { const m = hasCharter(s, 'consume_the_dead') ? 3 : hasCharter(s, 'salvage_the_dead') ? 2 : 1; matter(s, 50 * m); const b = bodyById(s, d); if (m === 3) taint(s, 2, 'stripped an archive of the dead for matter', b?.systemId); if (b?.relic) b.relic.state = 'spent'; } },
     ],
   },
   {
@@ -893,7 +898,7 @@ export const EVENTS: EventDef[] = [
     choices: [
       { label: 'Mourn them', hint: 'Resolve +4.', run: (s, d) => { res(s, 4); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
       { label: 'Study the script', hint: 'Insight +45.', run: (s, d) => { insight(s, 45); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
-      { label: 'Salvage the site', hint: 'Matter +40. Resolve −3.', run: (s, d) => { const m = hasCharter(s, 'consume_the_dead') ? 3 : hasCharter(s, 'salvage_the_dead') ? 2 : 1; matter(s, 40 * m); res(s, -3); if (m === 3) taint(s, 2); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; } },
+      { label: 'Salvage the site', hint: 'Matter +40. Resolve −3.', run: (s, d) => { const m = hasCharter(s, 'consume_the_dead') ? 3 : hasCharter(s, 'salvage_the_dead') ? 2 : 1; matter(s, 40 * m); res(s, -3); const b = bodyById(s, d); if (m === 3) taint(s, 2, 'stripped a tomb for matter', b?.systemId); if (b?.relic) b.relic.state = 'spent'; } },
     ],
   },
   {
@@ -944,7 +949,7 @@ export const EVENTS: EventDef[] = [
           return 'Something went wrong in the vault a very long time ago. What woke up is not the people who went to sleep. Their machines woke with them, and they are hungry.';
         },
       },
-      { label: 'Devour the vault', hint: 'Energy +150, Matter +60. Hunger Taint +6. Requires Strip the Sleepers.', ok: (s) => hasCharter(s, 'strip_the_sleepers'), run: (s, d) => { energy(s, 150); matter(s, 60); taint(s, 6); res(s, -5); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; } },
+      { label: 'Devour the vault', hint: 'Energy +150, Matter +60. Hunger Taint +6. Requires Strip the Sleepers.', ok: (s) => hasCharter(s, 'strip_the_sleepers'), run: (s, d) => { energy(s, 150); matter(s, 60); const b = bodyById(s, d); taint(s, 6, 'devoured a vault of sleepers', b?.systemId); res(s, -5); if (b?.relic) b.relic.state = 'spent'; } },
     ],
   },
 ];

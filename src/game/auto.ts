@@ -47,6 +47,7 @@ import { SHIP_BY_ID } from './data/ships';
 import { SEED_MIN, terraformSummary } from './sim/terraform';
 import { planTies } from './sim/ties';
 import { newStarNear } from './sim/ways';
+import { plight } from './sim/plight';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
@@ -162,8 +163,9 @@ function pickResearch(state: GameState) {
     const mine = civ.id === state.player;
     const guard = !mine && avail.has('orbital_defense') && colonies(state).some((c) => swarmThreat(state, c.systemId)) ? 'orbital_defense' : undefined;
     const way = wayOf(state);
-    const order = way ? [...WAY_RESEARCH[way], ...TECH_PRIORITY] : TECH_PRIORITY;
-    const next = guard ?? order.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
+    const dark = hungerSteps(state);
+    const order = [...(dark ? HUNGER_FIRST : []), ...(way ? WAY_RESEARCH[way] : []), ...TECH_PRIORITY];
+    const next = guard ?? order.find((id) => avail.has(id)) ?? [...avail].filter((id) => (dark || !TECHS.find((t) => t.id === id)?.taint) && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
     if (!next) break;
     setResearch(state, next);
   }
@@ -443,6 +445,22 @@ function planFleets(state: GameState) {
   if (state.eraTurn % 25 === 3 && fleets(state).filter((f) => f.ships.some((s) => s.cls === 'probe')).length < 2) queueBuild(state, capital.id, 'ship', 'probe');
 }
 
+/**
+ * Whether another civilization takes Hunger steps (the new version, part 2b): only one desperate
+ * enough (plight, from DESPERATE_AT) and bold enough (caution under BOLD_BELOW) to. Ours never, as
+ * our autoplayer never has.
+ */
+const DESPERATE_AT = 0.6;
+const BOLD_BELOW = 0.5;
+function hungerSteps(state: GameState): boolean {
+  const civ = state.civ;
+  if (civ.id === state.player) return false;
+  return plight(state, civ.id) >= DESPERATE_AT && temperament(state, civ.id).caution < BOLD_BELOW;
+}
+
+/** What a civilization that takes Hunger steps learns first: Hunger Engines (matter +40%). */
+const HUNGER_FIRST = ['hunger_studies', 'command_language', 'hunger_engines'];
+
 /** The new star the sleepers race for (another civilization of the dormant way): one burning near them, with a cold world free. */
 function raceFor(state: GameState): StarSystem | null {
   if (wayOf(state) !== 'dormant' || state.civ.id === state.player) return null;
@@ -494,7 +512,8 @@ function planThreads(state: GameState) {
 }
 
 function planCharters(state: GameState) {
-  const order = ['open_archives', 'right_to_stop', 'thread_parity', 'merge_consent', 'sanctuary', 'the_long_watch', 'lattice_compact'];
+  // (one desperate and bold enough takes what the dead left: Consume the Dead, matter at once)
+  const order = [...(hungerSteps(state) ? ['consume_the_dead'] : []), 'open_archives', 'right_to_stop', 'thread_parity', 'merge_consent', 'sanctuary', 'the_long_watch', 'lattice_compact'];
   for (const id of order) if (!charterAvailable(state, id)) enactCharter(state, id);
 }
 
@@ -567,6 +586,8 @@ function planSignals(state: GameState) {
       const ask = s.data.ask !== undefined ? Number(s.data.ask) : 40;
       const have = s.data.want === 'energy' ? civ.energy : civ.matter;
       choice = have > Math.max(ask * 3, s.data.ask !== undefined ? 0 : 150) ? 'trade' : 'decline';
+      // notes on Hunger knowledge are a Hunger act to take: only for one that takes such steps
+      if (Number(s.data.taint ?? 0) > 0 && !hungerSteps(state)) choice = 'decline';
     }
     if (s.kind === 'slow_first') choice = 'math';
     if (s.kind === 'dark_reveal1') choice = 'ease';
@@ -593,7 +614,7 @@ function planEvents(state: GameState) {
     for (let i = 0; i < def.choices.length && !done; i++) {
       const ch = def.choices[i];
       if (ch.ok && !ch.ok(state, p.data)) continue;
-      if (/Taint|Devour|Strip/.test(ch.label + choiceHint(ch, state, p.data))) continue;
+      if (!hungerSteps(state) && /Taint|Devour|Strip/.test(ch.label + choiceHint(ch, state, p.data))) continue;
       if (clockTooDear(state, p.defId, i, String(p.data.systemId))) continue;
       done = answerEvent(state, p.uid, i).ok;
     }

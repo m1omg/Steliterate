@@ -313,7 +313,7 @@ export interface Survivor {
   clock: number; // log10 years
   contact: boolean;
   alive: boolean;
-  fate?: 'faded' | 'saved' | 'absorbed' | 'seized' | 'devoured' | 'transcended';
+  fate?: 'faded' | 'saved' | 'absorbed' | 'seized' | 'devoured' | 'transcended' | 'hungered';
   aidGiven: number;
   lastSent: number; // turn
   forkOf?: ThreadId;
@@ -325,8 +325,12 @@ export interface Survivor {
   tempted?: number;
   /** Energy we beamed to them, still crossing the dark (cosmic years it arrives); `known`: they can tell it came from us. */
   beams?: { at: number; energy: number; known: boolean; plea?: boolean }[];
-  /** What they will hear of us when its light reaches them (cosmic years), and how it will change how they feel. */
-  news?: { at: number; delta: number; what: string; tag?: 'sanctuary' }[];
+  /** What they will hear of us when its light reaches them (cosmic years), and how it will change how they feel (and the Taint of a Hunger act, judge.ts). */
+  news?: { at: number; delta: number; what: string; tag?: 'sanctuary'; taint?: number }[];
+  /** The Taint of ours they have heard of (judge.ts): what they decide by, never our true Taint. */
+  heardTaint?: number;
+  /** The Taint of theirs we have heard of, a civilization of its own (judge.ts). */
+  taintSeen?: number;
   /** Pacts in force between us: the turn each was sealed. */
   pacts?: Partial<Record<PactKind, number>>;
   /** A pact we proposed, crossing to them (cosmic years it arrives), and the accord it cost. */
@@ -377,6 +381,10 @@ export interface Tie {
   beams?: { to: string; at: number; energy: number }[];
   /** Turns and counts, as our marks (aid_<id>: when that one last sent help). */
   marks?: Record<string, number>;
+  /** A Hunger act of one of them, crossing to the other (`to`) as light: what it will think of it, and its Taint (judge.ts). */
+  news?: { to: string; at: number; delta: number; taint: number }[];
+  /** The Taint of the other each has heard of, by the hearer's id. */
+  taintHeard?: Record<string, number>;
 }
 
 export interface Mind {
@@ -566,7 +574,7 @@ export interface GameState {
   /** Between the other civilizations: each pair's tie (sim/ties.ts), by `a|b` (their ids in order). */
   ties?: Record<string, Tie>;
   /** What we will hear of the others' dealings with each other, when its light reaches our capital (ties.ts). */
-  tidings?: { at: number; text: string; systemId?: string; tie?: string; kind?: PactKind }[];
+  tidings?: { at: number; text: string; systemId?: string; tie?: string; kind?: PactKind; taintOf?: string; taint?: number }[];
   /** Save format version (absent in the first published saves: version 1). */
   saveVersion?: number;
 }

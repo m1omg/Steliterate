@@ -8,7 +8,8 @@
 //   decay, the free energy its forecast last saw, the guide, the forecasts put away);
 // - nothing pushes into a civilization's messages but deliver (civs.ts), so that one meant for
 //   another waits in the outbox;
-// - the pointer is set only by pointAt (civs.ts), never by assigning `state.civ`.
+// - the pointer is set only by pointAt (civs.ts), never by assigning `state.civ`;
+// - Taint changes only in judge.ts (part 2b): a rise is a Hunger act the others hear of.
 import { check, done } from '../lib';
 
 declare const process: { getBuiltinModule(id: string): unknown };
@@ -29,6 +30,7 @@ const RULES: Rule[] = [
   { what: 'a civilization’s own facts are in its flags', re: /\b(state|s|st|g|sim|world|game\.value)\.flags(\.(first_swarm|decay_lost|gfe_prev|tut)\b|\[`fcd:)/, allowed: ['game/save.ts'] },
   { what: 'only deliver puts a message in a civilization’s list', re: /\.signals\.push\(/, allowed: ['game/civs.ts'] },
   { what: 'only pointAt sets the pointer', re: /\.civ\s*=[^=]/, allowed: [] },
+  { what: 'Taint rises only by a Hunger act, which the others hear of (hungerAct), and falls only by easeTaint (judge.ts)', re: /\.taint\s*[+\-]?=(?!=)/, allowed: ['game/sim/judge.ts'] },
 ];
 
 for (const r of RULES) {

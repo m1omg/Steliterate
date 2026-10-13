@@ -13,6 +13,7 @@ import { endPact, pactsWith } from './pacts';
 import { dealSize, distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
 import { capital, clamp, fleets, log, marks } from './util';
 import { send } from '../civs';
+import { JUST_CAUSE_AT } from './judge';
 
 /** Accord the Threads' consent to a war costs. */
 export const WAR_ACCORD = 60;
@@ -34,9 +35,19 @@ export function anyWar(state: GameState): boolean {
   return Object.values(state.survivors).some(atWar);
 }
 
-/** Why a war with them would be just, or null: our own people who left us, or a neighbour who keeps raiding us. */
+/** The cause no one holds against us: the Hunger we have heard of in them. */
+export const HUNGER_CAUSE = 'The Hunger is in them.';
+
+/** Whether we have heard of enough of the Hunger in a civilization for that to be cause for war. */
+export function hungerCause(sv: Survivor): boolean {
+  return (sv.taintSeen ?? 0) >= JUST_CAUSE_AT;
+}
+
+/** Why a war with them would be just, or null: our own people who left us, the Hunger in them, or a neighbour who keeps raiding us. */
 export function warCause(state: GameState, sv: Survivor): string | null {
   if (sv.way === 'fork') return 'They are our own people, who left us.';
+  // the Hunger heard of in a civilization of its own (judge.ts): a war on it carries no infamy
+  if (hungerCause(sv)) return HUNGER_CAUSE;
   const last = sv.marks?.raid_last;
   const prev = sv.marks?.raid_prev;
   if (last !== undefined && prev !== undefined && last - prev <= RAID_SPAN && state.turn - last <= RAID_SPAN) return 'They keep raiding us.';
@@ -87,7 +98,7 @@ export function declareWar(state: GameState, id: string): string | null {
   // they hear it when the light arrives, and so does everyone else
   (sv.news ??= []).push({ at: lightAt(state, distanceToThem(state, sv)), delta: -40, what: 'you declared war on them' });
   const cap = capital(state);
-  spreadNews(state, cap?.systemId ?? civ.homeSystemId, cause ? -5 : -15, `you went to war with ${sv.name}`, sv.id);
+  spreadNews(state, cap?.systemId ?? civ.homeSystemId, cause === HUNGER_CAUSE ? 0 : cause ? -5 : -15, `you went to war with ${sv.name}${cause === HUNGER_CAUSE ? ', for the Hunger in them' : ''}`, sv.id);
   log(state, `We declared war on ${sv.name}. ${cause ?? 'Everyone will hear of it when the light arrives.'}`, 'bad', sv.homeSystemId);
   return null;
 }

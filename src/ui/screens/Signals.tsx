@@ -5,7 +5,8 @@ import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace, proposeAPact, seize, sendAid, shutHaloSiphons } from '../../game/sim/actions';
 import { siphonsRunning } from '../../game/physics';
-import { SIEGE_TURNS, WAR_ACCORD, seizeBlocked, warBlocked, warCause, warDefence } from '../../game/sim/war';
+import { HUNGER_CAUSE, SIEGE_TURNS, WAR_ACCORD, hungerCause, seizeBlocked, warBlocked, warCause, warDefence } from '../../game/sim/war';
+import { HEARD_CEILING, JUST_CAUSE_AT, SANCTION_AT, shuns } from '../../game/sim/judge';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
 import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
 import { ASK_COOLDOWN, askBlocked, inStep, reachBy, talkSpan } from '../../game/sim/survivors';
@@ -132,8 +133,11 @@ function PatternView({ p }: { p: number[] }) {
 function regardTip(s: GameState, sv: Survivor): string {
   const lines = [...(sv.memory ?? [])].reverse().map((m) => `Turn ${m.turn}: ${m.what} (${m.delta > 0 ? '+' : '−'}${Math.abs(m.delta)})`);
   if (!lines.length) lines.push('Nothing yet: they are making up their minds about us.');
-  const ceiling = Math.round(100 - s.civ.taint * 1.5);
-  if (s.civ.taint > 0) lines.push(`The Hunger in us: no one thinks better of us than ${ceiling}.`);
+  // what they have heard of the Hunger in us, not our own Taint (judge.ts)
+  const heard = sv.heardTaint ?? 0;
+  const ceiling = Math.round(100 - heard * HEARD_CEILING);
+  if (heard > 0) lines.push(`The Hunger they have heard of in us (Taint ${Math.round(heard)}): they think no better of us than ${ceiling}.`);
+  if (shuns(s, sv)) lines.push('They shun us for it: no new pact, trade or joint work.');
   const trust = Math.min(SANCTUARY_TRUST, ceiling);
   if (hasCharter(s, 'sanctuary') && sv.disposition >= 0 && sv.disposition < trust) lines.push(`Sanctuary: their trust in us grows, toward ${trust}.`);
   return lines.join('\n');
@@ -246,6 +250,21 @@ export function SignalsModal({ s }: { s: GameState }) {
                           </dd>
                           <dt data-tip={`How long one of their thoughts takes. We can talk with them if it is within ${sv.way === 'lattice' ? 'a millionfold (processes and protocol parse anything slow enough)' : 'about a thousandfold'} of any rhythm we can keep, from how fast our minds think to how long our turn is.`}>Clock</dt>
                           <dd class={`mono ${talk ? '' : 'warn'}`} data-tip={stepHint(s, logL, sv.clock, talkSpan(sv))}>{pow10(sv.clock)} yr{talk ? ' · in reach' : stepGap(my, sv.clock) > 0 ? ' · too slow for us' : ' · too fast for us'}</dd>
+                          {shuns(s, sv) && (
+                            <>
+                              <dt data-tip={`They have heard of ${SANCTION_AT} Taint or more in us, and are not on that path themselves: no new pact, trade or joint work, and their archives are closed to us${sv.way === 'lattice' ? ' (the Tessellate keeps an agreement it made to the letter)' : ''}.`}>Shun us</dt>
+                              <dd class="mono bad">for the Hunger they have heard of in us (Taint {n0(sv.heardTaint ?? 0)})</dd>
+                            </>
+                          )}
+                          {(sv.taintSeen ?? 0) > 0 && (
+                            <>
+                              <dt data-tip={`Their Taint, as far as we have heard: each of their steps toward the Hunger reaches us when its light does. From ${JUST_CAUSE_AT}, the Hunger in them is cause for war, and no one holds a war on it against us.`}>The Hunger in them</dt>
+                              <dd class={`mono ${hungerCause(sv) ? 'bad' : 'warn'}`}>
+                                Taint {n0(sv.taintSeen ?? 0)}
+                                {hungerCause(sv) ? ' · cause for war' : ''}
+                              </dd>
+                            </>
+                          )}
                           {sv.aidGiven > 0 && (
                             <>
                               <dt data-tip="Energy we beamed to them that has reached them, and that they know came from us.">Aid received</dt>
@@ -363,7 +382,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                                   return (
                                     <button
                                       class={`btn small danger ${armed === `war:${sv.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
-                                      data-tip={`${why ? `${why}\n` : ''}${cause ? `${cause} ` : ''}The Threads must consent (${WAR_ACCORD} accord); resolve −5, dissent +8, every Thread’s standing −${cause ? 1 : 3}. Our pacts with them end. Everyone hears of it when the light arrives${cause ? ', and few blame us' : ', and those who hate us join against us'}. No trade, archives or refuge while it lasts.`}
+                                      data-tip={`${why ? `${why}\n` : ''}${cause ? `${cause} ` : ''}The Threads must consent (${WAR_ACCORD} accord); resolve −5, dissent +8, every Thread’s standing −${cause ? 1 : 3}. Our pacts with them end. Everyone hears of it when the light arrives${cause === HUNGER_CAUSE ? ', and no one blames us' : cause ? ', and few blame us' : ', and those who hate us join against us'}. No trade, archives or refuge while it lasts.`}
                                       onClick={() => !why && setArmed(armed === `war:${sv.id}` ? null : `war:${sv.id}`)}
                                     >
                                       Declare war
@@ -450,7 +469,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                       </>
                     ) : (
                       <div class="dim" style={{ fontSize: '13.5px' }}>
-                        {sv.fate === 'faded' ? 'Their lights went out.' : sv.fate === 'saved' ? 'They made it, with our help.' : sv.fate === 'absorbed' ? 'They live on as part of us.' : sv.fate === 'seized' ? 'We took their star.' : sv.fate === 'devoured' ? 'We ate them.' : sv.fate === 'transcended' ? 'They went somewhere we cannot follow.' : 'Gone.'}
+                        {sv.fate === 'faded' ? 'Their lights went out.' : sv.fate === 'saved' ? 'They made it, with our help.' : sv.fate === 'absorbed' ? 'They live on as part of us.' : sv.fate === 'seized' ? 'We took their star.' : sv.fate === 'devoured' ? 'We ate them.' : sv.fate === 'transcended' ? 'They went somewhere we cannot follow.' : sv.fate === 'hungered' ? 'They became what they feared.' : 'Gone.'}
                       </div>
                     )}
                   </>

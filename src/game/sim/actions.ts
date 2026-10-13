@@ -22,7 +22,8 @@ import { siphonsRunning, sourceLight } from '../physics';
 import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { allColonies, colonies, hasCharter, hasTech, leftBehind, log, ownColony, ownFleet, savableName, uid } from './util';
+import { allColonies, capital, colonies, hasCharter, hasTech, leftBehind, log, ownColony, ownFleet, savableName, uid } from './util';
+import { hungerAct } from './judge';
 import { ageReached, inAge, matterGone } from '../fate';
 
 export type ActionResult = string | null; // error message or null on success
@@ -317,7 +318,8 @@ export function enactCharter(state: GameState, id: string): ActionResult {
   for (const [t, v] of Object.entries(d.stances)) civ.standing[t as keyof typeof civ.standing] = Math.max(0, Math.min(100, civ.standing[t as keyof typeof civ.standing] + (v ?? 0)));
   if (d.resolve) civ.resolve = Math.max(0, Math.min(100, civ.resolve + d.resolve));
   if (d.dissent) civ.dissent = Math.max(0, Math.min(100, civ.dissent + d.dissent));
-  if (d.taint) civ.taint = Math.min(100, civ.taint + d.taint);
+  // a dark charter is a Hunger act (judge.ts)
+  if (d.taint) hungerAct(state, civ.id, d.taint, capital(state)?.systemId ?? civ.homeSystemId, `enacted ${d.name}`);
   if (!again && (id === 'consume_the_dead' || id === 'salvage_the_dead')) state.gfe = Math.max(0.05, state.gfe - 0.01);
   // stripping what is already dead and in reach pays at once
   if (!again && id === 'salvage_the_dead') civ.matter += 40;

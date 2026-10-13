@@ -29,6 +29,7 @@ import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
 import { allColonies, clamp, colonies, distLy, fleets, hasCharter, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
+import { becomeHunger } from './judge';
 import { WORKS_WATER, seededVitality } from './terraform';
 import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf } from '../fate';
 
@@ -434,8 +435,11 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
 
   // ------------------------------------------------ 10. endings, stats
   yield* each((_c, id) => {
+    const had = !!state.civ.outcome;
     const o = checkEndings(state);
     if (id === me) result.outcome = o;
+    // another civilization whose Taint has reached 100 becomes the Hunger (judge.ts)
+    else if (!had && o?.kind === 'dark') becomeHunger(state, id);
     const civ = state.civ;
     civ.stats.pops.push(totalPops(state));
     civ.stats.energy.push(Math.round(civ.energy));

@@ -1,6 +1,6 @@
 // Living neighbours. Phase 0, honesty: energy we send travels as a beam and helps when the light
 // gets there; what we do to one civilization reaches the others when its light does; the Hunger in
-// us caps how well anyone can think of us; those we raided into the dark leave us nothing; asking
+// us, as far as they have heard of it (part 2b), caps how well anyone can think of us; those we raided into the dark leave us nothing; asking
 // needs clocks in step; refugees come only as far as we have room; nothing is sent to the dead; a
 // fork with no settlement of its own finds a star of its own.
 // (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
@@ -125,9 +125,13 @@ const later = (s: GameState, years: number) => {
   const s = game(30);
   const sv = first(s);
   sv.disposition = 50;
+  // (our true Taint, unheard of, caps nothing: what they decide by is what they have heard)
   s.civ.taint = 60;
   theirTurn(s);
-  check(Math.abs(sv.disposition - 48) < 1e-9, `with Taint 60 their regard sinks toward 10, two a turn (${sv.disposition})`);
+  check(Math.abs(sv.disposition - 50) < 1e-9, `Taint 60 they have not heard of: their regard stays (${sv.disposition})`);
+  sv.heardTaint = 60;
+  theirTurn(s);
+  check(Math.abs(sv.disposition - 48) < 1e-9, `with Taint 60 heard of, their regard sinks toward 10, two a turn (${sv.disposition})`);
   for (let i = 0; i < 40; i++) theirTurn(s);
   check(Math.abs(sv.disposition - 10) < 1e-9, `and stays there (${sv.disposition.toFixed(1)})`);
 }

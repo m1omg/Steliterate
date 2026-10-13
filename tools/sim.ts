@@ -11,6 +11,7 @@ import { endTurn } from '../src/game/sim/turn';
 import { colonies, threadTotals, totalPops } from '../src/game/sim/util';
 import type { EpochLength, ProtonFate } from '../src/game/types';
 import { fateOf } from '../src/game/fate';
+import { shuns } from '../src/game/sim/judge';
 
 // positional arguments, with the flags (-v, --diff=…) taken out wherever they stand
 const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));
@@ -49,12 +50,14 @@ for (const strategy of strategies) {
     }
     // each neighbour: alive or its fate (a civilization of its own: @ the turn its game ended), +N
     // for every star it lives at beyond its first, and the pacts in force or once sealed with it
-    // (a: Mutual Aid, r: Open Archives, w: Shared Watch)
+    // (a: Mutual Aid, r: Open Archives, w: Shared Watch), ~N its own Taint if it took any Hunger
+    // step, and ! if it shuns us for the Hunger it has heard of in us
     const sv = Object.values(state.survivors)
       .map((s) => {
         const pacts = (['aid', 'archives', 'watch'] as const).filter((k) => s.pacts?.[k] !== undefined).map((k) => (k === 'archives' ? 'r' : k[0])).join('');
         const ended = state.civs[s.id]?.outcome?.turn;
-        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${ended !== undefined ? `@${ended}` : ''}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}`;
+        const taint = state.civs[s.id]?.taint ?? 0;
+        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${ended !== undefined ? `@${ended}` : ''}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}${taint > 0 ? `~${taint.toFixed(0)}` : ''}${shuns(state, s) ? '!' : ''}`;
       })
       .join(' ');
     console.log(

@@ -22,12 +22,24 @@ import { calendarEra } from '../fate';
 import { flowing } from './flow';
 import { send } from '../civs';
 import { civOf, endCiv, syncSurvivor } from './others';
+import { CORRUPT_AT, HEARD_CEILING, heardOfUs, hungerAct, shuns } from './judge';
 import type { Rng } from '../rng';
 
 // Fellow survivors: other young civilizations facing the same end. Simulated lightly: their
 // fate follows the same physics, and they talk to you across light-years.
 
 const WAY_DRAIN: Record<Survivor['way'], number> = { garden: 1.5, upload: 0.8, chorus: 0.9, dormant: 0.55, lattice: 0.7, fork: 1 };
+
+/** Whether a civilization of its own is far down the Hunger's path (its own Taint from CORRUPT_AT): it takes from the weak. */
+function corrupted(state: GameState, sv: Survivor): boolean {
+  return (civOf(state, sv)?.taint ?? 0) >= CORRUPT_AT;
+}
+
+/** The Taint of taking another's notes on a Hunger technology: a quarter of what learning it is. */
+function takenTaint(tech: string | null): number {
+  const t = tech ? TECH_BY_ID[tech]?.taint ?? 0 : 0;
+  return t > 0 ? Math.ceil(t / 4) : 0;
+}
 
 /** How they speak: in words, or (the Tessellate) in protocol. */
 export function voice(sv: Survivor, human: string, protocol: string): string {
@@ -113,12 +125,12 @@ export function beamEnergy(state: GameState, sv: Survivor, energy: number, plea 
  * What we did at a star reaches every other civilization when its light does, and changes how
  * they feel about us then, not before.
  */
-export function spreadNews(state: GameState, fromSystemId: string, delta: number, what: string, except?: string, tag?: 'sanctuary') {
+export function spreadNews(state: GameState, fromSystemId: string, delta: number, what: string, except?: string, tag?: 'sanctuary', taint?: number) {
   const from = state.systems[fromSystemId];
   for (const o of Object.values(state.survivors)) {
     if (!o.alive || o.id === except) continue;
     const home = state.systems[o.homeSystemId];
-    (o.news ??= []).push({ at: lightAt(state, from && home ? distLy(from, home) : 0), delta, what, ...(tag ? { tag } : {}) });
+    (o.news ??= []).push({ at: lightAt(state, from && home ? distLy(from, home) : 0), delta, what, ...(tag ? { tag } : {}), ...(taint ? { taint } : {}) });
   }
 }
 
@@ -139,6 +151,8 @@ function reachThem(state: GameState, sv: Survivor) {
   if (sv.news?.length) {
     for (const n of sv.news.filter((x) => arrived(state, x.at))) {
       feel(state, sv, n.delta, n.what);
+      // the Taint of a Hunger act of ours, now heard of (judge.ts)
+      if (n.taint) heardOfUs(state, sv, n.taint);
       // a great wrong is answered, if they can speak to us
       if (n.delta <= -20 && sv.contact && inStep(state, sv)) {
         sendSignal(state, {
@@ -223,8 +237,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       reachThem(state, sv);
       // on their way to us, they do nothing else; when they arrive they live on among us
       if (onTheirWay(state, sv)) continue;
-      // the Hunger in us shows: the more of it we carry, the less anyone can think well of us
-      const ceiling = 100 - civ.taint * 1.5;
+      // the Hunger in us shows: the more of it they have heard of, the less they can think well of us
+      const ceiling = 100 - (sv.heardTaint ?? 0) * HEARD_CEILING;
       if (sv.disposition > ceiling) sv.disposition = Math.max(ceiling, sv.disposition - 2);
       // an open door is trusted
       sanctuaryTrust(state, sv, ceiling);
@@ -278,7 +292,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       if (sv.health <= 0.02) {
         sv.alive = false;
         // one that won its own game has gone beyond us; otherwise it faded
-        sv.fate = civOf(state, sv)?.outcome && civOf(state, sv)!.outcome!.kind !== 'defeat' ? 'transcended' : 'faded';
+        const o = civOf(state, sv)?.outcome;
+        sv.fate = o?.kind === 'dark' ? 'hungered' : o && o.kind !== 'defeat' ? 'transcended' : 'faded';
         endCiv(state, sv, 'Faded');
         if (sv.exodus) {
           delete sv.exodus;
@@ -292,6 +307,11 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
           if (b) b.relic = { kind: 'tomb', state: sv.contact ? 'found' : 'hidden' };
         }
         if (!sv.contact) continue;
+        // one that became the Hunger sends nothing: we hear its silence when its light reaches us (judge.ts)
+        if (sv.fate === 'hungered') {
+          (state.tidings ??= []).push({ at: lightAt(state, dist), text: `${sv.name} has fallen silent. What moves at their stars now is hungry, and it is not them.`, systemId: sv.homeSystemId });
+          continue;
+        }
         // those we raided into the dark do not leave their archive to us
         if (sv.raidedAt !== undefined && state.turn - sv.raidedAt < 10) {
           log(state, `${sv.name} has gone dark. After what we did to them, they sent us nothing.`, 'bad', sv.homeSystemId);
@@ -359,17 +379,18 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
           ],
         });
       } else if (
-        (sv.health < 0.22 || (sv.raidedAt !== undefined && sv.disposition < -50) || (sv.tempted !== undefined && state.turn - sv.tempted < 10) || atWar(sv) || inCoalition(state, sv)) &&
-        (sv.disposition < -20 || atWar(sv)) &&
+        (sv.health < 0.22 || (sv.raidedAt !== undefined && sv.disposition < -50) || (sv.tempted !== undefined && state.turn - sv.tempted < 10) || atWar(sv) || inCoalition(state, sv) || corrupted(state, sv)) &&
+        (sv.disposition < -20 || atWar(sv) || (corrupted(state, sv) && sv.disposition < 20)) &&
         state.turn >= (sv.marks?.raid_wait ?? 0) &&
         rng.chance(atWar(sv) || inCoalition(state, sv) ? 0.5 : 0.35)
       ) {
         // the desperate take what they can; those we raided come back for what we took; the
-        // hostile we begged for help know we are weak; and in a war, they strike back, and those
-        // who hate us join them
+        // hostile we begged for help know we are weak; in a war, they strike back, and those who
+        // hate us join them; and one far down the Hunger's path takes from anyone not its friend
         const warring = atWar(sv) || inCoalition(state, sv);
-        const revenge = !warring && sv.health >= 0.22 && sv.raidedAt !== undefined;
-        const opening = !warring && sv.health >= 0.22 && !revenge;
+        const hungry = !warring && sv.health >= 0.22 && corrupted(state, sv);
+        const revenge = !warring && !hungry && sv.health >= 0.22 && sv.raidedAt !== undefined;
+        const opening = !warring && !hungry && sv.health >= 0.22 && !revenge;
         raidedUs(state, sv);
         sv.lastSent = state.turn;
         const took = Math.round(Math.min(civ.energy * 0.2, 60));
@@ -394,13 +415,15 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
               ? atWar(sv)
                 ? `Their warships struck back at our reserves: ${took} energy taken. This is what a war is.`
                 : `They have joined the others against us. Their ships took ${took} energy from the reserve.`
+              : hungry
+              ? `Their ships fed on our reserves the way a swarm feeds on a star: ${took} energy taken. The Hunger is in them now.`
               : revenge
               ? `Their ships came back for what we took from them, and ${took} energy more. They did not answer our hails afterwards.`
               : opening
                 ? `We told them we were weak when we asked them for help. They came for ${took} energy of what little we had.`
                 : `Desperate ships drained ${took} energy from the reserve before anyone understood what was happening.`,
         });
-      } else if (sv.disposition > 35 && sv.health > 0.4 && !sv.marks?.joint && offerDue(state, sv, 'joint', () => rng.next())) {
+      } else if (sv.disposition > 35 && sv.health > 0.4 && !sv.marks?.joint && !shuns(state, sv) && offerDue(state, sv, 'joint', () => rng.next())) {
         sv.lastSent = state.turn;
         offered(state, sv, 'joint');
         sendSignal(state, {
@@ -418,6 +441,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         sv.lastSent = state.turn;
         offered(state, sv, 'trade');
         const on = deal.techName ? ` on ${deal.techName}` : '';
+        // notes on a Hunger technology, from one on that path: marked, and a Hunger act of ours to take (judge.ts)
+        const dark = deal.tainted ? takenTaint(deal.tech) : 0;
         sendSignal(state, {
           from: sv.id,
           kind: 'trade',
@@ -425,12 +450,12 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
           title: `${sv.name} offers a trade`,
           text: voice(
             sv,
-            `We have notes${on} we cannot use, and we need ${deal.want}. ${deal.ask} ${deal.want} for ${deal.insight} insight?`,
-            `EXCHANGE PROPOSED: ${deal.ask} ${deal.want.toUpperCase()} FOR ONE DATA PACKAGE: ${deal.insight} INSIGHT${deal.techName ? `, SUBJECT ${deal.techName.toUpperCase()}` : ''}. TERMS FIXED.`,
+            `We have notes${on} we cannot use, and we need ${deal.want}. ${deal.ask} ${deal.want} for ${deal.insight} insight?${dark ? ' It is Hunger knowledge. We think you are ready for it.' : ''}`,
+            `EXCHANGE PROPOSED: ${deal.ask} ${deal.want.toUpperCase()} FOR ONE DATA PACKAGE: ${deal.insight} INSIGHT${deal.techName ? `, SUBJECT ${deal.techName.toUpperCase()}` : ''}${dark ? ' (HUNGER-DERIVED)' : ''}. TERMS FIXED.`,
           ),
-          data: { ask: deal.ask, want: deal.want, insight: deal.insight, tech: deal.tech ?? '' },
+          data: { ask: deal.ask, want: deal.want, insight: deal.insight, tech: deal.tech ?? '', ...(dark ? { taint: dark } : {}) },
           choices: [
-            { id: 'trade', label: `Trade ${deal.ask} ${deal.want}`, hint: `${deal.insight} insight: their notes${on}.` },
+            { id: 'trade', label: `Trade ${deal.ask} ${deal.want}`, hint: `${deal.insight} insight: their notes${on}.${dark ? ` Notes on a Hunger technology: taking them is a Hunger act, Taint +${dark}, and the others will hear of it.` : ''}` },
             { id: 'decline', label: 'Decline', hint: 'They will wait longer before they offer again.' },
           ],
         });
@@ -552,6 +577,9 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         const to = tech && !civ.techs.includes(tech) && TECH_BY_ID[tech] ? tech : civ.researching;
         if (to) civ.research[to] = (civ.research[to] ?? 0) + gain;
         else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
+        // Hunger knowledge taken (judge.ts)
+        const dark = Number(sig.data.taint ?? 0);
+        if (dark > 0) hungerAct(state, civ.id, dark, capital(state)?.systemId ?? civ.homeSystemId, `took notes on ${TECH_BY_ID[tech]?.name ?? 'Hunger knowledge'} from ${sv?.name ?? 'another civilization'}`);
         if (sv) {
           if (civOf(state, sv)) send(state, sv.id, { [want]: ask });
           else sv.health = Math.min(1, sv.health + 0.05);
@@ -660,8 +688,9 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
   }
   civ.resolve = Math.max(0, civ.resolve - (cause ? 3 : 8));
   civ.dissent = Math.min(100, civ.dissent + (cause ? 4 : 10));
-  if (!cause) civ.taint = Math.min(100, civ.taint + 5);
-  spreadNews(state, sys.id, cause ? -10 : -30, `you took the star of ${sv.name} by force`);
+  // without a cause it is a Hunger act (judge.ts): its Taint ours, and heard of
+  if (!cause) hungerAct(state, civ.id, 5, sys.id, `took the star of ${sv.name} by force`, -30);
+  else spreadNews(state, sys.id, -10, `you took the star of ${sv.name} by force`);
   state.battles.push({ systemId: sys.id, turn: state.turn, text: `We took ${sv.name}’s star.` });
   log(state, sv.way === 'fork' ? `${sv.name} are ours again, and so are the settlements they took. Not all of them wanted to come back.` : `You took ${sv.name}’s star. Some of them live on as your people now. The rest do not.`, 'bad', sys.id);
   return null;
@@ -831,10 +860,9 @@ export function devourSurvivor(state: GameState, id: string): string | null {
   endCiv(state, sv, 'Devoured');
   civ.energy += 80 + dealSize(state, sv) * 3;
   civ.matter += 60 + dealSize(state, sv) * 4;
-  civ.taint = Math.min(100, civ.taint + 10);
   civ.resolve = Math.max(0, civ.resolve - 6);
   state.gfe = Math.max(0.05, state.gfe - 0.01);
-  spreadNews(state, sv.homeSystemId, -40, `you devoured ${sv.name} whole`);
+  hungerAct(state, civ.id, 10, sv.homeSystemId, `devoured ${sv.name} whole`, -40);
   log(state, `${sv.name} is gone. You are fuller than you have been in ages.`, 'bad', sv.homeSystemId);
   return null;
 }

@@ -336,7 +336,7 @@ export function OutcomeScreen({ s }: { s: GameState }) {
           </div>
           {fates.map((f) => (
             <div key={f.id} class={f.fate === 'saved' || f.fate === 'absorbed' ? 'good' : f.fate === 'seized' || f.fate === 'devoured' ? 'bad' : 'dim'}>
-              {f.name}: {f.alive ? 'still out there' : f.fate === 'saved' ? 'saved' : f.fate === 'absorbed' ? 'lives on within you' : f.fate === 'seized' ? 'taken by force' : f.fate === 'devoured' ? 'devoured' : f.fate === 'transcended' ? 'went beyond' : 'faded'}
+              {f.name}: {f.alive ? 'still out there' : f.fate === 'saved' ? 'saved' : f.fate === 'absorbed' ? 'lives on within you' : f.fate === 'seized' ? 'taken by force' : f.fate === 'devoured' ? 'devoured' : f.fate === 'transcended' ? 'went beyond' : f.fate === 'hungered' ? 'became the Hunger' : 'faded'}
             </div>
           ))}
         </div>

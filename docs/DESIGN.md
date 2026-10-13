@@ -345,8 +345,16 @@ the disagreement as real model uncertainty.
   scoreboard (there is no conquest victory); cooperation pays in people, energy, eyes on the
   Hunger and lights still on beside ours; taking pays once and is heard everywhere.
   * *Honesty.* Help is a beam that arrives when it arrives; what we do at one star changes how
-    the others feel when its light reaches them; the Hunger in us (Taint) caps how well anyone
-    can think of us.
+    the others feel when its light reaches them; the Hunger they have heard of in us caps how well
+    they can think of us.
+  * *The Hunger among them* (since the new version, part 2b). Every step toward the Hunger, ours
+    or another's, is the taker's Taint at once and news at light speed, judged as it arrives, the
+    desperate at three tenths of the prospering ("desperate players adopting SOME hunger tech
+    should not be viewed as badly as prospering ones", the player). Past 30 heard of, those not on
+    that path shun the one taking it (no new pact, trade or joint work, and no archives); at 60
+    heard of, the Hunger in one is a just cause, a war on which no one holds against anyone; at
+    60 of its own, a civilization raids anyone not its friend; at 100 another becomes the Hunger,
+    its capital budding a swarm. Only one on that path itself offers Hunger knowledge in trade.
   * *Pacts* (Mutual Aid, Shared Watch, Open Archives), proposed and answered at light speed,
     priced in accord, dearer with every pact; breaking one is heard everywhere.
   * *Refuge.* A dying civilization that trusts us comes to us, minds as light and flesh by
@@ -358,7 +366,8 @@ the disagreement as real model uncertainty.
   * *War,* narrow and costly: an accord vote, resolve, calm and standing; a siege while they
     arm; an assault we can lose; infamy at light speed and coalitions of those who hate us; its
     heat draws the Hunger; no pacts, trade or refuge while it lasts. It pays only against our
-    own people who left us or a neighbour who keeps raiding us, and then only a little.
+    own people who left us, a neighbour who keeps raiding us or one with the Hunger in it, and
+    then only a little.
   * *Ways that meet.* The sleepers wake for new stars and race for them; the Tessellate keeps
     its agreements to the letter and holds us to ours; the Choir gathers the Echoes who wish it;
     a partner at a new star shares its clock; in the Black Hole Age a hole's spin is a commons.
