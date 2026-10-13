@@ -10,8 +10,10 @@ run(async () => {
     // one autoplayed turn picks research (an open research prompt would hide the ship prompt)
     window.__stel.endTurns(1);
     const s = window.__stel.state();
-    for (const x of Object.values(s.fleets)) { x.auto = undefined; }
-    const f = Object.values(s.fleets).find((x) => x.at && x.ships.some((y) => y.cls === 'probe')) ?? Object.values(s.fleets).find((x) => x.at);
+    // ours only: the others' fleets are in the same map since the new version (part 2a-2)
+    const ours = Object.values(s.fleets).filter((x) => x.owner === s.player);
+    for (const x of ours) { x.auto = undefined; }
+    const f = ours.find((x) => x.at && x.ships.some((y) => y.cls === 'probe')) ?? ours.find((x) => x.at);
     const here = s.systems[f.at];
     const near = Object.values(s.systems).filter((x) => x.id !== here.id && s.civ.known[x.id]).map((x) => ({ x, d: Math.hypot(x.pos.x - here.pos.x, x.pos.y - here.pos.y, x.pos.z - here.pos.z) })).sort((a, b) => a.d - b.d)[0].x;
     window.__stel.orderFleet(f.id, near.id, 'survey');

@@ -119,7 +119,7 @@ run(async () => {
   await page.waitForTimeout(500);
   const probe = await page.evaluate(() => {
     const s = window.__stel.state();
-    const f = Object.values(s.fleets).find((x) => x.at && x.ships.some((y) => y.cls === 'probe'));
+    const f = Object.values(s.fleets).find((x) => x.owner === s.player && x.at && x.ships.some((y) => y.cls === 'probe'));
     if (f) window.__stel.select('fleet', f.id);
     return f?.id ?? null;
   });

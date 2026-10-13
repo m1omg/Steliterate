@@ -11,7 +11,7 @@ run(async () => {
     Object.assign(v, { alive: true, contact: true, way: 'upload', health: 0.8, disposition: 10, lastSent: -99 });
     delete v.fate;
     delete v.pacts;
-    s.civ.flags[`trade_next_${v.id}`] = 0;
+    (v.marks ??= {}).trade_next = 0;
     s.civ.energy = 200;
     s.civ.pending.length = 0;
     // a project worth their notes (the first techs are too cheap for a deal worth the light)

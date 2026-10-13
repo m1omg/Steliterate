@@ -83,7 +83,7 @@ run(async () => {
   // the Systems window, opened from a ship
   const fl = await page.evaluate(() => {
     const s = window.__stel.state();
-    const f = Object.values(s.fleets).find((x) => x.at && !x.to);
+    const f = Object.values(s.fleets).find((x) => x.owner === s.player && x.at && !x.to);
     if (!f) return null;
     window.__stel.select('fleet', f.id);
     window.__stel.refresh();

@@ -9,7 +9,7 @@ run(async () => {
   const target = await page.evaluate(() => {
     const s = window.__stel.state();
     s.civ.pending.length = 0;
-    const probe = Object.values(s.fleets).find((f) => f.ships.some((x) => x.cls === 'probe') && f.at);
+    const probe = Object.values(s.fleets).find((f) => f.owner === s.player && f.ships.some((x) => x.cls === 'probe') && f.at);
     const here = s.systems[probe.at];
     const d = (a, b) => Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y, a.pos.z - b.pos.z);
     const t = Object.values(s.systems).filter((x) => s.civ.known[x.id] === 1 && !x.gone).sort((a, b) => d(here, a) - d(here, b))[0];

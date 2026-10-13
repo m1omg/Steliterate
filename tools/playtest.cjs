@@ -87,7 +87,7 @@ async function toEra(p, era) {
       await p.screenshot({ path: `${out}/${tag}-${era}-galaxy.png` });
       const cap = await p.evaluate(() => {
         const s = window.__stel.state();
-        const c = Object.values(s.colonies)[0];
+        const c = s.colonies[s.civ.capitalId] ?? Object.values(s.colonies).find((x) => x.owner === s.player);
         return c ? c.systemId : null;
       });
       if (cap) {
@@ -147,7 +147,7 @@ async function toEra(p, era) {
       const s = window.__stel.state();
       s.civ.researching = 'fusion';
       s.civ.research.fusion = 1e7;
-      const probes = Object.values(s.fleets);
+      const probes = Object.values(s.fleets).filter((f) => f.owner === s.player);
       const near = Object.values(s.systems)
         .filter((x) => x.id !== s.civ.homeSystemId && s.civ.known[x.id] === 1)
         .map((x) => { const h = s.systems[s.civ.homeSystemId].phys; return { x, d: Math.hypot(x.phys.x - h.x, x.phys.y - h.y, x.phys.z - h.z) }; })

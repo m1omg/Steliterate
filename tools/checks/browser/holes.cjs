@@ -71,7 +71,7 @@ run(async () => {
   await page.evaluate(() => {
     const s = window.__stel.state();
     const heart = Object.values(s.systems).find((x) => x.primary.kind === 'smbh');
-    const f = Object.values(s.fleets)[0];
+    const f = Object.values(s.fleets).find((x) => x.owner === s.player);
     Object.assign(f, { at: heart.id, to: null, from: null, traveled: 0, distance: 0, order: 'idle', auto: undefined, ships: [{ cls: 'vaultship', hp: 8 }] });
     s.civ.techs.push('cold_computation');
     window.__stel.refresh();

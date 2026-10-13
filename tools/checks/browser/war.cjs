@@ -39,7 +39,8 @@ run(async () => {
   // warships at their first star, held three turns
   await page.evaluate((home) => {
     const s = window.__stel.state();
-    const f = Object.values(s.fleets).find((x) => x.ships.some((y) => y.cls === 'warden')) ?? Object.values(s.fleets)[0];
+    const ours = Object.values(s.fleets).filter((x) => x.owner === s.player);
+    const f = ours.find((x) => x.ships.some((y) => y.cls === 'warden')) ?? ours[0];
     f.ships = Array(8).fill(0).map(() => ({ cls: 'warden', hp: 10 }));
     f.at = home;
     f.to = null;

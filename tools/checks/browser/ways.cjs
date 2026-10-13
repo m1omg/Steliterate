@@ -23,7 +23,7 @@ run(async () => {
       window.__stel.endTurns(1, false);
     }
     window.__stel.refresh();
-    const echoes = Object.values(s.colonies).reduce((a, c) => a + c.pops.echoes, 0);
+    const echoes = Object.values(s.colonies).filter((c) => c.owner === s.player).reduce((a, c) => a + c.pops.echoes, 0);
     return { id: v.id, name: v.name, echoes, asked: s.civ.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null) };
   });
   check(sv.asked, `${sv.name} asks for those of our Echoes who wish to come`);

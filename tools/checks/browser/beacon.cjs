@@ -15,7 +15,7 @@ run(async () => {
       .filter((x) => !x.gone && !x.special && !x.beacon && !Object.values(s.colonies).some((c) => c.systemId === x.id))
       .sort((a, b) => d(a, cap) - d(b, cap))[0];
     s.civ.known[sys.id] = 2;
-    const f = Object.values(s.fleets)[0];
+    const f = Object.values(s.fleets).find((x) => x.owner === s.player);
     Object.assign(f, { at: sys.id, to: null, from: null, traveled: 0, distance: 0, order: 'idle', auto: undefined });
     s.civ.energy = 200;
     s.civ.pending.length = 0;
