@@ -201,7 +201,7 @@ run(async () => {
       await page.waitForTimeout(500);
       const s0 = await page.evaluate(() => document.querySelector('.drawer')?.className ?? '');
       check(/\bs0\b/.test(s0), `${name}: dragging the map lowers the sheet to small`);
-      await page.evaluate(() => { const hp = JSON.parse(localStorage.getItem('steliterate.hud') || '{}'); return hp.sheet; }).then((v) => check(v === 1, `${name}: the size set with the handle is remembered (${v})`));
+      await page.evaluate(() => { const hp = JSON.parse(localStorage.getItem('steliterate2.hud') || '{}'); return hp.sheet; }).then((v) => check(v === 1, `${name}: the size set with the handle is remembered (${v})`));
     }
 
     // Choose on map, by touch: the first tap shows the trip, Send sends

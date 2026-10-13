@@ -11,8 +11,8 @@ run(async () => {
   const ck = await start('lowvision', { width: 1280, height: 720 });
   const { page } = ck;
   await page.evaluate(() => {
-    const st = JSON.parse(localStorage.getItem('steliterate.settings') || '{}');
-    localStorage.setItem('steliterate.settings', JSON.stringify({ ...st, lowVision: true, uiScale: 2 }));
+    const st = JSON.parse(localStorage.getItem('steliterate2.settings') || '{}');
+    localStorage.setItem('steliterate2.settings', JSON.stringify({ ...st, lowVision: true, uiScale: 2 }));
   });
   await page.reload();
   await page.waitForTimeout(1500);
@@ -245,13 +245,13 @@ run(async () => {
   await page.waitForTimeout(500);
   await page.locator('.modal .field', { hasText: 'Magnifier mode' }).locator('button', { hasText: /^Off$/ }).click();
   await page.waitForTimeout(500);
-  const off = await page.evaluate(() => ({ lv: document.documentElement.classList.contains('lv'), z: getComputedStyle(document.documentElement).getPropertyValue('--z').trim(), hud: getComputedStyle(document.querySelector('.hud')).display, scale: JSON.parse(localStorage.getItem('steliterate.settings')).uiScale }));
+  const off = await page.evaluate(() => ({ lv: document.documentElement.classList.contains('lv'), z: getComputedStyle(document.documentElement).getPropertyValue('--z').trim(), hud: getComputedStyle(document.querySelector('.hud')).display, scale: JSON.parse(localStorage.getItem('steliterate2.settings')).uiScale }));
   check(!off.lv && off.hud === 'contents' && off.scale <= 1.4, `Off: the HUD as before (${off.hud}), the size back within the usual ones (${off.scale}, --z ${off.z})`);
   // a link turns it on (a fresh browser profile)
   const other = await ck.another(1280, 720);
   await other.goto(`${process.argv[2] || 'http://localhost:4173/'}?lowvision`, { timeout: 90000, waitUntil: 'domcontentloaded' });
   await other.waitForTimeout(1500);
-  const linked = await other.evaluate(() => ({ lv: document.documentElement.classList.contains('lv'), saved: JSON.parse(localStorage.getItem('steliterate.settings') || '{}').lowVision }));
+  const linked = await other.evaluate(() => ({ lv: document.documentElement.classList.contains('lv'), saved: JSON.parse(localStorage.getItem('steliterate2.settings') || '{}').lowVision }));
   check(linked.lv && linked.saved === true, 'the link …/?lowvision turns it on, and it is kept');
   await finish('LOW VISION', ck);
 });

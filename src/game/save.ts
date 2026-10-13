@@ -8,12 +8,13 @@ import { queueEvent } from './sim/events';
 import { relightTheLastStar } from './sim/minds';
 import { waitsForAnswer } from './sim/signals';
 import type { GameState } from './types';
+import { STORE } from '../keys';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
 // full or blocked (private windows, previews), and the game must still run.
 
-const KEY = 'steliterate.save.v1';
-const AUTO = 'steliterate.autosave.v1';
+const KEY = `${STORE}save`;
+const AUTO = `${STORE}autosave`;
 
 function ls(): Storage | null {
   try {
@@ -24,7 +25,14 @@ function ls(): Storage | null {
 }
 
 /** The current save format. Bump it with a new step in migrate() whenever saved state changes shape. */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
+
+/**
+ * The new version's first save format (13 Oct). A save older than it is from the build before the
+ * new version, which keeps it (`OLDER_BUILD` in keys.ts): the game says so and does not load it.
+ * Only the checks still read such saves, as fixtures (`legacy`), through the old steps below.
+ */
+export const FIRST_OF_THIS_LINE = 4;
 
 /**
  * Bring a save from any earlier version up to date, so old games keep working. Every step is
@@ -105,14 +113,39 @@ function serialize(state: GameState): string {
   return JSON.stringify(state, (_k, v) => (v === Infinity ? '__inf' : v === -Infinity ? '__-inf' : v));
 }
 
-export function deserialize(text: string): GameState | null {
+function parse(text: string): GameState | null {
   try {
     const s = JSON.parse(text, (_k, v) => (v === '__inf' ? Infinity : v === '__-inf' ? -Infinity : v)) as GameState;
-    if (!s || typeof s !== 'object' || !s.systems || !s.civ) return null;
+    return s && typeof s === 'object' && s.systems && s.civ ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A save as text, ready to play; null when it is not a save, or is from the build before the new version (unless `legacy`, for the checks' fixtures). */
+export function deserialize(text: string, legacy = false): GameState | null {
+  const s = parse(text);
+  if (!s || (!legacy && (s.saveVersion ?? 1) < FIRST_OF_THIS_LINE)) return null;
+  try {
     return migrate(s);
   } catch {
     return null;
   }
+}
+
+/** Whether this text (a save file or a save code) is a game from the build before the new version. */
+export function fromOlderBuild(text: string): boolean {
+  const t = text.trim().replace(/^\uFEFF/, '');
+  let json = t;
+  if (!t.startsWith('{')) {
+    try {
+      json = decodeURIComponent(escape(atob(t)));
+    } catch {
+      return false;
+    }
+  }
+  const s = parse(json);
+  return !!s && (s.saveVersion ?? 1) < FIRST_OF_THIS_LINE;
 }
 
 export function saveGame(state: GameState, auto = false): boolean {
@@ -157,9 +190,9 @@ export function exportCode(state: GameState): string {
   }
 }
 
-export function importCode(code: string): GameState | null {
+export function importCode(code: string, legacy = false): GameState | null {
   try {
-    return deserialize(decodeURIComponent(escape(atob(code.trim()))));
+    return deserialize(decodeURIComponent(escape(atob(code.trim()))), legacy);
   } catch {
     return null;
   }
@@ -167,8 +200,8 @@ export function importCode(code: string): GameState | null {
 
 // ---- save slots: as many named saves as the browser will hold, kept gzipped where it can
 
-const SLOT_INDEX = 'steliterate.slots.v1';
-const slotKey = (id: string) => `steliterate.slot.${id}`;
+const SLOT_INDEX = `${STORE}slots`;
+const slotKey = (id: string) => `${STORE}slot.${id}`;
 
 export interface SlotInfo {
   id: string;
@@ -316,14 +349,17 @@ export function readSaveBundle(text: string): BundledSave[] | null {
  * twice adds nothing. Resolves how many came in, were already here, and could not be read or did
  * not fit.
  */
-export async function importSaveBundle(saves: BundledSave[]): Promise<{ added: number; skipped: number; failed: number }> {
+export async function importSaveBundle(saves: BundledSave[]): Promise<{ added: number; skipped: number; failed: number; older: number }> {
   let added = 0;
   let skipped = 0;
   let failed = 0;
+  let older = 0;
   for (const b of saves) {
-    const g = b && typeof b === 'object' ? deserialize(JSON.stringify(b.game)) : null;
+    const text = b && typeof b === 'object' ? JSON.stringify(b.game) : '';
+    const g = text ? deserialize(text) : null;
     if (!g) {
-      failed++;
+      if (text && fromOlderBuild(text)) older++;
+      else failed++;
       continue;
     }
     const name = b.from === 'slot' ? String(b.name) : `${b.name}: ${g.settings.civName}, turn ${g.turn}`;
@@ -336,7 +372,7 @@ export async function importSaveBundle(saves: BundledSave[]): Promise<{ added: n
     if (typeof r === 'string') failed++;
     else added++;
   }
-  return { added, skipped, failed };
+  return { added, skipped, failed, older };
 }
 
 /** A save as a file of its own: the same JSON the browser keeps, under a readable name. */
@@ -345,10 +381,10 @@ export function saveFile(state: GameState): { name: string; text: string } {
   return { name: `steliterate-${civ}-turn-${state.turn}.json`, text: serialize(state) };
 }
 
-/** Read a save from a file or pasted text: plain JSON or a save code, from any version. */
-export function readSave(text: string): GameState | null {
+/** Read a save from a file or pasted text: plain JSON or a save code (of this version, unless `legacy`). */
+export function readSave(text: string, legacy = false): GameState | null {
   const t = text.trim().replace(/^\uFEFF/, '');
-  return t.startsWith('{') ? deserialize(t) : importCode(t);
+  return t.startsWith('{') ? deserialize(t, legacy) : importCode(t, legacy);
 }
 
 export function cloneState(state: GameState): GameState {

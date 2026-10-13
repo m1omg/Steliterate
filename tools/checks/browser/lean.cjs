@@ -19,11 +19,11 @@ const voice = (page) =>
   });
 
 const quality = async (pg, saved) => {
-  await pg.evaluate((s) => localStorage.setItem('steliterate.settings', JSON.stringify(s)), saved);
+  await pg.evaluate((s) => localStorage.setItem('steliterate2.settings', JSON.stringify(s)), saved);
   await pg.reload();
   await pg.waitForFunction(() => !!window.__stel?.engine(), null, { timeout: 60000 });
   const q = await pg.evaluate(() => window.__stel.engine().quality);
-  await pg.evaluate(() => localStorage.removeItem('steliterate.settings'));
+  await pg.evaluate(() => localStorage.removeItem('steliterate2.settings'));
   return q;
 };
 

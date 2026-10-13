@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { DEFAULT_SETTINGS, newGame } from '../../game/newGame';
 import { hasSave, loadGame } from '../../game/save';
+import { hasOldGames, OLDER_BUILD } from '../../keys';
 import type { Difficulty, EpochLength, GameSettings, ProtonFate } from '../../game/types';
 import { music } from '../../audio/music';
 import { sfx } from '../../audio/sfx';
@@ -77,6 +78,14 @@ export function MainMenu() {
             Settings
           </button>
         </div>
+        {hasOldGames() && (
+          <p class="menu-older">
+            Your games from before the new version play on in the older build, as it was on 13 Oct.{' '}
+            <a href={OLDER_BUILD} target="_blank" rel="noopener">
+              Open the older build
+            </a>
+          </p>
+        )}
         <div class="menu-foot">
           Four ages, from the last red dwarfs to the Dark Era beyond 10¹⁰⁰ years. The physics follows Adams &amp; Laughlin (1997), Dyson (1979) and Krauss &amp; Starkman (2000), with the speculative parts labelled as such in the Codex.
           <br />

@@ -32,7 +32,7 @@ function oldRaw(): any {
   const bytes = fs.readFileSync(new URL(`../../saves/${OLD}`, import.meta.url));
   return JSON.parse(new TextDecoder().decode(zlib.gunzipSync(bytes)));
 }
-const fromRaw = (raw: unknown) => readSave(JSON.stringify(raw))!;
+const fromRaw = (raw: unknown) => readSave(JSON.stringify(raw), true)!;
 
 /** The base save moved to η `at`, the gathering done this turn, at this pace (and fate). */
 function gathering(at: number, pace: number, fate?: 'decay' | 'stable' | 'curvature'): GameState {

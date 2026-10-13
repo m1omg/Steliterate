@@ -1,6 +1,7 @@
 import { signal } from '@preact/signals';
 import type { Engine, Quality } from '../render/engine';
 import { saveGame } from '../game/save';
+import { OLD_HUD_KEY, OLD_SETTINGS_KEY, STORE } from '../keys';
 import type { GameState } from '../game/types';
 
 // UI state around the simulation. The game state is mutated in place by the simulation;
@@ -138,7 +139,9 @@ function loadSettings(): Settings {
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const d: Settings = { music: 0.7, sfx: 0.7, quality: touch ? 'medium' : 'high', uiScale: 1, playlist: {}, overture: true };
   try {
-    const t = localStorage.getItem('steliterate.settings');
+    // the new version keeps its own settings; the first time, it starts from the older build's
+    // (the magnifier mode, sizes and volumes carry over), which it never writes
+    const t = localStorage.getItem(`${STORE}settings`) ?? localStorage.getItem(OLD_SETTINGS_KEY);
     const s: Settings = t ? { ...d, ...JSON.parse(t) } : d;
     // settings saved before carry high: once on a touch device, unless it was picked by hand
     if (touch && !s.qualityChosen && s.quality === 'high') s.quality = 'medium';
@@ -170,7 +173,7 @@ export function applyUiScale(u: number) {
 export function saveSettings(s: Settings) {
   settings.value = s;
   try {
-    localStorage.setItem('steliterate.settings', JSON.stringify(s));
+    localStorage.setItem(`${STORE}settings`, JSON.stringify(s));
   } catch {
     /* storage may be unavailable */
   }
@@ -195,7 +198,7 @@ export interface HudPrefs {
 function loadHudPrefs(): HudPrefs {
   const d: HudPrefs = { forecasts: true, feed: true, orbitsPaused: false, eventPivot: true, viewMode: 0 };
   try {
-    const t = localStorage.getItem('steliterate.hud');
+    const t = localStorage.getItem(`${STORE}hud`) ?? localStorage.getItem(OLD_HUD_KEY);
     return t ? { ...d, ...JSON.parse(t) } : d;
   } catch {
     return d;
@@ -205,7 +208,7 @@ export const hudPrefs = signal<HudPrefs>(loadHudPrefs());
 export function setHudPrefs(p: Partial<HudPrefs>) {
   hudPrefs.value = { ...hudPrefs.value, ...p };
   try {
-    localStorage.setItem('steliterate.hud', JSON.stringify(hudPrefs.value));
+    localStorage.setItem(`${STORE}hud`, JSON.stringify(hudPrefs.value));
   } catch {
     /* storage may be unavailable */
   }

@@ -23,6 +23,7 @@ import { guardTranslation } from './ui/translateGuard';
 import { applyLowVision, trackKeyboard } from './ui/a11y';
 import { buildSelected, nextTodo } from './ui/hud/Hud';
 import { eventResult, loreView } from './ui/screens/Story';
+import { STORE } from './keys';
 import './ui/styles.css';
 
 const stage = document.getElementById('stage')!;
@@ -225,7 +226,7 @@ else boot(hot?.data ?? null);
 
 // The GPU context: phones take it away in the background. Usually it comes back by itself;
 // if it will not, save, reload the page, and pick the game up again where it was.
-const RESUME = 'steliterate.resume';
+const RESUME = `${STORE}resume`;
 // (a phone does this at every switch to another app and back: said only when it takes a while)
 let lostNote = 0;
 let lostSaid = false;

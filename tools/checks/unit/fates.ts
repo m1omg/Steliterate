@@ -13,11 +13,12 @@ import { TECH_BY_ID } from '../../../src/game/data/techs';
 import { calendarEra, fateKnown, fateOf, matterGone } from '../../../src/game/fate';
 import { shownKind } from '../../../src/game/physics';
 import type { CrossingReport, GameState, ProtonFate } from '../../../src/game/types';
+import { SAVE_VERSION } from '../../../src/game/save';
 import { check, done, loadSave } from '../lib';
 
 check(drawFate(0.1) === 'decay' && drawFate(0.49) === 'decay' && drawFate(0.5) === 'curvature' && drawFate(0.74) === 'curvature' && drawFate(0.75) === 'stable', 'an unknown fate: decay below 0.5, curvature to 0.75, stable above');
 const old = loadSave('551fb1a-seed24757-turn71.json.gz');
-check(old.saveVersion === 3 && old.fate === (old.protonsDecay ? 'decay' : 'stable'), `an old save keeps its fate (${old.fate}) and loads as version 3`);
+check(old.saveVersion === SAVE_VERSION && old.fate === (old.protonsDecay ? 'decay' : 'stable'), `an old save (a fixture, read as legacy) keeps its fate (${old.fate}) and migrates to version ${SAVE_VERSION}`);
 
 /** Play a game of this fate with the autoplayer until `stop` says so; every crossing seen is kept. */
 function play(fate: ProtonFate, stop: (s: GameState) => boolean, seed = 1000) {

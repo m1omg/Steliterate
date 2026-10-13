@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
 import { music, PIECES, pieceOn, TRACK_CHOICES, type Piece, type TrackKey } from '../../audio/music';
 import { ERA_BY_ID } from '../../game/eras';
-import { deleteSlot, exportAllSaves, exportCode, hasSave, importSaveBundle, listSlots, loadGame, loadSlot, readSave, readSaveBundle, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
+import { deleteSlot, exportAllSaves, exportCode, fromOlderBuild, hasSave, importSaveBundle, listSlots, loadGame, loadSlot, readSave, readSaveBundle, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
+import { OLDER_BUILD } from '../../keys';
 import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
@@ -334,15 +335,25 @@ async function importSave(onSlots?: () => void) {
   if (all) {
     const r = await importSaveBundle(all);
     onSlots?.();
-    const parts = [r.added ? `${r.added} save${r.added === 1 ? '' : 's'} added as slots` : 'No new saves', r.skipped ? `${r.skipped} already here` : '', r.failed ? `${r.failed} could not be read or did not fit` : ''].filter(Boolean);
-    notify(`${parts.join(', ')}.`, r.added ? 'good' : r.failed ? 'bad' : 'info');
+    const parts = [
+      r.added ? `${r.added} save${r.added === 1 ? '' : 's'} added as slots` : 'No new saves',
+      r.skipped ? `${r.skipped} already here` : '',
+      r.failed ? `${r.failed} could not be read or did not fit` : '',
+      r.older ? `${r.older} from the older build, which keeps them: import ${r.older === 1 ? 'it' : 'them'} there` : '',
+    ].filter(Boolean);
+    notify(`${parts.join(', ')}.`, r.added ? 'good' : r.failed || r.older ? 'bad' : 'info', r.older ? olderBuildAction : undefined);
     if (r.added) sfx('good');
     return;
   }
   const g = readSave(text);
   if (g) startLoaded(g);
+  else if (fromOlderBuild(text)) notify(OLDER_SAVE, 'bad', olderBuildAction);
   else notify('That file is not a Steliterate save.', 'bad');
 }
+
+/** A game saved before the new version: that build keeps it, and plays it. */
+const OLDER_SAVE = 'That game is from the older build, before the new version. It plays on there, with your other games from then.';
+const olderBuildAction = { label: 'Open it', tip: 'The older build, as it was on 13 Oct, in a new tab.', run: () => { window.open(OLDER_BUILD, '_blank', 'noopener'); } };
 
 const ERA_SHORT: Record<string, string> = { dusk: 'the Long Dusk', degenerate: 'the Degenerate Age', blackhole: 'the Black Hole Age', dark: 'the Dark' };
 
@@ -530,6 +541,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
             onClick={() => {
               const g = readSave(importText);
               if (g) startLoaded(g);
+              else if (fromOlderBuild(importText)) notify(OLDER_SAVE, 'bad', olderBuildAction);
               else notify('That code could not be read.', 'bad');
             }}
           >

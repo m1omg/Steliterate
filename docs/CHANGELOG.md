@@ -1889,3 +1889,30 @@ reading list: "yes add the positronium line to the codex pls".
   (2004, arXiv:astro-ph/0405273) find that electrons and positrons drift apart faster than they
   can pair, so it may never form. The game lets it form: a bend. The paper is in the Sources.
 - No rules changed.
+
+# The new version (from 13 Oct; on `claude/epic-wozniak-lyhulf`, not live until all of it is done)
+
+The plan the player approved is `docs/plans/new-version.md`. Each part below is validated and
+pushed on the work branch; nothing goes into `main` until the whole version goes up at `/next/`.
+
+## Its own storage (13 Oct)
+
+"For the new version, don't worry about saves. It will have so many changes that I will start
+from the beginning."
+
+- **Every key starts with `steliterate2.`** (`src/keys.ts`): the save, the autosave, the slots,
+  the settings, the HUD and the reload-resume flag. The new version never reads or writes the
+  older build's games, which play on at `/archive/2026-10-13/` on the same origin.
+- **Its first save format is 4** (`FIRST_OF_THIS_LINE` in `save.ts`). A save, save code or file of
+  all saves from before is refused, with "That game is from the older build, before the new
+  version. It plays on there, with your other games from then." and a button to open it
+  (`fromOlderBuild`). The title screen says the same, with a link, while the older build's games
+  are in this browser.
+- **Settings and HUD preferences** start from the older build's the first time (the magnifier
+  mode, sizes and volumes carry over); the older build's are never written.
+- **The checks' fixtures** in `tools/saves/` are from the older build: the checks still read them,
+  through the old migrate steps, as `legacy` (`loadSave`, `readSave(text, true)`). `savecompat`
+  now checks that the player's path refuses each of them.
+- **Checks:** `browser/older-build` (new); `save-all`, `lean`, `lowvision` and `mobile` use the new
+  keys; `unit/fates` expects version 4 after a legacy read.
+- No rules changed.

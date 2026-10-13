@@ -58,7 +58,7 @@ run(async () => {
   await close();
   // another browser, as it were: no saves at all
   await page.evaluate(() => {
-    for (const k of Object.keys(localStorage)) if (k.startsWith('steliterate.slot') || k.startsWith('steliterate.save') || k.startsWith('steliterate.autosave')) localStorage.removeItem(k);
+    for (const k of Object.keys(localStorage)) if (k.startsWith('steliterate2.slot') || k.startsWith('steliterate2.save') || k.startsWith('steliterate2.autosave')) localStorage.removeItem(k);
   });
   await openSaves();
   check((await page.locator('.modal .save-slots .list-item').count()) === 0, 'emptied: no slots');
@@ -79,7 +79,7 @@ run(async () => {
   check(after.length === 4, `four slots in the list, refreshed (${after.length})`);
   check(after.some((x) => x.startsWith('First of two')) && after.some((x) => x.startsWith('Second of two')), 'the slots keep their names');
   check(after.some((x) => x.startsWith('Quick save:')) && after.some((x) => x.startsWith('Autosave:')), 'the quick save and the autosave come in as slots of their own');
-  const own = await page.evaluate(() => [localStorage.getItem('steliterate.save.v1'), localStorage.getItem('steliterate.autosave.v1')]);
+  const own = await page.evaluate(() => [localStorage.getItem('steliterate2.save'), localStorage.getItem('steliterate2.autosave')]);
   check(own[0] === null, 'the quick save itself is not written by an import');
   const t2 = await importIt();
   check(/No new saves, 4 already here/.test(t2) && (await page.locator('.modal .save-slots .list-item').count()) === 4, `imported again: nothing added (${t2.slice(0, 80)})`);

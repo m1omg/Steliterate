@@ -1,12 +1,15 @@
-// Save compatibility: load saves written by earlier versions, check that they migrate, and play
-// each to the end of time with the autoplayer. Old saves must always load.
+// Save compatibility. The saves in tools/saves/ are from the build before the new version (13 Oct):
+// the player's path must refuse each one and say where it plays on (`fromOlderBuild`), while the
+// checks' legacy path still migrates it and plays it to the end of time with the autoplayer (they
+// are the checks' fixtures). What this version writes must load again, as a save code and a file.
 // Usage: npm run savecompat [-- file...]   (default: every save in tools/saves/; JSON or save codes, .gz allowed)
 // tools/saves/551fb1a-seed24757-turn71.json.gz is from the first published version (551fb1a):
-// seed 24757, the competent autoplayer, 71 turns. When SAVE_VERSION goes up, add a save from the old version.
+// seed 24757, the competent autoplayer, 71 turns. The new version's own saves start a new corpus
+// once it goes up at /next/ (docs/plans/new-version.md).
 
 import { autoPlay } from '../src/game/auto';
 import { formatEta } from '../src/game/eras';
-import { exportCode, importCode, readSave, saveFile, SAVE_VERSION } from '../src/game/save';
+import { exportCode, fromOlderBuild, importCode, readSave, saveFile, SAVE_VERSION } from '../src/game/save';
 import { endTurn } from '../src/game/sim/turn';
 import { totalPops } from '../src/game/sim/util';
 
@@ -27,13 +30,17 @@ const read = (t: string | URL) => {
 let failures = 0;
 for (const t of targets) {
   const name = String(t).split('/').pop();
-  const state = readSave(read(t));
+  const text = read(t);
+  const state = readSave(text, true);
   if (!state) {
     failures++;
     console.log(`FAIL ${name}: not a readable save`);
     continue;
   }
   const problems: string[] = [];
+  // the player's path: refused, and known for what it is
+  if (readSave(text) !== null) problems.push('the new version loads it for the player; it should refuse a save from the older build');
+  if (!fromOlderBuild(text)) problems.push('not recognised as a save from the older build');
   if (state.saveVersion !== SAVE_VERSION) problems.push(`saveVersion ${state.saveVersion} after migrate, expected ${SAVE_VERSION}`);
   const from = state.turn;
   let guard = 0;
