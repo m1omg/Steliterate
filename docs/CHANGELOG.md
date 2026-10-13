@@ -2571,11 +2571,13 @@ Each settlement now has a form, `Colony.form` (`data/forms.ts`), which decides w
   a Confluence Node re-encoded, room for 3 Chorus, decay-proof itself. Before, the Chorus had room
   nowhere after matter, so it was always lost and One Voice could not happen after it. Echoes merge
   there, and building one counts for the Chorus's wish for room, as a Confluence Node does.
-- **A system that dissolves before the Great Decay** (from η 37.5, one at a time): what was
-  re-encoded there goes on as leptonic at once, with the same losses as at the end, counted once in
-  the crossing's report. Before, it went on with all its matter and its Kin in domes on a world that
-  had dissolved, until the end stripped it.
 - **What is under way** at the end of matter stays in the queue if it is decay-proof too.
 - **The autoplayer** builds a Leptonic Confluence where its Chorus lives before the end, as it
   builds substrate (and under curvature from η 27, from matter to spare).
+- **Left to the Thinning (3-3):** a settlement re-encoded in a system that dissolves before the
+  Great Decay (from η 37.5) still goes on with all it had until the end strips it. Tried here, it
+  went leptonic at once and lost its sources of energy a few turns early, stranded in an empty
+  system until the Migration: 15 fewer decay games of 450 survived (175 to 160, most to The Will
+  Fails), the last turns' net energy falling from +154 to −21 in one of them. With the Thinning it
+  should drift to a black hole at once.
 - **Check:** `unit/forms` (new).

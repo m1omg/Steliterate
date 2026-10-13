@@ -23,7 +23,7 @@ function isHole(kind: string | undefined): boolean {
 }
 
 /** Whether anything standing at a settlement outlasts matter (Leptonic Substrate, a Leptonic Confluence, a Bastion Shell). */
-export function decayProof(c: Colony): boolean {
+function decayProof(c: Colony): boolean {
   return Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof);
 }
 
@@ -112,7 +112,7 @@ function toAll(lines: Reports, line: CrossingReport['lines'][number]) {
 }
 
 /** A crossing's protocols, if this civilization has them: they halve its losses (as they say). */
-export function protocolsMult(state: GameState, era: EraId): number {
+function protocolsMult(state: GameState, era: EraId): number {
   const protocols = PROTOCOLS[era];
   return protocols && state.civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1;
 }
@@ -232,14 +232,14 @@ function endOfMatter(state: GameState, ids: readonly string[], mods: Record<stri
 export const CARRIED = 0.35;
 
 /**
- * A settlement on decay-proof substrate whose matter is gone (at the end of matter, or as its own
- * system dissolves before it): it goes on as leptonic (data/forms.ts), keeping only what is
+ * A settlement on decay-proof substrate at the end of matter: it goes on as leptonic
+ * (data/forms.ts), keeping only what is
  * decay-proof and, at a black hole, what is kept there (a Horizon Vault's charge is its hole's
  * spin); what is under way stays only if it is decay-proof too. Its Kin and their sleepers, made of
  * matter, are gone, and re-encoding the Lattice costs half of it (`mult` of that, under the
  * protocols), once. Returns how many were lost.
  */
-export function goLeptonic(state: GameState, c: Colony, mult: number): number {
+function goLeptonic(state: GameState, c: Colony, mult: number): number {
   const was = formOf(c) === 'leptonic';
   const atHole = isHole(state.systems[c.systemId]?.primary.kind);
   for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]?.decayProof && !(atHole && STRUCTURE_BY_ID[k]?.keptAtHole)) delete c.structures[k];

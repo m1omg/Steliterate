@@ -5,11 +5,8 @@
 // - a Leptonic Confluence gives the Chorus room after matter (decay-proof itself), the protocols
 //   carry a Chorus onto it as far as it has room, Echoes merge there, and building one counts as a
 //   node for the Chorus's demand;
-// - a settlement whose own system dissolves before the end goes on as leptonic at once: its Kin
-//   are lost then, and counted once, in the crossing's report;
 // - before the end, the autoplayer builds a Leptonic Confluence where its Chorus lives.
 import { autoPlay } from '../../../src/game/auto';
-import { asCiv } from '../../../src/game/civs';
 import { FORMS } from '../../../src/game/data/forms';
 import { STRUCTURE_BY_ID, hasOnceEffect } from '../../../src/game/data/structures';
 import { newGame } from '../../../src/game/newGame';
@@ -18,7 +15,7 @@ import { CARRIED, runCrossing } from '../../../src/game/sim/crossing';
 import { capacity } from '../../../src/game/sim/economy';
 import { createColony, deepFor } from '../../../src/game/sim/fleets';
 import { computeMods } from '../../../src/game/sim/mods';
-import { endTurn, handleNotes } from '../../../src/game/sim/turn';
+import { endTurn } from '../../../src/game/sim/turn';
 import { allColonies, colonies, formOf } from '../../../src/game/sim/util';
 import type { Colony, GameState, ThreadId } from '../../../src/game/types';
 import { THREADS } from '../../../src/game/types';
@@ -84,33 +81,6 @@ check(convert(s, vault.id, 'merge') === null && vault.pops.echoes === e0 - 2 && 
   c.queue = [{ uid: 'qlc', kind: 'structure', key: 'lepton_confluence', progress: 109.999, cost: 110 }];
   endTurn(g);
   check((c.structures.lepton_confluence ?? 0) === 1 && (g.civ.flags.chorus_nodes_built ?? 0) === n0 + 1, `built, it counts as a node built (${g.civ.flags.chorus_nodes_built ?? 0})`);
-}
-
-// a system that dissolves before the end: what was re-encoded there goes on as leptonic at once
-{
-  const g = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'decays', civsAsleep: true });
-  g.era = 'degenerate';
-  g.civ.techs.push('leptonic_computation');
-  only(g);
-  const b = Object.values(g.bodies).find((x) => x.kind !== 'deep' && !x.colonyId && g.systems[x.systemId].primary.kind !== 'black_hole' && g.systems[x.systemId].primary.kind !== 'smbh')!;
-  const sys = g.systems[b.systemId];
-  const keep: Colony = createColony(g, b, {});
-  keep.pops = pops({ kin: 5, echoes: 4, lattice: 2 });
-  keep.cryo = 3;
-  keep.structures = { lepton_substrate: 1, habitat_dome: 2, cryo_hall: 1, mine: 1 };
-  const other = Object.values(g.bodies).find((x) => x.systemId === sys.id && x.id !== b.id && x.kind !== 'deep' && !x.colonyId);
-  const lost: Colony | undefined = other ? createColony(g, other, { kin: 2 }) : undefined;
-  if (lost) lost.structures = { habitat_dome: 1 };
-  g.civ.capitalId = keep.id;
-  // the decay takes the system (physics.ts): its star and every world in it
-  sys.primary.kind = 'void';
-  for (const id of sys.bodies) if (g.bodies[id] && g.bodies[id].kind !== 'deep') g.bodies[id].dissolved = true;
-  const d0 = g.civ.flags.decay_lost ?? 0;
-  asCiv(g, g.player, () => handleNotes(g, [{ systemId: sys.id, kind: 'dissolved' }]));
-  const lat = Math.round(2 * 0.5);
-  check(formOf(keep) === 'leptonic' && keep.pops.kin === 0 && keep.cryo === 0 && keep.pops.echoes === 4 && keep.pops.lattice === 2 - lat, `${keep.name} goes on as leptonic at once, its Echoes and half its Lattice with it (${JSON.stringify(keep.pops)})`);
-  check(!!keep.structures.lepton_substrate && !keep.structures.habitat_dome && !keep.structures.cryo_hall && !keep.structures.mine, `keeping only its Leptonic Substrate (${Object.keys(keep.structures).join(', ')})`);
-  check((g.civ.flags.decay_lost ?? 0) - d0 === 5 + 3 + lat + (lost ? 2 : 0) && (!lost || !g.colonies[lost.id]), `its Kin, its sleepers and half its Lattice${lost ? ', and the settlement beside it with no substrate,' : ''} counted lost once, for the crossing’s report (${(g.civ.flags.decay_lost ?? 0) - d0})`);
 }
 
 // before the end, a Leptonic Confluence where the Chorus lives

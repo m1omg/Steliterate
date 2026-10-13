@@ -406,10 +406,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - **Forms** (part 3-1): `Colony.form` (`data/forms.ts`, `formOf` in `sim/util.ts`), absent for
     matter. `capacity` gives no room to a Thread the form does not house (a leptonic settlement:
     no Kin, no sleepers), and `structureCheck` refuses what only houses Kin there.
-    `goLeptonic(state, c, mult)` (`crossing.ts`) is a settlement going on past matter: at the end
-    of matter, and in `handleNotes` (`turn.ts`, exported for the checks) when its own system
-    dissolves before it; it keeps the decay-proof (and, at a hole, `keptAtHole`) structures and
-    queue items, loses Kin and sleepers, and halves the Lattice once. `enabledAt(structures,
+    `goLeptonic(state, c, mult)` (`crossing.ts`) is a settlement going on past the end of matter:
+    it keeps the decay-proof (and, at a hole, `keptAtHole`) structures and queue items, loses Kin
+    and sleepers, and halves the Lattice once. `enabledAt(structures,
     'merge')` (`data/structures.ts`): a Confluence Node or a Leptonic Confluence; either counts
     toward `chorus_nodes_built`.
   - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a

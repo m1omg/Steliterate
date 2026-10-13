@@ -658,8 +658,10 @@ Each step validated on its own, with the harness by fate:
 2. **3-1, forms:** `Colony.form`, baryonic until the end of matter, leptonic after it for what
    survives on decay-proof substrate (who may live there, a leptonic Confluence Node for the
    Chorus). Nothing else changes yet.
-   - As built (13 Oct): a system dissolving before the Great Decay makes what was re-encoded there
-     leptonic at once; decay-proof work under way stays in the queue. Then, the player's word the
+   - As built (13 Oct): decay-proof work under way stays in the queue. Tried and moved to 3-3: a
+     system dissolving before the Great Decay making what was re-encoded there leptonic at once
+     (stranded without its sources until the Migration, it cost 15 decay survivals of 450). Then,
+     the player's word the
      same evening ("there should be a way to continue with Lattice even with just energy"): after
      matter the Lattice mends and grows with energy, at construction's rate, and only an empty
      reserve wears one out. Before, with no matter left, one wore out every turn and none grew.
@@ -667,7 +669,9 @@ Each step validated on its own, with the harness by fate:
    Kin's pattern archive, the Lattice at half; the AI's rule for it; the crossing report naming
    each settlement lost and who was in it.
 4. **3-3, the Thinning:** structures still made of matter failing one by one, matter yields
-   falling, the forecasts and the Record naming what goes.
+   falling, the forecasts and the Record naming what goes. Under decay, what was re-encoded in a
+   system that dissolves before the end goes leptonic then, and drifts to a black hole at once
+   (tried in 3-1 without the drift: stranded, it cost 15 decay survivals of 450).
 5. **3-4, the Horizon form:** written into a hole's horizon, bound to it; when it evaporates, to a
    larger hole, another form, or the final burst.
 6. **3-5, positronium:** the form, the nets, the decay's countdown, Leave the weave, the two events.
