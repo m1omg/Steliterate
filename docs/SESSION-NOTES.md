@@ -112,8 +112,15 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (12 Oct, rogue worlds leave their star behind; black
-  holes by lifetime; a finished Work not resumed; positronium):**
+- **The baseline, from the last validation (13 Oct, PR m1omg/Steliterate#27: who a burst reaches;
+  lighter on phones and tablets):**
+  - tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the 6 saves; all 49
+    unit checks; all 51 browser checks in the real fonts (live script `index-B4EKBtSN.js`);
+  - the harness: 154 of 300 survive, 72 victories, a Degenerate Age of 72 turns, all 300 as
+    before; 900 games 456 / 203 / 71, 896 as before (the 4 that moved are curvature games with
+    the same outcomes).
+- **The baseline before it (12 Oct, rogue worlds leave their star behind; black holes by
+  lifetime; a finished Work not resumed; positronium):**
   - tsc and the build clean; the playtest "ALL CHECKS PASSED"; all 48 unit checks; savecompat on
     the 6 saves; all 50 browser checks in the real fonts;
   - the harness: 154 of 300 survive, 72 victories, a Degenerate Age of 72 turns; 900 games 456 /
