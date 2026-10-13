@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -510,6 +510,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `eyes` (`updateDetection`), `dugIn` (fortified, instead of `FORTIFY_BONUS`); `repairFleets`
     (a tenth of a hull a turn at a Shipyard). `shipNote` writes a class's figures for the build
     list. The Picket and the Hunter wear the Warden's hull until they have their own.
+    `sim/conflict.ts` (2c-2): a war between us and another is still `sv.war`, between two others
+    `Tie.war` (`War`: `since`, `siege`, `by`, `cause`, `at`); `warOf`, `atWarWith`, `enemiesOf`;
+    `declareOn` (another's declaration, by our rules; `war_on_us` signal), `peaceBetween`;
+    `battlesTurn` (after `updateHunger`, once a turn): every battle at once from what stood at the
+    start, each side's `luck` hashed from seed, turn, star and side (never the dice, so no order
+    decides), then the sieges of wars the others began and their blockades (ours stay in
+    `warTurn`, which leaves a real civilization's fighting to the battles). `planWarAI` (the
+    others: the Hunger heard of in one, or the corrupted on the weakest; arm, go at `WAR_ODDS`,
+    tire at `WAR_TIRES`), `planDefence` (ours, any strategy: to the front, dug in). We cannot make
+    peace in a war they began (`makePeace`).
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not

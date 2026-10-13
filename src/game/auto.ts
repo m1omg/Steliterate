@@ -34,7 +34,7 @@ import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle, fleetUpkeep } from './sim/fleets';
-import { colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, temperament, threadTotals } from './sim/util';
+import { allFleets, colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, temperament, threadTotals } from './sim/util';
 import type { Body, Colony, Fate, GameState, StarSystem, SurvivorWay, ThreadId } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
@@ -42,11 +42,13 @@ import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/acco
 import { DEGENERATE_END, MATTER_END, calendarEra, fateKnown, fateOf, inAge, matterGone } from './fate';
 import { FLOW_ETA, flowAhead, flowing, keeping } from './sim/flow';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost, proposePact } from './sim/pacts';
-import { WAR_ACCORD, anyWar, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
+import { HUNGER_CAUSE, WAR_ACCORD, anyWar, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
+import { declareOn, enemiesOf, fleetFire, frontOf, guardAt, peaceBetween, warOf } from './sim/conflict';
+import { CORRUPT_AT, JUST_CAUSE_AT, SANCTION_AT } from './sim/judge';
 import { raidStrength, seizeSurvivor } from './sim/survivors';
 import { SHIP_BY_ID, isWarship, strength } from './data/ships';
 import { SEED_MIN, terraformSummary } from './sim/terraform';
-import { planTies } from './sim/ties';
+import { othersPlaying, planTies, tieKey } from './sim/ties';
 import { newStarNear } from './sim/ways';
 import { plight } from './sim/plight';
 
@@ -86,6 +88,81 @@ function swarmThreat(state: GameState, systemId: string): boolean {
   );
 }
 
+/** How long another civilization keeps a war it began, unless it has lost its warships first. */
+const WAR_TIRES = 30;
+/** How much stronger than what stands at the front its warships must be before it goes. */
+const WAR_ODDS = 1.5;
+
+/**
+ * Another civilization's wars (part 2c-2; the fuller judgement is 2d's). It fights only for the
+ * plan's causes: the Hunger it has heard of in another, if it is not on that path itself (a just
+ * cause, no infamy); or, far down that path itself (its own Taint from CORRUPT_AT), the weakest
+ * it knows, to feed on. It arms first (Hunters against the Hunger, once it knows them; Wardens
+ * otherwise), and goes when its warships are WAR_ODDS times what stands at the front: the enemy's
+ * settlement nearest its capital. Attacked, it gathers its warships there, dug in. It makes peace
+ * once a war it began has lasted WAR_TIRES turns, or its warships are gone.
+ */
+function planWarAI(state: GameState) {
+  const civ = state.civ;
+  if (civ.id === state.player) return;
+  const me = civ.id;
+  const warships = fleets(state).filter((f) => f.ships.some((s) => isWarship(s.cls)));
+  for (const foe of enemiesOf(state, me)) {
+    const w = warOf(state, me, foe)!;
+    if (w.by !== me) {
+      // attacked: to the front, dug in (a war we began on them is fought at their first star)
+      const front = w.at ?? (foe === state.player ? state.survivors[me]?.homeSystemId : undefined);
+      for (const f of warships) {
+        if (f.to) continue;
+        if (front && f.at !== front && colonies(state).some((c) => c.systemId === front)) orderFleet(state, f.id, front, 'move');
+        else if (f.at === front) f.order = 'fortify';
+      }
+      continue;
+    }
+    if (state.turn - w.since > WAR_TIRES || !warships.length) {
+      peaceBetween(state, me, foe);
+      continue;
+    }
+    for (const f of warships) if (w.at && f.at && f.at !== w.at && !f.to) orderFleet(state, f.id, w.at, 'move');
+  }
+  if (enemiesOf(state, me).length) return;
+  const target = warTarget(state);
+  if (!target) return;
+  const front = frontOf(state, target.id, me);
+  if (!front) return;
+  civ.flags.arming = state.turn;
+  const force = warships.reduce((a, f) => a + fleetFire(f), 0);
+  if (force >= WAR_ODDS * Math.max(1, guardAt(state, front, target.id)) && civ.accord >= WAR_ACCORD) {
+    if (declareOn(state, me, target.id, target.cause, front) === null) for (const f of warships) if (f.at && !f.to) orderFleet(state, f.id, front, 'move');
+    return;
+  }
+  // arm
+  const cap = civ.capitalId ? state.colonies[civ.capitalId] : undefined;
+  if (cap && (cap.structures.shipyard ?? 0) > 0 && cap.queue.length < 3 && civ.energy > 100 && warships.length < 6)
+    queueBuild(state, cap.id, 'ship', target.cause === HUNGER_CAUSE && hasTech(state, 'hunger_studies') ? 'hunter' : 'warden');
+}
+
+/** Whom another civilization would go to war with, and why: the Hunger it has heard of in one, or, far down that path itself, the weakest it knows. */
+function warTarget(state: GameState): { id: string; cause?: string } | null {
+  const civ = state.civ;
+  const me = civ.id;
+  const others = othersPlaying(state).filter((o) => o.id !== me).map((o) => o.id);
+  if (civ.taint < SANCTION_AT) {
+    // what it has heard of us is on our record of it; of the others, on its tie with each
+    if ((state.survivors[me]?.heardTaint ?? 0) >= JUST_CAUSE_AT) return { id: state.player, cause: HUNGER_CAUSE };
+    for (const o of others) if ((state.ties?.[tieKey(me, o)]?.taintHeard?.[me] ?? 0) >= JUST_CAUSE_AT) return { id: o, cause: HUNGER_CAUSE };
+  }
+  if (civ.taint >= CORRUPT_AT) {
+    const weakest = [...others, state.player]
+      .map((id) => ({ id, front: frontOf(state, id, me) }))
+      .filter((x): x is { id: string; front: string } => !!x.front)
+      .map((x) => ({ id: x.id, g: guardAt(state, x.front, x.id) }))
+      .sort((a, b) => a.g - b.g)[0];
+    return weakest ? { id: weakest.id } : null;
+  }
+  return null;
+}
+
 /** How much of what a turn gains before upkeep idle warships may cost before they are stood down. */
 const STAND_DOWN_SHARE = 0.15;
 
@@ -98,8 +175,9 @@ function planStandDown(state: GameState) {
   const civ = state.civ;
   // (in the Dusk an escort costs next to nothing, and the first swarms come for the weak)
   if (calendarEra(state) === 'dusk') return;
-  const war = civ.id === state.player ? anyWar(state) : !!state.survivors[civ.id]?.war;
-  if (war || colonies(state).some((c) => swarmThreat(state, c.systemId))) return;
+  const war = civ.id === state.player ? anyWar(state) : enemiesOf(state, civ.id).length > 0;
+  // (nor while it arms for a war of its own: planWarAI)
+  if (war || state.turn - (civ.flags.arming ?? -99) < 10 || colonies(state).some((c) => swarmThreat(state, c.systemId))) return;
   const pace = clockCiv(state).pace;
   const up = fleetUpkeep(state, livedShare(state, pace, turnStep(state, pace)));
   if (up <= 0 || up <= STAND_DOWN_SHARE * Math.max(1, (civ.flags.last_energy_net ?? 0) + up)) return;
@@ -570,6 +648,28 @@ function planPacts(state: GameState) {
  * keeps raiding us, with warships enough to outmatch them. Build Wardens, declare, bring them to
  * the siege, take the star when the siege allows; make peace if it drags on.
  */
+/**
+ * A war another civilization began on us (part 2c-2), whatever our strategy: our warships to the
+ * front, dug in, and more built while theirs outweigh what stands there.
+ */
+function planDefence(state: GameState) {
+  const civ = state.civ;
+  if (civ.id !== state.player) return;
+  const cap = civ.capitalId ? state.colonies[civ.capitalId] : colonies(state)[0];
+  const warships = fleets(state).filter((f) => f.ships.some((x) => isWarship(x.cls)));
+  for (const sv of Object.values(state.survivors)) {
+    if (!sv.alive || !sv.war?.by || sv.war.by === civ.id || !sv.war.at) continue;
+    const front = sv.war.at;
+    for (const f of warships) {
+      if (f.to) continue;
+      if (f.at !== front) orderFleet(state, f.id, front, 'move');
+      else f.order = 'fortify';
+    }
+    const theirs = allFleets(state).filter((f) => f.owner === sv.id).reduce((a, f) => a + fleetFire(f), 0);
+    if (cap && guardAt(state, front, civ.id) < theirs && (cap.structures.shipyard ?? 0) > 0 && cap.queue.length < 3 && civ.energy > 80) queueBuild(state, cap.id, 'ship', 'warden');
+  }
+}
+
 function planWar(state: GameState) {
   const civ = state.civ;
   if (civ.id !== state.player) return;
@@ -579,6 +679,8 @@ function planWar(state: GameState) {
   const force = warships.reduce((a, f) => a + f.ships.reduce((b, x) => b + strength(x.cls, 'settlements'), 0), 0);
   for (const sv of Object.values(state.survivors)) {
     if (!sv.alive || !sv.contact) continue;
+    // (a war they began on us is planDefence's)
+    if (sv.war?.by && sv.war.by !== civ.id) continue;
     if (sv.war) {
       if (seizeBlocked(state, sv) === null) seizeSurvivor(state, sv.id);
       else if (state.turn - sv.war.since > 30) makePeace(state, sv.id);
@@ -710,10 +812,12 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planDismantle(state);
   planBuilds(state);
   planFleets(state);
+  planWarAI(state);
   planStandDown(state);
   planSignals(state);
   planPace(state);
   planWorks(state);
+  planDefence(state);
   if (strategy === 'warlike') planWar(state);
 }
 

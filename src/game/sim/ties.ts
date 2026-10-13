@@ -95,7 +95,7 @@ export function distanceBetween(state: GameState, a: string, b: string): number 
   return x && y ? distLy(x, y) : 0;
 }
 
-function lightIn(state: GameState, ly: number): number {
+export function lightIn(state: GameState, ly: number): number {
   return isFinite(state.years) ? state.years + Math.max(0, ly) : state.years;
 }
 
@@ -258,7 +258,7 @@ export function tiesTurn(state: GameState): void {
 const PACT_NAME: Record<PactKind, string> = { aid: 'Mutual Aid', watch: 'Shared Watch', archives: 'Open Archives' };
 
 /** Something between two others that we will hear of when its light, from the nearer of them, reaches our capital. */
-function hearOf(state: GameState, a: string, b: string, text: string, kind?: PactKind): void {
+export function hearOf(state: GameState, a: string, b: string, text: string, kind?: PactKind): void {
   const me = state.civs[state.player];
   const cap = me.capitalId ? state.colonies[me.capitalId] : undefined;
   const here = state.systems[cap?.systemId ?? me.homeSystemId];

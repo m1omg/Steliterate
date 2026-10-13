@@ -286,7 +286,15 @@ export function SignalsModal({ s }: { s: GameState }) {
                               </dd>
                             </>
                           )}
-                          {sv.war && (
+                          {sv.war?.by && sv.war.by !== s.civ.id && (
+                            <>
+                              <dt data-tip={`They declared war on us on turn ${sv.war.since}${sv.war.cause ? `: ${sv.war.cause}` : ''}. Their warships come for ${s.systems[sv.war.at ?? '']?.name ?? 'our settlement nearest them'}; held there with none of ours, they besiege it, and our stores and will run down. They make peace when it has gone on long enough, or their warships are lost.`}>War on us</dt>
+                              <dd class="mono bad">
+                                since turn {sv.war.since} · at {s.systems[sv.war.at ?? '']?.name ?? '?'} · their siege {sv.war.siege} turn{sv.war.siege === 1 ? '' : 's'}
+                              </dd>
+                            </>
+                          )}
+                          {sv.war && !(sv.war.by && sv.war.by !== s.civ.id) && (
                             <>
                               <dt data-tip={`At war since turn ${sv.war.since}. A siege is warships held at their first star turn after turn; after ${SIEGE_TURNS} turns we can try to take it. They arm as the war goes on.`}>War</dt>
                               <dd class="mono bad">
@@ -357,7 +365,11 @@ export function SignalsModal({ s }: { s: GameState }) {
                                   </button>
                                 );
                               })()}
-                              {sv.war ? (
+                              {sv.war?.by && sv.war.by !== s.civ.id ? (
+                                <button class="btn small disabled" data-tip="They began this war, and it ends when they make peace: once it has gone on long enough, or their warships are lost.">
+                                  Make peace
+                                </button>
+                              ) : sv.war ? (
                                 <>
                                   {(() => {
                                     const why = seizeBlocked(s, sv);

@@ -11,7 +11,8 @@ import type { GameState, Survivor } from '../types';
 import { THREADS } from '../types';
 import { endPact, pactsWith } from './pacts';
 import { dealSize, distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
-import { capital, clamp, fleets, log, marks } from './util';
+import { allFleets, capital, clamp, fleets, log, marks } from './util';
+import { isWarship } from '../data/ships';
 import { send } from '../civs';
 import { JUST_CAUSE_AT } from './judge';
 
@@ -107,6 +108,8 @@ export function declareWar(state: GameState, id: string): string | null {
 export function makePeace(state: GameState, id: string): string | null {
   const sv = state.survivors[id];
   if (!sv || !atWar(sv)) return 'We are not at war with them.';
+  // a war they began ends when they make peace: once it has gone on long enough, or badly for them (conflict.ts)
+  if (sv.war!.by && sv.war!.by !== state.civ.id) return 'They began this war, and it ends when they make peace.';
   delete sv.war;
   (sv.news ??= []).push({ at: lightAt(state, distanceToThem(state, sv)), delta: 10, what: 'you made peace with them' });
   const cap = capital(state);
@@ -134,16 +137,25 @@ export function warTurn(state: GameState, chance: () => number) {
   for (const sv of Object.values(state.survivors)) {
     if (!atWar(sv)) continue;
     civ.dissent = Math.min(100, civ.dissent + (warCause(state, sv) ? 0.2 : 0.5));
+    // (the siege of a war they began is theirs: conflict.ts)
+    if (sv.war!.by && sv.war!.by !== civ.id) continue;
     const attack = raidStrength(state, sv.homeSystemId);
     if (attack <= 0) {
       sv.war!.siege = 0;
       continue;
     }
+    // a civilization of its own holds its first star while its warships are there
+    const real = !!state.civs[sv.id];
+    if (real && allFleets(state).some((f) => f.owner === sv.id && f.at === sv.homeSystemId && f.ships.some((s) => isWarship(s.cls)))) continue;
     sv.war!.siege++;
     // a blockade: the stores of a civilization of its own run down, and its will with them
     if (state.civs[sv.id]) send(state, sv.id, { energy: -Math.round(BLOCKADE * 400), resolve: -1 });
     else sv.health = Math.max(0, sv.health - BLOCKADE);
-    // their guns answer ours
+    // their guns answer ours (a civilization of its own fights with what it has: battlesTurn)
+    if (real) {
+      state.battles.push({ systemId: sv.homeSystemId, turn: state.turn, text: `The siege of ${sv.name}, turn ${sv.war!.siege}.` });
+      continue;
+    }
     const def = warDefence(state, sv);
     const hurt = (def / (attack + def)) * 1.2;
     for (const f of fleets(state)) {

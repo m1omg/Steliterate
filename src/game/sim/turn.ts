@@ -11,6 +11,7 @@ import { finalBurstCatch, greatEvaporation, runCrossing } from './crossing';
 import { flowComes, theLongFlow } from './flow';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
+import { battlesTurn } from './conflict';
 import { feedBeacons } from './beacons';
 import { spareYield } from './spare';
 import { coolAccord } from './accord';
@@ -326,6 +327,8 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
   swarmsHunt(state, modsOf);
   yield* each((c) => autoExplore(state, c.mods));
   updateHunger(state, step.turnLength, modsOf);
+  // wherever civilizations at war meet, they fight, all at once; the sieges of wars the others began
+  battlesTurn(state);
   // (the neighbours we know, our pacts and wars with them, and the other minds are the player's)
   yield* each((c, id) => {
     if (id !== me) return;

@@ -346,7 +346,8 @@ export interface Survivor {
   /** Warships we promised against a swarm at one of their stars, when, and whether ours have fought there since. */
   promised?: { systemId: string; turn: number; kept?: boolean };
   /** At war with us: since which turn, and how many turns in a row our warships have held their first star. */
-  war?: { since: number; siege: number };
+  /** A war between us (part 2c): who declared it (our id if absent), for what, and the siege's star and turns. */
+  war?: War;
   /** What they remember of us, newest last: the reasons for how they feel (dealings.ts, feel). */
   memory?: { turn: number; delta: number; what: string }[];
   /**
@@ -385,6 +386,17 @@ export interface Tie {
   news?: { to: string; at: number; delta: number; taint: number }[];
   /** The Taint of the other each has heard of, by the hearer's id. */
   taintHeard?: Record<string, number>;
+  /** A war between them (part 2c). */
+  war?: War;
+}
+
+/** A war between two civilizations (part 2c): since when, the siege's turns and star, who declared it and for what. */
+export interface War {
+  since: number;
+  siege: number;
+  by?: string;
+  cause?: string;
+  at?: string;
 }
 
 export interface Mind {
