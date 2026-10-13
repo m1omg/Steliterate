@@ -16,7 +16,7 @@ import { asCiv, flushOutbox, send } from '../../../src/game/civs';
 import { newGame } from '../../../src/game/newGame';
 import { project } from '../../../src/game/sim/projection';
 import { endTurn } from '../../../src/game/sim/turn';
-import { coloniesOf } from '../../../src/game/sim/util';
+import { coloniesOf, marks } from '../../../src/game/sim/util';
 import { copyState } from '../../../src/game/save';
 import { livedShare } from '../../../src/game/sim/flare';
 import { sendSignal } from '../../../src/game/sim/signals';
@@ -136,7 +136,7 @@ check(ways.size >= 4, `(the ways seen: ${[...ways].sort().join(', ')})`);
     // a shared work feeds both its builders: the same turn with it and without
     const a = copyState(s);
     const b = copyState(s);
-    b.civ.flags[`joint_${id}`] = 1;
+    marks(b.survivors[id]).joint = 1;
     a.civs[id].energy = b.civs[id].energy = 10;
     const pf = livedShare(a);
     endTurn(a);

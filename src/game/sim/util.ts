@@ -2,7 +2,7 @@ import { aroundTheStar, type StructureDef } from '../data/structures';
 import { ERA_BY_ID } from '../eras';
 import { fateKnown } from '../fate';
 import { Rng, hashSeed } from '../rng';
-import type { Body, Civ, Colony, EraId, Fleet, GameState, LogEntry, StarSystem, ThreadId } from '../types';
+import type { Body, Civ, Colony, EraId, Fleet, GameState, LogEntry, StarSystem, Survivor, ThreadId } from '../types';
 import { THREADS } from '../types';
 
 export function uid(state: GameState, prefix = 'u'): string {
@@ -215,4 +215,9 @@ export function capital(state: GameState): Colony | null {
 /** Do we know the fate of matter? (See fateKnown in fate.ts.) */
 export function protonFateKnown(state: GameState): boolean {
   return fateKnown(state);
+}
+
+/** What we keep of our dealings with a neighbour (Survivor.marks): turns and counts, by name. */
+export function marks(sv: Survivor): Record<string, number> {
+  return (sv.marks ??= {});
 }

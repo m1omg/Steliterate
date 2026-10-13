@@ -335,6 +335,14 @@ export interface Survivor {
   war?: { since: number; siege: number };
   /** What they remember of us, newest last: the reasons for how they feel (dealings.ts, feel). */
   memory?: { turn: number; delta: number; what: string }[];
+  /**
+   * What we keep of our dealings with them, turns and counts (util.ts, marks): when they may offer
+   * a trade or a shared work again and how often we refused (trade_next, trade_no, joint_next,
+   * joint_no), a shared work built (joint), raids on us (raid_last, raid_prev, raid_wait), Mutual
+   * Aid paid each way (aid_out, aid_in), the Choir's wish, the Tessellate's breaches, a plea
+   * against the Hunger. (Until part 2a-3 these were the player's flags, named by their id.)
+   */
+  marks?: Record<string, number>;
 }
 
 /** Mutual Aid, Shared Watch, Open Archives. */

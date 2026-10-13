@@ -15,7 +15,7 @@ import { reserveCapacity } from './economy';
 import { computeMods } from './mods';
 import { sendSignal } from './signals';
 import { beamEnergy, dealSize, distanceToThem, inStep, lightAt, spareOf, spreadNews, voice } from './survivors';
-import { distLy, log } from './util';
+import { distLy, log, marks } from './util';
 import { breach } from './ways';
 import { send } from '../civs';
 import { civOf } from './others';
@@ -186,14 +186,13 @@ export function pactsTurn(state: GameState) {
   for (const sv of Object.values(state.survivors)) {
     if (!sv.alive) continue;
     if (hasPact(sv, 'aid')) {
-      const outKey = `pact_aid_out_${sv.id}`;
-      const inKey = `pact_aid_in_${sv.id}`;
+      const m = marks(sv);
       // what they need, as far as we can spare it and keep 30% of our reserve
       const spare = civ.energy - cap * 0.3;
-      const due = sv.health < 0.35 && state.turn - (civ.flags[outKey] ?? -99) >= AID_EVERY;
+      const due = sv.health < 0.35 && state.turn - (m.aid_out ?? -99) >= AID_EVERY;
       if (due && spare < 5 && sv.way === 'lattice') {
         // the Tessellate holds us to our side of it, to the letter
-        civ.flags[outKey] = state.turn;
+        m.aid_out = state.turn;
         breach(state, sv);
         if (!hasPact(sv, 'aid')) continue;
       }
@@ -201,15 +200,15 @@ export function pactsTurn(state: GameState) {
         const e = Math.floor(Math.min(15 + (0.35 - sv.health) * 100, spare));
         civ.energy -= e;
         beamEnergy(state, sv, e, true);
-        civ.flags[outKey] = state.turn;
+        m.aid_out = state.turn;
         log(state, `As our pact says, we beamed ${e} energy to ${sv.name}.`, 'info', sv.homeSystemId);
       }
       // they pay their side while they can; the Tessellate pays it even while failing
-      if (weak && (sv.health > 0.4 || (sv.way === 'lattice' && sv.health > 0.05)) && state.turn - (civ.flags[inKey] ?? -99) >= AID_EVERY) {
+      if (weak && (sv.health > 0.4 || (sv.way === 'lattice' && sv.health > 0.05)) && state.turn - (m.aid_in ?? -99) >= AID_EVERY) {
         const e = spareOf(state, sv, Math.round(Math.min(60, Math.max(8, dealSize(state, sv) * sv.health * 0.8))));
         if (civOf(state, sv)) send(state, sv.id, { energy: -e });
         else sv.health = Math.max(0, sv.health - e / 1200);
-        civ.flags[inKey] = state.turn;
+        m.aid_in = state.turn;
         // they see our trouble when its light reaches them, and their beam takes as long again
         sendSignal(state, {
           from: sv.id,

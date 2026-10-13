@@ -21,7 +21,7 @@ import { reserveCapacity } from '../../../src/game/sim/economy';
 import { computeMods } from '../../../src/game/sim/mods';
 import { logTurnLength } from '../../../src/game/eras';
 import { calendarEra } from '../../../src/game/fate';
-import { colonies, distLy } from '../../../src/game/sim/util';
+import { colonies, distLy, marks } from '../../../src/game/sim/util';
 import type { GameState, StarSystem, Survivor } from '../../../src/game/types';
 import { check, done } from '../lib';
 import { copyState } from '../../../src/game/save';
@@ -100,15 +100,15 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
   s.civ.energy = 1;
   s.civ.flags.last_energy_net = -5;
   // our side falls due now: no aid beamed lately, no breach before (the seeded game may have had either)
-  delete s.civ.flags[`pact_aid_out_${sv.id}`];
-  delete s.civ.flags[`breach_${sv.id}`];
+  delete marks(sv).aid_out;
+  delete marks(sv).breach;
   const n = s.civ.signals.length;
   pactsTurn(s);
   check(s.civ.signals.slice(n).some((x) => x.kind === 'aid_answer'), 'it pays its side of Mutual Aid even while failing');
   // and holds us to ours
-  check(s.civ.flags[`breach_${sv.id}`] === 1 && s.civ.signals.some((x) => x.kind === 'breach'), 'we could not pay ours: a breach, logged');
+  check(marks(sv).breach === 1 && s.civ.signals.some((x) => x.kind === 'breach'), 'we could not pay ours: a breach, logged');
   s.turn += AID_EVERY;
-  delete s.civ.flags[`pact_aid_in_${sv.id}`];
+  delete marks(sv).aid_in;
   pactsTurn(s);
   check(!sv.pacts && s.civ.signals.some((x) => x.kind === 'pact_ended'), 'two breaches, and every agreement ends, as their terms provide');
 }
@@ -118,7 +118,7 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
   const s = clone(degenerate);
   const sv = only(s, 'chorus');
   // (whatever this game's Choir last asked)
-  delete s.civ.flags[`choir_wish_${sv.id}`];
+  delete marks(sv).choir_wish;
   const cap = colonies(s)[0];
   cap.pops.echoes = Math.max(cap.pops.echoes, 6);
   const echoes = colonies(s).reduce((a, c) => a + c.pops.echoes, 0);

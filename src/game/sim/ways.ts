@@ -13,7 +13,7 @@ import { CLAIM_SPEED, MAX_CLAIMS, claimedStars } from './claims';
 import { sendSignal } from './signals';
 import { pactsWith } from './pacts';
 import { distanceToThem, inStep, lightAt, voice } from './survivors';
-import { allColonies, colonies, distLy, log } from './util';
+import { allColonies, colonies, distLy, log, marks } from './util';
 import { feel } from './dealings';
 import { send } from '../civs';
 
@@ -79,11 +79,10 @@ export function wakeForNewStar(state: GameState, sv: Survivor): boolean {
  */
 export function choirWish(state: GameState, sv: Survivor): boolean {
   if (sv.way !== 'chorus' || sv.war || sv.health <= 0.4 || sv.disposition <= 20) return false;
-  const key = `choir_wish_${sv.id}`;
-  if (state.turn - (state.civ.flags[key] ?? -99) < CHOIR_EVERY) return false;
+  if (state.turn - (sv.marks?.choir_wish ?? -99) < CHOIR_EVERY) return false;
   const echoes = colonies(state).reduce((a, c) => a + c.pops.echoes, 0);
   if (echoes < CHOIR_TAKES + 2) return false;
-  state.civ.flags[key] = state.turn;
+  marks(sv).choir_wish = state.turn;
   sv.lastSent = state.turn;
   const consent = state.civ.charters.includes('merge_consent');
   sendSignal(state, {
@@ -158,9 +157,8 @@ export function spinSharers(state: GameState, systemId: string): Survivor[] {
 
 /** The Tessellate holds us to Mutual Aid to the letter: a breach when we could not pay our side. */
 export function breach(state: GameState, sv: Survivor) {
-  const key = `breach_${sv.id}`;
-  const n = (state.civ.flags[key] ?? 0) + 1;
-  state.civ.flags[key] = n;
+  const n = (marks(sv).breach ?? 0) + 1;
+  marks(sv).breach = n;
   const dist = distanceToThem(state, sv);
   if (n < BREACHES) {
     sendSignal(state, {
@@ -174,7 +172,7 @@ export function breach(state: GameState, sv: Survivor) {
   }
   delete sv.pacts;
   feel(state, sv, -15, `you breached Mutual Aid ${BREACHES} times`);
-  delete state.civ.flags[key];
+  delete marks(sv).breach;
   sendSignal(state, {
     from: sv.id,
     kind: 'pact_ended',

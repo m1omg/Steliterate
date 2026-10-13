@@ -20,7 +20,7 @@ import { computeMods } from '../../../src/game/sim/mods';
 import { turnStep } from '../../../src/game/sim/flare';
 import { techCost } from '../../../src/game/sim/research';
 import { logTurnLength } from '../../../src/game/eras';
-import { capital } from '../../../src/game/sim/util';
+import { capital, marks } from '../../../src/game/sim/util';
 import { TECH_BY_ID } from '../../../src/game/data/techs';
 import { EVENT_BY_ID } from '../../../src/game/data/events';
 import { fork } from '../../../src/game/sim/society';
@@ -102,7 +102,7 @@ const answer = (s: GameState, kind: string, choice: string) => {
   check(tradeOffer(s, sv) === null, 'and nothing at all when we could not spare even that');
   s.civ.energy = 200;
   // their turn, with their rhythm allowing it
-  s.civ.flags[`trade_next_${sv.id}`] = 0;
+  marks(sv).trade_next = 0;
   let sent = false;
   for (let i = 0; i < 40 && !sent; i++) {
     sv.lastSent = -99;
@@ -125,13 +125,13 @@ const answer = (s: GameState, kind: string, choice: string) => {
   offered(s, sv, 'trade');
   check(!offerDue(s, sv, 'trade', () => 0), 'after an offer, nothing until their rhythm comes round');
   answered(s, sv, 'trade', false);
-  check(s.civ.flags[`trade_next_${sv.id}`] === s.turn + every * 2, `a refusal: they wait twice as long (${every * 2} turns)`);
+  check(marks(sv).trade_next === s.turn + every * 2, `a refusal: they wait twice as long (${every * 2} turns)`);
   answered(s, sv, 'trade', false);
-  check(s.civ.flags[`trade_next_${sv.id}`] === s.turn + every * 4, `two in a row: four times (${every * 4})`);
+  check(marks(sv).trade_next === s.turn + every * 4, `two in a row: four times (${every * 4})`);
   answered(s, sv, 'trade', true);
-  check(s.civ.flags[`trade_next_${sv.id}`] === s.turn + every && s.civ.flags[`trade_no_${sv.id}`] === undefined, 'a yes, and they are back to their own rhythm');
+  check(marks(sv).trade_next === s.turn + every && marks(sv).trade_no === undefined, 'a yes, and they are back to their own rhythm');
   for (let i = 0; i < 6; i++) answered(s, sv, 'joint', false);
-  check(s.civ.flags[`joint_next_${sv.id}`] === s.turn + every * 8, 'shared works too, and never longer than eight times');
+  check(marks(sv).joint_next === s.turn + every * 8, 'shared works too, and never longer than eight times');
 }
 
 // ---------------------------------------------------------------- an offer from an older save
@@ -158,7 +158,7 @@ const answer = (s: GameState, kind: string, choice: string) => {
     tried = s.civ.signals.some((x) => x.kind === 'raid');
   }
   check(tried && s.civ.signals.some((x) => x.title.includes('tried to raid')), 'desperate and hostile, they try to raid us, and our defences turn them away');
-  const wait = s.civ.flags[`raid_wait_${sv.id}`];
+  const wait = marks(sv).raid_wait;
   check(wait === s.turn + 15, 'then they wait fifteen turns before they try again');
   const n = s.civ.signals.filter((x) => x.kind === 'raid').length;
   for (let i = 0; i < 5; i++) {

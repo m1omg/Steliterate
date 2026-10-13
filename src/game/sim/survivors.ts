@@ -14,7 +14,7 @@ import { canConverse, rangeWith, sendSignal, voiceRange, voiceThread } from './s
 import { queueEvent } from './events';
 import { survivorWorld } from './homes';
 import { formatDistance, formatYears, logTurnLength } from '../eras';
-import { capital, clamp, colonies, distLy, fleets, hasCharter, log, ownFleet, threadTotals, withRng } from './util';
+import { capital, clamp, colonies, distLy, fleets, hasCharter, log, marks, ownFleet, threadTotals, withRng } from './util';
 import { turnStep } from './flare';
 import { capacity } from './economy';
 import { computeMods } from './mods';
@@ -234,7 +234,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       // and a shared work we built together feeds it as it feeds us
       if (civOf(state, sv)) {
         syncSurvivor(state, sv);
-        if (!sv.war && civ.flags[`joint_${sv.id}`]) send(state, sv.id, { energy: JOINT_ENERGY * paceFactor });
+        if (!sv.war && sv.marks?.joint) send(state, sv.id, { energy: JOINT_ENERGY * paceFactor });
       } else lightly(state, sv, L, rng);
       // a promise of warships we made them: kept, or not
       judgePromise(state, sv);
@@ -359,7 +359,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       } else if (
         (sv.health < 0.22 || (sv.raidedAt !== undefined && sv.disposition < -50) || (sv.tempted !== undefined && state.turn - sv.tempted < 10) || atWar(sv) || inCoalition(state, sv)) &&
         (sv.disposition < -20 || atWar(sv)) &&
-        state.turn >= (civ.flags[`raid_wait_${sv.id}`] ?? 0) &&
+        state.turn >= (sv.marks?.raid_wait ?? 0) &&
         rng.chance(atWar(sv) || inCoalition(state, sv) ? 0.5 : 0.35)
       ) {
         // the desperate take what they can; those we raided come back for what we took; the
@@ -380,7 +380,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
           if (civOf(state, sv)) send(state, sv.id, { energy: took });
         }
         // turned away, they do not try again soon
-        if (defended) civ.flags[`raid_wait_${sv.id}`] = state.turn + RAID_WAIT;
+        if (defended) marks(sv).raid_wait = state.turn + RAID_WAIT;
         sendSignal(state, {
           from: sv.id,
           kind: 'raid',
@@ -398,7 +398,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
                 ? `We told them we were weak when we asked them for help. They came for ${took} energy of what little we had.`
                 : `Desperate ships drained ${took} energy from the reserve before anyone understood what was happening.`,
         });
-      } else if (sv.disposition > 35 && sv.health > 0.4 && !civ.flags[`joint_${sv.id}`] && offerDue(state, sv, 'joint', () => rng.next())) {
+      } else if (sv.disposition > 35 && sv.health > 0.4 && !sv.marks?.joint && offerDue(state, sv, 'joint', () => rng.next())) {
         sv.lastSent = state.turn;
         offered(state, sv, 'joint');
         sendSignal(state, {
@@ -527,7 +527,7 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
       if (choice === 'join' && sv) {
         if (civ.matter < 60) return 'You need 60 matter.';
         civ.matter -= 60;
-        civ.flags[`joint_${sv.id}`] = 1;
+        marks(sv).joint = 1;
         if (civOf(state, sv)) send(state, sv.id, { matter: -60 });
         else sv.health = Math.min(1, sv.health + 0.15);
         feel(state, sv, 10, 'you joined us in a shared work');
@@ -587,10 +587,11 @@ export function spareOf(state: GameState, sv: Survivor, want: number): number {
 /** What a shared work gives each of its two builders a turn (at full pace). */
 const JOINT_ENERGY = 6;
 
-/** Joint projects pay out while the partner endures. */
+/** Joint projects pay out while the partner endures. (The neighbours' records are our relations: for us alone.) */
 export function jointIncome(state: GameState): number {
+  if (state.civ.id !== state.player) return 0;
   let e = 0;
-  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.war && state.civ.flags[`joint_${sv.id}`]) e += JOINT_ENERGY;
+  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.war && sv.marks?.joint) e += JOINT_ENERGY;
   return e;
 }
 

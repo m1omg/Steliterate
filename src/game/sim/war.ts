@@ -11,7 +11,7 @@ import type { GameState, Survivor } from '../types';
 import { THREADS } from '../types';
 import { endPact, pactsWith } from './pacts';
 import { dealSize, distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
-import { capital, clamp, fleets, log } from './util';
+import { capital, clamp, fleets, log, marks } from './util';
 import { send } from '../civs';
 
 /** Accord the Threads' consent to a war costs. */
@@ -37,17 +37,17 @@ export function anyWar(state: GameState): boolean {
 /** Why a war with them would be just, or null: our own people who left us, or a neighbour who keeps raiding us. */
 export function warCause(state: GameState, sv: Survivor): string | null {
   if (sv.way === 'fork') return 'They are our own people, who left us.';
-  const last = state.civ.flags[`raid_last_${sv.id}`];
-  const prev = state.civ.flags[`raid_prev_${sv.id}`];
+  const last = sv.marks?.raid_last;
+  const prev = sv.marks?.raid_prev;
   if (last !== undefined && prev !== undefined && last - prev <= RAID_SPAN && state.turn - last <= RAID_SPAN) return 'They keep raiding us.';
   return null;
 }
 
 /** They raided us (or tried to): remembered, for a war's cause. */
 export function raidedUs(state: GameState, sv: Survivor) {
-  const f = state.civ.flags;
-  if (f[`raid_last_${sv.id}`] !== undefined) f[`raid_prev_${sv.id}`] = f[`raid_last_${sv.id}`];
-  f[`raid_last_${sv.id}`] = state.turn;
+  const f = marks(sv);
+  if (f.raid_last !== undefined) f.raid_prev = f.raid_last;
+  f.raid_last = state.turn;
 }
 
 /** Their strength at their first star: what they are, and how long they have been arming. */

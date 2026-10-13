@@ -10,7 +10,7 @@ import { TECH_BY_ID } from '../data/techs';
 import type { GameState, Survivor, SurvivorWay } from '../types';
 import { matterGone } from '../fate';
 import { availableTechs, techCost } from './research';
-import { clamp } from './util';
+import { clamp, marks } from './util';
 
 export type Want = 'matter' | 'energy';
 
@@ -90,22 +90,22 @@ export function tradeOffer(state: GameState, sv: Survivor): Offer | null {
 
 /** Whether their rhythm (and our last answers) lets them make an offer of this kind now. */
 export function offerDue(state: GameState, sv: Survivor, kind: 'trade' | 'joint', chance: () => number): boolean {
-  if (sv.war || state.turn < (state.civ.flags[`${kind}_next_${sv.id}`] ?? 0)) return false;
+  if (sv.war || state.turn < (sv.marks?.[`${kind}_next`] ?? 0)) return false;
   return sv.way === 'lattice' || chance() < OFFER_CHANCE;
 }
 
 /** They made an offer of this kind: the next waits at least their rhythm. */
 export function offered(state: GameState, sv: Survivor, kind: 'trade' | 'joint') {
-  state.civ.flags[`${kind}_next_${sv.id}`] = state.turn + termsFor(sv).every;
+  marks(sv)[`${kind}_next`] = state.turn + termsFor(sv).every;
 }
 
 /** Our answer to an offer of this kind: a yes resets their patience, a no doubles it. */
 export function answered(state: GameState, sv: Survivor, kind: 'trade' | 'joint', yes: boolean) {
-  const f = state.civ.flags;
-  const no = yes ? 0 : (f[`${kind}_no_${sv.id}`] ?? 0) + 1;
-  if (no) f[`${kind}_no_${sv.id}`] = no;
-  else delete f[`${kind}_no_${sv.id}`];
-  f[`${kind}_next_${sv.id}`] = state.turn + termsFor(sv).every * Math.min(BACKOFF_MAX, 2 ** no);
+  const f = marks(sv);
+  const no = yes ? 0 : (f[`${kind}_no`] ?? 0) + 1;
+  if (no) f[`${kind}_no`] = no;
+  else delete f[`${kind}_no`];
+  f[`${kind}_next`] = state.turn + termsFor(sv).every * Math.min(BACKOFF_MAX, 2 ** no);
 }
 
 /**

@@ -12,7 +12,7 @@ import { livingWorlds } from './fleets';
 import { residentsOf } from './homes';
 import { sendSignal } from './signals';
 import { distanceToThem, lightArrived, spreadNews, voice } from './survivors';
-import { allColonies, capital, distLy, log } from './util';
+import { allColonies, capital, distLy, log, marks } from './util';
 import { feel } from './dealings';
 
 /** How far they look for new stars (ly): their own cluster. */
@@ -133,12 +133,11 @@ export function theirWarmth(state: GameState, systemId: string): number {
 /** A swarm feeds at one of their stars: they ask us for warships (at most once in PLEA_EVERY turns). Returns true if they asked. */
 export function askAgainstHunger(state: GameState, sv: Survivor): boolean {
   if (sv.promised || sv.war) return false;
-  const key = `swarm_plea_${sv.id}`;
-  if (state.turn - (state.civ.flags[key] ?? -99) < PLEA_EVERY) return false;
+  if (state.turn - (sv.marks?.swarm_plea ?? -99) < PLEA_EVERY) return false;
   const sw = Object.values(state.swarms).find((w) => w.systemId && w.awake && !w.tamed && sv.systems.includes(w.systemId));
   if (!sw) return false;
   const sys = state.systems[sw.systemId!];
-  state.civ.flags[key] = state.turn;
+  marks(sv).swarm_plea = state.turn;
   sv.lastSent = state.turn;
   sendSignal(state, {
     from: sv.id,

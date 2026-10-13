@@ -16,7 +16,7 @@ import { pactBlocked } from '../../../src/game/sim/pacts';
 import { mayComeToUs } from '../../../src/game/sim/refuge';
 import { ARMING, SIEGE_TURNS, WAR_ACCORD, declareWar, inCoalition, makePeace, raidedUs, seizeBlocked, warBlocked, warCause, warDefence, warHeat, warTurn } from '../../../src/game/sim/war';
 import { newFleet } from '../../../src/game/sim/fleets';
-import { capital, colonies } from '../../../src/game/sim/util';
+import { capital, colonies, marks } from '../../../src/game/sim/util';
 import type { GameState, Survivor } from '../../../src/game/types';
 import { THREADS } from '../../../src/game/types';
 import { check, done } from '../lib';
@@ -63,7 +63,7 @@ const fleetAt = (s: GameState, sv: Survivor, n: number) => newFleet(s, sv.homeSy
   check(!sv.pacts?.aid && !sv.pacts?.archives, 'our pacts with them end');
   check((sv.news ?? []).some((n) => n.delta === -40) && (other.news ?? []).some((n) => n.delta === -15 && /went to war/.test(n.what)), 'they hear of it (−40), and so does everyone else (−15), each when the light arrives');
   check(pactBlocked(s, sv, 'watch') === 'We are at war with them.' && askBlocked(s, sv) === 'We are at war with them.' && !mayComeToUs(s, sv), 'no pacts, no asking, no refuge');
-  s.civ.flags[`joint_${sv.id}`] = 1;
+  marks(sv).joint = 1;
   check(jointIncome(s) === 0, 'and a shared work stops paying');
   other.disposition = -30;
   check(inCoalition(s, other), 'a civilization that hates us joins against us');
@@ -78,7 +78,7 @@ const fleetAt = (s: GameState, sv: Survivor, n: number) => newFleet(s, sv.homeSy
 {
   const { s, sv, other } = setup();
   check(warCause(s, sv) === null, 'one raid is not a cause');
-  s.civ.flags[`raid_last_${sv.id}`] = s.turn - 15;
+  marks(sv).raid_last = s.turn - 15;
   raidedUs(s, sv);
   check(warCause(s, sv) === 'They keep raiding us.', 'two raids within twenty turns are');
   const standing = { ...s.civ.standing };
