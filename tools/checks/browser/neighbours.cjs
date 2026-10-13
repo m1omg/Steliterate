@@ -15,7 +15,7 @@ run(async () => {
     v.health = Math.max(v.health, 0.6);
     s.civ.energy = 500;
     s.civ.accord = 300;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     return { id: v.id, name: v.name };
   });

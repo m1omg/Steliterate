@@ -35,7 +35,7 @@ run(async () => {
   await page.waitForTimeout(500);
   const after = await page.evaluate(() => {
     const s = window.__stel.state();
-    return { swarm: !!s.swarms.hgx, log: s.log.slice(-3).map((l) => l.text) };
+    return { swarm: !!s.swarms.hgx, log: s.civ.log.slice(-3).map((l) => l.text) };
   });
   console.log(`  the Record: ${after.log.join(' / ')}`);
   check(!after.swarm && after.log.some((t) => /broke it/.test(t)), 'the second click sends them: the swarm is broken, and the Record says so');

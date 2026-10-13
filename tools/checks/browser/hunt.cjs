@@ -51,7 +51,7 @@ run(async () => {
   const here = await page.evaluate(() => document.querySelector('.drawer .drawer-body .warn')?.textContent ?? '');
   check(/came here for this ship\. It strikes each turn the ship stays/.test(here), `there: "${here.trim()}"`);
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.waitForTimeout(300);

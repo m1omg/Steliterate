@@ -19,13 +19,13 @@ run(async () => {
   };
   // a turn played for real writes the autosave
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.locator('button.endturn').click();
   await page.waitForTimeout(1500);
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.waitForTimeout(300);

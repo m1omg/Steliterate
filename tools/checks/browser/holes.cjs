@@ -15,7 +15,7 @@ run(async () => {
     s.era = 'blackhole';
     s.years = 1e60;
     s.eta = 60;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     const holes = Object.values(s.systems).filter((x) => (x.primary.kind === 'black_hole' || x.primary.kind === 'smbh') && !x.gone);
     for (const h of holes) s.civ.known[h.id] = 2;
     window.__stel.refresh();

@@ -73,7 +73,7 @@ run(async () => {
   check(ended.turn === typed.turn + 1, `then Enter ends the turn, as before (turn ${typed.turn} → ${ended.turn})`);
   // clear whatever the turn brought
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   for (let k = 0; k < 5 && (await page.locator('.modal').count()); k++) {
@@ -95,7 +95,7 @@ run(async () => {
   // Enter under an event leaves the turn as it is; the event takes focus on its title, not a choice
   const t0 = await page.evaluate(() => {
     const s = window.__stel.state();
-    s.pending.push({ uid: 'a11y-check', defId: 'comet', data: {} });
+    s.civ.pending.push({ uid: 'a11y-check', defId: 'comet', data: {} });
     window.__stel.refresh();
     return s.turn;
   });
@@ -110,7 +110,7 @@ run(async () => {
   await page.waitForTimeout(300);
   check(await page.evaluate(() => !!document.querySelector('.modal.event')), 'Escape does not dismiss an event');
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.waitForTimeout(400);

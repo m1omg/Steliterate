@@ -54,7 +54,7 @@ run(async () => {
   await page.evaluate(() => window.__stel.newGame({ seed: 1000 }));
   await page.waitForTimeout(1000);
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.locator('button.endturn').click();

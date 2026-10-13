@@ -24,7 +24,7 @@ run(async () => {
     s.civ.known[a.id] = 2;
     s.civ.known[b.id] = 2;
     v.promised = { systemId: a.id, turn: s.turn };
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     return { id: v.id, name: v.name, home: home.id, a: a.id, b: b.id, aName: a.name };
   });

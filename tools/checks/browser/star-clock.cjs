@@ -19,7 +19,7 @@ run(async () => {
     delete s.civ.flags.star_until;
     delete s.civ.flags.star_step;
     s.civ.pace = 0;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     return { era: s.era, turn: s.turn, L: s.turnLength, years: s.years };
   });
@@ -33,7 +33,7 @@ run(async () => {
     a.primary.mass = 0.1;
     a.primary.bornAt = s.years;
     a.primary.diesAt = s.years + 3e12;
-    s.pending.push({ uid: 'ev_test_star', defId: 'new_star', data: { systemId: a.id } });
+    s.civ.pending.push({ uid: 'ev_test_star', defId: 'new_star', data: { systemId: a.id } });
     window.__stel.refresh();
     return { id: a.id, name: a.name };
   });
@@ -76,7 +76,7 @@ run(async () => {
     b.primary.mass = 0.1;
     b.primary.bornAt = s.years;
     b.primary.diesAt = s.years + 1e12;
-    s.pending.push({ uid: 'ev_test_star2', defId: 'new_star', data: { systemId: b.id } });
+    s.civ.pending.push({ uid: 'ev_test_star2', defId: 'new_star', data: { systemId: b.id } });
     window.__stel.refresh();
   });
   await page.waitForTimeout(600);
@@ -92,7 +92,7 @@ run(async () => {
   for (let k = 1; k <= 6; k++) {
     await page.evaluate(() => {
       const s = window.__stel.state();
-      s.pending.length = 0;
+      s.civ.pending.length = 0;
       window.__stel.refresh();
     });
     await page.waitForTimeout(150);
@@ -118,14 +118,14 @@ run(async () => {
   // White Fire: the same offer; let it pass
   await page.evaluate(() => {
     const s = window.__stel.state();
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     s.civ.energy = 100000; // enough for any price: the price itself is checked in star-price.cjs
     const w = Object.values(s.systems).find((x) => x.primary.kind === 'white_dwarf' && !x.gone);
     w.primary.kind = 'helium_star';
     w.primary.mass = 0.7;
     w.primary.bornAt = s.years;
     w.primary.diesAt = s.years + 2e8;
-    s.pending.push({ uid: 'ev_test_white', defId: 'white_fire', data: { systemId: w.id } });
+    s.civ.pending.push({ uid: 'ev_test_white', defId: 'white_fire', data: { systemId: w.id } });
     window.__stel.refresh();
   });
   await page.waitForTimeout(600);

@@ -11,7 +11,7 @@ run(async () => {
   await page.evaluate(() => {
     const s = window.__stel.state();
     for (let i = 0; i < 60 && (s.era !== 'degenerate' || s.years < 2e15); i++) window.__stel.endTurns(3);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     delete s.civ.flags.star_until; delete s.civ.flags.star_step; delete s.civ.flags.star_next;
     if (!s.civ.techs.includes('quickening')) s.civ.techs.push('quickening');
     s.civ.pace = 1;

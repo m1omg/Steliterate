@@ -15,16 +15,16 @@ run(async () => {
     const cap = s.colonies[s.civ.capitalId];
     cap.structures.substrate_core = (cap.structures.substrate_core ?? 0) + 2;
     cap.pops.echoes = Math.max(cap.pops.echoes, 6);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     // their wish crosses to us at the speed of light
-    for (let i = 0; i < 40 && !s.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null); i++) {
+    for (let i = 0; i < 40 && !s.civ.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null); i++) {
       v.health = 0.8;
       v.disposition = 30;
       window.__stel.endTurns(1, false);
     }
     window.__stel.refresh();
     const echoes = Object.values(s.colonies).reduce((a, c) => a + c.pops.echoes, 0);
-    return { id: v.id, name: v.name, echoes, asked: s.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null) };
+    return { id: v.id, name: v.name, echoes, asked: s.civ.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null) };
   });
   check(sv.asked, `${sv.name} asks for those of our Echoes who wish to come`);
   await page.locator('button[aria-label="Signals: the other minds"]').click();

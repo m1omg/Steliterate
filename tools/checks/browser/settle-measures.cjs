@@ -33,7 +33,7 @@ run(async () => {
     const cap = s.colonies[s.civ.capitalId];
     const f = Object.values(s.fleets)[0];
     Object.assign(f, { at: cap.systemId, to: null, from: null, traveled: 0, distance: 0, order: 'idle', auto: undefined, ships: [{ cls: 'ark', hp: 6 }] });
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     window.__stel.select('fleet', f.id);
   });

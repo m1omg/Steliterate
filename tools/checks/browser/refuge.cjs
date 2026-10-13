@@ -14,10 +14,10 @@ run(async () => {
     delete v.fate;
     delete v.exodus;
     delete v.exodusAsked;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     // their request crosses to us (early in the Dusk a turn is only thousands of years, so the
     // light takes a few turns), and we play on without answering
-    for (let i = 0; i < 40 && !s.signals.some((x) => x.kind === 'exodus' && x.arrivedTurn !== null); i++) {
+    for (let i = 0; i < 40 && !s.civ.signals.some((x) => x.kind === 'exodus' && x.arrivedTurn !== null); i++) {
       v.health = 0.15;
       window.__stel.endTurns(1, false);
     }
@@ -51,7 +51,7 @@ run(async () => {
     for (let i = 0; i < 60 && s.survivors[id].alive; i++) window.__stel.endTurns(1, false);
     window.__stel.refresh();
     const v = s.survivors[id];
-    return { fate: v.fate ?? null, alive: v.alive, said: s.signals.some((x) => x.kind === 'arrived' && x.from === id) };
+    return { fate: v.fate ?? null, alive: v.alive, said: s.civ.signals.some((x) => x.kind === 'arrived' && x.from === id) };
   }, sv.id);
   check(!after.alive && after.fate === 'saved' && after.said, `they arrive: saved, and they tell us (${JSON.stringify(after)})`);
   await page.waitForTimeout(400);

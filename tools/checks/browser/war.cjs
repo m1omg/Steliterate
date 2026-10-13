@@ -11,7 +11,7 @@ run(async () => {
     Object.assign(v, { alive: true, contact: true, health: 0.8, pop: 6, disposition: -30 });
     delete v.fate;
     s.civ.accord = 200;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     return { id: v.id, name: v.name, home: v.homeSystemId };
   });

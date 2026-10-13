@@ -65,7 +65,7 @@ run(async () => {
   const first = await shown();
   check(first.fonts > 50 && first.sci === first.sci.toUpperCase(), `the page is "translated" (${first.fonts} <font> stand-ins; "${first.sci}")`);
   for (let i = 0; i < 3; i++) {
-    await page.evaluate(() => (window.__stel.state().pending.length = 0));
+    await page.evaluate(() => (window.__stel.state().civ.pending.length = 0));
     await page.locator('button.endturn').click();
     await page.waitForTimeout(1000);
     for (let k = 0; k < 6 && (await page.locator('.modal').count()); k++) {

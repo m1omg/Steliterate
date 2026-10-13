@@ -8,7 +8,7 @@ run(async () => {
   const sysId = await page.evaluate(() => {
     const s = window.__stel.state();
     for (let i = 0; i < 80 && (s.era !== 'degenerate' || s.eta < 17.5); i++) window.__stel.endTurns(3);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     for (const k of ['star_until', 'star_step', 'star_next', 'star_flash']) delete s.civ.flags[k];
     const sys = Object.values(s.systems).find((x) => !x.gone && (x.primary.kind === 'white_dwarf' || x.primary.kind === 'black_dwarf') && s.civ.known[x.id]);
     sys.primary.kind = 'helium_giant';
@@ -16,7 +16,7 @@ run(async () => {
     sys.primary.diesAt = s.years + 1.2e5;
     s.civ.energy = 5000;
     s.civ.pace = 0;
-    s.pending.push({ uid: 'ev_test_giant', defId: 'helium_giant', data: { systemId: sys.id } });
+    s.civ.pending.push({ uid: 'ev_test_giant', defId: 'helium_giant', data: { systemId: sys.id } });
     window.__stel.refresh();
     return sys.id;
   });

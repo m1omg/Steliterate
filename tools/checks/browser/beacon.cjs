@@ -18,7 +18,7 @@ run(async () => {
     const f = Object.values(s.fleets)[0];
     Object.assign(f, { at: sys.id, to: null, from: null, traveled: 0, distance: 0, order: 'idle', auto: undefined });
     s.civ.energy = 200;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     window.__stel.select('fleet', f.id);
     return { sys: sys.id, name: sys.name, fleet: f.id };

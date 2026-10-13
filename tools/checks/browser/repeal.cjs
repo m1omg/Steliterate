@@ -9,7 +9,7 @@ run(async () => {
   // a full book of five, as in the player's game
   await page.evaluate(() => {
     const s = window.__stel.state();
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     for (const t of ['the_long_record', 'cold_sleep', 'mind_substrate', 'hunger_studies']) if (!s.civ.techs.includes(t)) s.civ.techs.push(t);
     s.civ.charters = ['sanctuary', 'open_archives', 'rationing', 'child_quotas', 'right_to_stop', 'consume_the_dead'];
     s.civ.accord = 200;
@@ -37,7 +37,7 @@ run(async () => {
   await page.waitForTimeout(500);
   const after = await page.evaluate(() => {
     const s = window.__stel.state();
-    return { has: s.civ.charters.includes('sanctuary'), accord: s.civ.accord, flag: s.civ.flags.repealed_sanctuary, log: s.log[s.log.length - 1]?.text };
+    return { has: s.civ.charters.includes('sanctuary'), accord: s.civ.accord, flag: s.civ.flags.repealed_sanctuary, log: s.civ.log[s.civ.log.length - 1]?.text };
   });
   check(!after.has && after.accord === 175 && after.flag !== undefined, `repealed: accord 200 → ${after.accord}, remembered`);
   check(after.log === 'Charter repealed: Sanctuary.', `the Record says so (${after.log})`);

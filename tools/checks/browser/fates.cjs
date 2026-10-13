@@ -25,7 +25,7 @@ run(async () => {
     // a turn at a time: this turn and the last one below must stay short of η 30, where the
     // neutron stars would tell (the autoplayer goes slow here, and a slow turn is long)
     let prev = s.eta;
-    for (let i = 0; i < 240 && !s.outcome && s.eta < 24; i++) {
+    for (let i = 0; i < 240 && !s.civ.outcome && s.eta < 24; i++) {
       if (s.eta + 2 * Math.max(s.eta - prev, 0.5) >= 29.5) break;
       prev = s.eta;
       window.__stel.endTurns(1);
@@ -62,20 +62,20 @@ run(async () => {
     page.evaluate((b) => {
       const s = window.__stel.state();
       let prev = s.eta;
-      for (let i = 0; i < 600 && !s.outcome; i++) {
+      for (let i = 0; i < 600 && !s.civ.outcome; i++) {
         // with room for a turn twice as long as the last (the autoplayer may slow down)
         if (s.eta + 2 * Math.max(s.eta - prev, 0.05) >= b) break;
         prev = s.eta;
         window.__stel.endTurns(1, true, true);
       }
       window.__stel.refresh();
-      return { eta: s.eta, outcome: s.outcome ? s.outcome.ending : null };
+      return { eta: s.eta, outcome: s.civ.outcome ? s.civ.outcome.ending : null };
     }, b);
   /** The autoplayer's choices for this turn (its events answered), then End turn, pressed. */
   const pressEndTurn = async (fate) => {
     await page.evaluate(() => {
       window.__stel.autoPlay();
-      window.__stel.state().pending.length = 0;
+      window.__stel.state().civ.pending.length = 0;
       window.__stel.refresh();
     });
     await page.waitForTimeout(300);

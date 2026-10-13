@@ -11,11 +11,11 @@ function setUp() {
   s.civ.techs.push('halo_siphons');
   s.minds.dark.stage = 3;
   s.minds.dark.understanding = 75;
-  const arrived = () => s.signals.find((x) => x.kind === 'dark_reveal2' && x.arrivedTurn !== null);
+  const arrived = () => s.civ.signals.find((x) => x.kind === 'dark_reveal2' && x.arrivedTurn !== null);
   for (let i = 0; i < 3 && !arrived(); i++) window.__stel.endTurns(1, false);
   s.civ.matter = 1000;
   s.civ.energy = 1000;
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   window.__stel.refresh();
   return arrived()?.uid ?? null;
 }
@@ -25,7 +25,7 @@ run(async () => {
   const { page } = ck;
   const uid = await page.evaluate(setUp);
   check(!!uid, 'their request has arrived');
-  const resolved = () => page.evaluate((u) => window.__stel.state().signals.find((x) => x.uid === u).resolved, uid);
+  const resolved = () => page.evaluate((u) => window.__stel.state().civ.signals.find((x) => x.uid === u).resolved, uid);
   await page.locator('button[aria-label="Signals: the other minds"]').click();
   await page.waitForTimeout(500);
   const msg = page.locator('.modal .message.open', { hasText: 'They are not dying' });

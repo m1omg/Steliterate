@@ -8,7 +8,7 @@ run(async () => {
   const ids = await page.evaluate(() => {
     const s = window.__stel.state();
     for (let i = 0; i < 80 && (s.era !== 'degenerate' || s.eta < 17.3); i++) window.__stel.endTurns(3);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     const sys = Object.values(s.systems).find((x) => !x.gone && (x.primary.kind === 'white_dwarf' || x.primary.kind === 'black_dwarf') && !Object.values(s.colonies).some((c) => c.systemId === x.id));
     sys.primary.kind = 'helium_star';
     sys.primary.mass = 0.7;

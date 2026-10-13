@@ -21,7 +21,7 @@ run(async () => {
     window.__stel.endTurns(10);
     const s = window.__stel.state();
     if (!s.civ.techs.includes('terraforming')) s.civ.techs.push('terraforming');
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     s.swarms = {};
     s.civ.matter = 500;
     return Object.values(s.bodies)

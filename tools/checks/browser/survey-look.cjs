@@ -8,7 +8,7 @@ run(async () => {
   await page.waitForTimeout(1200);
   const target = await page.evaluate(() => {
     const s = window.__stel.state();
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     const probe = Object.values(s.fleets).find((f) => f.ships.some((x) => x.cls === 'probe') && f.at);
     const here = s.systems[probe.at];
     const d = (a, b) => Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y, a.pos.z - b.pos.z);
@@ -22,7 +22,7 @@ run(async () => {
   for (let i = 0; i < 12 && !toast; i++) {
     await page.evaluate(() => {
       const s = window.__stel.state();
-      s.pending.length = 0;
+      s.civ.pending.length = 0;
       window.__stel.refresh();
     });
     await page.keyboard.press('Escape');

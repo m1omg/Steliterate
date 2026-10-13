@@ -40,7 +40,7 @@ async function toEra(p, era) {
     const S = window.__stel;
     for (let i = 0; i < 600; i++) {
       const s = S.state();
-      if (!s || s.outcome || order.indexOf(s.era) >= order.indexOf(target)) break;
+      if (!s || s.civ.outcome || order.indexOf(s.era) >= order.indexOf(target)) break;
       S.endTurns(1);
     }
   }, era);
