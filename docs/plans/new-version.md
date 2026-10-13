@@ -491,6 +491,24 @@ Part 2a in steps, each validated and pushed on its own, so the harness can tell 
   - A corrupted one may, with the offer marked, and accepting is a Hunger act.
 - **Checks:** `unit/hunger-judgement` (the same step by a desperate and by a prospering
   civilization), `unit/hunger-trade`, `unit/just-cause`.
+- **As built** (13 Oct):
+  - Every rise in Taint is a Hunger act (`judge.ts`), these too: communing, a point of Taint at a
+    time; taking a swarm in; notes on Hunger knowledge, in trade or from Open Archives; the
+    events' Taint choices. A fall is the taker's alone. `unit/rulebook-lint` keeps it so.
+  - Between the others the same rules: what one has heard of another's Hunger lowers its regard
+    for good (it never drifts back above what that allows), and past 30 it makes no pact with it
+    and closes its archives to it.
+  - At 60 of its own Taint the aggression is toward us for now: such a civilization raids anyone
+    it does not count a friend. Wars between the others, their coalitions and devouring belong to
+    2c (war between any two civilizations).
+  - At 100 another's game ends as ours would: its capital buds a swarm, its settlements go dark
+    the next turn, and it sends no last transmission (fate `hungered`).
+  - A civilization of its own offers notes only on what it knows, by the same rules: offers fell
+    by more than half, and our autoplayer, keeping the energy it paid for them, wins more often
+    (CHANGELOG, part 2b). Our autoplayer declines Hunger knowledge, as it declines every Hunger
+    step.
+  - The others rarely go far: about a third take a step, mostly Consume the Dead; in 900 games
+    none passed 45 Taint, and none became the Hunger.
 
 ### 2c. War, units, conquest
 

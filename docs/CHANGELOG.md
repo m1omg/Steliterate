@@ -2279,3 +2279,75 @@ Each of the other civilizations now plays its own way, not ours with a few needs
 - **Check:** `unit/slices` (new: the same game slice by slice as at once, the swap never across a
   slice, a turn in many slices).
 
+
+## The Hunger among the civilizations (13 Oct, part 2b)
+
+Taint is for everyone now, and heard of: every step toward the Hunger is news that travels at the
+speed of light, judged as it arrives.
+
+- **A Hunger act** (`hungerAct`, `sim/judge.ts`): learning a Hunger technology, enacting a dark
+  charter, taking a swarm in or communing with one (a point of Taint at a time), devouring a
+  civilization, seizing a star without cause, taking their notes on Hunger knowledge, and the
+  events' Taint choices (Hear the promise, stripping an archive or a tomb under Consume the Dead,
+  devouring a vault). Its Taint is the taker's at once; its news sets out from where it was done.
+  A fall in Taint (Hear the warning) is the taker's alone.
+- **Judged by how desperate the taker was** (the player: "desperate players adopting SOME hunger
+  tech should not be viewed as badly as prospering ones"): each hearer thinks less of it by
+  0.6 × Taint × (1 − 0.7 × plight), so Hunger Engines cost a prospering civilization 7.2 with
+  each hearer and a desperate one 2.2. Devouring (−40) and seizing without cause (−30) cost what
+  they did. Plight (`sim/plight.ts`, 0 to 1): how few turns the reserve would last at the present
+  loss, how many settlements starve, how fast the people fall, how low the will; the worst counts
+  most.
+- **What they decide by our Taint is what they have heard of it** (`Survivor.heardTaint`), not
+  what we carry: the most they can think of us (100 − 1.5 × heard), and:
+  - past 30 heard (`SANCTION_AT`), those not on that path themselves shun us: no new pact, trade
+    or joint work, and Open Archives closed (the Tessellate keeps even that agreement), and they
+    say so (before, every civilization refused new pacts at our true Taint of 60, and nothing
+    else changed);
+  - among the others the same: what one has heard of another's Hunger lowers its regard for good
+    (`Tie.taintHeard`), and past 30 it makes no pact with it and closes its archives to it.
+- **The others take Hunger steps too** (`hungerSteps`, `auto.ts`), only when desperate (plight
+  from 0.6) and bold (caution under 0.5): Hunger Studies, the Command Language and Hunger Engines
+  first, Consume the Dead, and the events' Taint choices. We hear of each when its light reaches
+  our capital (`Survivor.taintSeen`, on its card):
+  - at 60 heard of, the Hunger in one is a just cause (`HUNGER_CAUSE`): a war on it costs us
+    nothing in anyone else's eyes;
+  - at 60 of its own (`CORRUPT_AT`) it turns on the weak, and raids anyone it does not count a
+    friend;
+  - at 100 its game ends as ours would: it becomes the Hunger, its capital buds a swarm, and it
+    sends no last transmission: we hear its silence (fate `hungered`).
+- **Trade** (`dealings.ts`, `pacts.ts`): a civilization of its own offers notes only on what it
+  knows, and on Hunger knowledge only once on that path itself, the offer marked; taking them, or
+  reading them from Open Archives, is a Hunger act of ours (a quarter of the technology's Taint).
+  (Before, the notes followed whatever we were researching: that is how Hunger Engines and
+  Communion came to be offered.) Our autoplayer declines Hunger notes, as it declines every
+  Hunger step.
+- **On the card** (Signals): Shun us, The Hunger in them (with the just cause), and the regard
+  tooltip's ceiling from what they have heard. The war button says no one blames a war on the
+  Hunger in them. The HUD's Taint and a Hunger technology's tooltip say the others hear of it.
+- **The numbers** (900 harness games, against part 2a's reference): 411 survive and 167 win
+  (397 and 131), a Degenerate Age of 76 turns (71). By fate: decay 163 of 450 (164), stable 148 of
+  239 (136; 102 victories, 78 before), curvature 100 of 211 (97; 59 victories, 45). Survival is
+  within the noise. The victories are not, and the reason is the honest trade: in 40 games a
+  neighbour offered 159 trades (355 before), we took 110 (251) and paid 1,260 energy and 1,432
+  matter for 6,788 insight (5,927, 2,999 and 22,720). Our autoplayer keeps that energy, quickens
+  the pace when its reserve is full (3,182 turns of Degenerate Age in those games against 2,815,
+  its reserve there 1,032 on average against 888), and finishes the Long Thought in 130 of 900
+  games (99) and the Aeon Seed in 37 (32). Only 6 of the first 300 games play out as before: once
+  the others take Hunger steps, nearly every game goes its own way.
+- **The others on the Hunger's path**, in the 900: of 2,700 civilizations, 895 took a step: 673
+  only Consume the Dead (Taint 15), 158 Hunger Engines too (27), 64 Communion as well (45). None
+  went past 45, none became the Hunger, and the sleepers almost never take one (25 of 530: they
+  sleep through hard times instead). No one shunned us (once in 900 games before our autoplayer
+  declined Hunger notes). Alive at our end: the Chorus 29% (28%), the uploaded 28% (30%), the
+  Tessellate 23% (20%; its Archive of Everything in 188 of 558), the gardens 20% (17%), the
+  sleepers 19% (19%).
+- **Checks:** `unit/hunger-judgement` (the same step by a desperate and by a prospering
+  civilization, our acts heard, shunning, an event's step, the ties' lasting grudge, becoming the
+  Hunger and its silence), `unit/hunger-trade`, `unit/just-cause` (heard at light speed, the
+  cause, no infamy, the corrupted raid). `unit/neighbours`: the ceiling reads heard Taint.
+  `unit/rulebook-lint`: Taint changes only in `judge.ts` (`hungerAct` up, `easeTaint` down).
+  `unit/dismantle` and `browser/fates` no longer lean on how one seed happens to play: the first
+  picks a settlement of ours under a dark star (it had picked a neighbour's), the second keeps a
+  refuge at our capital through the end of matter (seed 48514 had one of its own until the
+  others played the same game).

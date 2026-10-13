@@ -528,6 +528,21 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     6,300 energy a game against 1,500, Open Archives 2,930 insight against 1,530). The balance
     reference starts again; 2a-3 grounds the dealings in what is really there. Tell the player
     plainly, and ask whether to tune back toward the old balance;
+  - relations and light speed (parts 2a-3, 2a-4): the dealings by what each really has, the others'
+    ties among themselves, their settlements and fleets seen as their light shows them (364 / 142
+    of 900);
+  - the Lattice thinks a little and minds of their own (part 2a-5): insight 0.3, accord 0.1, a
+    Search Foundry and a Protocol Registry for everyone; each way its own research, Great Work,
+    temperament and, for the sleepers, sleep; the events of ordinary life for everyone. The Quiet
+    Lattice is far the easiest ending, and was before: the player was asked (13 Oct) to choose
+    between leaving it, a dearer Archive of Everything (recommended), moving it to the Dark Era, or
+    needing the Lattice to be three quarters of everyone. Waiting for the answer; nothing changed
+    meanwhile. Also asked: whether to tune survival back toward the old numbers;
+  - End Turn in slices (part 2a-6): the browser breathes every 12 ms between civilizations' parts.
+    Part 2a's reference (`3678301`): 900 games 397 / 131 / 71;
+  - the Hunger among the civilizations (part 2b): see CHANGELOG. Its harness numbers moved
+    victories up, for a reason worth telling the player: a neighbour now offers notes only on what
+    it knows, so we trade less and keep the energy (CHANGELOG, part 2b).
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home
