@@ -479,6 +479,10 @@ function planBuilds(state: GameState) {
   const fate = plannedFate(state);
   // about as many turns ahead for either: the Black Hole Age's Tide covers a decade a turn, the Degenerate Age's under half
   const preEnd = fate === 'decay' ? calendarEra(state) === 'degenerate' && state.eta > 27 : fate === 'curvature' ? state.eta > 62 && !matterGone(state) : false;
+  // under curvature the end is far off, but a settlement's matter runs out long before it (near η
+  // 45 to 55), and a Bastion Shell, which costs none, stands only at a black hole: so from η 27 it
+  // re-encodes too, in the ordinary way, after what it needs for energy, from matter to spare
+  const reencode = fate === 'curvature' && state.eta > 27 && !preEnd && !matterGone(state) && civ.matter > 200;
   const t = threadTotals(state);
   const way = wayOf(state);
   for (const c of colonies(state)) {
@@ -516,6 +520,7 @@ function planBuilds(state: GameState) {
       if (light > 0.3) plan.push('dyson_swarm', 'orbital_collector', 'ember_collector', 'infrared_shroud', 'solar_array');
       plan.push('disk_skimmer', 'accretion_engine', 'pulsar_brake', 'geothermal_tap', 'fusion_plant', 'decay_harvester');
     }
+    if (reencode && (c.structures.lepton_substrate ?? 0) + c.queue.filter((q) => q.key === 'lepton_substrate').length < 2) plan.push('lepton_substrate');
     // (another civilization builds for Kin only where Kin live)
     const forKin = !way || c.pops.kin > 0;
     // its star has died: light Orbital Lamps while there is still life to keep

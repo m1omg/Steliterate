@@ -17,6 +17,11 @@ import { colonies, distLy, inItsSystem, log, popsOf, totalPops, withRng } from '
 /** Each crossing's protocols: they halve the losses of that crossing only, as they say. */
 const PROTOCOLS: Partial<Record<EraId, string>> = { dusk: 'last_light_protocols', degenerate: 'great_decay_protocols', blackhole: 'last_horizon_protocols' };
 
+/** Whether a star is a black hole (or the galaxy's own). */
+function isHole(kind: string | undefined): boolean {
+  return kind === 'black_hole' || kind === 'smbh';
+}
+
 function decayProof(c: Colony): boolean {
   return Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof);
 }
@@ -222,29 +227,41 @@ function endOfMatter(state: GameState, ids: readonly string[], mods: Record<stri
   state.flags.matter_gone = state.turn;
 }
 
-/** One civilization at the end of matter: what was re-encoded goes on, a few minds carried over by the protocols; the rest is gone. */
+/** The share of the minds the protocols carry from a settlement still made of matter onto leptonic substrate, as far as there is room for them. */
+export const CARRIED = 0.35;
+
+/**
+ * One civilization at the end of matter: what was re-encoded goes on, keeping only what is
+ * decay-proof (and a Horizon Vault's charge, held in its hole's spin); a few minds carried over by
+ * the protocols, as far as there is room for them; the rest is gone, each loss counted once.
+ */
 function leftOnSubstrate(state: GameState, mods: Mods, lines: CrossingReport['lines'], crossingMult: number, how: 'decayed' | 'evaporated') {
   const cs = colonies(state);
   const cap = cs.find((c) => c.id === state.civ.capitalId && decayProof(c)) ?? cs.find((c) => decayProof(c));
   let saved = 0;
   let lost = 0;
+  // first what goes on: only what was re-encoded survives
   for (const c of cs) {
-    if (decayProof(c)) {
-      // only what was re-encoded survives
-      for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]?.decayProof) delete c.structures[k];
-      c.queue = [];
-      lost += c.pops.kin + c.cryo;
-      c.pops.kin = 0;
-      c.cryo = 0;
-      const lat = Math.round(c.pops.lattice * 0.5 * crossingMult);
-      c.pops.lattice -= lat;
-      lost += lat;
-      continue;
-    }
-    // migration through the protocols
-    if (cap && crossingMult < 1) {
+    if (!decayProof(c)) continue;
+    const atHole = isHole(state.systems[c.systemId]?.primary.kind);
+    for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]?.decayProof && !(atHole && STRUCTURE_BY_ID[k]?.keptAtHole)) delete c.structures[k];
+    c.queue = [];
+    lost += c.pops.kin + c.cryo;
+    c.pops.kin = 0;
+    c.cryo = 0;
+    const lat = Math.round(c.pops.lattice * 0.5 * crossingMult);
+    c.pops.lattice -= lat;
+    lost += lat;
+  }
+  // then what does not: through the protocols, a share of its minds onto what goes on, as far as it has room for them
+  const room = cap && crossingMult < 1 ? capacity(state, cap, mods) : null;
+  for (const c of cs) {
+    if (decayProof(c)) continue;
+    if (cap && room) {
       for (const t of ['echoes', 'coldminds', 'chorus'] as const) {
-        const m = Math.floor(c.pops[t] * 0.35);
+        const m = Math.min(Math.floor(c.pops[t] * CARRIED), Math.max(0, room[t] - cap.pops[t]));
+        if (m <= 0) continue;
+        c.pops[t] -= m;
         cap.pops[t] += m;
         saved += m;
       }
@@ -269,6 +286,18 @@ function leftOnSubstrate(state: GameState, mods: Mods, lines: CrossingReport['li
   if (saved) lines.push({ text: `${saved} minds were carried onto leptonic substrate before their homes ${how === 'decayed' ? 'dissolved' : 'evaporated'}.`, kind: 'good' });
   lines.push({ text: lost > 0 ? `${lost} of our people ${how === 'decayed' ? 'dissolved' : 'evaporated'} with the matter they were made of.` : 'No one was lost.', kind: lost > 0 ? 'bad' : 'good' });
   state.civ.matter = 0;
+}
+
+/**
+ * After the end of matter and what the crossing costs: what held the reserve was matter too, so
+ * what no longer fits in what is left is gone at once, and the report says so (before, it was
+ * thrown away on the next turn without a word).
+ */
+function reserveAfterMatter(state: GameState, mods: Mods, lines: CrossingReport['lines']) {
+  const keep = reserveCapacity(state, mods);
+  if (state.civ.energy <= keep) return;
+  lines.push({ text: `What held our reserve was matter too: it can hold ${Math.round(keep)} energy now, and ${Math.round(state.civ.energy - keep)} had nowhere to go.`, kind: 'bad' });
+  state.civ.energy = keep;
 }
 
 /** What each civilization had as a crossing began, for its report. */
@@ -379,6 +408,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
     }
     // the crossing's cost falls on what we had saved; what the catchers caught comes after it
     eachCiv(state, ids, (id) => (state.civ.energy = state.civ.energy * 0.6 + (caught[id] ?? 0)));
+    if (fateOf(state) === 'decay') eachCiv(state, ids, (id) => reserveAfterMatter(state, mods[id], lines[id]));
   } else if (from === 'blackhole') {
     // ---------------------------------------------------------------- The Last Horizon
     // every hole left goes as one would on its own (physics.ts): its worlds drift loose, what we built stays
@@ -449,6 +479,7 @@ export function greatEvaporation(state: GameState, ids: readonly string[], mods:
   const reports: Record<string, CrossingReport> = {};
   eachCiv(state, ids, (id) => {
     state.civ.energy *= 0.6;
+    reserveAfterMatter(state, mods[id], lines[id]);
     for (const c of colonies(state)) if (popsOf(c) + c.cryo <= 0) destroyColony(state, c, 'no one is left there');
     log(state, 'The Great Evaporation: the last ordinary matter is gone.', 'era');
     reports[id] = {

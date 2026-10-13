@@ -25,6 +25,8 @@ export interface StructureDef {
   bodies?: BodyKind[]; // allowed body kinds (default: any)
   notBodies?: BodyKind[];
   primaries?: PrimaryKind[]; // allowed primary kinds
+  /** Kept at the end of matter on a settlement that goes on at its black hole: what it holds is in the hole itself (a Horizon Vault's charge, as spin). It does not make the settlement outlast matter. */
+  keptAtHole?: boolean;
   notAt?: PrimaryKind[]; // primary kinds it gathers nothing from (and cannot be built at)
   habitable?: boolean; // only bodies with intrinsic habitability > 0.3
   energy?: { mode: EnergyMode; amount: number; input?: number };
@@ -105,7 +107,7 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'brown_siphon', name: 'Hydrogen Siphon', desc: 'Drinks from a brown dwarf that never became a star.', era: 'degenerate', tech: 'brown_dwarf_mining', cost: 70, matter: 20, max: 1, bodies: ['deep'], primaries: ['brown_dwarf'], lift: 6, signature: 2 }),
   S({ id: 'cold_vault', name: 'Cold Vault', desc: 'A shielded vault near absolute zero, home to Coldminds.', era: 'degenerate', tech: 'cold_computation', cost: 60, matter: 25, max: 4, cap: { coldminds: 6 }, enables: 'cool', upkeep: 0.1, signature: 0.1 }),
   S({ id: 'garden_ark', name: 'Garden Ark', desc: 'A lit, warm, living garden in the dark, at a cost few can afford.', era: 'degenerate', tech: 'garden_arks', cost: 110, matter: 50, max: 3, cap: { kin: 4 }, upkeep: 3, signature: 3 }),
-  S({ id: 'horizon_vault', name: 'Horizon Vault', desc: 'Stores energy as black-hole spin. Almost nothing leaks.', era: 'degenerate', tech: 'horizon_storage', cost: 110, matter: 60, max: 2, bodies: ['deep'], primaries: ['black_hole', 'smbh'], reserveCap: 400, signature: 1 }),
+  S({ id: 'horizon_vault', name: 'Horizon Vault', desc: 'Stores energy as black-hole spin. Almost nothing leaks.', era: 'degenerate', tech: 'horizon_storage', cost: 110, matter: 60, max: 2, bodies: ['deep'], primaries: ['black_hole', 'smbh'], reserveCap: 400, keptAtHole: true, signature: 1 }),
   S({ id: 'burst_catcher', name: 'Burst Catcher', desc: 'Buffers for flashes: brief stars, final bursts and flares too fast to use as they happen, even a neutron star bursting in a neighbouring system.', era: 'degenerate', tech: 'burst_capture', cost: 90, matter: 40, max: 2, burstCap: 300, signature: 1 }),
   S({ id: 'decay_harvester', name: 'Decay Harvester', desc: 'Collects the faint heat of protons decaying inside dead stars.', era: 'degenerate', tech: 'baryon_decay_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['white_dwarf', 'black_dwarf', 'neutron_star', 'brown_dwarf'], energy: { mode: 'decay', amount: 4 }, signature: 1 }),
   S({ id: 'curvature_collector', name: 'Curvature Collector', desc: 'Catches the particles that space, curved tight around a neutron star, makes from its mass.', era: 'degenerate', tech: 'curvature_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['neutron_star'], energy: { mode: 'curvature', amount: 4 }, signature: 1 }),
@@ -115,7 +117,7 @@ export const STRUCTURES: StructureDef[] = [
   // ---------------------------------------------------------------- Black Hole Age
   S({ id: 'penrose_harvester', name: 'Penrose Harvester', desc: 'Throws mass into the ergosphere and catches it coming back heavier.', era: 'degenerate', tech: 'penrose_process', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'spin', amount: 20 }, signature: 2 }),
   S({ id: 'hawking_collector', name: 'Hawking Collector', desc: 'Listens to the faint heat of a black hole slowly boiling away.', era: 'degenerate', tech: 'hawking_capture', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'hawking', amount: 12 }, signature: 1 }),
-  S({ id: 'bastion', name: 'Bastion Shell', desc: 'A shell of leptonic structure around a black hole.', era: 'blackhole', tech: 'bastion_architecture', cost: 90, matter: 0, max: 3, cap: { echoes: 3, coldminds: 4, lattice: 3 }, decayProof: true, signature: 1 }),
+  S({ id: 'bastion', name: 'Bastion Shell', desc: 'A shell of leptonic structure around a black hole.', era: 'blackhole', tech: 'bastion_architecture', cost: 90, matter: 0, max: 3, primaries: ['black_hole', 'smbh'], cap: { echoes: 3, coldminds: 4, lattice: 3 }, decayProof: true, signature: 1 }),
 
   // ---------------------------------------------------------------- Dark Era
   S({ id: 'horizon_siphon', name: 'Horizon Siphon', desc: 'Speculative: draws on the faint temperature of the cosmic horizon itself.', era: 'dark', tech: 'horizon_siphon', cost: 120, matter: 0, max: 4, energy: { mode: 'siphon', amount: 0.6 }, signature: 0 }),

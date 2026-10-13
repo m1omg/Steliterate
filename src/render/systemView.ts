@@ -247,7 +247,8 @@ export class SystemView {
         const fed = allColonies(state).some((c) => c.systemId === sys.id && ((c.structures.accretion_engine ?? 0) > 0 || (c.structures.penrose_harvester ?? 0) > 0));
         const shine = diskLight(kind, calendarEra(state), state.years, !matterGone(state));
         const heat = fed ? 1.0 : kind === 'smbh' ? Math.min(0.75, 0.12 + shine * 0.4) : 0.18;
-        this.addDisk(r * 1.6, r * (kind === 'smbh' ? 9 : 6), heat);
+        // (no matter left to fall in: no disk, whatever harvests the hole's spin)
+        if (!matterGone(state)) this.addDisk(r * 1.6, r * (kind === 'smbh' ? 9 : 6), heat);
         break;
       }
       default:

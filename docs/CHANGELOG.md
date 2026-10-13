@@ -2522,3 +2522,39 @@ speed of light, judged as it arrives.
   runs without the browser getting its turn, 14 ms at the median and 34 at worst (16 and 34 after
   2a-6). From the click to the next frame, about 1 s at the median, as before: drawing the map in
   software here.
+
+## The end of matter, fixed (13 Oct, part 3-0)
+
+Before life after matter (Part 3) is built on it, what the end of matter already did is put right:
+- **Each loss is counted once.** The protocols' minds were counted as lost at the old settlement
+  and never taken off it; a carried Chorus, with no room for it at its host, was cut a second
+  time there. The report now says exactly how many went.
+- **The protocols carry minds only as far as there is room** for them on the settlement that goes
+  on (35% of the Echoes, Coldminds and Chorus of each settlement still made of matter, taken off
+  where they were). Their text now says what they do: before, they promised to halve the losses.
+- **A Horizon Vault is kept** with a settlement that goes on at its black hole: its charge is the
+  hole's spin (`StructureDef.keptAtHole`). It holds nothing once its hole is gone, as before.
+- **What held the reserve was matter too:** what no longer fits goes at once, after the crossing's
+  own cost, and the report says how much. Before, it was thrown away on the next turn with no word.
+- **The forecast** no longer promises survival to those merely living around black holes: only
+  minds on leptonic substrate go on.
+- **The Bastion Shell** can be built only at a black hole, as its text says.
+- **After matter, a black hole has no disk** in the system view, whatever harvests its spin (it was
+  drawn at full heat).
+- **The autoplayer re-encodes in time under curvature.** It had come through the Great Evaporation
+  on Bastion Shells built at every settlement, wherever it stood (a Shell costs no matter). With the
+  Shell at black holes only, it came through with nothing: it began on Leptonic Substrate at η 62,
+  and by then a settlement's matter has run out (near η 45 to 55; it knows Leptonic Computation from
+  η 15). Now, from η 27 under curvature, Leptonic Substrate is an ordinary project, two to a
+  settlement, after what it needs for energy and from matter to spare (over 200); the urgent
+  preparation, at the front of every queue and rushed, still begins at η 62. Put at the front from
+  η 27 instead, it took the place of the collectors a starving civilization needed.
+- **Check:** `unit/end-of-matter` (new).
+- **Harness (900 games):** 416 survive, 124 win, a Degenerate Age of 75 turns (407 / 151 / 75
+  after 2d); the first 300: 149 survive, 37 win (147 / 47). By fate: decay 175 / 450 with 11 wins,
+  as before; stable 141 / 239 with 95 wins (138, 95); curvature 100 / 211 with 18 wins (94, 45).
+  The wins lost are all under curvature, the Long Thought's (31 to 6; 20 of those games now end in
+  Recurrence): Bastion Shells everywhere had carried whole populations through the Great
+  Evaporation. With the Shell at black holes only and the old preparation, curvature had fallen to
+  60 survivals and 16 wins. 533 of 900 games play out as before.
+- **Validated:** 66 unit checks, the playtest and 53 browser checks pass.

@@ -558,6 +558,17 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     (`hull-candidates.png` in the scratchpad, not kept): they go in only once the player picks.
     `tools/process-sprites.mjs` cuts them; `fleetLook` and `lookRole` (`data/ships.ts`) need the new
     looks, the Lance's only for a fleet of Lances alone.
+  - the end of matter fixed (part 3-0): each loss counted once, the protocols carrying minds only
+    as far as there is room, a Horizon Vault kept at its hole, the reserve cut to what still holds
+    it (and said), the forecast and the protocols' text honest, the Bastion Shell at black holes
+    only, no disk after matter. The autoplayer had come through the Great Evaporation on Bastion
+    Shells built everywhere; it now re-encodes from η 27 under curvature, while matter can pay for
+    it. 900 games 416 / 124 / 75: survival as before, curvature wins 45 to 18 (the Long Thought's).
+  - 13 Oct evening, the player: "IDGAF about spoilers rn, just be straight with me" (for that
+    answer: the Lattice after matter, and what galactic free energy does); the session is in auto
+    mode ("didnt wanna manually approve every damn thing", but keep planning and asking where the
+    rules say so); "Always allow check balance": `.claude/settings.json` allows the harness and
+    the tally script.
   - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
