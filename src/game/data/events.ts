@@ -33,9 +33,11 @@ export interface EventDef {
   weight?: number; // random pool weight (0 or undefined = scripted only)
   once?: boolean;
   /**
-   * Who it can happen to: the player alone (absent), or every civilization ('everyone'). The
-   * other minds, the star clocks and the homeworld's story are the player's (the new version,
-   * part 2a, picks those that are everyone's).
+   * Who it can happen to: the player alone (absent), or every civilization ('everyone'): the
+   * ordinary life of Threads and people, and the Dark Era's own (the new version, part 2a-5). The
+   * other minds, the Lattice's and the Hunger's stories, the star clocks, the news of the universe
+   * and the homeworld's story (a world born with its failing dynamo and its substellar sea) are the
+   * player's.
    */
   scope?: 'everyone';
   bind?: (s: GameState, rng: Rng) => EventData | null;
@@ -321,6 +323,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'who_sleeps_first',
     title: 'Who Sleeps First',
+    scope: 'everyone',
     art: 'dusk',
     plate: 'who_sleeps_first',
     eras: ['dusk', 'degenerate'],
@@ -356,6 +359,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'derelict_ark',
     title: 'A Derelict Ark',
+    scope: 'everyone',
     art: 'ruins',
     eras: ['dusk', 'degenerate'],
     weight: 3,
@@ -383,6 +387,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'prophet_of_stillness',
     title: 'The Prophet of Stillness',
+    scope: 'everyone',
     art: 'dusk',
     plate: 'prophet_of_stillness',
     eras: ['dusk', 'degenerate'],
@@ -400,6 +405,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'first_upload',
     title: 'The First Upload',
+    scope: 'everyone',
     art: 'dusk',
     plate: 'first_upload',
     eras: ['dusk'],
@@ -416,6 +422,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'echo_drift',
     title: 'Drift',
+    scope: 'everyone',
     art: 'dusk',
     weight: 4,
     bind: (s) => (threadTotals(s).echoes >= 3 ? {} : null),
@@ -442,6 +449,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'chorus_invitation',
     title: 'An Invitation to Merge',
+    scope: 'everyone',
     art: 'dusk',
     weight: 3,
     bind: (s) => (threadTotals(s).chorus >= 1 && threadTotals(s).echoes >= 2 ? {} : null),
@@ -801,6 +809,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'forgetting',
     title: 'Forgetting',
+    scope: 'everyone',
     art: 'dark',
     eras: ['dark'],
     weight: 8,
@@ -815,6 +824,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'positronium',
     title: 'Atoms Wider Than Galaxies',
+    scope: 'everyone',
     art: 'dark',
     eras: ['dark'],
     weight: 4,
@@ -826,6 +836,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'false_vacuum',
     title: 'The False Vacuum',
+    scope: 'everyone',
     art: 'dark',
     eras: ['dark'],
     weight: 3,

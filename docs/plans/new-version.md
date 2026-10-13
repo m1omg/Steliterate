@@ -435,7 +435,25 @@ Part 2a in steps, each validated and pushed on its own, so the harness can tell 
    Age's spin as a commons), temperament, plight, the Lattice's insight and accord with the
    Search Foundry and Protocol Registry (and the Lattice-led strategy in the harness to tune
    them), AIs' Forks rejoining the world as people, the event whitelist, each civilization's
-   homeworld.
+   homeworld. As built:
+   - **The Lattice thinks a little** (`6b6c04e`): 0.3 insight and 0.1 accord a Lattice; the
+     Search Foundry and the Protocol Registry, taking industry first, built by the Tessellate only
+     where a settlement makes three times what they would draw (taking it everywhere, they starved
+     its building: the Lattice-led strategy showed it).
+   - **Minds of their own** (`b299f6a`): each way's research lead and its own Great Work only; the
+     sleepers' Long Sleep through hard times and their race for a new star (we hear when their Ark
+     sets out); a temperament from the seed and the id (caution, generosity, ambition); a Fork
+     from another civilization goes its own way; a hole's spin a commons drawn by real harvesters.
+     Gardens terraform as before (Terraforming is now among the first they learn).
+   - **The event whitelist**: the events of ordinary life (who sleeps first, the prophet of
+     stillness, a derelict ark, the first upload, drift, an invitation to merge) and the Dark Era's
+     (forgetting, the widest atoms, the false vacuum) come to everyone.
+   - **The homeworld's story stays ours.** Its events (the last rain, the sea freezing over, the
+     mantle settling, the superflare, the comet) are about a world born with a failing dynamo, a
+     tidal lock and a substellar sea, which the others' capitals were not; they follow the general
+     rules of their worlds instead (life fading with their star, as every world's does).
+   - **Plight** moves to 2b, which is the first to judge by it; until then pleas and refuge read
+     each civilization's health, as its record says.
 7. **2a-6, the checks, the numbers and the time**: the rewritten and new checks listed above, the
    harness by civilization, the balance reference; End Turn yielding to the browser between
    civilizations, measured on the emulated phone (after 2a-2 a turn costs about 7 ms on average

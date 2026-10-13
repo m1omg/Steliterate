@@ -2133,6 +2133,16 @@ there, and the others now deal with each other.
     lists the pacts with others that we have heard of.
 - **Checks:** `unit/ties` (new); `unit/others` gains a shared work by its star's light, and Open
   Archives by what a real neighbour learns and knows.
+- **The numbers** (with 2a-4, `a6cb1a5`). 900 harness games: 364 survive and 142 win (618 and 266
+  after 2a-2), a Degenerate Age of 74 turns (73). By fate: decay 132 of 450 (255), stable 137 of
+  239 (219), curvature 95 of 211 (144). Alive at the end of our games: the Lattice 46%, the
+  uploaded 29%, the Chorus 26%, the gardens 18%, the sleepers 9%.
+  - Most of the fall is the shared work: a flat 6 energy a turn for as long as the partner lived
+    (and the partners now live) becomes its star's light, which fades with the star. The rest is
+    Open Archives and the dealings grounded in what each really has.
+  - So our survival is now below the light neighbours' (455 of 900 in 2a-1). The balance
+    reference is set at the end of part 2a; whether to tune back toward the old numbers is the
+    player's call.
 
 ## Seen at light speed (13 Oct, part 2a-4)
 
@@ -2142,8 +2152,18 @@ there, and the others now deal with each other.
 - **Their size:** a neighbour's card shows its people as its light left it, kept a turn at a time
   until a later one has reached us (`Survivor.seen`, `asSeen`), and says how old that light is.
 - **Their stars** were already seen at light speed (`seenThere`).
-- **Check:** `unit/others` gains a neighbour seen as its light left it, and a new settlement seen
-  only once its light arrives.
+- **Their fleets** (`fleetSeen`, `others.ts`): on the galaxy map in their colour, on the other side
+  of a star from ours, and in a system's view on an orbit of their own going the other way round,
+  never ours to pick.
+  - We see each where it was when the light that reaches our capital now left it.
+  - A ship of theirs made since is not seen yet; one that set out is seen waiting where it was
+    until the light of its leaving arrives, then along its way, behind where it really is; one
+    that has arrived is seen on its way until the light of its coming reaches us.
+  - Only at or between stars we know of. A fleet of theirs keeps the times of its leg for this
+    (`Fleet.departed`, `since`, `cameFrom`); ours do not need them.
+- **Check:** `unit/others` gains a neighbour seen as its light left it, a new settlement seen
+  only once its light arrives, and their fleets seen at the speed of light (made, setting out, on
+  the way, arrived, and only where we know the stars).
 
 ## The Lattice thinks a little (13 Oct, part 2a-5)
 
@@ -2164,6 +2184,12 @@ never pay for a pact or a law of its own.
   substrate or Cold Vaults, Autonomous Replicators first and Archive Theory as soon as it can), and
   builds only the Archive of Everything.
 - **Check:** `unit/lattice-search` (new).
+- **The numbers** (`6b6c04e`, the Tessellate still building both wherever it had four Lattice).
+  900 games: 376 survive and 147 win (364 and 142 before), a Degenerate Age of 73 turns (74),
+  within the noise. By fate: decay 144 of 450 (132), stable 131 of 239 (137), curvature 101 of 211
+  (95). Our own Lattice is a small part of us, so its thinking barely shows in our numbers. The
+  Tessellate: alive at the end of our games 38% (46%), but it now builds the Archive of Everything
+  itself in 53 of 558 games (12), and is taken in by us in 40 (24); faded 255 (265).
 
 ## Minds of their own (13 Oct, part 2a-5)
 
@@ -2198,6 +2224,13 @@ Each of the other civilizations now plays its own way, not ours with a few needs
 - **A Fork from another civilization** leaves it, taking the settlements where it is the
   majority, and goes its own way: it becomes no neighbour of ours. (Until now another
   civilization's Threads never forked.)
+- **The events of ordinary life come to everyone** (`EventDef.scope`): who sleeps first, the
+  prophet of stillness, a derelict ark, the first upload, drift, an invitation to merge, and in the
+  Dark Era forgetting, the widest atoms and the false vacuum. Each civilization answers its own
+  in its own part of a turn, by its own dice, and keeps them in its own Record. The stories that
+  are ours stay ours: the Lattice's, the Hunger's, the stranger minds', the star clocks, the news
+  of the universe, and our homeworld's (a world born with a failing dynamo and a substellar sea,
+  which the others' capitals were not).
 - **A hole's spin is a commons** for a civilization of its own as it is for us: it draws on it
   with Penrose Harvesters of its own, in any age, and the world panel says so (the half a light
   partner took is for neighbours asleep).

@@ -4,6 +4,8 @@
 // - The sleepers sleep the Long Sleep through hard times; a new star near them wakes them, they
 //   send an Ark for it, and we hear that they are on their way, if we know them.
 // - A Thread that forks from another civilization leaves it, and becomes no neighbour of ours.
+// - The events of ordinary life come to every civilization (EventDef.scope); the stories that are
+//   ours (the Lattice's, the Hunger's, the stranger minds', our homeworld's) stay ours.
 import { WAY_RESEARCH, WAY_WORK, autoPlay } from '../../../src/game/auto';
 import { WORK_BY_ID } from '../../../src/game/data/works';
 import { asCiv } from '../../../src/game/civs';
@@ -16,6 +18,7 @@ import { availableTechs } from '../../../src/game/sim/research';
 import { voiceClock } from '../../../src/game/sim/signals';
 import { fork } from '../../../src/game/sim/society';
 import { heardWaking } from '../../../src/game/sim/ways';
+import { queueEvent } from '../../../src/game/sim/events';
 import { allFleets, coloniesOf, distLy, popsOf, temperament } from '../../../src/game/sim/util';
 import { check, done } from '../lib';
 
@@ -114,6 +117,23 @@ const fresh = (seed: number) => newGame({ seed, survivors: 3 });
     const p0 = people();
     asCiv(s, sv.id, () => fork(s, 'kin'));
     check(people() < p0 && Object.keys(s.survivors).length === before, `a Thread that forks from another civilization leaves it (${p0} people, then ${people()}), and becomes no neighbour of ours`);
+  }
+}
+// ---- events: ordinary life happens to everyone; the stories that are ours stay ours
+{
+  const s = fresh(1000);
+  const sv = Object.values(s.survivors).find((v) => v.way === 'upload' && s.civs[v.id]);
+  check(!!sv, 'seed 1000 has the uploaded');
+  if (sv) {
+    const civ = s.civs[sv.id];
+    asCiv(s, sv.id, () => {
+      queueEvent(s, 'first_upload');
+      queueEvent(s, 'anyone_in_there');
+    });
+    check(civ.pending.some((p) => p.defId === 'first_upload') && !civ.pending.some((p) => p.defId === 'anyone_in_there'), 'an event of ordinary life comes to another civilization too, but not a story that is ours');
+    check(!s.civs[s.player].pending.some((p) => p.defId === 'first_upload'), 'and it comes to that civilization alone');
+    asCiv(s, sv.id, () => autoPlay(s, 'competent'));
+    check(!civ.pending.some((p) => p.defId === 'first_upload') && civ.log.some((l) => /The First Upload/.test(l.text)), 'it answers in its own part of a turn, and keeps it in its own Record');
   }
 }
 done('MINDS');
