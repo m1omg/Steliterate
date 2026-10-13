@@ -6,7 +6,9 @@
 // and fleets (colonies, fleets), its flags, its log, its random stream (withRng). Between those
 // parts, and whenever the interface looks, the pointer is at the player. What one civilization
 // sends another goes through the outbox (deliver), so that none writes to another's own.
-import type { Civ, GameState, Signal } from './types';
+import type { Civ, GameState, Outgoing, Signal } from './types';
+import { THREADS } from './types';
+import { allFleets, coloniesOf } from './sim/util';
 
 /** The player's civilization's id in `state.civs`. */
 export const PLAYER_ID = 'us';
@@ -115,10 +117,70 @@ export function deliver(state: GameState, to: string, signal: Signal): void {
   (state.outbox ??= []).push({ to, signal });
 }
 
+/**
+ * Send civilization `to` what moves between civilizations (energy, matter, resolve, people; a
+ * negative amount is taken from it): delivered as messages are (flushOutbox), never written
+ * into another's own during a part of a turn.
+ */
+export function send(state: GameState, to: string, what: Omit<Outgoing, 'to' | 'signal'>): void {
+  (state.outbox ??= []).push({ to, ...what });
+}
+
 /** Hand everything in the outbox to whom it is for (a civilization gone meanwhile gets nothing). */
 export function flushOutbox(state: GameState): void {
   const out = state.outbox;
   if (!out) return;
   delete state.outbox;
-  for (const m of out) state.civs[m.to]?.signals.push(m.signal);
+  for (const m of out) {
+    const civ = state.civs[m.to];
+    if (!civ) continue;
+    if (m.signal) civ.signals.push(m.signal);
+    if (m.energy) civ.energy = Math.max(0, civ.energy + m.energy);
+    if (m.matter) civ.matter = Math.max(0, civ.matter + m.matter);
+    if (m.resolve) civ.resolve = Math.max(0, Math.min(100, civ.resolve + m.resolve));
+    if (m.people?.n) movePeople(state, civ, m.people.thread, m.people.n);
+    if (m.end) endNow(state, civ, m.end.ending, m.end.to);
+  }
+}
+
+/** A civilization's game ends: it plays no more, and what is left of it is empty, or another's (`to`). */
+function endNow(state: GameState, civ: Civ, ending: string, to?: string) {
+  civ.outcome ??= { kind: 'defeat', ending, turn: state.turn, eta: state.eta };
+  for (const c of coloniesOf(state, civ.id)) {
+    if (to && state.civs[to]) c.owner = to;
+    else {
+      const b = state.bodies[c.bodyId];
+      if (b) b.colonyId = null;
+      delete state.colonies[c.id];
+    }
+  }
+  for (const f of allFleets(state)) {
+    if (f.owner !== civ.id) continue;
+    if (to && state.civs[to]) f.owner = to;
+    else delete state.fleets[f.id];
+  }
+  civ.capitalId = null;
+}
+
+/**
+ * People joining a civilization (n > 0, at its capital) or leaving it (n < 0: that Thread first,
+ * then any, from its largest settlements).
+ */
+function movePeople(state: GameState, civ: Civ, thread: (typeof THREADS)[number], n: number) {
+  const mine = coloniesOf(state, civ.id);
+  if (n > 0) {
+    const at = mine.find((c) => c.id === civ.capitalId) ?? mine[0];
+    if (at) at.pops[thread] += n;
+    return;
+  }
+  let left = -n;
+  const order = [thread, ...THREADS.filter((t) => t !== thread)];
+  for (const t of order) {
+    for (const c of mine.sort((a, b) => b.pops[t] - a.pops[t])) {
+      const k = Math.min(left, c.pops[t]);
+      c.pops[t] -= k;
+      left -= k;
+      if (left <= 0) return;
+    }
+  }
 }

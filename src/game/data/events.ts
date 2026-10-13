@@ -8,6 +8,7 @@ import { SURFACE_LIFE, boilingAway, embersOutEta, haloEta, haloMoved, siphonsRun
 import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
+import { send } from '../civs';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -558,7 +559,8 @@ export const EVENTS: EventDef[] = [
         run: (s, d) => {
           for (const sv of Object.values(s.survivors)) {
             if (!sv.alive || !sv.contact) continue;
-            sv.health = Math.min(1, sv.health + 0.08);
+            if (s.civs[sv.id]) send(s, sv.id, { resolve: 3 });
+            else sv.health = Math.min(1, sv.health + 0.08);
             feel(s, sv, 8, `you told us of the new star at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'}`);
           }
         },

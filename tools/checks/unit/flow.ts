@@ -5,6 +5,8 @@
 // keeps everything. Minds that all think slower than the flow keep watchers awake at half again
 // their upkeep; sleeping costs 0.3 of upkeep, not 0.1, unless The Long Watch; sleeping neighbours
 // fade twice as fast. With protons decaying there is no flow: matter is gone long before.
+// (In games whose neighbours sleep, civsAsleep: a sleeping neighbour fading is the neighbours'
+// light simulation; unit/others checks the neighbours as civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -34,7 +36,7 @@ const mindUpkeep = (s: GameState, c: Colony) =>
     .reduce((a, l) => a + (l.energy ?? 0), 0);
 
 // ---------------------------------------------------------------- a stable game, to just before the flow
-const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
+const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
 for (let g = 0; g < 900 && !s.civ.outcome && s.eta < FLOW_ETA - 2.5; g++) {
   autoPlay(s, 'competent');
   endTurn(s);
@@ -143,7 +145,7 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
 
 // ---------------------------------------------------------------- no flow where protons decay
 {
-  const d = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'decays' });
+  const d = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'decays', civsAsleep: true });
   for (let g = 0; g < 900 && !d.civ.outcome && d.eta < FLOW_ETA + 2; g++) {
     autoPlay(d, 'competent');
     endTurn(d);

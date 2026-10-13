@@ -4,6 +4,9 @@
 // Choir would gather those of our Echoes who wish it. A partner living at a new star keeps its
 // clock with us, at half the cost. In the Black Hole Age a hole's spin is a commons: those who
 // live there draw on it, a partner half.
+// (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
+// them, on their records, which a check sets by hand; unit/others checks the neighbours as
+// civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -25,7 +28,7 @@ import { copyState } from '../../../src/game/save';
 
 const clone = (s: GameState) => copyState(s);
 const play = (seed: number, until: (s: GameState) => boolean, fate: 'stable' | 'decays' | 'curvature' = 'stable') => {
-  const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate });
+  const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate, civsAsleep: true });
   for (let g = 0; g < 900 && !s.civ.outcome && !until(s); g++) {
     autoPlay(s, 'competent');
     endTurn(s);

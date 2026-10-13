@@ -9,7 +9,7 @@ import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, S
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
 import { flowing } from '../game/sim/flow';
-import { allColonies, colonies, fleets } from '../game/sim/util';
+import { allColonies, colonies, fleets, ownColony } from '../game/sim/util';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -309,7 +309,7 @@ export class SystemView {
       this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos: new THREE.Vector3(orbitR, 0, 0) });
       return;
     }
-    const col = state.colonies[b.colonyId ?? ''];
+    const col = b.colonyId ? ownColony(state, b.colonyId) : undefined;
     const climate = bodyClimate(state, b);
     const eating = feedingSwarm(state, sys);
     const pops = col ? col.pops.kin + col.pops.echoes + col.pops.chorus + col.pops.lattice + col.pops.coldminds : 0;

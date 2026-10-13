@@ -4,6 +4,8 @@
 // again (a node, a label, something to click) and ships can reach it. A game saved with such a
 // settlement in a system still marked gone is repaired as it loads; one that fell into the Heart
 // stays gone.
+// (In a game whose neighbours sleep, civsAsleep: our own people who left us are a neighbour
+// simulated lightly, as every Fork is; unit/others checks the neighbours as civilizations.)
 import { newGame } from '../../../src/game/newGame';
 import { evaporateHole } from '../../../src/game/physics';
 import { readSave, saveFile } from '../../../src/game/save';
@@ -12,7 +14,7 @@ import { seizeSurvivor } from '../../../src/game/sim/survivors';
 import type { Fleet, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
 
-const game = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const game = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 
 /** A hole far from home whose worlds are long gone, our own people who left us living in its Deep. */
 const setup = () => {

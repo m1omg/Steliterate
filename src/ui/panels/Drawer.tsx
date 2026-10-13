@@ -41,7 +41,7 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, colonies, distLy, fleets, hasCharter, hasTech, leftBehind, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { capital, colonies, distLy, fleets, hasCharter, hasTech, leftBehind, nearestSwarmSeen, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
 import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
 import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
@@ -130,7 +130,9 @@ export function Drawer({ s }: { s: GameState }) {
   if (sel.kind === 'system' && s.systems[sel.id]) body = <SystemPanel s={s} sys={s.systems[sel.id]} />;
   else if (sel.kind === 'body' && s.bodies[sel.id]) {
     const b = s.bodies[sel.id];
-    body = b.colonyId && s.colonies[b.colonyId] ? <ColonyPanel s={s} c={s.colonies[b.colonyId]} /> : <BodyPanel s={s} b={b} />;
+    // (a settlement of another civilization is its world to us, not a settlement of ours)
+    const c = b.colonyId ? ownColony(s, b.colonyId) : undefined;
+    body = c ? <ColonyPanel s={s} c={c} /> : <BodyPanel s={s} b={b} />;
   } else if (sel.kind === 'fleet' && s.fleets[sel.id]) body = <FleetPanel s={s} f={s.fleets[sel.id]} />;
   else if (sel.kind === 'swarm' && s.swarms[sel.id]) body = <SwarmPanel s={s} sw={s.swarms[sel.id]} />;
   if (!body) return null;
@@ -254,7 +256,7 @@ function WorldStrip({ s, sys, current }: { s: GameState; sys: StarSystem; curren
         <Icon name={primaryIcon(sys.primary.kind)} />
       </button>
       {worlds.map((b) => {
-        const c = b.colonyId ? s.colonies[b.colonyId] : null;
+        const c = b.colonyId ? ownColony(s, b.colonyId) : null;
         const hab = b.habitability * b.vitality;
         return (
           <button
@@ -328,7 +330,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                 .map((id) => s.bodies[id])
                 .filter((b) => b && !b.dissolved)
                 .map((b) => {
-                  const c = b.colonyId ? s.colonies[b.colonyId] : null;
+                  const c = b.colonyId ? ownColony(s, b.colonyId) : null;
                   const hab = b.habitability * b.vitality;
                   return (
                     <div key={b.id} class="list-item" {...pressable(() => selectBody(b))}>
@@ -534,7 +536,7 @@ function TerraformedRow({ s, c }: { s: GameState; c: Colony }) {
 
 /** How seeded life on a world of ours is doing (sim/terraform.ts), or undefined if none is seeded. */
 function seededTip(s: GameState, b: Body): string | undefined {
-  const c = b.colonyId ? s.colonies[b.colonyId] : undefined;
+  const c = b.colonyId ? ownColony(s, b.colonyId) : undefined;
   if (!c || !((c.structures.biosphere_seeding ?? 0) > 0)) return undefined;
   return seedingGrowth(s, b, c) > 0
     ? `Seeded life is spreading: +${Math.round(SEED_RATE * 100)}% a turn, up to ${Math.round(SEED_CAP * 100)}%.`

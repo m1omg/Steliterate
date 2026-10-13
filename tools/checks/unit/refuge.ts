@@ -5,6 +5,9 @@
 // crowded in at the capital), with their archive, and their fate is 'saved'; everyone else hears
 // of it. The Choir, if we merge minds too, joins our Chorus and is 'absorbed', the rest of it as
 // memory. Sanctuary is heard of when its light arrives, and then trusted, up to 25.
+// (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
+// them, on their records, which a check sets by hand; unit/others checks the neighbours as
+// civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -22,7 +25,7 @@ import { copyState } from '../../../src/game/save';
 
 const clone = (s: GameState) => copyState(s);
 const base = (() => {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
   for (let g = 0; g < 30 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);

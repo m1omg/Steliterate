@@ -126,7 +126,7 @@ export function starsSeen(state: GameState, sv: Survivor): string[] {
 /** A living civilization is warm: the Hunger smells it as it smells us. */
 export function theirWarmth(state: GameState, systemId: string): number {
   let w = 0;
-  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.exodus && sv.systems.includes(systemId)) w += 0.1 * sv.pop * sv.health;
+  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.exodus && !state.civs[sv.id] && sv.systems.includes(systemId)) w += 0.1 * sv.pop * sv.health;
   return w;
 }
 

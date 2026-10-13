@@ -15,6 +15,7 @@ import { pactsWith } from './pacts';
 import { distanceToThem, inStep, lightAt, voice } from './survivors';
 import { allColonies, colonies, distLy, log } from './util';
 import { feel } from './dealings';
+import { send } from '../civs';
 
 /** How far a new star's light wakes the sleepers (ly): their own cluster. */
 export const WAKE_REACH = 100;
@@ -120,8 +121,12 @@ export function answerChoirWish(state: GameState, sv: Survivor, choice: string):
   civ.standing.echoes = Math.min(100, civ.standing.echoes + 3);
   // they cross as light, and are welcomed when they arrive
   (sv.news ??= []).push({ at: lightAt(state, distanceToThem(state, sv)), delta: 12, what: 'you let your Echoes come to us' });
-  sv.pop += went;
-  sv.health = Math.min(1, sv.health + 0.04 * went);
+  // (to a civilization of its own they come as Echoes, for it to gather in its own time)
+  if (state.civs[sv.id]) send(state, sv.id, { people: { thread: 'echoes', n: went } });
+  else {
+    sv.pop += went;
+    sv.health = Math.min(1, sv.health + 0.04 * went);
+  }
   log(state, `${went} Echo${went === 1 ? '' : 'es'} left us to become part of ${sv.name}.`, 'info', sv.homeSystemId);
   return null;
 }

@@ -3,6 +3,9 @@
 // us caps how well anyone can think of us; those we raided into the dark leave us nothing; asking
 // needs clocks in step; refugees come only as far as we have room; nothing is sent to the dead; a
 // fork with no settlement of its own finds a star of its own.
+// (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
+// them, on their records, which a check sets by hand; unit/others checks the neighbours as
+// civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -22,7 +25,7 @@ import { copyState } from '../../../src/game/save';
 
 const clone = (s: GameState) => copyState(s);
 const game = (turns: number) => {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
   for (let g = 0; g < turns && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);

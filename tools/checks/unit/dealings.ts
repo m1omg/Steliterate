@@ -6,6 +6,9 @@
 // defences turned away wait before trying again. They offer the pact they need most. And they
 // remember why they feel as they do, whatever moved them. An offer from an older save keeps its
 // old terms.
+// (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
+// them, on their records, which a check sets by hand; unit/others checks the neighbours as
+// civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -28,7 +31,7 @@ import { copyState } from '../../../src/game/save';
 
 const clone = (s: GameState) => copyState(s);
 const base = (() => {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
   for (let g = 0; g < 40 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);

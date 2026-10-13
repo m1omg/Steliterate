@@ -15,7 +15,7 @@ import { orderFleet } from '../../game/sim/actions';
 import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
-import { colonies, distLy, fleets, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { colonies, distLy, fleets, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, solarMass } from '../fmt';
@@ -449,7 +449,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
       best,
       room: rs.reduce((a, r) => a + r.room, 0),
       living: rs.filter((r) => r.hab >= LIVING_WORLD).length,
-      settled: rs.some((r) => r.b.colonyId),
+      settled: rs.some((r) => !!r.b.colonyId && !!ownColony(s, r.b.colonyId)),
       finds: [...new Set(rs.flatMap((r) => r.finds))],
       sites: bySystem ? starSites(s, rs[0].sys) : {},
     };
@@ -460,7 +460,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
   const deepOnly = bySystem && !findsOnly
     ? Object.values(s.systems)
         .filter((x) => s.civ.known[x.id] === 2 && !x.gone && !listed.has(x.id) && worldless(x) && (!open || !x.bodies.some((id) => s.bodies[id]?.colonyId)))
-        .map((x): StarRow => ({ sys: x, ly: distLy(home, x), worlds: 0, best: null, room: 0, living: 0, settled: x.bodies.some((id) => !!s.bodies[id]?.colonyId), finds: [], sites: starSites(s, x) }))
+        .map((x): StarRow => ({ sys: x, ly: distLy(home, x), worlds: 0, best: null, room: 0, living: 0, settled: x.bodies.some((id) => !!s.bodies[id]?.colonyId && !!ownColony(s, s.bodies[id].colonyId!)), finds: [], sites: starSites(s, x) }))
     : [];
   const mindOf = MIND_SORT[sort];
   const score = (x: StarRow) => x.best?.v?.score ?? (mindOf ? (x.sites[mindOf as Need]?.v.score ?? -1e9) : -1e9);
@@ -545,7 +545,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
               <span class="grow">
                 {b.name} <span class="faint">{bodyKindName(s, b)}</span>
                 {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
-                {b.colonyId && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
+                {b.colonyId && ownColony(s, b.colonyId) && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
                 {finds.map((t) => (
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
                 ))}

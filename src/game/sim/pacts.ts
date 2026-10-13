@@ -17,6 +17,8 @@ import { sendSignal } from './signals';
 import { beamEnergy, distanceToThem, inStep, lightAt, spreadNews, voice } from './survivors';
 import { distLy, log } from './util';
 import { breach } from './ways';
+import { send } from '../civs';
+import { civOf } from './others';
 
 export const PACT_KINDS: PactKind[] = ['aid', 'archives', 'watch'];
 
@@ -205,7 +207,8 @@ export function pactsTurn(state: GameState) {
       // they pay their side while they can; the Tessellate pays it even while failing
       if (weak && (sv.health > 0.4 || (sv.way === 'lattice' && sv.health > 0.05)) && state.turn - (civ.flags[inKey] ?? -99) >= AID_EVERY) {
         const e = Math.round(Math.min(60, Math.max(8, sv.pop * sv.health * 0.8)));
-        sv.health = Math.max(0, sv.health - e / 1200);
+        if (civOf(state, sv)) send(state, sv.id, { energy: -e });
+        else sv.health = Math.max(0, sv.health - e / 1200);
         civ.flags[inKey] = state.turn;
         // they see our trouble when its light reaches them, and their beam takes as long again
         sendSignal(state, {
@@ -222,7 +225,7 @@ export function pactsTurn(state: GameState) {
       const gain = 0.5 + 0.02 * sv.pop * sv.health;
       if (civ.researching) civ.research[civ.researching] = (civ.research[civ.researching] ?? 0) + gain;
       else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
-      sv.health = Math.min(1, sv.health + 0.002);
+      if (!civOf(state, sv)) sv.health = Math.min(1, sv.health + 0.002);
       const since = state.turn - (sv.pacts!.archives ?? state.turn);
       if (since > 0 && since % NOTES_EVERY === 0) {
         const t = civ.researching ? TECH_BY_ID[civ.researching] : availableTechs(state).filter((x) => !x.taint).sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];

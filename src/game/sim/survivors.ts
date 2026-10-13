@@ -20,6 +20,9 @@ import { capacity } from './economy';
 import { computeMods } from './mods';
 import { calendarEra } from '../fate';
 import { flowing } from './flow';
+import { send } from '../civs';
+import { civOf, endCiv, syncSurvivor } from './others';
+import type { Rng } from '../rng';
 
 // Fellow survivors: other young civilizations facing the same end. Simulated lightly: their
 // fate follows the same physics, and they talk to you across light-years.
@@ -124,7 +127,8 @@ function reachThem(state: GameState, sv: Survivor) {
   if (sv.proposal && !sv.proposal.answered && arrived(state, sv.proposal.at)) weighProposal(state, sv);
   if (sv.beams?.length) {
     for (const b of sv.beams.filter((x) => arrived(state, x.at))) {
-      sv.health = Math.min(1, sv.health + (b.plea ? 0.12 + b.energy / 600 : b.energy / 400));
+      if (civOf(state, sv)) send(state, sv.id, { energy: b.energy });
+      else sv.health = Math.min(1, sv.health + (b.plea ? 0.12 + b.energy / 600 : b.energy / 400));
       if (b.known) {
         feel(state, sv, b.plea ? 15 : b.energy / 4, b.plea ? `you answered our plea with ${Math.round(b.energy)} energy` : `you beamed us ${Math.round(b.energy)} energy`);
         sv.aidGiven += b.energy;
@@ -148,6 +152,36 @@ function reachThem(state: GameState, sv: Survivor) {
     }
     sv.news = sv.news.filter((x) => !arrived(state, x.at));
   }
+}
+
+/**
+ * A neighbour simulated lightly (a game with civsAsleep: as before the new version): the universe
+ * drains it, by its way, its stars and the age; it settles, or the sleepers wake for a new star.
+ */
+function lightly(state: GameState, sv: Survivor, L: number, rng: Rng) {
+  const home = state.systems[sv.homeSystemId];
+  // the universe drains them
+  let drain = 0.004;
+  if (calendarEra(state) === 'dusk') {
+    const light = home ? sourceLight(state, home, state.years, isFinite(L) ? L : 0).light : 0;
+    drain = light < 0.3 ? 0.03 : 0.004;
+  } else if (calendarEra(state) === 'degenerate') drain = 0.02;
+  else if (calendarEra(state) === 'blackhole') drain = 0.025;
+  else drain = 0.04;
+  drain *= WAY_DRAIN[sv.way] / (0.5 + state.gfe * 0.5);
+  // gardens live on living worlds: once proton decay takes hold (η 37.5) those worlds are dissolving
+  if (sv.way === 'garden' && state.protonsDecay && state.eta > 37.5) drain *= 1.4;
+  // sleepers through the ages must wake to mend their vaults once solid matter flows
+  if (sv.way === 'dormant' && flowing(state)) drain *= 2;
+  // every star they have settled beyond their first is another source; and in the Black
+  // Hole Age a hole's spin, drawn from a commons we may share
+  drain *= claimEase(state, sv);
+  if (drawTheirSpin(state, sv) > 0) drain *= 0.85;
+  sv.health = clamp(sv.health - drain + rng.range(-0.004, 0.006), 0, 1);
+  sv.pop = Math.max(0, sv.pop * (0.98 + sv.health * 0.03));
+  // the sleepers wake for a new star; otherwise settlers arrive at a new star, or a thriving
+  // civilization sends some out
+  if (!wakeForNewStar(state, sv)) expand(state, sv, () => rng.next());
 }
 
 /**
@@ -178,7 +212,7 @@ export function settleNewcomers(state: GameState, t: ThreadId, n: number): numbe
   return n - left;
 }
 
-export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: number) {
+export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: number, paceFactor = 1) {
   const civ = state.civ;
   const myClock = voiceRange(state, logL);
   withRng(state, (rng) => {
@@ -196,28 +230,12 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       sanctuaryTrust(state, sv, ceiling);
       // their clock drifts toward the age, as ours does
       sv.clock += (Math.min(logL, sv.way === 'garden' ? 1.7 : sv.way === 'dormant' ? logL + 1 : logL) - sv.clock) * 0.25;
-      // the universe drains them
-      let drain = 0.004;
-      if (calendarEra(state) === 'dusk') {
-        const light = home ? sourceLight(state, home, state.years, isFinite(L) ? L : 0).light : 0;
-        drain = light < 0.3 ? 0.03 : 0.004;
-      } else if (calendarEra(state) === 'degenerate') drain = 0.02;
-      else if (calendarEra(state) === 'blackhole') drain = 0.025;
-      else drain = 0.04;
-      drain *= WAY_DRAIN[sv.way] / (0.5 + state.gfe * 0.5);
-      // gardens live on living worlds: once proton decay takes hold (η 37.5) those worlds are dissolving
-      if (sv.way === 'garden' && state.protonsDecay && state.eta > 37.5) drain *= 1.4;
-      // sleepers through the ages must wake to mend their vaults once solid matter flows
-      if (sv.way === 'dormant' && flowing(state)) drain *= 2;
-      // every star they have settled beyond their first is another source; and in the Black
-      // Hole Age a hole's spin, drawn from a commons we may share
-      drain *= claimEase(state, sv);
-      if (drawTheirSpin(state, sv) > 0) drain *= 0.85;
-      sv.health = clamp(sv.health - drain + rng.range(-0.004, 0.006), 0, 1);
-      sv.pop = Math.max(0, sv.pop * (0.98 + sv.health * 0.03));
-      // the sleepers wake for a new star; otherwise settlers arrive at a new star, or a thriving
-      // civilization sends some out
-      if (!wakeForNewStar(state, sv)) expand(state, sv, () => rng.next());
+      // a civilization of its own lives by the same rules as ours (others.ts): we read how it is,
+      // and a shared work we built together feeds it as it feeds us
+      if (civOf(state, sv)) {
+        syncSurvivor(state, sv);
+        if (!sv.war && civ.flags[`joint_${sv.id}`]) send(state, sv.id, { energy: JOINT_ENERGY * paceFactor });
+      } else lightly(state, sv, L, rng);
       // a promise of warships we made them: kept, or not
       judgePromise(state, sv);
 
@@ -257,7 +275,9 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       // with nothing left they fade, whether or not we can hear them go
       if (sv.health <= 0.02) {
         sv.alive = false;
-        sv.fate = 'faded';
+        // one that won its own game has gone beyond us; otherwise it faded
+        sv.fate = civOf(state, sv)?.outcome && civOf(state, sv)!.outcome!.kind !== 'defeat' ? 'transcended' : 'faded';
+        endCiv(state, sv, 'Faded');
         if (sv.exodus) {
           delete sv.exodus;
           log(state, `Our answer reached ${sv.name} too late: they went dark before they could set out.`, 'bad', sv.homeSystemId);
@@ -354,7 +374,11 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         const cap = capital(state);
         // a defence grid, or warships fortified over the capital, turns raiders away
         const defended = cap && ((cap.structures.defense_grid ?? 0) > 0 || fleets(state).some((f) => f.at === cap.systemId && f.order === 'fortify'));
-        if (!defended && took > 0) civ.energy -= took;
+        if (!defended && took > 0) {
+          civ.energy -= took;
+          // (a civilization of its own carries home what it took)
+          if (civOf(state, sv)) send(state, sv.id, { energy: took });
+        }
         // turned away, they do not try again soon
         if (defended) civ.flags[`raid_wait_${sv.id}`] = state.turn + RAID_WAIT;
         sendSignal(state, {
@@ -461,7 +485,8 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         // only as many as we have room for: the rest stay with their own people
         const came = settleNewcomers(state, t, n);
         if (came <= 0) return `We have no room for ${t === 'kin' ? 'them, awake or asleep' : 'them'}.`;
-        sv.pop = Math.max(0, sv.pop - came * 2);
+        if (civOf(state, sv)) send(state, sv.id, { people: { thread: t, n: -came } });
+        else sv.pop = Math.max(0, sv.pop - came * 2);
         feel(state, sv, 10, 'you took in our refugees');
         civ.resolve = Math.min(100, civ.resolve + 3);
         civ.flags.refugees = (civ.flags.refugees ?? 0) + came;
@@ -503,7 +528,8 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         if (civ.matter < 60) return 'You need 60 matter.';
         civ.matter -= 60;
         civ.flags[`joint_${sv.id}`] = 1;
-        sv.health = Math.min(1, sv.health + 0.15);
+        if (civOf(state, sv)) send(state, sv.id, { matter: -60 });
+        else sv.health = Math.min(1, sv.health + 0.15);
         feel(state, sv, 10, 'you joined us in a shared work');
         answered(state, sv, 'joint', true);
         log(state, `A shared collector field with ${sv.name} begins to take shape.`, 'good');
@@ -525,7 +551,8 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
         if (to) civ.research[to] = (civ.research[to] ?? 0) + gain;
         else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
         if (sv) {
-          sv.health = Math.min(1, sv.health + 0.05);
+          if (civOf(state, sv)) send(state, sv.id, { [want]: ask });
+          else sv.health = Math.min(1, sv.health + 0.05);
           feel(state, sv, 3, 'you traded with us');
           answered(state, sv, 'trade', true);
         }
@@ -539,10 +566,13 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
   return null;
 }
 
+/** What a shared work gives each of its two builders a turn (at full pace). */
+const JOINT_ENERGY = 6;
+
 /** Joint projects pay out while the partner endures. */
 export function jointIncome(state: GameState): number {
   let e = 0;
-  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.war && state.civ.flags[`joint_${sv.id}`]) e += 6;
+  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.war && state.civ.flags[`joint_${sv.id}`]) e += JOINT_ENERGY;
   return e;
 }
 
@@ -581,7 +611,10 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
   sv.alive = false;
   sv.fate = 'seized';
   delete sv.war;
-  if (sv.way === 'fork' && sv.forkOf) {
+  if (civOf(state, sv)) {
+    // a civilization of its own: its settlements and ships are ours now, its people with them
+    endCiv(state, sv, 'Seized', civ.id);
+  } else if (sv.way === 'fork' && sv.forkOf) {
     // our own people: every settlement they took comes back, and they with it
     const t = sv.forkOf;
     const places = sv.systems.map((sid) => survivorWorld(state, sv, sid)).filter((b): b is Body => !!b);
@@ -655,7 +688,8 @@ export function requestAid(state: GameState, id: string): string | null {
       words = 'We cannot spare anything now. Perhaps later, if things go better for us, or between us.';
       protocol = 'REQUEST DEFERRED. SURPLUS BELOW TRANSFER THRESHOLD.';
     } else {
-      sv.health = clamp(sv.health - energy / 1200, 0, 1);
+      if (civOf(state, sv)) send(state, sv.id, { energy: -energy });
+      else sv.health = clamp(sv.health - energy / 1200, 0, 1);
       words = reciprocity > 10 ? `You helped us when we needed it. Here is ${energy} energy; it is the least we can do.` : `We can spare ${energy} energy. It is on its way to you.`;
       protocol = `TRANSFER AUTHORISED: ${energy} UNITS BY BEAM. RECIPROCITY LOGGED.`;
     }
@@ -722,9 +756,12 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
       const matter = Math.round(8 + sv.pop * 0.6);
       civ.energy += energy;
       civ.matter += matter;
-      sv.reserve = Math.max(0, sv.reserve - energy);
-      sv.health = clamp(sv.health - 0.06, 0, 1);
-      sv.pop *= 0.96;
+      if (civOf(state, sv)) send(state, sv.id, { energy: -energy, resolve: -3 });
+      else {
+        sv.reserve = Math.max(0, sv.reserve - energy);
+        sv.health = clamp(sv.health - 0.06, 0, 1);
+        sv.pop *= 0.96;
+      }
       hurt(0, 1.5);
       result = { ok: true, text: `Our warships raided ${sv.name} at ${sys.name}: +${energy} energy, +${matter} matter. Some of them died defending it.` };
     } else {
@@ -758,6 +795,7 @@ export function devourSurvivor(state: GameState, id: string): string | null {
   const civ = state.civ;
   sv.alive = false;
   sv.fate = 'devoured';
+  endCiv(state, sv, 'Devoured');
   civ.energy += 80 + sv.pop * 3;
   civ.matter += 60 + sv.pop * 4;
   civ.taint = Math.min(100, civ.taint + 10);

@@ -1,3 +1,4 @@
+import { autoPlay } from '../auto';
 import { asCiv, flushOutbox } from '../civs';
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
@@ -261,7 +262,12 @@ export function endTurn(state: GameState): TurnResult {
   };
 
   // ------------------------------------------------ 0. each one's start: its mods, pace, siphons, sleep
-  each((_c, id) => (t[id] = beginTurn(state)));
+  // (another civilization decides first, as the autoplayer decides for us; part 2a-5 of the new
+  // version gives each a mind of its own)
+  each((_c, id) => {
+    if (id !== me) autoPlay(state, 'competent');
+    t[id] = beginTurn(state);
+  });
   // the turn's time is the player's, its pace and clocks: everyone lives the same turn
   // (a turn stops when one of our stars begins its last flare; see flare.ts)
   const step = turnStep(state);
@@ -306,7 +312,7 @@ export function endTurn(state: GameState): TurnResult {
   // (the neighbours we know, our pacts and wars with them, and the other minds are the player's)
   each((c, id) => {
     if (id !== me) return;
-    updateSurvivors(state, logL, c.mods, step.turnLength);
+    updateSurvivors(state, logL, c.mods, step.turnLength, c.ctx.paceFactor);
     pactsTurn(state);
     withRng(state, (rng) => warTurn(state, () => rng.next()));
     updateMinds(state, logL, c.mods);
@@ -359,10 +365,10 @@ export function endTurn(state: GameState): TurnResult {
 
   // ------------------------------------------------ 9. crossings
   // the fate of matter shows itself: near η 30 the neutron stars tell the fates apart
-  each(() => {
+  each((_c, id) => {
     if (!fateKnown(state) && state.eta >= FATE_SHOWN_AT) {
       revealFate(state);
-      updateForecasts(state);
+      if (id === me) updateForecasts(state);
     }
   });
   const crossed = (reports: Record<string, CrossingReport>) => {
@@ -382,7 +388,7 @@ export function endTurn(state: GameState): TurnResult {
         }
       }
       crossed(runCrossing(state, ids, Object.fromEntries(ids.map((id) => [id, t[id].mods]))));
-      each(() => updateForecasts(state));
+      each((_c, id) => id === me && updateForecasts(state));
     }
   }
   // the calendar turns without the age (a fate other than decay): the Black Hole Age's Tide
@@ -396,7 +402,7 @@ export function endTurn(state: GameState): TurnResult {
   // curvature radiation unmakes the last ordinary matter: a storm of its own, inside the age
   if (fateOf(state) === 'curvature' && state.eta >= MATTER_END.curvature && state.flags.matter_gone === undefined && state.era !== 'dark') {
     crossed(greatEvaporation(state, ids, modsNow()));
-    each(() => updateForecasts(state));
+    each((_c, id) => id === me && updateForecasts(state));
   }
   // the last black hole may evaporate before the calendar says so
   if (state.era === 'blackhole' && !Object.values(state.systems).some((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone)) {
@@ -650,6 +656,7 @@ function continuity(state: GameState, t: CivTurn) {
 /** 8. What has reached us: signals, their deliveries, the turn's events and forecasts. Returns the signals that arrived. */
 function signalsAndEvents(state: GameState): Signal[] {
   const civ = state.civ;
+  const mine = civ.id === state.player;
   const arrived = deliverSignals(state);
   for (const s of arrived) {
     // a pact's answer: sealed, or our accord back
@@ -685,7 +692,8 @@ function signalsAndEvents(state: GameState): Signal[] {
   // positronium forms where matter has decayed or been unmade (η 85): news, once, after the random
   // roll so that it never changes what the roll draws (a game already past it hears it now)
   if (state.era === 'blackhole' && state.eta >= POSITRONIUM_ETA && fateOf(state) !== 'stable') queueEvent(state, 'positronium_forms');
-  updateForecasts(state);
+  // (the forecasts are for the player to read)
+  if (mine) updateForecasts(state);
   return arrived;
 }
 

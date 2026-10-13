@@ -576,7 +576,7 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
       if (broken) continue;
       // survivors suffer too (less, with our watch beside theirs)
       for (const sv of Object.values(state.survivors)) {
-        if (sv.alive && sv.systems.includes(sys.id)) sv.health = Math.max(0, sv.health - 0.012 * sw.size * (sv.pacts?.watch !== undefined ? 0.7 : 1));
+        if (sv.alive && !state.civs[sv.id] && sv.systems.includes(sys.id)) sv.health = Math.max(0, sv.health - 0.012 * sw.size * (sv.pacts?.watch !== undefined ? 0.7 : 1));
       }
 
       // a ship stopped nearby: part of it may go after the ship

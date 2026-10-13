@@ -6,7 +6,7 @@ import { THREADS } from '../types';
 import { formatDistance } from '../eras';
 import { boilingAway, frozenHard } from '../physics';
 import { habitabilityOf } from './terraform';
-import { THAW_ROOM, scorched, stepTurns, thawed } from './flare';
+import { THAW_ROOM, clockCiv, scorched, stepTurns, thawed } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
 import { allColonies, colonies, distLy, eraIndex, fleets, log, logTo, ownFleet, swarmSeenAt, uid, withRng } from './util';
@@ -32,7 +32,7 @@ export function launchCost(state: GameState, f: Fleet, ly: number, mods: Mods): 
  * walks the Tide forward instead of dividing by today's turn length), and in cosmic years of
  * flight, which no pace changes: distance ÷ speed, never faster than light.
  */
-export function travelEstimate(state: GameState, ly: number, mods: Mods, pace = state.civ.pace): { turns: number; years: number } {
+export function travelEstimate(state: GameState, ly: number, mods: Mods, pace = clockCiv(state).pace): { turns: number; years: number } {
   const years = ly > 0 ? ly / mods.speed : 0;
   if (ly <= 0) return { turns: 1, years };
   let covered = 0;

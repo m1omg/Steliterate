@@ -12,6 +12,7 @@ import { THREADS } from '../types';
 import { endPact, pactsWith } from './pacts';
 import { distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
 import { capital, clamp, fleets, log } from './util';
+import { send } from '../civs';
 
 /** Accord the Threads' consent to a war costs. */
 export const WAR_ACCORD = 60;
@@ -128,7 +129,9 @@ export function warTurn(state: GameState, chance: () => number) {
       continue;
     }
     sv.war!.siege++;
-    sv.health = Math.max(0, sv.health - BLOCKADE);
+    // a blockade: the stores of a civilization of its own run down, and its will with them
+    if (state.civs[sv.id]) send(state, sv.id, { energy: -Math.round(BLOCKADE * 400), resolve: -1 });
+    else sv.health = Math.max(0, sv.health - BLOCKADE);
     // their guns answer ours
     const def = warDefence(state, sv);
     const hurt = (def / (attack + def)) * 1.2;

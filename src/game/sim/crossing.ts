@@ -211,8 +211,9 @@ function endOfMatter(state: GameState, ids: readonly string[], mods: Record<stri
     }
   });
   toAll(lines, { text: 'The Hunger was made of matter too. Only a few starving swarms cling on at the black holes.', kind: 'info' });
+  // (a neighbour of its own crosses as we do, in its own part)
   for (const sv of Object.values(state.survivors)) {
-    if (!sv.alive) continue;
+    if (!sv.alive || state.civs[sv.id]) continue;
     if (sv.way === 'garden' || sv.way === 'fork') {
       sv.alive = false;
       sv.fate = 'faded';
@@ -342,7 +343,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
       }
     });
     for (const sw of Object.values(state.swarms)) sw.size *= 0.7;
-    for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health = Math.max(0, sv.health - (sv.way === 'garden' ? 0.6 : sv.way === 'dormant' ? 0.15 : 0.35));
+    for (const sv of Object.values(state.survivors)) if (sv.alive && !state.civs[sv.id]) sv.health = Math.max(0, sv.health - (sv.way === 'garden' ? 0.6 : sv.way === 'dormant' ? 0.15 : 0.35));
     eachCiv(state, ids, () => (state.civ.energy *= 0.6));
   } else if (from === 'degenerate') {
     // ---------------------------------------------------------------- The Great Decay, or the Last Warmth
@@ -374,7 +375,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
         }
         lines[id].push({ text: lost ? `${lost} Kin could not be kept warm.` : 'Everyone who needed warmth had it.', kind: lost ? 'bad' : 'good' });
       });
-      for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health = Math.max(0, sv.health - 0.25);
+      for (const sv of Object.values(state.survivors)) if (sv.alive && !state.civs[sv.id]) sv.health = Math.max(0, sv.health - 0.25);
     }
     // the crossing's cost falls on what we had saved; what the catchers caught comes after it
     eachCiv(state, ids, (id) => (state.civ.energy = state.civ.energy * 0.6 + (caught[id] ?? 0)));
@@ -397,7 +398,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
         }
       }
     });
-    for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health = Math.max(0, sv.health - 0.4);
+    for (const sv of Object.values(state.survivors)) if (sv.alive && !state.civs[sv.id]) sv.health = Math.max(0, sv.health - 0.4);
     eachCiv(state, ids, () => (state.civ.energy *= 1 - 0.15 * protocolsMult(state, from)));
   }
 

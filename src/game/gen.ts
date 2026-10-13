@@ -707,9 +707,14 @@ function addOuterWorlds(b: Builder, settings: GameSettings) {
 }
 
 function makeCiv(settings: GameSettings, homeSystemId: string): Civ {
+  return blankCiv(PLAYER_ID, settings.civName, homeSystemId);
+}
+
+/** A civilization as every one begins, before its start is set: ours, or another's (others.ts). */
+export function blankCiv(id: string, name: string, homeSystemId: string): Civ {
   return {
-    id: PLAYER_ID,
-    name: settings.civName,
+    id,
+    name,
     homeSystemId,
     capitalId: null,
     energy: 60,

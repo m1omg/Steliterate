@@ -1,6 +1,7 @@
 import { generateWorld } from './gen';
 import { frozenFromTheStart, waterFromTheStart } from './physics';
 import { createColony, newFleet } from './sim/fleets';
+import { foundCiv } from './sim/others';
 import { updateForecasts } from './sim/forecast';
 import { scorchedFromTheStart } from './sim/turn';
 import { log, savableName } from './sim/util';
@@ -34,6 +35,8 @@ export function newGame(partial: Partial<GameSettings> = {}): GameState {
   newFleet(state, home.id, ['probe'], 'Lamplighter');
   // one old escort, kept on watch over the homeworld: parked, so it does not ask for orders
   newFleet(state, home.id, ['warden'], 'Vigil').order = 'hold';
+  // the others: each a civilization playing the same game (others.ts), unless asleep as they were
+  if (!settings.civsAsleep) for (const sv of Object.values(state.survivors)) foundCiv(state, sv);
   log(state, `${settings.civName}. ${hw.name}, the last living world of ${home.name}. The long dusk begins.`, 'era');
   updateForecasts(state);
   state.saveVersion = SAVE_VERSION;

@@ -3,7 +3,7 @@ import { formatYears } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
 import { project, type Projection } from '../../game/sim/projection';
 import { setDormant, setPace, longSleep } from '../../game/sim/actions';
-import { colonies, fleets, hasTech } from '../../game/sim/util';
+import { colonies, fleets, hasTech, ownColony } from '../../game/sim/util';
 import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
@@ -552,7 +552,7 @@ export function nextTodo(s: GameState) {
 export function buildSelected(s: GameState) {
   const sel = selection.value;
   const b = sel?.kind === 'body' ? s.bodies[sel.id] : null;
-  let c = b?.colonyId ? s.colonies[b.colonyId] : null;
+  let c = b?.colonyId ? (ownColony(s, b.colonyId) ?? null) : null;
   if (!c && sel?.kind === 'system') {
     const here = colonies(s).filter((x) => x.systemId === sel.id);
     if (here.length === 1) c = here[0];

@@ -1,6 +1,7 @@
 // One rulebook (the new version, docs/plans/new-version.md, part 2a-0): every civilization has a
 // Civ in state.civs and state.civ points at the one whose turn or view it is. This checks the
-// pointer and the save format:
+// pointer and the save format (in a game whose neighbours sleep, civsAsleep: unit/others checks
+// them as civilizations):
 // - a new game has one civilization, the player's, and the pointer at it;
 // - a save holds each civilization once: `civs` and `player`, never the pointer;
 // - a load, a copy for the checks (copyState) and a save of the build before all point it again,
@@ -21,7 +22,7 @@ import { allColonies, allFleets, colonies, fleets, log, withRng } from '../../..
 import type { Civ, GameState } from '../../../src/game/types';
 import { check, done, loadSave } from '../lib';
 
-const s = newGame({ seed: 1000, survivors: 3 });
+const s = newGame({ seed: 1000, survivors: 3, civsAsleep: true });
 check(Object.keys(s.civs).length === 1 && s.player === PLAYER_ID && s.civ.id === PLAYER_ID, `a new game has one civilization, the player’s (${Object.keys(s.civs).join(', ')})`);
 check(s.civ === s.civs[s.player] && playerCiv(s) === s.civ, 'and the pointer is at it, the very object');
 check(!Object.keys(s).includes('civ'), 'the pointer is not one of the state’s own keys');

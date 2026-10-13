@@ -14,6 +14,7 @@ import { pactsWith } from './pacts';
 import { sendSignal } from './signals';
 import { distanceToThem, lightArrived, lightAt, newcomerThread, settleNewcomers, spreadNews, voice } from './survivors';
 import { capital, colonies, hasCharter, hasTech, log } from './util';
+import { endCiv } from './others';
 
 /** A civilization this far gone (health) asks to come to us, if it trusts us. */
 export const DYING = 0.2;
@@ -159,6 +160,8 @@ export function arriveAmongUs(state: GameState, sv: Survivor) {
   sv.alive = false;
   sv.fate = merge ? 'absorbed' : 'saved';
   delete sv.exodus;
+  // a civilization of its own: it has come to us, and what it leaves behind is empty
+  endCiv(state, sv, merge ? 'Absorbed' : 'Came to us');
   const cap = capital(state);
   spreadNews(state, cap?.systemId ?? civ.homeSystemId, 8, merge ? `you took ${sv.name} into your Chorus` : `you took in ${sv.name} when their sources failed`, sv.id);
   sendSignal(state, {

@@ -8,7 +8,7 @@ import { createPost, type PostChain } from './post';
 import { SystemView } from './systemView';
 import { VIEW_MODE } from './shaders/bodies';
 import { calendarEra } from '../game/fate';
-import { colonies } from '../game/sim/util';
+import { colonies, ownColony } from '../game/sim/util';
 
 export type ViewKind = 'galaxy' | 'system';
 export type Quality = 'low' | 'medium' | 'high';
@@ -684,7 +684,7 @@ export class Engine {
           items.push({ text: `${name} · ◈ ${sv.name}`, pos: p.pos.clone().add(lift), cls: 'others', w: 3, color: sv.color, pick: p.id });
           continue;
         }
-        items.push({ text: name, pos: p.pos.clone().add(lift), cls: b.colonyId ? 'mine' : 'body', w: 2, pick: p.id });
+        items.push({ text: name, pos: p.pos.clone().add(lift), cls: b.colonyId && ownColony(state, b.colonyId) ? 'mine' : 'body', w: 2, pick: p.id });
       }
     }
     let i = 0;

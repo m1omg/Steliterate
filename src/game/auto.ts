@@ -32,7 +32,7 @@ import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle } from './sim/fleets';
 import { colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, threadTotals } from './sim/util';
-import type { Body, Colony, Fate, GameState, ThreadId } from './types';
+import type { Body, Colony, Fate, GameState, SurvivorWay, ThreadId } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
@@ -50,7 +50,38 @@ const ACCORD_RALLY_BELOW = 40;
 const ACCORD_CALM_ABOVE = 40;
 const ACCORD_HEAR_BELOW = 35;
 
-// An autoplayer. It powers the balance harness, and can later back an in-game advisor.
+// An autoplayer. It powers the balance harness, and can later back an in-game advisor. Since the
+// new version (part 2a-2) it also plays the other civilizations, each under its own perspective:
+// the same decisions as ours, and where its way of life needs others (wayOf), those, for it alone,
+// so that our own autoplayer, and the harness's numbers, stay what they were.
+
+/** Another civilization's way of life (others.ts); null for ours, which the autoplayer plays as it always has. */
+function wayOf(state: GameState): SurvivorWay | null {
+  return state.civ.id === state.player ? null : (state.survivors[state.civ.id]?.way ?? null);
+}
+
+/**
+ * Whether a swarm threatens this star: one on its way to it, or, within a swarm's reach of it
+ * (90 ly in the Dusk, anywhere after), one awake, or one asleep at a star this civilization has
+ * surveyed. (Not a tamed one.)
+ */
+function swarmThreat(state: GameState, systemId: string): boolean {
+  const here = state.systems[systemId];
+  const reach = calendarEra(state) === 'dusk' ? 90 : Infinity;
+  return Object.values(state.swarms).some(
+    (s) => !s.tamed && (s.to === systemId || (!!s.systemId && (s.awake || state.civ.known[s.systemId] === 2) && distLy(state.systems[s.systemId], here) <= reach)),
+  );
+}
+
+/** The settlers another civilization builds: ships of its own Threads. */
+const WAY_SETTLERS: Record<SurvivorWay, string[]> = {
+  garden: ['ark', 'seedcore'],
+  upload: ['seedcore'],
+  chorus: ['seedcore'],
+  dormant: ['ark'],
+  lattice: ['spore'],
+  fork: ['seedcore', 'ark', 'spore'],
+};
 
 /** 'warlike' plays as 'competent', and also wages the wars worth waging (for the harness: does war pay?). */
 export type Strategy = 'competent' | 'passive' | 'warlike';
@@ -87,9 +118,11 @@ function pickResearch(state: GameState) {
   // a pick that stored insight already covers is done at once: pick again, as a player would
   for (let i = 0; i < 6 && !civ.researching; i++) {
     const avail = new Set(availableTechs(state).map((t) => t.id));
-    // (another civilization never falls back on a deliberate choice, noAuto: Halo Siphons, say)
+    // (another civilization never falls back on a deliberate choice, noAuto: Halo Siphons, say;
+    // with a swarm near, it learns to defend itself first)
     const mine = civ.id === state.player;
-    const next = TECH_PRIORITY.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
+    const guard = !mine && avail.has('orbital_defense') && colonies(state).some((c) => swarmThreat(state, c.systemId)) ? 'orbital_defense' : undefined;
+    const next = guard ?? TECH_PRIORITY.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
     if (!next) break;
     setResearch(state, next);
   }
@@ -126,7 +159,7 @@ function planFlow(state: GameState) {
   if (!flowing(state) && !(flowAhead(state) && fateKnown(state) && state.eta > FLOW_ETA - 3)) return;
   const civ = state.civ;
   const mods = computeMods(state);
-  const logL = logTurnLength(turnStep(state, civ.pace));
+  const logL = logTurnLength(turnStep(state));
   const spare = reserveCapacity(state, mods) * 0.3;
   for (const c of colonies(state)) {
     if (keeping(c, logL, mods) !== 'unmanned') continue;
@@ -177,6 +210,7 @@ function planBuilds(state: GameState) {
   // about as many turns ahead for either: the Black Hole Age's Tide covers a decade a turn, the Degenerate Age's under half
   const preEnd = fate === 'decay' ? calendarEra(state) === 'degenerate' && state.eta > 27 : fate === 'curvature' ? state.eta > 62 && !matterGone(state) : false;
   const t = threadTotals(state);
+  const way = wayOf(state);
   for (const c of colonies(state)) {
     // before the protons go, re-encoding goes to the front of the queue
     if (preEnd && hasTech(state, 'leptonic_computation') && (c.structures.lepton_substrate ?? 0) < 2) {
@@ -210,22 +244,32 @@ function planBuilds(state: GameState) {
       if (light > 0.3) plan.push('dyson_swarm', 'orbital_collector', 'ember_collector', 'infrared_shroud', 'solar_array');
       plan.push('disk_skimmer', 'accretion_engine', 'pulsar_brake', 'geothermal_tap', 'fusion_plant', 'decay_harvester');
     }
+    // (another civilization builds for Kin only where Kin live)
+    const forKin = !way || c.pops.kin > 0;
     // its star has died: light Orbital Lamps while there is still life to keep
-    if (calendarEra(state) === 'dusk' && b.vitality >= 0.2 && vitalityLoss(state, b, c).freeze > 0) plan.unshift('orbital_lamps');
+    if (forKin && calendarEra(state) === 'dusk' && b.vitality >= 0.2 && vitalityLoss(state, b, c).freeze > 0) plan.unshift('orbital_lamps');
     if (b.traits.includes('homeworld') && calendarEra(state) === 'dusk') plan.push('mag_shield', 'comet_shepherd', 'core_stimulator');
-    if (c.pops.kin >= capc.kin - 1 && calendarEra(state) === 'dusk') {
+    if (forKin && c.pops.kin >= capc.kin - 1 && calendarEra(state) === 'dusk') {
       plan.push('warrens', 'habitat_dome');
       // then make the world itself more livable, where that can bring it to life
       if (terraformSummary(state, b, c).full >= SEED_MIN) plan.push('orbital_mirrors', 'atmosphere_works', 'biosphere_seeding');
     }
-    if (hasTech(state, 'mind_substrate') && c.pops.echoes >= capc.echoes - 1) plan.push('substrate_core');
-    if (hasTech(state, 'cold_computation') && c.pops.coldminds >= capc.coldminds - 1) plan.unshift('cold_vault');
+    // (the Tessellate makes no minds: empty substrate would fill with Echoes)
+    if (way !== 'lattice' && hasTech(state, 'mind_substrate') && c.pops.echoes >= capc.echoes - 1) plan.push('substrate_core');
+    if (way) {
+      // room for its own: a Chorus with Echoes to gather, a Lattice that has filled its beds
+      if (hasTech(state, 'mind_merging') && c.pops.chorus >= capc.chorus - 1 && c.pops.echoes >= 2) plan.push('confluence_node');
+      if (hasTech(state, 'autonomous_replicators') && c.pops.lattice >= capc.lattice - 1) plan.push('lattice_foundry');
+      // a swarm near: defences first
+      if (swarmThreat(state, c.systemId)) plan.unshift('defense_grid');
+    }
+    if (way !== 'lattice' && hasTech(state, 'cold_computation') && c.pops.coldminds >= capc.coldminds - 1) plan.unshift('cold_vault');
     if (lateDusk && c.pops.kin > 0) plan.push('cryo_hall');
     if (calendarEra(state) === 'dusk' && state.eta > 13.985) plan.push('ember_collector', 'infrared_shroud', 'fusion_plant', 'accretion_engine', 'reserve_vault');
     if (civ.energy > cap * 0.8) plan.push('reserve_vault', 'superconducting_ring', 'horizon_vault', 'burst_catcher');
     if (civ.matter < 80) plan.push('mine', 'hydrogen_skimmer', 'brown_siphon');
     if (t.echoes > 0 && hasTech(state, 'upload')) plan.push('upload_clinic');
-    if (hasTech(state, 'cold_computation')) plan.push('cold_vault');
+    if (way !== 'lattice' && hasTech(state, 'cold_computation')) plan.push('cold_vault');
     if (Object.values(state.swarms).some((s) => !s.tamed && s.awake)) plan.push('defense_grid');
     plan.push('archive_spire', 'orbital_collector', 'solar_array', 'foundry', 'ember_collector', 'infrared_shroud', 'relic_dig', 'commons', 'reserve_vault');
     tryBuild(state, c, plan);
@@ -299,20 +343,12 @@ function planFleets(state: GameState) {
   const nCol = colonies(state).length;
   const want = calendarEra(state) === 'dusk' ? 3 + Math.floor(state.eraTurn / 12) : 4 + Math.floor(state.eraTurn / 10);
   const inFlight = fleets(state).filter((f) => f.ships.some((s) => ['ark', 'seedcore', 'spore', 'vaultship', 'lighter'].includes(s.cls))).length + capital.queue.filter((q) => q.kind === 'ship').length;
-  // only expand what the economy can carry: new settlements cost upkeep long before they pay
-  const pr = project(state);
-  const netNow = pr.energyIn - pr.energyOut;
-  const affordable = netNow > 2 + nCol * 1.5 && civ.energy > reserveCapacity(state, computeMods(state)) * 0.4;
   const fate = plannedFate(state);
   // a black hole that will outlast the end of matter (under curvature, only the big ones do)
   const lasting = (k: string, at?: number) => (k === 'black_hole' || k === 'smbh') && (fate !== 'curvature' || (at ?? Infinity) > Math.pow(10, MATTER_END.curvature));
   const atHole = colonies(state).some((c) => lasting(state.systems[c.systemId].primary.kind, state.systems[c.systemId].primary.evaporateAt));
   const needHole = ((fate === 'decay' && calendarEra(state) === 'degenerate' && state.eta > 22) || (fate === 'curvature' && state.eta > 50 && !matterGone(state))) && !atHole && inFlight === 0 && civ.matter > 80;
-  if ((affordable || needHole) && nCol + inFlight < want + (needHole ? 1 : 0) && (capital.structures.shipyard ?? 0) > 0 && capital.queue.length < 3) {
-    const opts = calendarEra(state) === 'dusk' ? ['seedcore', 'ark', 'spore'] : ['vaultship', 'seedcore', 'spore'];
-    if (eraIndex(calendarEra(state)) >= 2) opts.unshift('vaultship');
-    for (const k of opts) if (!queueBuild(state, capital.id, 'ship', k)) break;
-  }
+  const settling = nCol + inFlight < want + (needHole ? 1 : 0) && (capital.structures.shipyard ?? 0) > 0 && capital.queue.length < 3;
   const lighterBusy = fleets(state).some((f) => f.ships.some((x) => x.cls === 'lighter')) || capital.queue.some((q) => q.key === 'lighter');
   const homeCols = colonies(state).filter((c) => c.systemId === capital.systemId).length;
   // only worth a Lighter where the world itself still has room to live
@@ -320,7 +356,21 @@ function planFleets(state: GameState) {
     const b = state.bodies[bid];
     return b && !b.colonyId && !canSettle(state, b, 'kin') && b.habitability * b.vitality > 0.05;
   });
-  if (calendarEra(state) === 'dusk' && affordable && !lighterBusy && freeHere && homeCols < 2 && capital.pops.kin >= 6 && capital.queue.length < 3) queueBuild(state, capital.id, 'ship', 'lighter');
+  const lighting = calendarEra(state) === 'dusk' && !lighterBusy && freeHere && homeCols < 2 && capital.pops.kin >= 6;
+  // only expand what the economy can carry: new settlements cost upkeep long before they pay
+  // (worked out only when a ship could be built: the projection is the dearest of a turn's decisions)
+  let affordable = false;
+  if (settling || lighting) {
+    const pr = project(state);
+    affordable = pr.energyIn - pr.energyOut > 2 + nCol * 1.5 && civ.energy > reserveCapacity(state, computeMods(state)) * 0.4;
+  }
+  if ((affordable || needHole) && settling) {
+    const way = wayOf(state);
+    const opts = way ? [...WAY_SETTLERS[way]] : calendarEra(state) === 'dusk' ? ['seedcore', 'ark', 'spore'] : ['vaultship', 'seedcore', 'spore'];
+    if (eraIndex(calendarEra(state)) >= (way ? 1 : 2)) opts.unshift('vaultship');
+    for (const k of opts) if (!queueBuild(state, capital.id, 'ship', k)) break;
+  }
+  if (lighting && affordable && capital.queue.length < 3) queueBuild(state, capital.id, 'ship', 'lighter');
   if (state.eraTurn % 25 === 3 && fleets(state).filter((f) => f.ships.some((s) => s.cls === 'probe')).length < 2) queueBuild(state, capital.id, 'ship', 'probe');
 }
 
@@ -330,13 +380,19 @@ function planThreads(state: GameState) {
   const logL = logTurnLength(step);
   const kinStrain = strainFor('kin', logL, mods).m;
   const echoStrain = strainFor('echoes', logL, mods).m;
+  const way = wayOf(state);
   for (const c of colonies(state)) {
     for (let i = 0; i < 2; i++) {
       if (kinStrain > 2 && c.pops.kin > 1) {
         if (convert(state, c.id, 'upload')) convert(state, c.id, 'freeze');
       }
       if (echoStrain > 0.5 && c.pops.echoes > 0) convert(state, c.id, 'cool');
-      if (calendarEra(state) === 'dusk' && state.eta > 13.995 && c.pops.kin > 0) convert(state, c.id, 'freeze');
+      // (another civilization keeps two awake to keep each settlement)
+      if (calendarEra(state) === 'dusk' && state.eta > 13.995 && c.pops.kin > (way ? 2 : 0)) convert(state, c.id, 'freeze');
+      // the Chorus gathers its Echoes, two to each merged mind, keeping a few to grow from;
+      // the sleepers sleep, all but those two
+      if (way === 'chorus' && c.pops.echoes >= 4) convert(state, c.id, 'merge');
+      if (way === 'dormant' && c.pops.kin > 2) convert(state, c.id, 'freeze');
     }
   }
 }
@@ -360,6 +416,8 @@ function planAccord(state: GameState) {
 /** Pacts: propose one a turn to a neighbour who thinks well enough of us, while accord allows. */
 function planPacts(state: GameState) {
   const civ = state.civ;
+  // (pacts are with the neighbours as we know them, the player's: between other civilizations they come with relations)
+  if (civ.id !== state.player) return;
   for (const sv of Object.values(state.survivors)) {
     const kind = PACT_KINDS.find((k) => !hasPact(sv, k) && sv.disposition >= PACTS[k].need);
     if (!kind || pactBlocked(state, sv, kind) !== null) continue;
@@ -375,6 +433,7 @@ function planPacts(state: GameState) {
  */
 function planWar(state: GameState) {
   const civ = state.civ;
+  if (civ.id !== state.player) return;
   const cap = civ.capitalId ? state.colonies[civ.capitalId] : colonies(state)[0];
   if (!cap) return;
   const warships = fleets(state).filter((f) => f.ships.some((x) => (SHIP_BY_ID[x.cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[x.cls]?.settles));
@@ -445,6 +504,8 @@ function planEvents(state: GameState) {
 
 function planPace(state: GameState) {
   const civ = state.civ;
+  // (time is the player's: another civilization lives at our pace)
+  if (civ.id !== state.player) return;
   const mods = computeMods(state);
   const cap = reserveCapacity(state, mods);
   const netAt = (p: number) => {

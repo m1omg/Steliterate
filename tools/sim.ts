@@ -1,7 +1,8 @@
 // Headless balance harness: autoplay whole games and report how far each strategy gets.
 declare const process: { argv: string[] };
-// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [-v]
+// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [--asleep] [-v]
 // Game g uses seed 1000 + g·7919; --from=N starts at game N, so runs can be split and run in parallel.
+// --asleep: the neighbours as they were before the new version, simulated lightly (civsAsleep).
 
 import { autoPlay, type Strategy } from '../src/game/auto';
 import { formatEta } from '../src/game/eras';
@@ -19,6 +20,7 @@ const which = args[2] ?? 'both';
 const strategies: Strategy[] = which === 'both' ? ['competent', 'passive'] : [which as Strategy];
 const verbose = process.argv.includes('-v');
 const from = Number(process.argv.find((a) => a.startsWith('--from='))?.slice(7) ?? 0);
+const asleep = process.argv.includes('--asleep');
 
 for (const strategy of strategies) {
   console.log(`\n=== ${strategy} · ${length} ===`);
@@ -26,7 +28,7 @@ for (const strategy of strategies) {
     const seed = 1000 + g * 7919;
     const difficulty = (process.argv.find((a) => a.startsWith('--diff='))?.slice(7) ?? 'standard') as 'gentle' | 'standard' | 'harsh';
     const protonFate = (process.argv.find((a) => a.startsWith('--fate='))?.slice(7) ?? 'unknown') as ProtonFate;
-    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate });
+    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate, ...(asleep ? { civsAsleep: true } : {}) });
     const eraTurns: Record<string, number> = {};
     let crossings = '';
     const t0 = Date.now();
@@ -45,12 +47,14 @@ for (const strategy of strategies) {
         );
       }
     }
-    // each neighbour: alive or its fate, +N for every star it settled beyond its first, and the
-    // pacts in force or once sealed with it (a: Mutual Aid, r: Open Archives, w: Shared Watch)
+    // each neighbour: alive or its fate (a civilization of its own: @ the turn its game ended), +N
+    // for every star it lives at beyond its first, and the pacts in force or once sealed with it
+    // (a: Mutual Aid, r: Open Archives, w: Shared Watch)
     const sv = Object.values(state.survivors)
       .map((s) => {
         const pacts = (['aid', 'archives', 'watch'] as const).filter((k) => s.pacts?.[k] !== undefined).map((k) => (k === 'archives' ? 'r' : k[0])).join('');
-        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}`;
+        const ended = state.civs[s.id]?.outcome?.turn;
+        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${ended !== undefined ? `@${ended}` : ''}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}`;
       })
       .join(' ');
     console.log(

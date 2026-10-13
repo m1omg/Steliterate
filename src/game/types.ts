@@ -394,10 +394,19 @@ export interface Signal {
   resolved: string | null;
 }
 
-/** A message on its way from one civilization to another, in the outbox. */
+/**
+ * What is on its way from one civilization to another, in the outbox: a message, or what moves
+ * between them (energy, matter, resolve; people, who join or leave its settlements).
+ */
 export interface Outgoing {
   to: string;
-  signal: Signal;
+  signal?: Signal;
+  energy?: number;
+  matter?: number;
+  resolve?: number;
+  people?: { thread: ThreadId; n: number };
+  /** Its game ends (its people faded, came to us, were taken or devoured); `to`: its settlements and ships become that civilization's. */
+  end?: { ending: string; to?: string };
 }
 
 export interface Forecast {
@@ -455,6 +464,12 @@ export interface GameSettings {
   protonFate: ProtonFate;
   civName: string;
   homeName: string;
+  /**
+   * The neighbours as they were before the new version: simulated lightly, with no civilization
+   * of their own (for checks that must not drift with the civilizations, and the harness's
+   * comparisons). Absent: each is a civilization playing the same game (others.ts).
+   */
+  civsAsleep?: boolean;
 }
 
 export interface Battle {

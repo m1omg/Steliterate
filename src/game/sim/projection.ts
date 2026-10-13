@@ -1,5 +1,5 @@
 import { logTurnLength } from '../eras';
-import { livedShare, turnStep } from './flare';
+import { clockCiv, livedShare, turnStep } from './flare';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
@@ -31,7 +31,8 @@ export interface Projection {
 /** What the coming turn will look like at the current pace, without changing anything. */
 export function project(state: GameState, paceOverride?: number): Projection {
   const mods = computeMods(state);
-  const pace = paceOverride ?? state.civ.pace;
+  // (time is the player's: another civilization lives at our pace)
+  const pace = paceOverride ?? clockCiv(state).pace;
   const step = turnStep(state, pace);
   const logL = logTurnLength(step);
   const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), mods };

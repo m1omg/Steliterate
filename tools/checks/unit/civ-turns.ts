@@ -1,12 +1,13 @@
 // The turn with more than one civilization (the new version, docs/plans/new-version.md, part
 // 2a-0): every civilization plays its part of each step under its own perspective, the universe
 // moves once between the steps, and none writes to another's own. A second civilization, a plain
-// copy of ours set down at another star, played by the autoplayer under its own perspective (part
-// 2a gives it a mind of its own), plays alongside ours under the checks' guard, which throws at any
+// copy of ours set down at another star (in a game whose neighbours sleep, civsAsleep, so that it
+// is the only other), played by the autoplayer under its own perspective as every other
+// civilization is (part 2a-2), plays alongside ours under the checks' guard, which throws at any
 // write that crosses over:
 // - the player plays first, then the others; one whose game is over plays no more;
 // - a whole age of turns and the Last Light pass with no write crossing over;
-// - its settlement lives its own economy, its record and forecasts are its own;
+// - its settlement lives its own economy, its record is its own, and the forecasts are ours alone;
 // - at the crossing each has its own report: the universe's lines in both, its own losses in each;
 // - the swarms go for anyone's ships, each civilization's by its own charters (Communion spares only
 //   its own), told in its own Record; a tamed swarm works for whoever tamed it;
@@ -52,7 +53,7 @@ function addCiv(s: GameState, id: string): Civ {
   return c;
 }
 
-const s = newGame({ seed: 8919, survivors: 3, protonFate: 'decays' });
+const s = newGame({ seed: 8919, survivors: 3, protonFate: 'decays', civsAsleep: true });
 const other = addCiv(s, 'sv9');
 const theirs = Object.values(s.colonies).find((c) => c.owner === 'sv9')!;
 check(turnOrder(s).join(' ') === 'us sv9', `the player plays first, then the others (${turnOrder(s).join(', ')})`);
@@ -64,9 +65,8 @@ let crossing = false;
 const e0 = other.energy;
 try {
   for (let i = 0; i < 400 && !s.civ.outcome && !crossing; i++) {
+    // (the turn plays it, as the autoplayer plays for us, under its own perspective)
     autoPlay(s, 'competent');
-    // it plays as the autoplayer plays for us, under its own perspective (part 2a gives it a mind of its own)
-    asCiv(s, 'sv9', () => autoPlay(s, 'competent'));
     const r = endTurn(s);
     crossing = !!r.crossing;
     if (!isPlayerView(s)) throw new Error(`after turn ${s.turn} the state is pointed at ${s.civ.id}`);
@@ -81,7 +81,7 @@ check(other.stats.pops.length === s.civ.stats.pops.length && other.stats.pops.le
 check(other.energy !== e0 && !!theirs.last && theirs.last.energy > 0, `its settlement lives its own economy (${theirs.last?.energy.toFixed(1)} energy a turn, reserve ${Math.round(e0)} → ${Math.round(other.energy)})`);
 const asOurs = s.civ.log.filter((l) => l.text.includes(theirs.name) && l.kind !== 'info');
 check(other.log.some((l) => l.kind === 'era') && asOurs.length === 0, `its record is its own: ours never tells of its settlement as ours${asOurs.length ? ` (“${asOurs[0].text}”)` : ''}`);
-check(other.forecasts.length > 0 && other.forecasts !== s.civ.forecasts, `its forecasts its own (${other.forecasts.length})`);
+check(other.forecasts.length === 0 && s.civ.forecasts.length > 0, `the forecasts are ours to read: none made for it (ours ${s.civ.forecasts.length})`);
 
 // the crossing: one universe, a report each
 const mine = s.civ.crossing!;
@@ -96,7 +96,7 @@ check(its.popsAfter === theirsNow.reduce((n, c) => n + popsOf(c) + c.cryo, 0) &&
 
 // the swarms meet each civilization by its own rules: whose ship, whose charter, whose Record
 {
-  const g = newGame({ seed: 1000, survivors: 3, protonFate: 'stable' });
+  const g = newGame({ seed: 1000, survivors: 3, protonFate: 'stable', civsAsleep: true });
   g.swarms = {};
   g.turn = 5;
   const them = addCiv(g, 'sv9');
@@ -143,7 +143,7 @@ check(its.popsAfter === theirsNow.reduce((n, c) => n + popsOf(c) + c.cryo, 0) &&
 
 // each its own Deep: where another holds a system's Deep, ours is built beside it
 {
-  const g = newGame({ seed: 1000, survivors: 3, protonFate: 'stable' });
+  const g = newGame({ seed: 1000, survivors: 3, protonFate: 'stable', civsAsleep: true });
   addCiv(g, 'sv9');
   const sys = Object.values(g.systems).find((x) => !x.gone && !x.special && x.bodies.some((id) => g.bodies[id].kind === 'deep') && !x.bodies.some((id) => g.bodies[id].colonyId))!;
   const theirDeep = deepFor(g, sys, 'sv9')!;
