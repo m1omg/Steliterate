@@ -119,6 +119,18 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     browser checks one at a time) and prints a summary; `npm run check` and
     `npm run check:browser` call it. Name some to run only those:
     `node tools/checks/run.mjs unit clock evap`.
+  - **Profiling as a phone** (13 Oct): Playwright with `viewport` 390×844, `deviceScaleFactor` 3,
+    `isMobile` and `hasTouch`, and CDP `Emulation.setCPUThrottlingRate` 4. At that size the
+    software GPU here draws 2 to 3 frames a second, so frame rates measure SwiftShader, not the game:
+    swap `engine.post.composer.render` for a no-op to see the main thread's own work (CDP
+    `Performance.getMetrics`: `ScriptDuration`, `RecalcStyleDuration`, `LayoutDuration`, per
+    frame), and count draw calls with `renderer.info.autoReset = false` around one `engine.frame`.
+    Several builds compare side by side: one `git worktree`, `npx vite build --outDir <dir>` per
+    commit, `vite preview --outDir <dir>` on a port of its own. To compare pixels, freeze one page
+    (`engine.stop()`, then `engine.now`, `galaxy.time`, `system.time`, `system.orbitTime`) and read
+    back with `gl.readPixels` straight after `engine.frame(0)`; two loads never match (the sky and
+    the fleets' timings differ per load), so compare within one page. The figures of 13 Oct are in
+    the CHANGELOG ("Lighter on phones and tablets").
   - A new rule or fix gets a check here. One-off investigations (traces, censuses) stay in the
     scratchpad.
 - **The container is ephemeral.** Anything installed with pip is gone next session: numpy,
@@ -330,6 +342,19 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
+- **Lighter on phones** (13 Oct; CHANGELOG, "Lighter on phones and tablets"):
+  - The synth's continuous sounds: `voice(layer, t)` and `hush(layer)` in `src/audio/music.ts`.
+    `apply` builds a layer without them when a recording is due; `wakeSynth` and the slow-recording
+    grace start them; `tick` stops them as `hushAt` passes (the synth then faded to 0).
+  - The canvas: `antialias: false` (`engine.ts`); the post chain's targets were never multisampled.
+  - The labels: `labelsStand()` (`engine.ts`) compares the camera's matrices, the canvas size, the
+    magnifier mode and the interface's zoom with the last layout (`labelCam`); `labelsDirty` is set
+    by `setState` (every `bump`) and while they are hidden. The galaxy view only: a system's worlds
+    move every frame.
+  - Touchscreens: `@media (pointer: coarse) { .panel { backdrop-filter: none } }` (`styles.css`);
+    `loadSettings` (`store.ts`) starts at medium there, and moves a saved high to medium unless
+    `qualityChosen` (set by the Graphics buttons in Settings, `Misc.tsx`).
+  - Check `browser/lean`.
 - **Who a burst reaches** (12 Oct; CHANGELOG, "A burst reaches only what is still there"):
   `inItsSystem(state, c, held?)` (`sim/util.ts`): a settlement in its Deep, on a world its star
   holds, or on one in `held` (a burst has just set it loose); one on a world flung loose before is

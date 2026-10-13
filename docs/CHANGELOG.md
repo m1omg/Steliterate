@@ -1826,3 +1826,42 @@ is)". Asked how far the flash reaches: "By distance".
   games with the same outcomes, three of them ending with more people (settlements on rogue worlds
   spared: 92 → 106, 174 → 195, 180 → 188) and one with fewer (78 → 74). By fate: decay 189 / 450,
   stable 168 / 239, curvature 99 / 211.
+
+## Lighter on phones and tablets (13 Oct)
+
+The player: "The game definitely needs performance optimization. Preferably something at no visual
+cost. I know it's possible, because it worked better before." Asked what feels slower: "Everything
+to the point that on my phone, when I had some things running in the background, even the audio
+stuttered and had crackles. This does not happen on computers", on "Phone and Tablet".
+
+- **What was measured** (an emulated phone, 390×844 at 3×, its CPU slowed 4×, seven builds from
+  29 Sep to now, the same seed): nothing in the code grew heavier. Each frame's own work on the
+  galaxy map stayed at 0.6 to 0.9 ms of script (0.2 ms of it the engine's frame), with 20 draw calls
+  and about 97,000 points, and as little at turn 200 as at turn 40; an End Turn costs 40 to 50 ms
+  of the main thread in every build. Only the system view's style work grew, 0.17 to about 0.4 ms
+  a frame, with the phone interface (10 Oct). What weighs on a phone is what the game always asked
+  of it.
+- **Nothing runs unseen or unheard** (no change to what is seen or heard):
+  - Under a recording, the synthesized score's drone (six sawtooth oscillators through filters
+    swept by a low-frequency oscillator), its tape wobble and its hiss kept running at zero volume,
+    every sample, since 7 Oct. Now they run only while the synth can be heard: started when it wakes,
+    stopped once a recording has faded it out. On a busy phone that unheard work was the likeliest
+    cause of the crackles.
+  - The canvas is no longer multisampled. Every frame is drawn into the post chain's own buffers,
+    and only its last full-screen pass reaches the canvas, where multisampling changed no pixel (the
+    same frozen frame drawn to the multisampled canvas and to a plain buffer: 0 pixels differ, on
+    the map and in a system) but cost memory and a resolve each frame.
+  - On the galaxy map the labels are laid out again only when the camera, the state, the page or
+    the interface's size changes; idle, they are left as they stand, exactly as a fresh layout would
+    place them (their own work each frame 0.22 → 0.10 ms).
+- **Phones and tablets, as the player chose** (each with a small cost, said when asked):
+  - "No panel blur on touch": on a touchscreen the panels no longer blur the map behind them. They
+    are 90% opaque, so the blur showed only in the last tenth: stars behind a panel there are sharp
+    now instead of soft. Re-blurring the moving map under every panel each frame weighs on a phone's
+    GPU. With a mouse the panels keep it.
+  - "Touch devices start at Medium": graphics at medium on a touchscreen, 1.5 pixels to the point
+    instead of 2 (about 44% fewer pixels drawn); bloom stays. Settings saved before at high move to
+    medium once, unless the graphics are then picked by hand (`qualityChosen`); High is one tap away.
+  - Offered and not taken: a 60 fps cap on 120 Hz screens.
+- **Check:** `browser/lean`.
+- No rules changed: the harness imports none of it (`tools/sim.ts` runs `src/game` alone).

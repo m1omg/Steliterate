@@ -148,7 +148,7 @@ export function SettingsModal() {
           <label>Graphics</label>
           <div class="seg">
             {(['low', 'medium', 'high'] as const).map((q) => (
-              <button key={q} class={`btn small ${st.quality === q ? 'primary' : ''}`} onClick={() => set({ quality: q })}>
+              <button key={q} class={`btn small ${st.quality === q ? 'primary' : ''}`} onClick={() => set({ quality: q, qualityChosen: true })}>
                 {q}
               </button>
             ))}

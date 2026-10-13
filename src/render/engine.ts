@@ -79,6 +79,9 @@ export class Engine {
   private lv = false;
   /** The interface's zoom, which the magnifier mode's labels follow. */
   private uiZoom = 1;
+  /** The camera, the page and the interface's size the galaxy map's labels were last laid out for (labelsStand). */
+  private labelCam = new Float64Array(36);
+  private labelsDirty = true;
   /** The browser took the GPU away (a phone backgrounding the page, a driver reset). */
   contextLost = false;
   /** Lost: true when the picture goes, false when it is back. 'stuck' if it will not come back. */
@@ -92,7 +95,10 @@ export class Engine {
   showLabels = true;
 
   constructor(private host: HTMLElement, private events: EngineEvents) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    // no multisampled canvas: every frame is drawn into the post chain's own buffers (post.ts), and
+    // only its last full-screen pass reaches the canvas, where multisampling changes no pixel but
+    // costs memory and a resolve each frame (12 Oct)
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     this.renderer.setClearColor('#030306');
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.05;
@@ -249,6 +255,7 @@ export class Engine {
   /** Feed a fresh game state. Rebuilds what changed. */
   setState(state: GameState) {
     this.state = state;
+    this.labelsDirty = true;
     const era = ERA_BY_ID[state.era];
     this.galaxy.setPalette(era.accent, era.neon);
     this.system.neon.set(era.neon);
@@ -579,13 +586,38 @@ export class Engine {
     return this.labels[i];
   }
 
+  /**
+   * Whether the galaxy map's labels would come out as they stand: in that view nothing a label
+   * shows moves unless the camera does, or the state, the page or the interface's size changes
+   * (`labelsDirty`). Then they are left alone, with no work and no change to the page each frame
+   * (12 Oct, for phones); inside a system the worlds move, and they are laid out every frame.
+   */
+  private labelsStand(): boolean {
+    if (this.view !== 'galaxy') return false;
+    const c = this.labelCam;
+    const m = this.camera.matrixWorld.elements;
+    const pm = this.camera.projectionMatrix.elements;
+    const el = this.renderer.domElement;
+    let same = !this.labelsDirty;
+    for (let i = 0; i < 16; i++) {
+      if (c[i] !== m[i]) (same = false), (c[i] = m[i]);
+      if (c[16 + i] !== pm[i]) (same = false), (c[16 + i] = pm[i]);
+    }
+    const page = [el.clientWidth, el.clientHeight, this.lv ? 1 : 0, this.uiZoom];
+    for (let i = 0; i < page.length; i++) if (c[32 + i] !== page[i]) (same = false), (c[32 + i] = page[i]);
+    this.labelsDirty = false;
+    return same;
+  }
+
   private updateLabels() {
     const state = this.state;
-    for (const l of this.labels) l.used = false;
     if (!state || this.fade > 0.3 || !this.showLabels) {
       for (const l of this.labels) l.el.style.display = 'none';
+      this.labelsDirty = true;
       return;
     }
+    if (this.labelsStand()) return;
+    for (const l of this.labels) l.used = false;
     const rect = this.renderer.domElement.getBoundingClientRect();
     const items: { text: string; pos: THREE.Vector3; cls: string; w: number; color?: string; pick?: string }[] = [];
     if (this.view === 'galaxy') {
