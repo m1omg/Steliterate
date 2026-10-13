@@ -537,7 +537,7 @@ export function endTurn(state: GameState): TurnResult {
   // the calendar turns without the age (a fate other than decay): the Black Hole Age's Tide
   else if (calendarTurnDue(state)) calendarTurn(state);
   // curvature radiation unmakes the last ordinary matter: a storm of its own, inside the age
-  if (fateOf(state) === 'curvature' && state.eta >= MATTER_END.curvature && state.civ.flags.matter_gone === undefined && state.era !== 'dark') {
+  if (fateOf(state) === 'curvature' && state.eta >= MATTER_END.curvature && state.flags.matter_gone === undefined && state.era !== 'dark') {
     result.crossing = greatEvaporation(state, computeMods(state));
     state.civ.crossing = result.crossing;
     updateForecasts(state);
@@ -662,7 +662,7 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
       case 'dissolved':
         for (const c of colonies(state)) {
           if (c.systemId === sys.id && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) {
-            state.flags.decay_lost = (state.flags.decay_lost ?? 0) + popsOf(c) + c.cryo;
+            state.civ.flags.decay_lost = (state.civ.flags.decay_lost ?? 0) + popsOf(c) + c.cryo;
             destroyColony(state, c, 'its matter decayed');
           }
         }

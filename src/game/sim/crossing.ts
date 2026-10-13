@@ -209,8 +209,8 @@ function endOfMatter(state: GameState, mods: Mods, lines: CrossingReport['lines'
       }
     }
   }
-  lost += state.flags.decay_lost ?? 0;
-  state.flags.decay_lost = 0;
+  lost += state.civ.flags.decay_lost ?? 0;
+  state.civ.flags.decay_lost = 0;
   const moved = migrateToBlackHoles(state);
   if (moved) lines.push({ text: `The Migration: ${moved} leptonic vault(s) fell toward the nearest black holes, the only sources left.`, kind: 'info' });
   if (saved) lines.push({ text: `${saved} minds were carried onto leptonic substrate before their homes ${how === 'decayed' ? 'dissolved' : 'evaporated'}.`, kind: 'good' });
@@ -229,7 +229,7 @@ function endOfMatter(state: GameState, mods: Mods, lines: CrossingReport['lines'
       sv.fate = 'faded';
     } else sv.health = Math.max(0, sv.health - 0.45);
   }
-  state.civ.flags.matter_gone = state.turn;
+  state.flags.matter_gone = state.turn;
 }
 
 export function runCrossing(state: GameState, mods: Mods): CrossingReport {

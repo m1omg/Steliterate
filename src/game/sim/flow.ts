@@ -25,12 +25,12 @@ export const FLOW_DORMANT = 0.3;
 
 /** Has the Long Flow come, with ordinary matter still there to flow? */
 export function flowing(state: GameState): boolean {
-  return state.civ.flags.flowed !== undefined && !matterGone(state);
+  return state.flags.flowed !== undefined && !matterGone(state);
 }
 
 /** Will the Long Flow come (matter that lasts that long), and has it not yet? */
 export function flowAhead(state: GameState): boolean {
-  return state.civ.flags.flowed === undefined && fateOf(state) !== 'decay' && !matterGone(state);
+  return state.flags.flowed === undefined && fateOf(state) !== 'decay' && !matterGone(state);
 }
 
 /**
@@ -68,7 +68,7 @@ export function nextToFlow(c: Colony): string | null {
  * sleepers with the last Cryo Hall that held them.
  */
 export function theLongFlow(state: GameState, eta: number, logL: number, mods: Mods, slowOrders: number) {
-  if (state.civ.flags.flowed === undefined) {
+  if (state.flags.flowed === undefined) {
     if (!flowAhead(state) || eta < FLOW_ETA) return;
     comes(state, logL, mods, slowOrders);
   }
@@ -95,7 +95,7 @@ export function theLongFlow(state: GameState, eta: number, logL: number, mods: M
 
 /** The flow arrives: relics no one is digging run into smooth lumps; we hear of it. */
 function comes(state: GameState, logL: number, mods: Mods, slowOrders: number) {
-  state.civ.flags.flowed = state.turn;
+  state.flags.flowed = state.turn;
   let found = 0;
   for (const b of Object.values(state.bodies)) {
     if (!b.relic || b.relic.flowed || b.dissolved) continue;

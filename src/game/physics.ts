@@ -247,7 +247,7 @@ export function siphonsRunning(state: GameState): boolean {
  * starts at none, whatever it had researched, so no game loads into an emptier halo.
  */
 export function haloDrawn(state: GameState): number {
-  return state.civ?.flags?.halo_drawn ?? 0;
+  return state.flags?.halo_drawn ?? 0;
 }
 
 /** Has anything moved the halo's end (something drawn, or siphons running to draw more)? */
@@ -284,7 +284,7 @@ export function drainHalo(state: GameState, from: number, to: number): void {
   if (calendarEra(state) !== 'degenerate' || !isFinite(to) || !(to > from)) return;
   const d = haloDrawn(state);
   if (haloShare(from, d) <= 0) return;
-  state.civ.flags.halo_drawn = d + (to - from);
+  state.flags.halo_drawn = d + (to - from);
 }
 
 /**

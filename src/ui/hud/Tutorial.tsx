@@ -9,7 +9,7 @@ import { sfx } from '../../audio/sfx';
 import { useFocusPrompt } from '../a11y';
 
 // The guide: a short run of steps over the first turns. The step lives in the save
-// (flags.tut), so it survives a reload; deleting the flag ends the guide.
+// (civ.flags.tut), so it survives a reload; deleting the flag ends the guide.
 
 interface Step {
   title: string;
@@ -95,19 +95,19 @@ const STEPS: Step[] = [
 
 function setStep(n: number | null) {
   act((g) => {
-    if (n === null || n >= STEPS.length) delete g.flags.tut;
-    else g.flags.tut = n;
+    if (n === null || n >= STEPS.length) delete g.civ.flags.tut;
+    else g.civ.flags.tut = n;
   });
 }
 
 export function startTutorial(g: GameState) {
-  g.flags.tut = 0;
+  g.civ.flags.tut = 0;
 }
 
 export function Tutorial({ s }: { s: GameState }) {
   void rev.value;
   void selection.value;
-  const step = s.flags.tut;
+  const step = s.civ.flags.tut;
   const base = step !== undefined ? STEPS[step] : undefined;
   const cur = base?.phone && isPhone() ? { ...base, target: base.phone.target ?? base.target, text: base.phone.text } : base;
   const ring = useRef<HTMLDivElement>(null);

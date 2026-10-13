@@ -40,7 +40,7 @@ export const FATE_SHOWN_AT = 30;
 
 /** Is ordinary matter gone (dissolved at the Great Decay, or evaporated at the Great Evaporation)? */
 export function matterGone(state: GameState): boolean {
-  if (state.civ.flags.matter_gone !== undefined) return true;
+  if (state.flags.matter_gone !== undefined) return true;
   return fateOf(state) === 'decay' && ERA_BY_ID[calendarEra(state)].index >= 2;
 }
 

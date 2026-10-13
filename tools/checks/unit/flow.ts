@@ -39,7 +39,7 @@ for (let g = 0; g < 900 && !s.civ.outcome && s.eta < FLOW_ETA - 2.5; g++) {
   autoPlay(s, 'competent');
   endTurn(s);
 }
-check(!s.civ.outcome && s.eta < FLOW_ETA && s.civ.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come`);
+check(!s.civ.outcome && s.eta < FLOW_ETA && s.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come`);
 s.civ.pending.length = 0;
 // with the Tide (the autoplayer may have slowed down, and a slow turn here outlasts the flow)
 s.civ.pace = 0;
@@ -79,8 +79,8 @@ const turns = (n: number) => {
     endTurn(s);
   }
 };
-for (let i = 0; i < 12 && s.civ.flags.flowed === undefined && !s.civ.outcome; i++) turns(1);
-check(flowing(s) && s.eta >= FLOW_ETA, `the Long Flow comes at η ${s.eta.toFixed(1)} (turn ${s.civ.flags.flowed})`);
+for (let i = 0; i < 12 && s.flags.flowed === undefined && !s.civ.outcome; i++) turns(1);
+check(flowing(s) && s.eta >= FLOW_ETA, `the Long Flow comes at η ${s.eta.toFixed(1)} (turn ${s.flags.flowed})`);
 const ev = s.civ.pending.find((p) => p.defId === 'long_flow');
 check(!!ev && Number(ev.data.ruins) >= 1, `we hear of it, and of the ruins we found that flowed (${ev?.data.ruins})`);
 check(bRuin.relic?.flowed === true && bEmpty.relic?.flowed === true && !bDug.relic?.flowed, `ruins no one was digging flowed, found or hidden; the dug one is kept (${bRuin.relic?.flowed}, ${bEmpty.relic?.flowed}, ${bDug.relic?.flowed})`);
@@ -90,7 +90,7 @@ check(bRuin.relic?.flowed === true && bEmpty.relic?.flowed === true && !bDug.rel
 }
 const slowBefore = (() => {
   const b = clone(s);
-  delete b.civ.flags.flowed;
+  delete b.flags.flowed;
   return mindUpkeep(b, b.colonies[slow.id]);
 })();
 check(slow.structures.substrate_core === 1 && kept.structures.solar_array === 1, 'kept and watched places lose nothing');
@@ -107,7 +107,7 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
 {
   const a = clone(s);
   const b = clone(s);
-  delete b.civ.flags.flowed;
+  delete b.flags.flowed;
   for (const g of [a, b]) {
     g.civ.dormant = true;
     g.civ.charters = g.civ.charters.filter((x) => x !== 'the_long_watch');
@@ -125,7 +125,7 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
 {
   const a = clone(s);
   const b = clone(s);
-  delete b.civ.flags.flowed;
+  delete b.flags.flowed;
   const sv = Object.values(s.survivors).find((x) => x.alive) ?? Object.values(s.survivors)[0];
   for (const g of [a, b]) {
     g.survivors[sv.id].alive = true;
@@ -148,7 +148,7 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
     autoPlay(d, 'competent');
     endTurn(d);
   }
-  check(d.civ.flags.flowed === undefined, `protons decay: no flow (η ${d.eta.toFixed(1)}, ${d.civ.outcome ? d.civ.outcome.ending : 'playing'})`);
+  check(d.flags.flowed === undefined, `protons decay: no flow (η ${d.eta.toFixed(1)}, ${d.civ.outcome ? d.civ.outcome.ending : 'playing'})`);
 }
 void ({} as Body);
 done('FLOW');

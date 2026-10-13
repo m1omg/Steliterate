@@ -50,7 +50,7 @@ function defenseAt(state: GameState, systemId: string, mods: Mods): number {
  * that part goes for the nearest warmth, our settlements; sometimes it lets the ship go.
  */
 export function firstSwarm(state: GameState) {
-  if (state.flags.first_swarm) return;
+  if (state.civ.flags.first_swarm) return;
   for (const f of fleets(state)) {
     if (!f.at) continue;
     const here = state.systems[f.at];
@@ -58,7 +58,7 @@ export function firstSwarm(state: GameState) {
     const sw = Object.values(state.swarms).find((w) => w.systemId && !w.tamed && distLy(here, state.systems[w.systemId]) <= FIRST_SWARM_REACH);
     if (!sw) continue;
     const nest = state.systems[sw.systemId!];
-    state.flags.first_swarm = state.turn;
+    state.civ.flags.first_swarm = state.turn;
     if (!state.civ.known[nest.id]) state.civ.known[nest.id] = 1;
     let outcome = '';
     withRng(state, (rng) => {
@@ -129,7 +129,7 @@ export const HUNT_MIN_SIZE = 2;
  * ship; not before the first swarm's own moment; noticed half as often under the Blackout.
  */
 function sendHunter(state: GameState, sw: Swarm, sys: StarSystem, rng: { chance(p: number): boolean }, noticed: number) {
-  if (sw.size < HUNT_MIN_SIZE || !state.flags.first_swarm || state.flags.first_swarm === state.turn) return;
+  if (sw.size < HUNT_MIN_SIZE || !state.civ.flags.first_swarm || state.civ.flags.first_swarm === state.turn) return;
   const settled = new Set(colonies(state).map((c) => c.systemId));
   const held = new Set(Object.values(state.swarms).filter((w) => w.systemId && !w.tamed).map((w) => w.systemId!));
   const hunted = new Set(Object.values(state.swarms).map((w) => w.prey));
@@ -244,7 +244,7 @@ export const HUNT_ASLEEP = 0.2;
  */
 export function swarmsHunt(state: GameState, mods: Mods) {
   // the first swarm has its own moment (firstSwarm), and under Communion they take us for their own
-  if (state.flags.first_swarm === state.turn || hasCharter(state, 'communion_charter')) return;
+  if (state.civ.flags.first_swarm === state.turn || hasCharter(state, 'communion_charter')) return;
   const dark = mods.flags.has('charter:blackout') ? 0.5 : 1;
   const settled = new Set(colonies(state).map((c) => c.systemId));
   withRng(state, (rng) => {

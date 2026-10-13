@@ -45,14 +45,14 @@ near('a cast-out ember still dims by our own clock', emberShare(left, Math.pow(1
   const before = sourceLight(s, sys, s.years, s.turnLength).light;
   s.civ.techs.push('halo_siphons');
   const r = round(s);
-  check(r.civ.flags.halo_drawn === undefined && haloDrawn(r) === 0, 'an old save with Halo Siphons researched loads with nothing drawn');
+  check(r.flags.halo_drawn === undefined && haloDrawn(r) === 0, 'an old save with Halo Siphons researched loads with nothing drawn');
   check(sourceLight(r, r.systems[c.systemId], r.years, r.turnLength).light === before, 'and its ember gives the same light as before the update');
   const y0 = r.years;
   endTurn(r);
   near('one turn with the siphons running draws exactly that turn’s years', haloDrawn(r), r.years - y0);
   const t = loadSave(SAVE);
   for (let i = 0; i < 3; i++) endTurn(t);
-  check(t.civ.flags.halo_drawn === undefined, 'a game without the siphons never draws (three turns)');
+  check(t.flags.halo_drawn === undefined, 'a game without the siphons never draws (three turns)');
 }
 
 // ---------------------------------------------------------------- shutting them
@@ -180,7 +180,7 @@ function withRequest(): { s: GameState; uid: string } {
   const m = milestonesFor('decay', { at: embersOutEta(s), running: true }).find((x) => x.label === 'Embers fade')!;
   check(Math.abs(m.at - 24.699) < 0.01 && /bringing it sooner/.test(m.detail), 'running: the Chronometer’s Embers fade moves to η 24.7');
   check(/η 24\.7, sooner while our Halo Siphons run/.test(choiceHint(dim, s, {})), 'running: so does the fading embers’ hint');
-  s.civ.flags.halo_drawn = 1e23;
+  s.flags.halo_drawn = 1e23;
   s.civ.flags.siphons_shut = s.turn;
   near('shut with 10^23 years drawn: the end comes that much sooner, and no more', haloReachesYears(s, 25), 1e25 - 1e23);
 }

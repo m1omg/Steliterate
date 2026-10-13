@@ -23,7 +23,7 @@ run(async () => {
       s.fleets.lamp = { id: 'lamp', owner: s.player, name: 'Lamp', ships: [{ cls: 'probe', hp: 2 }], at: b.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' };
       s.civ.known[a.id] = 2;
       s.civ.known[b.id] = 2;
-      s.flags.first_swarm = -1;
+      s.civ.flags.first_swarm = -1;
       window.__stel.refresh();
       return { a: a.id, b: b.id, aName: a.name };
     }

@@ -360,7 +360,7 @@ declare global {
 window.__stel = {
   newGame(opts: Record<string, unknown> = {}) {
     game.value = newGame(opts);
-    if (opts.tutorial) game.value.flags.tut = 0;
+    if (opts.tutorial) game.value.civ.flags.tut = 0;
     screen.value = 'game';
     modal.value = null;
     bump();

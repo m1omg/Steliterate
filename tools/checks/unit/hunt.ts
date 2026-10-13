@@ -21,7 +21,7 @@ const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
   s.swarms = {};
   s.turn = 5;
-  s.flags.first_swarm = 2;
+  s.civ.flags.first_swarm = 2;
   const settled = new Set(colonies(s).map((c) => c.systemId));
   const free = Object.values(s.systems).filter((x) => !x.gone && !x.special && !settled.has(x.id));
   // a star for the swarm, one near it for our ship, and one out of reach
@@ -90,8 +90,8 @@ const rate = (tweak: (s: GameState) => void, n = 1000) => {
   never('a swarm asleep', (s) => (s.swarms.hgx.awake = false));
   never('a swarm too small to spare a part (1.5)', (s) => (s.swarms.hgx.size = 1.5));
   never('under the Communion Charter', (s) => s.civ.charters.push('communion_charter'));
-  never('before the first swarm', (s) => delete s.flags.first_swarm);
-  never('on the first swarm’s own turn', (s) => (s.flags.first_swarm = s.turn));
+  never('before the first swarm', (s) => delete s.civ.flags.first_swarm);
+  never('on the first swarm’s own turn', (s) => (s.civ.flags.first_swarm = s.turn));
   never('a ship out of reach', (s) => (s.fleets.fx.at = base.c));
   never('a ship under way', (s) => Object.assign(s.fleets.fx, { at: null, from: base.b, to: base.c, distance: 30 }));
   never('a ship at a star we have settled', (s) => createColony(s, s.bodies[s.systems[base.b].bodies[0]], { echoes: 1 }));

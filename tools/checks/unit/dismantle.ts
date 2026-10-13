@@ -49,7 +49,7 @@ const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
   check(err === 'Taking it apart needs 7 energy.' && c.structures.geothermal_tap === 1, `without the energy it stays (${err})`);
   // once matter is gone, building is paid in energy, and so is what comes back
   s.civ.energy = 300;
-  s.civ.flags.matter_gone = s.turn;
+  s.flags.matter_gone = s.turn;
   c.structures.lepton_substrate = 1;
   const lt = dismantleTerms(s, STRUCTURE_BY_ID.lepton_substrate);
   check(lt.matter === 0 && lt.energy === 105 && lt.cost === 22, `matter gone: a Leptonic Substrate gives 105 energy back for 22 (${JSON.stringify(lt)})`);

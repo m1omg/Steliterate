@@ -110,7 +110,7 @@ export function updateForecasts(state: GameState) {
     add({ kind: 'crossing', title: titles[state.era], text: texts[state.era], dueYears: Math.pow(10, d.endEta), severity: 'danger' });
   }
   // curvature radiation, once we know it: the end of matter, and the stars we live at that will go
-  if (known && fate === 'curvature' && state.civ.flags.matter_gone === undefined) {
+  if (known && fate === 'curvature' && state.flags.matter_gone === undefined) {
     add({ kind: 'evaporation_all', title: 'The Great Evaporation', text: 'Every world, every dead star and every scrap of ordinary matter will have evaporated. Only minds on leptonic substrate, living around the black holes that are left, go on.', dueYears: Math.pow(10, MATTER_END.curvature), severity: 'danger' });
     for (const sid of colonized) {
       const sys = state.systems[sid];
@@ -159,9 +159,9 @@ export function updateForecasts(state: GameState) {
   }
 
   // the galaxy's free energy
-  const prev = state.flags.gfe_prev ?? 1;
+  const prev = state.civ.flags.gfe_prev ?? 1;
   const rate = prev - state.gfe;
-  state.flags.gfe_prev = state.gfe;
+  state.civ.flags.gfe_prev = state.gfe;
   if (state.gfe < 0.92 || rate > 0.002) {
     add({
       kind: 'gfe',

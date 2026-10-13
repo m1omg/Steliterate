@@ -136,8 +136,8 @@ function BottomLeft({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const ui = hudPrefs.value;
   const all = s.civ.forecasts;
-  const shown = all.filter((f) => !s.flags[`fcd:${f.uid}`]).slice(0, 3);
-  const hidden = all.length - all.filter((f) => !s.flags[`fcd:${f.uid}`]).length;
+  const shown = all.filter((f) => !s.civ.flags[`fcd:${f.uid}`]).slice(0, 3);
+  const hidden = all.length - all.filter((f) => !s.civ.flags[`fcd:${f.uid}`]).length;
   const feed = s.civ.log.slice(-7).reverse();
   // (on a phone it is folded under the top bar until its turn line is tapped: styles.css)
   return (
@@ -154,7 +154,7 @@ function BottomLeft({ s }: { s: GameState }) {
             class="btn ghost small"
             data-tip="Bring back the forecasts you closed"
             onClick={() => act((g) => {
-              for (const k of Object.keys(g.flags)) if (k.startsWith('fcd:')) delete g.flags[k];
+              for (const k of Object.keys(g.civ.flags)) if (k.startsWith('fcd:')) delete g.civ.flags[k];
             })}
           >
             {hidden} closed
@@ -198,7 +198,7 @@ function BottomLeft({ s }: { s: GameState }) {
                 onClick={(e) => {
                   e.stopPropagation();
                   act((g) => {
-                    g.flags[`fcd:${f.uid}`] = g.turn;
+                    g.civ.flags[`fcd:${f.uid}`] = g.turn;
                   });
                 }}
               >

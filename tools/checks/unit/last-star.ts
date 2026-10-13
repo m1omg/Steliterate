@@ -219,7 +219,7 @@ for (const pace of [0, -1, -2]) {
   ok('it went out turns after it lit', (x) => {
     for (const e of x.log) if (e.text === 'The star at The Last Star has burned out.') e.turn += 3;
   });
-  ok('matter is gone', (x) => (x.civ.flags.matter_gone = 1));
+  ok('matter is gone', (x) => (x.flags.matter_gone = 1));
   ok('lit by the new rule', (x) => (x.civ.flags.last_star_lit = 1));
 }
 

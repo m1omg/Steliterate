@@ -35,6 +35,11 @@ export const SAVE_VERSION = 4;
  */
 export const FIRST_OF_THIS_LINE = 4;
 
+/** Facts about the universe kept in the one civilization's flags before the new version (13 Oct). */
+const UNIVERSE_FLAGS = ['halo_drawn', 'matter_gone', 'flowed'];
+/** And one civilization's own, kept in the state's (with `fcd:<forecast>`, a forecast put away). */
+const CIV_FLAGS = ['first_swarm', 'decay_lost', 'gfe_prev', 'tut'];
+
 /**
  * Bring a save from any earlier version up to date, so old games keep working. Every step is
  * additive: fill in what the old format lacked, never throw away the player's progress.
@@ -59,6 +64,19 @@ export function migrate(s: GameState): GameState {
   }
   // containers a partial or hand-edited save might lack
   s.flags ??= {};
+  s.civ.flags ??= {};
+  // and some facts were kept with the wrong owner: what is true of the universe lives in the
+  // state's flags, what is true of one civilization in its own
+  for (const k of UNIVERSE_FLAGS) {
+    if (!(k in s.civ.flags)) continue;
+    s.flags[k] ??= s.civ.flags[k];
+    delete s.civ.flags[k];
+  }
+  for (const k of Object.keys(s.flags)) {
+    if (!CIV_FLAGS.includes(k) && !k.startsWith('fcd:')) continue;
+    s.civ.flags[k] ??= s.flags[k];
+    delete s.flags[k];
+  }
   s.civ.fired ??= {};
   s.civ.pending ??= [];
   s.civ.log ??= [];
@@ -70,7 +88,6 @@ export function migrate(s: GameState): GameState {
   s.survivors ??= {};
   s.civ.signals ??= [];
   s.civ.forecasts ??= [];
-  s.civ.flags ??= {};
   s.civ.research ??= {};
   s.civ.techs ??= [];
   s.civ.charters ??= [];
