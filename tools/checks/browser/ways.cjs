@@ -36,7 +36,10 @@ run(async () => {
   await ck.shot('choir-wish.png');
   await msg.locator('.btn.choice', { hasText: 'Let those who wish go' }).click();
   await page.waitForTimeout(400);
-  const after = await page.evaluate(() => Object.values(window.__stel.state().colonies).reduce((a, c) => a + c.pops.echoes, 0));
+  const after = await page.evaluate(() => {
+    const s = window.__stel.state();
+    return Object.values(s.colonies).filter((c) => c.owner === s.player).reduce((a, c) => a + c.pops.echoes, 0);
+  });
   check(after === sv.echoes - 2, `two Echoes left us for the Choir (${sv.echoes} → ${after})`);
   const answered = await page.locator('.modal .message', { hasText: 'would gather some of our Echoes' }).locator('.faint', { hasText: 'Answered:' }).textContent().catch(() => null);
   check(/Answered: Let those who wish go/.test(answered ?? ''), 'the message says what we answered');
