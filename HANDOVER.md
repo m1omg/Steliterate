@@ -43,6 +43,21 @@ last.
 
 ## 3. Where things stand (13 Oct)
 
+- **The new version is being built** (13 Oct, the player's nine-part request: the other
+  civilizations playing the same game, the Hunger in diplomacy, war and new units, life after
+  matter, positronium, films, young dwarfs, charting on the way). The approved plan is
+  `docs/plans/new-version.md`; read it before anything else.
+  - The work is on `claude/epic-wozniak-lyhulf`, pushed but not merged: "Preview address, but
+    once all is done". Nothing of it goes into `main` until all of it is done. Then it goes up at
+    `/next/`, and `main` switches only when the player says.
+  - Saves don't carry over ("For the new version, don't worry about saves"). The new version
+    keeps its own storage keys (`steliterate2.`).
+- **The backup** (13 Oct, PR m1omg/Steliterate#28, `db34424`): today's game, frozen and playable,
+  at https://m1omg.github.io/Steliterate/archive/2026-10-13/ (`public/archive/`, with its own
+  README), on the same origin and so with the player's current saves. Its source is
+  `github.com/m1omg/Steliterate/archive/4aaaa2a996b5d4bd62587931737858d76b7f8706.zip`. The same
+  PR put the positronium bend in the Codex (Chiba & Sugiyama 2004); the live script is
+  `index-DZiWCpcP.js`.
 - **`main` and the live game:** as of PR m1omg/Steliterate#27 (13 Oct): a burst reaches only what
   is still there (a rule), and lighter on phones and tablets (section 6). The live script is
   `index-B4EKBtSN.js` (check it on the live page after the Pages run). Before it, PR

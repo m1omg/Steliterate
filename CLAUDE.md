@@ -16,11 +16,18 @@ lights, and PR m1omg/Steliterate#22, `af0b58b`, Export all saves; PR
 m1omg/Steliterate#23, `a083698`, rogue worlds leave their star behind and black holes by lifetime,
 all from `claude/affectionate-johnson-qqr7p2`; then PR m1omg/Steliterate#25, `3f927a4`, a third
 track for the Dusk, PR m1omg/Steliterate#26, `a16d43b`, a darker remix of it for the Dark, and the
-latest game batch, PR m1omg/Steliterate#27, a burst reaches only what is still there and lighter on
-phones, all three from `claude/epic-wozniak-lyhulf`).
+latest game batch, PR m1omg/Steliterate#27, `4aaaa2a`, a burst reaches only what is still there
+and lighter on phones, then PR m1omg/Steliterate#28, `db34424`, the backup of today's game at
+`/archive/2026-10-13/` and the positronium bend in the Codex, all from `claude/epic-wozniak-lyhulf`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
+
+**The new version** (13 Oct): the player's large request is planned in
+`docs/plans/new-version.md` (approved). It is built on `claude/epic-wozniak-lyhulf` and stays off
+`main` until all of it is done ("Preview address, but once all is done"); then it goes up at
+`/next/`. Its saves are its own (`steliterate2.` keys), and "Saves are sacred" is suspended for it
+until then. `public/archive/` holds frozen builds: never edit them.
 
 A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (rewritten
 12 Oct):
