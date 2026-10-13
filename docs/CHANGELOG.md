@@ -1865,3 +1865,27 @@ stuttered and had crackles. This does not happen on computers", on "Phone and Ta
   - Offered and not taken: a 60 fps cap on 120 Hz screens.
 - **Check:** `browser/lean`.
 - No rules changed: the harness imports none of it (`tools/sim.ts` runs `src/game` alone).
+
+## A backup of the game as it is, and the positronium bend (13 Oct)
+
+The player, before the new version: "please backup the entire game as it is, because even though
+yes we have Git, I may want an easy way to get to the older build even without it." And, from the
+reading list: "yes add the positronium line to the codex pls".
+
+- **A playable copy that never changes,** at https://m1omg.github.io/Steliterate/archive/2026-10-13/:
+  the build of PR m1omg/Steliterate#27's merge commit `4aaaa2a` (`npm run build`, nothing changed;
+  its script is the live one's, `index-B4EKBtSN.js`), committed as plain files under
+  `public/archive/2026-10-13/`, which Vite copies into every build as they are. It keeps the
+  storage keys of its time, so it opens the saves made on the main address: checked locally, a
+  game autosaved at the root continues there at the same turn. Its source, without Git:
+  https://github.com/m1omg/Steliterate/archive/4aaaa2a996b5d4bd62587931737858d76b7f8706.zip
+  (`public/archive/README.md`). `.gitattributes` marks the copy generated and out of diffs;
+  `.ignore` keeps its minified script out of searches.
+- **Not done, and why:** the planned tag `snapshot-2026-10-13` and a GitHub Release with a zip of
+  the build. This session's GitHub access refuses tags and releases (HTTP 403), so the commit's
+  own zip stands in for the tag.
+- **The Codex,** the Black Hole Age: the dates of positronium are for a universe whose expansion
+  slows down; with dark energy like ours, the cosmological constant included, Chiba & Sugiyama
+  (2004, arXiv:astro-ph/0405273) find that electrons and positrons drift apart faster than they
+  can pair, so it may never form. The game lets it form: a bend. The paper is in the Sources.
+- No rules changed.

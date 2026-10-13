@@ -1,0 +1,3 @@
+# Frozen, playable copies of older builds (see public/archive/README.md): built files, never
+# edited by hand, kept out of diffs and the language statistics.
+public/archive/** linguist-generated=true -diff

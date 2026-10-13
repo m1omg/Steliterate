@@ -96,6 +96,7 @@ export const CODEX: CodexEntry[] = [
       'Once matter is gone or locked away, black holes are the last sources. They lose mass through Hawking radiation, slowly at first and then faster: a black hole of mass M lasts about 2×10⁶⁷ (M / M☉)³ years, ending in a bright final burst. Until near the end a stellar hole radiates less than a billion-billion-billionth of a watt, so its last second, about 2×10²² joules (its last year, nearly 10²⁵), dwarfs everything it gave before: a prize for whoever catches it close in, in its Deep or on a world it still holds (a world flung loose long before is far away by then). Spread over the distance its worlds orbit it harms nothing: a world 1 AU out gets under a tenth of a joule on each square metre, what Earth gets from the Sun in a twentieth of a millisecond. As the hole shrinks, its hold on what circles it fades, and its worlds drift free.',
       'A spinning black hole also stores rotational energy that can in principle be tapped (the Penrose process). In the game it is a finite reservoir.',
       'Around η 85, if protons decayed or space unmade matter, electrons and positrons can pair into positronium atoms larger than today’s observable universe.',
+      'Those dates are for a universe whose expansion slows down. With dark energy like ours, the cosmological constant included, Chiba and Sugiyama (2004) find that the electrons and positrons drift apart faster than they can find each other, so positronium may never form at all. The game lets it form: a bend.',
     ],
   },
   {
@@ -127,6 +128,7 @@ export const CODEX: CodexEntry[] = [
       'L. M. Krauss & R. J. Scherrer, “The return of a static universe and the end of cosmology”, GRG 39, 1545 (2007).',
       'R. Penrose, Cycles of Time (2010). Speculative.',
       'D. N. Page & M. R. McKee, positronium formation and decay in the far future (1981).',
+      'T. Chiba & N. Sugiyama, “Does positronium form in the universe?”, arXiv:astro-ph/0405273 (2004): not with dark energy like ours.',
       'D. Spolyar, K. Freese & P. Gondolo, “Dark matter and the first stars: a new phase of stellar evolution”, Physical Review Letters 100, 051101 (2008). A dark star in the far future is speculation.',
       'H. Falcke, M. F. Wondrak & W. D. van Suijlekom, “An upper limit to the lifetime of stellar remnants from gravitational pair production”, arXiv:2410.14734 (2024). Theoretical and disputed.',
       'Planet inspiral and accretion figures: estimates from the co-designer’s speculation notes (not peer-reviewed; they disagree with each other, which the game keeps).',
