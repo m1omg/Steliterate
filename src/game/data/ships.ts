@@ -1,5 +1,8 @@
 import type { ThreadId } from '../types';
 
+/** What a ship fights: other ships, settlements (raids, sieges, assaults) or the Hunger's swarms. */
+export type Against = 'ships' | 'settlements' | 'swarms';
+
 export interface ShipDef {
   id: string;
   name: string;
@@ -9,6 +12,8 @@ export interface ShipDef {
   matter: number;
   mass: number; // for launch energy
   attack: number;
+  /** Its strength against each kind of foe, where that differs from `attack`. */
+  vs?: Partial<Record<Against, number>>;
   hp: number;
   survey?: boolean;
   settles?: { thread: ThreadId; pops: number; structure?: string };
@@ -30,6 +35,18 @@ export const SHIPS: ShipDef[] = [
 ];
 
 export const SHIP_BY_ID: Record<string, ShipDef> = Object.fromEntries(SHIPS.map((s) => [s.id, s]));
+
+/** A ship's strength against a kind of foe: its own figure for it, or else its attack. */
+export function strength(cls: string, against: Against): number {
+  const d = SHIP_BY_ID[cls];
+  return d ? (d.vs?.[against] ?? d.attack) : 0;
+}
+
+/** Whether a ship is a warship: it can fight something, and it carries no settlers. */
+export function isWarship(cls: string): boolean {
+  const d = SHIP_BY_ID[cls];
+  return !!d && !d.settles && (d.attack > 0 || Object.values(d.vs ?? {}).some((v) => (v ?? 0) > 0));
+}
 
 /** A painted hull in public/art/ships/<look>.png (the Ark is 'settler', the Warden 'war'). */
 export type FleetLook = 'settler' | 'probe' | 'war' | 'other' | 'lighter' | 'seedcore' | 'spore' | 'vaultship' | 'aegis' | 'tender';

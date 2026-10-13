@@ -1,4 +1,4 @@
-import { SHIP_BY_ID } from '../data/ships';
+import { SHIP_BY_ID, isWarship } from '../data/ships';
 import { residentsOf } from './homes';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../types';
@@ -340,7 +340,7 @@ export function signatureOf(state: GameState, systemId: string, civId = state.ci
 
 /** Warships: anything that can fight. */
 export function isWarFleet(f: Fleet): boolean {
-  return f.ships.some((x) => (SHIP_BY_ID[x.cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[x.cls]?.settles);
+  return f.ships.some((x) => isWarship(x.cls));
 }
 
 /** Stationed with nothing to do: the fleets the game should ask about. */

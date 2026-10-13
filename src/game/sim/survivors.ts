@@ -1,5 +1,5 @@
 import { sourceLight } from '../physics';
-import { SHIP_BY_ID } from '../data/ships';
+import { isWarship, strength } from '../data/ships';
 import { THREADS, type Body, type GameState, type PactKind, type Survivor, type ThreadId } from '../types';
 import { acceptOffer, hasPact, theirPacts, weighProposal } from './pacts';
 import { askRefuge, onTheirWay, sanctuaryTrust, takeThemIn } from './refuge';
@@ -654,7 +654,7 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
     won = attack * rng.range(0.6, 1.4) >= def;
     // an assault costs ships either way, more if it fails
     for (const f of fleets(state).filter((x) => x.at === sys.id)) {
-      for (const s of f.ships) if (isRaider(s.cls)) s.hp -= won ? rng.range(0, 1.5) : rng.range(1, 3.5);
+      for (const s of f.ships) if (isWarship(s.cls)) s.hp -= won ? rng.range(0, 1.5) : rng.range(1, 3.5);
       f.ships = f.ships.filter((s) => s.hp > 0);
       if (!f.ships.length) delete state.fleets[f.id];
     }
@@ -771,12 +771,11 @@ export const RAID_COOLDOWN = 5;
 /** Raiders our defences turned away wait this many turns before they try again. */
 export const RAID_WAIT = 15;
 
-const isRaider = (cls: string) => (SHIP_BY_ID[cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[cls]?.settles;
 
 /** The combined attack of every warship stationed at `systemId`: they all join a raid. */
 export function raidStrength(state: GameState, systemId: string): number {
   let a = 0;
-  for (const f of fleets(state)) if (f.at === systemId) for (const s of f.ships) if (isRaider(s.cls)) a += SHIP_BY_ID[s.cls].attack;
+  for (const f of fleets(state)) if (f.at === systemId) for (const s of f.ships) if (isWarship(s.cls)) a += strength(s.cls, 'settlements');
   return a;
 }
 
@@ -806,7 +805,7 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
     const defence = Math.max(1, dealSize(state, sv) * sv.health * 0.3);
     const hurt = (lo: number, hi: number) => {
       for (const x of fleets(state).filter((y) => y.at === f.at)) {
-        for (const s of x.ships) if (isRaider(s.cls)) s.hp -= rng.range(lo, hi);
+        for (const s of x.ships) if (isWarship(s.cls)) s.hp -= rng.range(lo, hi);
         x.ships = x.ships.filter((s) => s.hp > 0);
         if (!x.ships.length) delete state.fleets[x.id];
       }

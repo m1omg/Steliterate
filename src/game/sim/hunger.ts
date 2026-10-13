@@ -1,4 +1,4 @@
-import { SHIP_BY_ID } from '../data/ships';
+import { SHIP_BY_ID, strength } from '../data/ships';
 import { watchPartners } from './ties';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import type { Fleet, GameState, StarSystem, Swarm } from '../types';
@@ -39,7 +39,7 @@ function defenseAt(state: GameState, systemId: string, mods: Mods, owner = state
     if (f.at !== systemId || f.owner !== owner) continue;
     // dug in with the settlement's own grid, a fortified fleet defends twice as well
     const k = f.order === 'fortify' ? FORTIFY_BONUS : 1;
-    for (const s of f.ships) d += (SHIP_BY_ID[s.cls]?.attack ?? 0) * k;
+    for (const s of f.ships) d += strength(s.cls, 'swarms') * k;
   }
   if (mods.flags.has('charter:wardens_oath')) d *= 1.5;
   // Shared Watch: a partner's warning, and a little of their strength (never a shield); the
@@ -98,7 +98,7 @@ export function firstSwarm(state: GameState) {
       const size = Math.min(1.6, Math.max(1, sw.size * 0.3));
       sw.size = Math.max(0.8, sw.size - size * 0.5);
       const frag: Swarm = { id: uid(state, 'sw'), systemId: here.id, from: null, to: null, traveled: 0, distance: 0, size, awake: true, tamed: false, appetite: sw.appetite };
-      const attack = f.ships.reduce((a, s) => a + (SHIP_BY_ID[s.cls]?.attack ?? 0), 0);
+      const attack = f.ships.reduce((a, s) => a + strength(s.cls, 'swarms'), 0);
       if (attack > 0 && attack >= size * 1.2 * rng.range(0.6, 1.1)) {
         state.civ.matter += size * 2;
         for (const s of f.ships) s.hp = Math.max(1, s.hp - rng.range(0, size));
@@ -297,7 +297,7 @@ export function swarmsHunt(state: GameState, mods: ModsBy) {
         if (sw.prey !== f.id && !rng.chance((sw.awake ? HUNT_AWAKE : HUNT_ASLEEP) * dark)) continue;
         const what = sw.awake ? 'The swarm' : 'Something asleep';
         const k = f.order === 'fortify' ? FORTIFY_BONUS : 1;
-        const attack = f.ships.reduce((a, s) => a + (SHIP_BY_ID[s.cls]?.attack ?? 0) * k, 0);
+        const attack = f.ships.reduce((a, s) => a + strength(s.cls, 'swarms') * k, 0);
         if (attack > 0 && attack >= sw.size * 1.2 * rng.range(0.6, 1.1)) {
           const lost = Math.min(sw.size, attack * 0.3);
           sw.size -= lost;
@@ -346,7 +346,7 @@ export function attackOdds(attack: number, size: number): number {
 /** Every warship of ours at this star, their attack added up (at their plain strength: attacking, they leave any fortifications). */
 export function warshipsAt(state: GameState, systemId: string): { fleets: Fleet[]; attack: number } {
   const here = fleets(state).filter((x) => x.at === systemId && isWarFleet(x));
-  const attack = here.reduce((a, x) => a + x.ships.reduce((b, sh) => b + (SHIP_BY_ID[sh.cls]?.settles ? 0 : (SHIP_BY_ID[sh.cls]?.attack ?? 0)), 0), 0);
+  const attack = here.reduce((a, x) => a + x.ships.reduce((b, sh) => b + (SHIP_BY_ID[sh.cls]?.settles ? 0 : strength(sh.cls, 'swarms')), 0), 0);
   return { fleets: here, attack };
 }
 

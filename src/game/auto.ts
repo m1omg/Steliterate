@@ -43,7 +43,7 @@ import { FLOW_ETA, flowAhead, flowing, keeping } from './sim/flow';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost, proposePact } from './sim/pacts';
 import { WAR_ACCORD, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
 import { raidStrength, seizeSurvivor } from './sim/survivors';
-import { SHIP_BY_ID } from './data/ships';
+import { SHIP_BY_ID, isWarship, strength } from './data/ships';
 import { SEED_MIN, terraformSummary } from './sim/terraform';
 import { planTies } from './sim/ties';
 import { newStarNear } from './sim/ways';
@@ -554,8 +554,8 @@ function planWar(state: GameState) {
   if (civ.id !== state.player) return;
   const cap = civ.capitalId ? state.colonies[civ.capitalId] : colonies(state)[0];
   if (!cap) return;
-  const warships = fleets(state).filter((f) => f.ships.some((x) => (SHIP_BY_ID[x.cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[x.cls]?.settles));
-  const strength = warships.reduce((a, f) => a + f.ships.reduce((b, x) => b + (SHIP_BY_ID[x.cls]?.attack ?? 0), 0), 0);
+  const warships = fleets(state).filter((f) => f.ships.some((x) => isWarship(x.cls)));
+  const force = warships.reduce((a, f) => a + f.ships.reduce((b, x) => b + strength(x.cls, 'settlements'), 0), 0);
   for (const sv of Object.values(state.survivors)) {
     if (!sv.alive || !sv.contact) continue;
     if (sv.war) {
@@ -565,8 +565,8 @@ function planWar(state: GameState) {
       continue;
     }
     if (!warCause(state, sv)) continue;
-    if (strength >= warDefence(state, sv) * 2 && warBlocked(state, sv) === null && civ.accord >= WAR_ACCORD + ACCORD_KEEP) declareWar(state, sv.id);
-    else if (strength < warDefence(state, sv) * 2 && (cap.structures.shipyard ?? 0) > 0 && cap.queue.length < 3 && civ.energy > 120) queueBuild(state, cap.id, 'ship', 'warden');
+    if (force >= warDefence(state, sv) * 2 && warBlocked(state, sv) === null && civ.accord >= WAR_ACCORD + ACCORD_KEEP) declareWar(state, sv.id);
+    else if (force < warDefence(state, sv) * 2 && (cap.structures.shipyard ?? 0) > 0 && cap.queue.length < 3 && civ.energy > 120) queueBuild(state, cap.id, 'ship', 'warden');
   }
 }
 
