@@ -2009,3 +2009,32 @@ harness games prove it.
   checks copy states with `copyState`; `burst-reach` reads its report by civilization;
   `browser/save-all` expects `civs` in a saved game; the hand-made fleets in `attack`, `hunt` and
   `settled` have owners.
+- **The JavaScript checks** (34 browser checks and the playtest) read the civilization's lists
+  too (74 references): the codemod had followed tsc, which does not read them.
+
+## Owners everywhere (13 Oct, part 2a-1)
+
+Every rule that still took "ours" for granted now asks whose, so that every civilization can play
+by it. With one civilization nothing changes in play.
+
+- **Time is the player's.** The clock (the pace, the flares and new stars kept time with) is read
+  from the player whoever's part of the turn it is, so everyone lives the same turn.
+- **The swarms meet each civilization by its own rules.** They go for anyone's ships stopped at
+  their star and hunt anyone's nearby, strike each one's settlements by its own defence (the
+  player's first), spare a civilization under Communion and hide one under its Blackout. A tamed
+  swarm works for whoever tamed it; salvage goes to whoever fought. Each hears of its own losses
+  in its own Record, and news of a swarm goes to whoever knows the star.
+- **Each its own.** A lost settlement takes its own civilization's capital; every action acts only
+  on the actor's own settlements and fleets; a decoy beacon is fed and put out by whoever lit it;
+  each civilization builds its own Deep beside another's, where its evacuees, its vaults at the
+  end of matter and its settlers go; each sees to its own settlements when a world falls, boils
+  or is flung loose.
+- **The Long Flow** comes once, for the universe (each dig kept by its own civilization's mods),
+  and every civilization hears of it.
+- **The player's alone:** events (each now has a scope; none is marked for everyone yet), the
+  Aeon Seed, a survey's ruins, sleepers and finds, the Unlit's gestures and the Forks; another
+  civilization's research never falls back on a deliberate choice such as Halo Siphons.
+- **Checks:** `unit/civ-turns` gains the swarms (every civilization's ships hunted, Communion
+  sparing only its own, a tamed swarm working for its tamer, each told in its own Record) and the
+  Deep. Its second civilization now lives in another reach, as the others will: set down next
+  door, the two civilizations' warmth drew both reaches' swarms onto them both, and both fell.

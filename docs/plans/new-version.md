@@ -6,7 +6,8 @@ the new version is ready (see "How it ships"). Progress is in docs/SESSION-NOTES
 
 **Where it stands** (13 Oct): Part 0 done and live; the foundation (its own storage) done; 1a (young
 dwarfs) done; 1b waits for the player's word on the proposal (SESSION-NOTES, 13 Oct); 2a-0 (one
-rulebook) done, the 900 games identical; next, 2a.
+rulebook) and 2a-1 (owners everywhere) done, the 900 games identical; next, 2a-2 (the steps of 2a
+are under "2a, as it is being built").
 
 ---
 
@@ -394,6 +395,39 @@ playing.
   - It keeps the `seed N: OUTCOME … fate X` lines that `tally.sh` and the comparison script
     read.
   - The balance reference starts again here.
+
+### 2a, as it is being built (13 Oct, added while building it)
+
+Part 2a in steps, each validated and pushed on its own, so the harness can tell what moved what:
+
+1. **2a-0, one rulebook** (done): the civilizations, the pointer, owners, flags, `asCiv` and its
+   guard, each one's own dice, the outbox, the turn and the crossings in parts. 900 games
+   identical.
+2. **2a-1, owners everywhere** (done): the clock the player's; the swarms by each one's charters,
+   defence and Record; actions on one's own only; beacons, the Deep, the Long Flow, events' scope;
+   the minds, ruins and finds the player's. Nothing changes with one civilization.
+3. **2a-2, the others become civilizations.** Each neighbour gets a Civ of its own (same id as its
+   Survivor record), from its hashed stream after everything else is generated: its capital on
+   the world it lives on today (`survivorWorld`), people of its way, a start like ours scaled by
+   its `pop` and `health`, the structures its way needs (a garden with no world Kin can live on
+   gets domes and warrens), a probe and an escort. It plays every turn: the autoplayer under its
+   own perspective at the start of its part, then the same parts as ours. Its Survivor record
+   stays as the relation and the identity, with `pop`, `health`, `systems` and `alive` now read
+   from its real civilization each turn (no more abstract drains or claims for it), so that
+   today's messages, pleas, raids, trades and pacts keep their meaning on real numbers. A
+   `civsAsleep` switch keeps them from playing, for checks that must not drift. The harness's
+   baseline starts again here, with each civilization's outcome printed.
+4. **2a-3, relations**: regard, memory, pacts, war, beams, news and proposals per pair; the
+   relationship keys in `civ.flags` move there; between AIs, regard, pacts, war and news.
+5. **2a-4, seen at light speed**: their settlements and fleets on our map once their light
+   reaches our capital, in their colour; the views, prompts and hover filtered by owner; the card
+   shows the age of what we know.
+6. **2a-5, minds of their own**: per-way strategies and temperament, plight, the Lattice's
+   insight and accord with the Search Foundry and Protocol Registry (and the Lattice-led strategy
+   in the harness to tune them), AIs' Forks rejoining the world as people, the event whitelist,
+   each civilization's homeworld.
+7. **2a-6, the checks and the numbers**: the rewritten and new checks listed above, the harness
+   by civilization, the balance reference.
 
 ### 2b. The Hunger in civilizations, and diplomacy
 

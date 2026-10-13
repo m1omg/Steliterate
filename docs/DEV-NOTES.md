@@ -261,6 +261,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **The browser checks are read from the tree as the suite reaches them**: editing one while the
   suite runs against an older build fails it for nothing (13 Oct, `save-all` against the
   foundation build). Edit them before building, or after the suite.
+- **tsc does not read the JavaScript checks** (`tools/checks/browser/*.cjs`, `tools/playtest.cjs`):
+  a change to the state's shape must be made there by hand. 13 Oct: the one-rulebook codemod
+  followed tsc's errors, and 74 references in 34 browser checks still read `s.pending` and the
+  rest; most browser checks failed at once against the new build. Grep them after any such change.
 - **Generation changes** must keep RNG consumption the same (pick from the already-shuffled
   order), or every seed's galaxy changes.
 - **Harness blind spots:** the autoplayer never raids, asks for aid or picks tracks, so those
@@ -397,11 +401,22 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     one's catchers bank.
   - `tellOfWorld` (`turn.ts`): a world's steam, freezing and death are told to whoever lives there
     as its loss, and as news to whoever surveyed it (`logTo`, `sim/util.ts`).
-  - Still the player's, for part 2a to give everyone: the swarms' hunting and strikes, the
-    defence counted against them, Communion and Blackout, `destroyColony`'s capital and log, the
-    Long Flow's arrival (`comes`) and the end of matter's news, the Deep (one per system),
-    `migrateToBlackHoles` (merges into whoever holds the hole), the events (no `scope` yet), the
-    light neighbours and the claims.
+  - **Owners everywhere** (part 2a-1): the clock is the player's (`clockCiv`, `flare.ts`, read
+    whoever's part it is); the swarms take each civilization's mods (`swarmsHunt` and
+    `updateHunger` take `ModsBy`: one `Mods`, or a function of the civilization's id), go for
+    anyone's ships and strike each one's settlements by its own defence (`defenseAt(…, owner)`),
+    spare a civilization under Communion (`communes`), and tell each of its own (`logTo`,
+    `tellKnown`); `Swarm.tamedBy`, `Swarm.preyOwner`; `destroyColony` takes the owner's capital
+    and Record; `ownColony` and `ownFleet` (`sim/util.ts`) in every action; `StarSystem.beaconBy`
+    (`beaconOwner`, `beacons.ts`); `deepFor(state, sys, owner)` (`fleets.ts`): a civilization's
+    own Deep, a new one built beside another's; `flowComes` (`flow.ts`): the Long Flow comes once
+    for the universe, `theLongFlow` tells each; `EventDef.scope` ('everyone', else the player's
+    alone; `forThisCiv` in `sim/events.ts`). The player's alone: the Aeon Seed, a survey's ruins,
+    sleepers and finds, the Unlit's gestures, the Forks, and research's fallback onto `noAuto`.
+  - Still for part 2a: the light neighbours and the claims (they become civilizations), an
+    `EventDef.scope` whitelist, each civilization's homeworld (the `homeworld` trait is the
+    player's: an AI's capital world must not carry it, or `handleNotes` tells the player of its
+    fall), the tempo strain read from the player's pace, an AI's Fork rejoining the world as people.
   - Checks: `unit/civs` (the pointer, the save format, owners, `asCiv`, the guard, the streams,
     the outbox), `unit/civ-turns` (a second civilization, played by the autoplayer under its own
     perspective, lives a whole Dusk and the Last Light beside ours under the guard),

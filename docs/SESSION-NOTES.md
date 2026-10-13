@@ -517,7 +517,11 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - one rulebook (part 2a-0): the civilizations, the pointer, owners, flags, `asCiv` and its guard,
     each one's own dice, the outbox, the turn and the crossings in parts. All 900 harness games
     identical, line for line; the second civilization in `unit/civ-turns`, played by the
-    autoplayer under its own perspective, lives a whole Dusk beside ours with nothing crossing over.
+    autoplayer under its own perspective, lives a whole Dusk beside ours with nothing crossing over;
+  - owners everywhere (part 2a-1): the clock the player's, the swarms by each one's own charters
+    and defence, actions on one's own only, beacons, the Deep, the Long Flow, events' scope, the
+    minds and finds the player's. With one civilization nothing changes in play;
+  - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home
     to the Heart (the Heart's neighbours, seen on arrival anyway), 14 within 6,000 ly; the proposal
