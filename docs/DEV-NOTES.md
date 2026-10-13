@@ -94,7 +94,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -449,8 +449,20 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     time too (`project`, `travelEstimate` and `planFlow` read `clockCiv`).
   - The interface takes a settlement for ours only if it is (`ownColony`: the Drawer, the world
     strip and list, the lists' chips, the magnifier's build key, the labels, hover); the views
-    already walked ours only. Their settlements and fleets on our map at light speed are part
-    2a-4.
+    already walked ours only.
+  - **Relations** (part 2a-3): `Survivor.marks` (`marks(sv)` to write, `sv.marks?.key` to read, so
+    that a read never adds anything to a save); the neighbours' records are our relations, so
+    `jointIncome` counts for us alone. `jointYield` (`survivors.ts`): a shared work's field
+    gathers its star's light. `ARCHIVE_SHARE` (`pacts.ts`): Open Archives with a real neighbour.
+    `sim/ties.ts`: a `Tie` (`state.ties`, by `a|b`) holds each one's regard (`baseRegard`:
+    `AFFINITY` and the seed; drifting back by `DRIFT`), pacts, a proposal and its answer, beams
+    and marks; `planTies` (another civilization's part, from `planPacts`), `tiesTurn` (between
+    the parts, after the neighbours', then the outbox), `tieCost`, `watchPartners`
+    (`defenseAt`), `heardTies` (the card), `state.tidings` (what we hear, at light speed). The
+    outbox carries `accord` and `insight`; `civ.flags.last_insight` is what another civilization
+    learned last turn.
+  - **Seen at light speed** (part 2a-4): `Colony.foundedAt`; `settlementSeen`, `asSeen` and
+    `Survivor.seen` (`others.ts`); the system view, `residentsSeen` and the card read them.
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not

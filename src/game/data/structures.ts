@@ -50,6 +50,8 @@ export interface StructureDef {
   warms?: boolean; // keeps a living world warm after its star has gone
   gfeDrain?: number; // unsustainable
   enables?: string; // conversion / action key
+  /** Industry turned into insight or accord where the Lattice runs it: up to `draw` points a turn each, at `rate` (economy.ts). */
+  search?: { draw: number; rate: number; into: 'insight' | 'accord' };
   terraform?: 'mirrors' | 'works' | 'seeding'; // terraforming (sim/terraform.ts): its rules and effects live there
 }
 
@@ -88,6 +90,8 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'upload_clinic', name: 'Upload Clinic', desc: 'Where Kin become Echoes. Some call it a door, some a grave.', era: 'dusk', tech: 'upload', cost: 60, matter: 15, max: 1, enables: 'upload', signature: 0.5 }),
   S({ id: 'confluence_node', name: 'Confluence Node', desc: 'A chamber where minds merge.', era: 'dusk', tech: 'mind_merging', cost: 70, matter: 20, max: 3, cap: { chorus: 3 }, enables: 'merge', upkeep: 0.5, signature: 1 }),
   S({ id: 'lattice_foundry', name: 'Lattice Foundry', desc: 'Replicator beds that build and repair without anyone asking.', era: 'dusk', tech: 'autonomous_replicators', cost: 80, matter: 30, max: 3, cap: { lattice: 6 }, enables: 'lattice', signature: 2 }),
+  S({ id: 'search_foundry', name: 'Search Foundry', desc: 'The Lattice set to brute-force and evolutionary search: it tries everything, keeps what works, and turns industry into insight at a poor rate. Needs the Lattice here to run it.', era: 'dusk', tech: 'autonomous_replicators', cost: 60, matter: 25, max: 2, search: { draw: 8, rate: 0.25, into: 'insight' }, upkeep: 0.5, signature: 1.5 }),
+  S({ id: 'protocol_registry', name: 'Protocol Registry', desc: 'Every agreement the Lattice is bound by, kept to the letter and enforced on itself: industry turned into accord. Needs the Lattice here to run it.', era: 'dusk', tech: 'autonomous_replicators', cost: 50, matter: 15, max: 1, search: { draw: 6, rate: 0.1, into: 'accord' }, upkeep: 0.3, signature: 0.5 }),
   S({ id: 'defense_grid', name: 'Defense Grid', desc: 'Point-defence lasers and a web of kinetic mines.', era: 'dusk', tech: 'orbital_defense', cost: 50, matter: 20, max: 2, defense: 8, signature: 1 }),
   S({ id: 'stellar_lifter', name: 'Stellar Lifter', desc: 'Magnetic funnels that pull matter out of the star itself. Fast, and ruinous over time.', era: 'dusk', tech: 'stellar_lifting', cost: 150, matter: 40, max: 1, systemUnique: true, bodies: ['deep'], primaries: ['red_dwarf', 'blue_dwarf', 'white_dwarf', 'brown_dwarf', 'black_dwarf'], lift: 7, gfeDrain: 0.0015, signature: 4 }),
   S({ id: 'relic_dig', name: 'Relic Excavation', desc: 'Careful work in the ruins of someone older.', era: 'dusk', cost: 45, matter: 10, max: 1, insight: 4, signature: 0.3 }),

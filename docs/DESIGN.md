@@ -128,7 +128,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | **Kin** | The original biological people | Industry, insight, accord | Heavy upkeep; fixed clock; need living worlds, domes or warrens |
 | **Echoes** | Uploaded minds on substrate | Insight, low upkeep, can slow | Need substrate; drift |
 | **Chorus** | Many minds merged into one | Industry, insight, accord | Harder to slow; unsettles others |
-| **Lattice** | Self-maintaining processes that ask for nothing; everyone assumes no one is inside, and the game only ever hints otherwise | Huge industry, strain-immune | No insight; matter upkeep; the other Threads resent it |
+| **Lattice** | Self-maintaining processes that ask for nothing; everyone assumes no one is inside, and the game only ever hints otherwise | Huge industry, strain-immune | Little insight or accord of its own (0.3 and 0.1; a Search Foundry and a Protocol Registry turn its industry into more, at poor rates); matter upkeep; the other Threads resent it |
 | **Coldminds** | Minds in vaults near 0 K | Almost free to keep, extreme clocks | Low output; need Cold Vaults |
 
 * Conversions: Upload (Kin to Echo), Merge (two Echoes to a Chorus), Cool (Echo to Coldmind,

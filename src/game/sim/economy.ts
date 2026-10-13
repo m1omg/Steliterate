@@ -240,7 +240,9 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     energyUpkeep += up;
     // a collector with nothing to collect says so, rather than vanishing from the list
     const idle = away || (!!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion');
-    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${away ? ': out of reach, its world drifted loose from the star' : idle ? ': nothing to gather' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
+    // a Search Foundry or Protocol Registry with no Lattice here to run it says so too
+    const unrun = !!d.search && !(c.pops.lattice > 0);
+    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${away ? ': out of reach, its world drifted loose from the star' : idle ? ': nothing to gather' : unrun ? ': no Lattice here to run it' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
   }
   if (matterBurn > 0) lines.push({ label: 'Fuel burned', matter: -matterBurn });
 
@@ -260,6 +262,20 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   insight *= ctx.mods.insightMult * focusMul(c, 'insight');
   accord *= focusMul(c, 'accord');
   if (flags.has('charters')) accord += dormant ? 0 : 0.25;
+  // the Lattice's search and registry turn industry into insight and accord, where the Lattice is here to run them
+  if (c.pops.lattice > 0) {
+    for (const [id, n] of Object.entries(c.structures)) {
+      const d = STRUCTURE_BY_ID[id];
+      if (!d?.search || !n) continue;
+      const take = Math.min(industry, d.search.draw * n * out);
+      if (!(take > 0)) continue;
+      industry -= take;
+      const made = take * d.search.rate * (d.search.into === 'insight' ? ctx.mods.insightMult : 1);
+      if (d.search.into === 'insight') insight += made;
+      else accord += made;
+      lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}: industry into ${d.search.into}`, industry: -take, ...(d.search.into === 'insight' ? { insight: made } : { accord: made }) });
+    }
+  }
 
   const y: YieldBreakdown = {
     energy,

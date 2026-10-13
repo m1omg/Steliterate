@@ -56,9 +56,12 @@ const ACCORD_HEAR_BELOW = 35;
 // the same decisions as ours, and where its way of life needs others (wayOf), those, for it alone,
 // so that our own autoplayer, and the harness's numbers, stay what they were.
 
-/** Another civilization's way of life (others.ts); null for ours, which the autoplayer plays as it always has. */
+/** The way our own autoplayer plays in this call: none, as it always has, or for the 'lattice' strategy, the Lattice's. */
+let ourWay: SurvivorWay | null = null;
+
+/** Another civilization's way of life (others.ts); for ours, the strategy's (ourWay), null as it always was. */
 function wayOf(state: GameState): SurvivorWay | null {
-  return state.civ.id === state.player ? null : (state.survivors[state.civ.id]?.way ?? null);
+  return state.civ.id === state.player ? ourWay : (state.survivors[state.civ.id]?.way ?? null);
 }
 
 /**
@@ -84,8 +87,15 @@ const WAY_SETTLERS: Record<SurvivorWay, string[]> = {
   fork: ['seedcore', 'ark', 'spore'],
 };
 
-/** 'warlike' plays as 'competent', and also wages the wars worth waging (for the harness: does war pay?). */
-export type Strategy = 'competent' | 'passive' | 'warlike';
+/**
+ * 'warlike' plays as 'competent', and also wages the wars worth waging (for the harness: does war pay?).
+ * 'lattice' plays as 'competent' led by the Lattice, as the Tessellate plays, and builds only the
+ * Archive of Everything (for the harness: is the Quiet Lattice within reach, and no easier than the rest?).
+ */
+export type Strategy = 'competent' | 'passive' | 'warlike' | 'lattice';
+
+/** What a Lattice-led player learns first: the Lattice itself, and as soon as it can, the Archive's theory. */
+const LATTICE_FIRST = ['autonomous_replicators', 'archive_theory'];
 
 const TECH_PRIORITY = [
   'energy_storage', 'magnetospherics', 'the_long_record', 'orbital_collectors', 'survey_optics', 'mind_substrate', 'fusion_drives', 'hardy_lineages',
@@ -123,7 +133,8 @@ function pickResearch(state: GameState) {
     // with a swarm near, it learns to defend itself first)
     const mine = civ.id === state.player;
     const guard = !mine && avail.has('orbital_defense') && colonies(state).some((c) => swarmThreat(state, c.systemId)) ? 'orbital_defense' : undefined;
-    const next = guard ?? TECH_PRIORITY.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
+    const order = mine && ourWay === 'lattice' ? [...LATTICE_FIRST, ...TECH_PRIORITY] : TECH_PRIORITY;
+    const next = guard ?? order.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
     if (!next) break;
     setResearch(state, next);
   }
@@ -261,6 +272,8 @@ function planBuilds(state: GameState) {
       // room for its own: a Chorus with Echoes to gather, a Lattice that has filled its beds
       if (hasTech(state, 'mind_merging') && c.pops.chorus >= capc.chorus - 1 && c.pops.echoes >= 2) plan.push('confluence_node');
       if (hasTech(state, 'autonomous_replicators') && c.pops.lattice >= capc.lattice - 1) plan.push('lattice_foundry');
+      // the Tessellate's own thinking and its agreements, where it has the Lattice to run them
+      if (way === 'lattice' && c.pops.lattice >= 4) plan.push('search_foundry', 'protocol_registry');
       // a swarm near: defences first
       if (swarmThreat(state, c.systemId)) plan.unshift('defense_grid');
     }
@@ -540,7 +553,8 @@ function planPace(state: GameState) {
 function planWorks(state: GameState) {
   const civ = state.civ;
   if (civ.work) return;
-  for (const id of ['aeon_seed', 'hibernal_cascade', 'archive_of_everything', 'confluence', 'garden_of_embers']) {
+  const order = civ.id === state.player && ourWay === 'lattice' ? ['archive_of_everything'] : ['aeon_seed', 'hibernal_cascade', 'archive_of_everything', 'confluence', 'garden_of_embers'];
+  for (const id of order) {
     const w = WORK_BY_ID[id];
     if (!hasTech(state, w.tech) || !inAge(state, w.eras)) continue;
     if (!workRequirementMet(state, id)) continue;
@@ -549,6 +563,7 @@ function planWorks(state: GameState) {
 }
 
 export function autoPlay(state: GameState, strategy: Strategy) {
+  ourWay = strategy === 'lattice' && state.civ.id === state.player ? 'lattice' : null;
   if (strategy === 'passive') {
     if (!state.civ.researching) {
       const t = availableTechs(state).sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];

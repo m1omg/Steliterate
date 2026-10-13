@@ -2101,3 +2101,66 @@ stand stays its record, read from its civilization every turn.
   with the neighbours asleep. `browser/terraform`'s hand-made settlement has an owner (since 2a-1
   every action acts only on the actor's own); `browser/swarm-click` waits for the system view
   rather than a fixed 3 s (on a loaded machine the fade took longer).
+
+## Relations (13 Oct, part 2a-3)
+
+What passes between civilizations is kept where it belongs and grounded in what is really
+there, and the others now deal with each other.
+
+- **Our dealings with a neighbour are kept in its record** (`Survivor.marks`): when it may offer a
+  trade or a shared work again and how often we refused, a shared work built, its raids on us,
+  Mutual Aid paid each way, the Choir's wish, the Tessellate's breaches, a plea against the Hunger.
+  Until now they were our flags, named by its id. Nothing changes in play (40 games with the
+  neighbours playing and 30 asleep, line for line).
+- **A shared work gathers starlight.** The joint collector field sits around their star and
+  gathers its light, up to a red sun's: it fades as the star does and gives nothing in the dark.
+  Before, it gave a flat 6 a turn for as long as they endured. This holds for every neighbour,
+  light or real.
+- **Open Archives with a real neighbour** shares 3% of what it really learns a turn, and its notes
+  only on research it knows.
+- **The others among themselves** (`sim/ties.ts`):
+  - Each pair's regard begins from how their ways see each other and from the seed, never the
+    dice. Kin and kin, minds and minds, the Lattice and the Lattice think well of each other; the
+    Chorus unsettles the rest. Regard drifts back slowly and moves with what passes between them.
+  - They make the pacts we can make (Open Archives, Mutual Aid, Shared Watch):
+    - proposed and answered in each one's own turn, at the speed of light both ways;
+    - paid in each one's own accord, and sealed when the answer is home; a refusal gives the
+      proposer's accord back;
+    - real in effect through the outbox: a part of what each learns, energy beamed to a partner
+      in trouble (seen at light speed, the beam as long again), a little strength against the
+      Hunger.
+  - We hear of a pact between two others when its light reaches our capital. A neighbour's card
+    lists the pacts with others that we have heard of.
+- **Checks:** `unit/ties` (new); `unit/others` gains a shared work by its star's light, and Open
+  Archives by what a real neighbour learns and knows.
+
+## Seen at light speed (13 Oct, part 2a-4)
+
+- **Their settlements:** the system view draws every settlement of a neighbour's at a star we
+  can see, in its colour, once the light of its founding has reached our capital
+  (`Colony.foundedAt`, `settlementSeen`). Labels and the world's panel name it only then.
+- **Their size:** a neighbour's card shows its people as its light left it, kept a turn at a time
+  until a later one has reached us (`Survivor.seen`, `asSeen`), and says how old that light is.
+- **Their stars** were already seen at light speed (`seenThere`).
+- **Check:** `unit/others` gains a neighbour seen as its light left it, and a new settlement seen
+  only once its light arrives.
+
+## The Lattice thinks a little (13 Oct, part 2a-5)
+
+The player's choice, for everyone: until now the Lattice made neither insight nor accord, so a
+civilization led by it, as the Tessellate is, could research only through others, and could
+never pay for a pact or a law of its own.
+
+- **The Lattice Thread** yields 0.3 insight and 0.1 accord a Lattice (brute-force search,
+  agreements kept to the letter).
+- **A Search Foundry** (Autonomous Replicators) sets the Lattice to brute-force and evolutionary
+  search: it turns up to 8 industry a turn into insight at 4 to 1. **A Protocol Registry** turns up
+  to 6 industry a turn into accord at 10 to 1. Both scale with the settlement's output, as every
+  work does, and run only where a Lattice is; without one the panel says "no Lattice here to run
+  it".
+- **The Tessellate** builds both where it has four Lattice or more.
+- **The harness** gains a Lattice-led strategy (`tools/sim.ts 300 standard lattice`): it plays as
+  `competent` but led by the Lattice, as the Tessellate plays (Lattice Foundries and Spores, no
+  substrate or Cold Vaults, Autonomous Replicators first and Archive Theory as soon as it can), and
+  builds only the Archive of Everything.
+- **Check:** `unit/lattice-search` (new).
