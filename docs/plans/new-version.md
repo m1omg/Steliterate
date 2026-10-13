@@ -713,6 +713,27 @@ Each step validated on its own, with the harness by fate:
      that drains least a decade. 900 games: 530 / 219 (431 / 133 before the Passage).
 5. **Checks:** `unit/passage`; the reserve after matter in it (Field Stores carried over).
 
+### 3-4, as it will be built (13 Oct, written before starting it)
+
+1. **Leaving a hole:** a leptonic settlement at a black hole can drift to another (an action on its
+   panel, a turn and some energy), to a hole we know with spin left; it joins our vault there only
+   if it is of its own form. The autoplayer leaves a hole drained of spin, or one that will
+   evaporate within a few turns, for the best hole it knows. Before, a vault stayed at its hole,
+   drained or gone, for good: the Black Hole Age's promised rhythm, "move as small holes
+   evaporate", had no way to happen.
+2. **The Horizon form** (speculative, and the Codex says so: a horizon holds more than anything
+   else of its size, and time runs slowest at its edge): a leptonic settlement in a hole's Deep can
+   write itself into the horizon, a project like the Passage, after a Black Hole Age tech of the
+   mind. There its minds cost a tenth of their upkeep and think at a quarter of their pace (a turn's
+   work a quarter as much), and room grows with the hole's mass. It is bound to its hole: it cannot
+   leave it, and when the hole evaporates its minds pass to our vault at a larger hole as far as it
+   has room, or are written back out as leptonic (half the Lattice lost, as ever) and drift; with
+   no hole left, they are lost in the final burst. At the Last Horizon, with no holes in the Dark
+   Era, every horizon settlement is written back out as leptonic.
+3. **The autoplayer** writes into the horizon where its reserve would not last the age at its
+   pace and the hole will outlive it; leaves it as above.
+4. **Checks:** `unit/horizon-form`; the harness by fate.
+
 ### 3a. Ways of existence
 
 Each settlement has a **form**, `Colony.form`. The form decides who can live there, what feeds
