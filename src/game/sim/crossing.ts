@@ -3,6 +3,7 @@ import { ERA_BY_ID, ageIntro, crossingName, eta, nextEra, tideLength } from '../
 import { calendarEra, fateKnown, fateOf } from '../fate';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import { TECH_BY_ID } from '../data/techs';
+import { THREAD_DEFS } from '../data/threads';
 import type { Colony, CrossingReport, EraId, GameState } from '../types';
 import { THREADS } from '../types';
 import { evaporateHole } from '../physics';
@@ -22,9 +23,9 @@ function isHole(kind: string | undefined): boolean {
   return kind === 'black_hole' || kind === 'smbh';
 }
 
-/** Whether anything standing at a settlement outlasts matter (Leptonic Substrate, a Leptonic Confluence, a Bastion Shell). */
-function decayProof(c: Colony): boolean {
-  return Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof);
+/** Whether a settlement outlasts matter: it made the Passage (it is leptonic), or something decay-proof stands there (Leptonic Substrate, a Leptonic Confluence, a Bastion Shell). */
+export function decayProof(c: Colony): boolean {
+  return formOf(c) === 'leptonic' || Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof);
 }
 
 function hasStarlessSource(state: GameState, c: Colony): boolean {
@@ -112,7 +113,7 @@ function toAll(lines: Reports, line: CrossingReport['lines'][number]) {
 }
 
 /** A crossing's protocols, if this civilization has them: they halve its losses (as they say). */
-function protocolsMult(state: GameState, era: EraId): number {
+export function protocolsMult(state: GameState, era: EraId): number {
   const protocols = PROTOCOLS[era];
   return protocols && state.civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1;
 }
@@ -228,22 +229,33 @@ function endOfMatter(state: GameState, ids: readonly string[], mods: Record<stri
   state.flags.matter_gone = state.turn;
 }
 
+/** Who was at a settlement as it was lost, for the report: " (3 Kin, 2 Echoes)", or nothing for one empty. */
+function whoWasThere(c: Colony): string {
+  const parts = THREADS.filter((t) => c.pops[t] > 0).map((t) => `${c.pops[t]} ${c.pops[t] === 1 ? THREAD_DEFS[t].one : THREAD_DEFS[t].name}`);
+  if (c.cryo > 0) parts.push(`${c.cryo} asleep`);
+  return parts.length ? ` (${parts.join(', ')})` : '';
+}
+
 /** The share of the minds the protocols carry from a settlement still made of matter onto leptonic substrate, as far as there is room for them. */
 export const CARRIED = 0.35;
 
 /**
- * A settlement on decay-proof substrate at the end of matter: it goes on as leptonic
- * (data/forms.ts), keeping only what is
- * decay-proof and, at a black hole, what is kept there (a Horizon Vault's charge is its hole's
- * spin); what is under way stays only if it is decay-proof too. Its Kin and their sleepers, made of
- * matter, are gone, and re-encoding the Lattice costs half of it (`mult` of that, under the
- * protocols), once. Returns how many were lost.
+ * A settlement that outlasts matter, at its end: it goes on as leptonic (data/forms.ts). One that
+ * made the Passage keeps all it has (everything there has a leptonic form); one that did not keeps
+ * only what is decay-proof and, at a black hole, what is kept there (a Horizon Vault's charge is
+ * its hole's spin). What is under way stays only if it would be kept too. Its Kin and their
+ * sleepers, made of matter, are gone, and re-encoding the Lattice costs half of it (`mult` of
+ * that, under the protocols), once. Returns how many were lost.
  */
 function goLeptonic(state: GameState, c: Colony, mult: number): number {
   const was = formOf(c) === 'leptonic';
   const atHole = isHole(state.systems[c.systemId]?.primary.kind);
-  for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]?.decayProof && !(atHole && STRUCTURE_BY_ID[k]?.keptAtHole)) delete c.structures[k];
-  c.queue = c.queue.filter((q) => q.kind === 'structure' && STRUCTURE_BY_ID[q.key]?.decayProof);
+  const keeps = (id: string) => {
+    const d = STRUCTURE_BY_ID[id];
+    return !!d && (!!d.decayProof || (atHole && !!d.keptAtHole) || (was && !!d.leptonic));
+  };
+  for (const k of Object.keys(c.structures)) if (!keeps(k)) delete c.structures[k];
+  c.queue = c.queue.filter((q) => q.kind === 'structure' && keeps(q.key));
   let lost = c.pops.kin + c.cryo;
   c.pops.kin = 0;
   c.cryo = 0;
@@ -270,6 +282,7 @@ function leftOnSubstrate(state: GameState, mods: Mods, lines: CrossingReport['li
   for (const c of cs) if (decayProof(c)) lost += goLeptonic(state, c, crossingMult);
   // then what does not: through the protocols, a share of its minds onto what goes on, as far as it has room for them
   const room = cap && crossingMult < 1 ? capacity(state, cap, mods) : null;
+  const named: string[] = [];
   for (const c of cs) {
     if (decayProof(c)) continue;
     if (cap && room) {
@@ -282,8 +295,10 @@ function leftOnSubstrate(state: GameState, mods: Mods, lines: CrossingReport['li
       }
     }
     lost += popsOf(c) + c.cryo;
+    named.push(`${c.name}${whoWasThere(c)}`);
     destroyColony(state, c, how === 'decayed' ? 'dissolved with the protons' : 'evaporated with the rest of matter');
   }
+  if (named.length) lines.push({ text: `Lost with the matter they were made of: ${named.length > 8 ? `${named.slice(0, 8).join('; ')}; and ${named.length - 8} more` : named.join('; ')}.`, kind: 'bad' });
   // what does not fit on the new substrate is lost
   for (const c of colonies(state)) {
     const capc = capacity(state, c, mods);

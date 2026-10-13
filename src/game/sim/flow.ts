@@ -14,7 +14,7 @@ import { fateOf, matterGone } from '../fate';
 import { strainFor, type Mods } from './mods';
 import { destroyColony } from './fleets';
 import { queueEvent } from './events';
-import { colonies, log, popsOf } from './util';
+import { colonies, formOf, log, popsOf } from './util';
 
 /** When the Long Flow comes (η): iron's tunnelling time, 10^65 years. */
 export const FLOW_ETA = 65;
@@ -53,8 +53,9 @@ export function keeping(c: Colony, logL: number, mods: Mods, slowOrders = 0): Ke
   return awake ? 'watched' : 'unmanned';
 }
 
-/** What flows first at a settlement no one keeps: the cheapest structure, Cryo Halls last; leptonic ones never. */
+/** What flows first at a settlement no one keeps: the cheapest structure, Cryo Halls last; leptonic ones never (nor anything at a settlement that made the Passage). */
 export function nextToFlow(c: Colony): string | null {
+  if (formOf(c) === 'leptonic') return null;
   const ids = Object.keys(c.structures).filter((id) => (c.structures[id] ?? 0) > 0 && STRUCTURE_BY_ID[id] && !STRUCTURE_BY_ID[id].decayProof);
   if (!ids.length) return null;
   const last = (id: string) => (id === 'cryo_hall' ? 1 : 0);

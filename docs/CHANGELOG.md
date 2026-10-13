@@ -2606,3 +2606,32 @@ somewhere ("Without matter for repairs") and none ever grew: twenty Lattice last
   Long Thought's (decay 7 to 10, curvature 6 to 12). Our autoplayer never goes for the Quiet
   Lattice; the Tessellate finishes the Archive of Everything in 194 games of 558 (190).
 - **Validated** (3-1 and this together): 68 unit checks, the playtest and 53 browser checks pass.
+
+## The Passage (13 Oct, part 3-2)
+
+A settlement can now be rewritten whole, before matter ends, instead of only building Leptonic
+Substrate and losing everything else at the end.
+- **Some structures have a leptonic form** (`StructureDef.leptonic`): Energy Vaults are Field
+  Stores there and Deep Storage Rings Deep Field Stores (where the reserve lives after matter);
+  Substrate Cores (Leptonic Cores), Cold Vaults, Lattice Foundries (Field Foundries) and Confluence
+  Nodes house the same minds; Burst Catchers, Horizon Vaults, Penrose Harvesters, Hawking
+  Collectors, the Search Foundry and Protocol Registry, Defence Grids and the Dark Era's structures
+  work as before. Mines, domes, collectors, plants, foundries and shipyards are matter.
+- **Begin the Passage** (a settlement's Overview, once the end of matter can be foreseen and
+  Leptonic Computation is known; it asks once more): a project in its queue, 40 industry and 15 for
+  each structure that crosses over, 5 energy for each structure there paid at once (given back if
+  it is taken off). While it is worked the settlement makes 70% of its energy, matter, insight and
+  accord. Done, the settlement is leptonic: what has a leptonic form crosses over, the rest is taken
+  apart with its matter back, its Kin and sleepers go into the archive (20 insight each), and the
+  Lattice re-encodes at half (a quarter under the protocols). From then on it builds only what has
+  a leptonic form, and nothing there flows.
+- **At the end of matter** a settlement that made the Passage keeps all it has, the Field Stores
+  and the reserve they hold too; one that only built Leptonic Substrate keeps only that, as before;
+  the rest are lost, and the report names each one with who was in it ("Lost with the matter they
+  were made of: …"). A settlement founded after matter is leptonic.
+- **The autoplayer** begins it at a settlement where its own industry finishes it before the end
+  with three turns to spare, and no sooner (what it takes apart gives nothing after); nothing else
+  is built there meanwhile, and no substrate is needed.
+- **Checks:** `unit/passage` and `browser/passage` (new); `unit/invariants` accepts a leptonic
+  settlement on a world that is gone.
+

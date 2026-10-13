@@ -34,7 +34,8 @@ import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { FORTIFY_BONUS, canSettle, fleetUpkeep, launchCost, travelEstimate } from './sim/fleets';
-import { allColonies, allFleets, capital, colonies, distLy, eraIndex, fleets, hasTech, leftBehind, popsOf, swarmSeenAt, temperament, threadTotals } from './sim/util';
+import { allColonies, allFleets, capital, colonies, distLy, eraIndex, fleets, formOf, hasTech, leftBehind, popsOf, swarmSeenAt, temperament, threadTotals } from './sim/util';
+import { beginPassage, endForeseen, passageTerms, turnsToEndOfMatter } from './sim/passage';
 import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, ThreadId, War } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
@@ -469,6 +470,23 @@ function planDismantle(state: GameState) {
   }
 }
 
+/** Turns to spare when the autoplayer begins a settlement's Passage. */
+const PASSAGE_SPARE = 3;
+
+/**
+ * Is the Passage due at this settlement: begun now, would its own industry finish it before matter
+ * ends, with PASSAGE_SPARE turns to spare, and no sooner (and is there energy for it, and some)?
+ */
+function passageDue(state: GameState, c: Colony, turnsLeft: number): boolean {
+  if (!isFinite(turnsLeft) || formOf(c) !== 'baryonic' || c.queue.some((q) => q.kind === 'passage')) return false;
+  if (!hasTech(state, 'leptonic_computation') || !endForeseen(state)) return false;
+  const terms = passageTerms(state, c);
+  const industry = c.last?.industry ?? 0;
+  if (industry <= 0 || state.civ.energy < terms.energy + 20) return false;
+  const turns = terms.industry / industry;
+  return turns + 1 <= turnsLeft && turnsLeft <= turns + PASSAGE_SPARE;
+}
+
 function planBuilds(state: GameState) {
   const civ = state.civ;
   const mods = computeMods(state);
@@ -485,9 +503,18 @@ function planBuilds(state: GameState) {
   const reencode = fate === 'curvature' && state.eta > 27 && !preEnd && !matterGone(state) && civ.matter > 200;
   const t = threadTotals(state);
   const way = wayOf(state);
+  const turnsLeft = turnsToEndOfMatter(state);
   for (const c of colonies(state)) {
+    // the Passage, where its own industry can finish it before matter ends with a few turns to
+    // spare, and no sooner (what it takes apart gives nothing after): at the front of the queue
+    if (passageDue(state, c, turnsLeft)) {
+      if (c.queue.length >= 6) removeQueued(state, c.id, c.queue[c.queue.length - 1].uid);
+      if (!beginPassage(state, c.id)) c.queue.unshift(c.queue.pop()!);
+    }
+    // (a settlement making the Passage, or past it, needs no substrate to go on)
+    const passing = formOf(c) === 'leptonic' || c.queue.some((q) => q.kind === 'passage');
     // before the protons go, re-encoding goes to the front of the queue
-    if (preEnd && hasTech(state, 'leptonic_computation') && (c.structures.lepton_substrate ?? 0) < 2) {
+    if (!passing && preEnd && hasTech(state, 'leptonic_computation') && (c.structures.lepton_substrate ?? 0) < 2) {
       if (!c.queue.some((q) => q.key === 'lepton_substrate')) {
         if (c.queue.length >= 6) removeQueued(state, c.id, c.queue[c.queue.length - 1].uid);
         if (tryBuild(state, c, ['lepton_substrate'])) {
@@ -499,13 +526,14 @@ function planBuilds(state: GameState) {
     }
     // and for its Chorus, which has no room on substrate, a Leptonic Confluence, right behind it
     const confluences = Math.min(3, Math.ceil(c.pops.chorus / 3));
-    if (preEnd && hasTech(state, 'leptonic_computation') && (c.structures.lepton_confluence ?? 0) < confluences && !c.queue.some((q) => q.key === 'lepton_confluence')) {
+    if (!passing && preEnd && hasTech(state, 'leptonic_computation') && (c.structures.lepton_confluence ?? 0) < confluences && !c.queue.some((q) => q.key === 'lepton_confluence')) {
       if (c.queue.length >= 6) removeQueued(state, c.id, c.queue[c.queue.length - 1].uid);
       if (tryBuild(state, c, ['lepton_confluence'])) c.queue.splice(c.queue[0]?.key === 'lepton_substrate' ? 1 : 0, 0, c.queue.pop()!);
     }
     if (preEnd && c.queue[0]?.key === 'lepton_confluence') rushBuild(state, c.id);
     if (c.queue[0] && civ.matter > 600) rushBuild(state, c.id);
-    if (c.queue.length >= 2) continue;
+    // while the Passage rewrites it, nothing else is built there
+    if (c.queue.length >= 2 || c.queue.some((q) => q.kind === 'passage')) continue;
     const b = state.bodies[c.bodyId];
     const capc = capacity(state, c, mods);
     const light = lightAt(state, c);
@@ -527,8 +555,8 @@ function planBuilds(state: GameState) {
       if (light > 0.3) plan.push('dyson_swarm', 'orbital_collector', 'ember_collector', 'infrared_shroud', 'solar_array');
       plan.push('disk_skimmer', 'accretion_engine', 'pulsar_brake', 'geothermal_tap', 'fusion_plant', 'decay_harvester');
     }
-    if (reencode && (c.structures.lepton_substrate ?? 0) + c.queue.filter((q) => q.key === 'lepton_substrate').length < 2) plan.push('lepton_substrate');
-    if (reencode && (c.structures.lepton_confluence ?? 0) + c.queue.filter((q) => q.key === 'lepton_confluence').length < confluences) plan.push('lepton_confluence');
+    if (reencode && !passing && (c.structures.lepton_substrate ?? 0) + c.queue.filter((q) => q.key === 'lepton_substrate').length < 2) plan.push('lepton_substrate');
+    if (reencode && !passing && (c.structures.lepton_confluence ?? 0) + c.queue.filter((q) => q.key === 'lepton_confluence').length < confluences) plan.push('lepton_confluence');
     // (another civilization builds for Kin only where Kin live)
     const forKin = !way || c.pops.kin > 0;
     // its star has died: light Orbital Lamps while there is still life to keep

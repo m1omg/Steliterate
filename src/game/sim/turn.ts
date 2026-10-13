@@ -7,7 +7,8 @@ import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
 import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
-import { finalBurstCatch, greatEvaporation, runCrossing } from './crossing';
+import { decayProof, finalBurstCatch, greatEvaporation, runCrossing } from './crossing';
+import { completePassage } from './passage';
 import { flowComes, theLongFlow } from './flow';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
@@ -29,7 +30,7 @@ import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost }
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
-import { allColonies, clamp, colonies, distLy, fleets, hasCharter, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
+import { allColonies, clamp, colonies, distLy, fleets, formOf, hasCharter, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
 import { becomeHunger } from './judge';
 import { WORKS_WATER, seededVitality } from './terraform';
 import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf, matterGone } from '../fate';
@@ -78,8 +79,9 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
           }
           if (d?.enables === 'merge') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
         }
-        log(state, `${c.name}: ${item.kind === 'structure' ? structureLabel(item.key, state.systems[c.systemId]).name : d?.name ?? item.key} complete.`, 'good', c.systemId);
-      } else {
+        log(state, `${c.name}: ${structureLabel(item.key, state.systems[c.systemId], formOf(c)).name} complete.`, 'good', c.systemId);
+      } else if (item.kind === 'passage') completePassage(state, c);
+      else {
         const def = SHIP_BY_ID[item.key];
         if (def?.crew) c.pops.kin = Math.max(0, c.pops.kin - def.crew);
         const existing = fleets(state).find((f) => f.at === c.systemId && f.order === 'idle' && !f.auto && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
@@ -844,7 +846,8 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         break;
       case 'dissolved':
         for (const c of colonies(state)) {
-          if (c.systemId === sys.id && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) {
+          // (what made the Passage, or has something decay-proof, goes on until the end of matter)
+          if (c.systemId === sys.id && !decayProof(c)) {
             state.civ.flags.decay_lost = (state.civ.flags.decay_lost ?? 0) + popsOf(c) + c.cryo;
             destroyColony(state, c, 'its matter decayed');
           }

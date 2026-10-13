@@ -680,6 +680,29 @@ Each step validated on its own, with the harness by fate:
    ring, the dissolve; every quality tier, with screenshots asked about first (the player has not
    reached that far).
 
+### 3-2, as it will be built (13 Oct, written before starting it)
+
+1. **A leptonic form for some structures** (`StructureDef.leptonic`, with a name of its own where it
+   changes): Energy Vaults are Field Stores there and Deep Storage Rings Deep Field Stores (the
+   reserve's home after matter); Substrate Cores, Cold Vaults, Lattice Foundries and Confluence
+   Nodes house the same minds; Burst Catchers, Horizon Vaults, Penrose Harvesters, Hawking
+   Collectors, the Lattice's Search Foundry and Protocol Registry, Defence Grids and the Dark
+   Era's structures work as before. Nothing else: mines, domes, collectors, plants, foundries,
+   shipyards are matter. A leptonic settlement builds only these, and the decay-proof ones.
+2. **Begin the Passage** (a settlement's project, in its queue, once the end of matter is foreseen
+   and Leptonic Computation is known): 40 industry and 15 for each structure that crosses over,
+   5 energy for each structure paid up front; while it is worked the settlement's energy, matter,
+   insight and accord fall to 70%. When it is done the settlement is leptonic: what has a leptonic
+   form crosses over, the rest is taken apart (its matter back, as dismantling gives); its Kin and
+   sleepers are lost, their patterns kept in the archive (20 insight each); the Lattice re-encodes
+   at half (a quarter under the protocols), once.
+3. **At the end of matter** a settlement that passed keeps everything it has; one with only
+   decay-proof structures keeps only those, as now; the rest go, each named in the report with
+   who was in it.
+4. **The autoplayer** begins the Passage where it can finish before the end, with a few turns to
+   spare, by the turns left (from the turn's length) and the settlement's industry.
+5. **Checks:** `unit/passage`; the reserve after matter in it (Field Stores carried over).
+
 ### 3a. Ways of existence
 
 Each settlement has a **form**, `Colony.form`. The form decides who can live there, what feeds

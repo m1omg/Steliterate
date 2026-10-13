@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -413,6 +413,15 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     toward `chorus_nodes_built`. After matter the Lattice mends and grows with energy
     (`MATTER_AS_ENERGY`, `economy.ts`, construction's rate too), and only an empty reserve wears
     one out (`starvation`, `turn.ts`).
+  - **The Passage** (part 3-2, `sim/passage.ts`): a queue item of kind `'passage'` (key
+    `'passage'`; `applyIndustry` calls `completePassage`); `passageTerms`, `passageCheck`,
+    `beginPassage`, `endForeseen`, `turnsToEndOfMatter` (from `turnStep`'s length). While it is
+    `queue[0]`, `colonyTurn` cuts energy, matter, insight and accord to `PASSAGE_OUTPUT`.
+    `StructureDef.leptonic` (with a name of its own: `structureLabel(id, sys, form)`) and
+    `inLeptonicForm(d)` decide what crosses over and what a leptonic settlement may build;
+    `decayProof(c)` (`crossing.ts`, exported) is true for a leptonic settlement too, and
+    `goLeptonic` keeps all of a passed settlement's structures. The autoplayer's `passageDue`
+    (`auto.ts`) times it.
   - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a
     report per civilization; the universe's part runs once (`toAll` puts its lines in every
     report where they fall), each civilization's under `eachCiv`; `leftOnSubstrate` is one

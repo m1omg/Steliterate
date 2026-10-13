@@ -1,7 +1,7 @@
 import { CHARTER_BY_ID, CHARTERS } from '../data/charters';
 import { SHIP_BY_ID, SHIPS, isWarship, type ShipDef } from '../data/ships';
 import { formatYears } from '../eras';
-import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, enabledAt, hasOnceEffect, structureLabel, type StructureDef } from '../data/structures';
+import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, enabledAt, hasOnceEffect, inLeptonicForm, structureLabel, type StructureDef } from '../data/structures';
 import { FORMS } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
 import { WORK_BY_ID } from '../data/works';
@@ -54,6 +54,8 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   const form = FORMS[formOf(c)];
   const onlyKin = (d.cap && Object.keys(d.cap).every((t) => !form.lives.includes(t as ThreadId))) || (d.cryoCap && !form.sleepers) || (d.enables === 'upload' && !form.lives.includes('kin'));
   if (onlyKin) return `Kin are made of matter: a ${form.name.toLowerCase()} settlement has no room for them.`;
+  // and a leptonic settlement builds only what has a leptonic form (passage.ts)
+  if (formOf(c) === 'leptonic' && !inLeptonicForm(d)) return 'Made of matter: a leptonic settlement cannot build it.';
   if (d.terraform) {
     const why = terraformBlocked(state, b, c, d.terraform);
     if (why) return why;

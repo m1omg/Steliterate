@@ -44,7 +44,7 @@ for (let g = 0; g < games; g++) {
     for (const c of Object.values(s.colonies)) {
       for (const t of THREADS) if (c.pops[t] < 0) hit('negative people', `${tag} ${c.name} ${t} ${c.pops[t]}`);
       if (c.cryo < 0) hit('negative sleepers', tag);
-      if (s.bodies[c.bodyId]?.dissolved && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) hit('a settlement on a world that is gone', `${tag} ${c.name}`);
+      if (s.bodies[c.bodyId]?.dissolved && c.form !== 'leptonic' && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) hit('a settlement on a world that is gone', `${tag} ${c.name}`);
     }
     if (s.civ.energy < 0) hit('negative energy', `${tag} ${s.civ.energy}`);
     if (s.civ.matter < 0) hit('negative matter', `${tag} ${s.civ.matter}`);

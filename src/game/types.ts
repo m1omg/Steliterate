@@ -155,7 +155,8 @@ export interface Body {
 
 export interface QueueItem {
   uid: string;
-  kind: 'structure' | 'ship';
+  /** A structure, a ship, or the settlement's Passage (passage.ts: key 'passage'). */
+  kind: 'structure' | 'ship' | 'passage';
   key: string;
   progress: number;
   cost: number;

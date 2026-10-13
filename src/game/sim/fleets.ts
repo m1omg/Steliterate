@@ -10,7 +10,7 @@ import { THAW_ROOM, clockCiv, scorched, stepTurns, thawed } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
 import { allColonies, allFleets, colonies, distLy, eraIndex, fleets, log, logTo, ownFleet, swarmSeenAt, uid, withRng } from './util';
-import { calendarEra } from '../fate';
+import { calendarEra, matterGone } from '../fate';
 
 // No faster-than-light travel. Fleets advance speed × turn length light-years per turn.
 // Early on a 10 ly hop takes several turns; later a whole province fits into one.
@@ -268,6 +268,8 @@ export function createColony(state: GameState, b: Body, pops: Partial<Record<Thr
     damage: 0,
     starving: 0,
   };
+  // (after the end of matter there is nothing else to be)
+  if (matterGone(state)) c.form = 'leptonic';
   state.colonies[c.id] = c;
   b.colonyId = c.id;
   state.civ.known[b.systemId] = 2;

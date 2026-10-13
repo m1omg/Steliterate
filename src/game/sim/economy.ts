@@ -27,6 +27,9 @@ export type Capacity = Record<ThreadId, number> & { cryo: number };
  */
 export const MATTER_AS_ENERGY = 1.5;
 
+/** What a settlement makes while the Passage rewrites it (passage.ts): its energy, matter, insight and accord. */
+export const PASSAGE_OUTPUT = 0.7;
+
 export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number {
   const b = state.bodies[c.bodyId];
   if (!b || b.dissolved) return 0;
@@ -293,6 +296,16 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
       else accord += made;
       lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}: industry into ${d.search.into}`, industry: -take, ...(d.search.into === 'insight' ? { insight: made } : { accord: made }) });
     }
+  }
+
+  // the Passage: while the settlement is being rewritten it makes less (its industry goes into the rewriting)
+  if (c.queue[0]?.kind === 'passage') {
+    const cut = 1 - PASSAGE_OUTPUT;
+    lines.push({ label: 'The Passage: being rewritten', energy: -energy * cut, matter: -matter * cut, insight: -insight * cut, accord: -accord * cut });
+    energy *= PASSAGE_OUTPUT;
+    matter *= PASSAGE_OUTPUT;
+    insight *= PASSAGE_OUTPUT;
+    accord *= PASSAGE_OUTPUT;
   }
 
   const y: YieldBreakdown = {

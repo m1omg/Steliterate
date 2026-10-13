@@ -36,7 +36,8 @@ import {
   strike,
   type Conversion,
 } from '../../game/sim/actions';
-import { capacity } from '../../game/sim/economy';
+import { PASSAGE_OUTPUT, capacity } from '../../game/sim/economy';
+import { beginPassage, endForeseen, passageCheck, passageTerms, turnsToEndOfMatter } from '../../game/sim/passage';
 import { spareYield, type SpareYield } from '../../game/sim/spare';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
@@ -853,6 +854,53 @@ const CONVERSIONS: { id: Conversion; label: string; icon: 'upload' | 'merge' | '
   { id: 'thaw', label: 'Thaw', icon: 'wake', tip: 'Wake one sleeper.', show: (_s, c) => c.cryo > 0 },
 ];
 
+/**
+ * The Passage (passage.ts): this settlement rewritten in electron–positron structures before
+ * matter ends, as a project in its queue. Shown once it can be foreseen and Leptonic Computation is
+ * known; asks once more before it begins.
+ */
+function PassageSection({ s, c }: { s: GameState; c: Colony }) {
+  const [sure, setSure] = useState(false);
+  const going = c.queue.find((q) => q.kind === 'passage');
+  if (formOf(c) !== 'baryonic' || (!going && !(hasTech(s, 'leptonic_computation') && endForeseen(s)))) return null;
+  const t = passageTerms(s, c);
+  const why = going ? null : passageCheck(s, c);
+  const industry = c.last?.industry ?? 0;
+  const turns = industry > 0 ? Math.ceil(t.industry / industry) : Infinity;
+  const left = turnsToEndOfMatter(s);
+  const out = Math.round(PASSAGE_OUTPUT * 100);
+  const what = `${t.crossing} structure${t.crossing === 1 ? '' : 's'} cross${t.crossing === 1 ? 'es' : ''} over (Energy Vaults as Field Stores, the homes of minds, harvesters at a black hole); ${t.apart} ${t.apart === 1 ? 'is' : 'are'} taken apart${t.matterBack ? ` (+${t.matterBack} matter)` : ''}.${t.kin ? ` Its ${t.kin} Kin cannot go: their patterns are kept in the archive (+${t.insight} insight).` : ''}${t.lattice ? ` ${t.lattice} of its Lattice will not survive the re-encoding.` : ''}`;
+  return (
+    <div class="section passage">
+      <h3>The Passage</h3>
+      {going ? (
+        <p class="dim">
+          Under way: {Math.round((going.progress / going.cost) * 100)}%, in the queue. While it is worked here, this settlement makes {out}% of its energy, matter, insight and accord.
+        </p>
+      ) : (
+        <>
+          <p class="dim">
+            Rewrite this settlement in electron–positron structures held by fields, which will outlast matter: {t.industry} industry ({isFinite(turns) ? `about ${turns} turn${turns === 1 ? '' : 's'} here` : 'nothing builds here'}
+            {isFinite(left) ? `; matter ends in about ${Math.floor(left)}` : ''}) and {t.energy} energy now. {what} While it is worked, the settlement makes {out}% of its energy, matter, insight and accord; then only what has a leptonic form can be built there.
+          </p>
+          <button
+            class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+            data-tip={why ?? 'It goes into the queue as a project; taking it off gives the energy back.'}
+            onClick={() => {
+              if (why) return;
+              if (!sure) return setSure(true);
+              setSure(false);
+              if (act((g) => beginPassage(g, c.id))) sfx('build');
+            }}
+          >
+            {sure ? 'Really begin the Passage? (click again)' : 'Begin the Passage'}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   void rev.value; // mutable game state: re-render on every change
   const [tab, setTab] = useState<'overview' | 'build'>('overview');
@@ -1016,14 +1064,14 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                       <span
                         key={id}
                         class={`chip ${armed === id ? 'warn' : away ? 'faint' : ''}`}
-                        data-tip={`${structureLabel(id, sys).desc}${away ? '\nOut of reach: it was built around the star, and this world has drifted loose from it. It gives us nothing now.' : ''}`}
+                        data-tip={`${structureLabel(id, sys, formOf(c)).desc}${away ? '\nOut of reach: it was built around the star, and this world has drifted loose from it. It gives us nothing now.' : ''}`}
                       >
                         <KindIcon id={id} />
-                        {structureLabel(id, sys).name}
+                        {structureLabel(id, sys, formOf(c)).name}
                         {n > 1 ? ` ×${n}` : ''}
                         <button
                           class={`dismantle ${why ? 'off' : ''}`}
-                          aria-label={`Take apart ${structureLabel(id, sys).name}`}
+                          aria-label={`Take apart ${structureLabel(id, sys, formOf(c)).name}`}
                           data-tip={why ? `Cannot take it apart: ${why}` : `Take one apart: ${dismantleBack(dismantleTerms(s, STRUCTURE_BY_ID[id]))}.`}
                           onClick={() => !why && setArmed(armed === id ? null : id)}
                         >
@@ -1036,7 +1084,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
               {armed && (c.structures[armed] ?? 0) > 0 && (
                 <div ref={armRef} class="row wrap dismantle-confirm" style={{ gap: '6px', marginTop: '6px', alignItems: 'center' }}>
                   <span class="dim">
-                    Take apart one {structureLabel(armed, sys).name}? {dismantleBack(dismantleTerms(s, STRUCTURE_BY_ID[armed]))}. The work that built it is lost.
+                    Take apart one {structureLabel(armed, sys, formOf(c)).name}? {dismantleBack(dismantleTerms(s, STRUCTURE_BY_ID[armed]))}. The work that built it is lost.
                   </span>
                   <button
                     class="btn small danger"
@@ -1054,6 +1102,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                 </div>
               )}
             </div>
+            <PassageSection s={s} c={c} />
           </>
         ) : (
           <BuildTab s={s} c={c} industry={y?.industry ?? 0} energyMade={y?.energy ?? 0} />
@@ -1157,7 +1206,7 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
   type Item = { id: string; name: string; desc: string; error: string | null | undefined; cost: ReturnType<typeof buildCost>; count: number; fx?: BuildEffect; sk?: StructureKind };
   const list: Item[] =
     kind === 'structure'
-      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId]), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx), sk: structureKind(x.def) }))
+      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId], formOf(c)), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx), sk: structureKind(x.def) }))
       : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: `${x.def.desc} ${shipNote(x.def)}`, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
   // structures come grouped by kind, and can be narrowed to one kind
   const present = STRUCTURE_KINDS.filter((k) => list.some((x) => x.sk === k.id));
@@ -1185,10 +1234,10 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
                     <KindIcon id={q.key} />
                   ) : (
                     <span class="kind-icon">
-                      <Icon name="fleet" />
+                      <Icon name={q.kind === 'passage' ? 'upload' : 'fleet'} />
                     </span>
                   )}
-                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId]).name : def?.name ?? q.key}
+                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId], formOf(c)).name : q.kind === 'passage' ? 'The Passage' : def?.name ?? q.key}
                 </span>
                 <span class="mono faint" style={{ fontSize: '12.5px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
                 <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>
