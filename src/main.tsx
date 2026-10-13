@@ -16,7 +16,7 @@ import type { Pickable } from './render/galaxyView';
 import { App } from './ui/App';
 import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, saveSettings, screen, selection, setEngine, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
 import { PRIMARY_NAME, bodyKindName } from './ui/labels';
-import { doEndTurn } from './ui/turnflow';
+import { doEndTurn, lastTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
 import { sendPicked } from './ui/screens/Lists';
 import { guardTranslation } from './ui/translateGuard';
@@ -379,6 +379,10 @@ window.__stel = {
       if (!keep) s.civ.pending.length = 0;
     }
     bump();
+  },
+  /** The last turn's time as End Turn played it (turnflow.ts, playTurn). */
+  lastTurn() {
+    return lastTurn;
   },
   /** One turn's worth of the autoplayer's choices (events answered too), without ending the turn. */
   autoPlay() {

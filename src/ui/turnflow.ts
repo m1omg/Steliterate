@@ -35,16 +35,30 @@ function breathe(): Promise<void> {
  */
 async function playTurn(s: GameState): Promise<TurnResult> {
   const g = turnSlices(s);
-  let t0 = performance.now();
+  const start = performance.now();
+  let t0 = start;
+  let work = 0;
+  let longest = 0;
   for (;;) {
+    const a = performance.now();
     const r = g.next();
-    if (r.done) return r.value;
-    if (performance.now() - t0 > SLICE_MS) {
+    const b = performance.now();
+    work += b - a;
+    if (r.done) {
+      longest = Math.max(longest, b - t0);
+      lastTurn = { work, longest, wall: b - start };
+      return r.value;
+    }
+    if (b - t0 > SLICE_MS) {
+      longest = Math.max(longest, b - t0);
       await breathe();
       t0 = performance.now();
     }
   }
 }
+
+/** The last turn's time, for tools/turn-timing.cjs: its own work, its longest run without a breath, and from start to end. */
+export let lastTurn: { work: number; longest: number; wall: number } | null = null;
 
 export async function doEndTurn() {
   const s = game.value;

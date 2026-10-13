@@ -2262,8 +2262,15 @@ Each of the other civilizations now plays its own way, not ours with a few needs
   for 12 ms, a message to itself (no timer's clamp) lets the music's scheduler, which looks only
   0.3 s ahead, and the screen have their turn. Nothing may act on the game meanwhile (`act`
   refuses while `busy`), and the views are refreshed only when the turn is done.
-- **Timing** (`tools/turn-timing.cjs`: Chromium with its CPU slowed, the End Turn button itself):
-  see the numbers below.
+- **Timing** (`tools/turn-timing.cjs`: Chromium with its CPU slowed four times, 40 turns of seed
+  8919, the End Turn button clicked in the page):
+  - the turn's own work: 29 ms at the median, 72 at worst; the longest it runs without the browser
+    getting its turn, 16 ms at the median and 34 at worst (before, the whole turn was one block);
+  - turns with a task over 100 ms: 2 of 40, against 13 before;
+  - from the click to the next frame drawn: about 0.9 s here, before as after. That is drawing the
+    map in software (this machine has no GPU): only the first End Turn after a load compiles
+    shaders (two), and a phone's GPU draws a frame far faster. A real phone cannot be measured
+    from here.
 - **Check:** `unit/slices` (new: the same game slice by slice as at once, the swap never across a
   slice, a turn in many slices).
 
