@@ -14,7 +14,7 @@ import { availableTechs, techCost } from './research';
 import { reserveCapacity } from './economy';
 import { computeMods } from './mods';
 import { sendSignal } from './signals';
-import { beamEnergy, distanceToThem, inStep, lightAt, spreadNews, voice } from './survivors';
+import { beamEnergy, dealSize, distanceToThem, inStep, lightAt, spareOf, spreadNews, voice } from './survivors';
 import { distLy, log } from './util';
 import { breach } from './ways';
 import { send } from '../civs';
@@ -206,7 +206,7 @@ export function pactsTurn(state: GameState) {
       }
       // they pay their side while they can; the Tessellate pays it even while failing
       if (weak && (sv.health > 0.4 || (sv.way === 'lattice' && sv.health > 0.05)) && state.turn - (civ.flags[inKey] ?? -99) >= AID_EVERY) {
-        const e = Math.round(Math.min(60, Math.max(8, sv.pop * sv.health * 0.8)));
+        const e = spareOf(state, sv, Math.round(Math.min(60, Math.max(8, dealSize(state, sv) * sv.health * 0.8))));
         if (civOf(state, sv)) send(state, sv.id, { energy: -e });
         else sv.health = Math.max(0, sv.health - e / 1200);
         civ.flags[inKey] = state.turn;
@@ -222,7 +222,7 @@ export function pactsTurn(state: GameState) {
       }
     }
     if (hasPact(sv, 'archives')) {
-      const gain = 0.5 + 0.02 * sv.pop * sv.health;
+      const gain = 0.5 + 0.02 * dealSize(state, sv) * sv.health;
       if (civ.researching) civ.research[civ.researching] = (civ.research[civ.researching] ?? 0) + gain;
       else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
       if (!civOf(state, sv)) sv.health = Math.min(1, sv.health + 0.002);

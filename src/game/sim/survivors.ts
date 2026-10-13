@@ -307,7 +307,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
             `This is the last of us. We are sending everything we know, in case it helps. Remember that we were here. Remember that we tried.`,
             `FINAL STATE. OPERATIONS CEASE. ATTACHED: COMPLETE RECORDS. NO FURTHER REPLIES WILL BE GENERATED.`,
           ),
-          data: { insight: Math.round(60 + sv.pop * 4) },
+          data: { insight: Math.round(60 + dealSize(state, sv) * 4) },
         });
         continue;
       }
@@ -566,6 +566,24 @@ export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: 
   return null;
 }
 
+/**
+ * A neighbour's size as a dealing weighs it: its people on the old scale (`pop`), but for a
+ * civilization of its own (others.ts) never more than the light neighbours' healthiest grew to
+ * (DEAL_SIZE_MAX: their 90th percentile was 38, their largest 59), so that what it spares, shares,
+ * brings and defends with stays as designed while it grows far larger in its own game (part 2a-3
+ * sets the dealings by its real economy).
+ */
+export const DEAL_SIZE_MAX = 40;
+export function dealSize(state: GameState, sv: Survivor): number {
+  return civOf(state, sv) ? Math.min(sv.pop, DEAL_SIZE_MAX) : sv.pop;
+}
+
+/** What a civilization of its own can spare of its reserve in one dealing: half of it. */
+export function spareOf(state: GameState, sv: Survivor, want: number): number {
+  const c = civOf(state, sv);
+  return c ? Math.min(want, Math.floor(c.energy / 2)) : want;
+}
+
 /** What a shared work gives each of its two builders a turn (at full pace). */
 const JOINT_ENERGY = 6;
 
@@ -682,7 +700,7 @@ export function requestAid(state: GameState, id: string): string | null {
     protocol = 'REQUEST DENIED. SURPLUS: NONE. OPERATIONS CONTRACTING.';
   } else {
     const reciprocity = Math.min(30, sv.aidGiven / 5);
-    energy = Math.round(Math.max(0, Math.min(60, sv.pop * sv.health * (0.4 + sv.disposition / 100) + reciprocity)));
+    energy = spareOf(state, sv, Math.round(Math.max(0, Math.min(60, dealSize(state, sv) * sv.health * (0.4 + sv.disposition / 100) + reciprocity))));
     if (energy < 5) {
       energy = 0;
       words = 'We cannot spare anything now. Perhaps later, if things go better for us, or between us.';
@@ -743,7 +761,7 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
   sv.raidedAt = state.turn;
   let result: { ok: boolean; text: string } = { ok: false, text: '' };
   withRng(state, (rng) => {
-    const defence = Math.max(1, sv.pop * sv.health * 0.3);
+    const defence = Math.max(1, dealSize(state, sv) * sv.health * 0.3);
     const hurt = (lo: number, hi: number) => {
       for (const x of fleets(state).filter((y) => y.at === f.at)) {
         for (const s of x.ships) if (isRaider(s.cls)) s.hp -= rng.range(lo, hi);
@@ -752,11 +770,13 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
       }
     };
     if (attack * rng.range(0.6, 1.4) >= defence * 0.5) {
-      const energy = Math.round(Math.min(60, 5 + sv.reserve * 0.4));
-      const matter = Math.round(8 + sv.pop * 0.6);
+      // (from a civilization of its own, out of its real stores)
+      const theirs = civOf(state, sv);
+      const energy = Math.round(Math.min(60, 5 + (theirs ? theirs.energy : sv.reserve) * 0.4, theirs ? theirs.energy : Infinity));
+      const matter = Math.round(Math.min(8 + dealSize(state, sv) * 0.6, theirs ? theirs.matter : Infinity));
       civ.energy += energy;
       civ.matter += matter;
-      if (civOf(state, sv)) send(state, sv.id, { energy: -energy, resolve: -3 });
+      if (theirs) send(state, sv.id, { energy: -energy, matter: -matter, resolve: -3 });
       else {
         sv.reserve = Math.max(0, sv.reserve - energy);
         sv.health = clamp(sv.health - 0.06, 0, 1);
@@ -796,8 +816,8 @@ export function devourSurvivor(state: GameState, id: string): string | null {
   sv.alive = false;
   sv.fate = 'devoured';
   endCiv(state, sv, 'Devoured');
-  civ.energy += 80 + sv.pop * 3;
-  civ.matter += 60 + sv.pop * 4;
+  civ.energy += 80 + dealSize(state, sv) * 3;
+  civ.matter += 60 + dealSize(state, sv) * 4;
   civ.taint = Math.min(100, civ.taint + 10);
   civ.resolve = Math.max(0, civ.resolve - 6);
   state.gfe = Math.max(0.05, state.gfe - 0.01);

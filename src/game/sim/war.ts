@@ -10,7 +10,7 @@
 import type { GameState, Survivor } from '../types';
 import { THREADS } from '../types';
 import { endPact, pactsWith } from './pacts';
-import { distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
+import { dealSize, distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
 import { capital, clamp, fleets, log } from './util';
 import { send } from '../civs';
 
@@ -53,7 +53,7 @@ export function raidedUs(state: GameState, sv: Survivor) {
 /** Their strength at their first star: what they are, and how long they have been arming. */
 export function warDefence(state: GameState, sv: Survivor): number {
   const arming = sv.war ? state.turn - sv.war.since : 0;
-  return Math.max(1, sv.pop * sv.health * 0.3) * (1 + ARMING * arming);
+  return Math.max(1, dealSize(state, sv) * sv.health * 0.3) * (1 + ARMING * arming);
 }
 
 /** Why we cannot declare war on them now, or null. */

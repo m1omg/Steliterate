@@ -12,7 +12,7 @@ import { capacity } from './economy';
 import { computeMods } from './mods';
 import { pactsWith } from './pacts';
 import { sendSignal } from './signals';
-import { distanceToThem, lightArrived, lightAt, newcomerThread, settleNewcomers, spreadNews, voice } from './survivors';
+import { dealSize, distanceToThem, lightArrived, lightAt, newcomerThread, settleNewcomers, spreadNews, voice } from './survivors';
 import { capital, colonies, hasCharter, hasTech, log } from './util';
 import { endCiv } from './others';
 
@@ -154,7 +154,7 @@ export function arriveAmongUs(state: GameState, sv: Survivor) {
     }
   }
   // they bring everything they knew
-  const insight = Math.round(60 + sv.pop * 4) + memory * MEMORY_INSIGHT;
+  const insight = Math.round(60 + dealSize(state, sv) * 4) + memory * MEMORY_INSIGHT;
   if (civ.researching) civ.research[civ.researching] = (civ.research[civ.researching] ?? 0) + insight;
   else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + insight;
   sv.alive = false;
