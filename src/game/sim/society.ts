@@ -130,7 +130,9 @@ export function updateSociety(state: GameState, logL: number, popsLost: number, 
       }
       if (civ.standing[t] < 15 && civ.dissent > 45) civ.lowStanding[t]++;
       else civ.lowStanding[t] = Math.max(0, civ.lowStanding[t] - 1);
-      if (civ.lowStanding[t] >= 3) fork(state, t);
+      // (a Fork becomes one of the player's neighbours; another civilization's Thread will rejoin
+      // the world as people instead, part 2a of the new version)
+      if (civ.lowStanding[t] >= 3 && civ.id === state.player) fork(state, t);
     }
   });
 }

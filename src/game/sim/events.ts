@@ -2,9 +2,14 @@ import { EVENT_BY_ID, EVENTS } from '../data/events';
 import type { GameState } from '../types';
 import { log, uid, withRng } from './util';
 
+/** Whether an event can happen to the civilization whose turn it is (EventDef.scope). */
+function forThisCiv(state: GameState, def: { scope?: 'everyone' }): boolean {
+  return def.scope === 'everyone' || state.civ.id === state.player;
+}
+
 export function queueEvent(state: GameState, defId: string, data: Record<string, string | number> = {}) {
   const def = EVENT_BY_ID[defId];
-  if (!def) return;
+  if (!def || !forThisCiv(state, def)) return;
   if (def.once && state.civ.fired[defId]) return;
   if (state.civ.pending.some((p) => p.defId === defId && JSON.stringify(p.data) === JSON.stringify(data))) return;
   state.civ.pending.push({ uid: uid(state, 'ev'), defId, data });
@@ -18,7 +23,7 @@ export function rollRandomEvent(state: GameState) {
     if (!rng.chance(0.22)) return;
     const pool: { id: string; w: number; data: Record<string, string | number> }[] = [];
     for (const e of EVENTS) {
-      if (!e.weight) continue;
+      if (!e.weight || !forThisCiv(state, e)) continue;
       if (e.eras && !e.eras.includes(state.era)) continue;
       if (e.once && state.civ.fired[e.id]) continue;
       if ((state.civ.fired[`last_${e.id}`] ?? -99) > state.turn - 12) continue;

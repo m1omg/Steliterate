@@ -104,7 +104,8 @@ export interface StarSystem {
   special?: 'home' | 'core' | 'outlier' | 'survivor' | 'slow' | 'sleeper';
   ejected?: boolean; // flung out of the galaxy by dynamical evaporation
   rust?: number; // Hunger infestation 0..1
-  beacon?: boolean; // decoy beacon placed by the player
+  beacon?: boolean; // a decoy beacon burns here
+  beaconBy?: string; // whose it is, who feeds it (a civilization's id; older saves: the player's)
   gone?: boolean; // nothing left (dissolved / evaporated)
 }
 
@@ -367,6 +368,10 @@ export interface Swarm {
   prey?: string;
   /** The swarm a part broke away from (its id): it rejoins it on its way back. */
   nest?: string;
+  /** Whose ship a part was sent after (a civilization's id; older saves: the player's). */
+  preyOwner?: string;
+  /** Who tamed it (a civilization's id; older saves: the player). */
+  tamedBy?: string;
 }
 
 export interface SignalChoice {

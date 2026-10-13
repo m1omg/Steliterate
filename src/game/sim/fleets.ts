@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { residentsOf } from './homes';
 import { STRUCTURE_BY_ID } from '../data/structures';
-import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
+import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../types';
 import { THREADS } from '../types';
 import { formatDistance } from '../eras';
 import { boilingAway, frozenHard } from '../physics';
@@ -9,7 +9,7 @@ import { habitabilityOf } from './terraform';
 import { THAW_ROOM, scorched, stepTurns, thawed } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
-import { colonies, distLy, eraIndex, fleets, log, swarmSeenAt, uid, withRng } from './util';
+import { allColonies, colonies, distLy, eraIndex, fleets, log, logTo, ownFleet, swarmSeenAt, uid, withRng } from './util';
 import { calendarEra } from '../fate';
 
 // No faster-than-light travel. Fleets advance speed × turn length light-years per turn.
@@ -75,7 +75,7 @@ function fleetName(state: GameState, ships: string[]): string {
 
 /** Order a fleet toward a system. Returns an error string or null. */
 export function orderMove(state: GameState, fleetId: string, to: string, order: Fleet['order'] = 'move', targetBody?: string): string | null {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f || !f.at) return 'That fleet is already under way.';
   if (f.at === to && order !== 'colonize' && order !== 'tame') return 'Already there.';
   if (f.at !== to && f.ships.some((x) => SHIP_BY_ID[x.cls]?.inSystem)) return 'A System Lighter cannot leave its star.';
@@ -143,7 +143,9 @@ export function surveyWhereStationed(state: GameState) {
 export function survey(state: GameState, systemId: string) {
   const sys = state.systems[systemId];
   state.civ.known[systemId] = 2;
-  for (const bid of sys.bodies) {
+  // the ruins, the sleepers and the finds are the player's story: another's survey charts the star
+  const mine = state.civ.id === state.player;
+  for (const bid of mine ? sys.bodies : []) {
     const b = state.bodies[bid];
     if (b.relic && b.relic.state === 'hidden' && !b.relic.flowed && !b.dissolved) {
       b.relic.state = 'found';
@@ -155,7 +157,7 @@ export function survey(state: GameState, systemId: string) {
     log(state, `A living world at ${sys.name}: ${b.name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b, state)} Kin without domes.`, 'good', systemId);
   }
   // a survey sometimes turns up something remarkable (at most one find per survey)
-  withRng(state, (rng) => {
+  if (mine) withRng(state, (rng) => {
     if (!rng.chance(0.3)) return;
     const found = new Set(ANOMALIES.map((a) => a.id));
     const worlds = sys.bodies.map((id) => state.bodies[id]).filter((b) => b && !b.dissolved && !b.traits.some((t) => found.has(t)));
@@ -170,7 +172,7 @@ export function survey(state: GameState, systemId: string) {
 }
 
 export function canSettle(state: GameState, b: Body, thread: ThreadId): string | null {
-  if (b.colonyId) return 'Already settled.';
+  if (b.colonyId && !othersDeep(state, b)) return 'Already settled.';
   if (b.dissolved) return 'Nothing is left of it.';
   const boil = boilingAway(state, b);
   if (boil) return boil === 'swallowed' ? 'Its star is swelling over it: it will be swallowed as this turn ends.' : 'Its new star will boil it away as this turn ends.';
@@ -184,8 +186,10 @@ export function canSettle(state: GameState, b: Body, thread: ThreadId): string |
 }
 
 function settle(state: GameState, f: Fleet, bodyId: string): string | null {
-  const b = state.bodies[bodyId];
+  let b = state.bodies[bodyId];
   if (!b || b.systemId !== f.at) return 'The target is not here.';
+  // another's Deep: our own habitats beside theirs
+  if (othersDeep(state, b)) b = deepFor(state, state.systems[b.systemId]) ?? b;
   const idx = f.ships.findIndex((s) => SHIP_BY_ID[s.cls]?.settles);
   if (idx < 0) return 'No settlers aboard.';
   const def = SHIP_BY_ID[f.ships[idx].cls];
@@ -197,6 +201,33 @@ function settle(state: GameState, f: Fleet, bodyId: string): string | null {
   if (f.ships.length === 0) delete state.fleets[f.id];
   log(state, `A new settlement: ${c.name}.`, 'good', b.systemId);
   return null;
+}
+
+/**
+ * A civilization's own Deep in a system (its orbital habitats, or a vault at a hole): the one it
+ * holds, else a free one, else a new one beside the others', since each builds its own. Null if
+ * the system has none. (13 Oct: before the new version a system had one Deep, and whoever came
+ * there joined whoever held it.)
+ */
+export function deepFor(state: GameState, sys: StarSystem, owner = state.civ.id): Body | null {
+  const deeps = sys.bodies.map((id) => state.bodies[id]).filter((b): b is Body => !!b && b.kind === 'deep' && !b.dissolved);
+  if (!deeps.length) return null;
+  const own = deeps.find((b) => b.colonyId && state.colonies[b.colonyId]?.owner === owner);
+  if (own) return own;
+  const free = deeps.find((b) => !b.colonyId || !state.colonies[b.colonyId]);
+  if (free) return free;
+  const base = deeps[0];
+  const b: Body = { ...structuredClone(base), id: `${base.id}.${owner}`, colonyId: null };
+  delete b.relic;
+  delete b.lore;
+  state.bodies[b.id] = b;
+  sys.bodies.push(b.id);
+  return b;
+}
+
+/** A Deep held by another civilization: settling there builds our own beside it (deepFor). */
+function othersDeep(state: GameState, b: Body): boolean {
+  return b.kind === 'deep' && !!b.colonyId && !!state.colonies[b.colonyId] && state.colonies[b.colonyId].owner !== state.civ.id;
 }
 
 export function createColony(state: GameState, b: Body, pops: Partial<Record<ThreadId, number>>): Colony {
@@ -228,12 +259,14 @@ export function createColony(state: GameState, b: Body, pops: Partial<Record<Thr
   return c;
 }
 
+/** A settlement is gone: its civilization loses its capital if it was that, and hears why. */
 export function destroyColony(state: GameState, c: Colony, reason: string) {
   const b = state.bodies[c.bodyId];
   if (b) b.colonyId = null;
   delete state.colonies[c.id];
-  if (state.civ.capitalId === c.id) state.civ.capitalId = null;
-  log(state, `${c.name} is lost: ${reason}`, 'bad', c.systemId);
+  const owner = state.civs[c.owner] ?? state.civ;
+  if (owner.capitalId === c.id) owner.capitalId = null;
+  logTo(state, owner, `${c.name} is lost: ${reason}`, 'bad', c.systemId);
 }
 
 /** Systems within detection range of any settlement or fleet become known. */
@@ -284,10 +317,11 @@ export function updateDetection(state: GameState, mods: Mods) {
   }
 }
 
-export function signatureOf(state: GameState, systemId: string): number {
+/** How warm a civilization's settlements at this star look to the Hunger (the active one's, unless `civId`). */
+export function signatureOf(state: GameState, systemId: string, civId = state.civ.id): number {
   let sig = 0;
-  for (const c of colonies(state)) {
-    if (c.systemId !== systemId) continue;
+  for (const c of allColonies(state)) {
+    if (c.systemId !== systemId || c.owner !== civId) continue;
     for (const [id, n] of Object.entries(c.structures)) sig += (STRUCTURE_BY_ID[id]?.signature ?? 0) * n;
     sig += (c.pops.kin + c.pops.chorus) * 0.3;
     if (c.overdrive) sig += 4;

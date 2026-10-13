@@ -13,9 +13,14 @@ export const BEACON_COST = 30;
 /** Energy a turn to keep one burning, at the Tide. */
 export const BEACON_UPKEEP = 3;
 
-/** The beacons burning now, in a fixed order (the order they are fed in). */
+/** Whose a beacon is (older saves: the player's). */
+export function beaconOwner(state: GameState, sys: StarSystem): string | null {
+  return sys.beacon ? (sys.beaconBy ?? state.player) : null;
+}
+
+/** The civilization's beacons burning now (the one whose turn or view it is), in a fixed order (the order they are fed in). */
 export function litBeacons(state: GameState): StarSystem[] {
-  return Object.values(state.systems).filter((s) => s.beacon && !s.gone);
+  return Object.values(state.systems).filter((s) => s.beacon && !s.gone && beaconOwner(state, s) === state.civ.id);
 }
 
 /** Energy the coming turn takes to keep every beacon burning, before the turn's lived share. */
@@ -32,9 +37,10 @@ export function feedBeacons(state: GameState, livedShare: number): number {
   const each = BEACON_UPKEEP * livedShare;
   let paid = 0;
   for (const sys of Object.values(state.systems)) {
-    if (!sys.beacon) continue;
+    if (!sys.beacon || beaconOwner(state, sys) !== civ.id) continue;
     if (sys.gone) {
       delete sys.beacon;
+      delete sys.beaconBy;
       continue;
     }
     if (civ.energy >= each) {
@@ -42,6 +48,7 @@ export function feedBeacons(state: GameState, livedShare: number): number {
       paid += each;
     } else {
       delete sys.beacon;
+      delete sys.beaconBy;
       log(state, `We could not feed the beacon at ${sys.name}; it has gone dark.`, 'bad', sys.id);
     }
   }

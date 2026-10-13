@@ -6,7 +6,7 @@ import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolve
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
 import { finalBurstCatch, greatEvaporation, runCrossing } from './crossing';
-import { theLongFlow } from './flow';
+import { flowComes, theLongFlow } from './flow';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
 import { feedBeacons } from './beacons';
@@ -15,7 +15,7 @@ import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
-import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
+import { advanceFleets, autoExplore, createColony, deepFor, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
 import { clearStarClock, flareData, livedShare, scorched, turnStep } from './flare';
@@ -298,9 +298,11 @@ export function endTurn(state: GameState): TurnResult {
     firstSwarm(state);
   });
   // swarms go for ships that have just stopped at their star, before exploring probes move on
-  swarmsHunt(state, t[me].mods);
+  // (each civilization's ships and settlements by its own mods; one no longer playing, by its own now)
+  const modsOf = (id: string) => t[id]?.mods ?? asCiv(state, id, () => computeMods(state));
+  swarmsHunt(state, modsOf);
   each((c) => autoExplore(state, c.mods));
-  updateHunger(state, step.turnLength, t[me].mods);
+  updateHunger(state, step.turnLength, modsOf);
   // (the neighbours we know, our pacts and wars with them, and the other minds are the player's)
   each((c, id) => {
     if (id !== me) return;
@@ -316,6 +318,8 @@ export function endTurn(state: GameState): TurnResult {
   if (ids.some((id) => t[id].siphoning)) drainHalo(state, from, step.years);
   const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
   result.notes = notes;
+  // from 10^65 years solid matter flows: once, the ruins no one awake is digging run into smooth lumps
+  flowComes(state, step.eta, logL, modsOf, Math.log10(paceFactor));
   each((c, id) => {
     handleNotes(state, notes);
     // the Unlit's gathering is done: the Last Star lights as the turn ends, as every new star does
@@ -332,9 +336,11 @@ export function endTurn(state: GameState): TurnResult {
   state.turnLength = step.turnLength;
   state.turn++;
   state.eraTurn++;
+  // the turn's clock is the player's (flare.ts, clockCiv): one of our stars has just begun its
+  // last flare (the turn stopped for it); a flare's clock or a new star's has run out
   each((_c, id) => {
+    if (id !== me) return;
     const civ = state.civ;
-    // one of our stars has just begun its last flare (the turn stopped for it)
     for (const sys of new Set(colonies(state).map((c) => state.systems[c.systemId]))) {
       if (sys?.primary.kind === 'blue_dwarf' && sys.primary.blueAt === state.years) queueEvent(state, 'last_flare', flareData(state, sys));
     }
@@ -344,8 +350,9 @@ export function endTurn(state: GameState): TurnResult {
     }
     // the new star we kept time with has burned out: our own pace again
     clearStarClock(state);
-
-    // ---------------------------------------------- 8. signals, forecasts, events
+  });
+  // ------------------------------------------------ 8. signals, forecasts, events
+  each((_c, id) => {
     const arrived = signalsAndEvents(state);
     if (id === me) result.arrived = arrived;
   });
@@ -685,6 +692,8 @@ function signalsAndEvents(state: GameState): Signal[] {
 function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const colonized = new Set(colonies(state).map((c) => c.systemId));
   const known = state.civ.known;
+  // (each civilization sees to its own settlements, in its own part of the turn)
+  const own = (id: string | null | undefined) => (id && state.colonies[id]?.owner === state.civ.id ? state.colonies[id] : undefined);
   for (const n of notes) {
     const sys = state.systems[n.systemId];
     if (!sys) continue;
@@ -726,7 +735,7 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         if (seen) log(state, `The star at ${sys.name} has burned out.`, mine ? 'bad' : 'info', sys.id);
         break;
       case 'rogue':
-        if (n.bodyId && state.bodies[n.bodyId]?.colonyId) queueEvent(state, 'unmoored', { systemId: sys.id, bodyId: n.bodyId });
+        if (n.bodyId && own(state.bodies[n.bodyId]?.colonyId)) queueEvent(state, 'unmoored', { systemId: sys.id, bodyId: n.bodyId });
         break;
       case 'feeding':
       case 'rekindle':
@@ -736,10 +745,8 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
       case 'plunge':
         if (n.bodyId) {
           const b = state.bodies[n.bodyId];
-          if (b?.colonyId) {
-            const c = state.colonies[b.colonyId];
-            if (c) evacuate(state, c, 'its world finished falling into its star');
-          }
+          const c = own(b?.colonyId);
+          if (c) evacuate(state, c, 'its world finished falling into its star');
           if (seen) log(state, `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
           state.civ.energy += colonized.has(sys.id) ? 20 : 0;
         }
@@ -748,10 +755,8 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         if (n.bodyId) {
           const b = state.bodies[n.bodyId];
           if (seen) log(state, n.swallowed ? `${b?.name} was swallowed by the swelling giant at ${sys.name}.` : `${b?.name} boiled away in the heat of the new star at ${sys.name}.`, mine ? 'bad' : 'info', sys.id);
-          if (b?.colonyId) {
-            const c = state.colonies[b.colonyId];
-            if (c) evacuate(state, c, n.swallowed ? 'its world was swallowed by its star' : 'its world boiled away');
-          }
+          const c = own(b?.colonyId);
+          if (c) evacuate(state, c, n.swallowed ? 'its world was swallowed by its star' : 'its world boiled away');
         }
         break;
       case 'ejected':
@@ -793,7 +798,8 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
 /** A world is lost (it falls into its star, or boils away): whoever can get off is caught by the habitats of the Deep. */
 function evacuate(state: GameState, c: Colony, reason: string) {
   const sys = state.systems[c.systemId];
-  const deep = sys.bodies.map((id) => state.bodies[id]).find((b) => b && b.kind === 'deep' && !b.dissolved);
+  // (its own civilization's Deep, beside any other's)
+  const deep = deepFor(state, sys, c.owner);
   const saved: Partial<Record<(typeof THREADS)[number], number>> = {};
   let n = 0;
   for (const t of THREADS) {

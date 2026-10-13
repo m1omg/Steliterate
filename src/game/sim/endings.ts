@@ -18,8 +18,9 @@ export function workRequirementMet(state: GameState, id: string): boolean {
     case 'archive_of_everything':
       return all > 0 && t.lattice >= all / 2;
     case 'aeon_seed': {
+      // (the Slow Ones and the Unlit are the player's alone: so is this Work)
       const heart = Object.values(state.systems).find((s) => s.special === 'core');
-      return !!heart && colonies(state).some((c) => c.systemId === heart.id) && (state.minds.slow.stage >= 4 || !!civ.flags.unlit_gift);
+      return civ.id === state.player && !!heart && colonies(state).some((c) => c.systemId === heart.id) && (state.minds.slow.stage >= 4 || !!civ.flags.unlit_gift);
     }
     case 'garden_of_embers': {
       let kin = 0;

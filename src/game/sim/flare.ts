@@ -1,11 +1,22 @@
+import { pointAt } from '../civs';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import { eta, formatYears, stepTime, type TimeStep } from '../eras';
 import { bodyClimate, primaryLuminosity } from '../physics';
 import type { Body, Colony, GameState, StarSystem } from '../types';
 import { computeMods } from './mods';
 import { reserveCapacity } from './storage';
-import { colonies, hasTech } from './util';
+import { allColonies, colonies } from './util';
 import { calendarEra } from '../fate';
+import type { Civ } from '../types';
+
+/**
+ * Whose clock the turn keeps: the player's, its pace and the flares and new stars it keeps time
+ * with. Every civilization lives the same turn (docs/plans/new-version.md, "Time stays the
+ * player's"), so whoever's part of a turn it is, the clock read here is the player's.
+ */
+export function clockCiv(state: GameState): Civ {
+  return state.civs?.[state.player] ?? state.civ;
+}
 
 // A red dwarf's last flare. At the end of its life a red dwarf does not swell into a giant: it
 // heats up into a blue dwarf for a few billion years, some 4 to 80 times brighter than before by
@@ -55,7 +66,9 @@ export function thawed(state: GameState, b: Body): 'warm' | 'hot' | null {
 function flareDue(state: GameState, from: number, to: number): StarSystem | null {
   let best: StarSystem | null = null;
   const seen = new Set<string>();
-  for (const c of colonies(state)) {
+  const who = clockCiv(state).id;
+  for (const c of allColonies(state)) {
+    if (c.owner !== who) continue;
     if (seen.has(c.systemId)) continue;
     seen.add(c.systemId);
     const sys = state.systems[c.systemId];
@@ -71,13 +84,13 @@ function flareDue(state: GameState, from: number, to: number): StarSystem | null
  * six additions of the step can fall an ulp or two short of it, which gave a seventh turn.
  */
 function keepingTime(state: GameState): boolean {
-  const f = state.civ.flags;
+  const f = clockCiv(state).flags;
   return !!f.flare_until && !!f.flare_step && state.years < f.flare_until - f.flare_step * 1e-6;
 }
 
 /** Are we keeping time with a flare? Returns which of its turns comes next (1-based), or 0. */
 export function flareClock(state: GameState): { turn: number; of: number; system: string } | null {
-  const f = state.civ.flags;
+  const f = clockCiv(state).flags;
   if (!keepingTime(state)) return null;
   const sys = Object.values(state.systems).find((s) => s.primary.kind === 'blue_dwarf' && s.primary.whiteAt === f.flare_until);
   const done = Math.round((state.years - (f.flare_until - f.flare_step * FLARE_TURNS)) / f.flare_step);
@@ -88,7 +101,7 @@ export function flareClock(state: GameState): { turn: number; of: number; system
  * The settled star whose last flare cuts the coming turn short at this pace, if any: the turn
  * stops the moment it leaves the main sequence, so a slower pace cannot take us past it.
  */
-export function flareStop(state: GameState, pace = state.civ.pace): StarSystem | null {
+export function flareStop(state: GameState, pace = clockCiv(state).pace): StarSystem | null {
   const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
   if (calendarEra(state) !== 'dusk' || !isFinite(step.years) || keepingTime(state)) return null;
   return flareDue(state, state.years, step.years);
@@ -130,8 +143,8 @@ export const STAR_SPLIT = 10;
  * light over more turns, each paying its upkeep), else 1. Never finer than the calendar can count.
  */
 function starSplit(state: GameState, pace: number): number {
-  const f = state.civ.flags;
-  if (pace < 1 || !f.star_step || f.star_flash || !hasTech(state, 'quickening')) return 1;
+  const f = clockCiv(state).flags;
+  if (pace < 1 || !f.star_step || f.star_flash || !clockCiv(state).techs.includes('quickening')) return 1;
   return f.star_step / STAR_SPLIT >= state.years * STAR_STEP_MIN ? STAR_SPLIT : 1;
 }
 
@@ -141,15 +154,15 @@ function starSplit(state: GameState, pace: number): number {
  * nor stall one (a few hundred million years is a sliver of 10^20); a turn that starts between
  * two of its steps (the pace changed under Quickening) runs to the next one.
  */
-function starTurnsLeft(state: GameState, pace = state.civ.pace): number {
-  const f = state.civ.flags;
+function starTurnsLeft(state: GameState, pace = clockCiv(state).pace): number {
+  const f = clockCiv(state).flags;
   if (!keepingStarTime(state)) return 0;
   return Math.max(1, Math.ceil((f.star_until - state.years) / (f.star_step / starSplit(state, pace)) - 1e-6));
 }
 
 /** A clock runs until the year its star burns out (every turn of it ends exactly on a sixth, or a sixtieth, counted back from there). */
 function keepingStarTime(state: GameState): boolean {
-  const f = state.civ.flags;
+  const f = clockCiv(state).flags;
   return !!f.star_until && !!f.star_step && f.star_until - state.years > f.star_step * 1e-6;
 }
 
@@ -158,7 +171,7 @@ function keepingStarTime(state: GameState): boolean {
  * a star we chose to follow on (`star_next`, the year it burns out), if it still burns.
  */
 export function clearStarClock(state: GameState) {
-  const f = state.civ.flags;
+  const f = clockCiv(state).flags;
   if (keepingStarTime(state) || !(f.star_until || f.star_step || f.star_next || f.star_flash)) return;
   const next = f.star_next;
   delete f.star_until;
@@ -241,7 +254,7 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
   if (!sys || !p || sys.gone || !isNewStar(sys)) return none;
   if (calendarEra(state) !== 'degenerate' && !(p.kind === 'dark_star' && starClockEra(state))) return none;
   if (!p.diesAt || p.diesAt <= state.years) return none;
-  const f = state.civ.flags;
+  const f = clockCiv(state).flags;
   let from = state.years;
   let after: string | null = null;
   if (keepingStarTime(state)) {
@@ -253,7 +266,7 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
     after = kept?.system ?? 'the star we keep time with';
   }
   const left = p.diesAt - from;
-  const next = stepTime(calendarEra(state), from, eta(from), state.civ.pace, state.settings.length).turnLength;
+  const next = stepTime(calendarEra(state), from, eta(from), clockCiv(state).pace, state.settings.length).turnLength;
   const full = Math.floor(reserveCapacity(state, computeMods(state)));
   // the Last Star is the Unlit's gift to all who can see it: free to keep time with, whatever our pace
   const gift = p.kind === 'dark_star';
@@ -283,7 +296,7 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
  * matter): a clock kept with it, or waiting to follow on to it, ends with it.
  */
 export function starGoneEarly(state: GameState, sys: StarSystem) {
-  const f = state.civ.flags;
+  const f = clockCiv(state).flags;
   const dies = sys.primary.diesAt;
   if (!isNewStar(sys) || dies === undefined) return;
   if (f.star_next === dies) delete f.star_next;
@@ -312,18 +325,18 @@ export function keepTimeWithStar(state: GameState, systemId: string): number | n
   if (!t.possible || state.civ.energy < t.cost) return null;
   state.civ.energy -= t.cost;
   if (t.after) {
-    state.civ.flags.star_next = sys.primary.diesAt!;
+    clockCiv(state).flags.star_next = sys.primary.diesAt!;
     return t.cost;
   }
   if (t.flash) {
     // one turn, lived in full in its light (`star_flash` names the star whose light it is)
-    state.civ.flags.star_until = t.flashUntil;
-    state.civ.flags.star_step = t.flashUntil - state.years;
-    state.civ.flags.star_flash = sys.primary.diesAt!;
+    clockCiv(state).flags.star_until = t.flashUntil;
+    clockCiv(state).flags.star_step = t.flashUntil - state.years;
+    clockCiv(state).flags.star_flash = sys.primary.diesAt!;
     return t.cost;
   }
-  state.civ.flags.star_until = sys.primary.diesAt!;
-  state.civ.flags.star_step = (sys.primary.diesAt! - state.years) / STAR_TURNS;
+  clockCiv(state).flags.star_until = sys.primary.diesAt!;
+  clockCiv(state).flags.star_step = (sys.primary.diesAt! - state.years) / STAR_TURNS;
   return t.cost;
 }
 
@@ -332,10 +345,10 @@ export function keepTimeWithStar(state: GameState, systemId: string): number | n
  * (this one included), whose, and which star we follow on to after it, if any.
  */
 export function starClock(state: GameState): { turn: number; of: number; split: number; left: number; flash: boolean; system: string; systemId: string | null; next: string | null; nextId: string | null } | null {
-  const f = state.civ.flags;
+  const f = clockCiv(state).flags;
   const left = starTurnsLeft(state);
   if (left < 1) return null;
-  const split = starSplit(state, state.civ.pace);
+  const split = starSplit(state, clockCiv(state).pace);
   // (a flash's turn may end after its star, at the shortest turn the calendar can count)
   const sys = Object.values(state.systems).find((s) => isNewStar(s) && s.primary.diesAt === (f.star_flash ?? f.star_until));
   const after = f.star_next ? Object.values(state.systems).find((s) => isNewStar(s) && s.primary.diesAt === f.star_next) : undefined;
@@ -360,17 +373,17 @@ export function starClock(state: GameState): { turn: number; of: number; split: 
  * what was left of its life, whatever the pace, the last ending as it burns out; with Quickening
  * at a quick pace each of those splits into STAR_SPLIT.
  */
-export function turnStep(state: GameState, pace = state.civ.pace): TimeStep {
+export function turnStep(state: GameState, pace = clockCiv(state).pace): TimeStep {
   const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
   const left = starClockEra(state) && isFinite(step.years) ? starTurnsLeft(state, pace) : 0;
   if (left >= 1) {
-    const f = state.civ.flags;
+    const f = clockCiv(state).flags;
     const end = left === 1 ? f.star_until : f.star_until - (f.star_step / starSplit(state, pace)) * (left - 1);
     if (end > state.years) return { years: end, eta: eta(end), turnLength: end - state.years };
   }
   if (calendarEra(state) !== 'dusk' || !isFinite(step.years)) return step;
   let end = step.years;
-  const f = state.civ.flags;
+  const f = clockCiv(state).flags;
   if (keepingTime(state)) {
     // the last of its turns ends exactly when the flare does, not an ulp or two short of it
     const next = state.years + f.flare_step;
@@ -406,7 +419,7 @@ export function paceMatters(state: GameState, pace: number): boolean {
  * upkeep, which does not shrink with a short turn, for a fraction of its income.) A turn kept
  * with a new star is lived in full in the same way, or as a tenth of one when Quickening splits it.
  */
-export function livedShare(state: GameState, pace = state.civ.pace, step: TimeStep = turnStep(state, pace)): number {
+export function livedShare(state: GameState, pace = clockCiv(state).pace, step: TimeStep = turnStep(state, pace)): number {
   const share = Math.pow(10, -pace);
   if (starClockEra(state) && keepingStarTime(state)) return 1 / starSplit(state, pace);
   if (calendarEra(state) !== 'dusk' || !isFinite(step.turnLength)) return share;
@@ -423,14 +436,16 @@ export function livedShare(state: GameState, pace = state.civ.pace, step: TimeSt
  * not changed.
  */
 export function stepTurns(state: GameState, pace: number, maxTurns: number, each: (turnLength: number, endYears: number) => boolean): number {
-  const sim: GameState = { ...state, civ: { ...state.civ, flags: { ...state.civ.flags } } };
+  const real = clockCiv(state);
+  const copy: Civ = { ...real, flags: { ...real.flags } };
+  const sim = pointAt({ ...state, civs: { ...state.civs, [real.id]: copy } }, copy);
   for (let n = 1; n <= maxTurns; n++) {
     const step = turnStep(sim, pace);
     if (each(step.turnLength, step.years)) return n;
     if (!isFinite(step.years)) return Infinity;
     sim.years = step.years;
     sim.eta = step.eta;
-    const f = sim.civ.flags;
+    const f = copy.flags;
     if (f.flare_until && sim.years >= f.flare_until) {
       delete f.flare_until;
       delete f.flare_step;
@@ -441,14 +456,14 @@ export function stepTurns(state: GameState, pace: number, maxTurns: number, each
 }
 
 /** Turns until `target` years at this pace, counted as they will really fall (see stepTurns). */
-export function turnsUntilYears(state: GameState, target: number, pace = state.civ.pace, maxTurns = 400): number {
+export function turnsUntilYears(state: GameState, target: number, pace = clockCiv(state).pace, maxTurns = 400): number {
   if (!isFinite(target)) return Infinity;
   if (target <= state.years) return 0;
   return stepTurns(state, pace, maxTurns, (_len, end) => end >= target);
 }
 
 /** turnsUntilYears for many targets at once (a list of stars), stepping the turns only once. */
-export function turnsUntilAll(state: GameState, targets: number[], pace = state.civ.pace, maxTurns = 400): number[] {
+export function turnsUntilAll(state: GameState, targets: number[], pace = clockCiv(state).pace, maxTurns = 400): number[] {
   const ahead = targets.filter((t) => isFinite(t) && t > state.years);
   const ends: number[] = [];
   if (ahead.length) {
@@ -523,8 +538,8 @@ export function digShelters(state: GameState, systemId: string): { built: number
 export function keepTimeWithFlare(state: GameState, systemId: string) {
   const p = state.systems[systemId]?.primary;
   if (!p || p.kind !== 'blue_dwarf' || !p.whiteAt || p.whiteAt <= state.years) return;
-  state.civ.flags.flare_until = p.whiteAt;
-  state.civ.flags.flare_step = (p.whiteAt - state.years) / FLARE_TURNS;
+  clockCiv(state).flags.flare_until = p.whiteAt;
+  clockCiv(state).flags.flare_step = (p.whiteAt - state.years) / FLARE_TURNS;
 }
 
 /** The event's numbers for a star that has just begun to flare. */
@@ -536,7 +551,7 @@ export function flareData(state: GameState, sys: StarSystem): Record<string, str
     mine.map((c) => state.bodies[c.bodyId]).filter((b) => b && living.includes(b.kind)).sort((a, b) => b.vitality - a.vitality)[0] ??
     state.bodies[mine.sort((a, b) => b.pops.kin - a.pops.kin)[0]?.bodyId ?? ''];
   const span = (p.whiteAt ?? state.years) - state.years;
-  const next = stepTime(calendarEra(state), state.years, state.eta, state.civ.pace, state.settings.length).turnLength;
+  const next = stepTime(calendarEra(state), state.years, state.eta, clockCiv(state).pace, state.settings.length).turnLength;
   const d: Record<string, string | number> = {
     systemId: sys.id,
     star: sys.name,

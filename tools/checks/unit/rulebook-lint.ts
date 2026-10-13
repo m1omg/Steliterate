@@ -26,7 +26,7 @@ interface Rule {
 const RULES: Rule[] = [
   { what: 'every walk over settlements and fleets says whose it means (colonies, fleets; allColonies, allFleets)', re: /Object\.(values|keys|entries)\(\s*[\w.]+\.(colonies|fleets)\s*\)/, allowed: ['game/sim/util.ts', 'game/save.ts'] },
   { what: 'the universe’s facts are in the state’s flags', re: /\bciv\.flags(\.|\[')(halo_drawn|matter_gone|flowed)\b/, allowed: [] },
-  { what: 'a civilization’s own facts are in its flags', re: /(?<!civ)\.flags(\.(first_swarm|decay_lost|gfe_prev|tut)\b|\[`fcd:)/, allowed: ['game/save.ts'] },
+  { what: 'a civilization’s own facts are in its flags', re: /\b(state|s|st|g|sim|world|game\.value)\.flags(\.(first_swarm|decay_lost|gfe_prev|tut)\b|\[`fcd:)/, allowed: ['game/save.ts'] },
   { what: 'only deliver puts a message in a civilization’s list', re: /\.signals\.push\(/, allowed: ['game/civs.ts'] },
   { what: 'only pointAt sets the pointer', re: /\.civ\s*=[^=]/, allowed: [] },
 ];

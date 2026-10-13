@@ -87,7 +87,9 @@ function pickResearch(state: GameState) {
   // a pick that stored insight already covers is done at once: pick again, as a player would
   for (let i = 0; i < 6 && !civ.researching; i++) {
     const avail = new Set(availableTechs(state).map((t) => t.id));
-    const next = TECH_PRIORITY.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
+    // (another civilization never falls back on a deliberate choice, noAuto: Halo Siphons, say)
+    const mine = civ.id === state.player;
+    const next = TECH_PRIORITY.find((id) => avail.has(id)) ?? [...avail].filter((id) => !TECHS.find((t) => t.id === id)?.taint && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
     if (!next) break;
     setResearch(state, next);
   }
@@ -413,8 +415,9 @@ function planSignals(state: GameState) {
     if (s.kind === 'dark_reveal2') choice = 'help';
     if (answerSignal(state, s.uid, choice)) answerSignal(state, s.uid, s.choices[s.choices.length - 1].id);
   }
+  // (the Unlit speak to the player alone)
   const dark = state.minds.dark;
-  if (dark.stage >= 2 && dark.stage < 5 && civ.energy > 80 && civ.matter > 40) makeGesture(state, patternAnswer(dark.lastPattern));
+  if (civ.id === state.player && dark.stage >= 2 && dark.stage < 5 && civ.energy > 80 && civ.matter > 40) makeGesture(state, patternAnswer(dark.lastPattern));
 }
 
 /** Pay to keep time with a new star only while half the store would remain afterwards. */

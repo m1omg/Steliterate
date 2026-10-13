@@ -68,10 +68,11 @@ export function nextToFlow(c: Colony): string | null {
  * sleepers with the last Cryo Hall that held them.
  */
 export function theLongFlow(state: GameState, eta: number, logL: number, mods: Mods, slowOrders: number) {
-  if (state.flags.flowed === undefined) {
-    if (!flowAhead(state) || eta < FLOW_ETA) return;
-    comes(state, logL, mods, slowOrders);
-  }
+  // (the turn lets it come first, for everyone: flowComes)
+  if (state.flags.flowed === undefined) flowComes(state, eta, logL, () => mods, slowOrders);
+  if (state.flags.flowed === undefined) return;
+  // every civilization hears of it as it comes, in its own part of the turn
+  if (state.flags.flowed === state.turn) heard(state);
   if (!flowing(state)) return;
   for (const c of colonies(state)) {
     if (keeping(c, logL, mods, slowOrders) !== 'unmanned') continue;
@@ -93,18 +94,27 @@ export function theLongFlow(state: GameState, eta: number, logL: number, mods: M
   }
 }
 
-/** The flow arrives: relics no one is digging run into smooth lumps; we hear of it. */
-function comes(state: GameState, logL: number, mods: Mods, slowOrders: number) {
+/**
+ * The flow arrives, once, for the universe (η is where this turn ends): ruins no one is digging run
+ * into smooth lumps. Someone awake working a Relic Excavation keeps its ruin, by that civilization's
+ * own mods. Each civilization then hears of it in its part of the turn (theLongFlow, `heard`).
+ */
+export function flowComes(state: GameState, eta: number, logL: number, modsOf: (id: string) => Mods, slowOrders: number) {
+  if (state.flags.flowed !== undefined || !flowAhead(state) || eta < FLOW_ETA) return;
   state.flags.flowed = state.turn;
   let found = 0;
   for (const b of Object.values(state.bodies)) {
     if (!b.relic || b.relic.flowed || b.dissolved) continue;
-    // someone awake working a Relic Excavation there keeps its ruin
     const dig = b.colonyId ? state.colonies[b.colonyId] : undefined;
-    if (dig && (dig.structures.relic_dig ?? 0) > 0 && keeping(dig, logL, mods, slowOrders) !== 'unmanned') continue;
+    if (dig && (dig.structures.relic_dig ?? 0) > 0 && keeping(dig, logL, modsOf(dig.owner), slowOrders) !== 'unmanned') continue;
     b.relic.flowed = true;
     if (b.relic.state !== 'hidden') found++;
   }
-  queueEvent(state, 'long_flow', { ruins: found });
+  state.flags.flow_ruins = found;
+}
+
+/** A civilization hears that the flow has come, and how many found ruins it took. */
+function heard(state: GameState) {
+  queueEvent(state, 'long_flow', { ruins: state.flags.flow_ruins ?? 0 });
   log(state, 'The Long Flow: from now on every solid flows, slowly; whatever no one is awake to mend runs into smooth lumps.', 'era');
 }

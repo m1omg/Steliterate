@@ -14,7 +14,7 @@ import { workCost, workRequirementMet } from './endings';
 import { resolveEvent } from './events';
 import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
 import { absorbSwarm, attackSwarm, drawSwarmTo, tameSwarm } from './hunger';
-import { BEACON_COST } from './beacons';
+import { BEACON_COST, beaconOwner } from './beacons';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
@@ -22,7 +22,7 @@ import { siphonsRunning, sourceLight } from '../physics';
 import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { allColonies, colonies, hasCharter, hasTech, leftBehind, log, savableName, uid } from './util';
+import { allColonies, colonies, hasCharter, hasTech, leftBehind, log, ownColony, ownFleet, savableName, uid } from './util';
 import { ageReached, inAge, matterGone } from '../fate';
 
 export type ActionResult = string | null; // error message or null on success
@@ -99,7 +99,7 @@ export function buildableShips(state: GameState, c: Colony): { def: ShipDef; err
 }
 
 export function queueBuild(state: GameState, colonyId: string, kind: 'structure' | 'ship', key: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const def = kind === 'structure' ? STRUCTURE_BY_ID[key] : SHIP_BY_ID[key];
   if (!def) return 'Unknown blueprint.';
@@ -152,7 +152,7 @@ export function dismantleCheck(state: GameState, c: Colony, id: string): string 
 
 /** Take one structure apart at a settlement. */
 export function dismantle(state: GameState, colonyId: string, id: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const err = dismantleCheck(state, c, id);
   if (err) return err;
@@ -173,7 +173,7 @@ export function dismantle(state: GameState, colonyId: string, id: string): Actio
 
 /** Emergency shifts: finish the first project in a queue now, paying for the remaining work. */
 export function rushCost(state: GameState, colonyId: string): { matter: number; energy: number } | null {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   const q = c?.queue[0];
   if (!q) return null;
   const left = Math.max(0, q.cost - q.progress);
@@ -182,7 +182,7 @@ export function rushCost(state: GameState, colonyId: string): { matter: number; 
 }
 
 export function rushBuild(state: GameState, colonyId: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   const cost = rushCost(state, colonyId);
   if (!c || !cost) return 'Nothing to rush.';
   if (state.civ.matter < cost.matter || state.civ.energy < cost.energy) return `Rushing needs ${cost.matter ? `${cost.matter} matter and ` : ''}${cost.energy} energy.`;
@@ -196,7 +196,7 @@ export function rushBuild(state: GameState, colonyId: string): ActionResult {
 }
 
 export function removeQueued(state: GameState, colonyId: string, qid: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const i = c.queue.findIndex((q) => q.uid === qid);
   if (i < 0) return 'Not in the queue.';
@@ -214,7 +214,7 @@ export function removeQueued(state: GameState, colonyId: string, qid: string): A
 }
 
 export function moveQueued(state: GameState, colonyId: string, qid: string, dir: -1 | 1): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const i = c.queue.findIndex((q) => q.uid === qid);
   const j = i + dir;
@@ -224,21 +224,21 @@ export function moveQueued(state: GameState, colonyId: string, qid: string, dir:
 }
 
 export function setFocus(state: GameState, colonyId: string, focus: Focus): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   c.focus = focus;
   return null;
 }
 
 export function setSpare(state: GameState, colonyId: string, spare: SpareWork): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   c.spare = spare;
   return null;
 }
 
 export function toggleOverdrive(state: GameState, colonyId: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   if (!hasCharter(state, 'overdrive_protocols')) return 'Enact the Overdrive Protocols charter first.';
   c.overdrive = !c.overdrive;
@@ -367,7 +367,7 @@ export function repealCharter(state: GameState, id: string): ActionResult {
 export type Conversion = 'upload' | 'merge' | 'cool' | 'freeze' | 'thaw';
 
 export function convert(state: GameState, colonyId: string, kind: Conversion): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const civ = state.civ;
   const mods = computeMods(state);
@@ -430,7 +430,7 @@ export function orderFleet(state: GameState, fleetId: string, systemId: string, 
 
 /** Set a survey ship exploring by itself (it sets out at once if it can), or call it off. */
 export function setAutoExplore(state: GameState, fleetId: string, on: boolean): ActionResult {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f) return 'No such fleet.';
   if (on && !canSurvey(f)) return 'Only survey ships can explore by themselves.';
   f.auto = on ? 'explore' : undefined;
@@ -443,7 +443,7 @@ export function setAutoExplore(state: GameState, fleetId: string, on: boolean): 
 }
 
 export function disbandFleet(state: GameState, fleetId: string): ActionResult {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f) return 'No such fleet.';
   if (!f.at) return 'Wait until it arrives.';
   state.civ.matter += f.ships.reduce((a, s) => a + (SHIP_BY_ID[s.cls]?.matter ?? 0) * 0.4, 0);
@@ -457,7 +457,7 @@ export function disbandFleet(state: GameState, fleetId: string): ActionResult {
  */
 export function placeBeacon(state: GameState, fleetId: string): ActionResult {
   if (!hasTech(state, 'hunger_lures')) return 'Research Decoy Beacons first.';
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f || !f.at) return 'The fleet must be stationed.';
   const sys = state.systems[f.at];
   if (sys.beacon) return 'A beacon already burns here.';
@@ -465,6 +465,7 @@ export function placeBeacon(state: GameState, fleetId: string): ActionResult {
   if (state.civ.energy < BEACON_COST) return `A beacon needs ${BEACON_COST} energy.`;
   state.civ.energy -= BEACON_COST;
   sys.beacon = true;
+  sys.beaconBy = state.civ.id;
   const from = drawSwarmTo(state, sys.id);
   log(state, `A decoy beacon burns at ${sys.name}. ${from ? `The swarm at ${from.name} has turned toward it.` : 'No swarm is near enough to notice it yet.'}`, from ? 'good' : 'info', sys.id);
   return null;
@@ -474,7 +475,9 @@ export function placeBeacon(state: GameState, fleetId: string): ActionResult {
 export function putOutBeacon(state: GameState, systemId: string): ActionResult {
   const sys = state.systems[systemId];
   if (!sys?.beacon) return 'No beacon burns there.';
+  if (beaconOwner(state, sys) !== state.civ.id) return 'That beacon is not ours to put out.';
   delete sys.beacon;
+  delete sys.beaconBy;
   log(state, `We let the beacon at ${sys.name} go dark.`, 'info', sys.id);
   return null;
 }
@@ -591,7 +594,7 @@ export function answerEvent(state: GameState, eventUid: string, choice: number) 
 }
 
 export function renameColony(state: GameState, colonyId: string, name: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   c.name = savableName(name.slice(0, 32)) || c.name;
   return null;
@@ -605,7 +608,7 @@ export const ALL_CHARTERS = CHARTERS;
  * purpose, so the game stops asking. idle: back to waiting for orders.
  */
 export function standFleet(state: GameState, fleetId: string, order: 'fortify' | 'hold' | 'idle'): ActionResult {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f || !f.at) return 'Only a fleet that has arrived can do that.';
   if (order === 'fortify' && !isWarFleet(f)) return 'Only warships can fortify.';
   f.order = order;

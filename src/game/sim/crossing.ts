@@ -7,7 +7,7 @@ import type { Colony, CrossingReport, EraId, GameState } from '../types';
 import { THREADS } from '../types';
 import { evaporateHole } from '../physics';
 import { capacity, reserveCapacity } from './economy';
-import { destroyColony } from './fleets';
+import { deepFor, destroyColony } from './fleets';
 import { starGoneEarly } from './flare';
 import type { Mods } from './mods';
 import { colonies, distLy, inItsSystem, log, popsOf, totalPops, withRng } from './util';
@@ -38,7 +38,8 @@ function migrateToBlackHoles(state: GameState): number {
     // a vault already at a hole stays there, but a planet it stood on has dissolved: into the Deep
     if (atHole && state.bodies[c.bodyId]?.kind === 'deep') continue;
     const target = atHole ? here : holes.slice().sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z))[0];
-    const deep = state.bodies[target.bodies[0]];
+    // its own civilization's vault at the hole, beside any other's
+    const deep = deepFor(state, target, c.owner) ?? state.bodies[target.bodies[0]];
     const oldBody = state.bodies[c.bodyId];
     if (oldBody) oldBody.colonyId = null;
     moved++;

@@ -31,6 +31,12 @@ export interface EventDef {
   eras?: EraId[];
   weight?: number; // random pool weight (0 or undefined = scripted only)
   once?: boolean;
+  /**
+   * Who it can happen to: the player alone (absent), or every civilization ('everyone'). The
+   * other minds, the star clocks and the homeworld's story are the player's (the new version,
+   * part 2a, picks those that are everyone's).
+   */
+  scope?: 'everyone';
   bind?: (s: GameState, rng: Rng) => EventData | null;
   text: (s: GameState, d: EventData) => string;
   choices: EventChoice[];

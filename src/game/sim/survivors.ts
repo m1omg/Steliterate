@@ -14,7 +14,7 @@ import { canConverse, rangeWith, sendSignal, voiceRange, voiceThread } from './s
 import { queueEvent } from './events';
 import { survivorWorld } from './homes';
 import { formatDistance, formatYears, logTurnLength } from '../eras';
-import { capital, clamp, colonies, distLy, fleets, hasCharter, log, threadTotals, withRng } from './util';
+import { capital, clamp, colonies, distLy, fleets, hasCharter, log, ownFleet, threadTotals, withRng } from './util';
 import { turnStep } from './flare';
 import { capacity } from './economy';
 import { computeMods } from './mods';
@@ -697,7 +697,7 @@ export function raidTarget(state: GameState, systemId: string): Survivor | null 
  * the others hear of it, and our own people do not like what we have become.
  */
 export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; text: string } | string {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f || !f.at) return 'The fleet must be stationed at their star.';
   const sv = raidTarget(state, f.at);
   if (!sv) return 'No civilization we know of lives here.';

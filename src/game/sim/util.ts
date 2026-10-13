@@ -81,6 +81,16 @@ export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'in
   logTo(state, state.civ, text, kind, systemId, fleet);
 }
 
+/** A line for every civilization that knows of this star (its Record), as `kind`. */
+export function tellKnown(state: GameState, systemId: string, text: string, kind: LogEntry['kind'] = 'info') {
+  for (const v of Object.values(state.civs)) if (v.known[systemId]) logTo(state, v, text, kind, systemId);
+}
+
+/** The settlements of one civilization, whoever's turn it is. */
+export function coloniesOf(state: GameState, civId: string): Colony[] {
+  return Object.values(state.colonies).filter((c) => c.owner === civId);
+}
+
 /** A line in one civilization's Record (the universe's part of a turn tells each its own). */
 export function logTo(state: GameState, civ: Civ, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string) {
   civ.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}) });
@@ -111,6 +121,18 @@ export function fleets(state: GameState): Fleet[] {
 /** Every civilization's fleets. */
 export function allFleets(state: GameState): Fleet[] {
   return Object.values(state.fleets);
+}
+
+/** A settlement of the civilization whose turn or view it is, by id: its actions never touch another's. */
+export function ownColony(state: GameState, id: string): Colony | undefined {
+  const c = state.colonies[id];
+  return c && c.owner === state.civ.id ? c : undefined;
+}
+
+/** A fleet of the civilization whose turn or view it is, by id: its orders never move another's. */
+export function ownFleet(state: GameState, id: string): Fleet | undefined {
+  const f = state.fleets[id];
+  return f && f.owner === state.civ.id ? f : undefined;
 }
 
 export function popsOf(c: Colony): number {
