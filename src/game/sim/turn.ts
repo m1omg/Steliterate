@@ -1,5 +1,6 @@
 import { autoPlay } from '../auto';
 import { asCiv, flushOutbox } from '../civs';
+import { tiesTurn } from './ties';
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
 import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
@@ -317,6 +318,9 @@ export function endTurn(state: GameState): TurnResult {
     withRng(state, (rng) => warTurn(state, () => rng.next()));
     updateMinds(state, logL, c.mods);
   });
+  // the others among themselves: their pacts sealed and at work (and what we hear of it)
+  tiesTurn(state);
+  flushOutbox(state);
 
   // ------------------------------------------------ 7. the universe moves on
   const from = state.years;
@@ -571,6 +575,8 @@ function starvation(state: GameState, t: CivTurn) {
 function researchAndWorks(state: GameState, t: CivTurn) {
   const civ = state.civ;
   const insight = t.insight;
+  // (what it learns a turn: Open Archives between others share a part of it, ties.ts)
+  if (civ.id !== state.player) civ.flags.last_insight = insight;
   let research = insight;
   if (civ.work) {
     const share = civ.researching ? 0.5 : 1;

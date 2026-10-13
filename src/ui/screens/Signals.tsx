@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { heardTies } from '../../game/sim/ties';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace, proposeAPact, seize, sendAid, shutHaloSiphons } from '../../game/sim/actions';
@@ -405,6 +406,17 @@ export function SignalsModal({ s }: { s: GameState }) {
                                   </div>
                                 );
                               })}
+                              {(() => {
+                                // their pacts with the others, as far as their news has reached us
+                                const known = heardTies(s, sv.id);
+                                return (
+                                  known.length > 0 && (
+                                    <div class="dim" style={{ fontSize: '13.5px', marginTop: '6px' }} data-tip="Their pacts with the other civilizations, as far as the news of them has reached us.">
+                                      With the others: {known.map((k) => `${k.kinds.map((x) => PACTS[x].name).join(' and ')} with ${s.survivors[k.other]?.name ?? k.other}`).join('; ')}
+                                    </div>
+                                  )
+                                );
+                              })()}
                             </div>
                           </>
                         )}

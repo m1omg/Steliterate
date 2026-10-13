@@ -35,6 +35,8 @@ export const PACT_RISE = 1.6;
 export const AID_EVERY = 6;
 /** Open Archives: notes on a project every this many turns. */
 export const NOTES_EVERY = 10;
+/** Open Archives with a civilization of its own: the part of what it learns a turn that we read. */
+export const ARCHIVE_SHARE = 0.03;
 
 /** Pacts in force with them. */
 export function pactsWith(sv: Survivor): PactKind[] {
@@ -221,13 +223,17 @@ export function pactsTurn(state: GameState) {
       }
     }
     if (hasPact(sv, 'archives')) {
-      const gain = 0.5 + 0.02 * dealSize(state, sv) * sv.health;
+      // a civilization of its own shares a part of what it really learns, and notes only on what it knows
+      const theirs = civOf(state, sv);
+      const gain = theirs ? ARCHIVE_SHARE * (theirs.flags.last_insight ?? 0) : 0.5 + 0.02 * dealSize(state, sv) * sv.health;
       if (civ.researching) civ.research[civ.researching] = (civ.research[civ.researching] ?? 0) + gain;
       else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
-      if (!civOf(state, sv)) sv.health = Math.min(1, sv.health + 0.002);
+      if (!theirs) sv.health = Math.min(1, sv.health + 0.002);
       const since = state.turn - (sv.pacts!.archives ?? state.turn);
       if (since > 0 && since % NOTES_EVERY === 0) {
-        const t = civ.researching ? TECH_BY_ID[civ.researching] : availableTechs(state).filter((x) => !x.taint).sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];
+        const open = availableTechs(state).filter((x) => !x.taint && (!theirs || theirs.techs.includes(x.id)));
+        const ours = civ.researching ? TECH_BY_ID[civ.researching] : undefined;
+        const t = ours && (!theirs || theirs.techs.includes(ours.id)) ? ours : open.sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];
         if (t) {
           const notes = Math.round(techCost(state, t.id) * 0.3);
           civ.research[t.id] = (civ.research[t.id] ?? 0) + notes;

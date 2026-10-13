@@ -348,6 +348,22 @@ export interface Survivor {
 /** Mutual Aid, Shared Watch, Open Archives. */
 export type PactKind = 'aid' | 'watch' | 'archives';
 
+/** Two other civilizations' relation (sim/ties.ts): toward us a neighbour's relation is its Survivor record. */
+export interface Tie {
+  /** How each regards the other (−100..100), by its id. */
+  regard: Record<string, number>;
+  /** Pacts in force between them: the turn each was sealed. */
+  pacts?: Partial<Record<PactKind, number>>;
+  /** The pacts between them that we have heard of (their news reached us). */
+  heard?: Partial<Record<PactKind, true>>;
+  /** A pact one of them proposed, crossing to the other (cosmic years), and its answer coming back. */
+  proposal?: { kind: PactKind; from: string; arrives: number; cost: number; answer?: { yes: boolean; arrives: number } };
+  /** Energy beamed between them, crossing the dark: to whom, when it arrives, how much. */
+  beams?: { to: string; at: number; energy: number }[];
+  /** Turns and counts, as our marks (aid_<id>: when that one last sent help). */
+  marks?: Record<string, number>;
+}
+
 export interface Mind {
   id: string;
   kind: 'slow' | 'dark';
@@ -412,6 +428,10 @@ export interface Outgoing {
   energy?: number;
   matter?: number;
   resolve?: number;
+  /** The Threads' consent given back (a pact proposal declined). */
+  accord?: number;
+  /** Insight, into what it is researching next (Open Archives between others). */
+  insight?: number;
   people?: { thread: ThreadId; n: number };
   /** Its game ends (its people faded, came to us, were taken or devoured); `to`: its settlements and ships become that civilization's. */
   end?: { ending: string; to?: string };
@@ -528,6 +548,10 @@ export interface GameState {
    * Empty between turns.
    */
   outbox?: Outgoing[];
+  /** Between the other civilizations: each pair's tie (sim/ties.ts), by `a|b` (their ids in order). */
+  ties?: Record<string, Tie>;
+  /** What we will hear of the others' dealings with each other, when its light reaches our capital (ties.ts). */
+  tidings?: { at: number; text: string; systemId?: string; tie?: string; kind?: PactKind }[];
   /** Save format version (absent in the first published saves: version 1). */
   saveVersion?: number;
 }

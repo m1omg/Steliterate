@@ -9,7 +9,7 @@
 // - It plays every turn, at our pace, and we know it by its civilization: its people, health and
 //   stars read from it (syncSurvivor).
 // - What passes between us is real, through the outbox: refugees leave its settlements, a trade
-//   pays it what we pay, a shared work feeds it as it feeds us.
+//   pays it what we pay, a shared work feeds it as it feeds us (by its star's light).
 // - Its story and its game end together: one whose game ends is gone to us, its settlements empty.
 import { STRUCTURE_BY_ID } from '../../../src/game/data/structures';
 import { asCiv, flushOutbox, send } from '../../../src/game/civs';
@@ -19,8 +19,11 @@ import { endTurn } from '../../../src/game/sim/turn';
 import { coloniesOf, marks } from '../../../src/game/sim/util';
 import { copyState } from '../../../src/game/save';
 import { livedShare } from '../../../src/game/sim/flare';
+import { ARCHIVE_SHARE, NOTES_EVERY, pactsTurn } from '../../../src/game/sim/pacts';
+import { availableTechs } from '../../../src/game/sim/research';
+import { sourceLight } from '../../../src/game/physics';
 import { sendSignal } from '../../../src/game/sim/signals';
-import { resolveSurvivorSignal } from '../../../src/game/sim/survivors';
+import { jointYield, resolveSurvivorSignal } from '../../../src/game/sim/survivors';
 import { autoPlay } from '../../../src/game/auto';
 import type { Colony, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
@@ -141,8 +144,37 @@ check(ways.size >= 4, `(the ways seen: ${[...ways].sort().join(', ')})`);
     const pf = livedShare(a);
     endTurn(a);
     endTurn(b);
+    const want = jointYield(a, a.survivors[id]) * pf;
     const got = b.civs[id].energy - a.civs[id].energy;
-    check(Math.abs(got - 6 * pf) < 1e-6, `a shared work we built together feeds them too: ${got.toFixed(2)} energy more a turn (6 at full pace)`);
+    check(want > 0 && Math.abs(got - want) < 1e-6, `a shared work we built together feeds them too: ${got.toFixed(2)} energy more a turn (its field gathers their star’s light: 6 under a full red sun)`);
+  }
+
+  // a shared work's field gathers its star's light: under a dark star, almost nothing
+  {
+    const g = copyState(s);
+    const sv = g.survivors[ids[0]];
+    const lit = jointYield(g, sv);
+    const dark = Object.values(g.systems).find((x) => !x.gone && sourceLight(g, x, g.years, 0).light < 0.03);
+    if (dark) sv.homeSystemId = dark.id;
+    check(lit > 3 && !!dark && jointYield(g, sv) < 0.2, `a shared work gathers its star’s light: ${lit.toFixed(1)} a turn by a red sun, ${dark ? jointYield(g, sv).toFixed(2) : '?'} by a dark one`);
+  }
+  // Open Archives with a civilization of its own: a part of what it learns, and notes only on what it knows
+  {
+    const g = copyState(s);
+    const sv = g.survivors[ids[0]];
+    const theirs = g.civs[sv.id];
+    theirs.flags.last_insight = 50;
+    const unknown = availableTechs(g).find((t) => !t.taint && !theirs.techs.includes(t.id))!;
+    g.civ.researching = unknown.id;
+    sv.pacts = { archives: g.turn - NOTES_EVERY };
+    const r0 = g.civ.research[unknown.id] ?? 0;
+    pactsTurn(g);
+    const read = (g.civ.research[unknown.id] ?? 0) - r0;
+    check(Math.abs(read - 50 * ARCHIVE_SHARE) < 1e-9, `Open Archives: we read ${read.toFixed(2)} a turn of the ${50} it learns, and no notes on what it does not know`);
+    theirs.techs.push(unknown.id);
+    const r1 = g.civ.research[unknown.id] ?? 0;
+    pactsTurn(g);
+    check((g.civ.research[unknown.id] ?? 0) - r1 > 50 * ARCHIVE_SHARE + 1, `once it knows it, its notes on it come (${((g.civ.research[unknown.id] ?? 0) - r1).toFixed(0)} insight)`);
   }
 
   // its story and its game end together

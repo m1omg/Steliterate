@@ -138,6 +138,8 @@ export function flushOutbox(state: GameState): void {
     if (m.energy) civ.energy = Math.max(0, civ.energy + m.energy);
     if (m.matter) civ.matter = Math.max(0, civ.matter + m.matter);
     if (m.resolve) civ.resolve = Math.max(0, Math.min(100, civ.resolve + m.resolve));
+    if (m.accord) civ.accord = Math.max(0, civ.accord + m.accord);
+    if (m.insight) civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + m.insight;
     if (m.people?.n) movePeople(state, civ, m.people.thread, m.people.n);
     if (m.end) endNow(state, civ, m.end.ending, m.end.to);
   }

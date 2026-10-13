@@ -43,6 +43,7 @@ import { WAR_ACCORD, declareWar, makePeace, seizeBlocked, warBlocked, warCause, 
 import { raidStrength, seizeSurvivor } from './sim/survivors';
 import { SHIP_BY_ID } from './data/ships';
 import { SEED_MIN, terraformSummary } from './sim/terraform';
+import { planTies } from './sim/ties';
 
 // when the autoplayer spends accord, and how much it keeps for the next law (the dearest costs 30)
 const ACCORD_KEEP = 30;
@@ -416,8 +417,11 @@ function planAccord(state: GameState) {
 /** Pacts: propose one a turn to a neighbour who thinks well enough of us, while accord allows. */
 function planPacts(state: GameState) {
   const civ = state.civ;
-  // (pacts are with the neighbours as we know them, the player's: between other civilizations they come with relations)
-  if (civ.id !== state.player) return;
+  // (between other civilizations, their ties: ties.ts)
+  if (civ.id !== state.player) {
+    if (wayOf(state)) planTies(state, ACCORD_KEEP);
+    return;
+  }
   for (const sv of Object.values(state.survivors)) {
     const kind = PACT_KINDS.find((k) => !hasPact(sv, k) && sv.disposition >= PACTS[k].need);
     if (!kind || pactBlocked(state, sv, kind) !== null) continue;

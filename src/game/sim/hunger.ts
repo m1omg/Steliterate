@@ -1,4 +1,5 @@
 import { SHIP_BY_ID } from '../data/ships';
+import { watchPartners } from './ties';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import type { Fleet, GameState, StarSystem, Swarm } from '../types';
 import { FORTIFY_BONUS, destroyColony, isWarFleet, signatureOf } from './fleets';
@@ -43,6 +44,8 @@ function defenseAt(state: GameState, systemId: string, mods: Mods, owner = state
   // Shared Watch: a partner's warning, and a little of their strength (never a shield); the
   // neighbours' pacts are the player's
   if (owner === state.player) for (const sv of Object.values(state.survivors)) if (sv.alive && sv.pacts?.watch !== undefined) d += 0.5;
+  // and another civilization's Shared Watch partners among the others (ties.ts)
+  else d += 0.5 * watchPartners(state, owner);
   return d;
 }
 

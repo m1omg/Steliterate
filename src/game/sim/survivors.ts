@@ -234,7 +234,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
       // and a shared work we built together feeds it as it feeds us
       if (civOf(state, sv)) {
         syncSurvivor(state, sv);
-        if (!sv.war && sv.marks?.joint) send(state, sv.id, { energy: JOINT_ENERGY * paceFactor });
+        if (!sv.war && sv.marks?.joint) send(state, sv.id, { energy: jointYield(state, sv) * paceFactor });
       } else lightly(state, sv, L, rng);
       // a promise of warships we made them: kept, or not
       judgePromise(state, sv);
@@ -408,7 +408,7 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
           title: `${sv.name} proposes a shared work`,
           text: voice(sv, `Together we could build what neither of us can alone: a shared collector field, split fairly. It costs 60 matter from each of us.`, `JOINT CONSTRUCTION PROPOSED. INPUT: 60 MATTER. OUTPUT: SHARED ENERGY STREAM. TERMS IMMUTABLE.`),
           choices: [
-            { id: 'join', label: 'Commit 60 matter', hint: '+6 energy per turn for as long as they endure.' },
+            { id: 'join', label: 'Commit 60 matter', hint: `+${jointYield(state, sv).toFixed(1)} energy per turn now, from their star’s light: it fades as their star does.` },
             { id: 'decline', label: 'Decline' },
           ],
         });
@@ -584,14 +584,24 @@ export function spareOf(state: GameState, sv: Survivor, want: number): number {
   return c ? Math.min(want, Math.floor(c.energy / 2)) : want;
 }
 
-/** What a shared work gives each of its two builders a turn (at full pace). */
+/** What a shared work gives each of its two builders a turn (at full pace), under a red sun's full light. */
 const JOINT_ENERGY = 6;
+
+/**
+ * A shared work is a collector field around their star: it gathers that star's light (up to a
+ * red sun's, sourceLight), so it fades as the star does, and gives nothing in the dark (since
+ * part 2a-3; before, a flat 6 for as long as they endured).
+ */
+export function jointYield(state: GameState, sv: Survivor): number {
+  const home = state.systems[sv.homeSystemId];
+  return home ? JOINT_ENERGY * Math.min(1, sourceLight(state, home, state.years, 0).light) : 0;
+}
 
 /** Joint projects pay out while the partner endures. (The neighbours' records are our relations: for us alone.) */
 export function jointIncome(state: GameState): number {
   if (state.civ.id !== state.player) return 0;
   let e = 0;
-  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.war && sv.marks?.joint) e += JOINT_ENERGY;
+  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.war && sv.marks?.joint) e += jointYield(state, sv);
   return e;
 }
 
