@@ -10,7 +10,7 @@ import { endPact, proposePact } from './pacts';
 import { sanctuaryHeard } from './refuge';
 import { declareWar, makePeace } from './war';
 import { THREADS } from '../types';
-import { capacity } from './economy';
+import { MATTER_AS_ENERGY, capacity } from './economy';
 import { workCost, workRequirementMet } from './endings';
 import { resolveEvent } from './events';
 import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
@@ -87,7 +87,7 @@ export function buildCost(state: GameState, d: StructureDef | ShipDef, isShip: b
     matter *= 0.75;
   }
   if (isShip && hasCharter(state, 'expansion_mandate')) industry *= 0.8;
-  if (matterIsEnergy(state)) return { industry: Math.round(industry), matter: 0, energy: Math.round(matter * 1.5) };
+  if (matterIsEnergy(state)) return { industry: Math.round(industry), matter: 0, energy: Math.round(matter * MATTER_AS_ENERGY) };
   return { industry: Math.round(industry), matter: Math.round(matter), energy: 0 };
 }
 

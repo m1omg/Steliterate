@@ -2581,3 +2581,28 @@ Each settlement now has a form, `Colony.form` (`data/forms.ts`), which decides w
   Fails), the last turns' net energy falling from +154 to −21 in one of them. With the Thinning it
   should drift to a black hole at once.
 - **Check:** `unit/forms` (new).
+- **Harness (900 games):** 421 survive, 124 win, a Degenerate Age of 75 turns (416 / 124 / 75 after
+  3-0); by fate decay 179 / 450, stable 141 / 239, curvature 101 / 211, the wins as before. 745 of
+  900 games play out as before.
+
+## The Lattice lives on energy after matter (13 Oct, the player's word)
+
+"There should be a way to continue with Lattice even with just energy." Until now each Lattice
+mended itself with matter (0.3 a turn) and grew from it (4 in hand, 3 a new one). Once matter was
+gone nothing yielded it and the stock was set to nothing, so every turn one Lattice wore out
+somewhere ("Without matter for repairs") and none ever grew: twenty Lattice lasted twenty turns.
+- **After matter, its repairs are paid in energy:** 0.45 a turn each, the 0.3 of matter at the rate
+  construction already pays after matter (`MATTER_AS_ENERGY`, 1.5 energy for each unit). The
+  settlement's yields say so on the Lattice's line.
+- **It grows from energy:** 4.5 for a new Lattice, while the reserve holds more than 15, as Echoes
+  grow.
+- **Only an empty reserve wears one out** (one a turn: "Without energy for repairs"), as an empty
+  stock of matter does while there is matter.
+- While there is matter, nothing changes. The Manual says all of it.
+- **Check:** `unit/lattice-energy` (new).
+- **Harness (900 games):** 431 survive, 133 win, a Degenerate Age of 75 turns (421 / 124 / 75
+  before); the first 300: 144 survive, 39 win. All of it after matter: decay 190 / 450 with 14 wins
+  (179, 11), curvature 100 / 211 with 24 (101, 18), stable unchanged (141, 95). The wins are the
+  Long Thought's (decay 7 to 10, curvature 6 to 12). Our autoplayer never goes for the Quiet
+  Lattice; the Tessellate finishes the Archive of Everything in 194 games of 558 (190).
+- **Validated** (3-1 and this together): typecheck and build; the full suite follows.

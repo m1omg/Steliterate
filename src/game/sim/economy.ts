@@ -21,6 +21,12 @@ export interface TurnContext {
 
 export type Capacity = Record<ThreadId, number> & { cryo: number };
 
+/**
+ * In the ages without ordinary matter, what was paid in matter is paid in energy, at this many
+ * energy for each unit: construction (actions.ts), and the Lattice's repairs and its growth.
+ */
+export const MATTER_AS_ENERGY = 1.5;
+
 export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number {
   const b = state.bodies[c.bodyId];
   if (!b || b.dissolved) return 0;
@@ -120,6 +126,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   const watch = flowNow && keeping(c, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor)) === 'watched' ? FLOW_WATCH : 1;
   // machines and sleepers run for the whole of a slowed turn; only minds can slow themselves down
   const slowTime = Math.max(1, pf);
+  // after matter, what the Lattice mended with matter it mends with energy
+  const noMatter = matterGone(state);
   for (const t of THREADS) {
     const n = c.pops[t];
     const s = strainFor(t, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor));
@@ -131,14 +139,19 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const ind = n * d.industry * o;
     const ins = n * d.insight * o;
     const acc = n * d.accord * o;
-    const eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1);
-    const mUp = n * d.matterUpkeep * upkeepScale;
+    let eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1);
+    let mUp = n * d.matterUpkeep * upkeepScale;
+    const mended = noMatter && mUp > 0;
+    if (mended) {
+      eUp += mUp * MATTER_AS_ENERGY;
+      mUp = 0;
+    }
     industry += ind;
     insight += ins;
     accord += acc;
     energyUpkeep += eUp;
     matterUpkeep += mUp;
-    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
+    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}${mended ? ' (repairs in energy: no matter is left)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
   }
   if (c.cryo > 0) {
     const cu = c.cryo * 0.08 * (flags.has('charter:cold_sleep_lottery') ? 0.5 : 1) * slowTime;

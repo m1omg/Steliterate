@@ -15,7 +15,7 @@ import { battlesTurn } from './conflict';
 import { feedBeacons } from './beacons';
 import { spareYield } from './spare';
 import { coolAccord } from './accord';
-import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
+import { MATTER_AS_ENERGY, capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, deepFor, destroyColony, fleetUpkeep, newFleet, repairFleets, surveyWhereStationed, updateDetection } from './fleets';
@@ -32,7 +32,7 @@ import { jointIncome, updateSurvivors } from './survivors';
 import { allColonies, clamp, colonies, distLy, fleets, hasCharter, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
 import { becomeHunger } from './judge';
 import { WORKS_WATER, seededVitality } from './terraform';
-import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf } from '../fate';
+import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf, matterGone } from '../fate';
 
 export interface TurnResult {
   crossing: CrossingReport | null;
@@ -590,6 +590,14 @@ function starvation(state: GameState, t: CivTurn) {
       }
     }
     log(state, 'The reserve is empty. Settlements are going cold.', 'bad');
+    // after matter the Lattice mends itself with energy: with none left, one wears out, as one does without matter
+    if (matterGone(state)) {
+      const c = colonies(state).find((x) => x.pops.lattice > 0);
+      if (c) {
+        c.pops.lattice--;
+        log(state, `Without energy for repairs, a Lattice at ${c.name} wore out.`, 'bad', c.systemId);
+      }
+    }
   } else {
     for (const c of colonies(state)) c.starving = 0;
   }
@@ -640,6 +648,8 @@ function growth(state: GameState, t: CivTurn) {
   const { mods, starving } = t;
   // Echoes waiting in the archive move into any free substrate before anyone is counted
   wakeArchivedEchoes(state);
+  // (after matter a Lattice is built from energy, as everything is)
+  const noMatter = matterGone(state);
   for (const c of colonies(state)) {
     const capc = capacity(state, c, mods);
     const b = state.bodies[c.bodyId];
@@ -648,12 +658,15 @@ function growth(state: GameState, t: CivTurn) {
         c.growth.kin += 0.12 * (0.5 + 0.5 * b.vitality) * (hasCharter(state, 'child_quotas') ? 0.4 : 1);
       }
       if (c.pops.echoes < capc.echoes && (c.pops.echoes > 0 || capc.echoes > 0) && civ.energy > 15) c.growth.echoes += 0.22;
-      if (c.pops.lattice < capc.lattice && civ.matter >= 4) c.growth.lattice += 0.35;
+      if (c.pops.lattice < capc.lattice && (noMatter ? civ.energy > 15 : civ.matter >= 4)) c.growth.lattice += 0.35;
     }
     for (const th of THREADS) {
       if (c.growth[th] >= 1) {
         c.growth[th] -= 1;
-        if (th === 'lattice') civ.matter -= 3;
+        if (th === 'lattice') {
+          if (noMatter) civ.energy -= 3 * MATTER_AS_ENERGY;
+          else civ.matter -= 3;
+        }
         if (th === 'echoes') civ.energy -= 3;
         if (c.pops[th] < capc[th] || (th === 'kin' && c.pops.kin === 0)) c.pops[th]++;
       }

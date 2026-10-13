@@ -569,6 +569,14 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     mode ("didnt wanna manually approve every damn thing", but keep planning and asking where the
     rules say so); "Always allow check balance": `.claude/settings.json` allows the harness and
     the tally script.
+  - what a settlement is made of (part 3-1): `Colony.form`, matter or leptonic; no Kin in a leptonic
+    settlement; a Leptonic Confluence for the Chorus after matter. 900 games 421 / 124 / 75. Making
+    what was re-encoded in a dissolving system leptonic at once cost 15 decay survivals of 450, so
+    it waits for the Thinning (3-3), with a drift to a black hole at once.
+  - the Lattice lives on energy after matter, the player's word ("there should be a way to continue
+    with Lattice even with just energy", 13 Oct evening): repairs 0.45 energy a turn each, a new
+    one 4.5, only an empty reserve wears one out. 900 games 431 / 133 / 75. It bears on the Quiet
+    Lattice question, still open.
   - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
