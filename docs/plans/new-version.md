@@ -672,6 +672,10 @@ Each step validated on its own, with the harness by fate:
    falling, the forecasts and the Record naming what goes. Under decay, what was re-encoded in a
    system that dissolves before the end goes leptonic then, and drifts to a black hole at once
    (tried in 3-1 without the drift: stranded, it cost 15 decay survivals of 450).
+   - As built (13 Oct): the share of matter gone runs evenly from η 37.5 to 39 (decay) and 87 to
+     89.5 (curvature); each structure of matter fails with the chance that keeps the share standing
+     at the share left; matter yields scale by it; the drift goes to the nearest hole with spin, as
+     the Migration does (`sim/thinning.ts`, `goOnAlone` in `crossing.ts`).
 5. **3-4, the Horizon form:** written into a hole's horizon, bound to it; when it evaporates, to a
    larger hole, another form, or the final burst.
 6. **3-5, positronium:** the form, the nets, the decay's countdown, Leave the weave, the two events.

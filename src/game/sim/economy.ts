@@ -10,6 +10,7 @@ import { type Mods, strainFor, type Strain } from './mods';
 import { clamp, colonies, eraIndex, formOf, leftBehind } from './util';
 import { calendarEra, fateOf, matterGone } from '../fate';
 import { FLOW_DORMANT, FLOW_WATCH, flowing, keeping } from './flow';
+import { thinShare } from './thinning';
 
 export interface TurnContext {
   years: number; // start of the coming turn
@@ -101,6 +102,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   const taintBoost = 1 + civ.taint / 200;
   const overdrive = c.overdrive ? 1.5 : 1;
   const pf = ctx.paceFactor;
+  // (the share of ordinary matter gone at the turn's start, in the Thinning)
+  const thin = thinShare(state, Math.log10(Math.max(1, ctx.years)));
 
   let energy = 0;
   let energyUpkeep = 0;
@@ -244,8 +247,9 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     if (d.hydrogenYield) mt += d.hydrogenYield * n * body.hydrogen * gfeMatter;
     if (d.lift && !away) mt += d.lift * n * gfeMatter;
     if (mt) {
-      // only its own focus touches matter: the others leave it as it was
-      mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1);
+      // only its own focus touches matter: the others leave it as it was; in the Thinning there
+      // is that much less of it to bring in (thinning.ts)
+      mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1) * (1 - thin);
       depletion += (d.matterYield || d.hydrogenYield ? mt : 0);
       if (!matterGone(state)) matter += mt;
     }

@@ -2689,3 +2689,30 @@ Substrate and losing everything else at the end.
   games, 76% of curvature ones and 57% of decay ones (5% before: the Passage carries the Lattice
   through the Great Decay); 236 of 300 survive (146).
 
+
+## The Thinning (13 Oct, part 3-3)
+
+The last decades of ordinary matter now thin what is still made of it.
+- **When:** if protons decay, from η 37.5, as matter begins to dissolve in earnest (systems already
+  dissolve one by one from there), to the Great Decay at η 39; under curvature radiation from η 87,
+  the brown dwarfs gone and the worlds evaporating, to the Great Evaporation at η 89.5; never if
+  matter is stable. The share of matter gone runs evenly over those decades (`thinShare`): a third
+  by η 38 under decay.
+- **Structures still made of matter fail**, each with the chance that keeps the share standing at
+  the share of matter left, and the Record names what went, a line a settlement ("Aster: the
+  matter is thinning. Deep Mine and 2 × Solar Array have decayed away."). Decay-proof
+  structures do not fail, nor anything at a settlement that made the Passage.
+- **Mines and skimmers bring in less:** what they make, times the share of matter left.
+- **A system dissolving before the Great Decay** (decay only): what was re-encoded there goes on as
+  leptonic at once (its Kin, its sleepers and half its Lattice lost, counted once for the Great
+  Decay's report) and drifts to the nearest black hole with spin left, with a harvester for its
+  spin, as the Migration takes the rest at the end; what made the Passage drifts whole. Before, it
+  stood on its dissolved world, its mines still working, until η 39. (Tried in 3-1 without the
+  drift, stranded with nothing to draw on: 15 decay survivals of 450 lost.)
+- **The forecasts** name what of ours is still made of matter, with nothing to go on, or around
+  what will (Leptonic Substrate, a Bastion Shell), before the Thinning and during it, with the
+  share gone.
+- **The Codex** says where it bends: it spreads the decay evenly over a decade and a half, where a
+  real decay with one lifetime would be exponential. The Manual describes it under both fates.
+- **Checks:** `unit/thinning` (new).
+- **Balance:** (the 900 games are running).

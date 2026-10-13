@@ -594,6 +594,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     in 86% of stable games, 76% of curvature and now 57% of decay ones (84 of 148, 5% before): the
     Passage carries a Lattice-led civilization through the Great Decay. 236 of 300 survive (146).
     The Quiet Lattice question (A to D) is still the player's.
+  - the Thinning (part 3-3): from η 37.5 (decay) or 87 (curvature) what is still made of matter
+    fails, structure by structure, with the share of matter left, and mines bring in less; what
+    was re-encoded in a system dissolving before the Great Decay goes on at once, leptonic, and
+    drifts to a black hole with spin. The forecasts name what is still made of matter.
   - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census

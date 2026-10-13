@@ -2,10 +2,12 @@ import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
 import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
-import { colonies, inItsSystem, protonFateKnown } from './util';
+import { colonies, formOf, inItsSystem, protonFateKnown } from './util';
 import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
 import { computeMods } from './mods';
-import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf } from '../fate';
+import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf, matterGone } from '../fate';
+import { decayProof } from './crossing';
+import { thinShare, thinning, thinningFrom } from './thinning';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
 // question is whether you can prepare in time.
@@ -20,6 +22,16 @@ function tideTurnsTo(state: GameState, at: number, horizon: number): number {
   if (calendarEra(state) === 'dusk') return turnsUntilYears(state, at, 0, horizon + 1);
   const era = calendarEra(state);
   return turnsUntil(era === 'dark' ? 'blackhole' : era, state.years, at, state.settings.length);
+}
+
+/** Which of our settlements are still made of matter (neither made the Passage nor stand on anything decay-proof): named, for the forecasts. */
+function stillOfMatter(state: GameState): string {
+  const cs = colonies(state).filter((c) => formOf(c) === 'baryonic');
+  const bare = cs.filter((c) => !decayProof(c)).map((c) => c.name);
+  const kept = cs.filter((c) => decayProof(c)).map((c) => c.name);
+  const names = (xs: string[]) => (xs.length > 6 ? `${xs.slice(0, 6).join(', ')} and ${xs.length - 6} more` : xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0]);
+  if (!cs.length) return 'Nothing of ours is made of it any more.';
+  return [bare.length ? `Still made of matter, with nothing to go on: ${names(bare)}.` : '', kept.length ? `Made of matter around what will go on (Leptonic Substrate, a Bastion Shell): ${names(kept)}; only the Passage keeps all of it.` : ''].filter(Boolean).join(' ');
 }
 
 export function updateForecasts(state: GameState) {
@@ -147,7 +159,13 @@ export function updateForecasts(state: GameState) {
         : `The dark-matter halo is being used up, ${siphonsRunning(state) ? 'faster while our Halo Siphons run' : 'sooner for what our Halo Siphons drew'}. White dwarfs will cool toward black dwarfs by about η ${embersOutEta(state).toFixed(1)}.`;
       add({ kind: 'embers', title: 'The embers begin to fade', text, dueYears: haloReachesYears(state, 22), severity: 'warn' });
     }
-    if (protonFateKnown(state) && state.protonsDecay && state.eta < 37.5) add({ kind: 'decay', title: 'Proton decay takes hold', text: 'Matter will begin to dissolve in earnest.', dueYears: Math.pow(10, 37.5), severity: 'danger' });
+    if (protonFateKnown(state) && state.protonsDecay && state.eta < 37.5) add({ kind: 'decay', title: 'Proton decay takes hold', text: `Matter will begin to dissolve in earnest, system by system, and whatever is still made of it will thin with it, structure by structure, until the Great Decay. ${stillOfMatter(state)}`, dueYears: Math.pow(10, 37.5), severity: 'danger' });
+  }
+  // the Thinning, once we know matter will end (thinning.ts): what is still made of it
+  if (known && fate !== 'stable' && !matterGone(state)) {
+    const from = thinningFrom(state);
+    if (thinning(state)) add({ kind: 'thinning', title: 'The Thinning', text: `Ordinary matter is ${fate === 'decay' ? 'dissolving' : 'evaporating'}: ${Math.round(thinShare(state) * 100)}% of it is gone, and what is still made of it fails with it, structure by structure. ${stillOfMatter(state)}`, dueYears: Math.pow(10, MATTER_END[fate]), severity: 'danger' });
+    else if (fate === 'curvature' && state.eta < from) add({ kind: 'thinning', title: 'The Thinning', text: `Once the brown dwarfs have faded the worlds themselves evaporate, and whatever is still made of matter will fail with them, structure by structure, until the Great Evaporation. ${stillOfMatter(state)}`, dueYears: Math.pow(10, from), severity: 'warn' });
   }
 
   // black holes we live on

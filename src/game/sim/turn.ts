@@ -7,9 +7,10 @@ import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
 import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
-import { decayProof, finalBurstCatch, greatEvaporation, runCrossing } from './crossing';
+import { decayProof, finalBurstCatch, goOnAlone, greatEvaporation, runCrossing } from './crossing';
 import { completePassage } from './passage';
 import { flowComes, theLongFlow } from './flow';
+import { theThinning } from './thinning';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
 import { battlesTurn } from './conflict';
@@ -360,6 +361,8 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
     }
     // from 10^65 years solid matter flows: what no one is awake to mend runs into smooth lumps
     theLongFlow(state, step.eta, logL, c.mods, Math.log10(c.ctx.paceFactor));
+    // in the last decades of matter, what is still made of it thins with it
+    theThinning(state, state.eta, step.eta);
     continuity(state, c);
   });
   state.years = step.years;
@@ -750,7 +753,8 @@ function signalsAndEvents(state: GameState): Signal[] {
   return arrived;
 }
 
-function handleNotes(state: GameState, notes: EvolutionNote[]) {
+/** What the universe did this turn, for the civilization whose part it is (exported for the checks). */
+export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const colonized = new Set(colonies(state).map((c) => c.systemId));
   const known = state.civ.known;
   // (each civilization sees to its own settlements, in its own part of the turn)
@@ -846,8 +850,11 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         break;
       case 'dissolved':
         for (const c of colonies(state)) {
-          // (what made the Passage, or has something decay-proof, goes on until the end of matter)
-          if (c.systemId === sys.id && !decayProof(c)) {
+          if (c.systemId !== sys.id) continue;
+          // what made the Passage, or has something decay-proof, goes on alone: leptonic, to a
+          // black hole now (the Thinning); the rest is gone, each loss counted for the report
+          if (decayProof(c)) goOnAlone(state, c);
+          else {
             state.civ.flags.decay_lost = (state.civ.flags.decay_lost ?? 0) + popsOf(c) + c.cryo;
             destroyColony(state, c, 'its matter decayed');
           }

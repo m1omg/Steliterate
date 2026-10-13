@@ -4,7 +4,7 @@ import { calendarEra, fateKnown, fateOf } from '../fate';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import { TECH_BY_ID } from '../data/techs';
 import { THREAD_DEFS } from '../data/threads';
-import type { Colony, CrossingReport, EraId, GameState } from '../types';
+import type { Colony, CrossingReport, EraId, GameState, StarSystem } from '../types';
 import { THREADS } from '../types';
 import { evaporateHole } from '../physics';
 import { capacity, reserveCapacity } from './economy';
@@ -37,50 +37,75 @@ function hasStarlessSource(state: GameState, c: Colony): boolean {
 /** A hole with less spin left than a Penrose Harvester draws in a turn has little to give a vault that comes to it. */
 const SPENT_SPIN = 20;
 
+/** The black holes not yet evaporated: after matter, the only sources left. */
+function holesLeft(state: GameState): StarSystem[] {
+  return Object.values(state.systems).filter((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone);
+}
+
 /**
- * After the protons go, what survives drifts to the black holes: each to the nearest one with
- * spin left to give (a hole drained of it gives next to nothing), or the nearest if none has.
- * Vaults arriving at the same hole merge.
+ * One settlement drifts to a black hole: the nearest with spin left to give (a hole drained of it
+ * gives next to nothing), or the nearest if none has; into its own civilization's vault there, if
+ * it has one. One already at a hole stays at it, in its Deep. Returns whether it moved, and where
+ * it is now (it may have merged into another).
  */
+function driftToHole(state: GameState, c: Colony, holes: StarSystem[]): { moved: boolean; at: Colony } {
+  const here = state.systems[c.systemId];
+  const atHole = here.primary.kind === 'black_hole' || here.primary.kind === 'smbh';
+  // a vault already at a hole stays there, but a planet it stood on has dissolved: into the Deep
+  if (!holes.length || (atHole && state.bodies[c.bodyId]?.kind === 'deep')) return { moved: false, at: c };
+  const near = holes.slice().sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z));
+  const target = atHole ? here : (near.find((h) => h.primary.spin >= SPENT_SPIN) ?? near[0]);
+  // its own civilization's vault at the hole, beside any other's
+  const deep = deepFor(state, target, c.owner) ?? state.bodies[target.bodies[0]];
+  const oldBody = state.bodies[c.bodyId];
+  if (oldBody) oldBody.colonyId = null;
+  if (deep.colonyId && state.colonies[deep.colonyId]) {
+    const host = state.colonies[deep.colonyId];
+    for (const t of THREADS) host.pops[t] += c.pops[t];
+    host.cryo += c.cryo;
+    for (const [k, n] of Object.entries(c.structures)) host.structures[k] = (host.structures[k] ?? 0) + n;
+    if (state.civ.capitalId === c.id) state.civ.capitalId = host.id;
+    delete state.colonies[c.id];
+    return { moved: true, at: host };
+  }
+  c.bodyId = deep.id;
+  c.systemId = target.id;
+  c.name = `${target.name} Vault`;
+  deep.colonyId = c.id;
+  state.civ.known[target.id] = 2;
+  return { moved: true, at: c };
+}
+
+/** The migrants bring what they know how to build: a harvester for the hole's spin. */
+function harvesterFor(state: GameState, c: Colony) {
+  const k = state.systems[c.systemId].primary.kind;
+  if (state.civ.techs.includes('penrose_process') && (k === 'black_hole' || k === 'smbh') && !(c.structures.penrose_harvester ?? 0)) c.structures.penrose_harvester = 1;
+}
+
+/** After the protons go, what survives drifts to the black holes (`driftToHole`). Vaults arriving at the same hole merge. */
 function migrateToBlackHoles(state: GameState): number {
-  const holes = Object.values(state.systems).filter((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone);
+  const holes = holesLeft(state);
   if (!holes.length) return 0;
   let moved = 0;
-  for (const c of colonies(state)) {
-    const here = state.systems[c.systemId];
-    const atHole = here.primary.kind === 'black_hole' || here.primary.kind === 'smbh';
-    // a vault already at a hole stays there, but a planet it stood on has dissolved: into the Deep
-    if (atHole && state.bodies[c.bodyId]?.kind === 'deep') continue;
-    const near = holes.slice().sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z));
-    const target = atHole ? here : (near.find((h) => h.primary.spin >= SPENT_SPIN) ?? near[0]);
-    // its own civilization's vault at the hole, beside any other's
-    const deep = deepFor(state, target, c.owner) ?? state.bodies[target.bodies[0]];
-    const oldBody = state.bodies[c.bodyId];
-    if (oldBody) oldBody.colonyId = null;
-    moved++;
-    if (deep.colonyId && state.colonies[deep.colonyId]) {
-      const host = state.colonies[deep.colonyId];
-      for (const t of THREADS) host.pops[t] += c.pops[t];
-      host.cryo += c.cryo;
-      for (const [k, n] of Object.entries(c.structures)) host.structures[k] = (host.structures[k] ?? 0) + n;
-      if (state.civ.capitalId === c.id) state.civ.capitalId = host.id;
-      delete state.colonies[c.id];
-    } else {
-      c.bodyId = deep.id;
-      c.systemId = target.id;
-      c.name = `${target.name} Vault`;
-      deep.colonyId = c.id;
-      state.civ.known[target.id] = 2;
-    }
-  }
-  // the migrants bring what they know how to build: a harvester for the hole's spin
-  if (moved && state.civ.techs.includes('penrose_process')) {
-    for (const c of colonies(state)) {
-      const k = state.systems[c.systemId].primary.kind;
-      if ((k === 'black_hole' || k === 'smbh') && !(c.structures.penrose_harvester ?? 0)) c.structures.penrose_harvester = 1;
-    }
-  }
+  for (const c of colonies(state)) if (driftToHole(state, c, holes).moved) moved++;
+  if (moved) for (const c of colonies(state)) harvesterFor(state, c);
   return moved;
+}
+
+/**
+ * What was re-encoded at a system dissolving before the Great Decay (the Thinning, part 3-3): its
+ * world gone from under it, it goes on as leptonic at once (`goLeptonic`, its losses counted for the
+ * crossing's report) and drifts to a black hole now, not at the Migration. Returns where it is.
+ */
+export function goOnAlone(state: GameState, c: Colony): Colony {
+  const was = formOf(c) === 'leptonic';
+  state.civ.flags.decay_lost = (state.civ.flags.decay_lost ?? 0) + goLeptonic(state, c, protocolsMult(state, 'degenerate'));
+  const from = state.systems[c.systemId].name;
+  const { moved, at } = driftToHole(state, c, holesLeft(state));
+  harvesterFor(state, at);
+  const there = state.systems[at.systemId];
+  log(state, `${from} has dissolved. ${was ? `${c.name}, made of fields, goes on` : `What was re-encoded at ${c.name} goes on as leptonic, its Kin and the rest of what was matter lost`}${moved ? `, and drifts to ${there.name}, a black hole with spin to give` : ''}.`, 'bad', at.systemId);
+  return at;
 }
 
 /** What a Burst Catcher banks from a black hole's final burst, or from a neutron star's burst close by. */
