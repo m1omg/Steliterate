@@ -618,7 +618,25 @@ In steps, each validated on its own:
   - The aim is that most games have no war, and that most wars are started by the desperate or
     the corrupted.
 
-## Part 3: life after matter, and positronium (items 6 and 7)
+### 2d, as it is being built (13 Oct, added while building it)
+
+Where it starts: in 900 harness games after 2c-3, no war starts at all. The causes built so far (60
+Taint heard in a neighbour, or 60 of one's own) are never reached; Hunger steps stop by 45 (2b).
+Already done in 2a-5: each way's own Great Work (`WAY_WORK`), gardens terraform, sleepers sleep
+(`planSleep`).
+
+1. **The desperate's war:** plight from 0.6, and bold (caution under 0.5). It weighs a war on the
+   weakest neighbour it can reach for what that settlement holds (its people, its collectors), its
+   own warships against the front's guard (`WAR_ODDS`), and what it would cost: the accord, the
+   infamy without a cause, the upkeep, the galaxy's free energy. It takes, never razes, and makes
+   peace once it has what it came for. One that is not bold pleads, as today.
+2. **Defence against the Lance:** once an enemy knows Relativistic Arks, a civilization keeps a
+   Picket at its capital (screens), and the most screened settlement is the one it holds closest.
+3. **The corrupted use the Lance:** only those far down the Hunger's path (60 Taint of their own),
+   at war, on an enemy's largest settlement they can see.
+4. **Each war's why in the harness:** who began it, on whom and for what (`*N` with its cause:
+   Hunger, corrupted, desperate), conquests, Lance strikes; the aim stays most games without war.
+5. **Then the numbers:** 900 games, by fate and by way, against 2c's reference.: life after matter, and positronium (items 6 and 7)
 
 This part comes after the civilizations, so its rules apply to everyone. All of it is
 speculation, and the Codex says so.
