@@ -2,7 +2,7 @@ import { aroundTheStar, type StructureDef } from '../data/structures';
 import { ERA_BY_ID } from '../eras';
 import { fateKnown } from '../fate';
 import { Rng, hashSeed } from '../rng';
-import type { Body, Civ, Colony, EraId, Fleet, GameState, LogEntry, StarSystem, Survivor, ThreadId } from '../types';
+import type { Body, Civ, Colony, ColonyForm, EraId, Fleet, GameState, LogEntry, StarSystem, Survivor, ThreadId } from '../types';
 import { THREADS } from '../types';
 
 export function uid(state: GameState, prefix = 'u'): string {
@@ -133,6 +133,11 @@ export function ownColony(state: GameState, id: string): Colony | undefined {
 export function ownFleet(state: GameState, id: string): Fleet | undefined {
   const f = state.fleets[id];
   return f && f.owner === state.civ.id ? f : undefined;
+}
+
+/** What a settlement is made of (data/forms.ts): matter, unless it went on past the end of matter. */
+export function formOf(c: Colony): ColonyForm {
+  return c.form ?? 'baryonic';
 }
 
 export function popsOf(c: Colony): number {

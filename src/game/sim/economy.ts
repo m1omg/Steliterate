@@ -1,4 +1,5 @@
 import { STRUCTURE_BY_ID, type StructureDef } from '../data/structures';
+import { FORMS } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
 import { frozenHard, hawkingLight, insolation, siphonsRunning, sourceLight } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
@@ -6,7 +7,7 @@ import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
 import { habitabilityOf } from './terraform';
 import { type Mods, strainFor, type Strain } from './mods';
-import { clamp, colonies, eraIndex, leftBehind } from './util';
+import { clamp, colonies, eraIndex, formOf, leftBehind } from './util';
 import { calendarEra, fateOf, matterGone } from '../fate';
 import { FLOW_DORMANT, FLOW_WATCH, flowing, keeping } from './flow';
 
@@ -45,6 +46,10 @@ export function capacity(state: GameState, c: Colony, mods: Mods): Capacity {
     for (const t of THREADS) cap[t] += (d.cap?.[t] ?? 0) * n;
     cap.cryo += (d.cryoCap ?? 0) * n;
   }
+  // what it is made of decides who can live there at all (a leptonic settlement has no room for Kin)
+  const form = FORMS[formOf(c)];
+  for (const t of THREADS) if (!form.lives.includes(t)) cap[t] = 0;
+  if (!form.sleepers) cap.cryo = 0;
   return cap;
 }
 

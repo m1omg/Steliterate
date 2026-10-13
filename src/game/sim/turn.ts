@@ -7,7 +7,7 @@ import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
 import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
-import { finalBurstCatch, greatEvaporation, runCrossing } from './crossing';
+import { decayProof, finalBurstCatch, goLeptonic, greatEvaporation, protocolsMult, runCrossing } from './crossing';
 import { flowComes, theLongFlow } from './flow';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
@@ -29,7 +29,7 @@ import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost }
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
-import { allColonies, clamp, colonies, distLy, fleets, hasCharter, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
+import { allColonies, clamp, colonies, distLy, fleets, formOf, hasCharter, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
 import { becomeHunger } from './judge';
 import { WORKS_WATER, seededVitality } from './terraform';
 import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf } from '../fate';
@@ -76,7 +76,7 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
             const b = state.bodies[c.bodyId];
             b.water = Math.max(b.water ?? 0, WORKS_WATER);
           }
-          if (item.key === 'confluence_node') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
+          if (d?.enables === 'merge') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
         }
         log(state, `${c.name}: ${item.kind === 'structure' ? structureLabel(item.key, state.systems[c.systemId]).name : d?.name ?? item.key} complete.`, 'good', c.systemId);
       } else {
@@ -735,7 +735,8 @@ function signalsAndEvents(state: GameState): Signal[] {
   return arrived;
 }
 
-function handleNotes(state: GameState, notes: EvolutionNote[]) {
+/** What the universe did this turn, for the civilization whose part it is (exported for the checks). */
+export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const colonized = new Set(colonies(state).map((c) => c.systemId));
   const known = state.civ.known;
   // (each civilization sees to its own settlements, in its own part of the turn)
@@ -831,9 +832,16 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         break;
       case 'dissolved':
         for (const c of colonies(state)) {
-          if (c.systemId === sys.id && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) {
+          if (c.systemId !== sys.id) continue;
+          // (each loss is counted in the Great Decay's report, once)
+          if (!decayProof(c)) {
             state.civ.flags.decay_lost = (state.civ.flags.decay_lost ?? 0) + popsOf(c) + c.cryo;
             destroyColony(state, c, 'its matter decayed');
+          } else if (formOf(c) !== 'leptonic') {
+            // its matter gone with its star: what was re-encoded goes on, as leptonic, now
+            const lost = goLeptonic(state, c, protocolsMult(state, 'degenerate'));
+            state.civ.flags.decay_lost = (state.civ.flags.decay_lost ?? 0) + lost;
+            log(state, `${sys.name} has dissolved. At ${c.name}, what was re-encoded on leptonic substrate goes on${lost ? `; ${lost} of its people were made of matter, and went with it` : ''}.`, lost ? 'bad' : 'info', sys.id);
           }
         }
         break;

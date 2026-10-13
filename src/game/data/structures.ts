@@ -112,6 +112,7 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'decay_harvester', name: 'Decay Harvester', desc: 'Collects the faint heat of protons decaying inside dead stars.', era: 'degenerate', tech: 'baryon_decay_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['white_dwarf', 'black_dwarf', 'neutron_star', 'brown_dwarf'], energy: { mode: 'decay', amount: 4 }, signature: 1 }),
   S({ id: 'curvature_collector', name: 'Curvature Collector', desc: 'Catches the particles that space, curved tight around a neutron star, makes from its mass.', era: 'degenerate', tech: 'curvature_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['neutron_star'], energy: { mode: 'curvature', amount: 4 }, signature: 1 }),
   S({ id: 'lepton_substrate', name: 'Leptonic Substrate', desc: 'Speculative: minds re-encoded in electron–positron structures that will outlast ordinary matter.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 70, max: 3, decayProof: true, cap: { echoes: 4, coldminds: 4, lattice: 2 }, signature: 1 }),
+  S({ id: 'lepton_confluence', name: 'Leptonic Confluence', desc: 'Speculative: a Confluence Node re-encoded in electron–positron structures, where minds merge. The Chorus has room nowhere else once ordinary matter is gone.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 60, max: 3, decayProof: true, cap: { chorus: 3 }, enables: 'merge', upkeep: 0.5, signature: 1 }),
   S({ id: 'superconducting_ring', name: 'Deep Storage Ring', desc: 'Giant, patient batteries for the long nights between sources.', era: 'degenerate', tech: 'deep_storage', cost: 70, matter: 40, max: 3, reserveCap: 150, burstCap: 100, signature: 0.3 }),
 
   // ---------------------------------------------------------------- Black Hole Age
@@ -152,7 +153,12 @@ export const STRUCTURE_KINDS: { id: StructureKind; name: string; tip: string }[]
 /** A structure's kind, from what it does: the first of these that it yields. */
 /** Does building this do something once, at that settlement, beyond what it does while it stands? */
 export function hasOnceEffect(d: StructureDef): boolean {
-  return !!(d.vitalityOnce || d.coreHeatBonus || d.id === 'confluence_node');
+  return !!(d.vitalityOnce || d.coreHeatBonus || d.enables === 'merge');
+}
+
+/** Whether something standing at a settlement lets it do this (a conversion's key: 'merge' needs a Confluence Node, or a Leptonic Confluence). */
+export function enabledAt(structures: Record<string, number>, what: string): boolean {
+  return Object.entries(structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.enables === what);
 }
 
 /**

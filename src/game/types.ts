@@ -185,6 +185,13 @@ export interface YieldBreakdown {
   lines: YieldLine[];
 }
 
+/**
+ * What a settlement is made of (data/forms.ts): matter (baryonic), as every settlement is until the
+ * end of matter; leptonic, re-encoded in electron–positron structures held by fields, for what goes
+ * on after it. The form decides who can live there.
+ */
+export type ColonyForm = 'baryonic' | 'leptonic';
+
 export interface Colony {
   id: string;
   /** The civilization it belongs to (its id in `state.civs`). */
@@ -198,6 +205,8 @@ export interface Colony {
   pops: Record<ThreadId, number>;
   growth: Record<ThreadId, number>;
   cryo: number; // Kin in Cold Sleep
+  /** What it is made of (absent: matter, as every settlement is until the end of matter). */
+  form?: ColonyForm;
   structures: Record<string, number>;
   queue: QueueItem[];
   focus: Focus;

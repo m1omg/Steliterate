@@ -497,6 +497,13 @@ function planBuilds(state: GameState) {
       }
       if (c.queue[0]?.key === 'lepton_substrate') rushBuild(state, c.id);
     }
+    // and for its Chorus, which has no room on substrate, a Leptonic Confluence, right behind it
+    const confluences = Math.min(3, Math.ceil(c.pops.chorus / 3));
+    if (preEnd && hasTech(state, 'leptonic_computation') && (c.structures.lepton_confluence ?? 0) < confluences && !c.queue.some((q) => q.key === 'lepton_confluence')) {
+      if (c.queue.length >= 6) removeQueued(state, c.id, c.queue[c.queue.length - 1].uid);
+      if (tryBuild(state, c, ['lepton_confluence'])) c.queue.splice(c.queue[0]?.key === 'lepton_substrate' ? 1 : 0, 0, c.queue.pop()!);
+    }
+    if (preEnd && c.queue[0]?.key === 'lepton_confluence') rushBuild(state, c.id);
     if (c.queue[0] && civ.matter > 600) rushBuild(state, c.id);
     if (c.queue.length >= 2) continue;
     const b = state.bodies[c.bodyId];
@@ -521,6 +528,7 @@ function planBuilds(state: GameState) {
       plan.push('disk_skimmer', 'accretion_engine', 'pulsar_brake', 'geothermal_tap', 'fusion_plant', 'decay_harvester');
     }
     if (reencode && (c.structures.lepton_substrate ?? 0) + c.queue.filter((q) => q.key === 'lepton_substrate').length < 2) plan.push('lepton_substrate');
+    if (reencode && (c.structures.lepton_confluence ?? 0) + c.queue.filter((q) => q.key === 'lepton_confluence').length < confluences) plan.push('lepton_confluence');
     // (another civilization builds for Kin only where Kin live)
     const forKin = !way || c.pops.kin > 0;
     // its star has died: light Orbital Lamps while there is still life to keep

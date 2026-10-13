@@ -1,10 +1,11 @@
 import { CHARTER_BY_ID, CHARTERS } from '../data/charters';
 import { SHIP_BY_ID, SHIPS, isWarship, type ShipDef } from '../data/ships';
 import { formatYears } from '../eras';
-import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, hasOnceEffect, structureLabel, type StructureDef } from '../data/structures';
+import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, enabledAt, hasOnceEffect, structureLabel, type StructureDef } from '../data/structures';
+import { FORMS } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
 import { WORK_BY_ID } from '../data/works';
-import type { Colony, Focus, GameState, PactKind, SpareWork } from '../types';
+import type { Colony, Focus, GameState, PactKind, SpareWork, ThreadId } from '../types';
 import { endPact, proposePact } from './pacts';
 import { sanctuaryHeard } from './refuge';
 import { declareWar, makePeace } from './war';
@@ -22,7 +23,7 @@ import { siphonsRunning, sourceLight } from '../physics';
 import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { allColonies, capital, colonies, hasCharter, hasTech, leftBehind, log, ownColony, ownFleet, savableName, uid } from './util';
+import { allColonies, capital, colonies, formOf, hasCharter, hasTech, leftBehind, log, ownColony, ownFleet, savableName, uid } from './util';
 import { hungerAct } from './judge';
 import { launchStrike } from './conflict';
 import { ageReached, inAge, matterGone } from '../fate';
@@ -49,6 +50,10 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return 'Needs a different kind of star or remnant.';
   if (d.notAt?.includes(sys.primary.kind)) return sys.primary.kind === 'brown_dwarf' ? 'A brown dwarf’s light is too faint and too red for these: Infrared Shrouds gather it.' : 'Gathers nothing from this kind of star.';
   if (d.habitable && b.habitability < 0.3) return 'Only on a living world.';
+  // who can live here (data/forms.ts): nothing that only houses Kin, or puts them to sleep, or uploads them
+  const form = FORMS[formOf(c)];
+  const onlyKin = (d.cap && Object.keys(d.cap).every((t) => !form.lives.includes(t as ThreadId))) || (d.cryoCap && !form.sleepers) || (d.enables === 'upload' && !form.lives.includes('kin'));
+  if (onlyKin) return `Kin are made of matter: a ${form.name.toLowerCase()} settlement has no room for them.`;
   if (d.terraform) {
     const why = terraformBlocked(state, b, c, d.terraform);
     if (why) return why;
@@ -388,7 +393,7 @@ export function convert(state: GameState, colonyId: string, kind: Conversion): A
       else if (!hasCharter(state, 'upload_at_death')) civ.standing.kin = Math.max(0, civ.standing.kin - 0.7);
       return null;
     case 'merge':
-      if (!(c.structures.confluence_node ?? 0)) return 'Needs a Confluence Node.';
+      if (!enabledAt(c.structures, 'merge')) return 'Needs a Confluence Node, or a Leptonic Confluence.';
       if (c.pops.echoes < 2) return 'Needs two Echoes.';
       if (c.pops.chorus >= cap.chorus) return 'The Chorus here is full.';
       if (civ.energy < 8) return 'Needs 8 energy.';

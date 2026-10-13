@@ -2558,3 +2558,24 @@ Before life after matter (Part 3) is built on it, what the end of matter already
   Evaporation. With the Shell at black holes only and the old preparation, curvature had fallen to
   60 survivals and 16 wins. 533 of 900 games play out as before.
 - **Validated:** 66 unit checks, the playtest and 53 browser checks pass.
+
+## What a settlement is made of (13 Oct, part 3-1)
+
+Each settlement now has a form, `Colony.form` (`data/forms.ts`), which decides who can live there:
+- **Matter** (baryonic): every settlement until the end of matter, with the room it always had.
+- **Leptonic:** what goes on past the end of matter, on decay-proof substrate. Echoes, Coldminds,
+  the Lattice and the Chorus can live there; Kin, made of matter, cannot, awake or asleep: no room
+  for them at all, and nothing that only houses them can be built there (Habitat Domes, Garden
+  Arks, Cryo Halls, an Upload Clinic). The settlement's panel shows the form, with what it means.
+- **The Leptonic Confluence** (Leptonic Computation; 110 industry, 60 matter, up to 3, upkeep 0.5):
+  a Confluence Node re-encoded, room for 3 Chorus, decay-proof itself. Before, the Chorus had room
+  nowhere after matter, so it was always lost and One Voice could not happen after it. Echoes merge
+  there, and building one counts for the Chorus's wish for room, as a Confluence Node does.
+- **A system that dissolves before the Great Decay** (from η 37.5, one at a time): what was
+  re-encoded there goes on as leptonic at once, with the same losses as at the end, counted once in
+  the crossing's report. Before, it went on with all its matter and its Kin in domes on a world that
+  had dissolved, until the end stripped it.
+- **What is under way** at the end of matter stays in the queue if it is decay-proof too.
+- **The autoplayer** builds a Leptonic Confluence where its Chorus lives before the end, as it
+  builds substrate (and under curvature from η 27, from matter to spare).
+- **Check:** `unit/forms` (new).

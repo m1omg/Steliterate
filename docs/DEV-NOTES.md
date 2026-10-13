@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -403,6 +403,15 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     notes, the Long Flow, `continuity`, `signalsAndEvents`, the fate shown, endings and stats.
     The player's alone: the neighbours (`updateSurvivors`, `pactsTurn`, `warTurn`), the other
     minds (`updateMinds`, `gatherTheLastStar`) and the Slow Ones' notice at the Last Light.
+  - **Forms** (part 3-1): `Colony.form` (`data/forms.ts`, `formOf` in `sim/util.ts`), absent for
+    matter. `capacity` gives no room to a Thread the form does not house (a leptonic settlement:
+    no Kin, no sleepers), and `structureCheck` refuses what only houses Kin there.
+    `goLeptonic(state, c, mult)` (`crossing.ts`) is a settlement going on past matter: at the end
+    of matter, and in `handleNotes` (`turn.ts`, exported for the checks) when its own system
+    dissolves before it; it keeps the decay-proof (and, at a hole, `keptAtHole`) structures and
+    queue items, loses Kin and sleepers, and halves the Lattice once. `enabledAt(structures,
+    'merge')` (`data/structures.ts`): a Confluence Node or a Leptonic Confluence; either counts
+    toward `chorus_nodes_built`.
   - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a
     report per civilization; the universe's part runs once (`toAll` puts its lines in every
     report where they fall), each civilization's under `eachCiv`; `leftOnSubstrate` is one

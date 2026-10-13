@@ -658,6 +658,11 @@ Each step validated on its own, with the harness by fate:
 2. **3-1, forms:** `Colony.form`, baryonic until the end of matter, leptonic after it for what
    survives on decay-proof substrate (who may live there, a leptonic Confluence Node for the
    Chorus). Nothing else changes yet.
+   - As built (13 Oct): a system dissolving before the Great Decay makes what was re-encoded there
+     leptonic at once; decay-proof work under way stays in the queue. Then, the player's word the
+     same evening ("there should be a way to continue with Lattice even with just energy"): after
+     matter the Lattice mends and grows with energy, at construction's rate, and only an empty
+     reserve wears one out. Before, with no matter left, one wore out every turn and none grew.
 3. **3-2, the Passage:** the conversion over several turns, Field Stores (the reserve's home), the
    Kin's pattern archive, the Lattice at half; the AI's rule for it; the crossing report naming
    each settlement lost and who was in it.

@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { SHIP_BY_ID, fleetLook, shipNote } from '../../game/data/ships';
-import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
+import { STRUCTURE_BY_ID, STRUCTURE_KINDS, enabledAt, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
@@ -42,7 +42,8 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { allColonies, capital, colonies, distLy, fleets, hasCharter, hasTech, leftBehind, nearestSwarmSeen, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { allColonies, capital, colonies, distLy, fleets, formOf, hasCharter, hasTech, leftBehind, nearestSwarmSeen, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { FORMS } from '../../game/data/forms';
 import { atWarWith, screensSeen, strikeBlocked } from '../../game/sim/conflict';
 import { settlementSeen } from '../../game/sim/others';
 import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
@@ -846,7 +847,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
 
 const CONVERSIONS: { id: Conversion; label: string; icon: 'upload' | 'merge' | 'coldminds' | 'cryo' | 'wake'; tip: string; show: (s: GameState, c: Colony) => boolean }[] = [
   { id: 'upload', label: 'Upload', icon: 'upload', tip: 'One Kin becomes an Echo (6 energy). Needs an Upload Clinic and free substrate.', show: (_s, c) => (c.structures.upload_clinic ?? 0) > 0 },
-  { id: 'merge', label: 'Merge', icon: 'merge', tip: 'Two Echoes become one Chorus (8 energy). Needs a Confluence Node.', show: (_s, c) => (c.structures.confluence_node ?? 0) > 0 },
+  { id: 'merge', label: 'Merge', icon: 'merge', tip: 'Two Echoes become one Chorus (8 energy). Needs a Confluence Node, or a Leptonic Confluence.', show: (_s, c) => enabledAt(c.structures, 'merge') },
   { id: 'cool', label: 'Cool', icon: 'coldminds', tip: 'One Echo becomes a Coldmind, thinking far slower and costing almost nothing to keep. Needs a Cold Vault.', show: (_s, c) => (c.structures.cold_vault ?? 0) + (c.structures.lepton_substrate ?? 0) + (c.structures.bastion ?? 0) > 0 },
   { id: 'freeze', label: 'Freeze', icon: 'cryo', tip: 'Put one Kin into Cold Sleep. Sleepers cost almost nothing and do nothing.', show: (s, c) => capacity(s, c, computeMods(s)).cryo > 0 },
   { id: 'thaw', label: 'Thaw', icon: 'wake', tip: 'Wake one sleeper.', show: (_s, c) => c.cryo > 0 },
@@ -896,6 +897,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
         <h2>{c.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
           {isCap && <span class="chip neon">capital</span>}
+          {formOf(c) !== 'baryonic' && <span class="chip" data-tip={FORMS[formOf(c)].desc}>{FORMS[formOf(c)].name.toLowerCase()}</span>}
           {shownTraits(s, b).map((tr) => (
             <span key={tr} class="chip" data-tip={TRAIT_NAME[tr]?.[1] ?? ''}>{TRAIT_NAME[tr]?.[0] ?? tr}</span>
           ))}

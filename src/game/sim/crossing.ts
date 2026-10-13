@@ -10,7 +10,7 @@ import { capacity, reserveCapacity } from './economy';
 import { deepFor, destroyColony } from './fleets';
 import { starGoneEarly } from './flare';
 import type { Mods } from './mods';
-import { colonies, distLy, inItsSystem, log, popsOf, totalPops, withRng } from './util';
+import { colonies, distLy, formOf, inItsSystem, log, popsOf, totalPops, withRng } from './util';
 
 // The three great storms. Each transforms the world; your preparation decides what survives.
 
@@ -22,7 +22,8 @@ function isHole(kind: string | undefined): boolean {
   return kind === 'black_hole' || kind === 'smbh';
 }
 
-function decayProof(c: Colony): boolean {
+/** Whether anything standing at a settlement outlasts matter (Leptonic Substrate, a Leptonic Confluence, a Bastion Shell). */
+export function decayProof(c: Colony): boolean {
   return Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof);
 }
 
@@ -111,7 +112,7 @@ function toAll(lines: Reports, line: CrossingReport['lines'][number]) {
 }
 
 /** A crossing's protocols, if this civilization has them: they halve its losses (as they say). */
-function protocolsMult(state: GameState, era: EraId): number {
+export function protocolsMult(state: GameState, era: EraId): number {
   const protocols = PROTOCOLS[era];
   return protocols && state.civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1;
 }
@@ -231,6 +232,31 @@ function endOfMatter(state: GameState, ids: readonly string[], mods: Record<stri
 export const CARRIED = 0.35;
 
 /**
+ * A settlement on decay-proof substrate whose matter is gone (at the end of matter, or as its own
+ * system dissolves before it): it goes on as leptonic (data/forms.ts), keeping only what is
+ * decay-proof and, at a black hole, what is kept there (a Horizon Vault's charge is its hole's
+ * spin); what is under way stays only if it is decay-proof too. Its Kin and their sleepers, made of
+ * matter, are gone, and re-encoding the Lattice costs half of it (`mult` of that, under the
+ * protocols), once. Returns how many were lost.
+ */
+export function goLeptonic(state: GameState, c: Colony, mult: number): number {
+  const was = formOf(c) === 'leptonic';
+  const atHole = isHole(state.systems[c.systemId]?.primary.kind);
+  for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]?.decayProof && !(atHole && STRUCTURE_BY_ID[k]?.keptAtHole)) delete c.structures[k];
+  c.queue = c.queue.filter((q) => q.kind === 'structure' && STRUCTURE_BY_ID[q.key]?.decayProof);
+  let lost = c.pops.kin + c.cryo;
+  c.pops.kin = 0;
+  c.cryo = 0;
+  if (!was) {
+    const lat = Math.round(c.pops.lattice * 0.5 * mult);
+    c.pops.lattice -= lat;
+    lost += lat;
+  }
+  c.form = 'leptonic';
+  return lost;
+}
+
+/**
  * One civilization at the end of matter: what was re-encoded goes on, keeping only what is
  * decay-proof (and a Horizon Vault's charge, held in its hole's spin); a few minds carried over by
  * the protocols, as far as there is room for them; the rest is gone, each loss counted once.
@@ -240,19 +266,8 @@ function leftOnSubstrate(state: GameState, mods: Mods, lines: CrossingReport['li
   const cap = cs.find((c) => c.id === state.civ.capitalId && decayProof(c)) ?? cs.find((c) => decayProof(c));
   let saved = 0;
   let lost = 0;
-  // first what goes on: only what was re-encoded survives
-  for (const c of cs) {
-    if (!decayProof(c)) continue;
-    const atHole = isHole(state.systems[c.systemId]?.primary.kind);
-    for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]?.decayProof && !(atHole && STRUCTURE_BY_ID[k]?.keptAtHole)) delete c.structures[k];
-    c.queue = [];
-    lost += c.pops.kin + c.cryo;
-    c.pops.kin = 0;
-    c.cryo = 0;
-    const lat = Math.round(c.pops.lattice * 0.5 * crossingMult);
-    c.pops.lattice -= lat;
-    lost += lat;
-  }
+  // first what goes on: only what was re-encoded survives, as leptonic
+  for (const c of cs) if (decayProof(c)) lost += goLeptonic(state, c, crossingMult);
   // then what does not: through the protocols, a share of its minds onto what goes on, as far as it has room for them
   const room = cap && crossingMult < 1 ? capacity(state, cap, mods) : null;
   for (const c of cs) {
