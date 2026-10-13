@@ -459,7 +459,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **The audits of 8 Oct** (planet and star; their scripts were in the scratchpad):
   - Dead stars, one law per kind in every age (`physics.ts`): `dwarfCoolingK` (Mestel, then
     t^-0.58 from `DEBYE_AGE` 5×10¹¹; capped at a red dwarf's flare peak), `brownCoolingK` (Burrows
-    et al. 2001), `formedAt` (a hash of the mass: no random draw, so old saves get it too),
+    et al. 2001), `formedAt` (a hash of the mass: no random draw, so old saves get it too; since 13 Oct one
+    in ten young, `YOUNG_SHARE`: white 1 to 12 billion years, brown 0.4 to 2 billion),
     `giantHeatK`, `rekindledK` (`REKINDLE_SUNS`). `ownTemperature` no longer reads the era; dark
     matter warms from the Dusk on (`emberShare`, `haloShare`). Luminosities are `glow(R)` of the
     temperature. Neutron stars 900 K in the Dusk too. `SKY_K` 2.2×10⁻³⁰.
@@ -654,7 +655,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `steamWorld(state, b)` tells the labels, and `declineWorlds` (`turn.ts`): life on a steam
     world dies with the turn, logged for ours and surveyed worlds. Only new games have `water_rich`, so
     old saves' climates are unchanged. `youngDwarfLight(a, b)`: a Dusk white dwarf's
-    collector light averaged over ages a..b (the power law integrated, then the 0.02 floor).
+    collector light averaged over ages a..b (the power law integrated, then the 0.02 floor); since
+    13 Oct one the galaxy began with gets it too, from `formedAt` (an old one: the floor).
   - `bodyClimate` holds a world under Orbital Lamps at `LAMP_K` (285 K) at least
     (`starClimate` is the star's part); a floor, so it never adds to a flare.
 - **`src/game/sim/flare.ts`:** `livedShare(state, pace, step)` is the pace factor everything
@@ -1278,6 +1280,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the Last Star shines when it lights; its clock free (12 Oct) | 150 | 67 victories, Degenerate Age 72 turns; 900 games 445 / 199 / 70 (442 / 195 / 70 on `main`), within the noise: 721 of 900 play out as on `main`, and all 179 that changed light the Last Star, outcomes moving both ways. By fate: decay 177 / 450, stable 166 / 239, curvature 102 / 211. In the first 300, 75 games light it (η 15.0 to 2,370, median 23.1; 40 before η 24.5; 19 in the Black Hole Age's calendar, 1 in the Dark Era); the autoplayer keeps time with it in 32 |
 | The Embers Dim only while the halo thins (12 Oct) | 157 | 69 victories, Degenerate Age 72 turns; 900 games 449 / 202 / 70 (445 / 199 / 70 with the Last Star), within the noise: 534 of 900 play out as before, the rest moved by the changed pool of chance events, both ways (35 defeat → endurance, 31 back). By fate: decay 181 / 450, stable 169 / 239, curvature 99 / 211 |
 | rogue worlds leave their star behind; a finished Work not resumed; positronium (12 Oct) | 154 | 72 victories, Degenerate Age 72 turns; 900 games 456 / 203 / 71 (449 / 202 / 70 before), within the noise: 406 of 900 play out as before, the outcomes that moved going both ways (43 defeat → endurance, 38 back; 8 defeat → victory, 6 back). By fate: decay 189 / 450, stable 168 / 239, curvature 99 / 211; Aeon Seed victories 67 → 71 |
+| a few young, glowing dwarfs (13 Oct; the new version, on its work branch) | 155 | 72 victories, Degenerate Age 72 turns; 900 games 455 / 202 / 70 (456 / 203 / 71 before), within the noise: 860 of 900 play out as before. By fate: decay 189 / 450, stable 168 / 239, curvature 98 / 211 |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

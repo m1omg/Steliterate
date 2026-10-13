@@ -1916,3 +1916,39 @@ from the beginning."
 - **Checks:** `browser/older-build` (new); `save-all`, `lean`, `lowvision` and `mobile` use the new
   keys; `unit/fates` expects version 4 after a legacy read.
 - No rules changed.
+
+## A few young, glowing dwarfs (13 Oct, item 8)
+
+"Make somewhat fresh/hot, hot enough to glow in the visible spectrum, white and brown dwarfs a
+little bit more common in the early game", and "I'm not asking you to change the cooling physics."
+
+- **One dwarf in ten the galaxy begins with is a straggler of the last star formation**
+  (`YOUNG_SHARE` in `physics.ts`). `formedAt` maps the same hash as before differently: about a
+  tenth of the dwarfs land in a young window, the rest keep the old spread, as many in each
+  tenfold of time from 10⁹ years to the Dusk (before, 99% were over 10¹³ years old: white dwarfs
+  at 47 to 89 K, brown dwarfs under 63 K).
+  - White ones formed 1 to 12 billion years before the Dusk: about 7,500 to 3,400 K at 0.6 M☉.
+  - Brown ones 0.4 to 2 billion years before: 2,100 to 1,200 K at 0.05 M☉, 1,400 to 810 K at 0.03,
+    2,900 to 1,700 K at 0.075.
+  - Over 30 galaxies: 127 of 1,392 white dwarfs young (9.1%, 3,391 to 7,668 K) and 97 of 810 brown
+    dwarfs (12%, 859 to 2,763 K).
+- **The cooling laws are untouched** (Mestel's for white dwarfs, Burrows' fit for brown ones): a
+  young one simply formed later, and cools by them from then. A 10⁹-year-old white dwarf is down
+  to about 130 K by the Dusk's end.
+- **Collectors:** a white dwarf the galaxy began with gave a flat 0.02 in the Dusk, whatever its
+  age. Now it gives what a red dwarf's remnant gives at the same age (`youngDwarfLight`, from when
+  it formed): an old one still 0.02, a young one 0.02 to 0.2 (0.20 at a billion years, 0.085 at
+  three, 0.021 at twelve). Its label says "Young white dwarf, a straggler of the last stars,
+  still glowing as it cools".
+- **The map:** a brown dwarf in the Dusk blends to its blackbody colour as it gets hot enough to
+  glow (`coolDwarfShine`), as the system view already drew it.
+- **Seeds are safe:** generation never reads a temperature, and the passes that do run after it
+  and draw nothing, so every seed keeps every star and world (`unit/young-dwarfs` compares
+  fingerprints of four galaxies with main's). Only the worlds of young dwarfs start warmer.
+- **A bend, in the Codex** (the Dusk): a star formation fading as 1/t leaves far fewer so young.
+- **Balance:** 300 games: 155 survive (154 before), 72 victories (72), a Degenerate Age of 72
+  turns (72); 283 of 300 games identical. 900 games: 455 survive (456), 202 victories (203), 70
+  Degenerate turns (71); 860 of 900 identical. By fate: decay 189 of 450 (189), stable 168 of 239
+  (168), curvature 98 of 211 (99). No change beyond noise.
+- **Check:** `unit/young-dwarfs` (new): the share, the ages and temperatures, the light, the laws
+  unchanged, and generation identical.
