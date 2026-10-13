@@ -357,63 +357,19 @@ class Music {
     echo.gain.value = 0.5;
     tone.connect(echo).connect(bus);
 
-    // tape wobble
-    const lfo = a.ctx.createOscillator();
-    lfo.frequency.value = 0.27;
+    // tape wobble, in cents (its LFO runs with the drone: `voice`)
     const wobble = a.ctx.createGain();
     wobble.gain.value = 7;
-    lfo.connect(wobble);
-    lfo.start(t);
-    const persistent: AudioScheduledSourceNode[] = [lfo];
-
-    // drone
-    if (style.drone) {
-      const f = a.ctx.createBiquadFilter();
-      f.type = 'lowpass';
-      f.frequency.value = style.drone.cutoff;
-      f.Q.value = 2;
-      const g = a.ctx.createGain();
-      g.gain.value = style.drone.vol;
-      f.connect(g).connect(bus);
-      const flfo = a.ctx.createOscillator();
-      flfo.frequency.value = 0.041;
-      const fdepth = a.ctx.createGain();
-      fdepth.gain.value = style.drone.cutoff * 0.5;
-      flfo.connect(fdepth).connect(f.frequency);
-      flfo.start(t);
-      persistent.push(flfo);
-      for (const n of style.drone.notes) {
-        for (const det of [-4, 5]) {
-          const o = a.ctx.createOscillator();
-          o.type = 'sawtooth';
-          o.frequency.value = midiHz(style.root + n);
-          o.detune.value = det;
-          wobble.connect(o.detune);
-          o.connect(f);
-          o.start(t);
-          persistent.push(o);
-        }
-      }
-    }
-    // tape hiss
+    // tape hiss, through its own gain: part of the synth, so it goes when a recording plays
     let hissOut: GainNode | null = null;
     if (style.hiss > 0) {
-      const src = a.ctx.createBufferSource();
-      src.buffer = a.noise;
-      src.loop = true;
-      const hp = a.ctx.createBiquadFilter();
-      hp.type = 'bandpass';
-      hp.frequency.value = 3500;
-      hp.Q.value = 0.4;
-      const g = a.ctx.createGain();
-      g.gain.value = style.hiss;
       hissOut = a.ctx.createGain();
       hissOut.gain.value = due ? 0 : 1;
-      src.connect(hp).connect(g).connect(hissOut).connect(a.music);
-      src.start(t);
-      persistent.push(src);
+      hissOut.connect(a.music);
     }
-    const layer: Layer = { style, bus, arpIn, wobble, persistent, silenced: due, track: null, hiss: hissOut, hushAt: 0, synthUntil: 0, onSynthEnd: null, intro: false, onShow: null };
+    const layer: Layer = { style, bus, arpIn, wobble, persistent: [], silenced: due, track: null, hiss: hissOut, hushAt: 0, synthUntil: 0, onSynthEnd: null, intro: false, onShow: null };
+    // with a recording due, the synth's continuous sounds wait unbuilt: nothing runs unheard
+    if (!due) this.voice(layer, t);
     this.layer = layer;
     this.step = 0;
     this.next = t + 0.1;
@@ -468,6 +424,7 @@ class Music {
         this.next = a.ctx.currentTime + 0.05;
       }
       layer.hushAt = 0;
+      this.voice(layer, a.ctx.currentTime);
       ramp(layer.bus.gain, 1, 3);
       if (layer.hiss) ramp(layer.hiss.gain, 1, 3);
       layer.synthUntil = span > 0 ? a.ctx.currentTime + span : 0;
@@ -521,6 +478,7 @@ class Music {
       layer.silenced = false;
       layer.hushAt = 0;
       this.next = a.ctx.currentTime + 0.05;
+      this.voice(layer, a.ctx.currentTime);
       ramp(layer.bus.gain, 1, 3);
       if (layer.hiss) ramp(layer.hiss.gain, 1, 3);
     }, RECORDING_GRACE * 1000);
@@ -535,6 +493,77 @@ class Music {
     } else play(list[0]);
   }
 
+  /**
+   * Start a layer's continuous sounds: the tape wobble, the drone and the hiss. They run only while
+   * the synth can be heard: started when it wakes, and stopped (`hush`) once a recording has faded it
+   * out, so that nothing plays unheard under a recording. On a busy phone that unheard work was
+   * enough to make the sound crackle (12 Oct).
+   */
+  private voice(layer: Layer, t: number) {
+    const a = audio();
+    if (!a || layer.persistent.length) return;
+    const { style, bus, wobble } = layer;
+    const lfo = a.ctx.createOscillator();
+    lfo.frequency.value = 0.27;
+    lfo.connect(wobble);
+    lfo.start(t);
+    const persistent: AudioScheduledSourceNode[] = [lfo];
+    // drone
+    if (style.drone) {
+      const f = a.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = style.drone.cutoff;
+      f.Q.value = 2;
+      const g = a.ctx.createGain();
+      g.gain.value = style.drone.vol;
+      f.connect(g).connect(bus);
+      const flfo = a.ctx.createOscillator();
+      flfo.frequency.value = 0.041;
+      const fdepth = a.ctx.createGain();
+      fdepth.gain.value = style.drone.cutoff * 0.5;
+      flfo.connect(fdepth).connect(f.frequency);
+      flfo.start(t);
+      persistent.push(flfo);
+      for (const n of style.drone.notes) {
+        for (const det of [-4, 5]) {
+          const o = a.ctx.createOscillator();
+          o.type = 'sawtooth';
+          o.frequency.value = midiHz(style.root + n);
+          o.detune.value = det;
+          wobble.connect(o.detune);
+          o.connect(f);
+          o.start(t);
+          persistent.push(o);
+        }
+      }
+    }
+    // tape hiss
+    if (layer.hiss) {
+      const src = a.ctx.createBufferSource();
+      src.buffer = a.noise;
+      src.loop = true;
+      const hp = a.ctx.createBiquadFilter();
+      hp.type = 'bandpass';
+      hp.frequency.value = 3500;
+      hp.Q.value = 0.4;
+      const g = a.ctx.createGain();
+      g.gain.value = style.hiss;
+      src.connect(hp).connect(g).connect(layer.hiss);
+      src.start(t);
+      persistent.push(src);
+    }
+    layer.persistent = persistent;
+  }
+
+  /** Stop a layer's continuous sounds (`voice`): its synth has faded out under a recording. */
+  private hush(layer: Layer) {
+    for (const n of layer.persistent) {
+      n.stop();
+      n.disconnect();
+    }
+    layer.persistent = [];
+  }
+
   private tick() {
     const a = audio();
     const L = this.layer;
@@ -544,6 +573,7 @@ class Music {
     if (L.hushAt && now >= L.hushAt) {
       L.hushAt = 0;
       L.silenced = true;
+      this.hush(L);
     }
     // a synthesized piece has had its turn
     if (L.synthUntil && now >= L.synthUntil) {

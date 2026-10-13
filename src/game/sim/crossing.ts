@@ -9,7 +9,7 @@ import { capacity, reserveCapacity } from './economy';
 import { destroyColony } from './fleets';
 import { starGoneEarly } from './flare';
 import type { Mods } from './mods';
-import { colonies, log, popsOf, totalPops, withRng } from './util';
+import { colonies, distLy, inItsSystem, log, popsOf, totalPops, withRng } from './util';
 import type { Rng } from '../rng';
 
 // The three great storms. Each transforms the world; your preparation decides what survives.
@@ -67,21 +67,66 @@ function migrateToBlackHoles(state: GameState): number {
   return moved;
 }
 
+/** What a Burst Catcher banks from a black hole's final burst, or from a neutron star's burst close by. */
+export const BURST_CATCH = 250;
+/** Within this many light-years a neutron star's burst gives a catcher all of BURST_CATCH. */
+export const NEAR_BURST_LY = 10;
+
+/**
+ * What one Burst Catcher banks from a neutron star bursting `ly` light-years away: all of
+ * BURST_CATCH within NEAR_BURST_LY, and beyond it less with the square of the distance (about 63 at
+ * 20 ly, 10 at 50). The player chose "By distance", 12 Oct.
+ */
+export function burstShare(ly: number): number {
+  return Math.round(BURST_CATCH * Math.min(1, (NEAR_BURST_LY / Math.max(ly, 1e-9)) ** 2));
+}
+
+/**
+ * What Burst Catchers bank from a black hole's final burst: BURST_CATCH each, in its Deep or on a
+ * world it held until then (`held`, from `evaporateHole`). A world flung loose long before is far away.
+ */
+export function finalBurstCatch(state: GameState, systemId: string, held: readonly string[] = []): number {
+  let catchers = 0;
+  for (const c of colonies(state)) if (c.systemId === systemId && inItsSystem(state, c, held)) catchers += c.structures.burst_catcher ?? 0;
+  return BURST_CATCH * catchers;
+}
+
 /**
  * Curvature radiation: each neutron star, its mass given to the curvature of space for 10^68 years,
  * bursts at a tenth of a Sun in a last flash of particles and neutrinos (some 10^42 J): whatever we
- * had settled at one is lost, and its worlds are blasted loose.
+ * had settled at one is lost, in its Deep or on a world it still held, and its worlds are blasted
+ * loose. A world flung loose from it long before has drifted far away, and loses nothing. Burst
+ * Catchers in other systems bank a share of the flash by its distance (`burstShare`), once each,
+ * from the nearest: returned, for the crossing to add after its own cost.
  */
-function burstNeutronStars(state: GameState, lines: CrossingReport['lines']) {
-  let burst = 0;
+export function burstNeutronStars(state: GameState, lines: CrossingReport['lines']): number {
+  // every one bursts, even one flung out of the galaxy with nothing left around it
+  const stars = Object.values(state.systems).filter((s) => s.primary.kind === 'neutron_star');
+  const bursting = new Set(stars.map((s) => s.id));
+  // what reaches the catchers elsewhere; a system cast out of the galaxy is far from all the rest
+  let caught = 0;
+  let catching = 0;
+  for (const c of colonies(state)) {
+    const n = c.structures.burst_catcher ?? 0;
+    const home = state.systems[c.systemId];
+    if (!n || bursting.has(c.systemId) || home.ejected || !inItsSystem(state, c)) continue;
+    let share = 0;
+    for (const s of stars) if (!s.ejected) share = Math.max(share, burstShare(distLy(home, s)));
+    if (share > 0) {
+      caught += share * n;
+      catching++;
+    }
+  }
   let lostHere = 0;
   let people = 0;
-  for (const s of Object.values(state.systems)) {
-    // every one bursts, even one flung out of the galaxy with nothing left around it
-    if (s.primary.kind !== 'neutron_star') continue;
-    burst++;
+  let farAway = 0;
+  for (const s of stars) {
     for (const c of colonies(state)) {
       if (c.systemId !== s.id) continue;
+      if (!inItsSystem(state, c)) {
+        farAway++;
+        continue;
+      }
       lostHere++;
       people += popsOf(c) + c.cryo;
       destroyColony(state, c, 'its neutron star burst');
@@ -99,8 +144,11 @@ function burstNeutronStars(state: GameState, lines: CrossingReport['lines']) {
     }
     s.gone = s.gone || !left;
   }
-  lines.push({ text: `The neutron stars have burst: ${burst} of them, each at a tenth of a Sun, in a last flash of particles and neutrinos. They had given their mass to the curvature of space for 10⁶⁸ years.`, kind: 'info' });
+  lines.push({ text: `The neutron stars have burst: ${stars.length} of them, each at a tenth of a Sun, in a last flash of particles and neutrinos. They had given their mass to the curvature of space for 10⁶⁸ years.`, kind: 'info' });
   if (lostHere) lines.push({ text: `${lostHere} of our settlements at neutron stars went with them${people ? `, and ${people} of our people` : ''}.`, kind: 'bad' });
+  if (farAway) lines.push({ text: farAway === 1 ? 'One of our settlements was on a world flung loose from its neutron star long before, and far away when it burst.' : `${farAway} of our settlements were on worlds flung loose from neutron stars long before, and far away when they burst.`, kind: 'good' });
+  if (caught) lines.push({ text: `Burst Catchers at ${catching === 1 ? 'one of our settlements' : `${catching} of our settlements`} caught the flash from afar: +${caught} energy.`, kind: 'good' });
+  return caught;
 }
 
 /**
@@ -248,10 +296,11 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
       // unless we found it out before (the Proton Question, or the neutron stars showing it earlier)
       if (!fateKnown(state) || civ.flags.fate_known === state.turn) lines.push({ text: fateOf(state) === 'decay' ? 'The question is settled: the protons decay.' : fateOf(state) === 'curvature' ? 'The question is settled: space itself is unmaking matter.' : 'The question is settled: the protons are stable.', kind: 'info' });
       civ.flags.fate_known ??= state.turn;
+      let caught = 0;
       if (fateOf(state) === 'decay') {
         endOfMatter(state, mods, lines, crossingMult, rng, 'decayed');
       } else {
-        if (fateOf(state) === 'curvature') burstNeutronStars(state, lines);
+        if (fateOf(state) === 'curvature') caught = burstNeutronStars(state, lines);
         else lines.push({ text: 'The protons held. Matter endures, cold and dark, slowly tunnelling toward iron.', kind: 'good' });
         lines.push({ text: 'The neutron stars, the last things warm of their own accord, are colder now than the faint glow of the black holes. For the whole life of the universe the holes were the coldest things in it; from now on they are the warmest. The astronomers close the Degenerate Age here.', kind: 'info' });
         for (const s of Object.values(state.systems)) if (s.primary.kind === 'white_dwarf') s.primary.kind = 'black_dwarf';
@@ -268,7 +317,8 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
         lines.push({ text: lost ? `${lost} Kin could not be kept warm.` : 'Everyone who needed warmth had it.', kind: lost ? 'bad' : 'good' });
         for (const sv of Object.values(state.survivors)) if (sv.alive) sv.health = Math.max(0, sv.health - 0.25);
       }
-      civ.energy *= 0.6;
+      // the crossing's cost falls on what we had saved; what the catchers caught comes after it
+      civ.energy = civ.energy * 0.6 + caught;
     } else if (from === 'blackhole') {
       // ---------------------------------------------------------------- The Last Horizon
       // every hole left goes as one would on its own (physics.ts): its worlds drift loose, what we built stays

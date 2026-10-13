@@ -2,7 +2,7 @@ import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
 import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
-import { colonies, protonFateKnown } from './util';
+import { colonies, inItsSystem, protonFateKnown } from './util';
 import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
 import { computeMods } from './mods';
 import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf } from '../fate';
@@ -100,7 +100,7 @@ export function updateForecasts(state: GameState) {
       add({ kind: 'crossing', title: 'The end of the Degenerate Age?', text: 'No one knows yet what becomes of matter. If protons decay, it dissolves near η 39, and only minds moved onto leptonic substrates, or living around black holes, will continue. If space itself slowly unmakes it, the neutron stars burst near η 68 and worlds last until η 90. If neither, nothing at all happens: the dead stars simply grow colder than the black holes, near η 30. The Proton Question would tell us; the neutron stars will, near η 30.', dueYears: Math.pow(10, FATE_SHOWN_AT), severity: 'danger' });
     else if (fate === 'decay') add({ kind: 'crossing', title: 'The Great Decay', text: 'Ordinary matter dissolves. Only minds moved onto leptonic substrates, or living around black holes, will continue.', dueYears: Math.pow(10, DEGENERATE_END.decay), severity: 'danger' });
     else if (fate === 'stable') add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars, the last things warm of their own accord, cool below the faint glow of the black holes. Nothing dissolves: matter endures, frozen, and gives nothing back. From then on only the black holes are sources, and Kin will need warmth no star can give.', dueYears: Math.pow(10, DEGENERATE_END.stable), severity: 'warn' });
-    else add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars burst, one after another, at a tenth of a Sun: whatever is settled at one is lost. After that only the black holes are warm, and space goes on unmaking the rest: the dwarfs fade by η 85, worlds by η 90.', dueYears: Math.pow(10, DEGENERATE_END.curvature), severity: 'danger' });
+    else add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars burst, one after another, at a tenth of a Sun: whatever is settled at one is lost, unless it is on a world flung loose from it long before, far away by then. Burst Catchers in other systems bank a share of the flash, the more the nearer they are. After that only the black holes are warm, and space goes on unmaking the rest: the dwarfs fade by η 85, worlds by η 90.', dueYears: Math.pow(10, DEGENERATE_END.curvature), severity: 'danger' });
   } else if (state.era !== 'dark') {
     const titles: Record<string, string> = { dusk: 'The Last Light', blackhole: 'The Last Horizon' };
     const texts: Record<string, string> = {
@@ -117,7 +117,9 @@ export function updateForecasts(state: GameState) {
       const k = sys.primary.kind;
       const at = k === 'neutron_star' ? DEGENERATE_END.curvature : k === 'white_dwarf' || k === 'black_dwarf' ? dwarfFadeEta(sys.primary.mass) : k === 'brown_dwarf' ? BROWN_FADE_ETA : Infinity;
       if (!isFinite(at) || at <= state.eta) continue;
-      if (k === 'neutron_star') add({ kind: 'burst', title: `${sys.name} will burst`, text: 'Its neutron star, its mass given to the curvature of space, will burst at a tenth of a Sun: our settlements here will be lost with it. Move what can be moved.', dueYears: Math.pow(10, at), systemId: sid, severity: 'danger' });
+      // a settlement on a world flung loose from it long ago is far away, and safe
+      const lost = colonies(state).some((c) => c.systemId === sid && inItsSystem(state, c));
+      if (k === 'neutron_star') add({ kind: 'burst', title: `${sys.name} will burst`, text: lost ? 'Its neutron star, its mass given to the curvature of space, will burst at a tenth of a Sun: our settlements in its Deep and on the worlds it holds will be lost with it. Move what can be moved.' : 'Its neutron star, its mass given to the curvature of space, will burst at a tenth of a Sun. Our settlements here are on worlds flung loose from it long ago, far away by now, and safe.', dueYears: Math.pow(10, at), systemId: sid, severity: lost ? 'danger' : 'info' });
       else add({ kind: 'fade', title: `${sys.name} will fade`, text: 'Space is turning its dwarf’s mass into particles; when it is gone its worlds drift loose, and our settlements stay, with nothing there to warm them.', dueYears: Math.pow(10, at), systemId: sid, severity: 'warn' });
     }
   }

@@ -4,7 +4,7 @@ import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
 import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
 import { THREADS } from '../types';
-import { greatEvaporation, runCrossing } from './crossing';
+import { finalBurstCatch, greatEvaporation, runCrossing } from './crossing';
 import { theLongFlow } from './flow';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
@@ -643,11 +643,11 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
         if (seen) log(state, `${sys.name} fell into the Heart.`, 'info', sys.id);
         break;
       case 'evaporated': {
-        let catchers = 0;
-        for (const c of colonies(state)) if (c.systemId === sys.id) catchers += c.structures.burst_catcher ?? 0;
-        if (catchers) {
-          state.civ.energy += 250 * catchers;
-          log(state, `Burst Catchers at ${sys.name} caught the black hole’s final burst.`, 'good', sys.id);
+        // only what was there to catch it: in its Deep, or on a world it held until now
+        const caught = finalBurstCatch(state, sys.id, n.held);
+        if (caught) {
+          state.civ.energy += caught;
+          log(state, `Burst Catchers at ${sys.name} caught the black hole’s final burst: +${caught} energy.`, 'good', sys.id);
         }
         // its worlds drift loose and what we built there stays (physics.ts): nothing is lost with it
         if (mine) queueEvent(state, 'final_burst', { systemId: sys.id });

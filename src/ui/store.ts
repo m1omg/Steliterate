@@ -46,6 +46,8 @@ export interface Settings {
   lowVision?: boolean;
   /** The side its column keeps to. */
   lvSide?: 'left' | 'right';
+  /** The graphics were picked by hand in Settings (else a touch device starts at medium). */
+  qualityChosen?: boolean;
 }
 
 export const game = signal<GameState | null>(null);
@@ -131,10 +133,15 @@ export function autosave() {
 }
 
 function loadSettings(): Settings {
-  const d: Settings = { music: 0.7, sfx: 0.7, quality: 'high', uiScale: 1, playlist: {}, overture: true };
+  // phones and tablets start at medium graphics, 1.5 pixels to the point instead of 2 (the
+  // player, 12 Oct: "Touch devices start at Medium"); high is one tap away in Settings
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  const d: Settings = { music: 0.7, sfx: 0.7, quality: touch ? 'medium' : 'high', uiScale: 1, playlist: {}, overture: true };
   try {
     const t = localStorage.getItem('steliterate.settings');
     const s: Settings = t ? { ...d, ...JSON.parse(t) } : d;
+    // settings saved before carry high: once on a touch device, unless it was picked by hand
+    if (touch && !s.qualityChosen && s.quality === 'high') s.quality = 'medium';
     // older versions offered 0.9 / 1 / 1.12: snap to the nearest size now offered
     s.uiScale = UI_SCALES.reduce((a, b) => (Math.abs(b.v - s.uiScale) < Math.abs(a.v - s.uiScale) ? b : a)).v;
     if (!s.lowVision) s.uiScale = Math.min(s.uiScale, PLAIN_MAX_SCALE);
