@@ -2718,4 +2718,8 @@ The last decades of ordinary matter now thin what is still made of it.
 - **The Codex** says where it bends: it spreads the decay evenly over a decade and a half, where a
   real decay with one lifetime would be exponential. The Manual describes it under both fates.
 - **Checks:** `unit/thinning` (new).
-- **Balance:** (the 900 games are running).
+- **Balance:** 173 of 300 standard competent games survive, 58 victories, a Degenerate Age of 73
+  turns; 900 games 522 / 205 / 74 (530 / 219 / 74 with the Passage): decay 210 / 450 (221), 53 wins
+  (65); stable as before, game for game; curvature 143 / 211 (140). 760 of 900 end as before. The
+  Thinning costs what it should, a little: settlements that had not made the Passage lose their
+  matter before the end.
