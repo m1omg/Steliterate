@@ -2242,6 +2242,11 @@ Each of the other civilizations now plays its own way, not ours with a few needs
     17% (19%);
   - the Tessellate alive in 20% (38%), but it builds the Archive of Everything itself in 196 of
     558 games (53): aiming for it, it gets there in a third of all games.
+- **With the events of ordinary life** (part 2a's reference, `3678301`, End Turn in slices
+  included): 900 games, 397 survive and 131 win, a Degenerate Age of 71 turns (410, 143 and 72
+  without them), within the noise. By fate: decay 164 of 450, stable 136 of 239, curvature 97 of
+  211. The others alive at our end: the uploaded 30%, the Chorus 28%, the Tessellate 20% (the
+  Archive of Everything its own in 198 of 558), the sleepers 19%, the gardens 17%.
 - **The Quiet Lattice is far the easiest ending, and was before.** A Lattice-led player of ours
   (`tools/sim.ts 300 standard lattice`) wins it in nearly every game where matter lasts: on the
   rules before the Lattice thought, 78 of 81 stable games and 65 of 71 curvature games; now 70 of

@@ -82,4 +82,7 @@ Balance reference (12 Oct, rogue worlds leave their star behind, a finished Work
 positronium; the same on 13 Oct with who a burst reaches): 154 of 300 standard competent games survive, 72 victories, a Degenerate Age of 72
 turns; 900 games: 456 survive, 203 victories; noise ±12 in 300 (two runs of 900 can differ by 30).
 By fate in the 900: decay 42%, stable 70%, curvature 47% (`--fate=` runs one). The full history is
-in DEV-NOTES (Balance reference).
+in DEV-NOTES (Balance reference). That is `main`'s game. The new version (on
+`claude/epic-wozniak-lyhulf`) starts again with real neighbours: part 2a's reference (13 Oct,
+`3678301`) is 140 of 300 surviving, 41 victories; 900 games 397 / 131, a Degenerate Age of 71
+turns; by fate decay 36%, stable 57%, curvature 46%.
