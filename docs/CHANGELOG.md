@@ -2234,6 +2234,20 @@ Each of the other civilizations now plays its own way, not ours with a few needs
 - **A hole's spin is a commons** for a civilization of its own as it is for us: it draws on it
   with Penrose Harvesters of its own, in any age, and the world panel says so (the half a light
   partner took is for neighbours asleep).
+- **The numbers** (`b299f6a`, before the events of ordinary life). 900 harness games: 410 survive
+  and 143 win (376 and 147 before), a Degenerate Age of 72 turns (73). By fate: decay 178 of 450
+  (144), stable 147 of 239 (131), curvature 85 of 211 (101). The others, at the end of our games:
+  - the sleepers alive in 21% (11% before), sleeping through what killed them;
+  - the Chorus 30% (27%), the uploaded 27% (31%; the Long Thought their own in 16), the gardens
+    17% (19%);
+  - the Tessellate alive in 20% (38%), but it builds the Archive of Everything itself in 196 of
+    558 games (53): aiming for it, it gets there in a third of all games.
+- **The Quiet Lattice is far the easiest ending, and was before.** A Lattice-led player of ours
+  (`tools/sim.ts 300 standard lattice`) wins it in nearly every game where matter lasts: on the
+  rules before the Lattice thought, 78 of 81 stable games and 65 of 71 curvature games; now 40 of
+  45 and 31 of 43 (of the first 180). Under decay it never can (the Lattice is matter). Our usual
+  mixed strategy wins 40% of stable games and 20% of curvature games, by any ending. How to make
+  it harder is for the player to decide (asked, 13 Oct).
 - **Checks:** `unit/minds` (new). `browser/prompt-systems` picks research until its prompt closes
   (a pick that stored insight covers is learnt at once, and the prompt stays) and passes over
   another of our ships asking first; `browser/refuge` plays with the neighbours asleep, as it sets
