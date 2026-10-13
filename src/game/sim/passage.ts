@@ -1,10 +1,11 @@
 import { STRUCTURE_BY_ID, inLeptonicForm } from '../data/structures';
-import { MATTER_END, fateKnown, fateOf, matterGone } from '../fate';
+import { stepTime } from '../eras';
+import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from '../fate';
 import type { Colony, GameState } from '../types';
 import type { ActionResult } from './actions';
 import { dismantleTerms } from './actions';
 import { protocolsMult } from './crossing';
-import { turnStep } from './flare';
+import { clockCiv, turnStep } from './flare';
 import { formOf, hasTech, log, ownColony, uid } from './util';
 
 // The Passage (the new version, part 3-2): a settlement rewritten, over several turns, into
@@ -130,9 +131,31 @@ export function completePassage(state: GameState, c: Colony): void {
   log(state, `${c.name} has made the Passage: it is leptonic now. ${t.crossing} structure${t.crossing === 1 ? '' : 's'} crossed over; ${t.apart} ${t.apart === 1 ? 'was' : 'were'} taken apart${t.matterBack ? ` (+${t.matterBack} matter)` : ''}.${kin}${lattice}`, 'good', c.systemId);
 }
 
-/** About how many turns are left before ordinary matter ends, from the coming turn's length (Infinity if it will not). */
-export function turnsToEndOfMatter(state: GameState): number {
+/** Decades of η until ordinary matter ends (Infinity if it will not, or already has). */
+export function etaToEndOfMatter(state: GameState): number {
   const end = MATTER_END[fateOf(state)];
+  return !isFinite(end) || matterGone(state) ? Infinity : Math.max(0, end - state.eta);
+}
+
+/**
+ * About how many decades of η this settlement's own industry would take to put `industry` into
+ * the Passage: turns of its industry (the last turn's: minds work a turn's worth whatever its
+ * length), each as long as the calendar's turn at this pace (`pace`, the player's by default: time
+ * is the player's; no star's clock).
+ */
+export function passageEta(state: GameState, c: Colony, industry: number, pace = clockCiv(state).pace): number {
+  const per = c.last?.industry ?? 0;
+  if (per <= 0) return Infinity;
+  const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
+  return isFinite(step.eta) ? (industry / per) * Math.max(0, step.eta - state.eta) : Infinity;
+}
+
+/**
+ * About how many turns are left before ordinary matter ends (or before η `at`), from the coming
+ * turn's length (Infinity if it will not).
+ */
+export function turnsToEndOfMatter(state: GameState, at = MATTER_END[fateOf(state)]): number {
+  const end = at;
   if (!isFinite(end) || matterGone(state)) return Infinity;
   const step = turnStep(state);
   const per = isFinite(step.turnLength) && step.turnLength > 0 ? Math.log10(1 + step.turnLength / state.years) : 0;

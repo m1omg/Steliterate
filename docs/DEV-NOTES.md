@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -247,7 +247,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 - `src/ui/screens/Manual.tsx` strings are single-quoted: use typographic apostrophes (’) in
   prose. A straight `'` breaks the build; it has happened twice.
-- Components that read mutable game state need `void rev.value`.
+- Components that read mutable game state need `void rev.value`. Above all one with state of its
+  own (`useState`) whose props are the game's objects: `@preact/signals` skips re-rendering a
+  component with hooks state when its props are the same objects, and the game's state changes in
+  place, so without it the component shows what was (13 Oct: the Passage section still said
+  "Under way: 0%" after the Passage was done; the Kinetic Lance's strike section, a warship's
+  attack button and the Halo Siphons' shut button had the same gap).
 - Hooks must come before any early return. `FleetPanel` has several `useState` calls.
 - **Save compatibility:** only add optional fields, or compute things live. Put small counters
   in `civ.flags` (a `Record<string, number>`), or `state.flags` for a fact about the universe.
@@ -415,13 +420,26 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     one out (`starvation`, `turn.ts`).
   - **The Passage** (part 3-2, `sim/passage.ts`): a queue item of kind `'passage'` (key
     `'passage'`; `applyIndustry` calls `completePassage`); `passageTerms`, `passageCheck`,
-    `beginPassage`, `endForeseen`, `turnsToEndOfMatter` (from `turnStep`'s length). While it is
-    `queue[0]`, `colonyTurn` cuts energy, matter, insight and accord to `PASSAGE_OUTPUT`.
+    `beginPassage`, `endForeseen`, `etaToEndOfMatter`, `passageEta` (decades of η a settlement's
+    own industry would take at a pace) and `turnsToEndOfMatter` (the panel's turns, from
+    `turnStep`'s length). While it is `queue[0]`, `colonyTurn` cuts energy, matter, insight and
+    accord to `PASSAGE_OUTPUT`. A turn's industry from minds does not grow with the turn's length
+    (only machines' energy and matter scale with the lived share; minds feel tempo strain), so a
+    slower pace puts less work into it a decade: the autoplayer counts decades, not turns.
     `StructureDef.leptonic` (with a name of its own: `structureLabel(id, sys, form)`) and
     `inLeptonicForm(d)` decide what crosses over and what a leptonic settlement may build;
     `decayProof(c)` (`crossing.ts`, exported) is true for a leptonic settlement too, and
     `goLeptonic` keeps all of a passed settlement's structures. The autoplayer's `passageDue`
-    (`auto.ts`) times it.
+    (`auto.ts`) times it: done about `PASSAGE_SPARE` (2) decades before the end at the Tide, or at
+    our pace if quicker; `passageLate` rushes it only in the last three decades, and the general
+    rush (matter over 600) skips a Passage, which once finished one the turn after it began, 15
+    decades early. `migrateToBlackHoles` goes to the nearest hole with spin left (`SPENT_SPIN`);
+    `planThreads` cools Echoes when the reserve would last fewer than `COOL_BELOW` turns (in the
+    Dark Era, fewer than `darkTurnsLeft`); and when no pace pays after matter or in the Dark Era,
+    `planPace` takes the one that drains the reserve least a decade (`turnReach`: decades of η, of
+    log η in the Dark Era), not the least a turn: quicker turns cost about as much a turn once
+    nothing comes in. Not before then: in the Dusk the rule took long turns and lost the turns a
+    civilization grows by.
   - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a
     report per civilization; the universe's part runs once (`toAll` puts its lines in every
     report where they fall), each civilization's under `eachCiv`; `leftOnSubstrate` is one

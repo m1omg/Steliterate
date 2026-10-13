@@ -34,6 +34,7 @@ function senderName(s: GameState, sig: Signal): string {
  * (they will not gather until they are shut), and on the Unlit's card.
  */
 function ShutSiphons({ s, card }: { s: GameState; card?: boolean }) {
+  void rev.value; // mutable game state: re-render on every change
   const [armed, setArmed] = useState(false);
   if (!s.civ.techs.includes('halo_siphons')) return null;
   if (!siphonsRunning(s))

@@ -35,6 +35,9 @@ export const DEGENERATE_END: Record<Fate, number> = { decay: 39, stable: 30, cur
 /** When ordinary matter is gone (η), by fate: never, if it is stable. */
 export const MATTER_END: Record<Fate, number> = { decay: 39, stable: Infinity, curvature: 89.5 };
 
+/** If protons decay, ordinary matter begins to dissolve in earnest from here (η), one system at a time (physics.ts). */
+export const MATTER_DISSOLVES = 37.5;
+
 /** Near η 30 the neutron stars show the fate of matter, if no one has found it out before. */
 export const FATE_SHOWN_AT = 30;
 

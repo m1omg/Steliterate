@@ -580,8 +580,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - the Passage (part 3-2): a settlement rewritten whole before matter ends, as a project in its
     queue; Field Stores (Energy Vaults and Deep Storage Rings in leptonic form) hold the reserve
     after matter; the report names each settlement lost. Lattice-led games, 13 Oct: the Quiet
-    Lattice in 85% of stable games and 74% of curvature ones, before and after the Lattice lived on
-    energy; under decay 0 before, 6% after (300 games each, for the open Quiet Lattice question).
+    Lattice in 88% of stable games (71 of 81) and 76% of curvature ones (54 of 71), before and
+    after the Lattice lived on energy; under decay none of 148 before, 7 (5%) after (300 games
+    each, for the open Quiet Lattice question).
   - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census

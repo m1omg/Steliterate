@@ -286,7 +286,7 @@ export const POSITRONIUM_ETA = 85;
 const FATE_MILESTONES: Record<Fate | 'unknown', Milestone[]> = {
   decay: [
     { at: 37.5, label: 'Proton decay', detail: 'Protons decay in earnest: ordinary matter begins to dissolve.' },
-    { at: 39, label: 'The Great Decay', detail: 'Ordinary matter is gone. Only minds on leptonic substrate, and the black holes, remain. The Degenerate Age ends.' },
+    { at: 39, label: 'The Great Decay', detail: 'Ordinary matter is gone. Only what was re-encoded in electrons and positrons, and the black holes, remain. The Degenerate Age ends.' },
     { at: POSITRONIUM_ETA, label: 'Positronium forms', detail: 'Electrons and positrons pair into atoms larger than today’s observable universe.' },
     { at: 141, label: 'Positronium decays', detail: 'The last bound atoms annihilate into photons.' },
   ],

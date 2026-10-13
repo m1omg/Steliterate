@@ -36,12 +36,19 @@ const mindUpkeep = (s: GameState, c: Colony) =>
     .reduce((a, l) => a + (l.energy ?? 0), 0);
 
 // ---------------------------------------------------------------- a stable game, to just before the flow
-const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
-for (let g = 0; g < 900 && !s.civ.outcome && s.eta < FLOW_ETA - 2.5; g++) {
-  autoPlay(s, 'competent');
-  endTurn(s);
-}
-check(!s.civ.outcome && s.eta < FLOW_ETA && s.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come`);
+// (the first seed from 1000 whose autoplayed game lives that long: rules changes move how a game goes)
+const toFlow = (seed: number) => {
+  const g = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
+  for (let n = 0; n < 900 && !g.civ.outcome && g.eta < FLOW_ETA - 2.5; n++) {
+    autoPlay(g, 'competent');
+    endTurn(g);
+  }
+  return g;
+};
+let seed = 1000;
+let s = toFlow(seed);
+while (s.civ.outcome && seed < 1009) s = toFlow(++seed);
+check(!s.civ.outcome && s.eta < FLOW_ETA && s.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come (seed ${seed})`);
 s.civ.pending.length = 0;
 // with the Tide (the autoplayer may have slowed down, and a slow turn here outlasts the flow)
 s.civ.pace = 0;

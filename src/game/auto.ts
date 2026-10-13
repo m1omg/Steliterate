@@ -2,7 +2,7 @@ import { EVENT_BY_ID, choiceHint } from './data/events';
 import { STRUCTURE_BY_ID, type EnergyMode } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
-import { logTurnLength } from './eras';
+import { ERA_BY_ID, logTurnLength, stepTime } from './eras';
 import { clockCiv, livedShare, starClockTerms, turnStep } from './sim/flare';
 import { emberShare, haloDrawn, sourceLight, vitalityLoss } from './physics';
 import {
@@ -35,7 +35,7 @@ import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { FORTIFY_BONUS, canSettle, fleetUpkeep, launchCost, travelEstimate } from './sim/fleets';
 import { allColonies, allFleets, capital, colonies, distLy, eraIndex, fleets, formOf, hasTech, leftBehind, popsOf, swarmSeenAt, temperament, threadTotals } from './sim/util';
-import { beginPassage, endForeseen, passageTerms, turnsToEndOfMatter } from './sim/passage';
+import { beginPassage, endForeseen, etaToEndOfMatter, passageEta, passageTerms } from './sim/passage';
 import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, ThreadId, War } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
@@ -470,21 +470,46 @@ function planDismantle(state: GameState) {
   }
 }
 
-/** Turns to spare when the autoplayer begins a settlement's Passage. */
-const PASSAGE_SPARE = 3;
+/**
+ * Decades of η the autoplayer leaves between a settlement's Passage done and the end of matter
+ * (under decay, matter begins to dissolve a decade and a half before it: physics.ts).
+ */
+const PASSAGE_SPARE = 2;
 
 /**
- * Is the Passage due at this settlement: begun now, would its own industry finish it before matter
- * ends, with PASSAGE_SPARE turns to spare, and no sooner (and is there energy for it, and some)?
+ * How many decades the Passage would take here: at the Tide, or at our pace if it is quicker. A
+ * slower pace covers more decades a turn, and minds work a turn's worth whatever its length, so
+ * then it would take longer; planning on the Tide, it is rushed at the end if need be.
  */
-function passageDue(state: GameState, c: Colony, turnsLeft: number): boolean {
-  if (!isFinite(turnsLeft) || formOf(c) !== 'baryonic' || c.queue.some((q) => q.kind === 'passage')) return false;
+function passageNeeds(state: GameState, c: Colony, industry: number): number {
+  return Math.min(passageEta(state, c, industry, 0), passageEta(state, c, industry));
+}
+
+/**
+ * Is the Passage due at this settlement: begun now, would its own industry finish it about
+ * PASSAGE_SPARE decades before matter ends, and no sooner (what it takes apart gives nothing
+ * after)? And is there energy for it, and some? Measured in decades, not turns, which the pace
+ * makes longer or shorter.
+ */
+function passageDue(state: GameState, c: Colony): boolean {
+  if (formOf(c) !== 'baryonic' || c.queue.some((q) => q.kind === 'passage')) return false;
   if (!hasTech(state, 'leptonic_computation') || !endForeseen(state)) return false;
   const terms = passageTerms(state, c);
-  const industry = c.last?.industry ?? 0;
-  if (industry <= 0 || state.civ.energy < terms.energy + 20) return false;
-  const turns = terms.industry / industry;
-  return turns + 1 <= turnsLeft && turnsLeft <= turns + PASSAGE_SPARE;
+  if (state.civ.energy < terms.energy + 20) return false;
+  const left = etaToEndOfMatter(state);
+  const need = passageNeeds(state, c, terms.industry);
+  return need < left && left <= need + PASSAGE_SPARE;
+}
+
+/**
+ * Is the Passage under way here, in the last decades before matter ends, and at our pace its own
+ * industry would not finish it a decade before the end? Then it is rushed, with matter that will
+ * soon be gone anyway.
+ */
+function passageLate(state: GameState, c: Colony): boolean {
+  const q = c.queue[0];
+  const left = etaToEndOfMatter(state);
+  return q?.kind === 'passage' && left <= PASSAGE_SPARE + 1 && passageEta(state, c, q.cost - q.progress) > left - 1;
 }
 
 function planBuilds(state: GameState) {
@@ -503,14 +528,14 @@ function planBuilds(state: GameState) {
   const reencode = fate === 'curvature' && state.eta > 27 && !preEnd && !matterGone(state) && civ.matter > 200;
   const t = threadTotals(state);
   const way = wayOf(state);
-  const turnsLeft = turnsToEndOfMatter(state);
   for (const c of colonies(state)) {
-    // the Passage, where its own industry can finish it before matter ends with a few turns to
-    // spare, and no sooner (what it takes apart gives nothing after): at the front of the queue
-    if (passageDue(state, c, turnsLeft)) {
+    // the Passage, where its own industry can finish it a little before matter ends, and no
+    // sooner: at the front of the queue, and rushed only if it would not be done in time
+    if (passageDue(state, c)) {
       if (c.queue.length >= 6) removeQueued(state, c.id, c.queue[c.queue.length - 1].uid);
       if (!beginPassage(state, c.id)) c.queue.unshift(c.queue.pop()!);
     }
+    if (passageLate(state, c)) rushBuild(state, c.id);
     // (a settlement making the Passage, or past it, needs no substrate to go on)
     const passing = formOf(c) === 'leptonic' || c.queue.some((q) => q.kind === 'passage');
     // before the protons go, re-encoding goes to the front of the queue
@@ -531,7 +556,7 @@ function planBuilds(state: GameState) {
       if (tryBuild(state, c, ['lepton_confluence'])) c.queue.splice(c.queue[0]?.key === 'lepton_substrate' ? 1 : 0, 0, c.queue.pop()!);
     }
     if (preEnd && c.queue[0]?.key === 'lepton_confluence') rushBuild(state, c.id);
-    if (c.queue[0] && civ.matter > 600) rushBuild(state, c.id);
+    if (c.queue[0] && c.queue[0].kind !== 'passage' && civ.matter > 600) rushBuild(state, c.id);
     // while the Passage rewrites it, nothing else is built there
     if (c.queue.length >= 2 || c.queue.some((q) => q.kind === 'passage')) continue;
     const b = state.bodies[c.bodyId];
@@ -756,13 +781,31 @@ function planSleep(state: GameState) {
   if (!civ.dormant && net < 0 && civ.energy < -net * SLEEP_BELOW && hasTech(state, 'hibernation_protocols')) longSleep(state, SLEEP_FOR);
 }
 
+/** A starving civilization cools Echoes once its reserve would last fewer turns than this (in the Dark Era, than the age has left). */
+const COOL_BELOW = 5;
+
 function planThreads(state: GameState) {
   const mods = computeMods(state);
   const step = turnStep(state);
   const logL = logTurnLength(step);
   const kinStrain = strainFor('kin', logL, mods).m;
-  const echoStrain = strainFor('echoes', logL, mods).m;
+  const echoes = strainFor('echoes', logL, mods);
+  const echoStrain = echoes.m;
   const way = wayOf(state);
+  // starving, it cools Echoes into Coldminds, which cost a fraction as much, as many as it takes to
+  // pay its way (in the Dark Era, to make the reserve last the age) and the vaults have room for:
+  // cooling a mind costs nothing but the self it was
+  // (in the Dark Era nothing refills the reserve: it must last to the end of the age)
+  const civ = state.civ;
+  const net = civ.flags.last_energy_net ?? 0;
+  const dark = calendarEra(state) === 'dark';
+  const horizon = dark ? Math.max(COOL_BELOW, darkTurnsLeft(state)) : COOL_BELOW;
+  if (net < 0 && civ.energy < -net * horizon) {
+    const cold = strainFor('coldminds', logL, mods);
+    const saving = Math.max(0.01, THREAD_DEFS.echoes.energyUpkeep * echoes.upkeepMul * mods.upkeep.echoes - THREAD_DEFS.coldminds.energyUpkeep * cold.upkeepMul * mods.upkeep.coldminds);
+    let short = -net - (dark ? civ.energy / horizon : 0);
+    for (const c of colonies(state)) while (short > 0 && c.pops.echoes > 0 && convert(state, c.id, 'cool') === null) short -= saving;
+  }
   for (const c of colonies(state)) {
     for (let i = 0; i < 2; i++) {
       if (kinStrain > 2 && c.pops.kin > 1) {
@@ -916,6 +959,27 @@ function planEvents(state: GameState) {
   }
 }
 
+/** How far a turn at this pace takes us: decades of η, or in the Dark Era decades of log η, its ruler. */
+function turnReach(state: GameState, pace: number): number {
+  const step = turnStep(state, pace);
+  if (!isFinite(step.eta)) return Infinity;
+  if (calendarEra(state) === 'dark') return Math.log10(Math.max(step.eta, 1)) - Math.log10(Math.max(state.eta, 1));
+  return step.eta - state.eta;
+}
+
+/** Turns left in the Dark Era at our pace, to its ruler's end (log η 122), as far as 300. */
+function darkTurnsLeft(state: GameState, pace = clockCiv(state).pace): number {
+  let years = state.years;
+  let e = state.eta;
+  for (let n = 0; n < 300; n++) {
+    if (Math.log10(Math.max(e, 1)) >= ERA_BY_ID.dark.endEta || !isFinite(e)) return n;
+    const step = stepTime('dark', years, e, pace, state.settings.length);
+    years = step.years;
+    e = step.eta;
+  }
+  return 300;
+}
+
 function planPace(state: GameState) {
   const civ = state.civ;
   // (time is the player's: another civilization lives at our pace)
@@ -931,13 +995,24 @@ function planPace(state: GameState) {
     // in trouble: take whichever neighbouring pace pays best right now
     let best = civ.pace;
     let bestNet = here;
+    const nets = new Map<number, number>([[civ.pace, here]]);
     for (const p of [civ.pace - 1, civ.pace + 1]) {
       if (p < mods.paceMin || p > mods.paceMax) continue;
       const n = netAt(p);
+      nets.set(p, n);
       if (n > bestNet + 0.5) {
         best = p;
         bestNet = n;
       }
+    }
+    // and if none pays after matter, or in the Dark Era, when all that is left is to last,
+    // whichever drains the reserve least for the ground it covers: a quicker turn costs about as
+    // much once nothing comes in, and there are that many more of them, each starving as surely
+    // (until then turns are worth having: what they make grows)
+    if (bestNet < 0 && (matterGone(state) || calendarEra(state) === 'dark')) {
+      const drain = (p: number) => -nets.get(p)! / Math.max(1e-12, turnReach(state, p));
+      best = civ.pace;
+      for (const p of nets.keys()) if (drain(p) < drain(best) * 0.9) best = p;
     }
     if (best !== civ.pace) setPace(state, best);
     return;

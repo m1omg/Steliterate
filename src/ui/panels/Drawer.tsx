@@ -69,7 +69,7 @@ import { spinSharers } from '../../game/sim/ways';
 import { EXPLORE_RESERVE, FORTIFY_BONUS, LANCE_SPEED, LIVING_WORLD, isLance, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 import { focusTitle, lowVision, pressable, useWholeScroll } from '../a11y';
-import { calendarEra } from '../../game/fate';
+import { MATTER_DISSOLVES, calendarEra, fateOf } from '../../game/fate';
 import { flowing, keeping, nextToFlow } from '../../game/sim/flow';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
 
@@ -860,6 +860,7 @@ const CONVERSIONS: { id: Conversion; label: string; icon: 'upload' | 'merge' | '
  * known; asks once more before it begins.
  */
 function PassageSection({ s, c }: { s: GameState; c: Colony }) {
+  void rev.value; // mutable game state: re-render on every change
   const [sure, setSure] = useState(false);
   const going = c.queue.find((q) => q.kind === 'passage');
   if (formOf(c) !== 'baryonic' || (!going && !(hasTech(s, 'leptonic_computation') && endForeseen(s)))) return null;
@@ -868,6 +869,8 @@ function PassageSection({ s, c }: { s: GameState; c: Colony }) {
   const industry = c.last?.industry ?? 0;
   const turns = industry > 0 ? Math.ceil(t.industry / industry) : Infinity;
   const left = turnsToEndOfMatter(s);
+  // (under decay matter begins to dissolve a decade and a half before it is gone)
+  const dissolves = fateOf(s) === 'decay' && s.eta < MATTER_DISSOLVES ? turnsToEndOfMatter(s, MATTER_DISSOLVES) : Infinity;
   const out = Math.round(PASSAGE_OUTPUT * 100);
   const what = `${t.crossing} structure${t.crossing === 1 ? '' : 's'} cross${t.crossing === 1 ? 'es' : ''} over (Energy Vaults as Field Stores, the homes of minds, harvesters at a black hole); ${t.apart} ${t.apart === 1 ? 'is' : 'are'} taken apart${t.matterBack ? ` (+${t.matterBack} matter)` : ''}.${t.kin ? ` Its ${t.kin} Kin cannot go: their patterns are kept in the archive (+${t.insight} insight).` : ''}${t.lattice ? ` ${t.lattice} of its Lattice will not survive the re-encoding.` : ''}`;
   return (
@@ -881,7 +884,7 @@ function PassageSection({ s, c }: { s: GameState; c: Colony }) {
         <>
           <p class="dim">
             Rewrite this settlement in electron–positron structures held by fields, which will outlast matter: {t.industry} industry ({isFinite(turns) ? `about ${turns} turn${turns === 1 ? '' : 's'} here` : 'nothing builds here'}
-            {isFinite(left) ? `; matter ends in about ${Math.floor(left)}` : ''}) and {t.energy} energy now. {what} While it is worked, the settlement makes {out}% of its energy, matter, insight and accord; then only what has a leptonic form can be built there.
+            {isFinite(dissolves) ? `; matter begins to dissolve in about ${Math.floor(dissolves)}, and is gone in about ${Math.floor(left)}` : isFinite(left) ? `; matter ends in about ${Math.floor(left)}` : ''}) and {t.energy} energy now. {what} While it is worked, the settlement makes {out}% of its energy, matter, insight and accord; then only what has a leptonic form can be built there.
           </p>
           <button
             class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
@@ -1714,6 +1717,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
  * its own ships there; a second click to confirm. Nothing for a fleet without a Lance.
  */
 function StrikeSection({ s, f }: { s: GameState; f: Fleet }) {
+  void rev.value; // mutable game state: re-render on every change
   const [armed, setArmed] = useState<string | null>(null);
   useEffect(() => setArmed(null), [f.id, f.at]);
   const here = f.at ? s.systems[f.at] : null;
@@ -1761,6 +1765,7 @@ function StrikeSection({ s, f }: { s: GameState; f: Fleet }) {
 
 /** Send every warship of ours at this star against its swarm: the odds shown, a second click to confirm. */
 function AttackButton({ s, systemId, fleetId }: { s: GameState; systemId: string; fleetId: string }) {
+  void rev.value; // mutable game state: re-render on every change
   const [armed, setArmed] = useState(false);
   useEffect(() => setArmed(false), [systemId, fleetId]);
   const sw = Object.values(s.swarms).find((w) => w.systemId === systemId && !w.tamed);

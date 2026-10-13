@@ -10,10 +10,13 @@
 // - at the end of matter it keeps all of it, and the reserve it holds; a settlement that only
 //   built Leptonic Substrate keeps only that; the rest are lost, each named in the report with who
 //   was in it;
-// - the autoplayer begins it where it can finish it before the end with a few turns to spare, and
-//   not sooner.
+// - the autoplayer begins it where its own industry would finish it about two decades of η before
+//   the end, and not sooner, counting decades rather than turns (the pace makes turns longer or
+//   shorter); it rushes a Passage only in the last decades, when it would not be done in time.
 import { autoPlay } from '../../../src/game/auto';
 import { STRUCTURE_BY_ID, structureLabel } from '../../../src/game/data/structures';
+import { stepTime } from '../../../src/game/eras';
+import { calendarEra } from '../../../src/game/fate';
 import { newGame } from '../../../src/game/newGame';
 import { structureCheck } from '../../../src/game/sim/actions';
 import { runCrossing } from '../../../src/game/sim/crossing';
@@ -21,7 +24,7 @@ import { PASSAGE_OUTPUT, reserveCapacity } from '../../../src/game/sim/economy';
 import { createColony } from '../../../src/game/sim/fleets';
 import { nextToFlow } from '../../../src/game/sim/flow';
 import { computeMods } from '../../../src/game/sim/mods';
-import { ARCHIVE_INSIGHT, PASSAGE_BASE, PASSAGE_ENERGY, PASSAGE_PER, beginPassage, completePassage, passageCheck, passageTerms, turnsToEndOfMatter } from '../../../src/game/sim/passage';
+import { ARCHIVE_INSIGHT, PASSAGE_BASE, PASSAGE_ENERGY, PASSAGE_PER, beginPassage, completePassage, passageCheck, passageTerms } from '../../../src/game/sim/passage';
 import { project } from '../../../src/game/sim/projection';
 import { endTurn } from '../../../src/game/sim/turn';
 import { colonies, formOf } from '../../../src/game/sim/util';
@@ -120,25 +123,33 @@ check(/under way/.test(passageCheck(s, c) ?? ''), 'and not begun twice');
   check(formOf(wc) === 'leptonic' && !wc.queue.length && !wc.structures.mine, 'a turn finishes it, as it does any project in the queue');
 }
 
-// the autoplayer: due where it can finish before the end with a few turns to spare, and not sooner
+// the autoplayer: due where its own industry would finish it about two decades before the end at
+// the Tide (or at its pace, if quicker), and not sooner; rushed only near the end, if it would
+// not be done in time
 {
-  const a = setup();
-  a.eta = 35;
-  a.years = Math.pow(10, 35);
-  const ac = town(a);
-  a.civ.capitalId = ac.id;
-  const left = turnsToEndOfMatter(a);
-  const need = passageTerms(a, ac).industry;
-  ac.last = { energy: 0, energyUpkeep: 0, matter: 0, matterUpkeep: 0, industry: need / (left - 2), insight: 0, accord: 0, lines: [] };
-  autoPlay(a, 'competent');
-  check(ac.queue[0]?.kind === 'passage', `with about ${left.toFixed(0)} turns before the end and ${(left - 2).toFixed(0)} needed, it begins the Passage, at the front of the queue`);
-  const b = setup();
-  b.eta = 35;
-  b.years = Math.pow(10, 35);
-  const bc = town(b);
-  b.civ.capitalId = bc.id;
-  bc.last = { energy: 0, energyUpkeep: 0, matter: 0, matterUpkeep: 0, industry: need / Math.max(1, left - 10), insight: 0, accord: 0, lines: [] };
-  autoPlay(b, 'competent');
-  check(!bc.queue.some((q) => q.kind === 'passage'), 'and with ten turns to spare, not yet');
+  /** A settlement of matter at η `eta`, whose industry would take `need` decades for the Passage at the Tide; our pace `pace`. */
+  const at = (need: number, pace = 0, matter = 0, eta = 35) => {
+    const a = setup();
+    a.eta = eta;
+    a.years = Math.pow(10, eta);
+    a.civ.matter = matter;
+    a.civ.pace = pace;
+    const ac = town(a);
+    a.civ.capitalId = ac.id;
+    const tide = stepTime(calendarEra(a), a.years, a.eta, 0, a.settings.length).eta - a.eta;
+    const cost = passageTerms(a, ac).industry;
+    ac.last = { energy: 0, energyUpkeep: 0, matter: 0, matterUpkeep: 0, industry: (cost * tide) / need, insight: 0, accord: 0, lines: [] };
+    autoPlay(a, 'competent');
+    return { a, ac, q: ac.queue.find((x) => x.kind === 'passage') };
+  };
+  const front = (r: ReturnType<typeof at>) => r.ac.queue[0]?.kind === 'passage';
+  check(front(at(3)), 'with 4 decades before the end and 3 needed at the Tide, it begins the Passage, at the front of the queue');
+  check(!at(1).q, 'with three decades to spare, not yet');
+  check(front(at(3, -1)) && !at(1, -1).q, 'at a slower pace it still plans on the Tide (it can be rushed at the end)');
+  check(!at(3, 1).q, 'at a quicker pace, where a turn covers fewer decades, it waits longer');
+  const rich = at(3, 0, 2000);
+  check(!!rich.q && rich.q.progress < rich.q.cost - 1 && rich.a.civ.matter > 1000, `on time, it is not rushed, though there is matter to rush it (${rich.q ? Math.round(rich.q.progress) : '-'} of ${rich.q?.cost})`);
+  const late = at(2.4, -1, 2000, 36.5);
+  check(!!late.q && late.q.progress >= late.q.cost - 0.01, 'in the last decades, at a pace that would not finish it in time, it is rushed with matter that will soon be gone');
 }
 done('PASSAGE');

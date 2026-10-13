@@ -2629,9 +2629,50 @@ Substrate and losing everything else at the end.
   and the reserve they hold too; one that only built Leptonic Substrate keeps only that, as before;
   the rest are lost, and the report names each one with who was in it ("Lost with the matter they
   were made of: …"). A settlement founded after matter is leptonic.
-- **The autoplayer** begins it at a settlement where its own industry finishes it before the end
-  with three turns to spare, and no sooner (what it takes apart gives nothing after); nothing else
-  is built there meanwhile, and no substrate is needed.
-- **Checks:** `unit/passage` and `browser/passage` (new); `unit/invariants` accepts a leptonic
-  settlement on a world that is gone.
+- **The autoplayer** begins it where its own industry would finish it about two decades of η
+  before the end at the Tide (or at the player's pace, if that is quicker), and no sooner (what it
+  takes apart gives nothing after); nothing else is built there meanwhile, and no substrate is
+  needed. It counts decades, not turns: a slower pace makes a turn cover ten times as many
+  decades, and minds put a turn's worth of work into it whatever the turn's length. It rushes a
+  Passage only in the last three decades, when it would not be done in time, with matter that
+  will soon be gone; the general rush (matter over 600) passes it by.
+  - As first built (`4ac99aa`) it counted turns at the coming turn's length, three to spare, and
+    the general rush finished a Passage the turn after it began: at a slow pace one began at
+    η 20.5 was done at η 24, fifteen decades early, and settlements stripped of their collectors
+    starved before the end and carried more minds across than they could feed. 900 games:
+    372 survived, 172 victories (431 / 133 before the Passage); decay 138 / 450.
+- **The Migration** goes to the nearest black hole with spin left (at least a Penrose
+  Harvester's turn of it), past one drained of it: before, to the nearest, where a vault could
+  find nothing to draw on.
+- **A starving civilization cools its Echoes:** the autoplayer, its reserve to last fewer than
+  five turns, cools Echoes into Coldminds (which cost a fraction as much) as many as it takes to
+  pay its way and its vaults have room for; in the Dark Era, where nothing refills the reserve,
+  as many as it takes to make it last the age. Before, it cooled two a turn, and only under tempo
+  strain.
+- **And after matter it keeps the pace that costs least for the ground it covers:** when no pace
+  pays, after matter or in the Dark Era, the autoplayer takes the one that drains the reserve
+  least a decade (in the Dark Era, a decade of its ruler), not whichever costs least a turn.
+  Before, a game that had quickened twice on a full reserve after a burst found the next pace
+  costing about as much a turn once nothing came in at its hole, and starved at turns a hundred
+  times short for 110 turns until its will failed: a decade there cost 27 times the Tide's.
+  Tried at every age first: short of energy in the Dusk it took long turns and lost the turns it
+  grows by (of 295 games, 107 ended in Silence where 60 had, and 44 won where 66 had).
+- **The forecasts and the crossings say what goes on:** what was re-encoded, a settlement that
+  made the Passage whole and one on Leptonic Substrate with only that; and the Passage's panel,
+  under decay, when matter begins to dissolve (η 37.5) as well as when it is gone.
+- **The Passage section shows what is** (`void rev.value`), as do the Kinetic Lance's strike
+  section, a warship's attack button and the Halo Siphons' shut button: a component with state of
+  its own is not re-rendered by `@preact/signals` while its props are the same objects, and the
+  game's state changes in place. After the Passage the section still said "Under way: 0%".
+- **Checks:** `unit/passage` and `browser/passage` (new; the browser check found the stale
+  section), `unit/starving-cool` (new), `unit/end-of-matter` (the Migration past a drained hole);
+  `unit/invariants` accepts a leptonic settlement on a world that is gone; `unit/flow` plays the
+  first seed from 1000 whose stable game lives to the Long Flow (seed 1000's now fails its will at
+  η 54.7, as it nearly did before: resolve 20 at η 50).
+- **Balance:** with the timing, the Migration and the cooling (before the pace and the Dark Era's
+  cooling), 900 games: 428 survive, 210 victories (431 / 133 before the Passage); decay 160 / 450
+  (190), 55 wins (14); stable 159 / 239 (141), curvature 109 / 211 (100). The decay games lost
+  were mostly Recurrences (176 to 105) that now fade in the Dark Era, or lose their will in a
+  starving Black Hole Age, with many more minds carried across than before (one game 101 to 83
+  where it had been 86 to 45). With the pace and the Dark Era’s cooling: (900 games running).
 

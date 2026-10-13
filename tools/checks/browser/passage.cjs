@@ -1,8 +1,9 @@
 // Browser check: the Passage (the new version, part 3-2). Once the end of matter can be foreseen
 // and Leptonic Computation is known, a settlement's Overview offers it, says what it takes and
-// does, and asks once more; begun, it is a project in the queue and the section says it is under
-// way; a turn that finishes it makes the settlement leptonic: its panel says so, and its Energy
-// Vault is a Field Store there.
+// does (under decay, when matter begins to dissolve and when it is gone), and asks once more;
+// begun, it is a project in the queue and the section says it is under way; a turn that finishes
+// it makes the settlement leptonic: its panel says so, its Energy Vault is a Field Store there,
+// and the Passage is no longer offered.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('passage');
@@ -25,8 +26,10 @@ run(async () => {
   const section = page.locator('.drawer .section.passage');
   check((await section.count()) === 1, 'the settlement’s Overview offers the Passage');
   const text = (await section.textContent()) ?? '';
-  check(/\d+ industry \(about \d+ turns? here; matter ends in about \d+\) and \d+ energy now\./.test(text) && /cross(es)? over/.test(text) && /taken apart/.test(text) && /Kin cannot go: their patterns are kept/.test(text), `it says what it takes and does (${text.slice(0, 110)}…)`);
-  const btn = section.locator('button', { hasText: /Begin the Passage/ });
+  check(/\d+ industry \(about \d+ turns? here; matter begins to dissolve in about \d+, and is gone in about \d+\) and \d+ energy now\./.test(text) && /cross(es)? over/.test(text) && /taken apart/.test(text) && /Kin cannot go: their patterns are kept/.test(text), `it says what it takes and does (${text.slice(0, 110)}…)`);
+  // (the section's one button: its text changes once it is clicked)
+  const btn = section.locator('button').first();
+  check(/^Begin the Passage$/.test(((await btn.textContent()) ?? '').trim()), 'with a button to begin it');
   await btn.click();
   await page.waitForTimeout(200);
   check(/Really begin the Passage\?/.test((await btn.textContent()) ?? ''), 'it asks once more');
@@ -48,6 +51,7 @@ run(async () => {
   const after = await page.evaluate((id) => ({ form: window.__stel.state().colonies[id].form, chips: [...document.querySelectorAll('.drawer .chip')].map((x) => x.textContent.replace(/×$/, '').trim()) }), at.colony);
   check(after.form === 'leptonic' && after.chips.includes('leptonic'), `done: the settlement is leptonic, and its panel says so (${after.form})`);
   check(after.chips.some((x) => /^Field Store/.test(x)), `its Energy Vault is a Field Store there (${after.chips.filter((x) => /Store|Vault/.test(x)).join(', ') || 'none'})`);
+  check((await section.count()) === 0, `and the Passage is no longer offered there (${((await section.first().textContent().catch(() => '')) ?? '').slice(0, 60)})`);
   await ck.shot('passage-done.png', { clip: { x: 900, y: 60, width: 500, height: 760 } });
   await finish('PASSAGE UI', ck);
 });

@@ -34,7 +34,14 @@ function hasStarlessSource(state: GameState, c: Colony): boolean {
   return ['fusion_plant', 'accretion_engine', 'pulsar_brake'].some((k) => (c.structures[k] ?? 0) > 0);
 }
 
-/** After the protons go, what survives drifts to the black holes. Vaults arriving at the same hole merge. */
+/** A hole with less spin left than a Penrose Harvester draws in a turn has little to give a vault that comes to it. */
+const SPENT_SPIN = 20;
+
+/**
+ * After the protons go, what survives drifts to the black holes: each to the nearest one with
+ * spin left to give (a hole drained of it gives next to nothing), or the nearest if none has.
+ * Vaults arriving at the same hole merge.
+ */
 function migrateToBlackHoles(state: GameState): number {
   const holes = Object.values(state.systems).filter((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone);
   if (!holes.length) return 0;
@@ -44,7 +51,8 @@ function migrateToBlackHoles(state: GameState): number {
     const atHole = here.primary.kind === 'black_hole' || here.primary.kind === 'smbh';
     // a vault already at a hole stays there, but a planet it stood on has dissolved: into the Deep
     if (atHole && state.bodies[c.bodyId]?.kind === 'deep') continue;
-    const target = atHole ? here : holes.slice().sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z))[0];
+    const near = holes.slice().sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z));
+    const target = atHole ? here : (near.find((h) => h.primary.spin >= SPENT_SPIN) ?? near[0]);
     // its own civilization's vault at the hole, beside any other's
     const deep = deepFor(state, target, c.owner) ?? state.bodies[target.bodies[0]];
     const oldBody = state.bodies[c.bodyId];
@@ -516,7 +524,7 @@ export function greatEvaporation(state: GameState, ids: readonly string[], mods:
       from: state.era,
       to: state.era,
       title: 'The Great Evaporation',
-      intro: 'Space took some 10⁹⁰ years to unmake it all, and now it is done: every world, every dead star, every scrap of ordinary matter has evaporated into particles and light. Only what was carried onto leptonic substrate goes on, around the black holes that are left. The Heart will last a little longer than the rest.',
+      intro: 'Space took some 10⁹⁰ years to unmake it all, and now it is done: every world, every dead star, every scrap of ordinary matter has evaporated into particles and light. Only what was re-encoded in electrons and positrons goes on, around the black holes that are left. The Heart will last a little longer than the rest.',
       lines: lines[id],
       popsBefore: had[id].pops,
       popsAfter: totalPops(state),

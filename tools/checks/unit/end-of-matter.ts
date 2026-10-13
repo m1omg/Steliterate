@@ -8,6 +8,7 @@
 // - What held the reserve was matter too: what no longer fits goes at once, and the report says so.
 // - The forecast promises nothing to those merely living around black holes; the protocols say
 //   what they do; the Bastion Shell is built only at a black hole.
+// - The Migration goes to the nearest black hole with spin left, not to one drained of it.
 import { newGame } from '../../../src/game/newGame';
 import { STRUCTURE_BY_ID } from '../../../src/game/data/structures';
 import { TECH_BY_ID } from '../../../src/game/data/techs';
@@ -68,4 +69,31 @@ const forecasts = f.civ.forecasts.map((x) => x.text).join(' ');
 check(!/living around black holes/.test(forecasts) && /only minds moved onto leptonic substrates will continue/.test(forecasts), 'the forecast promises nothing to those merely living around black holes');
 check(/carried onto one of ours already on leptonic substrate, as far as it has room/.test(TECH_BY_ID.great_decay_protocols.desc), 'the protocols say what they do');
 check(!!STRUCTURE_BY_ID.bastion.primaries?.includes('black_hole') && !STRUCTURE_BY_ID.bastion.primaries.includes('white_dwarf'), 'the Bastion Shell is built only at a black hole');
+// the Migration: to the nearest hole with spin left to give, not one drained of it
+{
+  const g = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'decays', civsAsleep: true });
+  g.era = 'degenerate';
+  g.civ.techs.push('leptonic_computation', 'penrose_process');
+  for (const c of colonies(g)) {
+    g.bodies[c.bodyId].colonyId = null;
+    delete g.colonies[c.id];
+  }
+  const holes = Object.values(g.systems).filter((x) => (x.primary.kind === 'black_hole' || x.primary.kind === 'smbh') && !x.gone);
+  const b = Object.values(g.bodies).find((x) => x.kind !== 'deep' && !x.colonyId && !holes.some((h) => h.id === x.systemId))!;
+  const here = g.systems[b.systemId];
+  const far = (h: (typeof holes)[number]) => Math.hypot(h.phys.x - here.phys.x, h.phys.y - here.phys.y, h.phys.z - here.phys.z);
+  const near = holes.slice().sort((x, y) => far(x) - far(y));
+  // the nearest is drained; the next has spin left
+  near[0].primary.spin = 0;
+  near[1].primary.spin = Math.max(near[1].primary.spin, 300);
+  const town = createColony(g, b, {});
+  town.pops = pops({ echoes: 4 });
+  town.structures = { lepton_substrate: 1 };
+  g.civ.capitalId = town.id;
+  g.civ.energy = 300;
+  runCrossing(g, [g.player], { [g.player]: computeMods(g) });
+  const moved = colonies(g)[0];
+  check(!!moved && moved.systemId === near[1].id, `a vault drifts to the nearest black hole with spin left (${g.systems[moved?.systemId ?? '']?.name}), past one drained of it (${near[0].name})`);
+  check(!!moved && (moved.structures.penrose_harvester ?? 0) > 0, 'and its harvester has spin to draw on there');
+}
 done('END OF MATTER');
