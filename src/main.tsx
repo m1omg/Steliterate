@@ -300,7 +300,7 @@ window.addEventListener('keydown', (e) => {
   if (open) return;
   // an event (or what came of it) is answered with its own buttons; the survey report closes with Escape
   const g = game.value;
-  const story = !!g && (g.pending.length > 0 || !!eventResult.value);
+  const story = !!g && (g.civ.pending.length > 0 || !!eventResult.value);
   // the magnifier mode: N what needs attention next, B the selected settlement's Build tab, M the column folded away
   if (settings.value.lowVision && !story && g && (key === 'n' || key === 'b' || key === 'm')) {
     e.preventDefault();
@@ -370,18 +370,18 @@ window.__stel = {
   endTurns(n: number, auto = true, keep = false) {
     const s = game.value;
     if (!s) return;
-    for (let i = 0; i < n && !s.outcome; i++) {
+    for (let i = 0; i < n && !s.civ.outcome; i++) {
       if (auto) autoPlay(s, 'competent');
       endTurn(s);
-      s.crossing = null;
-      if (!keep) s.pending.length = 0;
+      s.civ.crossing = null;
+      if (!keep) s.civ.pending.length = 0;
     }
     bump();
   },
   /** One turn's worth of the autoplayer's choices (events answered too), without ending the turn. */
   autoPlay() {
     const s = game.value;
-    if (s && !s.outcome) autoPlay(s, 'competent');
+    if (s && !s.civ.outcome) autoPlay(s, 'competent');
     bump();
   },
   orderFleet(fleetId: string, systemId: string, order: 'move' | 'survey' | 'colonize' = 'survey') {

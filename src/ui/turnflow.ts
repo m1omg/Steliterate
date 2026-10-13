@@ -14,7 +14,7 @@ import { researchPrompt } from './hud/ResearchPrompt';
 
 export function doEndTurn() {
   const s = game.value;
-  if (!s || busy.value || s.outcome) return;
+  if (!s || busy.value || s.civ.outcome) return;
   busy.value = true;
   sfx('endturn');
   // the magnifier mode keeps a turn's messages until the next one
@@ -27,7 +27,7 @@ export function doEndTurn() {
   const idleBefore = new Set(Object.values(s.fleets).filter(isIdleFleet).map((f) => f.id));
   const contactBefore = new Set(Object.values(s.survivors).filter((v) => v.contact).map((v) => v.id));
   const shipsBefore = new Map(Object.values(s.fleets).map((f) => [f.id, f.ships.length]));
-  const lastLog = s.log[s.log.length - 1];
+  const lastLog = s.civ.log[s.civ.log.length - 1];
   const r = endTurn(s);
   bump();
   autosave();
@@ -56,8 +56,8 @@ export function doEndTurn() {
     sfx('signal');
   }
   // a swarm going for one of our ships: say so (two at most; the Record keeps the rest)
-  const at = lastLog ? s.log.lastIndexOf(lastLog) : -1;
-  const fresh = lastLog && at < 0 ? [] : s.log.slice(at + 1);
+  const at = lastLog ? s.civ.log.lastIndexOf(lastLog) : -1;
+  const fresh = lastLog && at < 0 ? [] : s.civ.log.slice(at + 1);
   for (const e of fresh.filter((x) => x.fleet).slice(0, 2)) {
     const f = s.fleets[e.fleet!];
     const lost = !f || f.ships.length < (shipsBefore.get(e.fleet!) ?? 0);
@@ -106,7 +106,7 @@ export function doEndTurn() {
   } else if (detected.length) notify(`${detected.length} new star${detected.length === 1 ? '' : 's'} on the map.`, 'info');
   const newSettlers = Object.values(s.fleets).filter((f) => !fleetsBefore.has(f.id) && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
   if (newSettlers.length) notify(`${newSettlers[0].name} is ready at ${s.systems[newSettlers[0].at ?? '']?.name ?? 'the shipyard'}. Open Fleets to choose a world.`, 'good');
-  if (s.civ.sleepTurns > 0 && s.pending.length === 0) {
+  if (s.civ.sleepTurns > 0 && s.civ.pending.length === 0) {
     window.setTimeout(doEndTurn, 420);
   }
 }

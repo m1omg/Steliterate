@@ -18,11 +18,11 @@ import { check, done } from '../lib';
 
 const fresh = (turns: number) => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < turns && !s.outcome; g++) {
+  for (let g = 0; g < turns && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   return s;
 };
 const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
@@ -118,11 +118,11 @@ const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
 // ---------------------------------------------------------------- the autoplayer, short of matter
 {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 600 && !s.outcome && s.eta < 20; g++) {
+  for (let g = 0; g < 600 && !s.civ.outcome && s.eta < 20; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   /** How many collectors gather nothing (and have matter in them to give back). */
   const idleCount = (g: GameState) => {
     const pr = project(g);

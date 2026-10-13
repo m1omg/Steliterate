@@ -27,9 +27,9 @@ const LOG_FILTERS: { id: 'all' | LogEntry['kind']; name: string }[] = [
 export function LogModal({ s }: { s: GameState }) {
   void rev.value;
   const [f, setF] = useState<(typeof LOG_FILTERS)[number]['id']>('all');
-  const entries = s.log.filter((e) => f === 'all' || e.kind === f).slice(-400).reverse();
+  const entries = s.civ.log.filter((e) => f === 'all' || e.kind === f).slice(-400).reverse();
   return (
-    <ModalFrame title="The Record" eyebrow={`${s.log.length} entries`} icon="log">
+    <ModalFrame title="The Record" eyebrow={`${s.civ.log.length} entries`} icon="log">
       <div class="row wrap" style={{ gap: '4px', marginBottom: '8px' }}>
         {LOG_FILTERS.map((x) => (
           <button key={x.id} class={`btn small ${f === x.id ? 'primary' : ''}`} onClick={() => setF(x.id)}>

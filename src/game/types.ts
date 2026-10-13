@@ -262,6 +262,16 @@ export interface Civ {
   taint: number; // Hunger Taint 0..100
   flags: Record<string, number>;
   stats: CivStats;
+  // What belongs to one civilization alone (13 Oct, the new version: every civilization plays the
+  // same game, each turn under its own perspective, docs/plans/new-version.md)
+  signals: Signal[];
+  forecasts: Forecast[];
+  pending: PendingEvent[];
+  log: LogEntry[];
+  crossing: CrossingReport | null;
+  outcome: Outcome | null;
+  /** Once-only and counted events: id -> times fired. */
+  fired: Record<string, number>;
 }
 
 // ---------------------------------------------------------------- other minds
@@ -458,16 +468,10 @@ export interface GameState {
   survivors: Record<string, Survivor>;
   minds: Record<string, Mind>;
   swarms: Record<string, Swarm>;
-  signals: Signal[];
-  forecasts: Forecast[];
-  pending: PendingEvent[];
-  log: LogEntry[];
   battles: Battle[];
   nextId: number;
-  crossing: CrossingReport | null;
-  outcome: Outcome | null;
+  /** Facts about the universe itself (each civilization's own are in its `flags`). */
   flags: Record<string, number>;
-  fired: Record<string, number>;
   /** Save format version (absent in the first published saves: version 1). */
   saveVersion?: number;
 }

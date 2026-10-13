@@ -40,17 +40,28 @@ export const FIRST_OF_THIS_LINE = 4;
  */
 export function migrate(s: GameState): GameState {
   const v = s.saveVersion ?? 1;
+  // before the new version (13 Oct) these lists were the state's own; they are the civilization's
+  // now (only the checks' fixtures still come this way, as legacy saves)
+  const loose = s as unknown as Record<string, unknown>;
+  const civ = s.civ as unknown as Record<string, unknown>;
+  for (const k of ['signals', 'forecasts', 'pending', 'log', 'crossing', 'outcome', 'fired']) {
+    if (!(k in loose)) continue;
+    if (civ[k] === undefined) civ[k] = loose[k];
+    delete loose[k];
+  }
   // containers a partial or hand-edited save might lack
   s.flags ??= {};
-  s.fired ??= {};
-  s.pending ??= [];
-  s.log ??= [];
+  s.civ.fired ??= {};
+  s.civ.pending ??= [];
+  s.civ.log ??= [];
+  s.civ.crossing ??= null;
+  s.civ.outcome ??= null;
   s.battles ??= [];
   s.fleets ??= {};
   s.swarms ??= {};
   s.survivors ??= {};
-  s.signals ??= [];
-  s.forecasts ??= [];
+  s.civ.signals ??= [];
+  s.civ.forecasts ??= [];
   s.civ.flags ??= {};
   s.civ.research ??= {};
   s.civ.techs ??= [];
@@ -99,7 +110,7 @@ export function migrate(s: GameState): GameState {
   // ships parked at stars they could not chart before (only probes could survey) chart them now
   surveyWhereStationed(s);
   // the Unlit's messages wait for an answer now (11 Oct): one that lapsed before opens again
-  for (const sig of s.signals) if (sig.resolved === 'lapsed' && waitsForAnswer(sig)) sig.resolved = null;
+  for (const sig of s.civ.signals) if (sig.resolved === 'lapsed' && waitsForAnswer(sig)) sig.resolved = null;
   // a Last Star lit by the old rule (before 12 Oct) burned out within a turn: it lights again,
   // while matter lasts, and its event offers its clock (the player's choice)
   const relit = relightTheLastStar(s);

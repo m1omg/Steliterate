@@ -13,7 +13,7 @@ import { check, done } from '../lib';
 
 // stable matter, so worlds still circle the holes; holes evaporate by the calendar's Black Hole Age
 const s = newGame({ seed: 2360862, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-for (let g = 0; g < 900 && !s.outcome && !(calendarEra(s) === 'blackhole' && s.eraTurn >= 3); g++) {
+for (let g = 0; g < 900 && !s.civ.outcome && !(calendarEra(s) === 'blackhole' && s.eraTurn >= 3); g++) {
   autoPlay(s, 'competent');
   endTurn(s);
 }
@@ -42,7 +42,7 @@ const before = colonyTurn(s, c, ctx(), 1e9).y.lines.map((l) => `${l.label} ${(l.
 console.log(`  before: ${before.join(', ')}`);
 withWorld.primary.evaporateAt = s.years * (1 + 1e-12);
 empty.primary.evaporateAt = s.years * (1 + 1e-12);
-s.pending.length = 0;
+s.civ.pending.length = 0;
 s.civ.energy = 10;
 // nothing else finishes this turn, so the storage change is the vault's alone
 for (const x of Object.values(s.colonies)) x.queue = [];
@@ -55,8 +55,8 @@ check(withWorld.primary.kind === 'void' && !withWorld.gone, `its system stays, i
 check(world.rogue === true && withWorld.bodies.every((id) => { const b = s.bodies[id]; return !b || b.dissolved || b.kind === 'deep' || b.rogue; }), 'its worlds drift loose (rogue)');
 check(withWorld.primary.spin === 0 && !withWorld.primary.rekindle, 'no spin and no glow are left there');
 check(!!empty.gone, `a hole with nothing left around it is simply gone (${empty.name})`);
-check(s.log.some((l) => /Burst Catchers at .* caught/.test(l.text)), 'its Burst Catchers caught the final burst');
-check(s.pending.some((e) => e.defId === 'final_burst'), 'the Last Burst event is waiting');
+check(s.civ.log.some((l) => /Burst Catchers at .* caught/.test(l.text)), 'its Burst Catchers caught the final burst');
+check(s.civ.pending.some((e) => e.defId === 'final_burst'), 'the Last Burst event is waiting');
 const cap1 = reserveCapacity(s, computeMods(s));
 check(Math.abs(cap0 - cap1 - 400 * mods.reserveMult) < 1e-9, `storage: ${cap0} -> ${cap1} (the Horizon Vault's spin is gone; the rings hold)`);
 const after = colonyTurn(s, cc, ctx(), 1e9).y.lines;
@@ -67,9 +67,9 @@ check((!pen || (pen.energy ?? 0) <= 0) && (!haw || (haw.energy ?? 0) <= 0), 'the
 const t = deserialize(JSON.stringify(s))!;
 check(!!t.colonies[c.id] && t.systems[withWorld.id].primary.kind === 'void' && t.bodies[world.id].rogue === true, 'it all saves and loads');
 // play on to the end: nothing breaks
-for (let g = 0; g < 900 && !s.outcome; g++) {
+for (let g = 0; g < 900 && !s.civ.outcome; g++) {
   autoPlay(s, 'competent');
   endTurn(s);
 }
-check(!!s.outcome, `the game plays on to its end: ${s.outcome?.kind} "${s.outcome?.ending}" at turn ${s.turn}`);
+check(!!s.civ.outcome, `the game plays on to its end: ${s.civ.outcome?.kind} "${s.civ.outcome?.ending}" at turn ${s.turn}`);
 done('EVAP');

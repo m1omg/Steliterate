@@ -180,5 +180,5 @@ export function updateForecasts(state: GameState) {
   }
 
   out.sort((a, b) => a.dueYears - b.dueYears);
-  state.forecasts = out;
+  state.civ.forecasts = out;
 }

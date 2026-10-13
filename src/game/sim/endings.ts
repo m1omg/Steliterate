@@ -38,8 +38,8 @@ export function workCost(state: GameState, id: string): number {
 }
 
 function end(state: GameState, kind: Outcome['kind'], ending: string): Outcome {
-  state.outcome = { kind, ending, turn: state.turn, eta: state.eta };
-  return state.outcome;
+  state.civ.outcome = { kind, ending, turn: state.turn, eta: state.eta };
+  return state.civ.outcome;
 }
 
 /**
@@ -47,7 +47,7 @@ function end(state: GameState, kind: Outcome['kind'], ending: string): Outcome {
  * the turn's own at its end: despair is counted only in that one, so once a turn.
  */
 export function checkEndings(state: GameState, atLastHorizon = false): Outcome | null {
-  if (state.outcome) return state.outcome;
+  if (state.civ.outcome) return state.civ.outcome;
   const civ = state.civ;
   if (civ.taint >= 100) return end(state, 'dark', DARK_ENDING.ending);
   if (totalPops(state) <= 0) return end(state, 'defeat', 'Silence');

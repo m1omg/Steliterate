@@ -143,7 +143,7 @@ check(Math.abs(cl.mean - BACKGROUND_EMBERS_K) < 1e-6, `a rogue world at η 20 wi
 let checked = 0;
 for (const seed of [1000, 8919]) {
   const game = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard' });
-  for (let guard = 0; guard < 700 && !game.outcome && game.eta < 26; guard++) {
+  for (let guard = 0; guard < 700 && !game.civ.outcome && game.eta < 26; guard++) {
     autoPlay(game, 'competent');
     endTurn(game);
     if (game.era !== 'degenerate') continue;

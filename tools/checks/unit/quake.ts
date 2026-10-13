@@ -24,10 +24,10 @@ function run(alive: boolean) {
     const wrong = (['continue', 'mirror', 'resonance'] as const).find((x) => x !== right)!;
     const v0 = b.vitality,
       d0 = c.damage,
-      lastBefore = s.log.length ? s.log[s.log.length - 1] : null;
+      lastBefore = s.civ.log.length ? s.civ.log[s.civ.log.length - 1] : null;
     b.rogue = false;
     gesture(s, wrong);
-    const last = s.log[s.log.length - 1];
+    const last = s.civ.log[s.civ.log.length - 1];
     if (last === lastBefore) continue;
     if (/thinner sky/.test(last.text)) {
       shook++;

@@ -20,11 +20,11 @@ import { check, done } from '../lib';
 const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
 const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 30 && !s.outcome; g++) {
+  for (let g = 0; g < 30 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   if (!s.civ.techs.includes('hunger_lures')) s.civ.techs.push('hunger_lures');
   s.swarms = {};
   s.civ.energy = 100;
@@ -66,7 +66,7 @@ const nearAndFar = (s: GameState, sys: StarSystem) => {
   check(placeBeacon(s, f.id) === null && s.civ.energy === 100 - BEACON_COST && sys.beacon === true, `lighting one costs ${BEACON_COST} energy`);
   check(sw.to === sys.id && sw.systemId === null, `the nearest awake swarm (at ${near.name}) turns toward it at once`);
   check(placeBeacon(s, f.id) === 'A beacon already burns here.', 'one beacon to a star');
-  check(s.log.slice(-2).some((l) => /has turned toward it/.test(l.text)), `the Record says so: "${s.log[s.log.length - 1].text}"`);
+  check(s.civ.log.slice(-2).some((l) => /has turned toward it/.test(l.text)), `the Record says so: "${s.civ.log[s.civ.log.length - 1].text}"`);
   for (const [what, more, at] of [
     ['a sleeping swarm', { awake: false }, near],
     ['a tamed one', { tamed: true }, near],
@@ -117,7 +117,7 @@ const nearAndFar = (s: GameState, sys: StarSystem) => {
   s.civ.energy = BEACON_UPKEEP + 1;
   const paid = feedBeacons(s, 1);
   check(paid === BEACON_UPKEEP && s.civ.energy === 1 && litBeacons(s).length === 1, `with energy for one, one is fed and the other goes dark (${litBeacons(s).map((x) => x.name).join(', ')} still burns)`);
-  check(s.log.some((l) => /could not feed the beacon/.test(l.text)), 'and the Record says so');
+  check(s.civ.log.some((l) => /could not feed the beacon/.test(l.text)), 'and the Record says so');
   feedBeacons(s, 1);
   check(litBeacons(s).length === 0 && s.civ.energy === 1, 'with less than a turn’s upkeep, the last goes dark too, and energy never drops below zero');
   const g = setup();

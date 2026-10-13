@@ -629,16 +629,9 @@ export function generateWorld(settings: GameSettings): GameState {
       dark: { id: 'dark', kind: 'dark', name: 'The Unlit', systemId: null, stage: 0, understanding: 0, clock: 5, lastPattern: [], flags: {} },
     },
     swarms: {},
-    signals: [],
-    forecasts: [],
-    pending: [],
-    log: [],
     battles: [],
     nextId: 1,
-    crossing: null,
-    outcome: null,
     flags: {},
-    fired: {},
   };
   void coreSystems;
   void globulars;
@@ -738,6 +731,13 @@ function makeCiv(settings: GameSettings, homeSystemId: string): Civ {
     taint: 0,
     flags: {},
     stats: { pops: [], energy: [], resolve: [] },
+    signals: [],
+    forecasts: [],
+    pending: [],
+    log: [],
+    crossing: null,
+    outcome: null,
+    fired: {},
   };
 }
 

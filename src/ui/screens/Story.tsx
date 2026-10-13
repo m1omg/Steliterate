@@ -94,9 +94,9 @@ export function worldFinds(s: GameState, b: Body): { defId: string; title: strin
     .map((id) => {
       const def = EVENT_BY_ID[id];
       let choice = b.lore?.[id] ?? null;
-      if (!choice && !s.pending.some((p) => p.defId === id && p.data.bodyId === b.id)) {
+      if (!choice && !s.civ.pending.some((p) => p.defId === id && p.data.bodyId === b.id)) {
         // older games did not keep it with the world: look for it in the Record
-        const e = s.log.find((l) => l.kind === 'event' && l.text.startsWith(`${def.title}: `));
+        const e = s.civ.log.find((l) => l.kind === 'event' && l.text.startsWith(`${def.title}: `));
         if (e) choice = e.text.slice(def.title.length + 2).replace(/\.$/, '');
       }
       return { defId: id, title: def.title, choice };
@@ -120,7 +120,7 @@ export function LoreModal({ s }: { s: GameState }) {
     text = '…';
   }
   const find = worldFinds(s, b).find((f) => f.defId === v.defId);
-  const pending = s.pending.some((p) => p.defId === v.defId && p.data.bodyId === b.id);
+  const pending = s.civ.pending.some((p) => p.defId === v.defId && p.data.bodyId === b.id);
   const close = () => (loreView.value = null);
   return (
     <div class="modal-wrap" onClick={(e) => e.target === e.currentTarget && close()}>
@@ -147,7 +147,7 @@ export function LoreModal({ s }: { s: GameState }) {
 export function EventModal({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const result = eventResult.value;
-  const top = s.pending[0];
+  const top = s.civ.pending[0];
   // each event takes focus on its title (never a choice: a stray Enter must not choose)
   const head = useRef<HTMLHeadingElement>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -166,7 +166,7 @@ export function EventModal({ s }: { s: GameState }) {
       </ModalFrame>
     );
   }
-  const p = s.pending[0];
+  const p = s.civ.pending[0];
   if (!p) return null;
   const def = EVENT_BY_ID[p.defId];
   if (!def) return null;
@@ -258,7 +258,7 @@ export function EraIntro({ s }: { s: GameState }) {
 }
 
 export function CrossingScreen({ s }: { s: GameState }) {
-  const r = s.crossing;
+  const r = s.civ.crossing;
   if (!r) return null;
   const to = ERA_BY_ID[r.to];
   const from = ERA_BY_ID[r.from];
@@ -294,8 +294,8 @@ export function CrossingScreen({ s }: { s: GameState }) {
           class="btn primary"
           style={{ minWidth: '220px', minHeight: '44px' }}
           onClick={() => {
-            s.crossing = null;
-            modal.value = s.outcome ? { kind: 'outcome' } : null;
+            s.civ.crossing = null;
+            modal.value = s.civ.outcome ? { kind: 'outcome' } : null;
             music.setEra(s.era);
             sfx('click');
             bump();
@@ -315,7 +315,7 @@ const DEFEAT_TEXT: Record<string, string> = {
 };
 
 export function OutcomeScreen({ s }: { s: GameState }) {
-  const o = s.outcome;
+  const o = s.civ.outcome;
   if (!o) return null;
   const work = WORKS.find((w) => w.ending === o.ending);
   const epilogue = work?.epilogue ?? (o.kind === 'dark' ? DARK_ENDING.epilogue : o.kind === 'endurance' ? ENDURANCE_ENDING.epilogue : DEFEAT_TEXT[o.ending] ?? '');

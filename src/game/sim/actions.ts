@@ -494,7 +494,7 @@ export function absorb(state: GameState, swarmId: string, colonyId: string): Act
 }
 
 export function answerSignal(state: GameState, sigUid: string, choice: string): ActionResult {
-  const s = state.signals.find((x) => x.uid === sigUid);
+  const s = state.civ.signals.find((x) => x.uid === sigUid);
   if (!s) return 'No such message.';
   if (s.from === 'slow' || s.from === 'dark') return resolveMindSignal(state, sigUid, choice);
   return resolveSurvivorSignal(state, sigUid, choice);

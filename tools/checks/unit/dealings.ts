@@ -28,12 +28,12 @@ import { check, done } from '../lib';
 const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
 const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 40 && !s.outcome; g++) {
+  for (let g = 0; g < 40 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
-  s.signals.length = 0;
+  s.civ.pending.length = 0;
+  s.civ.signals.length = 0;
   s.swarms = {};
   s.civ.taint = 0;
   return s;
@@ -57,7 +57,7 @@ const theirTurn = (s: GameState) => {
   updateSurvivors(s, logTurnLength(step), computeMods(s), step.turnLength);
 };
 const answer = (s: GameState, kind: string, choice: string) => {
-  const sig = s.signals.find((x) => x.kind === kind && !x.resolved)!;
+  const sig = s.civ.signals.find((x) => x.kind === kind && !x.resolved)!;
   s.years = Math.max(s.years, sig.arriveYears);
   deliverSignals(s);
   return resolveSurvivorSignal(s, sig.uid, choice);
@@ -103,9 +103,9 @@ const answer = (s: GameState, kind: string, choice: string) => {
   for (let i = 0; i < 40 && !sent; i++) {
     sv.lastSent = -99;
     theirTurn(s);
-    sent = s.signals.some((x) => x.kind === 'trade');
+    sent = s.civ.signals.some((x) => x.kind === 'trade');
   }
-  const sig = s.signals.find((x) => x.kind === 'trade')!;
+  const sig = s.civ.signals.find((x) => x.kind === 'trade')!;
   check(sent && new RegExp(`^We have notes on ${TECH_BY_ID[r].name} we cannot use, and we need energy\\. \\d+ energy for \\d+ insight\\?$`).test(sig.text), `the message says it all: "${sig?.text}"`);
   const insight = Number(sig.data.insight);
   const ask = Number(sig.data.ask);
@@ -151,18 +151,18 @@ const answer = (s: GameState, kind: string, choice: string) => {
     sv.lastSent = -99;
     sv.health = 0.1;
     theirTurn(s);
-    tried = s.signals.some((x) => x.kind === 'raid');
+    tried = s.civ.signals.some((x) => x.kind === 'raid');
   }
-  check(tried && s.signals.some((x) => x.title.includes('tried to raid')), 'desperate and hostile, they try to raid us, and our defences turn them away');
+  check(tried && s.civ.signals.some((x) => x.title.includes('tried to raid')), 'desperate and hostile, they try to raid us, and our defences turn them away');
   const wait = s.civ.flags[`raid_wait_${sv.id}`];
   check(wait === s.turn + 15, 'then they wait fifteen turns before they try again');
-  const n = s.signals.filter((x) => x.kind === 'raid').length;
+  const n = s.civ.signals.filter((x) => x.kind === 'raid').length;
   for (let i = 0; i < 5; i++) {
     sv.lastSent = -99;
     sv.health = 0.1;
     theirTurn(s);
   }
-  check(s.signals.filter((x) => x.kind === 'raid').length === n, 'and do not, meanwhile');
+  check(s.civ.signals.filter((x) => x.kind === 'raid').length === n, 'and do not, meanwhile');
 }
 
 // ---------------------------------------------------------------- the pact they need
@@ -172,7 +172,7 @@ const answer = (s: GameState, kind: string, choice: string) => {
   const home = s.systems[sv.homeSystemId];
   s.swarms.hgx = { id: 'hgx', systemId: home.id, from: null, to: null, traveled: 0, distance: 0, size: 2, awake: true, tamed: false, appetite: 1 };
   theirPacts(s, sv, () => 0);
-  const offer = s.signals.find((x) => x.kind === 'pact_offer');
+  const offer = s.civ.signals.find((x) => x.kind === 'pact_offer');
   check(String(offer?.data.pact) === 'watch', `with the Hunger at their star, they offer a Shared Watch first (${offer?.data.pact})`);
 }
 

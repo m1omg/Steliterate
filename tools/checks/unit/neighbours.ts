@@ -22,11 +22,11 @@ import { check, done } from '../lib';
 const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
 const game = (turns: number) => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < turns && !s.outcome; g++) {
+  for (let g = 0; g < turns && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   return s;
 };
 const first = (s: GameState): Survivor => {
@@ -134,9 +134,9 @@ const later = (s: GameState, years: number) => {
   const sv = first(s);
   sv.health = 0.01;
   sv.raidedAt = s.turn - 2;
-  const n = s.signals.length;
+  const n = s.civ.signals.length;
   theirTurn(s);
-  check(!sv.alive && !s.signals.slice(n).some((x) => x.kind === 'last'), 'a civilization we raided into the dark sends us no last transmission');
+  check(!sv.alive && !s.civ.signals.slice(n).some((x) => x.kind === 'last'), 'a civilization we raided into the dark sends us no last transmission');
 }
 
 // ---------------------------------------------------------------- refugees, only as many as we have room for
@@ -186,14 +186,14 @@ const later = (s: GameState, years: number) => {
   check(proposePact(s, sv.id, 'aid') === null && s.civ.accord === 470 && !!sv.proposal && Math.abs(sv.proposal.at - (s.years + d)) < 1e-6, 'proposing Mutual Aid spends it, and the proposal sets out at light speed');
   check(pactCost(s) === 48 && pactBlocked(s, sv, 'archives') === 'Our proposal of Mutual Aid is still crossing to them, or their answer is.', `the next is dearer (${pactCost(s)}), and one proposal at a time`);
   later(s, d * 1.01);
-  const n = s.signals.length;
+  const n = s.civ.signals.length;
   theirTurn(s);
-  const answer = s.signals.slice(n).find((x) => x.kind === 'pact_answer');
+  const answer = s.civ.signals.slice(n).find((x) => x.kind === 'pact_answer');
   check(!!answer && Number(answer.data.yes) === 1 && Math.abs(answer.arriveYears - (s.years + d)) < 1e-6, 'it reaches them, they agree, and their answer sets out back');
   check(!hasPact(sv, 'aid'), 'not yet in force: the answer is still on its way');
-  const n2 = s.signals.length;
+  const n2 = s.civ.signals.length;
   theirTurn(s);
-  check(!s.signals.slice(n2).some((x) => x.kind === 'pact_answer'), 'they answer once, not every turn the answer is on its way');
+  check(!s.civ.signals.slice(n2).some((x) => x.kind === 'pact_answer'), 'they answer once, not every turn the answer is on its way');
   later(s, d * 1.01);
   for (const x of deliverSignals(s)) if (x.kind === 'pact_answer') answerArrived(s, x.from, x.data);
   check(hasPact(sv, 'aid') && !sv.proposal, 'when their answer arrives, Mutual Aid is in force');
@@ -230,9 +230,9 @@ const later = (s: GameState, years: number) => {
   sv.health = 0.8;
   s.civ.energy = 1;
   s.civ.flags.last_energy_net = -5;
-  const m = s.signals.length;
+  const m = s.civ.signals.length;
   pactsTurn(s);
-  const help = s.signals.slice(m).find((x) => x.kind === 'aid_answer');
+  const help = s.civ.signals.slice(m).find((x) => x.kind === 'aid_answer');
   check(!!help && Number(help.data.energy) > 0 && Math.abs(help.arriveYears - (s.years + 2 * d)) < 1e-6, `we are failing: their help comes, after they see it and their beam crosses back (${help?.data.energy})`);
   // Open Archives
   acceptOffer(s, sv, 'archives');
@@ -248,8 +248,8 @@ const later = (s: GameState, years: number) => {
   // they renounce what they no longer believe in
   sv.disposition = -15;
   sv.lastSent = -99;
-  const k = s.signals.length;
-  check(theirPacts(s, sv, () => 0.5) && !hasPact(sv, 'aid') && s.signals.slice(k).some((x) => x.kind === 'pact_ended'), 'turned against us, they renounce every pact');
+  const k = s.civ.signals.length;
+  check(theirPacts(s, sv, () => 0.5) && !hasPact(sv, 'aid') && s.civ.signals.slice(k).some((x) => x.kind === 'pact_ended'), 'turned against us, they renounce every pact');
 }
 void clone;
 done('NEIGHBOURS');

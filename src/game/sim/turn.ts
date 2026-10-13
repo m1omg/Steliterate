@@ -212,8 +212,8 @@ function worldDies(state: GameState, b: Body, scorched = false) {
 }
 
 export function endTurn(state: GameState): TurnResult {
-  const result: TurnResult = { crossing: null, outcome: state.outcome, arrived: [], notes: [], wasted: 0 };
-  if (state.outcome) return result;
+  const result: TurnResult = { crossing: null, outcome: state.civ.outcome, arrived: [], notes: [], wasted: 0 };
+  if (state.civ.outcome) return result;
   const civ = state.civ;
   const mods = computeMods(state);
   civ.pace = clamp(civ.pace, mods.paceMin, mods.paceMax);
@@ -493,7 +493,7 @@ export function endTurn(state: GameState): TurnResult {
   }
   if (state.turn === 3) queueEvent(state, 'dynamo_fails');
   if (state.turn === 7) queueEvent(state, 'first_night');
-  if ((state.flags.hunger_woke ?? 0) > 0 && !state.fired.rust_in_the_belt) {
+  if ((state.flags.hunger_woke ?? 0) > 0 && !state.civ.fired.rust_in_the_belt) {
     // our surveyors found it: say where (the woken swarm nearest the capital), and chart that star
     const capSys = state.systems[state.colonies[state.civ.capitalId ?? '']?.systemId ?? state.civ.homeSystemId];
     // (a swarm that has already set off was found where it fed: the system it left)
@@ -530,7 +530,7 @@ export function endTurn(state: GameState): TurnResult {
         }
       }
       result.crossing = runCrossing(state, mods);
-      state.crossing = result.crossing;
+      state.civ.crossing = result.crossing;
       updateForecasts(state);
     }
   }
@@ -539,7 +539,7 @@ export function endTurn(state: GameState): TurnResult {
   // curvature radiation unmakes the last ordinary matter: a storm of its own, inside the age
   if (fateOf(state) === 'curvature' && state.eta >= MATTER_END.curvature && state.civ.flags.matter_gone === undefined && state.era !== 'dark') {
     result.crossing = greatEvaporation(state, computeMods(state));
-    state.crossing = result.crossing;
+    state.civ.crossing = result.crossing;
     updateForecasts(state);
   }
   // the last black hole may evaporate before the calendar says so
@@ -550,7 +550,7 @@ export function endTurn(state: GameState): TurnResult {
       return result;
     }
     result.crossing = runCrossing(state, computeMods(state));
-    state.crossing = result.crossing;
+    state.civ.crossing = result.crossing;
   }
 
   // ------------------------------------------------ 10. endings, stats

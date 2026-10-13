@@ -31,7 +31,7 @@ for (const strategy of strategies) {
     let crossings = '';
     const t0 = Date.now();
     let guard = 0;
-    while (!state.outcome && guard++ < 1200) {
+    while (!state.civ.outcome && guard++ < 1200) {
       autoPlay(state, strategy);
       const r = endTurn(state);
       eraTurns[state.era] = (eraTurns[state.era] ?? 0) + 1;
@@ -54,7 +54,7 @@ for (const strategy of strategies) {
       })
       .join(' ');
     console.log(
-      `seed ${seed}: ${state.outcome ? `${state.outcome.kind.toUpperCase()} "${state.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage}${state.civ.flags.wars ? ` wars ${state.civ.flags.wars}` : ''} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
+      `seed ${seed}: ${state.civ.outcome ? `${state.civ.outcome.kind.toUpperCase()} "${state.civ.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage}${state.civ.flags.wars ? ` wars ${state.civ.flags.wars}` : ''} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
     );
   }
 }

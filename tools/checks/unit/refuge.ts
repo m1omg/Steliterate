@@ -22,12 +22,12 @@ import { check, done } from '../lib';
 const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
 const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 30 && !s.outcome; g++) {
+  for (let g = 0; g < 30 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
-  s.signals.length = 0;
+  s.civ.pending.length = 0;
+  s.civ.signals.length = 0;
   s.civ.taint = 0;
   return s;
 })();
@@ -58,7 +58,7 @@ const people = (s: GameState, t: ThreadId) => colonies(s).reduce((a, c) => a + c
 const insight = (s: GameState) => (s.civ.researching ? (s.civ.research[s.civ.researching] ?? 0) : 0) + (s.civ.flags.insight_bank ?? 0);
 /** Their request reaches us, and we answer it. */
 const answer = (s: GameState, choice: string) => {
-  const sig = s.signals.find((x) => x.kind === 'exodus' && !x.resolved)!;
+  const sig = s.civ.signals.find((x) => x.kind === 'exodus' && !x.resolved)!;
   s.years = Math.max(s.years, sig.arriveYears);
   deliverSignals(s);
   return resolveSurvivorSignal(s, sig.uid, choice);
@@ -76,7 +76,7 @@ const answer = (s: GameState, choice: string) => {
   check(!askRefuge(s, sv), 'nor one that is not yet dying');
   sv.health = 0.15;
   check(askRefuge(s, sv), 'a dying partner asks to come to us');
-  const sig = s.signals.find((x) => x.kind === 'exodus');
+  const sig = s.civ.signals.find((x) => x.kind === 'exodus');
   check(!!sig && Number(sig.data.n) === exodusSize(sv) && exodusSize(sv) === 8 && sv.exodusAsked === s.turn, `their request: ${exodusSize(sv)} of their ${sv.pop} people, "${sig?.choices[0].hint}"`);
   check(!askRefuge(s, sv), 'they ask once');
   const t = clone(s);
@@ -111,14 +111,14 @@ const answer = (s: GameState, choice: string) => {
   check(sv.alive && sv.health === h2 && !!sv.exodus, 'on their way, nothing drains them');
   const pop = sv.pop;
   later(s, d / EXODUS_SPEED);
-  const n = s.signals.length;
+  const n = s.civ.signals.length;
   theirTurn(s);
   check(!sv.alive && sv.fate === 'saved' && !sv.exodus, 'they arrive: their fate is saved');
   const came = people(s, 'kin') - kin;
   check(came === 8, `all 8 live among us (room for ${room} awake or asleep; the rest crowd in at the capital)`);
   check(Math.round(insight(s) - known) === Math.round(60 + pop * 4), `their archive is ours (${Math.round(insight(s) - known)} insight)`);
-  check(s.signals.slice(n).some((x) => x.kind === 'arrived'), 'they tell us they have arrived');
-  check(s.log.slice(-3).some((l) => /has come to us: /.test(l.text)), `the Record says so: "${s.log[s.log.length - 1].text}"`);
+  check(s.civ.signals.slice(n).some((x) => x.kind === 'arrived'), 'they tell us they have arrived');
+  check(s.civ.log.slice(-3).some((l) => /has come to us: /.test(l.text)), `the Record says so: "${s.civ.log[s.civ.log.length - 1].text}"`);
 }
 
 // ---------------------------------------------------------------- the others hear of it
@@ -163,7 +163,7 @@ const answer = (s: GameState, choice: string) => {
   cap.structures.confluence_node = 1;
   cap.pops.chorus = 0;
   check(askRefuge(s, sv), 'one that does, it asks to join');
-  const sig = s.signals.find((x) => x.kind === 'exodus')!;
+  const sig = s.civ.signals.find((x) => x.kind === 'exodus')!;
   check(/join our Chorus/.test(sig.title) && sig.choices[0].label === 'Open the Confluence', `"${sig.title}"`);
   const room = roomFor(s, 'chorus');
   const chorus = people(s, 'chorus');
@@ -191,7 +191,7 @@ const answer = (s: GameState, choice: string) => {
   answer(s, 'take');
   sv.health = 0.01;
   theirTurn(s);
-  check(!sv.alive && sv.fate === 'faded' && !sv.exodus && s.log.some((l) => /too late/.test(l.text)), 'if they go dark before our answer reaches them, it was too late');
+  check(!sv.alive && sv.fate === 'faded' && !sv.exodus && s.civ.log.some((l) => /too late/.test(l.text)), 'if they go dark before our answer reaches them, it was too late');
   const t = setup('garden');
   t.sv.pacts = { aid: t.s.turn };
   askRefuge(t.s, t.sv);

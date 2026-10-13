@@ -393,7 +393,7 @@ function planWar(state: GameState) {
 
 function planSignals(state: GameState) {
   const civ = state.civ;
-  for (const s of state.signals) {
+  for (const s of state.civ.signals) {
     if (s.resolved || s.arrivedTurn === null || !s.choices.length) continue;
     let choice = s.choices[s.choices.length - 1].id;
     if (s.kind === 'aid') choice = civ.energy > Number(s.data.ask) * 3 ? 'give' : 'refuse';
@@ -425,7 +425,7 @@ function clockTooDear(state: GameState, defId: string, choice: number, systemId:
 }
 
 function planEvents(state: GameState) {
-  for (const p of [...state.pending]) {
+  for (const p of [...state.civ.pending]) {
     const def = EVENT_BY_ID[p.defId];
     if (!def) continue;
     let done = false;
@@ -486,8 +486,8 @@ export function autoPlay(state: GameState, strategy: Strategy) {
       const t = availableTechs(state).sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];
       if (t) setResearch(state, t.id);
     }
-    for (const p of [...state.pending]) answerEvent(state, p.uid, 0);
-    for (const s of state.signals) if (!s.resolved && s.arrivedTurn !== null && s.choices.length) answerSignal(state, s.uid, s.choices[s.choices.length - 1].id);
+    for (const p of [...state.civ.pending]) answerEvent(state, p.uid, 0);
+    for (const s of state.civ.signals) if (!s.resolved && s.arrivedTurn !== null && s.choices.length) answerSignal(state, s.uid, s.choices[s.choices.length - 1].id);
     return;
   }
   planEvents(state);

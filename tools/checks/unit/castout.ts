@@ -20,7 +20,7 @@ let ejected = 0, turned = 0;
 for (const seed of [1000, 8919, 16838]) {
   const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard' });
   let guard = 0;
-  while (!s.outcome && guard++ < 700 && s.eta < 22.5) {
+  while (!s.civ.outcome && guard++ < 700 && s.eta < 22.5) {
     autoPlay(s, 'competent');
     endTurn(s);
     for (const x of Object.values(s.systems)) {

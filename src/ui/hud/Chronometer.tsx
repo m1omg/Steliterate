@@ -44,7 +44,7 @@ export function Chronometer({ s, nextYears }: { s: GameState; nextYears: number 
   const era = ERA_BY_ID[s.era];
   const deep = s.era === 'dark';
   const now = deep ? deepPos(s.eta) : rulerPos(s.years, s.eta);
-  const pins = s.forecasts
+  const pins = s.civ.forecasts
     .filter((f) => isFinite(f.dueYears))
     .map((f) => ({ f, x: deep ? deepPos(Math.log10(Math.max(1, f.dueYears))) : rulerPos(f.dueYears, Math.log10(Math.max(1, f.dueYears))) }))
     .filter((p) => p.x > now - 0.001);
@@ -66,7 +66,7 @@ export function Chronometer({ s, nextYears }: { s: GameState; nextYears: number 
     const r = root.current?.getBoundingClientRect();
     if (r && r.height > 0) document.documentElement.style.setProperty('--chrono-end', `${Math.round(r.bottom / uiFactor())}px`);
   });
-  const fc = s.forecasts.length;
+  const fc = s.civ.forecasts.length;
   return (
     <div ref={root} class={`chrono panel scan${more ? ' more' : ''}`}>
       {/* phones: the turn and its span on a line of their own; a tap opens the timeline, the forecasts and the Record */}

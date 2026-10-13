@@ -174,14 +174,14 @@ export function App() {
   }, [sc]);
   // danger ahead: the score tightens
   useEffect(() => {
-    if (sc !== 'game' || !s || s.outcome) return;
-    const danger = s.forecasts.some((f) => f.severity === 'danger' && (f.kind === 'hunger' || f.kind === 'crossing'));
+    if (sc !== 'game' || !s || s.civ.outcome) return;
+    const danger = s.civ.forecasts.some((f) => f.severity === 'danger' && (f.kind === 'hunger' || f.kind === 'crossing'));
     music.setMood(danger ? 'tension' : 'calm');
   });
   const m = modal.value?.kind;
   const blocking = m === 'crossing' || m === 'outcome' || m === 'era_intro';
-  const story = !!s && !blocking && (s.pending.length > 0 || !!eventResult.value);
-  const lore = !!s && !blocking && !!loreView.value && !s.pending.length && !eventResult.value;
+  const story = !!s && !blocking && (s.civ.pending.length > 0 || !!eventResult.value);
+  const lore = !!s && !blocking && !!loreView.value && !s.civ.pending.length && !eventResult.value;
   return (
     <div class="ui-root">
       {sc === 'menu' && <MainMenu />}

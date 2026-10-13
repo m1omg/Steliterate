@@ -24,7 +24,7 @@ while (stepTime(state.era, state.years, state.eta, state.civ.pace, state.setting
   autoPlay(state, 'competent');
   endTurn(state);
 }
-state.pending.length = 0;
+state.civ.pending.length = 0;
 delete state.civ.flags.star_until;
 delete state.civ.flags.star_step;
 state.civ.pace = 0;
@@ -96,7 +96,7 @@ for (let k = 1; k <= 6; k++) {
   const e = state.civ.energy;
   state.civ.pace = k % 2 ? 2 : -2;
   endTurn(state);
-  state.pending.length = 0;
+  state.civ.pending.length = 0;
   if (k === 1) check(state.civ.energy >= e - 400, 'no further charge while it runs');
 }
 state.civ.pace = 0;

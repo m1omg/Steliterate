@@ -21,12 +21,12 @@ import { check, done } from '../lib';
 const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
 const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 30 && !s.outcome; g++) {
+  for (let g = 0; g < 30 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
-  s.signals.length = 0;
+  s.civ.pending.length = 0;
+  s.civ.signals.length = 0;
   s.civ.taint = 0;
   return s;
 })();
@@ -139,7 +139,7 @@ const fleetAt = (s: GameState, sv: Survivor, n: number) => newFleet(s, sv.homeSy
 // ---------------------------------------------------------------- the warlike autoplayer: a whole game, no crash
 {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 200 && !s.outcome; g++) {
+  for (let g = 0; g < 200 && !s.civ.outcome; g++) {
     autoPlay(s, 'warlike');
     endTurn(s);
   }

@@ -34,12 +34,12 @@ const mindUpkeep = (s: GameState, c: Colony) =>
 
 // ---------------------------------------------------------------- a stable game, to just before the flow
 const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-for (let g = 0; g < 900 && !s.outcome && s.eta < FLOW_ETA - 2.5; g++) {
+for (let g = 0; g < 900 && !s.civ.outcome && s.eta < FLOW_ETA - 2.5; g++) {
   autoPlay(s, 'competent');
   endTurn(s);
 }
-check(!s.outcome && s.eta < FLOW_ETA && s.civ.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come`);
-s.pending.length = 0;
+check(!s.civ.outcome && s.eta < FLOW_ETA && s.civ.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come`);
+s.civ.pending.length = 0;
 // with the Tide (the autoplayer may have slowed down, and a slow turn here outlasts the flow)
 s.civ.pace = 0;
 if (!s.civ.techs.includes('hawking_patience')) s.civ.techs.push('horizon_cognition', 'hawking_patience');
@@ -73,14 +73,14 @@ s.civ.matter = 5000;
 
 // ---------------------------------------------------------------- it comes
 const turns = (n: number) => {
-  for (let i = 0; i < n && !s.outcome; i++) {
-    s.pending = s.pending.filter((p) => p.defId === 'long_flow');
+  for (let i = 0; i < n && !s.civ.outcome; i++) {
+    s.civ.pending = s.civ.pending.filter((p) => p.defId === 'long_flow');
     endTurn(s);
   }
 };
-for (let i = 0; i < 12 && s.civ.flags.flowed === undefined && !s.outcome; i++) turns(1);
+for (let i = 0; i < 12 && s.civ.flags.flowed === undefined && !s.civ.outcome; i++) turns(1);
 check(flowing(s) && s.eta >= FLOW_ETA, `the Long Flow comes at η ${s.eta.toFixed(1)} (turn ${s.civ.flags.flowed})`);
-const ev = s.pending.find((p) => p.defId === 'long_flow');
+const ev = s.civ.pending.find((p) => p.defId === 'long_flow');
 check(!!ev && Number(ev.data.ruins) >= 1, `we hear of it, and of the ruins we found that flowed (${ev?.data.ruins})`);
 check(bRuin.relic?.flowed === true && bEmpty.relic?.flowed === true && !bDug.relic?.flowed, `ruins no one was digging flowed, found or hidden; the dug one is kept (${bRuin.relic?.flowed}, ${bEmpty.relic?.flowed}, ${bDug.relic?.flowed})`);
 {
@@ -143,11 +143,11 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
 // ---------------------------------------------------------------- no flow where protons decay
 {
   const d = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'decays' });
-  for (let g = 0; g < 900 && !d.outcome && d.eta < FLOW_ETA + 2; g++) {
+  for (let g = 0; g < 900 && !d.civ.outcome && d.eta < FLOW_ETA + 2; g++) {
     autoPlay(d, 'competent');
     endTurn(d);
   }
-  check(d.civ.flags.flowed === undefined, `protons decay: no flow (η ${d.eta.toFixed(1)}, ${d.outcome ? d.outcome.ending : 'playing'})`);
+  check(d.civ.flags.flowed === undefined, `protons decay: no flow (η ${d.eta.toFixed(1)}, ${d.civ.outcome ? d.civ.outcome.ending : 'playing'})`);
 }
 void ({} as Body);
 done('FLOW');

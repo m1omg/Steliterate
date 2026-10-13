@@ -146,7 +146,7 @@ export function survey(state: GameState, systemId: string) {
     const b = state.bodies[bid];
     if (b.relic && b.relic.state === 'hidden' && !b.relic.flowed && !b.dissolved) {
       b.relic.state = 'found';
-      state.pending.push({ uid: uid(state, 'ev'), defId: `relic_${b.relic.kind}`, data: { bodyId: b.id, systemId } });
+      state.civ.pending.push({ uid: uid(state, 'ev'), defId: `relic_${b.relic.kind}`, data: { bodyId: b.id, systemId } });
     }
   }
   log(state, `Surveyed ${sys.name}.`, 'info', systemId);
@@ -159,12 +159,12 @@ export function survey(state: GameState, systemId: string) {
     const found = new Set(ANOMALIES.map((a) => a.id));
     const worlds = sys.bodies.map((id) => state.bodies[id]).filter((b) => b && !b.dissolved && !b.traits.some((t) => found.has(t)));
     const options: { b: Body; id: string }[] = [];
-    for (const b of worlds) for (const a of ANOMALIES) if ((state.fired[`anom_${a.id}`] ?? 0) < 2 && a.fits(state, b)) options.push({ b, id: a.id });
+    for (const b of worlds) for (const a of ANOMALIES) if ((state.civ.fired[`anom_${a.id}`] ?? 0) < 2 && a.fits(state, b)) options.push({ b, id: a.id });
     if (!options.length) return;
     const pick = rng.pick(options);
     pick.b.traits.push(pick.id);
-    state.fired[`anom_${pick.id}`] = (state.fired[`anom_${pick.id}`] ?? 0) + 1;
-    state.pending.push({ uid: uid(state, 'ev'), defId: `anom_${pick.id}`, data: { bodyId: pick.b.id, systemId } });
+    state.civ.fired[`anom_${pick.id}`] = (state.civ.fired[`anom_${pick.id}`] ?? 0) + 1;
+    state.civ.pending.push({ uid: uid(state, 'ev'), defId: `anom_${pick.id}`, data: { bodyId: pick.b.id, systemId } });
   });
 }
 

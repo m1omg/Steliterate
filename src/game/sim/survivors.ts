@@ -435,7 +435,7 @@ function firstWords(sv: Survivor): string {
 }
 
 export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: string): string | null {
-  const sig = state.signals.find((s) => s.uid === sigUid);
+  const sig = state.civ.signals.find((s) => s.uid === sigUid);
   if (!sig || sig.resolved) return 'Already answered.';
   const sv = state.survivors[sig.from];
   const civ = state.civ;
@@ -612,7 +612,7 @@ export function askBlocked(state: GameState, sv: Survivor): string | null {
   if (!sv.contact) return 'We have not made contact.';
   if (sv.war) return 'We are at war with them.';
   if (!inStep(state, sv)) return 'Our clocks are too far apart: they could not hear the question.';
-  if (state.signals.some((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null)) return 'Our last request is still on its way, or their answer is.';
+  if (state.civ.signals.some((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null)) return 'Our last request is still on its way, or their answer is.';
   if (sv.askedAt !== undefined && state.turn - sv.askedAt < ASK_COOLDOWN) return `We asked them recently. Wait ${ASK_COOLDOWN - (state.turn - sv.askedAt)} more turn(s).`;
   return null;
 }

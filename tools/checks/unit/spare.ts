@@ -17,7 +17,7 @@ function turn(spare: SpareWork | null, tweak?: (s: GameState) => void) {
   s.civ.resolve = 50;
   if (spare) setSpare(s, c.id, spare);
   tweak?.(s);
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   const before = { m: s.civ.matter, e: s.civ.energy };
   endTurn(s);
   const cc = s.colonies[c.id];

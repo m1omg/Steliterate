@@ -61,8 +61,8 @@ export function savableName(name: string): string {
 }
 
 export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string) {
-  state.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}) });
-  if (state.log.length > 400) state.log.splice(0, state.log.length - 400);
+  state.civ.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}) });
+  if (state.civ.log.length > 400) state.civ.log.splice(0, state.civ.log.length - 400);
 }
 
 export function eraIndex(era: EraId): number {

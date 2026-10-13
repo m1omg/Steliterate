@@ -177,7 +177,7 @@ function stepHint(s: GameState, logL: number, theirs: number, span: number): str
 
 export function SignalsModal({ s }: { s: GameState }) {
   void rev.value;
-  const arrived = s.signals.filter((x) => x.arrivedTurn !== null);
+  const arrived = s.civ.signals.filter((x) => x.arrivedTurn !== null);
   const openMsgs = arrived.filter((x) => !x.resolved && x.choices.length);
   const [tab, setTab] = useState<'messages' | 'others' | 'minds'>(openMsgs.length ? 'messages' : 'others');
   // a heavy choice waits for a yes: 'seize:<id>', 'war:<id>' or 'devour:<id>'
@@ -318,7 +318,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                                 const d = cap ? distLy(s.systems[cap.systemId], s.systems[sv.homeSystemId]) : 0;
                                 const turns = isFinite(s.years) ? turnsUntilYears(s, s.years + 2 * d, s.civ.pace) : 0;
                                 const trip = d > 0 ? `${formatYears(2 * d)}${isFinite(turns) ? `, about ${turns} turn${turns === 1 ? '' : 's'} at your pace` : ''}` : 'no time';
-                                const inFlight = s.signals.find((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null);
+                                const inFlight = s.civ.signals.find((x) => x.from === sv.id && x.kind === 'aid_answer' && x.arrivedTurn === null);
                                 return (
                                   <button
                                     class="btn small"

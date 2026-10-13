@@ -288,7 +288,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const survivor = Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id) && (v.homeSystemId === sys.id || seenThere(s, v, sys.id)));
   const outpost = !!survivor && survivor.homeSystemId !== sys.id;
   const survivorHome = survivor && known === 2 ? survivorWorld(s, survivor, sys.id) : null;
-  const fc = s.forecasts.filter((f) => f.systemId === sys.id);
+  const fc = s.civ.forecasts.filter((f) => f.systemId === sys.id);
   const d = distFromCapital(s, sys);
   return (
     <>

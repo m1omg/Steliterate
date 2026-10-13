@@ -22,12 +22,12 @@ import { check, done } from '../lib';
 const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
 const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 30 && !s.outcome; g++) {
+  for (let g = 0; g < 30 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
-  s.signals.length = 0;
+  s.civ.pending.length = 0;
+  s.civ.signals.length = 0;
   s.civ.taint = 0;
   return s;
 })();
@@ -160,7 +160,7 @@ const nearby = (s: GameState, sv: Survivor) =>
   const sw = { id: 'hgx', systemId: a.id, from: null, to: null, traveled: 0, distance: 0, size: 1.5, awake: true, tamed: false, appetite: 1 };
   s.swarms[sw.id] = sw;
   check(askAgainstHunger(s, sv), 'a swarm feeds at one of their stars: they ask us for warships');
-  const sig = s.signals.find((x) => x.kind === 'swarm_plea')!;
+  const sig = s.civ.signals.find((x) => x.kind === 'swarm_plea')!;
   check(sig.choices[0].label === 'We will send warships' && String(sig.data.systemId) === a.id, `"${sig.title}"`);
   check(!askAgainstHunger(s, sv), `once in ${PROMISE_TURNS} turns`);
   s.years = Math.max(s.years, sig.arriveYears);
@@ -207,7 +207,7 @@ const nearby = (s: GameState, sv: Survivor) =>
 {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
   let most = 0;
-  for (let g = 0; g < 120 && !s.outcome; g++) {
+  for (let g = 0; g < 120 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
     for (const v of Object.values(s.survivors)) most = Math.max(most, v.systems.length - 1);

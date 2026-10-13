@@ -112,7 +112,7 @@ function Rail({ s }: { s: GameState }) {
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   });
-  const unanswered = s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
+  const unanswered = s.civ.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
   const m = modal.value?.kind;
   const readySettlers = Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles)).length;
   return (
@@ -135,10 +135,10 @@ function Rail({ s }: { s: GameState }) {
 function BottomLeft({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const ui = hudPrefs.value;
-  const all = s.forecasts;
+  const all = s.civ.forecasts;
   const shown = all.filter((f) => !s.flags[`fcd:${f.uid}`]).slice(0, 3);
   const hidden = all.length - all.filter((f) => !s.flags[`fcd:${f.uid}`]).length;
-  const feed = s.log.slice(-7).reverse();
+  const feed = s.civ.log.slice(-7).reverse();
   // (on a phone it is folded under the top bar until its turn line is tapped: styles.css)
   return (
     <div class={`bottom-left${phoneMore.value ? ' open' : ''}`}>
@@ -374,7 +374,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           {hasTech(s, 'hibernation_protocols') && <div class="row">{longSleepBtn()}</div>}
         </div>
       )}
-      <button class="btn primary endturn" disabled={busy.value || !!s.outcome} onClick={() => doEndTurn()} data-tip={warnings.length ? `Before you go: ${warnings.join(', ')}.` : 'End the turn.'}>
+      <button class="btn primary endturn" disabled={busy.value || !!s.civ.outcome} onClick={() => doEndTurn()} data-tip={warnings.length ? `Before you go: ${warnings.join(', ')}.` : 'End the turn.'}>
         <span>
           End Turn
           <small>{civ.sleepTurns > 0 ? `sleeping · ${civ.sleepTurns} more` : warnings.length ? warnings[0] : `turn ${s.turn}`}</small>
@@ -482,7 +482,7 @@ function ThermalLegend() {
 const idleColonies = (s: GameState) => colonies(s).filter((c) => c.queue.length === 0 && !c.spare);
 const readySettlers = (s: GameState) => Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
 const idleShips = (s: GameState) => Object.values(s.fleets).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
-const unansweredSignals = (s: GameState) => s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
+const unansweredSignals = (s: GameState) => s.civ.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
 
 /** Things worth a look before ending the turn (the to-do chips); each one takes you there. */
 function todoItems(s: GameState): { text: string; tip: string; go: () => void }[] {

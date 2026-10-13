@@ -59,10 +59,10 @@ const heartGame = (fate: Fate = 'decay', at = 50): GameState => {
 }
 
 // ---------------------------------------------------------------- positronium
-const heard = (s: GameState) => s.pending.filter((p) => p.defId === 'positronium_forms').length;
+const heard = (s: GameState) => s.civ.pending.filter((p) => p.defId === 'positronium_forms').length;
 const turnFrom = (fate: Fate, at: number) => {
   const s = heartGame(fate, at);
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   endTurn(s);
   return s;
 };
@@ -72,7 +72,7 @@ const turnFrom = (fate: Fate, at: number) => {
   check(before.eta < POSITRONIUM_ETA && heard(before) === 0, 'decay: no news before η 85');
   const at = turnFrom('decay', POSITRONIUM_ETA - 0.01);
   check(at.eta >= POSITRONIUM_ETA && heard(at) === 1, `decay: the turn that passes η 85 brings it (to η ${at.eta.toFixed(2)})`);
-  at.pending.length = 0;
+  at.civ.pending.length = 0;
   endTurn(at);
   check(heard(at) === 0, 'once only');
   const late = turnFrom('decay', 90.9);

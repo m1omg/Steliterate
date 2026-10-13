@@ -76,7 +76,7 @@ const rate = (tweak: (s: GameState) => void, n = 1000) => {
   const nest = s?.swarms.hgx;
   check(!!part && part.to === base.b && part.from === base.a && !part.systemId && part.awake && part.size >= 1 && part.size <= 1.6, `the part (size ${part?.size.toFixed(2)}) sets off from the swarm's star for the ship's`);
   check(!!nest && !!part && nest.size + part.size <= 4.4 + 1e-9 && nest.size < 4, `and the swarm is smaller by it (${nest?.size.toFixed(2)} left)`);
-  const said = s?.log.find((e) => e.fleet === 'fx');
+  const said = s?.civ.log.find((e) => e.fleet === 'fx');
   check(!!said && said.kind === 'bad' && said.systemId === base.b && /coming for Lamp/.test(said.text), `we are told, naming the ship: "${said?.text}"`);
 }
 
@@ -120,7 +120,7 @@ const hunting = () => {
     const t = clone(s);
     t.rng = 1000 + i * 7919;
     swarmsHunt(t, computeMods(t));
-    if (t.log.some((e) => e.fleet === 'fx' && e.kind === 'combat')) struck++;
+    if (t.civ.log.some((e) => e.fleet === 'fx' && e.kind === 'combat')) struck++;
   }
   check(struck === 100, `there it strikes that ship every time (${struck} of 100), where a swarm feeding there strikes on 70% of turns`);
   // thin pickings do not move it on while the ship is there
@@ -143,7 +143,7 @@ const hunting = () => {
   const w = s.swarms.hunt;
   const nest = s.swarms.hgx;
   check(!!w && !w.prey && !w.systemId && w.from === base.b && w.to === (nest.systemId ?? nest.to) && w.nest === 'hgx', `arriving to find the ship gone, it turns back for the swarm it broke away from (${nest.systemId ? 'where it sits' : 'where it is going'})`);
-  const said = s.log.find((e) => e.fleet === 'fx');
+  const said = s.civ.log.find((e) => e.fleet === 'fx');
   check(!!said && said.kind === 'info' && /found it gone, and is going back to its swarm/.test(said.text), `and we are told: "${said?.text}"`);
 }
 
@@ -155,7 +155,7 @@ const hunting = () => {
   updateHunger(s, L, computeMods(s));
   const w = s.swarms.hunt;
   check(!!w && !w.prey && w.to === (s.swarms.hgx.systemId ?? s.swarms.hgx.to), 'its ship lost, it goes back to its swarm');
-  check(s.log.some((e) => /has had it, and is going back/.test(e.text) && !e.fleet), 'and we are told (with no ship to look at)');
+  check(s.civ.log.some((e) => /has had it, and is going back/.test(e.text) && !e.fleet), 'and we are told (with no ship to look at)');
 }
 
 // back with its swarm, it rejoins it; if the swarm has moved on, it follows; no random draw taken
@@ -217,7 +217,7 @@ const hunting = () => {
     if (6 - hp >= 0.2 * size - 1e-9 && 6 - hp <= 0.6 * size + 1e-9) fits++;
     worst = Math.min(worst, hp);
     least = Math.max(least, hp);
-    if (!s.fleets.gx && s.log.some((e) => e.fleet === 'gx' && /was lost in the fighting/.test(e.text))) lost++;
+    if (!s.fleets.gx && s.civ.log.some((e) => e.fleet === 'gx' && /was lost in the fighting/.test(e.text))) lost++;
   }
   check(hurt === 40 && fits === 40, `a swarm of about 6 breaking through: the ships there are hurt every time, by 0.2 to 0.6 of its size (hull 6 → ${worst.toFixed(1)} to ${least.toFixed(1)})`);
   check(lost === 40, `one that cannot take it is lost, and we are told (${lost} of 40)`);

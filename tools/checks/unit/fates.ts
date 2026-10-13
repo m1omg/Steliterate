@@ -24,7 +24,7 @@ check(old.saveVersion === SAVE_VERSION && old.fate === (old.protonsDecay ? 'deca
 function play(fate: ProtonFate, stop: (s: GameState) => boolean, seed = 1000) {
   const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate });
   const crossings: CrossingReport[] = [];
-  for (let g = 0; g < 1200 && !s.outcome && !stop(s); g++) {
+  for (let g = 0; g < 1200 && !s.civ.outcome && !stop(s); g++) {
     autoPlay(s, 'competent');
     const r = endTurn(s);
     if (r.crossing) crossings.push(r.crossing);
@@ -81,12 +81,12 @@ const seen = (fate: 'decays' | 'stable' | 'curvature') => {
   s.protonsDecay = fate === 'decays';
   // stop short of η 30, where the neutron stars tell (a slow turn here can be two η long)
   let prev = s.eta;
-  for (let g = 0; g < 900 && !s.outcome && s.eta < 29; g++) {
+  for (let g = 0; g < 900 && !s.civ.outcome && s.eta < 29; g++) {
     if (s.eta + 2 * Math.max(s.eta - prev, 0.05) >= 29.8) break;
     prev = s.eta;
     blindTurn(s);
   }
-  const f = s.forecasts.find((x) => x.kind === 'crossing');
+  const f = s.civ.forecasts.find((x) => x.kind === 'crossing');
   return { s, f };
 };
 const before = (['decays', 'stable', 'curvature'] as const).map(seen);
@@ -109,12 +109,12 @@ check(before.every((b) => b.f?.title === 'The end of the Degenerate Age?' && b.f
 for (const b of before) {
   const g = b.s;
   let r: CrossingReport | undefined;
-  for (let n = 0; n < 60 && !g.outcome && !fateKnown(g); n++) r = blindTurn(g).crossing ?? r;
+  for (let n = 0; n < 60 && !g.civ.outcome && !fateKnown(g); n++) r = blindTurn(g).crossing ?? r;
   const shown = fateOf(g) === 'decay' ? 'decay_shown' : fateOf(g) === 'curvature' ? 'curvature_shown' : null;
   check(fateKnown(g) && g.eta >= 30, `${fateOf(g)}: known at η ${g.eta.toFixed(2)}${shown ? `, with ${shown}` : ', by the crossing itself'}`);
-  if (shown) check(g.pending.some((e) => e.defId === shown) && !r, `its reveal (${shown}) is waiting, and the age goes on (${g.pending.map((e) => e.defId).join(', ')})`);
+  if (shown) check(g.civ.pending.some((e) => e.defId === shown) && !r, `its reveal (${shown}) is waiting, and the age goes on (${g.civ.pending.map((e) => e.defId).join(', ')})`);
   else check(r?.title === 'The Last Warmth' && text(r).includes('The question is settled: the protons are stable.'), 'and the Last Warmth says so');
-  check(g.forecasts.find((x) => x.kind === 'crossing')?.title !== 'The end of the Degenerate Age?', `the forecast no longer asks (${g.forecasts.find((x) => x.kind === 'crossing')?.title})`);
+  check(g.civ.forecasts.find((x) => x.kind === 'crossing')?.title !== 'The end of the Degenerate Age?', `the forecast no longer asks (${g.civ.forecasts.find((x) => x.kind === 'crossing')?.title})`);
 }
 TECH_BY_ID.proton_question.requires = asked;
 // ---------------------------------------------------------------- research by fate

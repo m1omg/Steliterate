@@ -22,11 +22,11 @@ import { check, done, loadSave } from '../lib';
 const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
 const base = (() => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 10 && !s.outcome; g++) {
+  for (let g = 0; g < 10 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   s.swarms = {};
   if (!s.civ.techs.includes('terraforming')) s.civ.techs.push('terraforming');
   return s;

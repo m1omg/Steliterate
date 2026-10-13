@@ -44,7 +44,7 @@ for (const t of targets) {
   if (state.saveVersion !== SAVE_VERSION) problems.push(`saveVersion ${state.saveVersion} after migrate, expected ${SAVE_VERSION}`);
   const from = state.turn;
   let guard = 0;
-  while (!state.outcome && guard++ < 1200) {
+  while (!state.civ.outcome && guard++ < 1200) {
     autoPlay(state, 'competent');
     endTurn(state);
     const civ = state.civ;
@@ -57,8 +57,8 @@ for (const t of targets) {
       if (readSave(saveFile(state).text)?.turn !== state.turn) problems.push(`save file round trip failed at turn ${state.turn}`);
     }
   }
-  if (!state.outcome) problems.push(`unfinished after ${guard} turns`);
-  const end = state.outcome ? `${state.outcome.kind.toUpperCase()} "${state.outcome.ending}"` : 'unfinished';
+  if (!state.civ.outcome) problems.push(`unfinished after ${guard} turns`);
+  const end = state.civ.outcome ? `${state.civ.outcome.kind.toUpperCase()} "${state.civ.outcome.ending}"` : 'unfinished';
   console.log(`${problems.length ? 'FAIL' : 'ok  '} ${name}: turn ${from} → ${end} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}), pops ${totalPops(state)}`);
   for (const p of problems.slice(0, 8)) console.log(`  ${p}`);
   if (problems.length) failures++;

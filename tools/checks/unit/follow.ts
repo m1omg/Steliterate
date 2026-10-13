@@ -10,7 +10,7 @@ import { check as ck, done, loadSave } from '../lib';
 const check = (what: string, ok: boolean, more = '') => ck(ok, `${what}${more ? `: ${more}` : ''}`);
 
 const s = loadSave('4fe2404-seed1000-turn87-clock.json.gz');
-s.pending = [];
+s.civ.pending = [];
 const c0 = starClock(s)!;
 check('a clock runs in the old save', !!c0, c0 ? `${c0.system}, turn ${c0.turn} of ${c0.of}, ${c0.left} left` : '');
 const f = s.civ.flags;
@@ -51,7 +51,7 @@ let second = 0;
 while (turns < 20) {
   const before = s.years;
   const step = turnStep(s);
-  s.pending = [];
+  s.civ.pending = [];
   endTurn(s);
   turns++;
   const c = starClock(s);

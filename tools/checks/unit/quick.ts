@@ -4,7 +4,7 @@ import { endTurn } from '../../../src/game/sim/turn';
 import { formatYears } from '../../../src/game/eras';
 import { check as ck, done, loadSave } from '../lib';
 const check = (what: string, ok: boolean, more = '') => ck(ok, `${what}${more ? `: ${more}` : ''}`);
-const load = () => { const s = loadSave('4fe2404-seed1000-turn87-clock.json.gz'); s.pending = []; return s; };
+const load = () => { const s = loadSave('4fe2404-seed1000-turn87-clock.json.gz'); s.civ.pending = []; return s; };
 
 // without Quickening: a quick pace changes nothing while the clock runs
 {
@@ -37,7 +37,7 @@ const load = () => { const s = loadSave('4fe2404-seed1000-turn87-clock.json.gz')
     if (n === 15 && !switched) { s.civ.pace = 0; switched = true; }
     else if (n === 16) s.civ.pace = 1;
     endTurn(s);
-    s.pending = [];
+    s.civ.pending = [];
     n++;
   }
   // 15 short turns, one turn back at the Tide spans the rest of its clock turn (or a whole one), then short again
