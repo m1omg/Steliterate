@@ -2244,11 +2244,26 @@ Each of the other civilizations now plays its own way, not ours with a few needs
     558 games (53): aiming for it, it gets there in a third of all games.
 - **The Quiet Lattice is far the easiest ending, and was before.** A Lattice-led player of ours
   (`tools/sim.ts 300 standard lattice`) wins it in nearly every game where matter lasts: on the
-  rules before the Lattice thought, 78 of 81 stable games and 65 of 71 curvature games; now 40 of
-  45 and 31 of 43 (of the first 180). Under decay it never can (the Lattice is matter). Our usual
+  rules before the Lattice thought, 78 of 81 stable games and 65 of 71 curvature games; now 70 of
+  81 and 52 of 71. Under decay it never can (the Lattice is matter). Our usual
   mixed strategy wins 40% of stable games and 20% of curvature games, by any ending. How to make
   it harder is for the player to decide (asked, 13 Oct).
 - **Checks:** `unit/minds` (new). `browser/prompt-systems` picks research until its prompt closes
   (a pick that stored insight covers is learnt at once, and the prompt stays) and passes over
   another of our ships asking first; `browser/refuge` plays with the neighbours asleep, as it sets
   a neighbour's record by hand (`start(name, { asleep: true })` in `lib.cjs`).
+
+## End Turn in slices (13 Oct, part 2a-6)
+
+- **The turn comes in slices** (`turnSlices`, `sim/turn.ts`): it yields after each civilization's
+  part of a step, never inside one, about 40 times a turn. `endTurn` plays it at once, so the
+  harness and the checks are unchanged (24 games identical).
+- **End Turn lets the browser breathe** (`playTurn`, `turnflow.ts`): whenever the slices have run
+  for 12 ms, a message to itself (no timer's clamp) lets the music's scheduler, which looks only
+  0.3 s ahead, and the screen have their turn. Nothing may act on the game meanwhile (`act`
+  refuses while `busy`), and the views are refreshed only when the turn is done.
+- **Timing** (`tools/turn-timing.cjs`: Chromium with its CPU slowed, the End Turn button itself):
+  see the numbers below.
+- **Check:** `unit/slices` (new: the same game slice by slice as at once, the swap never across a
+  slice, a turn in many slices).
+

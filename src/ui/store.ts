@@ -121,6 +121,8 @@ export function notify(text: string, kind: 'info' | 'bad' | 'good' = 'info', act
 export function act(fn: (s: GameState) => string | null | void): boolean {
   const g = game.value;
   if (!g) return false;
+  // a turn half played (turnflow.ts, playTurn) is not to be acted on
+  if (busy.value) return false;
   assertPlayerView(g, 'act');
   const err = fn(g);
   if (typeof err === 'string' && err) {
@@ -129,6 +131,16 @@ export function act(fn: (s: GameState) => string | null | void): boolean {
   }
   bump();
   return true;
+}
+
+/**
+ * Whether the game is between turns, not half-way through one (turnflow.ts, playTurn): what saves
+ * or replaces it waits for that. (A Long Sleep ends turns on its own, menus open or not.)
+ */
+export function between(): boolean {
+  if (!busy.value) return true;
+  notify('The turn is still ending: a moment.', 'info');
+  return false;
 }
 
 export function autosave() {

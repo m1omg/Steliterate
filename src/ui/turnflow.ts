@@ -1,5 +1,5 @@
 import { SHIP_BY_ID } from '../game/data/ships';
-import { endTurn } from '../game/sim/turn';
+import { turnSlices, type TurnResult } from '../game/sim/turn';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
 import { autosave, busy, bump, engine, game, modal, notify, selection, settings, toasts } from './store';
@@ -9,11 +9,44 @@ import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
 import { shipQueue } from './hud/ShipPrompt';
 import { researchPrompt } from './hud/ResearchPrompt';
 import { colonies, fleets } from '../game/sim/util';
+import type { GameState } from '../game/types';
 
 // Ending a turn: run the simulation, refresh the views, and surface what needs attention.
 // A Long Sleep keeps ending turns on its own, pausing whenever something happens.
 
-export function doEndTurn() {
+/**
+ * How long a slice of the turn may run before the browser gets a breath: the music schedules its
+ * notes only 0.3 s ahead (music.ts), and a phone takes several times as long as this machine.
+ */
+const SLICE_MS = 12;
+
+/** Let the browser breathe: a task of its own (a message to ourselves), without a timer's clamp. */
+function breathe(): Promise<void> {
+  return new Promise((done) => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => done();
+    ch.port2.postMessage(0);
+  });
+}
+
+/**
+ * Play the turn in its slices (turnSlices: each civilization's part of a step whole), breathing
+ * whenever they have run for long. Nothing acts on the game meanwhile (busy: act refuses).
+ */
+async function playTurn(s: GameState): Promise<TurnResult> {
+  const g = turnSlices(s);
+  let t0 = performance.now();
+  for (;;) {
+    const r = g.next();
+    if (r.done) return r.value;
+    if (performance.now() - t0 > SLICE_MS) {
+      await breathe();
+      t0 = performance.now();
+    }
+  }
+}
+
+export async function doEndTurn() {
   const s = game.value;
   if (!s || busy.value || s.civ.outcome) return;
   busy.value = true;
@@ -29,10 +62,14 @@ export function doEndTurn() {
   const contactBefore = new Set(Object.values(s.survivors).filter((v) => v.contact).map((v) => v.id));
   const shipsBefore = new Map(fleets(s).map((f) => [f.id, f.ships.length]));
   const lastLog = s.civ.log[s.civ.log.length - 1];
-  const r = endTurn(s);
+  let r: TurnResult;
+  try {
+    r = await playTurn(s);
+  } finally {
+    busy.value = false;
+  }
   bump();
   autosave();
-  busy.value = false;
   if (r.outcome) {
     modal.value = { kind: 'outcome' };
     music.setMood('outcome');

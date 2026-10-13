@@ -250,14 +250,28 @@ export function turnOrder(state: GameState): string[] {
   return [state.player, ...Object.keys(state.civs).filter((id) => id !== state.player && !state.civs[id].outcome).sort()];
 }
 
-export function endTurn(state: GameState): TurnResult {
+/**
+ * The turn in slices (the new version, part 2a-6): it yields after each civilization's part of a
+ * step, never inside one, so that the interface can let the browser breathe between them
+ * (turnflow.ts, playTurn); endTurn plays it at once. The state between two slices is a turn half
+ * done: nothing may act on it then.
+ */
+export function* turnSlices(state: GameState): Generator<void, TurnResult, void> {
   const result: TurnResult = { crossing: null, outcome: state.civ.outcome, arrived: [], notes: [], wasted: 0 };
   if (state.civ.outcome) return result;
   const me = state.player;
   const ids = turnOrder(state);
   const t: Record<string, CivTurn> = {};
   // each civilization plays its part of a step, the player first; then what they sent each other is delivered
-  const each = (part: (c: CivTurn, id: string) => void) => {
+  function* each(part: (c: CivTurn, id: string) => void): Generator<void, void, void> {
+    for (const id of ids) {
+      asCiv(state, id, () => part(t[id], id));
+      yield;
+    }
+    flushOutbox(state);
+  }
+  // (the same at once, inside a step that must not be cut)
+  const eachNow = (part: (c: CivTurn, id: string) => void) => {
     for (const id of ids) asCiv(state, id, () => part(t[id], id));
     flushOutbox(state);
   };
@@ -265,7 +279,7 @@ export function endTurn(state: GameState): TurnResult {
   // ------------------------------------------------ 0. each one's start: its mods, pace, siphons, sleep
   // (another civilization decides first, as the autoplayer decides for us; part 2a-5 of the new
   // version gives each a mind of its own)
-  each((_c, id) => {
+  yield* each((_c, id) => {
     if (id !== me) autoPlay(state, 'competent');
     t[id] = beginTurn(state);
   });
@@ -276,7 +290,7 @@ export function endTurn(state: GameState): TurnResult {
   const paceFactor = livedShare(state, state.civ.pace, step);
 
   // ------------------------------------------------ 1-3. economy, starvation, research and works
-  each((c) => {
+  yield* each((c) => {
     c.ctx = { years: state.years, L: step.turnLength, logL, paceFactor, mods: c.mods };
     economy(state, c);
     overdriveAccidents(state);
@@ -289,7 +303,7 @@ export function endTurn(state: GameState): TurnResult {
   // what the stars do to the worlds, once for everyone
   scorchWorlds(state, state.years, step.years);
   declineWorlds(state);
-  each((c) => {
+  yield* each((c) => {
     growth(state, c);
     // ---------------------------------------------- 5. society
     // Consume the Dead: nothing is buried any more
@@ -308,10 +322,10 @@ export function endTurn(state: GameState): TurnResult {
   // (each civilization's ships and settlements by its own mods; one no longer playing, by its own now)
   const modsOf = (id: string) => t[id]?.mods ?? asCiv(state, id, () => computeMods(state));
   swarmsHunt(state, modsOf);
-  each((c) => autoExplore(state, c.mods));
+  yield* each((c) => autoExplore(state, c.mods));
   updateHunger(state, step.turnLength, modsOf);
   // (the neighbours we know, our pacts and wars with them, and the other minds are the player's)
-  each((c, id) => {
+  yield* each((c, id) => {
     if (id !== me) return;
     updateSurvivors(state, logL, c.mods, step.turnLength, c.ctx.paceFactor);
     pactsTurn(state);
@@ -330,7 +344,7 @@ export function endTurn(state: GameState): TurnResult {
   result.notes = notes;
   // from 10^65 years solid matter flows: once, the ruins no one awake is digging run into smooth lumps
   flowComes(state, step.eta, logL, modsOf, Math.log10(paceFactor));
-  each((c, id) => {
+  yield* each((c, id) => {
     handleNotes(state, notes);
     // the Unlit's gathering is done: the Last Star lights as the turn ends, as every new star does
     if (id === me) {
@@ -348,7 +362,7 @@ export function endTurn(state: GameState): TurnResult {
   state.eraTurn++;
   // the turn's clock is the player's (flare.ts, clockCiv): one of our stars has just begun its
   // last flare (the turn stopped for it); a flare's clock or a new star's has run out
-  each((_c, id) => {
+  yield* each((_c, id) => {
     if (id !== me) return;
     const civ = state.civ;
     for (const sys of new Set(colonies(state).map((c) => state.systems[c.systemId]))) {
@@ -362,14 +376,14 @@ export function endTurn(state: GameState): TurnResult {
     clearStarClock(state);
   });
   // ------------------------------------------------ 8. signals, forecasts, events
-  each((_c, id) => {
+  yield* each((_c, id) => {
     const arrived = signalsAndEvents(state);
     if (id === me) result.arrived = arrived;
   });
 
   // ------------------------------------------------ 9. crossings
   // the fate of matter shows itself: near η 30 the neutron stars tell the fates apart
-  each((_c, id) => {
+  yield* each((_c, id) => {
     if (!fateKnown(state) && state.eta >= FATE_SHOWN_AT) {
       revealFate(state);
       if (id === me) updateForecasts(state);
@@ -392,7 +406,7 @@ export function endTurn(state: GameState): TurnResult {
         }
       }
       crossed(runCrossing(state, ids, Object.fromEntries(ids.map((id) => [id, t[id].mods]))));
-      each((_c, id) => id === me && updateForecasts(state));
+      yield* each((_c, id) => id === me && updateForecasts(state));
     }
   }
   // the calendar turns without the age (a fate other than decay): the Black Hole Age's Tide
@@ -400,13 +414,13 @@ export function endTurn(state: GameState): TurnResult {
   // each one's mods as they are now (for a storm that comes after the turn's changes)
   const modsNow = () => {
     const m: Record<string, Mods> = {};
-    each((_c, id) => (m[id] = computeMods(state)));
+    eachNow((_c, id) => (m[id] = computeMods(state)));
     return m;
   };
   // curvature radiation unmakes the last ordinary matter: a storm of its own, inside the age
   if (fateOf(state) === 'curvature' && state.eta >= MATTER_END.curvature && state.flags.matter_gone === undefined && state.era !== 'dark') {
     crossed(greatEvaporation(state, ids, modsNow()));
-    each((_c, id) => id === me && updateForecasts(state));
+    yield* each((_c, id) => id === me && updateForecasts(state));
   }
   // the last black hole may evaporate before the calendar says so
   if (state.era === 'blackhole' && !Object.values(state.systems).some((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone)) {
@@ -419,7 +433,7 @@ export function endTurn(state: GameState): TurnResult {
   }
 
   // ------------------------------------------------ 10. endings, stats
-  each((_c, id) => {
+  yield* each((_c, id) => {
     const o = checkEndings(state);
     if (id === me) result.outcome = o;
     const civ = state.civ;
@@ -430,6 +444,14 @@ export function endTurn(state: GameState): TurnResult {
     if (!civ.capitalId || !state.colonies[civ.capitalId]) civ.capitalId = colonies(state).sort((a, b) => popsOf(b) - popsOf(a))[0]?.id ?? null;
   });
   return result;
+}
+
+/** The whole turn at once: the harness, the checks, and whatever needs it done before going on. */
+export function endTurn(state: GameState): TurnResult {
+  const g = turnSlices(state);
+  let r = g.next();
+  while (!r.done) r = g.next();
+  return r.value;
 }
 
 /** A civilization's turn begins: its mods, its pace within them, its Halo Siphons, its Long Sleep. */

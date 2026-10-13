@@ -24,7 +24,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      ENDURANCE + VICTORY; noise is about ±12 per 300 games. For a closer call, compare 900 games
      against a `git worktree` of HEAD (symlink `node_modules` into it). `--asleep` plays the
      neighbours as they were before the new version (`civsAsleep`): with it, a change that should
-     leave our own play alone must leave the games line for line as they were.
+     leave our own play alone must leave the games line for line as they were. `tools/sim.ts 300
+     standard lattice` plays us led by the Lattice, as the Tessellate plays (`ourWay` in `auto.ts`).
+   - End Turn as a phone feels it: `node tools/turn-timing.cjs http://localhost:4173/ [turns=40]
+     [slowdown=4] [seed=8919]` (Chromium with the CPU slowed, the End Turn button itself, the
+     longest task of each turn as `PerformanceObserver` reports it).
    - Save compatibility: `npm run savecompat` loads every save in `tools/saves/` through
      `readSave` → `migrate`, checks the round trip, and plays each to the end. It must end with
      "SAVE COMPAT OK". The saves: the 71-turn save from `551fb1a`, and four from the week of
@@ -94,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -467,6 +471,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     (`Fleet.departed`, `since`, `cameFrom`, set for theirs only in `newFleet`, `orderMove` and
     `arrive`); `syncFleets` (`galaxyView.ts`) and `buildFleets` (`systemView.ts`) draw them, never
     as pickables.
+  - **The turn in slices** (part 2a-6): `turnSlices` (`sim/turn.ts`) yields after each
+    civilization's part of a step (`each`; `eachNow` where a step must not be cut), never inside
+    `asCiv`; `endTurn` runs it at once. `playTurn` (`turnflow.ts`) breathes (a `MessageChannel`
+    message) whenever 12 ms have run; `act` refuses while `busy`. Between two slices the state is
+    a turn half done: anything new that acts on the game from the interface goes through `act`,
+    or checks `busy` itself.
   - **Minds of their own** (part 2a-5): `WAY_RESEARCH` and `WAY_WORK` (`auto.ts`, exported for
     `unit/minds`); `EventDef.scope: 'everyone'` on the events of ordinary life (nine, `data/events.ts`); `planSleep` and `raceFor` (the sleepers); `temperament` (`util.ts`, from the
     seed, read live, never saved); `heardWaking` (`ways.ts`, our side: their Ark under way to a

@@ -7,7 +7,7 @@ import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
-import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
+import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, between, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
 import { Icon } from '../Icon';
 import { CODEX } from './Codex';
 import { MANUAL } from './Manual';
@@ -120,7 +120,7 @@ export function SettingsModal() {
       <div class="col" style={{ gap: '14px' }}>
         {g && (
           <div class="row wrap" style={{ gap: '6px' }}>
-            <button class="btn primary" onClick={() => (saveGame(g) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Use a save code.', 'bad'))}>
+            <button class="btn primary" onClick={() => between() && (saveGame(g) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Use a save code.', 'bad'))}>
               <Icon name="save" /> Quick save
             </button>
             <button class="btn" onClick={() => (modal.value = { kind: 'save' })}>
@@ -288,6 +288,7 @@ function PlaylistField({ playlist, overture, set }: { playlist: Record<string, b
 }
 
 export function startLoaded(g: GameState) {
+  if (!between()) return;
   game.value = g;
   screen.value = 'game';
   modal.value = null;
@@ -303,6 +304,7 @@ export function startLoaded(g: GameState) {
 
 /** Back to the title screen. The game is kept in the autosave slot, so Continue resumes it. */
 function quitToMenu(g: GameState) {
+  if (!between()) return;
   saveGame(g, true);
   sfx('click');
   modal.value = null;
@@ -462,7 +464,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
         <div class="eyebrow">Quick save and autosave</div>
         <div class="row wrap" style={{ gap: '6px' }}>
           {s && (
-            <button class="btn" onClick={() => (saveGame(s) ? notify('Quick-saved.', 'good') : notify('Could not save: storage is unavailable here. Export a file or use a save code.', 'bad'))} data-tip="One quick slot, overwritten each time">
+            <button class="btn" onClick={() => between() && (saveGame(s) ? notify('Quick-saved.', 'good') : notify('Could not save: storage is unavailable here. Export a file or use a save code.', 'bad'))} data-tip="One quick slot, overwritten each time">
               Quick save
             </button>
           )}
@@ -518,7 +520,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
         </div>
         {s && !code && (
           <div>
-            <button class="btn small" onClick={() => setCode(exportCode(s))}>
+            <button class="btn small" onClick={() => between() && setCode(exportCode(s))}>
               Make a save code
             </button>
           </div>
