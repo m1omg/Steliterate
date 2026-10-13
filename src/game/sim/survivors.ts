@@ -8,7 +8,7 @@ import { atWar, inCoalition, raidedUs, seizeBlocked, warCause, warDefence } from
 import { answerChoirWish, choirWish, drawTheirSpin, heardWaking, wakeForNewStar } from './ways';
 import { answered, feel, offerDue, offered, tradeOffer, type Offer } from './dealings';
 import { TECH_BY_ID } from '../data/techs';
-import { createColony, isWarFleet } from './fleets';
+import { createColony, isWarFleet, screenAt } from './fleets';
 import type { Mods } from './mods';
 import { canConverse, rangeWith, sendSignal, voiceRange, voiceThread } from './signals';
 import { queueEvent } from './events';
@@ -395,8 +395,10 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         sv.lastSent = state.turn;
         const took = Math.round(Math.min(civ.energy * 0.2, 60));
         const cap = capital(state);
-        // a defence grid, or warships fortified over the capital, turns raiders away
-        const defended = cap && ((cap.structures.defense_grid ?? 0) > 0 || fleets(state).some((f) => f.at === cap.systemId && f.order === 'fortify'));
+        // a defence grid, or warships fortified over the capital, turns raiders away; ships that
+        // screen it may (a Picket half the time, part 2c)
+        const screen = cap ? screenAt(state, cap.systemId) : 0;
+        const defended = cap && ((cap.structures.defense_grid ?? 0) > 0 || fleets(state).some((f) => f.at === cap.systemId && f.order === 'fortify') || (screen > 0 && rng.chance(screen)));
         if (!defended && took > 0) {
           civ.energy -= took;
           // (a civilization of its own carries home what it took)

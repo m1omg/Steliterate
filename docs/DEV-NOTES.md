@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -501,6 +501,15 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     sends no last transmission, only a tiding of the silence. The autoplayer's `hungerSteps`
     (`auto.ts`, AIs only: plight from 0.6 and caution under 0.5) opens Hunger research
     (`HUNGER_FIRST`), Consume the Dead and the events' Taint choices.
+  - **War, units, conquest** (part 2c), as far as built: every fleet strength goes through
+    `strength(cls, against)` (`data/ships.ts`: against `'ships'`, `'settlements'` or `'swarms'`,
+    a class's `vs` figure or its `attack`), and what can fight is `isWarship`; never sum
+    `.attack` (2c-0, 30 games identical). `ShipDef.upkeep` (energy a turn, `fleetUpkeep` in
+    `fleets.ts`, charged in the turn and the projection like a structure's, a tenth asleep),
+    `screen` (`screenAt`: each ship's own chance to turn a raid away, read in the raids on us),
+    `eyes` (`updateDetection`), `dugIn` (fortified, instead of `FORTIFY_BONUS`); `repairFleets`
+    (a tenth of a hull a turn at a Shipyard). `shipNote` writes a class's figures for the build
+    list. The Picket and the Hunter wear the Warden's hull until they have their own.
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not
@@ -1452,6 +1461,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | minds of their own (13 Oct; part 2a-5, `b299f6a`) | 136 | 45 victories, Degenerate Age 71 turns; 900 games 410 / 143 / 72 (376 / 147 / 73 before). By fate: decay 178 / 450, stable 147 / 239, curvature 85 / 211. Alive at our end: Chorus 30%, uploaded 27%, sleepers 21% (11%), gardens 17%, Tessellate 20% with the Archive of Everything its own in 196 of 558. A Lattice-led player wins the Quiet Lattice in about 9 of 10 games where matter lasts, as before the Lattice thought (`lattice` strategy) |
 | the events of ordinary life for everyone; End Turn in slices: part 2a's reference (13 Oct; `3678301`) | 140 | 41 victories, Degenerate Age 71 turns; 900 games 397 / 131 / 71 (410 / 143 / 72 before), within the noise; the slices change nothing (24 games identical). By fate: decay 164 / 450, stable 136 / 239, curvature 97 / 211. Alive at our end: uploaded 30%, Chorus 28%, Tessellate 20% with the Archive of Everything its own in 198 of 558, sleepers 19%, gardens 17% |
 | the Hunger among the civilizations (13 Oct; part 2b) | 135 | 64 victories, Degenerate Age 78 turns; 900 games 411 / 167 / 76 (397 / 131 / 71 at 2a's reference): survival within the noise, victories up as a neighbour offers notes only on what it knows (in 40 games 159 offers against 355, 1,260 energy paid against 5,927), so our autoplayer keeps its energy and quickens. By fate: decay 163 / 450, stable 148 / 239 (102 victories), curvature 100 / 211 (59). Of 2,700 others, 895 took a Hunger step (673 to Taint 15, 158 to 27, 64 to 45), none past 45; 6 of the first 300 games as before |
+| ships by role: upkeep, screens, mending, the Picket and the Hunter (13 Oct; parts 2c-0, 2c-1) | 149 | 47 victories, Degenerate Age 75 turns; 900 games 409 / 152 / 75 (411 / 167 / 76 after 2b), within the noise. By fate: decay 175 / 450, stable 140 / 239, curvature 94 / 211. Without the autoplayer standing idle warships down after the Dusk: 361 / 146 (Vigil's upkeep in the Dark Era as much as the whole net) |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

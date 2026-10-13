@@ -8,6 +8,7 @@ import { computeMods, strainFor, type Strain } from './mods';
 import { researchDraw } from './research';
 import { jointIncome } from './survivors';
 import { beaconUpkeep } from './beacons';
+import { fleetUpkeep } from './fleets';
 import { colonies } from './util';
 import { terraformingOf } from '../physics';
 import { SEED_CAP, SEED_RATE, WORKS_WATER, habitabilityOf, terraformedWarmth } from './terraform';
@@ -66,6 +67,7 @@ export function project(state: GameState, paceOverride?: number): Projection {
   }
   p.energyIn += jointIncome(state) * ctx.paceFactor;
   p.energyOut += beaconUpkeep(state) * ctx.paceFactor;
+  p.energyOut += fleetUpkeep(state, ctx.paceFactor);
   p.accord -= latticeAlienation(state, mods);
   p.researchDraw = researchDraw(state, p.insight);
   p.energyOut += p.researchDraw;

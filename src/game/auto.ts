@@ -3,7 +3,7 @@ import { STRUCTURE_BY_ID, type EnergyMode } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
 import { logTurnLength } from './eras';
-import { starClockTerms, turnStep } from './sim/flare';
+import { clockCiv, livedShare, starClockTerms, turnStep } from './sim/flare';
 import { emberShare, haloDrawn, sourceLight, vitalityLoss } from './physics';
 import {
   answerEvent,
@@ -13,6 +13,7 @@ import {
   convert,
   dismantle,
   dismantleTerms,
+  disbandFleet,
   enactCharter,
   longSleep,
   makeGesture,
@@ -32,7 +33,7 @@ import { computeMods, strainFor } from './sim/mods';
 import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
-import { canSettle } from './sim/fleets';
+import { canSettle, fleetUpkeep } from './sim/fleets';
 import { colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, temperament, threadTotals } from './sim/util';
 import type { Body, Colony, Fate, GameState, StarSystem, SurvivorWay, ThreadId } from './types';
 import { THREADS } from './types';
@@ -41,7 +42,7 @@ import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/acco
 import { DEGENERATE_END, MATTER_END, calendarEra, fateKnown, fateOf, inAge, matterGone } from './fate';
 import { FLOW_ETA, flowAhead, flowing, keeping } from './sim/flow';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost, proposePact } from './sim/pacts';
-import { WAR_ACCORD, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
+import { WAR_ACCORD, anyWar, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
 import { raidStrength, seizeSurvivor } from './sim/survivors';
 import { SHIP_BY_ID, isWarship, strength } from './data/ships';
 import { SEED_MIN, terraformSummary } from './sim/terraform';
@@ -83,6 +84,26 @@ function swarmThreat(state: GameState, systemId: string): boolean {
   return Object.values(state.swarms).some(
     (s) => !s.tamed && (s.to === systemId || (!!s.systemId && (s.awake || state.civ.known[s.systemId] === 2) && distLy(state.systems[s.systemId], here) <= reach)),
   );
+}
+
+/** How much of what a turn gains before upkeep idle warships may cost before they are stood down. */
+const STAND_DOWN_SHARE = 0.15;
+
+/**
+ * Warships cost upkeep (part 2c), the more the longer the turns. After the Dusk, with no war and
+ * no swarm that threatens any of our settlements, once they cost more than STAND_DOWN_SHARE of
+ * what a turn gains, the idle ones are scrapped where they wait (some matter back).
+ */
+function planStandDown(state: GameState) {
+  const civ = state.civ;
+  // (in the Dusk an escort costs next to nothing, and the first swarms come for the weak)
+  if (calendarEra(state) === 'dusk') return;
+  const war = civ.id === state.player ? anyWar(state) : !!state.survivors[civ.id]?.war;
+  if (war || colonies(state).some((c) => swarmThreat(state, c.systemId))) return;
+  const pace = clockCiv(state).pace;
+  const up = fleetUpkeep(state, livedShare(state, pace, turnStep(state, pace)));
+  if (up <= 0 || up <= STAND_DOWN_SHARE * Math.max(1, (civ.flags.last_energy_net ?? 0) + up)) return;
+  for (const f of fleets(state)) if (f.at && !f.to && f.ships.length && f.ships.every((s) => isWarship(s.cls))) disbandFleet(state, f.id);
 }
 
 /** The settlers another civilization builds: ships of its own Threads. */
@@ -689,6 +710,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planDismantle(state);
   planBuilds(state);
   planFleets(state);
+  planStandDown(state);
   planSignals(state);
   planPace(state);
   planWorks(state);

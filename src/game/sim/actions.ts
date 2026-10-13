@@ -1,5 +1,5 @@
 import { CHARTER_BY_ID, CHARTERS } from '../data/charters';
-import { SHIP_BY_ID, SHIPS, type ShipDef } from '../data/ships';
+import { SHIP_BY_ID, SHIPS, isWarship, type ShipDef } from '../data/ships';
 import { formatYears } from '../eras';
 import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, hasOnceEffect, structureLabel, type StructureDef } from '../data/structures';
 import { THREAD_DEFS } from '../data/threads';
@@ -76,7 +76,7 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
 export function buildCost(state: GameState, d: StructureDef | ShipDef, isShip: boolean): { industry: number; matter: number; energy: number } {
   let industry = d.cost;
   let matter = d.matter;
-  if (isShip && hasCharter(state, 'wardens_oath') && (d.id === 'warden' || d.id === 'aegis')) {
+  if (isShip && hasCharter(state, 'wardens_oath') && isWarship(d.id)) {
     industry *= 0.75;
     matter *= 0.75;
   }

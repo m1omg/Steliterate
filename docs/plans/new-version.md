@@ -567,6 +567,27 @@ Part 2a in steps, each validated and pushed on its own, so the harness can tell 
 - **Checks:** `unit/war-costs` (a conquest lowers galactic free energy as stated),
   `unit/battle-roles`, `unit/simultaneous` (turn order decides nothing), `browser/war-ui`.
 
+### 2c, as it is being built (13 Oct, added while building it)
+
+In steps, each validated on its own:
+
+1. **2c-0, one strength per role** (done, `60d0617`): every fleet strength through
+   `strength(cls, against)`, against ships, settlements or swarms; 30 games identical.
+2. **2c-1, the roster's first ships**: the Picket (eyes, a screen) and the Hunter (twice a
+   Warden on swarms); each warship's upkeep, screen and dug-in strength (the Aegis three times);
+   a Shipyard mends. The Breacher and the Kinetic Lance come with what they are for (2c-3). As
+   built, upkeep like a structure's cost the autoplayer its one escort's worth in the Dark Era
+   (as much as its whole net there): it now stands idle warships down after the Dusk once they
+   cost more than 15% of a turn's gain, with no war and no swarm in reach.
+3. **2c-2, war between any two civilizations**: the war state on each tie; the AIs declare it
+   on the plan's causes; space battles once a turn, settled at once for everyone; a siege at any
+   settlement, not only the first star.
+4. **2c-3, conquest**: a settlement taken (damage, some people fleeing, the rest unwilling) or
+   razed, galactic free energy spent for what it held; the Breacher for the defended, the
+   Kinetic Lance.
+5. **2c-4, the interface and the checks**; **2c-5, the sprites** (Higgsfield: 6.5 credits on
+   the basic plan, checked 13 Oct; each shown to the player before it goes in).
+
 ### 2d. The AI's judgement, and the numbers
 
 - **Mostly peaceable.** A civilization weighs war only when:

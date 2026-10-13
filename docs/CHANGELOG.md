@@ -2351,3 +2351,37 @@ speed of light, judged as it arrives.
   picks a settlement of ours under a dark star (it had picked a neighbour's), the second keeps a
   refuge at our capital through the end of matter (seed 48514 had one of its own until the
   others played the same game).
+
+## Ships by role (13 Oct, parts 2c-0 and 2c-1)
+
+- **One strength per role** (`60d0617`): what a fleet fights with goes through
+  `strength(cls, against)`, against ships, settlements (raids, sieges) or swarms (defence,
+  hunts, attacks): a class's own figure where it has one, its attack otherwise. 30 harness games
+  identical, line for line.
+- **The first new ships:**
+  - the **Picket** (Orbital Defence; 25 industry, 8 matter): attack 1, half a point against
+    settlements, hull 4; it sees twice as far from where it waits, and turns half the raids away
+    from its star;
+  - the **Hunter** (Hunger Studies; 70 industry, 25 matter): attack 3, 6 against swarms, hull 12.
+  - The Breacher and the Kinetic Lance come with what they are for (taking settlements, 2c-3).
+- **Every warship has an upkeep** (Picket 0.1 energy a turn, Warden 0.3, Hunter 0.4, Aegis 0.8),
+  charged like a structure's: a pace slower than the Tide costs as much more as its turn is
+  longer, and asleep a tenth. The reserve's tooltip shows it.
+- **Screens**: each ship stopped at a star has its own chance of turning a raid away from it
+  (Picket 50%, Aegis 30%, Warden 20%, Hunter 10%), on top of what a Defence Grid or warships
+  fortified over the capital always did. An Aegis dug in fights at three times its attack (other
+  warships twice, as before).
+- **A Shipyard mends** a tenth of a hull a turn, for every ship of its civilization stopped at its
+  star (hulls never mended before).
+- **The build list** gives each ship's figures; the Wardens' Oath takes a quarter off every
+  warship, as its text says (it named the Warden and the Aegis).
+- **The autoplayer stands idle warships down** (ours and the others'): after the Dusk, with no war
+  and no swarm in reach of a settlement, once its warships cost more than 15% of what a turn
+  gains. Without that, our one escort, Vigil, cost about 0.4 energy a turn in the Dusk, 2 in the
+  Degenerate and Black Hole Ages and 24 in the Dark Era, as much as the whole net there: 361 of
+  900 games survived and 146 won.
+- **The numbers** (900 games): 409 survive and 152 win, a Degenerate Age of 75 turns (411, 167 and
+  76 after part 2b), within the noise. By fate: decay 175 of 450 (163), stable 140 of 239 (148),
+  curvature 94 of 211 (100).
+- **Check:** `unit/battle-roles` (new: strengths by role, defence against a swarm, dug in, upkeep
+  by pace and asleep, mending, screens, a Picket's eyes, the Oath).

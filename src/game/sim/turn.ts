@@ -17,7 +17,7 @@ import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { queueEvent, rollRandomEvent } from './events';
-import { advanceFleets, autoExplore, createColony, deepFor, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
+import { advanceFleets, autoExplore, createColony, deepFor, destroyColony, fleetUpkeep, newFleet, repairFleets, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
 import { clearStarClock, flareData, livedShare, scorched, turnStep } from './flare';
@@ -315,6 +315,7 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
     // ---------------------------------------------- 6. fleets, hazards, other minds
     advanceFleets(state, step.turnLength, c.mods);
     surveyWhereStationed(state);
+    repairFleets(state);
     // look around before exploring ships set off again, so they scan every star they reach
     updateDetection(state, c.mods);
     firstSwarm(state);
@@ -521,6 +522,7 @@ function economy(state: GameState, t: CivTurn) {
     insight += applyIndustry(state, c, y.y.industry, y.y.energy, mods);
   }
   eIn += jointIncome(state) * ctx.paceFactor;
+  eOut += fleetUpkeep(state, ctx.paceFactor);
   eOut += researchDraw(state, insight);
   accord -= latticeAlienation(state, mods);
   civ.energy += eIn - eOut;

@@ -302,7 +302,7 @@ export function updateDetection(state: GameState, mods: Mods) {
       .filter((e) => !!e.sys),
     ...fleets(state)
       .filter((f) => f.at)
-      .map((f) => ({ sys: state.systems[f.at!], range: mods.detect * (canSurvey(f) ? 3 : 1) })),
+      .map((f) => ({ sys: state.systems[f.at!], range: mods.detect * Math.max(canSurvey(f) ? 3 : 1, ...f.ships.map((s) => SHIP_BY_ID[s.cls]?.eyes ?? 1)) })),
   ];
   for (const s of Object.values(state.systems)) {
     if (state.civ.known[s.id]) continue;
@@ -323,6 +323,47 @@ export function updateDetection(state: GameState, mods: Mods) {
     for (const x of found) state.civ.known[x.s.id] = 1;
     if (found.length)
       log(state, `From ${here.name}, ${f.name} picks out ${found.length === 1 ? 'a distant star' : `${found.length} distant stars`}: ${found.map((x) => `${x.s.name} (${formatDistance(x.ly)})`).join(', ')}.`, 'info', here.id);
+  }
+}
+
+/**
+ * What the active civilization's warships cost it a turn (part 2c): each class its own upkeep;
+ * like a structure's, a turn slower than the Tide costs as much more as it is longer, and asleep
+ * it is a tenth.
+ */
+export function fleetUpkeep(state: GameState, paceFactor: number): number {
+  let u = 0;
+  for (const f of fleets(state)) for (const s of f.ships) u += SHIP_BY_ID[s.cls]?.upkeep ?? 0;
+  return u * Math.max(1, paceFactor) * (state.civ.dormant ? 0.1 : 1);
+}
+
+/** How many warships the active civilization keeps, for the upkeep's line. */
+export function warshipCount(state: GameState): number {
+  let n = 0;
+  for (const f of fleets(state)) for (const s of f.ships) if (SHIP_BY_ID[s.cls]?.upkeep) n++;
+  return n;
+}
+
+/** The chance the active civilization's ships stopped at a star turn a raid away from it: each screen a chance of its own. */
+export function screenAt(state: GameState, systemId: string): number {
+  let through = 1;
+  for (const f of fleets(state)) if (f.at === systemId) for (const s of f.ships) through *= 1 - (SHIP_BY_ID[s.cls]?.screen ?? 0);
+  return 1 - through;
+}
+
+/** The share of a ship's hull a Shipyard mends in a turn, at a star where its owner has one. */
+export const REPAIR_SHARE = 0.1;
+
+/** Ships stopped where their civilization has a Shipyard are mended, a little each turn (part 2c). */
+export function repairFleets(state: GameState) {
+  const yards = new Set(colonies(state).filter((c) => (c.structures.shipyard ?? 0) > 0).map((c) => c.systemId));
+  if (!yards.size) return;
+  for (const f of fleets(state)) {
+    if (!f.at || !yards.has(f.at)) continue;
+    for (const s of f.ships) {
+      const max = SHIP_BY_ID[s.cls]?.hp ?? s.hp;
+      if (s.hp < max) s.hp = Math.min(max, s.hp + max * REPAIR_SHARE);
+    }
   }
 }
 

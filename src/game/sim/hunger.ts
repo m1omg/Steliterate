@@ -29,7 +29,7 @@ export function systemMatter(state: GameState, sys: StarSystem): number {
 }
 
 /** One civilization's defence at a star against a swarm: its settlements' grids and its warships there. */
-function defenseAt(state: GameState, systemId: string, mods: Mods, owner = state.civ.id): number {
+export function defenseAt(state: GameState, systemId: string, mods: Mods, owner = state.civ.id): number {
   let d = 0;
   for (const c of allColonies(state)) {
     if (c.systemId !== systemId || c.owner !== owner) continue;
@@ -38,8 +38,8 @@ function defenseAt(state: GameState, systemId: string, mods: Mods, owner = state
   for (const f of allFleets(state)) {
     if (f.at !== systemId || f.owner !== owner) continue;
     // dug in with the settlement's own grid, a fortified fleet defends twice as well
-    const k = f.order === 'fortify' ? FORTIFY_BONUS : 1;
-    for (const s of f.ships) d += strength(s.cls, 'swarms') * k;
+    const dug = f.order === 'fortify';
+    for (const s of f.ships) d += strength(s.cls, 'swarms') * (dug ? (SHIP_BY_ID[s.cls]?.dugIn ?? FORTIFY_BONUS) : 1);
   }
   if (mods.flags.has('charter:wardens_oath')) d *= 1.5;
   // Shared Watch: a partner's warning, and a little of their strength (never a shield); the
@@ -296,8 +296,8 @@ export function swarmsHunt(state: GameState, mods: ModsBy) {
         // a part sent after this very ship strikes it surely
         if (sw.prey !== f.id && !rng.chance((sw.awake ? HUNT_AWAKE : HUNT_ASLEEP) * dark)) continue;
         const what = sw.awake ? 'The swarm' : 'Something asleep';
-        const k = f.order === 'fortify' ? FORTIFY_BONUS : 1;
-        const attack = f.ships.reduce((a, s) => a + strength(s.cls, 'swarms') * k, 0);
+        const dug = f.order === 'fortify';
+        const attack = f.ships.reduce((a, s) => a + strength(s.cls, 'swarms') * (dug ? (SHIP_BY_ID[s.cls]?.dugIn ?? FORTIFY_BONUS) : 1), 0);
         if (attack > 0 && attack >= sw.size * 1.2 * rng.range(0.6, 1.1)) {
           const lost = Math.min(sw.size, attack * 0.3);
           sw.size -= lost;
