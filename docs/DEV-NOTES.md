@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -520,6 +520,35 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     others: the Hunger heard of in one, or the corrupted on the weakest; arm, go at `WAR_ODDS`,
     tire at `WAR_TIRES`), `planDefence` (ours, any strategy: to the front, dug in). We cannot make
     peace in a war they began (`makePeace`).
+    Conquest (2c-3, the end of `conflict.ts`): `assaultBlocked` (a war; warships at its star and
+    none of its owner's; `siegeAt` at least `SIEGE_TURNS`, in a war the stormer began; `walled`, a
+    Defence Grid or a Bastion Shell, needs a `breaches` ship), `assault` (`assaultForce`, the
+    warships' strength against settlements, × the hashed `luck` against `holdOf`; hulls pay either
+    way; won, `conquer` and the war's `at` moves to `frontOf` the enemy's next settlement), and
+    `conquer(state, by, c, how: Fall, cause)` for every way a settlement falls ('take', 'raze',
+    'lance'): `CONQUEST_GFE` a person or structure from `state.gfe`; taken, `FLEE` to their own
+    nearest settlement, structures × `SPOILS`, `TAKEN_DAMAGE` to the hearth, queue cleared,
+    overdrive off, the owner changed (a Deep beside the winner's own merges into it); the winner's
+    resolve and dissent by cause, `flags.conquests`, the loser's `flags.lost`; `heardEverywhere`
+    (`infamyOf`; without a cause a Hunger act of `FALL_TAINT`); the last settlement ends the
+    civilization through the outbox (`endCiv`: 'Seized' by us, fate 'seized' or 'destroyed'; by
+    another, 'Conquered', fate 'conquered', set at once on the record since `updateSurvivors`
+    keeps a fate it finds) and ours sets `flags.conquered`, a defeat of its own (`checkEndings`).
+    Our `seizeSurvivor(state, id, raze)` on a civilization of its own is `assault` at `sv.war.at`
+    (the light neighbours' and forks' path is unchanged); our `declareWar` now keeps its cause on
+    the war. The others storm in `battlesTurn` when nothing blocks it, razing from `CORRUPT_AT`.
+    `warOf` gives no war once either side's game is over. The Kinetic Lance: `strikeBlocked`,
+    `launchStrike` (the Lance alone in a fleet of its own, `orderMove(..., 'strike')`,
+    `Fleet.targetColony`, `LANCE_GFE` at launch), flown at `LANCE_SPEED` (`advanceFleets`,
+    `isLance`) and kept on its order at arrival (`arrive` returns early), struck in `strikesTurn`
+    at the start of `battlesTurn`: the target owner's `screenAt(state, sys, owner)` against a
+    hashed draw; a world's settlement `conquer(..., 'lance')`, one in the Deep loses `LANCE_DEEP`.
+    A Lance on its order is neither surveyed from (`surveyWhereStationed`) nor hunted by a swarm
+    (`swarmsHunt`): it does not stop. The AI builds a Breacher (`needsBreacher`, `arm` in
+    `auto.ts`) when the front is walled; it does not use the Lance yet (2d). In a war the other
+    side began, the defender cannot storm (`siegeAt` counts only the declarer's siege;
+    `assaultBlocked` and `seizeBlocked` say so). A war whose settlement is gone (taken, razed,
+    abandoned) moves on to the enemy's next (`warTurn` for ours, `battlesTurn` for the others').
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not
@@ -1472,6 +1501,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the events of ordinary life for everyone; End Turn in slices: part 2a's reference (13 Oct; `3678301`) | 140 | 41 victories, Degenerate Age 71 turns; 900 games 397 / 131 / 71 (410 / 143 / 72 before), within the noise; the slices change nothing (24 games identical). By fate: decay 164 / 450, stable 136 / 239, curvature 97 / 211. Alive at our end: uploaded 30%, Chorus 28%, Tessellate 20% with the Archive of Everything its own in 198 of 558, sleepers 19%, gardens 17% |
 | the Hunger among the civilizations (13 Oct; part 2b) | 135 | 64 victories, Degenerate Age 78 turns; 900 games 411 / 167 / 76 (397 / 131 / 71 at 2a's reference): survival within the noise, victories up as a neighbour offers notes only on what it knows (in 40 games 159 offers against 355, 1,260 energy paid against 5,927), so our autoplayer keeps its energy and quickens. By fate: decay 163 / 450, stable 148 / 239 (102 victories), curvature 100 / 211 (59). Of 2,700 others, 895 took a Hunger step (673 to Taint 15, 158 to 27, 64 to 45), none past 45; 6 of the first 300 games as before |
 | ships by role: upkeep, screens, mending, the Picket and the Hunter (13 Oct; parts 2c-0, 2c-1) | 149 | 47 victories, Degenerate Age 75 turns; 900 games 409 / 152 / 75 (411 / 167 / 76 after 2b), within the noise. By fate: decay 175 / 450, stable 140 / 239, curvature 94 / 211. Without the autoplayer standing idle warships down after the Dusk: 361 / 146 (Vigil's upkeep in the Dark Era as much as the whole net) |
+| war between civilizations, conquest, the Breacher and the Kinetic Lance (13 Oct; parts 2c-2, 2c-3) | 149 | 47 victories, Degenerate Age 75 turns; 900 games 409 / 152 / 75, identical to 2c-1 game for game: no war starts in any of the 900 (no one hears of 60 Taint in a neighbour, or reaches it); the war is checked by `unit/civ-war` and `unit/conquest` |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

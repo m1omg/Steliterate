@@ -2385,3 +2385,76 @@ speed of light, judged as it arrives.
   curvature 94 of 211 (100).
 - **Check:** `unit/battle-roles` (new: strengths by role, defence against a swarm, dug in, upkeep
   by pace and asleep, mending, screens, a Picket's eyes, the Oath).
+
+## War between civilizations, and conquest (13 Oct, parts 2c-2 and 2c-3)
+
+- **War between any two civilizations** (`ab6bd75`, `sim/conflict.ts`). The others declare war on
+  each other and on us by our rules: the Threads' consent (60 accord) and what it costs, the
+  pacts between them ended, and infamy at the speed of light, none for a war on the Hunger in
+  them. Their causes are few:
+  - the Hunger they have heard of in someone (60 Taint heard), if they are not on that path
+    themselves;
+  - or, far down it themselves (60 Taint of their own), the weakest they know.
+
+  They arm first, and go when their warships are half again what stands at the front, their
+  enemy's settlement nearest their capital. They make peace after 30 turns, or once their warships
+  are gone. A war on us arrives as a signal at the speed of light, only they can end it, and our
+  autoplayer gathers its warships at the front, dug in.
+- **Battles once a turn, everyone at once.** Wherever warships of two civilizations at war meet,
+  or warships stand at an enemy's settlement:
+  - each side fires with what stood at the start of the turn: its warships' strength against
+    ships (dug in, a fortified ship's own bonus) and its settlements' defences;
+  - each side's luck is drawn from the seed, the turn, the star and the side, never the dice, so
+    the order of the fleets decides nothing;
+  - warships that hold a settlement's star, with none of its owner's left there, besiege it: its
+    owner's stores and will run down.
+- **Conquest, a settlement at a time** (2c-3), by the same rules for everyone. The war is fought
+  at the enemy's settlement nearest the attacker's capital.
+  - **Storming it:** hold the siege there three turns with none of its warships left. Then storm
+    it with the warships' strength against settlements, on a draw (0.6 to 1.4), against what it
+    holds: 2, plus 0.3 a person, plus its Defence Grids (8 each), plus 10 for a Bastion Shell.
+    Either way it costs hulls, more for a failure; a failure begins the siege again and costs 2
+    resolve.
+  - **Taken:** three tenths of its people flee to their own nearest settlement, the rest stay and
+    are the conqueror's. Its structures keep 70% (rounded down), its hearth takes 0.25 damage, its
+    queue is lost and its overdrive stops. A Deep beside the conqueror's own at that star joins it.
+  - **Razed:** it is gone.
+  - **Either way:**
+    - the galaxy's free energy pays 0.0003 for every person and structure it held;
+    - the conqueror's people pay 3 resolve and 4 dissent (8 and 10 without a cause);
+    - everyone hears of it as its light arrives (taking −5 with the Hunger in them as cause, −10
+      with another, −25 with none; a razing half as much again, a Lance's strike twice);
+    - without a cause it is a Hunger act: 5 Taint for a taking, 8 for a razing.
+  - **After it:** the war goes on at the enemy's next settlement, and a war whose settlement is
+    lost to anything else moves on the same way.
+  - **The last settlement** ends that civilization ('Conquered'; 'Seized' when it was ours, its
+    fate 'seized' or 'destroyed'). When it is ours, a defeat of its own: **Conquered**.
+  - Our Seize on a civilization of its own is the same assault, at the settlement the war is
+    fought at, a raze if we choose. The light neighbours and our own people who left us are
+    seized as before.
+  - In a war the other side began, the defender fights where they come and cannot storm theirs.
+- **The Breacher** (Aegis Lattices; 120 industry, 50 matter): attack 1, 10 against settlements, 2
+  against ships, hull 20, upkeep 0.6. Without one, a settlement behind a Defence Grid or a Bastion
+  Shell cannot be stormed. The others build one when the front is walled.
+- **The Kinetic Lance** (Relativistic Arks; 200 industry, 120 matter, upkeep 0.2): one strike at
+  an enemy's settlement we can see, from anywhere.
+  - It flies alone at 99% of light. One leaves its fleet, and only one is in flight at a time.
+    Driving it spends 0.005 of the galaxy's free energy.
+  - It strikes as it arrives, in the turn's battles, and is spent. It is neither surveyed from nor
+    caught by a swarm there.
+  - The screens of the target's own ships waiting at that star may turn it aside, on a hashed
+    draw.
+  - Unless they do, a settlement on a world is struck down whole, and one in the Deep loses half
+    its people and half of everything it built.
+  - Everyone hears of it, turned aside or not; without a cause it is a Hunger act of 10.
+  - The bend, stated in the Manual: near the speed of light a strike would be very hard to stop.
+    The others do not use the Lance yet (part 2d).
+- **The Codex** says that one pool of free energy for the whole galaxy is the game's own device,
+  and that war spends it too.
+- **The harness** marks each neighbour with `*N`, the wars it began; `#N`, the settlements it took
+  or destroyed; and `%N`, those it lost in war. Our own line adds `took N` and `lost N`.
+- **The numbers** (900 games): 409 survive and 152 win, a Degenerate Age of 75 turns, identical to
+  part 2c-1 game for game, after 2c-2 and again after 2c-3. No war starts in any of the 900, ours
+  or the others': no one hears of 60 Taint in a neighbour, and no one reaches it (part 2b: none
+  past 45). The war is checked by `unit/civ-war` (2c-2) and `unit/conquest` (2c-3, new), and the
+  desperate's wars come with part 2d.

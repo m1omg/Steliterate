@@ -9,7 +9,7 @@ import { habitabilityOf } from './terraform';
 import { THAW_ROOM, clockCiv, scorched, stepTurns, thawed } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
-import { allColonies, colonies, distLy, eraIndex, fleets, log, logTo, ownFleet, swarmSeenAt, uid, withRng } from './util';
+import { allColonies, allFleets, colonies, distLy, eraIndex, fleets, log, logTo, ownFleet, swarmSeenAt, uid, withRng } from './util';
 import { calendarEra } from '../fate';
 
 // No faster-than-light travel. Fleets advance speed × turn length light-years per turn.
@@ -79,7 +79,7 @@ function fleetName(state: GameState, ships: string[]): string {
 export function orderMove(state: GameState, fleetId: string, to: string, order: Fleet['order'] = 'move', targetBody?: string): string | null {
   const f = ownFleet(state, fleetId);
   if (!f || !f.at) return 'That fleet is already under way.';
-  if (f.at === to && order !== 'colonize' && order !== 'tame') return 'Already there.';
+  if (f.at === to && order !== 'colonize' && order !== 'tame' && order !== 'strike') return 'Already there.';
   if (f.at !== to && f.ships.some((x) => SHIP_BY_ID[x.cls]?.inSystem)) return 'A System Lighter cannot leave its star.';
   const mods = computeMods(state);
   const a = state.systems[f.at];
@@ -106,10 +106,18 @@ export function orderMove(state: GameState, fleetId: string, to: string, order: 
   return null;
 }
 
+/** A Kinetic Lance's speed, as a share of light's, whatever its civilization's ships can do. */
+export const LANCE_SPEED = 0.99;
+
+/** Whether a fleet is a Kinetic Lance alone, flying at LANCE_SPEED. */
+export function isLance(f: Fleet): boolean {
+  return f.ships.length > 0 && f.ships.every((s) => SHIP_BY_ID[s.cls]?.lance);
+}
+
 export function advanceFleets(state: GameState, L: number, mods: Mods) {
   for (const f of fleets(state)) {
     if (!f.to || f.at) continue;
-    const step = isFinite(L) ? mods.speed * L : Infinity;
+    const step = isFinite(L) ? (isLance(f) ? Math.max(mods.speed, LANCE_SPEED) : mods.speed) * L : Infinity;
     f.traveled = Math.min(f.distance, f.traveled + step);
     if (f.traveled >= f.distance) {
       f.at = f.to;
@@ -128,6 +136,8 @@ function arrive(state: GameState, f: Fleet) {
   f.to = null;
   f.traveled = 0;
   f.distance = 0;
+  // a Kinetic Lance does not stop: it strikes, with every other battle of the turn (conflict.ts)
+  if (f.order === 'strike') return;
   // any ship charts the system it reaches (probes are just cheap, fast to build and far-sighted)
   if (state.civ.known[sys.id] !== 2) survey(state, sys.id);
   if (f.order === 'colonize' && f.targetBody) {
@@ -144,7 +154,8 @@ function arrive(state: GameState, f: Fleet) {
  */
 export function surveyWhereStationed(state: GameState) {
   for (const f of fleets(state)) {
-    if (f.at && state.systems[f.at] && state.civ.known[f.at] !== 2) survey(state, f.at);
+    // (a Kinetic Lance does not stop where it strikes)
+    if (f.at && f.order !== 'strike' && state.systems[f.at] && state.civ.known[f.at] !== 2) survey(state, f.at);
   }
 }
 
@@ -344,10 +355,10 @@ export function warshipCount(state: GameState): number {
   return n;
 }
 
-/** The chance the active civilization's ships stopped at a star turn a raid away from it: each screen a chance of its own. */
-export function screenAt(state: GameState, systemId: string): number {
+/** The chance a civilization's ships stopped at a star (the active one's, unless another is named) turn a raid or a Kinetic Lance away from it: each screen a chance of its own. */
+export function screenAt(state: GameState, systemId: string, owner = state.civ.id): number {
   let through = 1;
-  for (const f of fleets(state)) if (f.at === systemId) for (const s of f.ships) through *= 1 - (SHIP_BY_ID[s.cls]?.screen ?? 0);
+  for (const f of allFleets(state)) if (f.owner === owner && f.at === systemId) for (const s of f.ships) through *= 1 - (SHIP_BY_ID[s.cls]?.screen ?? 0);
   return 1 - through;
 }
 

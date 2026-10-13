@@ -34,8 +34,8 @@ import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
 import { availableTechs, techCost } from './sim/research';
 import { canSettle, fleetUpkeep } from './sim/fleets';
-import { allFleets, colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, temperament, threadTotals } from './sim/util';
-import type { Body, Colony, Fate, GameState, StarSystem, SurvivorWay, ThreadId } from './types';
+import { allColonies, allFleets, colonies, distLy, eraIndex, fleets, hasTech, leftBehind, swarmSeenAt, temperament, threadTotals } from './sim/util';
+import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, ThreadId } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
@@ -43,7 +43,7 @@ import { DEGENERATE_END, MATTER_END, calendarEra, fateKnown, fateOf, inAge, matt
 import { FLOW_ETA, flowAhead, flowing, keeping } from './sim/flow';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost, proposePact } from './sim/pacts';
 import { HUNGER_CAUSE, WAR_ACCORD, anyWar, declareWar, makePeace, seizeBlocked, warBlocked, warCause, warDefence } from './sim/war';
-import { declareOn, enemiesOf, fleetFire, frontOf, guardAt, peaceBetween, warOf } from './sim/conflict';
+import { declareOn, enemiesOf, fleetFire, frontOf, guardAt, peaceBetween, walled, warOf } from './sim/conflict';
 import { CORRUPT_AT, JUST_CAUSE_AT, SANCTION_AT } from './sim/judge';
 import { raidStrength, seizeSurvivor } from './sim/survivors';
 import { SHIP_BY_ID, isWarship, strength } from './data/ships';
@@ -124,6 +124,8 @@ function planWarAI(state: GameState) {
       continue;
     }
     for (const f of warships) if (w.at && f.at && f.at !== w.at && !f.to) orderFleet(state, f.id, w.at, 'move');
+    // behind a Defence Grid or a Bastion Shell: only a Breacher breaks in
+    if (needsBreacher(state, foe, w.at, warships)) arm(state, 'breacher', true);
   }
   if (enemiesOf(state, me).length) return;
   const target = warTarget(state);
@@ -136,10 +138,26 @@ function planWarAI(state: GameState) {
     if (declareOn(state, me, target.id, target.cause, front) === null) for (const f of warships) if (f.at && !f.to) orderFleet(state, f.id, front, 'move');
     return;
   }
-  // arm
+  // arm: a Breacher first if the front is walled, then Hunters against the Hunger, or Wardens
+  if (needsBreacher(state, target.id, front, warships)) arm(state, 'breacher', true);
+  else if (warships.length < 6) arm(state, target.cause === HUNGER_CAUSE && hasTech(state, 'hunger_studies') ? 'hunter' : 'warden');
+}
+
+/** Whether the enemy's settlement at the front is walled, a Breacher can be built, and none is on its way there or being built. */
+function needsBreacher(state: GameState, foe: string, front: string | undefined, warships: Fleet[]): boolean {
+  if (!front || !hasTech(state, 'aegis_lattices')) return false;
+  const c = allColonies(state).find((x) => x.owner === foe && x.systemId === front);
+  if (!c || !walled(c)) return false;
+  return !warships.some((f) => f.ships.some((s) => SHIP_BY_ID[s.cls]?.breaches)) && !colonies(state).some((x) => x.queue.some((q) => q.key === 'breacher'));
+}
+
+/** Build a warship at the capital, if it has a Shipyard, room in its queue and energy to spare (`once`: unless one is already queued there). */
+function arm(state: GameState, cls: string, once = false) {
+  const civ = state.civ;
   const cap = civ.capitalId ? state.colonies[civ.capitalId] : undefined;
-  if (cap && (cap.structures.shipyard ?? 0) > 0 && cap.queue.length < 3 && civ.energy > 100 && warships.length < 6)
-    queueBuild(state, cap.id, 'ship', target.cause === HUNGER_CAUSE && hasTech(state, 'hunger_studies') ? 'hunter' : 'warden');
+  if (!cap || !((cap.structures.shipyard ?? 0) > 0) || cap.queue.length >= 3 || civ.energy <= 100) return;
+  if (once && cap.queue.some((q) => q.key === cls)) return;
+  queueBuild(state, cap.id, 'ship', cls);
 }
 
 /** Whom another civilization would go to war with, and why: the Hunger it has heard of in one, or, far down that path itself, the weakest it knows. */
@@ -684,7 +702,7 @@ function planWar(state: GameState) {
     if (sv.war) {
       if (seizeBlocked(state, sv) === null) seizeSurvivor(state, sv.id);
       else if (state.turn - sv.war.since > 30) makePeace(state, sv.id);
-      else if (raidStrength(state, sv.homeSystemId) <= 0) for (const f of warships) if (f.at && f.at !== sv.homeSystemId) orderFleet(state, f.id, sv.homeSystemId, 'move');
+      else if (raidStrength(state, sv.war.at ?? sv.homeSystemId) <= 0) for (const f of warships) if (f.at && f.at !== (sv.war.at ?? sv.homeSystemId)) orderFleet(state, f.id, sv.war.at ?? sv.homeSystemId, 'move');
       continue;
     }
     if (!warCause(state, sv)) continue;

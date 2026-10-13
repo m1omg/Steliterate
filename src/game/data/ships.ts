@@ -22,6 +22,10 @@ export interface ShipDef {
   eyes?: number;
   /** How much stronger it defends dug in (fortified) than in the open, if not FORTIFY_BONUS. */
   dugIn?: number;
+  /** It can break a settlement's defences: without one, a settlement behind a Defence Grid or a Bastion Shell cannot be stormed. */
+  breaches?: boolean;
+  /** A one-use strike at a settlement, flown at nearly the speed of light (the Kinetic Lance). */
+  lance?: boolean;
   hp: number;
   survey?: boolean;
   settles?: { thread: ThreadId; pops: number; structure?: string };
@@ -40,6 +44,8 @@ export const SHIPS: ShipDef[] = [
   { id: 'picket', name: 'Picket', desc: 'A light watcher: long-range eyes, and a screen that turns raiders away from the star where it waits. No match for a swarm.', tech: 'orbital_defense', cost: 25, matter: 8, mass: 1, attack: 1, vs: { settlements: 0.5 }, hp: 4, upkeep: 0.1, screen: 0.5, eyes: 2 },
   { id: 'warden', name: 'Warden', desc: 'A patched-together escort with lasers and kinetic launchers.', tech: 'orbital_defense', cost: 45, matter: 15, mass: 3, attack: 3, hp: 10, upkeep: 0.3, screen: 0.2 },
   { id: 'hunter', name: 'Hunter', desc: 'Built on what Hunger Studies learned of the swarms: it strikes where a swarm holds itself together, twice as hard as a Warden.', tech: 'hunger_studies', cost: 70, matter: 25, mass: 4, attack: 3, vs: { swarms: 6 }, hp: 12, upkeep: 0.4, screen: 0.1 },
+  { id: 'breacher', name: 'Breacher', desc: 'A siege hull: shaped charges, mining rigs and a heavy prow, to break a settlement’s defences. Without one, a settlement behind a Defence Grid or a Bastion Shell cannot be stormed.', tech: 'aegis_lattices', cost: 120, matter: 50, mass: 8, attack: 1, vs: { settlements: 10, ships: 2 }, hp: 20, upkeep: 0.6, breaches: true },
+  { id: 'lance', name: 'Kinetic Lance', desc: 'A mass driven at nearly the speed of light: a strike at a settlement, once, stopped only by the screens of ships waiting there. Everyone hears of it, and it spends the galaxy’s free energy. One in flight at a time.', tech: 'relativistic_arks', cost: 200, matter: 120, mass: 20, attack: 0, hp: 1, upkeep: 0.2, lance: true },
   { id: 'aegis', name: 'Aegis', desc: 'A heavy picket built around a salvaged reactor, at its strongest dug in.', tech: 'aegis_lattices', cost: 110, matter: 40, mass: 8, attack: 8, hp: 30, upkeep: 0.8, screen: 0.3, dugIn: 3 },
   { id: 'tender', name: 'Swarm Tender', desc: 'Broadcasts the dead makers’ command language to calm a swarm.', tech: 'command_language', cost: 70, matter: 20, mass: 3, attack: 0, hp: 8, tames: true },
 ];
@@ -62,6 +68,8 @@ export function shipNote(d: ShipDef): string {
     d.screen ? `turns ${Math.round(d.screen * 100)}% of raids away from its star` : '',
     d.eyes ? `sees ${d.eyes}× as far` : '',
     d.dugIn ? `${d.dugIn}× as strong fortified` : '',
+    d.breaches ? 'breaks a settlement’s defences' : '',
+    d.lance ? 'one strike at a settlement' : '',
   ].filter(Boolean);
   return `${parts.join('; ')}.`;
 }
@@ -89,8 +97,8 @@ const HULL: Record<string, FleetLook> = {
 /** Which painted hull stands for a fleet on the map and in the lists: its heaviest warship, else its first settler, else its tender. */
 export function fleetLook(classes: string[]): FleetLook {
   if (classes.includes('aegis')) return HULL.aegis;
-  // (the Hunter and the Picket wear the Warden's hull until they have their own)
-  if (classes.includes('warden') || classes.includes('hunter') || classes.includes('picket')) return 'war';
+  // (the Hunter, the Picket, the Breacher and the Lance wear the Warden's hull until they have their own)
+  if (classes.includes('warden') || classes.includes('hunter') || classes.includes('picket') || classes.includes('breacher') || classes.includes('lance')) return 'war';
   const settler = classes.find((c) => SHIP_BY_ID[c]?.settles);
   if (settler) return HULL[settler] ?? 'settler';
   if (classes.length > 0 && classes.every((c) => c === 'probe')) return 'probe';

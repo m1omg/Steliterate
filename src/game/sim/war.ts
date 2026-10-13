@@ -11,10 +11,11 @@ import type { GameState, Survivor } from '../types';
 import { THREADS } from '../types';
 import { endPact, pactsWith } from './pacts';
 import { dealSize, distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
-import { allFleets, capital, clamp, fleets, log, marks } from './util';
+import { allColonies, allFleets, capital, clamp, fleets, log, marks } from './util';
 import { isWarship } from '../data/ships';
 import { send } from '../civs';
 import { JUST_CAUSE_AT } from './judge';
+import { assaultBlocked, frontOf } from './conflict';
 
 /** Accord the Threads' consent to a war costs. */
 export const WAR_ACCORD = 60;
@@ -94,7 +95,9 @@ export function declareWar(state: GameState, id: string): string | null {
   for (const k of pactsWith(sv)) endPact(state, sv.id, k);
   delete sv.proposal;
   delete sv.promised;
-  sv.war = { since: state.turn, siege: 0 };
+  // (with a civilization of its own, the war is fought at its settlement nearest us: conflict.ts)
+  const front = state.civs[sv.id] ? frontOf(state, sv.id, civ.id) : undefined;
+  sv.war = { since: state.turn, siege: 0, ...(front ? { at: front } : {}), ...(cause ? { cause } : {}) };
   civ.flags.wars = (civ.flags.wars ?? 0) + 1;
   // they hear it when the light arrives, and so does everyone else
   (sv.news ??= []).push({ at: lightAt(state, distanceToThem(state, sv)), delta: -40, what: 'you declared war on them' });
@@ -122,6 +125,13 @@ export function makePeace(state: GameState, id: string): string | null {
 export function seizeBlocked(state: GameState, sv: Survivor): string | null {
   if (!sv.alive) return 'They are gone.';
   if (!sv.war) return 'Only in a war: declare one first.';
+  if (state.civs[sv.id]) {
+    // (a war they began is fought at our settlement: conflict.ts, assaultBlocked)
+    if (sv.war.by && sv.war.by !== state.civ.id) return 'They began this war: you fight where they come, and cannot storm theirs.';
+    const at = sv.war.at ?? sv.homeSystemId;
+    const c = allColonies(state).find((x) => x.owner === sv.id && x.systemId === at);
+    return c ? assaultBlocked(state, state.civ.id, c) : 'They hold no settlement there now.';
+  }
   if (raidStrength(state, sv.homeSystemId) <= 0) return 'You need warships at their first star.';
   if (sv.war.siege < SIEGE_TURNS) return `Hold the siege: ${SIEGE_TURNS - sv.war.siege} more turn(s) of warships at their first star.`;
   return null;
@@ -139,21 +149,29 @@ export function warTurn(state: GameState, chance: () => number) {
     civ.dissent = Math.min(100, civ.dissent + (warCause(state, sv) ? 0.2 : 0.5));
     // (the siege of a war they began is theirs: conflict.ts)
     if (sv.war!.by && sv.war!.by !== civ.id) continue;
-    const attack = raidStrength(state, sv.homeSystemId);
+    const real = !!state.civs[sv.id];
+    const at = sv.war!.at ?? sv.homeSystemId;
+    // (what the war was fought at is gone: on to the next of theirs)
+    if (real && !allColonies(state).some((c) => c.owner === sv.id && c.systemId === at)) {
+      sv.war!.siege = 0;
+      const next = frontOf(state, sv.id, civ.id);
+      if (next) sv.war!.at = next;
+      continue;
+    }
+    const attack = raidStrength(state, at);
     if (attack <= 0) {
       sv.war!.siege = 0;
       continue;
     }
     // a civilization of its own holds its first star while its warships are there
-    const real = !!state.civs[sv.id];
-    if (real && allFleets(state).some((f) => f.owner === sv.id && f.at === sv.homeSystemId && f.ships.some((s) => isWarship(s.cls)))) continue;
+    if (real && allFleets(state).some((f) => f.owner === sv.id && f.at === at && f.ships.some((s) => isWarship(s.cls)))) continue;
     sv.war!.siege++;
     // a blockade: the stores of a civilization of its own run down, and its will with them
     if (state.civs[sv.id]) send(state, sv.id, { energy: -Math.round(BLOCKADE * 400), resolve: -1 });
     else sv.health = Math.max(0, sv.health - BLOCKADE);
     // their guns answer ours (a civilization of its own fights with what it has: battlesTurn)
     if (real) {
-      state.battles.push({ systemId: sv.homeSystemId, turn: state.turn, text: `The siege of ${sv.name}, turn ${sv.war!.siege}.` });
+      state.battles.push({ systemId: at, turn: state.turn, text: `The siege of ${sv.name}, turn ${sv.war!.siege}.` });
       continue;
     }
     const def = warDefence(state, sv);
@@ -177,7 +195,10 @@ export function warHeat(state: GameState): Map<string, number> {
   if (!anyWar(state)) return out;
   const cap = capital(state);
   if (cap) out.set(cap.systemId, 8);
-  for (const sv of Object.values(state.survivors)) if (atWar(sv) && raidStrength(state, sv.homeSystemId) > 0) out.set(sv.homeSystemId, (out.get(sv.homeSystemId) ?? 0) + 10);
+  for (const sv of Object.values(state.survivors)) {
+    const at = sv.war?.at ?? sv.homeSystemId;
+    if (atWar(sv) && raidStrength(state, at) > 0) out.set(at, (out.get(at) ?? 0) + 10);
+  }
   return out;
 }
 

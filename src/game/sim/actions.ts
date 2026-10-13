@@ -24,6 +24,7 @@ import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
 import { allColonies, capital, colonies, hasCharter, hasTech, leftBehind, log, ownColony, ownFleet, savableName, uid } from './util';
 import { hungerAct } from './judge';
+import { launchStrike } from './conflict';
 import { ageReached, inAge, matterGone } from '../fate';
 
 export type ActionResult = string | null; // error message or null on success
@@ -523,8 +524,14 @@ export function shutHaloSiphons(state: GameState): ActionResult {
   return null;
 }
 
-export function seize(state: GameState, survivorId: string): ActionResult {
-  return seizeSurvivor(state, survivorId);
+/** Storm their star (a civilization of its own: the settlement the war is fought at), taking it, or with `raze` destroying it. */
+export function seize(state: GameState, survivorId: string, raze = false): ActionResult {
+  return seizeSurvivor(state, survivorId, raze);
+}
+
+/** Strike one of the enemy's settlements with a Kinetic Lance from this fleet. */
+export function strike(state: GameState, fleetId: string, colonyId: string): ActionResult {
+  return launchStrike(state, fleetId, colonyId);
 }
 
 /** Raid the civilization whose star this warship is parked at. Returns an error, or what happened. */

@@ -481,7 +481,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                       </>
                     ) : (
                       <div class="dim" style={{ fontSize: '13.5px' }}>
-                        {sv.fate === 'faded' ? 'Their lights went out.' : sv.fate === 'saved' ? 'They made it, with our help.' : sv.fate === 'absorbed' ? 'They live on as part of us.' : sv.fate === 'seized' ? 'We took their star.' : sv.fate === 'devoured' ? 'We ate them.' : sv.fate === 'transcended' ? 'They went somewhere we cannot follow.' : sv.fate === 'hungered' ? 'They became what they feared.' : 'Gone.'}
+                        {sv.fate === 'faded' ? 'Their lights went out.' : sv.fate === 'saved' ? 'They made it, with our help.' : sv.fate === 'absorbed' ? 'They live on as part of us.' : sv.fate === 'seized' ? (s.civs[sv.id] ? 'We took the last of their settlements.' : 'We took their star.') : sv.fate === 'destroyed' ? 'We destroyed the last of their settlements.' : sv.fate === 'conquered' ? 'Another civilization took the last of their settlements.' : sv.fate === 'devoured' ? 'We ate them.' : sv.fate === 'transcended' ? 'They went somewhere we cannot follow.' : sv.fate === 'hungered' ? 'They became what they feared.' : 'Gone.'}
                       </div>
                     )}
                   </>

@@ -14,7 +14,7 @@ import { canConverse, rangeWith, sendSignal, voiceRange, voiceThread } from './s
 import { queueEvent } from './events';
 import { survivorWorld } from './homes';
 import { formatDistance, formatYears, logTurnLength } from '../eras';
-import { capital, clamp, colonies, distLy, fleets, hasCharter, log, marks, ownFleet, threadTotals, withRng } from './util';
+import { allColonies, capital, clamp, colonies, distLy, fleets, hasCharter, log, marks, ownFleet, threadTotals, withRng } from './util';
 import { turnStep } from './flare';
 import { capacity } from './economy';
 import { computeMods } from './mods';
@@ -23,6 +23,7 @@ import { flowing } from './flow';
 import { send } from '../civs';
 import { civOf, endCiv, syncSurvivor } from './others';
 import { CORRUPT_AT, HEARD_CEILING, heardOfUs, hungerAct, shuns } from './judge';
+import { assault } from './conflict';
 import type { Rng } from '../rng';
 
 // Fellow survivors: other young civilizations facing the same end. Simulated lightly: their
@@ -293,7 +294,8 @@ export function updateSurvivors(state: GameState, logL: number, mods: Mods, L: n
         sv.alive = false;
         // one that won its own game has gone beyond us; otherwise it faded
         const o = civOf(state, sv)?.outcome;
-        sv.fate = o?.kind === 'dark' ? 'hungered' : o && o.kind !== 'defeat' ? 'transcended' : 'faded';
+        // (conquered by another, its last settlement taken: the fate is set as it falls, conflict.ts)
+        sv.fate = o?.kind === 'dark' ? 'hungered' : o && o.kind !== 'defeat' ? 'transcended' : (sv.fate ?? 'faded');
         endCiv(state, sv, 'Faded');
         if (sv.exodus) {
           delete sv.exodus;
@@ -640,14 +642,22 @@ export function jointIncome(state: GameState): number {
 /**
  * Take a survivor's star by force: only in a war, after a siege, and it is a battle we can lose.
  * A heavy choice. Our own people who left us come back without Taint, with every settlement they
- * took.
+ * took. A civilization of its own is stormed a settlement at a time, the one the war is fought at,
+ * by the same rules as anyone's assault (conflict.ts): taken, or with `raze`, destroyed.
  */
-export function seizeSurvivor(state: GameState, id: string): string | null {
+export function seizeSurvivor(state: GameState, id: string, raze = false): string | null {
   const sv = state.survivors[id];
   if (!sv || !sv.alive) return 'They are gone.';
   const blocked = seizeBlocked(state, sv);
   if (blocked) return blocked;
   const civ = state.civ;
+  if (civOf(state, sv)) {
+    const at = sv.war!.at ?? sv.homeSystemId;
+    const c = allColonies(state).find((x) => x.owner === sv.id && x.systemId === at);
+    if (!c) return 'They hold no settlement there now.';
+    const r = assault(state, civ.id, c.id, raze);
+    return typeof r === 'string' ? r : null;
+  }
   const sys = state.systems[sv.homeSystemId];
   const attack = raidStrength(state, sys.id);
   const def = warDefence(state, sv);
@@ -672,10 +682,7 @@ export function seizeSurvivor(state: GameState, id: string): string | null {
   sv.alive = false;
   sv.fate = 'seized';
   delete sv.war;
-  if (civOf(state, sv)) {
-    // a civilization of its own: its settlements and ships are ours now, its people with them
-    endCiv(state, sv, 'Seized', civ.id);
-  } else if (sv.way === 'fork' && sv.forkOf) {
+  if (sv.way === 'fork' && sv.forkOf) {
     // our own people: every settlement they took comes back, and they with it
     const t = sv.forkOf;
     const places = sv.systems.map((sid) => survivorWorld(state, sv, sid)).filter((b): b is Body => !!b);

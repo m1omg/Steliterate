@@ -215,7 +215,7 @@ export interface Ship {
 }
 
 // fortify: warships dug in to defend where they are; hold: parked on purpose (neither counts as idle)
-export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame' | 'fortify' | 'hold';
+export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame' | 'fortify' | 'hold' | 'strike';
 
 export interface Fleet {
   id: string;
@@ -230,6 +230,8 @@ export interface Fleet {
   distance: number; // ly of current leg
   order: FleetOrder;
   targetBody?: string;
+  /** A Kinetic Lance's target (order 'strike'): the settlement it will strike when it arrives. */
+  targetColony?: string;
   /** Standing orders the fleet carries out by itself (absent in older saves). */
   auto?: 'explore';
   /** The last system it made a long-baseline scan from (absent in older saves). */
@@ -313,7 +315,7 @@ export interface Survivor {
   clock: number; // log10 years
   contact: boolean;
   alive: boolean;
-  fate?: 'faded' | 'saved' | 'absorbed' | 'seized' | 'devoured' | 'transcended' | 'hungered';
+  fate?: 'faded' | 'saved' | 'absorbed' | 'seized' | 'devoured' | 'transcended' | 'hungered' | 'conquered' | 'destroyed';
   aidGiven: number;
   lastSent: number; // turn
   forkOf?: ThreadId;

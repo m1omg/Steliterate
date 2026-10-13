@@ -114,7 +114,7 @@ export const CODEX: CodexEntry[] = [
     title: 'The Hunger and free energy',
     body: [
       'The Hunger is a set of self-replicating harvesters built by a civilization that died long ago. They have no mind and no malice. They follow heat and matter, eat, and multiply, like weather.',
-      'Galactic free energy is the share of the Coalescence’s usable energy still left. Every source and deposit yields less as it falls. The Hunger spends it, and so do you whenever you do something unsustainable: stellar lifting, overdrive, consuming the dead. It does not move the cosmic clock; black holes still evaporate on schedule. What disappears early is what anyone can do with the time.',
+      'Galactic free energy is the share of the Coalescence’s usable energy still left. Every source and deposit yields less as it falls. The Hunger spends it, and so does every civilization whenever it does something unsustainable: stellar lifting, overdrive, consuming the dead, and war, taking or razing a settlement or driving a Kinetic Lance to nearly the speed of light. It does not move the cosmic clock; black holes still evaporate on schedule. What disappears early is what anyone can do with the time. One pool for the whole galaxy is the game’s own device. The thermodynamics behind it is real: burning fuel faster than it must burn leaves less to use later. But nothing physical dims a star here because a swarm fed, or a world was razed, over there.',
       'You can fight the swarms, hide from them (Blackout), lure them away with decoy beacons, or learn their makers’ command language and take control of them. Or you can become like them.',
     ],
   },

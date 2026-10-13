@@ -51,6 +51,8 @@ export function checkEndings(state: GameState, atLastHorizon = false): Outcome |
   if (state.civ.outcome) return state.civ.outcome;
   const civ = state.civ;
   if (civ.taint >= 100) return end(state, 'dark', DARK_ENDING.ending);
+  // the last of our settlements taken or destroyed in a war (conflict.ts): a defeat of its own
+  if (civ.flags.conquered !== undefined && !colonies(state).length) return end(state, 'defeat', 'Conquered');
   if (totalPops(state) <= 0) return end(state, 'defeat', 'Silence');
   if (civ.resolve <= 0) {
     if (!atLastHorizon) civ.flags.despair = (civ.flags.despair ?? 0) + 1;

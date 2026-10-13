@@ -287,7 +287,8 @@ export function swarmsHunt(state: GameState, mods: ModsBy) {
       const sys = state.systems[sw.systemId];
       if (!sys || sys.gone) continue;
       for (const f of allFleets(state)) {
-        if (f.at !== sys.id || !f.ships.length) continue;
+        // (a Kinetic Lance does not stop where it strikes)
+        if (f.at !== sys.id || !f.ships.length || f.order === 'strike') continue;
         // its civilization's first swarm has its own moment (firstSwarm); under Communion they take
         // it for their own; and a ship where it has a settlement fights beside it (updateHunger)
         const owner = state.civs[f.owner];

@@ -579,12 +579,23 @@ In steps, each validated on its own:
    built, upkeep like a structure's cost the autoplayer its one escort's worth in the Dark Era
    (as much as its whole net there): it now stands idle warships down after the Dusk once they
    cost more than 15% of a turn's gain, with no war and no swarm in reach.
-3. **2c-2, war between any two civilizations**: the war state on each tie; the AIs declare it
-   on the plan's causes; space battles once a turn, settled at once for everyone; a siege at any
-   settlement, not only the first star.
-4. **2c-3, conquest**: a settlement taken (damage, some people fleeing, the rest unwilling) or
-   razed, galactic free energy spent for what it held; the Breacher for the defended, the
-   Kinetic Lance.
+3. **2c-2, war between any two civilizations** (done, `ab6bd75`): the war state on each tie; the
+   AIs declare it on the plan's causes; space battles once a turn, settled at once for everyone
+   (hashed luck, never the dice); a siege at any settlement, not only the first star. 900 games
+   identical to 2c-1, game for game: no war started in any of them.
+4. **2c-3, conquest** (as built): a settlement at a time, by the same rules for everyone (ours
+   through `seizeSurvivor`, the others' in the battles): the siege held, its walls breached (a
+   Breacher behind a Defence Grid or a Bastion Shell), an assault on a draw against what it
+   holds. Taken, three tenths of its people flee to their own, structures keep 70%, its hearth
+   damaged; or razed. Galactic free energy pays for every person and structure it held; without
+   a cause it is a Hunger act; the war goes on at the enemy's next settlement; the last one ends
+   that civilization ('Conquered', a defeat of ours too). The Kinetic Lance: at 99% of light, one
+   in flight at a time, free energy spent at launch, a world's settlement struck down whole and
+   one in the Deep by half, turned aside only by the screens of the target's ships waiting there
+   (a bend the Manual states). The AI builds a Breacher against a walled front.
+   - **Left for 2d:** the AI's use of the Lance, and Pickets kept at its settlements once an
+     enemy could have one; a defender's own sieges (in a war the other side began, it fights
+     where they come, and cannot storm theirs).
 5. **2c-4, the interface and the checks**; **2c-5, the sprites** (Higgsfield: 6.5 credits on
    the basic plan, checked 13 Oct; each shown to the player before it goes in).
 

@@ -51,17 +51,20 @@ for (const strategy of strategies) {
     // each neighbour: alive or its fate (a civilization of its own: @ the turn its game ended), +N
     // for every star it lives at beyond its first, and the pacts in force or once sealed with it
     // (a: Mutual Aid, r: Open Archives, w: Shared Watch), ~N its own Taint if it took any Hunger
-    // step, and ! if it shuns us for the Hunger it has heard of in us
+    // step, *N the wars it began, #N the settlements it took or destroyed, %N those it lost in war,
+    // and ! if it shuns us for the Hunger it has heard of in us
     const sv = Object.values(state.survivors)
       .map((s) => {
         const pacts = (['aid', 'archives', 'watch'] as const).filter((k) => s.pacts?.[k] !== undefined).map((k) => (k === 'archives' ? 'r' : k[0])).join('');
         const ended = state.civs[s.id]?.outcome?.turn;
         const taint = state.civs[s.id]?.taint ?? 0;
-        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${ended !== undefined ? `@${ended}` : ''}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}${taint > 0 ? `~${taint.toFixed(0)}` : ''}${shuns(state, s) ? '!' : ''}`;
+        const fl = state.civs[s.id]?.flags ?? {};
+        const war = `${fl.wars ? `*${fl.wars}` : ''}${fl.conquests ? `#${fl.conquests}` : ''}${fl.lost ? `%${fl.lost}` : ''}`;
+        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${ended !== undefined ? `@${ended}` : ''}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}${taint > 0 ? `~${taint.toFixed(0)}` : ''}${war}${shuns(state, s) ? '!' : ''}`;
       })
       .join(' ');
     console.log(
-      `seed ${seed}: ${state.civ.outcome ? `${state.civ.outcome.kind.toUpperCase()} "${state.civ.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage}${state.civ.flags.wars ? ` wars ${state.civ.flags.wars}` : ''} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
+      `seed ${seed}: ${state.civ.outcome ? `${state.civ.outcome.kind.toUpperCase()} "${state.civ.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage}${state.civ.flags.wars ? ` wars ${state.civ.flags.wars}` : ''}${state.civ.flags.conquests ? ` took ${state.civ.flags.conquests}` : ''}${state.civ.flags.lost ? ` lost ${state.civ.flags.lost}` : ''} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
     );
   }
 }

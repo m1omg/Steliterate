@@ -312,6 +312,7 @@ const DEFEAT_TEXT: Record<string, string> = {
   Silence: 'The last of you went quiet. The settlements cooled, the archives stopped answering, and the light of your worlds kept travelling outward for a while after there was no one left to send it.',
   'The Will Fails': 'You did not run out of energy. You ran out of reasons. One by one the Threads chose to stop, and the reserve sat full and unused in the dark.',
   'The Fade': 'Every cycle in the dark cost a little of who you were. At the end, the pattern was too thin to hold. Something still runs where you used to be, but it is not you.',
+  Conquered: 'The last of your settlements fell in a war. Some of your people live on among those who took them, counted as theirs now. Whatever you meant to become in the dark, you will not become it.',
 };
 
 export function OutcomeScreen({ s }: { s: GameState }) {
@@ -335,8 +336,8 @@ export function OutcomeScreen({ s }: { s: GameState }) {
             {totalPops(s) > 0 ? `: ${THREADS.filter((t) => totals[t] > 0).map((t) => `${totals[t]} ${THREAD_DEFS[t].name}`).join(', ')}` : ''}.
           </div>
           {fates.map((f) => (
-            <div key={f.id} class={f.fate === 'saved' || f.fate === 'absorbed' ? 'good' : f.fate === 'seized' || f.fate === 'devoured' ? 'bad' : 'dim'}>
-              {f.name}: {f.alive ? 'still out there' : f.fate === 'saved' ? 'saved' : f.fate === 'absorbed' ? 'lives on within you' : f.fate === 'seized' ? 'taken by force' : f.fate === 'devoured' ? 'devoured' : f.fate === 'transcended' ? 'went beyond' : f.fate === 'hungered' ? 'became the Hunger' : 'faded'}
+            <div key={f.id} class={f.fate === 'saved' || f.fate === 'absorbed' ? 'good' : f.fate === 'seized' || f.fate === 'devoured' || f.fate === 'destroyed' ? 'bad' : 'dim'}>
+              {f.name}: {f.alive ? 'still out there' : f.fate === 'saved' ? 'saved' : f.fate === 'absorbed' ? 'lives on within you' : f.fate === 'seized' ? 'taken by force' : f.fate === 'devoured' ? 'devoured' : f.fate === 'transcended' ? 'went beyond' : f.fate === 'hungered' ? 'became the Hunger' : f.fate === 'destroyed' ? 'destroyed by you' : f.fate === 'conquered' ? 'conquered by another' : 'faded'}
             </div>
           ))}
         </div>

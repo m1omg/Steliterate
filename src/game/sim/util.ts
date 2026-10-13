@@ -207,7 +207,7 @@ export function hasCharter(state: GameState, id: string): boolean {
 
 export function capital(state: GameState): Colony | null {
   const id = state.civ.capitalId;
-  if (id && state.colonies[id]) return state.colonies[id];
+  if (id && state.colonies[id]?.owner === state.civ.id) return state.colonies[id];
   const all = colonies(state).sort((a, b) => popsOf(b) - popsOf(a));
   return all[0] ?? null;
 }

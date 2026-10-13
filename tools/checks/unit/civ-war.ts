@@ -93,7 +93,8 @@ const arm = (s: GameState, id: string, guard: number) => {
   s.civs[a].accord = 200;
   const front = frontOf(s, b, a)!;
   for (const f of Object.values(s.fleets)) if (f.owner === b) delete s.fleets[f.id];
-  for (const c of Object.values(s.colonies)) if (c.owner === b) delete c.structures.defense_grid;
+  // (behind a Defence Grid, and no Breacher: the siege holds, and no one storms it; unit/conquest)
+  for (const c of Object.values(s.colonies)) if (c.owner === b && c.systemId === front) c.structures.defense_grid = 1;
   declareOn(s, a, b, HUNGER_CAUSE, front);
   asCiv(s, a, () => newFleet(s, front, ['warden', 'warden'], 'Host'));
   const e0 = s.civs[b].energy;

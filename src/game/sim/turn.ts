@@ -449,7 +449,8 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
     civ.stats.energy.push(Math.round(civ.energy));
     civ.stats.resolve.push(Math.round(civ.resolve));
     for (const k of ['pops', 'energy', 'resolve'] as const) if (civ.stats[k].length > 500) civ.stats[k].shift();
-    if (!civ.capitalId || !state.colonies[civ.capitalId]) civ.capitalId = colonies(state).sort((a, b) => popsOf(b) - popsOf(a))[0]?.id ?? null;
+    // (a capital lost, or taken by another: the most populous settlement left)
+    if (!civ.capitalId || state.colonies[civ.capitalId]?.owner !== civ.id) civ.capitalId = colonies(state).sort((a, b) => popsOf(b) - popsOf(a))[0]?.id ?? null;
   });
   return result;
 }
