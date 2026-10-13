@@ -67,7 +67,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     from `main`): PR m1omg/Steliterate#25 (`3f927a4`), a third track for the Dusk (CHANGELOG, "A
     third track for the Dusk"; live script `index-D3ajlLbq.js`), then PR m1omg/Steliterate#26, a
     darker remix of it for the Dark (CHANGELOG, "A darker remix of it for the Dark"; live script
-    `index-CXxVY_iy.js`). Neither changed a rule.
+    `index-CXxVY_iy.js`). Neither changed a rule. Then, 13 Oct, PR m1omg/Steliterate#27: a burst
+    reaches only what is still there (a rule: rogue worlds neither lost nor paid; Burst Catchers
+    elsewhere catch a neutron star's burst by distance), and lighter on phones and tablets
+    (CHANGELOG, both entries; live script `index-B4EKBtSN.js`).
   - The game was as of PR m1omg/Steliterate#13 (11 Oct, Halo Siphons can be shut, the halo
     empties sooner while they run, the Unlit's messages wait; live script `index-C_b0vzQm.js`).
     Before it, PR m1omg/Steliterate#12 (`d2c52b4`, swarms go for ships near them; built by the
@@ -148,12 +151,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   A rules change compares with these (DEV-NOTES: Balance reference, and the helpers for
   comparing runs game for game).
 - **Open threads, likeliest first:**
-  0. **Offers put to the player on 12 Oct, no answer yet** (each a rules change): pulsar beams in
-     line with real pulsars, or a stated bend; Burst Catchers in neighbouring systems catching a
-     neutron star's burst; a rogue world's Coldminds at the dark-sky half upkeep; the two rogue-world
-     bends (close passes 25 times slower, evaporation casting out about half) stated in the Codex
-     or changed; the neighbours' new-star rules and the Last Star. `HANDOVER.md`, section 8, has
-     each in a line.
+  0. **Offers put to the player on 12 and 13 Oct, no answer yet** (each a rules or text change):
+     pulsar beams in line with real pulsars, or a stated bend; a rogue world's Coldminds at the
+     dark-sky half upkeep; the two rogue-world bends (close passes 25 times slower, evaporation
+     casting out about half) stated in the Codex or changed; the neighbours' new-star rules and
+     the Last Star; a Codex line for the positronium bend (13 Oct: with a cosmological constant it
+     may never form, Chiba & Sugiyama 2004). `HANDOVER.md`, section 8, has each in a line.
   1. **A Slovak translation of our own** ("slovak translation would be best, friend is slovak
      like myself just using a cz translation tool", its typing tidied). Not started. Planned with
      the player on 10 Oct, then put aside for the phone interface (done the same day). Decided:
@@ -430,6 +433,43 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   first (PR m1omg/Steliterate#25, `3f927a4`), then the remix as the Dark's Recorded II (PR
   m1omg/Steliterate#26; CHANGELOG, "A darker remix of it for the Dark"). Then, in their order: the
   event plates, then a second Dark track to replace the old drone.
+- **12–13 Oct, night: bursts, phones, questions.** A picture of the other session's answer on the
+  neutron stars' burst ("I could add that as a new rule … Want it?"), and: "yes please but regarding
+  destruction of planet around it or capturing BH evaporation flashes, consider rogue planets are
+  no longer bound so should not get destroyed OR any benefit from a BH/stellar remnant evaporation
+  flash, so only Deep settlements would benefit or be destroyed (or bound planets but by that point
+  i don't know how likely THAT is)". Asked how far the flash reaches: "By distance". Done (CHANGELOG,
+  "A burst reaches only what is still there"); by η 68 most of our settlements are on rogue worlds,
+  as they guessed. Then: "The game definitely needs performance optimization. Preferably something
+  at no visual cost. I know it's possible, because it worked better before. Don't get me wrong, the
+  game is much better now than before, but the performance has gone down, at least it feels like
+  it." Asked what and where: "Everything to the point that on my phone, when I had some things
+  running in the background, even the audio stuttered and had crackles. This does not happen on
+  computers", "Phone and Tablet. Hadn't tried the latest version on the 2017 MacBook Air." Seven
+  builds since 29 Sep measured on an emulated phone: nothing in the code grew heavier (said to them
+  plainly). Gone, with no change seen or heard: the synth's drone running unheard under every
+  recording, the unused multisampled canvas, the idle labels' layout. Chosen: "No panel blur on
+  touch (Recommended), Touch devices start at Medium"; a 60 fps cap on 120 Hz screens was offered
+  and not taken (CHANGELOG, "Lighter on phones and tablets"). Both in PR m1omg/Steliterate#27,
+  opened and merged by this session. Questions only, answered in the conversation:
+  - the Slovak glossary does not exist yet: it is the plan's first step, and the plan is not
+    started;
+  - reading on life and computation after the protons: Dyson 1979 (Rev. Mod. Phys. 51, 447),
+    Adams & Laughlin 1997 (Rev. Mod. Phys. 69, 337) and their book (1999), Krauss & Starkman 2000
+    (astro-ph/9902189) and 2004 (astro-ph/0404510), Lloyd 2000 (Nature 406, 1047), Ćirković's
+    resource letter 2003 (Am. J. Phys. 71, 122), Page & McKee 1981, Chiba & Sugiyama 2004
+    (astro-ph/0405273), the aestivation hypothesis 2017 (arXiv:1705.03394) and Bennett, Hanson &
+    Riedel's reply 2019 (Found. Phys. 49, 820), Barrow & Tipler 1986;
+  - "why are most white dwarfs and brown dwarfs so cold at the start of the game? There must be
+    still some fresh ones, right? Since stars just stopped forming": the dwarfs the galaxy begins
+    with formed at a rate falling as 1/t from 10^9 years to the start at 9 × 10^13 (`formedAt`), so
+    99% are older than 10^13 years (in seed 1000 the white dwarfs at 47–89 K, the brown dwarfs under
+    63 K); the fresh ones are the red and blue dwarfs dying during the Dusk (`whiteAt`: 44 in seed
+    1000, from 1.7 million years in; about 5,300 K new, 500 K after 10^12 years). Real star
+    formation fell faster than 1/t, and late formation makes only small stars, which become white
+    dwarfs only 10^12 years and more later.
+  Offered: a Codex line for the positronium bend (Chiba & Sugiyama 2004: with a cosmological
+  constant like ours, positronium may never form; the game has it form at η 85).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word

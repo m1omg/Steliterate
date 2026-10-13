@@ -3,8 +3,8 @@
 For the next Claude instance (a new session, or the player's other account). First written 11 Oct
 ("pls make a .md for handover to another claude instance, ill be back dont worry"), rewritten on
 the evening of 12 Oct at the end of the next long session ("do an .md for a session handover again
-pls"), and brought up to date later that evening by the session after it (a third Dusk track,
-and a darker remix of it for the Dark).
+pls"), and brought up to date by the session after it: that evening (a third Dusk track, and a
+darker remix of it for the Dark) and on 13 Oct (who a burst reaches; lighter on phones).
 This is the entry point. The details stay where they are, and every section says where.
 
 Spoiler-light, as everything the player may read: the stranger minds and the endings are in
@@ -41,13 +41,14 @@ last.
 5. `docs/CHANGELOG.md`, the last few entries (every change, with its balance figures), and
    `docs/DESIGN.md` when a rule's intent matters.
 
-## 3. Where things stand (12 Oct, evening)
+## 3. Where things stand (13 Oct)
 
-- **`main` and the live game:** as of PR m1omg/Steliterate#26, a darker remix of the Dusk's third
-  track for the Dark, after PR m1omg/Steliterate#25 (merge commit `3f927a4`), the third Dusk track;
-  neither changed a rule. The rules are as of PR m1omg/Steliterate#23 (merge commit `a083698`):
-  rogue worlds leave their star behind, black holes by lifetime, the late sky as it is. The live
-  script is `index-CXxVY_iy.js` (check it on the live page after the Pages run).
+- **`main` and the live game:** as of PR m1omg/Steliterate#27 (13 Oct): a burst reaches only what
+  is still there (a rule), and lighter on phones and tablets (section 6). The live script is
+  `index-B4EKBtSN.js` (check it on the live page after the Pages run). Before it, PR
+  m1omg/Steliterate#26 (`a16d43b`), a darker remix of the Dusk's third track for the Dark, and PR
+  m1omg/Steliterate#25 (`3f927a4`), the third Dusk track, changed no rule; PR m1omg/Steliterate#23
+  (`a083698`) was the batch of rogue worlds, black holes by lifetime and the late sky.
 - **12 Oct, in order** (all from `claude/affectionate-johnson-qqr7p2`, each merged with a merge
   commit):
   - PR m1omg/Steliterate#16 (`3538f47`): the Last Star shines when it lights; its clock is free.
@@ -59,7 +60,8 @@ last.
   - PRs #17 and #19 were notes only, and PR #24 this handover; PR #14 and #15 (11 Oct) were the
     first handover and the Last Star's plan.
   - That evening, from `claude/epic-wozniak-lyhulf`: PR m1omg/Steliterate#25 (`3f927a4`), a third
-    track for the Dusk, and PR m1omg/Steliterate#26, a darker remix of it for the Dark (section 6).
+    track for the Dusk, and PR m1omg/Steliterate#26 (`a16d43b`), a darker remix of it for the Dark;
+    then, 13 Oct, PR m1omg/Steliterate#27 (section 6).
 - **Branches:**
   - `claude/lucid-newton-v2`, `claude/epic-wozniak-lyhulf` and
     `claude/affectionate-johnson-qqr7p2` are fully merged. A follow-up starts its branch again
@@ -142,7 +144,27 @@ The full picture is in SESSION-NOTES, "How the player likes to work".
 7. Write it down: a CHANGELOG entry (with the balance), DEV-NOTES (systems, checks, a balance
    row), SESSION-NOTES (the decision in the player's words, and "Picking up"), and this file.
 
-## 6. The latest work (12 Oct)
+## 6. The latest work (12 and 13 Oct)
+
+- **A burst reaches only what is still there** (PR #27, 13 Oct; CHANGELOG under that name). The
+  player: rogue planets "are no longer bound so should not get destroyed OR any benefit from a
+  BH/stellar remnant evaporation flash, so only Deep settlements would benefit or be destroyed (or
+  bound planets…)", and "By distance". A neutron star's burst (curvature, η 68) destroys only what
+  is in its Deep or on a world it still holds; Burst Catchers elsewhere bank 250 within 10 ly of the
+  nearest burst, then by the inverse square, once each, never on a rogue world; a black hole's final
+  burst pays its Deep and the worlds it held until then (`inItsSystem`, `burstShare`,
+  `finalBurstCatch`). Harness: 154 / 72 / 72 in 300, all 300 as before; 896 of 900 as before.
+- **Lighter on phones and tablets** (PR #27; CHANGELOG under that name). "Everything" felt slower
+  on their phone and tablet, "even the audio stuttered and had crackles". Seven builds since 29 Sep
+  measured on an emulated phone: nothing in the code grew heavier (DEV-NOTES, "Profiling as a
+  phone"). Gone, unseen and unheard: the synth's drone running under every recording (the likeliest
+  cause of the crackles), the unused multisampled canvas, the idle labels' layout. Chosen: no panel
+  blur on a touchscreen, and touch devices start at medium graphics (a saved high moves once,
+  unless picked by hand). A 60 fps cap on 120 Hz screens was offered and not taken.
+- **Answered on 13 Oct** (no change made): the Slovak glossary does not exist yet (the plan's first
+  step); reading on life and computation after the protons (the list is in SESSION-NOTES); why the
+  dwarfs are cold at the start (`formedAt`: as many formed in each tenfold of time, so 99% are older
+  than 10^13 years; the fresh ones are the red dwarfs dying during the Dusk).
 
 - **The Last Star** (PR #16): it lights as its turn ends and burns through the next; its event,
   Light in the Halo, offers keeping time with it, free at any pace. Old saves relight it where it
@@ -173,15 +195,15 @@ The full picture is in SESSION-NOTES, "How the player likes to work".
 
 ## 7. The baseline (12 Oct, rogue worlds leave their star behind)
 
-**Checks** (and the same again with the third Dusk track, PR #25, and with the Dark's remix,
-PR #26):
+**Checks** (13 Oct, PR #27):
 - tsc and the build are clean;
 - the playtest passes (30/144 Hz parity);
-- all 48 unit checks pass;
+- all 49 unit checks pass;
 - savecompat passes on the 6 saves in `tools/saves/`;
-- all 50 browser checks pass, in the real fonts.
+- all 51 browser checks pass, in the real fonts.
 
-Neither music batch changed a rule, so the harness below still stands.
+PR #27's burst rule left the totals as they were: 300 games all as before, 896 of 900 (the 4 that
+moved are curvature games with the same outcomes).
 
 **Harness (standard competent):**
 
@@ -200,14 +222,12 @@ Neither music batch changed a rule, so the harness below still stands.
 
 Wait for the player's word before starting any of them.
 
-0. **Offers put to the player on 12 Oct, no answer yet** (each a rules change: the harness, and a
-   check):
+0. **Offers put to the player on 12 and 13 Oct, no answer yet** (each a rules or text change: the
+   harness, and a check):
    - **Pulsar beams last far too long.** Neutron stars beam (×0.1 to collectors, Beam Arrays) all
      through the Dusk and fade only by η 27; real pulsars stop within 10⁷ to 10¹⁰ years of forming.
      Asked whether to bring them in line (it takes that light out of the Dusk) or keep it as a
      stated bend.
-   - **Catching a neutron star's burst** (curvature radiation, η 68) from neighbouring systems:
-     Burst Catchers within some light-years bank a share, as at a black hole's last burst.
    - **A rogue world's Coldminds** pay full upkeep, though it has no sun at all (the dark-sky half
      applies only where the star gives no light).
    - **Two rogue-world bends** to state in the Codex, or to change: close passes strip worlds 25
@@ -215,6 +235,9 @@ Wait for the player's word before starting any of them.
      remnants where the Codex says "most". (The outliers' own evaporation: "Leave it".)
    - **The neighbours' new-star rules** (sleepers waking for a new star, claims) leave the Last
      Star out.
+   - **The positronium bend** (13 Oct): the game has positronium form at η 85; with a cosmological
+     constant like ours it may never form (Chiba & Sugiyama 2004, astro-ph/0405273). A Codex line
+     saying so was offered.
 1. **A Slovak translation of our own.** Planned with the player on 10 Oct and not started. The
    decisions are in SESSION-NOTES, "Picking up":
    - a glossary first;
@@ -250,7 +273,8 @@ The full list is in DEV-NOTES, "Gotchas".
 - **Worlds in a late save are often rogue already** (close passes): a check that means a world
   still bound to its star sets `rogue: false` first.
 - **`pgrep -f` and `pkill -f` match their own shell.** Find a PID with a pattern that cannot
-  match itself (`ps -eo pid,args | grep "[v]ite.js preview"`), or by its port.
+  match itself (`ps -eo pid,args | grep "[v]ite.js preview"`), or by its port. A wait loop on
+  `pgrep -f` never ends (13 Oct): wait for the run's output file instead.
 - **An `rm` of a path built from variables** is blocked by a safety check. Write
   `"${VAR:?}"/…` so an empty variable stops the command.
 - **The stop hook** won't let a turn end with uncommitted, untracked or unpushed changes. Keep
