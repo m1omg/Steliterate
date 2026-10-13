@@ -20,9 +20,19 @@ import type { GameState } from '../game/types';
  */
 const SLICE_MS = 12;
 
-/** Let the browser breathe: a task of its own (a message to ourselves), without a timer's clamp. */
-function breathe(): Promise<void> {
+/**
+ * At least this often a breath waits for a timer: a message to ourselves can run ahead of the
+ * timers that are due, and the synth's lookahead timer (every 40 ms, music.ts) needs its turn.
+ */
+const TIMER_MS = 40;
+
+/** Let the browser breathe: a task of its own (a message to ourselves, without a timer's clamp), or, with `timer`, after the timers due. */
+function breathe(timer: boolean): Promise<void> {
   return new Promise((done) => {
+    if (timer) {
+      setTimeout(done, 0);
+      return;
+    }
     const ch = new MessageChannel();
     ch.port1.onmessage = () => done();
     ch.port2.postMessage(0);
@@ -37,6 +47,7 @@ async function playTurn(s: GameState): Promise<TurnResult> {
   const g = turnSlices(s);
   const start = performance.now();
   let t0 = start;
+  let timed = start;
   let work = 0;
   let longest = 0;
   for (;;) {
@@ -51,8 +62,10 @@ async function playTurn(s: GameState): Promise<TurnResult> {
     }
     if (b - t0 > SLICE_MS) {
       longest = Math.max(longest, b - t0);
-      await breathe();
+      const timer = b - timed > TIMER_MS;
+      await breathe(timer);
       t0 = performance.now();
+      if (timer) timed = t0;
     }
   }
 }
