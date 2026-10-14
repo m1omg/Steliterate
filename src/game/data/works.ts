@@ -52,7 +52,8 @@ export const WORKS: WorkDef[] = [
     path: 'Persistence, kept by the machines',
     eras: ['blackhole', 'dark'],
     tech: 'archive_theory',
-    cost: 1500,
+    // (four times the others': at 1,500 it was far the easiest ending; the player's choice, 14 Oct)
+    cost: 6000,
     energy: 150,
     requirement: 'The Lattice is at least half of everyone.',
     maxTaint: 59,
