@@ -18,7 +18,9 @@ all from `claude/affectionate-johnson-qqr7p2`; then PR m1omg/Steliterate#25, `3f
 track for the Dusk, PR m1omg/Steliterate#26, `a16d43b`, a darker remix of it for the Dark, and the
 latest game batch, PR m1omg/Steliterate#27, `4aaaa2a`, a burst reaches only what is still there
 and lighter on phones, then PR m1omg/Steliterate#28, `db34424`, the backup of today's game at
-`/archive/2026-10-13/` and the positronium bend in the Codex, all from `claude/epic-wozniak-lyhulf`).
+`/archive/2026-10-13/` and the positronium bend in the Codex, all from `claude/epic-wozniak-lyhulf`;
+PR m1omg/Steliterate#29, `75efadc`, put the new version's plan in `main`, and PR
+m1omg/Steliterate#30, `3a3f4c2`, has a push to `main` or `next` build both).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -103,4 +105,8 @@ the player: "make it harder pls"; the dark's Continuity, swarms on to our settle
 300, 67 victories; 900 games 520 / 218 / 72; by fate decay 56%, stable 69%, curvature 50%.
 With part 3-6 (the stable fate's late game: black dwarf supernovae, iron stars, tunnelling
 collapse): 144 of 300, 61 victories; 900 games 460 / 209 / 72; by fate decay 56%, stable 43%,
-curvature 50%.
+curvature 50%. With the dearer Archive, ships seeing what they pass and the softer stable fate (14
+Oct, `d92849a`; the films change no rule): 153 of 300, 63 victories; 900 games 444 / 160 / 70; by
+fate decay 53%, stable 46%, curvature 46%. With real neighbours the noise is larger: the same rules
+with only the neighbours' dice reshuffled give 440 / 177 / 69, and two such runs of 900 can differ
+by 32 survivors and 37 victories.

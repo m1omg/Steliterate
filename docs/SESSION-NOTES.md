@@ -688,13 +688,37 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     the Long Dusk's film, Enter skips to the introduction, a turn ends, and only `steliterate2.`
     keys are written (the browser here does not trust the session proxy's certificate, so the
     check fetched the live files through curl, which does).
-  - Next: the player's word on the open threads (HANDOVER, section 3).
-  - the plan's "2a, as it is being built" lists the steps from here.
-  - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
-    found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home
-    to the Heart (the Heart's neighbours, seen on arrival anyway), 14 within 6,000 ly; the proposal
-    is the stretch flown swept by the eyes a ship has stopped, plus one long-baseline look a turn
-    in flight for survey probes. Part 2a goes ahead meanwhile: it does not depend on it.
+  - the player's answers (14 Oct, two rounds of questions): "Dearer Archive (Recommended)";
+    the stable fate "Soften it a little"; ships seeing what they pass "Build the proposal
+    (Recommended)"; the Pages PR "Yes, do it (Recommended)" (PR m1omg/Steliterate#30, merged as
+    `3a3f4c2`: a push to `main` or `next` builds both); the hulls "Picket A. Breacher B. Hunter A,
+    Lance B."; "Start the plates"; switching `main` to the new version "Not yet (Recommended)".
+    And on how I write: "I never saw the 10s showcase you produce walls of texts this was likely
+    66447886556 pages ago": keep messages short, and send again what they may have missed.
+  - "btw i bought krea credits so dont have to be stingy": all fifteen event plates painted
+    (CHANGELOG, "The event plates, all fifteen"); A Tomb and Light in the Halo retaken until right.
+  - the Archive of Everything at 6,000 insight: the Lattice-led player's Quiet Lattice 214 → 74 of
+    300; the competent harness 461 / 214 / 72.
+  - ships see what they pass (part 1b, built): 900 games 420 / 164 / 70. That looked like a cost
+    of 41 survivors and 50 victories, so I measured the harness's noise: the same rules with only
+    the neighbours' dice reshuffled give 429 / 179 / 71, and at today's rules 440 / 177 against
+    444 / 160. Survival is unchanged (445 on average before, 442 after); victories may be about 3
+    points lower, at the edge of the noise. No fix: the rule stays for everyone. DEV-NOTES has
+    the way to measure such noise.
+  - the stable fate, a little softer (the player's word): substrate outlasts the tunnelling
+    collapse (the collapse takes baryons; field-held electron–positron structures are not), the
+    iron, collapse and heavy-dwarf forecasts from the Black Hole Age on, the autoplayer's Long
+    Sleep once all is iron; and a Great Work finished as Continuity runs out now stands. 900 games
+    444 / 160 / 70: stable 110 / 239 (46%, from 36%), the other fates game for game as before.
+  - the films, second cut (the player on the first: "A GOOD START but they need a LOT MORE
+    work", with a video as the level to reach, "don't copy it … create something as
+    sophisticated and as pretty, but in the game's art style"): all sixteen rebuilt as composed
+    scenes with diagrams that draw themselves, camera moves, painted stars, worlds and holes, what
+    is too cold to see by its faint heat, and real physics labelled with whose it is (CHANGELOG,
+    "The films, second cut"). Sent: the Long Dusk and the Black Hole Age (decay) as videos. The
+    endings' videos only when asked (spoilers); the player had said they would be away watching a
+    film: "please don't ask me questions unless it's something absolutely crucial".
+  - Next: the player's word on the films' second cut and the open threads (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word

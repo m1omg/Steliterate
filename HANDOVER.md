@@ -62,11 +62,14 @@ last.
     their own settlement, a swarm's part whose ship is gone goes on to the ship's nearest
     settlement); the stable fate's late game (3-6) and the look of what is not matter (3-7); the
     films and the survey reveal (Part 4); `/next/` (Part 5).
-  - Waiting for the player: ships seeing what they pass (1b, a census done), the Quiet Lattice
-    (four options put to them, 13 Oct; see SESSION-NOTES, "Picking up"), the new hulls (2c-5, a
-    sheet shown), their word on the films' look (a 10-second test piece), whether to soften the
-    stable fate (43% survive), and whether `main`'s own Pages workflow should build `/next/` too
-    (section 9).
+  - Done since, at the player's word (14 Oct): ships see what they pass (1b; its seeming cost
+    is the harness's noise, CHANGELOG), the Archive of Everything dearer (the Quiet Lattice),
+    the new hulls in their own paint, all fifteen event plates, the stable fate a little softer
+    (46% of its games survive), all sixteen films rebuilt ("the films, second cut"), and `main`'s
+    Pages workflow building `/next/` too (PR m1omg/Steliterate#30, `3a3f4c2`).
+  - Waiting for the player: their word on the films' second cut (sent as videos: the Long Dusk,
+    the Black Hole Age under decay; the endings only when asked), switching `main` to the new
+    version ("Not yet", 14 Oct), and the open threads (section 8).
 - **The backup** (13 Oct, PR m1omg/Steliterate#28, `db34424`): today's game, frozen and playable,
   at https://m1omg.github.io/Steliterate/archive/2026-10-13/ (`public/archive/`, with its own
   README), on the same origin and so with the player's current saves. Its source is
@@ -280,7 +283,8 @@ Wait for the player's word before starting any of them.
 3. **Messages from gone civilizations.** Four answers misbehave (SESSION-NOTES lists them).
    Diplomacy is discuss-first.
 4. **Krea, in the player's order:** a Dark track that moves, then the event plates
-   (`docs/plans/plates.md`, 15 planned), then a second Dark track to replace the old drone. Each
+   (`docs/plans/plates.md`: all fifteen painted, 14 Oct), then a second Dark track to replace the
+   old drone (next, at the player's word). Each
    track measured and heard by the player before it goes in. The arranged Canon stays; Krea cannot
    make a real one. The player bought credits on the evening of 12 Oct: the first track went to the
    Dusk (PR #25), and a darker remix of it to the Dark (PR #26, made locally with
@@ -311,11 +315,13 @@ The full list is in DEV-NOTES, "Gotchas".
   `"${VAR:?}"/…` so an empty variable stops the command.
 - **The stop hook** won't let a turn end with uncommitted, untracked or unpushed changes. Keep
   scratch files outside the clone.
-- **A push to `main` takes `/next/` down.** A push runs the Pages workflow of the branch pushed,
-  and `main`'s still builds `main` alone (its copy of the new workflow, which builds both, waits
-  for the player's word: pushing it needs a branch of its own for the PR). After any merge into
-  `main`, run the workflow on `next` again (Actions, "Deploy to GitHub Pages", Run workflow on
-  `next`; or `actions_run_trigger` with `ref: next`), and check `/next/` once it has run.
+- **A push runs the Pages workflow of the branch pushed.** Since PR m1omg/Steliterate#30 (14 Oct)
+  `main` and `next` carry the same one, which builds both: a push to either rebuilds the root and
+  `/next/`. Keep the two copies the same; check `/next/` after any merge into `main`.
+- **The harness's noise is larger with real neighbours.** Two runs of the same rules (the
+  neighbours' streams reshuffled) differ by up to 32 survivors and 37 victories in 900. Measure
+  a reshuffle before calling a change of that size a cost (DEV-NOTES, "Workflow for every
+  batch").
 - **A container restart** stops background runs without a word, and the session can resume in a
   new one with the working tree kept: check `git status` and the servers first. If an output
   stops short, run it again.

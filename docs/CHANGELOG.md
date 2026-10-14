@@ -3070,3 +3070,152 @@ The new version goes up beside today's game: https://m1omg.github.io/Steliterate
   barely matters: the cost is the full-screen work (grain, glow, vignette), not the strokes; in
   the game Medium also draws at most 1.25 pixels a point to High's 2. A film's first frame takes
   up to 0.3 s while its layers are made, and the first in a page up to 2 s.
+
+## The new hulls in their own paint (14 Oct)
+
+- **The player's picks** from the Higgsfield sheet ("Picket A. Breacher B. Hunter A, Lance B."),
+  cut out by `tools/process-sprites.mjs`, which can now cut only the ones named.
+- **Which hull a fleet wears:** its heaviest warship's (Aegis, Breacher, Hunter, Warden, Picket);
+  a Kinetic Lance shows its own only with no other warship to escort it. In a system's view every
+  warship now draws as one (it had looked for a Warden or an Aegis only).
+- Display only. `unit/hulls` is new.
+
+## The Archive of Everything dearer (14 Oct, the player's choice)
+
+- **Why:** the Quiet Lattice was far the easiest ending. A Lattice-led player (`lattice` strategy)
+  won it in 214 of 300 games (stable 89%, curvature 73%, decay 61%). The player chose "Dearer
+  Archive": it costs 6,000 insight (was 1,500). The other Works are unchanged.
+- **At 6,000:** 74 of 300 (stable 65%, curvature 21%, decay 4%), about as often as the competent
+  player wins anything (23%).
+- **The competent player:** 900 games 461 / 214 / 72 (460 / 209 / 72 at 3-6), within the noise;
+  by fate decay 248 / 450 (73 wins), stable 107 / 239 (101), curvature 106 / 211 (40).
+
+## Ships see what they pass (14 Oct, part 1b)
+
+- **The rule:** a fleet under way sees, with the eyes it has when stopped, every star near the
+  stretch it flew this turn (a survey ship three times as far, a Picket twice). A survey ship under
+  way at the edge of what is known takes one long-baseline look a turn: the three nearest stars no
+  one has seen. Each civilization's fleets see for its own map.
+- **Seen is only seen:** charting still needs a stop, nothing is found on the way, the void's
+  outliers stay hidden, and a Kinetic Lance has no eyes. One message a turn names what was seen.
+- **How much:** in 12 autoplayed games about 34 stars a game were first seen under way, all in the
+  Dusk (of about 145).
+- **Checks:** `unit/en-route` is new. `unit/evap` and `unit/fates` watched the universe through one
+  seed's game and broke with no rule wrong (a swarm striking during the evaporation; a curvature
+  game ending before the Black Hole Age): the first clears the swarms, the second plays the next
+  seed when a game ends early or its turn runs past the moment checked.
+- **Balance, and the harness's noise.** 900 games 420 / 164 / 70 (461 / 214 / 72 before); by fate
+  decay 237 / 450 (65 wins), stable 86 / 239 (78), curvature 97 / 211 (21). That looked like a
+  cost, so the noise was measured: the same rules with only the neighbours' dice reshuffled (their
+  streams seeded under another key, `civX`) give 429 / 179 / 71 at `9516abc` and 440 / 177 / 69
+  at `d92849a` (444 / 160 / 70). Two runs of the same rules differ by up to 32 survivors and 37
+  victories in 900, and only 313 to 333 of the 900 end the same way (this change: 371). So
+  survival is unchanged (445 on average before, 442 after), and victories may be about 3 points
+  lower, at the edge of the noise. The sight for our own ships only: 439 / 195 / 71.
+
+## The event plates, all fifteen (14 Oct)
+
+- **Painted with Krea** (Nano Banana Pro, each with one of our graded plates as its style
+  reference; prompts in `docs/plans/plates.md`), looked over for letters and physics, and graded
+  by `tools/process-art.mjs` like the rest: Superflare, A Derelict Ark, Rust in the Belt, The Last
+  Flare, We Are Not Alone, The Embers Dim, The Proton Question, Not for Ever and The Stars That
+  Would Not Cool (one plate), The Long Flow, Whispers at the Horizon, An Archive of the Dead, A
+  Cold Engine, Ghosts in the Archive, A Tomb and Light in the Halo.
+- **Retaken:** A Tomb (its first was lit like daylight under a dim red sun: now red twilight, the
+  slabs rimmed toward the sun, long shadows toward us); Light in the Halo, three tries to give the
+  dead galaxy below its true shape, an elliptical (the merger remnant the game's galaxy is), not a
+  spiral.
+- **Check:** `unit/plates`, every event's own plate and its age's painting are there (a missing
+  plate would show only the age's painting, so nothing else would notice).
+
+## The stable fate, a little softer (14 Oct, the player's word)
+
+The player asked to soften the stable fate a little, back toward half surviving, by a lever true
+to the physics. Since its late game (3-6) the iron ends all income, and most of the new losses
+came between the iron and the collapse: civilizations arriving with almost nothing stored, at a
+fast pace, their Passages unfinished.
+
+- **Substrate outlasts the collapse.** A settlement still of matter with Leptonic Substrate or a
+  Leptonic Confluence goes on when its system tunnels into a black hole, as it does at the end of
+  matter in the other fates: its minds on the substrate kept, leptonic, in the Deep; its Kin,
+  sleepers and whatever has no leptonic form lost. The collapse takes baryons (Dyson 1979), and
+  field-held electron–positron structures are not baryons, the game's own reason they outlast
+  proton decay; the collapse forecast already said such minds go on.
+- **Earlier warnings.** The iron, collapse and heavy-dwarf forecasts appear from the Black Hole Age
+  on, once the fate is known, with how many turns into the Dark Era each falls at the Tide; the
+  iron's says nothing comes in after it.
+- **The autoplayer takes the Long Sleep** (Dyson's hibernation, already in the game) once
+  everything is iron, if its reserve would not last the age and no Great Work would be done first.
+  A player could always do this; the harness's player did not.
+- **A bug:** a Great Work finished in the turn Continuity reached nothing was announced, and then
+  the game was lost to The Fade anyway. The Works are now checked first, as the turn did them.
+- **Checks:** `unit/stable-dark` (the collapse with and without substrate; when the autoplayer
+  sleeps), `unit/great-works` (a Work finished as Continuity runs out). Texts: the collapse event
+  and the Manual's stable paragraph.
+- **Balance:** 900 games 444 / 160 / 70 (420 / 164 / 70 with the sight under way): stable 110 /
+  239 (86; 74 wins), 46% (69% before 3-6); decay and curvature identical game for game. 300 games:
+  153 / 63 / 72. With the neighbours reshuffled: 440 / 177 / 69, stable 105 / 239.
+
+## The films, second cut (14 Oct, the player's word)
+
+The player on the first cut: "A GOOD START but they need a LOT MORE work", with a video as the
+level to reach and not a style to copy: "create something as sophisticated and as pretty, but in
+the game's art style". All sixteen films are rebuilt.
+
+- **The reel** (`src/film/reel.ts`, `reel2`): scenes on a beat grid crossfading or zooming into
+  one another; notes placed anywhere in the frame as real text (a diagram's labels; aria-hidden,
+  the narration says what they show); heavy paintings made a slice a frame while a film plays
+  (`Lazy` jobs) or at once when a moment is drawn on demand, so every moment draws the same picture
+  however it is reached.
+- **The painting kit** (`src/film/paint.ts`): stars' discs with limb darkening, granulation,
+  faculae and spot groups; worlds painted from a map (warped continents, a locked world's baked
+  face and frozen far side, cloud, towns as points of light on the night side); skies by
+  temperature with the galaxy's band; an old elliptical galaxy by its de Vaucouleurs profile with
+  streams and globulars; a banded brown dwarf; a black hole lensing what is behind it (the
+  point-lens equation); and what is too cold to see by its faint heat, in a thermal camera's
+  magma-like palette (`heatOf`), said so on screen. `src/film/hr.ts` grows a generation of stars on
+  the Hertzsprung–Russell diagram (Kroupa's masses, the textbook's relations, Mestel's cooling);
+  `src/film/holes.ts` holds what the films of the holes and after share (rings and paths bent
+  round a shadow, quanta, settlements of fields, the pairs curvature makes).
+- **The Long Dusk** (48 s, eleven scenes): the embers going out; the galaxy round the Heart; its
+  star-making as a curve; the H–R diagram from η 7 to now; a red dwarf's flare up close; the locked
+  world, its towns at the night's edge; a ship leaving.
+- **The Last Light** (47 s, nine): the last red dwarf turning blue and shrinking to a white dwarf;
+  the corpses as specimens; dark matter warming an ember; two brown dwarfs into a new star, two
+  white dwarfs into a helium star; the galaxy casting its remnants out; the proton's lifetime.
+- **The Black Hole Age** (49 s, in three versions by fate): matter decaying (a loupe on one
+  proton: p → e⁺ + π⁰, π⁰ → γγ), the last neutron star cooling below a hole's Hawking glow (η 30.1
+  for ten Suns, by the game's law) and the nuclei sliding to iron, or a neutron star bursting by
+  curvature; then the holes: our collectors' light bent round one, Kerr's ergosphere and the
+  Penrose process (up to 1.21 back for 1; up to 29% of a hole's mass is spin), lifetimes ∝ M³, a
+  small hole's last flash as its people leave, a Bastion Shell of fields.
+- **The Great Evaporation** (32 s): the last world unmade by the pairs space's bending makes; every
+  world and dead star going in turn; a settlement of fields going on; the holes left; the Heart.
+- **The Last Horizon** (45 s, two versions): the last hole's last flash; settlements of fields and a
+  reserve nothing fills; a photon of that flash stretched as space grows; positronium, one atom
+  with the old observable universe a dot at its middle, spiralling in until about η 141; a ruler of
+  η rescaled again and again. With stable matter: dead stars as cold as the sky (2 × 10⁻³⁰ K),
+  nuclei settling into iron, a black dwarf supernova (Caplan 2020), the matter tunnelling at last.
+- **The ten endings** (26 s each, `src/film/endings.ts`), on their epilogues' words: the Long
+  Thought (thoughts spaced ever further apart; Dyson's chart, a finite store and the thoughts
+  adding up past it); One Voice (five Threads braided over and under into one gold strand; the
+  crowd's upkeep coming together as one mind's); the Quiet Lattice (the others writing and letting
+  go; the record a turning lattice, repairs walking along it; one record opened that nothing asked
+  for); the Aeon Seed (the pattern cut round the Heart like a record; rings carried out past every
+  scale; Penrose's aeons with their light cones, the last light crossing the seam at 45°; the next
+  universe's first light, mapped as ours is, with faint rings in it, as Penrose looked for in
+  ours); the Last Garden (an iron world; the garden under its dome, the Kin awake, frost and the
+  cold berths, green again); the Hunger (a murmuration crossing a world's night side, the lights
+  going out behind it; ember to ember); Recurrence (a star, a dead star, a hole, a bound atom and a
+  clock going out; Arnold's cat map bringing a star and its world back after twelve steps, labelled
+  a toy that does exactly what Poincaré says; a red sun come round again); Silence (the network
+  going dark; a settlement cooling by its heat with no answer to our calls; our light going out,
+  redder and fainter); the Will Fails (a full Field Store and its gauge; the Threads stopping one
+  by one); the Fade (the pattern thinning, cycle by cycle, to something small still going round).
+- **Sound:** every film's cue rings a bell on each scene's cut with a soft chord under each scene
+  (`SPECS`, and `FATE_SPECS` keyed `id:fate` where a fate's version cuts on other beats);
+  Recurrence's comes back to the note it began on.
+- **Tools:** `tools/film-render.mjs` takes `--fate=` and `--jpeg`, and waits out a page reload by
+  the dev server (a frame depends on its time alone).
+- **Videos sent:** the Long Dusk and the Black Hole Age (decay), 1920×1080. No ending's video goes
+  out unasked.

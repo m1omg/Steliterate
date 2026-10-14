@@ -26,6 +26,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      neighbours as they were before the new version (`civsAsleep`): with it, a change that should
      leave our own play alone must leave the games line for line as they were. `tools/sim.ts 300
      standard lattice` plays us led by the Lattice, as the Tessellate plays (`ourWay` in `auto.ts`).
+     With real neighbours the noise is larger (14 Oct): the same rules with only the neighbours'
+     streams reshuffled (`foundCiv`'s `civ.rng` seeded under another key, in a worktree) move
+     900 games by up to 32 survivors and 37 victories, and only about a third end the same way.
+     Before calling a change of that size a cost, run such a reshuffle of the rules before it.
    - End Turn as a phone feels it: `node tools/turn-timing.cjs http://localhost:4173/ [turns=40]
      [slowdown=4] [seed=8919]` (Chromium with the CPU slowed, the End Turn button itself, the
      longest task of each turn as `PerformanceObserver` reports it).
@@ -1378,7 +1382,27 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   title and an ending's name to films (`turnflow.ts`). Checks: `lib.cjs` adds `?nofilms` unless
   `start(name, { films: true })`; `__stel.filmFrames(id, times)` hashes frames, `__stel.filmList()`
   lists them. Videos: `tools/film-render.mjs` (needs an ffmpeg path, e.g. imageio-ffmpeg in a
-  scratch venv; it starts `vite` on port 5179 for `film.html`).
+  scratch venv; it starts `vite` on port 5179 for `film.html`; `--fate=` for the films that
+  differ by fate, `--jpeg` for lighter frames; it waits out a page reload by the dev server).
+- **The films' second cut (14 Oct):** every film is now a `reel2(def, make)` (`reel.ts`), whose
+  `make(w, h, S, k, args, quality)` returns a `ReelSpec`: numeral, title, sub, `titleAt`, `eta`
+  (the timecode's span), narration, an optional `card` under the title, and `scenes`, each
+  `{from, to, enter ('fade' | 'zoom' | 'cut'), fade, draw(c, m), notes(m), assets}`. A `Moment`
+  is `{b, t, p, w, h, S, k, q}`: the beat, the seconds, the scene's progress, the frame and the
+  quality. `note(id, text, x, y, opacity, {align, tone, size})` places a label anywhere (x and y
+  as fractions of the frame); ids must be unique within a film. Heavy paintings are `Lazy` jobs
+  (`paint.ts`): list them in the scene's `assets` and the reel paints them a slice a frame ahead
+  of their scene, or at once when a moment is drawn on demand, so a frame is the same however it
+  is reached. Where things live: `dusk.ts` (the Long Dusk), `lastlight.ts` (the Last Light),
+  `blackhole.ts` (`blackHoleAge2`, the Black Hole Age in three versions by `args.fate`), `dark.ts`
+  (the Great Evaporation; the Last Horizon, its stable version by fate), `endings.ts` (the ten
+  endings, `ENDINGS2`, through its `ending()` helper: 36 beats at 84, the title at 31), `holes.ts`
+  (the holes' kit: the point lens, `drawRing`, `plainHole`, `quanta`, `lattice` for settlements of
+  fields, `pairs`, `figure` and `axes` for charts, `paintDark` for the late skies), `paint.ts`
+  (stars, worlds, skies, galaxies, `heatOf` and `HEAT_LUT` for what is seen by its heat, and
+  `World`'s `heat` option), `hr.ts` (the H–R diagram's stars), `kit.ts` (layout, layers, the
+  camera, a ship, `falseColour`). A film's cue is `SPECS[id]`, or `FATE_SPECS['id:fate']` where a
+  fate's version cuts on other beats (`cueOf`); keep its cuts on its scenes' `from`.
 - **`/next/` (part 5):** the `next` branch (a copy of the work branch: `git push origin
   claude/epic-wozniak-lyhulf:next`) carries a Pages workflow that checks out `main` and `next`
   into folders of those names, builds each (`npm ci && npm run build`), drops `next/dist/archive`
@@ -1739,6 +1763,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | leaving a hole, and the Horizon form (13 Oct; part 3-4) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 639 / 226 / 74 (522 / 205 / 74 before): decay 330 / 450 (210; 77 wins, 53), stable 170 / 239 (169; 235 of 239 end as before), curvature 139 / 211 (143; 36 wins, 40), within the noise. Drifts in 384 games, the Horizon form in 4. Under decay the vaults now drift to a hole with spin, the Heart above all, where before they starved at the small hole the Migration found, slowed the pace to stretch the reserve, and entered the Dark Era short: of the 450, 125 saved (72 had faded, 41 lost their will), 5 lost. The first drift rule, the nearest hole with spin: 638 / 227 with Horizon Writing researched everywhere |
 | harder: the dark's Continuity (an empty reserve 10 a turn, arrays for their own settlement), swarms on to our settlements (14 Oct; the player: "make it harder pls") | 167 | 67 victories, Degenerate Age 71 turns; 900 games 520 / 218 / 72 (636 / 226 / 74 at 3-5): decay 251 / 450 (73 wins), stable 164 / 239 (107), curvature 105 / 211 (38); victories as before. The Fade 126 (78), Silence 224 (159), The Will Fails 30 (27); 466 of 900 end the same way (88 line for line). The dark alone (300): 186 / 68, The Fade 23 → 56; the swarms on top: 167 / 67, Silence in the Degenerate Age 12 → 23. The Harsh setting before both: 198 / 58 of 300. A part turning on a settlement founded where it waits (an ark come down) changes none of the 900 |
 | the stable fate's late game: a few heavy dwarfs, black dwarf supernovae, iron stars, tunnelling collapse; the Passage where matter is stable (14 Oct; part 3-6) | 144 | 61 victories, Degenerate Age 71 turns; 900 games 460 / 209 / 72 (520 / 218 / 72 at "Harder"): decay 251 / 450 (449 line for line, every outcome the same), curvature 106 / 211 (105; the heavy dwarfs are in every fate), stable 103 / 239 (164): The Long Thought 80 (89), Recurrence 5 (57), The Fade 79 (37), Silence in the Dark Era 21 (2). The stable dark is a finite budget now; the autoplayer never sleeps. 748 of 900 line for line |
+| the Archive of Everything dearer, 6,000 insight (14 Oct; `9516abc`) | 146 | 63 victories, Degenerate Age 71 turns; 900 games 461 / 214 / 72 (460 / 209 / 72 at 3-6), within the noise. By fate: decay 248 / 450 (73 wins), stable 107 / 239 (101), curvature 106 / 211 (40). The Lattice-led strategy wins the Quiet Lattice in 74 of 300 (214 at 1,500) |
+| ships see what they pass (14 Oct; part 1b, `dd34cc4`) | 147 | 64 victories, Degenerate Age 72 turns; 900 games 420 / 164 / 70 (461 / 214 / 72 before), within the noise: the same rules with the neighbours' streams reshuffled (seeded under `civX`) give 429 / 179 / 71, and only 333 of 900 end as before (this change: 371). By fate: decay 237 / 450 (65 wins), stable 86 / 239 (78), curvature 97 / 211 (21). The sight for our own ships only: 439 / 195 / 71 |
+| the stable fate, a little softer: substrate outlasts the collapse, earlier warnings, the autoplayer's Long Sleep; a Work finished as Continuity runs out stands (14 Oct; `d92849a`) | 153 | 63 victories, Degenerate Age 72 turns; 900 games 444 / 160 / 70 (420 / 164 / 70 before): stable 110 / 239 (86; 74 wins, 78), decay and curvature identical game for game. With the neighbours reshuffled: 440 / 177 / 69 (decay 237, stable 105, curvature 98; 313 of 900 as with the usual streams). Survival over two runs each: 445 before the sight under way, 442 now |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

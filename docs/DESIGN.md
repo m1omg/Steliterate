@@ -475,13 +475,15 @@ stop them from talking.
   murmurations) and a restrained post chain: a faint, tight bloom only on what is brighter
   than white (light sources carry their own coronae, as in ra-system-alpha), fine midtone
   grain, vignette, edge chromatic aberration. No full-screen haze and no lens dirt.
-* **Plates:** eleven painterly images for the ages and events and thirteen for the survey
-  discoveries (Krea and Codex image generation), one grade for all (`tools/process-art.mjs`);
-  four painted ship sprites (Higgsfield, `tools/process-sprites.mjs`).
-* **Films** (the new version, Part 4): one as each age begins and as a game ends, every frame
-  drawn by code on one canvas from its moment alone (an ink line that draws itself, a timecoded
-  reel cut on the beat, hatching, stipple and grain), the game's own words as text over it, and a
-  cue made as it plays. A system just charted shows its worlds one by one (**the survey reveal**):
+* **Plates:** painterly images for the ages and events (fifteen more for the events in the new
+  version) and thirteen for the survey discoveries (Krea and Codex image generation), one grade
+  for all (`tools/process-art.mjs`); painted ship sprites (Higgsfield, `tools/process-sprites.mjs`),
+  the Picket, Breacher, Hunter and Kinetic Lance among them.
+* **Films** (the new version, Part 4, rebuilt in a second cut): one as each age begins and as a
+  game ends, every frame drawn by code on one canvas from its moment alone. Each is a few composed
+  scenes cut on the beat: painted stars, worlds and holes, diagrams that ink themselves in, slow
+  camera moves, what is too cold to see by its faint heat, and the physics labelled with whose it
+  is; the game's own words as text over it, and a cue made as it plays. A system just charted shows its worlds one by one (**the survey reveal**):
   a ring of light leaves the star, then a line of light sweeps each world from a silhouette to its
   look, with a card naming it.
 * **What is not matter** (3-7): a leptonic settlement is drawn as its fields (a dipole's lines, a
