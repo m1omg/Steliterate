@@ -52,8 +52,22 @@ try {
   const length = await page.evaluate(() => window.__film.length);
   const dir = mkdtempSync(join(tmpdir(), 'film-'));
   const n = Math.ceil(length * fps);
+  // (should the dev server reload the page, wait for the film again and draw the same moment: a
+  // frame depends on its time alone)
+  const frameAt = async (t) => {
+    for (let tries = 0; ; tries++) {
+      try {
+        await page.evaluate((x) => window.__film.frame(x), t);
+        return;
+      } catch (e) {
+        if (tries >= 3) throw e;
+        await page.waitForFunction(() => !!window.__film, null, { timeout: 120000 });
+        await page.evaluate(() => window.__film.ready());
+      }
+    }
+  };
   for (let i = 0; i < n; i++) {
-    await page.evaluate((t) => window.__film.frame(t), i / fps);
+    await frameAt(i / fps);
     writeFileSync(join(dir, `${String(i).padStart(5, '0')}.${ext}`), await page.screenshot(jpeg ? { type: 'jpeg', quality: 94 } : { type: 'png' }));
     if (i % fps === 0) process.stdout.write(`\r${film}: ${i} / ${n} frames`);
   }
