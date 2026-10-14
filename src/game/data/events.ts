@@ -274,6 +274,7 @@ export const EVENTS: EventDef[] = [
     id: 'superflare',
     title: 'Superflare',
     art: 'flare',
+    plate: 'superflare',
     eras: ['dusk'],
     weight: 6,
     bind: (s) => {
@@ -367,6 +368,7 @@ export const EVENTS: EventDef[] = [
     title: 'A Derelict Ark',
     scope: 'everyone',
     art: 'ruins',
+    plate: 'derelict_ark',
     eras: ['dusk', 'degenerate'],
     weight: 3,
     once: true,
@@ -471,6 +473,7 @@ export const EVENTS: EventDef[] = [
     id: 'rust_in_the_belt',
     title: 'Rust in the Belt',
     art: 'hunger',
+    plate: 'rust_in_the_belt',
     once: true,
     text: (_s, d) =>
       'Surveyors found asteroids hollowed from the inside, and a haze of fine dark motes that moved away from their lights. It is a swarm: harvesters left running by a civilization that died before our sun was born. It does not seem to know it is alone. It only eats and grows, and it is drawn to warmth.' +
@@ -484,6 +487,7 @@ export const EVENTS: EventDef[] = [
     id: 'last_flare',
     title: 'The Last Flare',
     art: 'flare',
+    plate: 'last_flare',
     text: (s, d) => {
       const need = sheltersNeeded(s, String(d.systemId)).reduce((a, x) => a + x.n, 0);
       const day = Number(d.day1) > 1000 ? 'hot enough to soften rock' : Number(d.day1) > 373 ? 'far past boiling' : 'hotter than anything we have known';
@@ -526,6 +530,7 @@ export const EVENTS: EventDef[] = [
     id: 'first_contact',
     title: 'We Are Not Alone',
     art: 'survivor',
+    plate: 'first_contact',
     text: (_s, d) =>
       `Our listeners have picked out a civilization: ${d.name}, at ${d.star}, ${d.dist} away. What we are hearing left them ${d.age} ago; whatever they are now, they were alive then, and facing the same end as us. The first thing we could make out: “${d.words}”`,
     choices: [
@@ -706,6 +711,7 @@ export const EVENTS: EventDef[] = [
     id: 'embers_dim',
     title: 'The Embers Dim',
     art: 'degenerate',
+    plate: 'embers_dim',
     eras: ['degenerate'],
     once: true,
     weight: 20,
@@ -723,6 +729,7 @@ export const EVENTS: EventDef[] = [
     id: 'proton_answer',
     title: 'The Proton Question',
     art: 'degenerate',
+    plate: 'proton_detector',
     once: true,
     text: (s) =>
       fateOf(s) === 'decay'
@@ -739,6 +746,7 @@ export const EVENTS: EventDef[] = [
     id: 'decay_shown',
     title: 'Not for Ever',
     art: 'degenerate',
+    plate: 'neutron_warm',
     once: true,
     text: () =>
       'The neutron stars should be a few billionths of a degree above nothing by now, and still falling. They are at one and a half degrees, and holding; every dead dwarf at a twentieth of one. The warmth is their own protons dying. Ordinary matter is not for ever: by about 10³⁹ years every planet, every dead star and every body will have dissolved into light and leptons. Whatever we are then, we cannot be made of this.',
@@ -751,6 +759,7 @@ export const EVENTS: EventDef[] = [
     id: 'curvature_shown',
     title: 'The Stars That Would Not Cool',
     art: 'degenerate',
+    plate: 'neutron_warm',
     once: true,
     text: () =>
       'The neutron stars should be a few billionths of a degree above nothing by now, and still falling. They are at thirty billionths, and holding. The warmth is not theirs: space itself, curved tight around them, is turning their mass into particles, a little at a time. The protons are stable, and still matter is not for ever. The neutron stars will burst near η 68, the dwarfs fade by η 85, and every world will be gone by η 90. Matter will outlast the stellar black holes, though not the Heart.',
@@ -764,6 +773,7 @@ export const EVENTS: EventDef[] = [
     id: 'long_flow',
     title: 'The Long Flow',
     art: 'blackhole',
+    plate: 'long_flow',
     once: true,
     text: (_s, d) =>
       `Ten to the sixty-five years. At the absolute zero an atom still slips out of its place now and then, tunnelling through what holds it: in iron, about once in that long. From now on every solid flows, like a liquid too slow for anyone to see. Whatever no one is awake to mend runs into smooth lumps${Number(d.ruins) > 0 ? `: the ${Number(d.ruins) === 1 ? 'ruin' : `${d.ruins} ruins`} we found and never dug among them` : ''}. Every world, and every stone in the belts, is slumping into a sphere. It was always happening, far too slowly to notice; our turns have grown long enough to see it. Kin, the Lattice and any mind that thinks faster than the flow keep a settlement whole. Minds that think more slowly must keep watchers awake between their thoughts, and a place where no one is awake at all will flow away.`,
@@ -868,6 +878,7 @@ export const EVENTS: EventDef[] = [
     id: 'horizon_whispers',
     title: 'Whispers at the Horizon',
     art: 'blackhole',
+    plate: 'horizon_whispers',
     eras: ['blackhole'],
     weight: 3,
     once: true,
@@ -942,6 +953,7 @@ export const EVENTS: EventDef[] = [
     id: 'relic_archive',
     title: 'An Archive of the Dead',
     art: 'ruins',
+    plate: 'relic_archive',
     text: (s, d) => `On ${bodyById(s, d)?.name} the survey found a library cut into bedrock by someone who died before our star formed. Much of it is still readable.`,
     choices: [
       { label: 'Read it, slowly', hint: 'Insight +90.', run: (s, d) => { insight(s, 90); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
@@ -952,6 +964,7 @@ export const EVENTS: EventDef[] = [
     id: 'relic_engine',
     title: 'A Cold Engine',
     art: 'ruins',
+    plate: 'relic_engine',
     text: (s, d) => `Beneath the ice of ${bodyById(s, d)?.name} lies an ancient reactor, shut down and sealed. Its fuel is still there.`,
     choices: [
       { label: 'Restart it', hint: 'Energy +70. Its heat may be noticed.', run: (s, d, rng) => { energy(s, 70); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; if (rng.chance(0.3)) { const sys = b ? s.systems[b.systemId] : null; const from = sys ? drawSwarmTo(s, sys.id) : null; if (sys && from) log(s, `The swarm at ${from.name} has turned toward the warmth of the engine at ${sys.name}.`, 'bad', sys.id); } } },
@@ -973,6 +986,7 @@ export const EVENTS: EventDef[] = [
     id: 'relic_ghosts',
     title: 'Ghosts in the Archive',
     art: 'ruins',
+    plate: 'relic_ghosts',
     text: (s, d) => `The machines under ${bodyById(s, d)?.name} are still running, and still storing minds: thousands of archived people from a civilization that ended ages ago. They are not asleep. They are paused, mid-sentence.`,
     choices: [
       { label: 'Run them again, as Echoes', hint: '+2 Echoes, wherever there is substrate (they wait in the archive until there is). They are strange to us.', ok: (s) => hasTech(s, 'mind_substrate'), run: (s, d) => { welcomeEchoes(s, 2); stand(s, 'echoes', -3); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'woken'; } },
