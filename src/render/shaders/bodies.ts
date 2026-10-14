@@ -146,6 +146,8 @@ export const PLANET_FRAG = /* glsl */ `
   uniform float uEaten;       // a swarm of the Hunger feeding on it now, by its size (0..1)
   uniform float uFlow;        // the Long Flow has come: the ground has run smooth (0 or 1)
   uniform float uIron;        // matter stable, past 10^1500 years: everything has fused to iron (0 or 1)
+  uniform float uReveal;      // the survey reveal: 1 shown; below it a scan line sweeps down the world, its look above the line, a silhouette below
+  uniform vec3 uScan;         // the scan line's colour (the age's neon)
   varying vec3 vNormal;
   varying vec3 vObj;
   varying vec3 vWorldN;
@@ -373,6 +375,16 @@ export const PLANET_FRAG = /* glsl */ `
       tv = max(tv, 900.0 * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))));
       tv = max(tv, 700.0 * uEaten * cut);
       col = thermal(tv) * (0.5 + 0.5 * toViewer) * (0.9 + 0.2 * detail);
+    }
+    if (uReveal < 1.0) {
+      // the survey reveal: a line of light sweeps down the world, leaving its look behind it; below
+      // the line it is still a silhouette, only its edge catching the light
+      float v = 0.5 - 0.5 * vObj.y;
+      float edge = uReveal * 1.16 - 0.08;
+      float shown = 1.0 - smoothstep(edge - 0.012, edge + 0.012, v);
+      vec3 sil = vec3(0.004) + uScan * pow(1.0 - toViewer, 3.0) * 0.3;
+      col = mix(sil, col, shown);
+      col += uScan * (1.0 - smoothstep(0.0, 0.028, abs(v - edge))) * 1.3 * step(0.001, uReveal);
     }
     gl_FragColor = vec4(col, 1.0);
   }

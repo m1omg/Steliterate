@@ -55,6 +55,8 @@ export interface Settings {
   qualityChosen?: boolean;
   /** The films (part 4): unset, on, unless the system asks for reduced motion. */
   films?: boolean;
+  /** The survey reveal (part 4): a system just charted shows its worlds one by one. Unset, as the films. */
+  reveals?: boolean;
 }
 
 export const game = signal<GameState | null>(null);
@@ -301,6 +303,20 @@ export function setFilmOverride(on: boolean | null) {
 export function filmsOn(): boolean {
   if (filmOverride !== null) return filmOverride;
   const s = settings.value.films;
+  if (s !== undefined) return s;
+  return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/** Survey reveals off for this page (`?nofilms` turns them off with the films, for the checks), or forced on or off (`__stel.reveals`). */
+let revealOverride: boolean | null = filmOverride === false ? false : null;
+export function setRevealOverride(on: boolean | null) {
+  revealOverride = on;
+}
+
+/** Whether a system just charted shows its worlds one by one: as set in Settings; unset, on unless the system asks for reduced motion. */
+export function revealsOn(): boolean {
+  if (revealOverride !== null) return revealOverride;
+  const s = settings.value.reveals;
   if (s !== undefined) return s;
   return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 }

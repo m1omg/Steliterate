@@ -14,7 +14,7 @@ import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import type { Pickable } from './render/galaxyView';
 import { App } from './ui/App';
-import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, saveSettings, screen, selection, setEngine, setFilmOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
+import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, saveSettings, screen, selection, revealsOn, setEngine, setFilmOverride, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
 import { PRIMARY_NAME, bodyKindName } from './ui/labels';
 import { doEndTurn, lastTurn, setSlowSlices } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
@@ -23,6 +23,7 @@ import { guardTranslation } from './ui/translateGuard';
 import { applyLowVision, trackKeyboard } from './ui/a11y';
 import { buildSelected, nextTodo } from './ui/hud/Hud';
 import { eventResult, loreView } from './ui/screens/Story';
+import { revealing } from './ui/hud/RevealCard';
 import { STORE } from './keys';
 import './ui/styles.css';
 import { colonies, ownColony } from './game/sim/util';
@@ -145,6 +146,11 @@ const eng = new Engine(stage, {
     view.value = 'galaxy';
     eng.showGalaxy();
   },
+  // the survey reveal: its card follows it
+  onReveal(r) {
+    revealing.value = r;
+  },
+  revealsOn: () => revealsOn(),
 });
 setEngine(eng);
 eng.setQuality(settings.value.quality);
@@ -406,6 +412,8 @@ window.__stel = {
   engine: () => engine(),
   /** The films on or off for this page (null: as the settings say), for the checks. */
   films: (on: boolean | null) => setFilmOverride(on),
+  /** The survey reveals on or off for this page (null: as the settings say), for the checks. */
+  reveals: (on: boolean | null) => setRevealOverride(on),
   /** Every slice of End Turn's turn made to take at least this long (ms), as on a slow phone (turn-slices). */
   slowSlices: (ms: number) => setSlowSlices(ms),
   /** The films, by id, with their names. */

@@ -63,7 +63,8 @@ last.
     stars, tunnelling collapse, the Passage where matter is stable) and the look of what is not
     matter (3-7: fields, horizon writing, the positronium's ellipses); then the films (Part 4: one
     for each age and ending, every frame drawn by code, a 10-second test piece sent to the player
-    first). Next: the survey reveal (the rest of Part 4) and Part 5 (`/next/`). Waiting for the
+    first) and the survey reveal (a system just charted shows its worlds one by one). Next: Part 5
+    (`/next/`). Waiting for the
     player: ships seeing what they pass (1b, a census done), the Quiet Lattice (four options put
     to them, 13 Oct; see SESSION-NOTES, "Picking up"), the new hulls (2c-5, a sheet shown), and
     their word on the films' look.

@@ -1379,6 +1379,21 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `start(name, { films: true })`; `__stel.filmFrames(id, times)` hashes frames, `__stel.filmList()`
   lists them. Videos: `tools/film-render.mjs` (needs an ffmpeg path, e.g. imageio-ffmpeg in a
   scratch venv; it starts `vite` on port 5179 for `film.html`).
+- **The survey reveal (part 4):** `SystemView` keeps it (`reveal`: its system, its start, the
+  worlds' order and times; `REVEAL` is the pace) outside `build()`, which reruns on every
+  `bump()`. `build()` tags whatever it draws for each body (`userData.reveal`; `orbit` holds an
+  orbit line's opacity, `belt` a belt's instance count, `world` marks a world's pivot), and
+  `applyReveal()`, every frame in `update()`, sets their visibility, the orbit's fade, the belt's
+  count and the planet's `uReveal` (`PLANET_FRAG`: a silhouette, then a scan line) from the
+  reveal's time alone; `endReveal()` puts them back. `hidden(id)` is a world whose scan is not
+  over: `Engine.pickAt` and the labels leave it out, the selection ring waits, and
+  `Engine.select` of one ends the reveal. `Engine.markForReveal(state, ids)` (turnflow: the
+  systems charted this turn, kept for that `GameState` only), `showSystem` starts it on entering
+  one (`focusBodyId` first), `skipReveal(all)`. `EngineEvents.onReveal` feeds `revealing`
+  (`ui/hud/RevealCard.tsx`); `revealsOn` asks `store.ts` (Settings, reduced motion, `?nofilms`,
+  `__stel.reveals(on)`). The card's Enter and Escape are a capture listener on `window`, as the
+  films' keys are, so main.tsx's handler never sees them (it would end the turn or clear the
+  selection); it sets `--reveal-h`, from which the messages stack on.
 - **What is not matter, drawn (part 3-7, `src/render/fields.ts`):** `fieldLattice` (a dipole's
   lines r = L sin²θ, a standing-wave torus whose `userData.markColor` the selection circle takes,
   motes bouncing between the mirror points in `MOTE_VERT`, loops for Field Stores, a

@@ -17,6 +17,7 @@ import { ironAge } from '../game/sim/deeptime';
 import { ERA_BY_ID } from '../game/eras';
 import type { Quality } from './engine';
 import { fieldCage, fieldLattice, positroniumVeil, type FieldStyle } from './fields';
+import { ANOMALIES } from '../game/data/events';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -34,6 +35,44 @@ interface PlanetRig {
 
 /** The selection circle on a world no one lives on (on a lived-on world it takes its ring's colour). */
 const SELECT = new THREE.Color('#ffd9b0');
+
+/**
+ * The survey reveal's pace, in seconds (part 4): the star's pulse first (`lead`); then each world
+ * in its turn, at most `step` long and all of them within `span` (a world where the survey found
+ * something takes two turns, for its card); within its turn its orbit fades in over `orbit` and a
+ * scan line sweeps it from `scanA` to `scanB`; the last card stays `hold`. At most about 8 s.
+ */
+const REVEAL = { lead: 0.7, step: 1.2, span: 6, orbit: 0.35, scanA: 0.25, scanB: 0.95, hold: 1.2, pulse: 1.4 };
+
+/** Where the reveal has come to, for the card (UI): the world being charted (null before the first), its place, and how many. */
+export interface RevealStep {
+  systemId: string;
+  bodyId: string | null;
+  index: number;
+  total: number;
+}
+
+interface Reveal {
+  systemId: string;
+  /** The view's time it began at. */
+  start: number;
+  /** The worlds in the order they come, and when each one's turn begins (seconds from the start). */
+  order: string[];
+  at: Map<string, number>;
+  /** When it is over. */
+  end: number;
+  /** How far the star's pulse goes: past the last orbit. */
+  reach: number;
+}
+
+const FIND_IDS = new Set(ANOMALIES.map((a) => a.id));
+
+/** A survey found something here: ruins (a relic) or a remarkable find (Story.tsx worldFinds). */
+function hasFind(b: Body | undefined): boolean {
+  return !!b && ((!!b.relic && b.relic.state !== 'hidden') || b.traits.some((t) => FIND_IDS.has(t)));
+}
+
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 const KIND_INDEX: Record<string, number> = { eyeball: 1, terran: 1, super_earth: 0, barren: 0, ice: 2, ocean_ice: 5, gas_giant: 3, ice_giant: 4 };
 
@@ -77,6 +116,13 @@ export class SystemView {
   }
   neon = new THREE.Color('#4fe3d1');
   selectedBody: string | null = null;
+  /** The survey reveal playing, if one is (kept across a rebuild of the same system; applied in update). */
+  private reveal: Reveal | null = null;
+  private revealAt = -2;
+  /** Told where the reveal has come to, and null once it is over (Engine: the card). */
+  onReveal: ((r: RevealStep | null) => void) | null = null;
+  /** The reveal's first moment: a ring of light leaving the star. */
+  private pulse: THREE.Mesh;
 
   /** Where a body is right now, and how big: for the camera to fly to and follow. */
   /** Where a fleet in this system is drawn right now. */
@@ -97,6 +143,9 @@ export class SystemView {
     this.stars = backgroundStars();
     this.selRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 96), new THREE.MeshBasicMaterial({ color: SELECT.clone(), transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
     this.selRing.visible = false;
+    this.pulse = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 160), new THREE.MeshBasicMaterial({ color: this.neon.clone(), transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.pulse.rotation.x = -Math.PI / 2;
+    this.pulse.visible = false;
   }
 
   private clear() {
@@ -104,7 +153,7 @@ export class SystemView {
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();
       const mat = m.material as THREE.Material | THREE.Material[] | undefined;
-      if (mat && !Array.isArray(mat) && mat !== this.selRing.material) mat.dispose();
+      if (mat && !Array.isArray(mat) && mat !== this.selRing.material && mat !== this.pulse.material) mat.dispose();
     });
     this.group.clear();
     this.planets = [];
@@ -127,12 +176,15 @@ export class SystemView {
   }
 
   build(state: GameState, systemId: string) {
+    // (a reveal belongs to its system: another one built ends it)
+    if (this.reveal && this.reveal.systemId !== systemId) this.endReveal();
     this.clear();
     this.systemId = systemId;
     const sys = state.systems[systemId];
     this.group.add(this.stars);
     (this.stars.material as THREE.PointsMaterial).opacity = state.era === 'dusk' ? 0.8 : state.era === 'degenerate' ? 0.35 : state.era === 'blackhole' ? 0.12 : 0.03;
     this.group.add(this.selRing);
+    this.group.add(this.pulse);
     this.buildPrimary(state, sys);
     const light = primaryLightColor(state, sys);
     const colonized = new Set(colonies(state).filter((c) => c.systemId === sys.id).map((c) => c.bodyId));
@@ -165,11 +217,11 @@ export class SystemView {
     for (const bid of surveyed ? sys.bodies : []) {
       const b = state.bodies[bid];
       if (!b || b.dissolved) continue;
-      if (b.kind === 'deep') {
-        this.buildDeep(state, sys, b, colonized.has(b.id), residents.get(b.id), theirForms.get(b.id));
-        continue;
-      }
-      this.buildBody(state, sys, b, light, colonized.has(b.id), residents.get(b.id), theirForms.get(b.id), iron);
+      const from = this.group.children.length;
+      if (b.kind === 'deep') this.buildDeep(state, sys, b, colonized.has(b.id), residents.get(b.id), theirForms.get(b.id));
+      else this.buildBody(state, sys, b, light, colonized.has(b.id), residents.get(b.id), theirForms.get(b.id), iron);
+      // whatever was drawn for it waits for its turn in a survey reveal
+      for (let i = from; i < this.group.children.length; i++) this.group.children[i].userData.reveal = b.id;
     }
     if (surveyed) this.buildStructures(state, sys);
     // the positronium, everywhere at once while it lasts: brighter where our minds are woven through it
@@ -337,6 +389,7 @@ export class SystemView {
     const other = sv ? othersColor(sv) : null;
     const ring = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.12, 128), new THREE.MeshBasicMaterial({ color: settled ? this.neon : (other ?? '#6b6f7a'), transparent: true, opacity: settled ? 0.55 : other ? 0.4 : 0.18, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2;
+    ring.userData.orbit = (ring.material as THREE.MeshBasicMaterial).opacity;
     this.group.add(ring);
     const pos = new THREE.Vector3(r, 0, 0);
     this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos });
@@ -417,6 +470,7 @@ export class SystemView {
     let mat: THREE.ShaderMaterial | null = null;
     if (b.kind === 'asteroids') {
       mesh = asteroidBelt(orbitR, hashSeed(b.id), b.richness, flowing(state));
+      mesh.userData.belt = (mesh as unknown as THREE.InstancedMesh).count;
       this.rockMats.push({ mat: mesh.material as THREE.MeshBasicMaterial, tempK: bodyClimate(state, b).mean, rust: sys.rust ?? 0 });
       this.applyViewMode();
       this.group.add(mesh);
@@ -465,6 +519,9 @@ export class SystemView {
         uLocked: { value: b.kind === 'eyeball' || b.traits.includes('tidally_locked') ? 1 : 0 },
         // matter stable, past 10^1500 years: iron through and through
         uIron: { value: iron ? 1 : 0 },
+        // the survey reveal sweeps it in (update)
+        uReveal: { value: 1 },
+        uScan: { value: this.neon },
       },
     });
     if (iron) this.look.iron++;
@@ -516,7 +573,9 @@ export class SystemView {
     // orbit line
     const orbit = new THREE.Mesh(new THREE.RingGeometry(orbitR - 0.04, orbitR + 0.04, 180), new THREE.MeshBasicMaterial({ color: b.rogue ? '#4a4a52' : '#8a8f9c', transparent: true, opacity: b.rogue ? 0.08 : 0.16, side: THREE.DoubleSide, depthWrite: false }));
     orbit.rotation.x = -Math.PI / 2;
+    orbit.userData.orbit = (orbit.material as THREE.MeshBasicMaterial).opacity;
     this.group.add(orbit);
+    pivot.userData.world = true;
     this.group.add(pivot);
     const speed = b.rogue ? 0.004 : 0.25 / Math.pow(orbitR / 12, 1.5);
     this.planets.push({ body: b, pivot, mesh, mat, speed, phase: b.phase, radius: orbitR, extra });
@@ -979,10 +1038,12 @@ export class SystemView {
       const f = this.fleets.children[i];
       if (f) p.pos.copy(f.position);
     });
+    // the survey reveal: what it has not yet charted on screen waits (and its name and the pointer: hidden)
+    const waiting = this.applyReveal();
     // a world wears one ring: selected, the selection circle takes the place and colour of the
     // ring that says whose it is (ours, or a neighbour's); a world no one lives on gets the pale one
     let marked: THREE.Mesh | undefined;
-    if (this.selectedBody) {
+    if (this.selectedBody && !waiting?.has(this.selectedBody)) {
       const p = pick(`body:${this.selectedBody}`) ?? pick(this.selectedBody);
       if (p) {
         const rig = this.planets.find((x) => x.body.id === this.selectedBody);
@@ -1002,7 +1063,138 @@ export class SystemView {
         mat.opacity = floor + (0.8 - floor) * fade * fade * (3 - 2 * fade);
       } else this.selRing.visible = false;
     } else this.selRing.visible = false;
-    for (const pr of this.planets) for (const e of pr.extra) if (e.userData.mark) e.visible = e !== marked;
+    for (const pr of this.planets) for (const e of pr.extra) if (e.userData.mark) e.visible = e !== marked && !waiting?.has(pr.body.id);
+  }
+
+  /**
+   * Begin the survey reveal of the system just built: its worlds one by one in orbit order (or
+   * `first` first, a world the view was entered to look at), after the star's pulse.
+   */
+  startReveal(state: GameState, first?: string | null) {
+    const id = this.systemId;
+    if (!id) return;
+    const dist = new Map<string, number>();
+    for (const p of this.pickables) {
+      if (!p.id.startsWith('body:')) continue;
+      const b = p.id.slice(5);
+      dist.set(b, this.planets.find((x) => x.body.id === b)?.radius ?? p.pos.length());
+    }
+    const order = state.systems[id].bodies.filter((b) => dist.has(b)).sort((a, b) => (a === first ? -1 : b === first ? 1 : dist.get(a)! - dist.get(b)!));
+    if (!order.length) return;
+    const weight = (b: string) => (hasFind(state.bodies[b]) ? 2 : 1);
+    const step = Math.min(REVEAL.step, REVEAL.span / order.reduce((a, b) => a + weight(b), 0));
+    const at = new Map<string, number>();
+    let t = REVEAL.lead;
+    let last = t;
+    for (const b of order) {
+      at.set(b, t);
+      last = t;
+      t += step * weight(b);
+    }
+    const reach = this.planets.reduce((m, p) => (p.body.rogue ? m : Math.max(m, p.radius)), this.primaryRadius * 3) * 1.15;
+    this.reveal = { systemId: id, start: this.time, order, at, end: Math.max(t, last + REVEAL.scanB) + REVEAL.hold, reach };
+    this.revealAt = -2;
+  }
+
+  /** Skip the reveal: every world at once. */
+  stopReveal() {
+    this.endReveal();
+  }
+
+  get revealing(): boolean {
+    return !!this.reveal;
+  }
+
+  /** Whether a pickable waits for the reveal (a world not yet charted on screen): its name and the pointer wait with it. */
+  hidden(id: string): boolean {
+    const r = this.reveal;
+    if (!r || !id.startsWith('body:')) return false;
+    const at = r.at.get(id.slice(5));
+    return at !== undefined && this.time - r.start < at + REVEAL.scanB;
+  }
+
+  /**
+   * The reveal applied to what is drawn, every frame it plays (after a rebuild too): the worlds
+   * still to come hidden, the one in its turn fading and scanning in. Returns the worlds not yet
+   * wholly there.
+   */
+  private applyReveal(): Set<string> | null {
+    const r = this.reveal;
+    if (!r) return null;
+    const t = this.time - r.start;
+    if (t >= r.end) {
+      this.endReveal();
+      return null;
+    }
+    const waiting = new Set<string>();
+    for (const [id, at] of r.at) if (t < at + REVEAL.scanB) waiting.add(id);
+    // first a ring of light leaves the star, out past the last orbit
+    const k = clamp01(t / REVEAL.pulse);
+    const r0 = this.primaryRadius * 1.2;
+    this.pulse.visible = k < 1;
+    this.pulse.scale.setScalar(r0 + (r.reach - r0) * (1 - (1 - k) * (1 - k)));
+    const pm = this.pulse.material as THREE.MeshBasicMaterial;
+    pm.color.copy(this.neon);
+    pm.opacity = 0.5 * (1 - k);
+    const sweep = (since: number) => clamp01((since - REVEAL.scanA) / (REVEAL.scanB - REVEAL.scanA));
+    for (const o of this.group.children) {
+      const id = o.userData.reveal as string | undefined;
+      const at = id === undefined ? undefined : r.at.get(id);
+      if (at === undefined) continue;
+      const since = t - at;
+      if (o.userData.orbit !== undefined) {
+        // its orbit fades in
+        o.visible = since >= 0;
+        ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = (o.userData.orbit as number) * clamp01(since / REVEAL.orbit);
+      } else if (o.userData.belt !== undefined) {
+        // a belt's rubble comes in as the scan passes
+        const inst = o as unknown as THREE.InstancedMesh;
+        inst.count = Math.round((o.userData.belt as number) * sweep(since));
+        o.visible = inst.count > 0;
+      } else if (o.userData.world) o.visible = since >= 0;
+      // (what is round it, habitats, fields and motes, once it is charted)
+      else o.visible = since >= REVEAL.scanB;
+    }
+    for (const pr of this.planets) {
+      const at = r.at.get(pr.body.id);
+      if (at === undefined || !pr.mat) continue;
+      // the world itself, a silhouette first, then the scan
+      const scan = sweep(t - at);
+      pr.mat.uniforms.uReveal.value = scan;
+      // its rings, its fields and its shield come with its look
+      for (const ch of pr.mesh.children) ch.visible = scan >= 1;
+      for (const ch of pr.pivot.children) if (ch !== pr.mesh) ch.visible = scan >= 1;
+    }
+    // the card follows the world whose scan has begun
+    let cur = -1;
+    r.order.forEach((id, i) => {
+      if (t >= r.at.get(id)! + REVEAL.scanA) cur = i;
+    });
+    if (cur !== this.revealAt) {
+      this.revealAt = cur;
+      this.onReveal?.({ systemId: r.systemId, bodyId: cur >= 0 ? r.order[cur] : null, index: cur, total: r.order.length });
+    }
+    return waiting;
+  }
+
+  /** The reveal over (or skipped): everything as it is drawn without one. */
+  private endReveal() {
+    if (!this.reveal) return;
+    this.reveal = null;
+    this.revealAt = -2;
+    this.pulse.visible = false;
+    for (const o of this.group.children) {
+      if (o.userData.reveal === undefined) continue;
+      o.visible = true;
+      if (o.userData.orbit !== undefined) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = o.userData.orbit as number;
+      if (o.userData.belt !== undefined) (o as unknown as THREE.InstancedMesh).count = o.userData.belt as number;
+    }
+    for (const pr of this.planets) {
+      if (pr.mat) pr.mat.uniforms.uReveal.value = 1;
+      for (const ch of pr.mesh.children) ch.visible = true;
+      for (const ch of pr.pivot.children) ch.visible = true;
+    }
+    this.onReveal?.(null);
   }
 }
 

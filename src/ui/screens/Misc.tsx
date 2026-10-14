@@ -7,7 +7,7 @@ import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
-import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, between, bump, engine, filmsOn, filmsSeen, game, modal, notify, rev, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
+import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, between, bump, engine, filmsOn, filmsSeen, game, modal, notify, rev, revealsOn, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
 import { FILMS, type FilmId } from '../../film/films';
 import { fateOf } from '../../game/fate';
 import { Icon } from '../Icon';
@@ -202,6 +202,27 @@ export function SettingsModal() {
           </div>
           <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
             A short film, drawn as it plays, as each age begins and as a game ends. A click, Space or Escape skips one; the Codex plays again those you have seen. Off to begin with where the system asks for less motion.
+          </div>
+        </div>
+        <div class="field">
+          <label>Survey reveals</label>
+          <div class="seg">
+            <button class={`btn small ${revealsOn() ? 'primary' : ''}`} aria-pressed={revealsOn()} onClick={() => set({ reveals: true })}>
+              On
+            </button>
+            <button
+              class={`btn small ${!revealsOn() ? 'primary' : ''}`}
+              aria-pressed={!revealsOn()}
+              onClick={() => {
+                set({ reveals: false });
+                engine()?.skipReveal(true);
+              }}
+            >
+              Off
+            </button>
+          </div>
+          <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
+            Looking into a system your ships have just charted, its worlds come in one by one, each named on a card with what the survey found there. Skip, Enter or Escape shows them all at once. Off to begin with where the system asks for less motion.
           </div>
         </div>
         <div class="field">

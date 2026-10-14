@@ -3020,3 +3020,29 @@ A film as each age begins and as a game ends, every frame drawn by code: the pla
   longest it runs without the browser getting its turn 13 ms at the median and 20 at worst (31,
   72, 14 and 34 after part 2). From the click to done, 0.8 s at the median: drawing the map in
   software.
+
+## The survey reveal (14 Oct, part 4)
+
+Looking into a system our ships have just charted, its worlds come in one by one, as in Endless
+Space 2: display only, no rule changed. New: `ui/hud/RevealCard.tsx`, `browser/survey-reveal`.
+
+- **What it shows:** a ring of light leaves the star; then each world in orbit order (the one the
+  view was entered to look at first): its orbit fades in, it stands as a silhouette, and a line of
+  light sweeps down it, leaving its real look behind (`uReveal` in the planet shader); its rings,
+  fields and the habitats round it come with it, a belt's rubble as the line passes. Only then do
+  its name and the pointer find it. A card names the world being charted: its kind, temperature,
+  water, how habitable, room for Kin, and last what the survey found there, with its plate. About
+  1.2 s a world and all of them within about 8 s (a world with a find takes two turns, for its
+  card). Its clock is the view's elapsed time: the same at any frame rate.
+- **When:** on entering such a system by any way in (the survey's Look, the map, a list), once
+  each; never by itself after a turn. Leaving it, another system, or another game ends it.
+- **Controls:** Skip, and Skip all (the other systems just charted then open with their worlds);
+  Enter and Escape skip it and never end the turn underneath it; a world picked from a list
+  before its turn brings them all at once. Settings: Survey reveals on or off (off to begin with
+  where the system asks for less motion). The card sits low in the middle, the messages stacking
+  on from it; on a phone it hangs under the top bar, the messages below it; in the magnifier mode
+  it has its place in the column, with the prompts.
+- **Checks:** `?nofilms` turns the reveals off too (every check but those that ask for films);
+  `browser/survey-reveal` (Look plays it; the worlds and their names wait; the card names each
+  world; Enter skips it and ends no turn; Escape skips it; Skip all; off in Settings; the same
+  2 s in at 30 and at 144 frames a second; its place in the magnifier column).

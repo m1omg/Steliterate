@@ -726,6 +726,11 @@ Each step validated on its own, with the harness by fate:
    - As built (14 Oct), the films (items 1 to 6): as above. Their layer hangs on the page's body,
      outside `#ui`, whose zoom had scaled the canvas with the interface; the narration sits low
      and the picture above it, so the words never cross the world drawn.
+   - As built (14 Oct), the survey reveal (item 7): as above, with a ring of light leaving the
+     star first; the world the view was entered to look at comes first; a world with a find takes
+     two turns, for its card. The card sits low in the middle, where the messages are (they stack
+     on from it), and under the top bar on a phone; a world picked from a list before its turn
+     brings them all at once. `?nofilms` turns the reveals off too.
 
 ### 3-7, as it will be built (14 Oct, written before starting it)
 

@@ -274,7 +274,7 @@ html.kbd [tabindex='-1']:focus-visible { outline: none; }
 
 .viewswitch { position: absolute; left: 50%; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 4px; padding: 4px; }
 
-.toasts { position: absolute; left: 50%; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; z-index: 25; pointer-events: none; width: min(560px, calc(calc(100vw / var(--z, 1)) - 32px)); }
+.toasts { position: absolute; left: 50%; bottom: calc(64px + var(--reveal-h, 0px) + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; z-index: 25; pointer-events: none; width: min(560px, calc(calc(100vw / var(--z, 1)) - 32px)); }
 .toast { pointer-events: auto; padding: 8px 16px; font-size: 14.5px; text-align: center; cursor: pointer; animation: toast-in 0.25s ease-out; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .toast.bad { border-color: var(--bad); }
@@ -462,6 +462,13 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .rp-options { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 .rp-option { justify-content: flex-start; text-align: left; }
 @media (max-width: 760px) { .research-prompt { top: calc(150px + env(safe-area-inset-top, 0px)); } .toasts { bottom: calc(230px + env(safe-area-inset-bottom, 0px)); } }
+/* the survey reveal's card (part 4): low in the middle, over the view's buttons and out of the worlds' way (on a phone, under the top bar) */
+.reveal-card { position: absolute; left: 50%; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(380px, calc(calc(100vw / var(--z, 1)) - 32px)); padding: 10px 12px; z-index: 6; border-color: color-mix(in srgb, var(--neon) 50%, var(--line-2)); }
+.reveal-card > .row { gap: 6px; align-items: flex-start; }
+.rc-name { font-family: var(--f-display); font-weight: 700; font-size: 19px; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.1; }
+.rc-facts { margin-top: 6px; }
+.rc-find { position: relative; margin: 8px -12px -10px; border-top: 1px solid var(--line); }
+.rc-find-text { position: absolute; left: 12px; right: 12px; bottom: 8px; font-size: 14px; text-shadow: 0 1px 3px #000; }
 
 .bl-head { display: flex; gap: 2px; padding: 3px; align-self: flex-start; }
 .bl-head .btn { min-height: 24px; }
@@ -678,12 +685,13 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
   html:not(.lv) .viewswitch .thermal-legend { position: absolute; right: calc(100% + 6px); top: 0; width: 210px; padding: 6px 4px 4px; background: var(--panel); border: 1px solid var(--line-2); }
 
   /* messages, the map banner, the prompts and the guide hang from the top bar, clear of the panels below */
-  html:not(.lv) .toasts { top: calc(var(--hud-end, 160px) + 6px); bottom: auto; flex-direction: column; width: min(460px, calc(calc(100vw / var(--z, 1)) - 72px)); }
+  html:not(.lv) .toasts { top: calc(var(--hud-end, 160px) + 6px + var(--reveal-h, 0px)); bottom: auto; flex-direction: column; width: min(460px, calc(calc(100vw / var(--z, 1)) - 72px)); }
   html:not(.lv) .toast { padding: 6px 12px; font-size: 13.5px; }
   html:not(.lv) .targeting { top: calc(var(--hud-end, 160px) + 6px); left: 8px; right: 62px; transform: none; max-width: none; padding: 6px 8px; font-size: 13.5px; line-height: 1.35; }
   html:not(.lv) .targeting .target-est { font-size: 12.5px; }
   html:not(.lv) .research-prompt { top: calc(var(--hud-end, 160px) + 6px); max-height: max(160px, calc(calc(100vh / var(--z, 1)) - var(--hud-end, 160px) - 150px)); }
   html:not(.lv) .tutorial { top: calc(var(--hud-end, 160px) + 6px); max-height: max(160px, calc(calc(100vh / var(--z, 1)) - var(--hud-end, 160px) - 150px)); }
+  html:not(.lv) .reveal-card { top: calc(var(--hud-end, 160px) + 6px); bottom: auto; z-index: 7; }
   /* choosing a destination: the map is the whole screen */
   html.picking:not(.lv) .drawer { display: none; }
 }
@@ -804,7 +812,7 @@ html.lv .hud > :not(.tut-ring) { position: relative; inset: auto; width: auto; m
 html.lv .lv-bar { order: 0; display: flex; justify-content: flex-end; }
 html.lv .chrono { order: 1; }
 html.lv .resources { order: 2; }
-html.lv .research-prompt, html.lv .tutorial, html.lv .targeting { order: 3; }
+html.lv .research-prompt, html.lv .tutorial, html.lv .targeting, html.lv .reveal-card { order: 3; }
 html.lv .turnbox { order: 4; }
 html.lv .rail { order: 5; }
 html.lv .bottom-left { order: 6; }

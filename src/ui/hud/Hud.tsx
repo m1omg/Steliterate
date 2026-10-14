@@ -19,6 +19,7 @@ import { doEndTurn } from '../turnflow';
 import { Chronometer } from './Chronometer';
 import { Resources } from './Resources';
 import { ResearchPrompt } from './ResearchPrompt';
+import { RevealCard } from './RevealCard';
 import { Tutorial } from './Tutorial';
 import { sfx } from '../../audio/sfx';
 import { pressable } from '../a11y';
@@ -62,6 +63,7 @@ export function Hud({ s }: { s: GameState }) {
       <TurnBox s={s} p={p} />
       <ResearchPrompt s={s} />
       <ShipPrompt s={s} />
+      <RevealCard s={s} />
       <Tutorial s={s} />
       <ViewSwitch s={s} />
     </>

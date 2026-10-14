@@ -668,7 +668,13 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     four runs) had been measuring by luck, and are now sure of it (CHANGELOG), passing every run
     since. End Turn
     on a slowed CPU after Parts 3 and 4: at worst 20 ms without a breath (34 after part 2).
-  - Next: the survey reveal (the rest of Part 4), then Part 5 (`/next/`).
+  - the survey reveal (part 4, 14 Oct, display only): looking into a system our ships have just
+    charted, a ring of light leaves the star and its worlds come in one by one, a scan line
+    sweeping each from a silhouette to its look, with a card naming each and what the survey found
+    there (its plate). Skip, Skip all, Enter or Escape (no turn ends); Survey reveals on or off in
+    Settings. Validated: tsc, the build (`index-CrfEF9mB.js`), the playtest, 76 unit checks and
+    59 browser checks at once (`survey-reveal` new).
+  - Next: Part 5 (`/next/`).
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home
