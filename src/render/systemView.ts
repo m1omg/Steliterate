@@ -18,6 +18,7 @@ import { ERA_BY_ID } from '../game/eras';
 import type { Quality } from './engine';
 import { fieldCage, fieldLattice, positroniumVeil, type FieldStyle } from './fields';
 import { ANOMALIES } from '../game/data/events';
+import { fleetLook, lookRole } from '../game/data/ships';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -917,7 +918,7 @@ export class SystemView {
   private buildFleets(state: GameState, sys: StarSystem) {
     const here = fleets(state).filter((f) => f.at === sys.id);
     here.forEach((f, i) => {
-      const hull = shipMesh(f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis'));
+      const hull = shipMesh(lookRole(fleetLook(f.ships.map((s) => s.cls))) === 'war');
       hull.userData.orbit = { r: this.primaryRadius * 3.2 + 4 + i * 1.5, speed: 0.12, phase: i * 1.9 };
       this.fleets.add(hull);
       this.pickables.push({ kind: 'fleet', id: f.id, pos: new THREE.Vector3() });
@@ -929,7 +930,7 @@ export class SystemView {
       return !!sn && 'at' in sn && sn.at === sys.id;
     });
     theirs.forEach((f, i) => {
-      const hull = shipMesh(f.ships.some((s) => s.cls === 'warden' || s.cls === 'aegis'), state.survivors[f.owner]?.color);
+      const hull = shipMesh(lookRole(fleetLook(f.ships.map((s) => s.cls))) === 'war', state.survivors[f.owner]?.color);
       hull.userData.orbit = { r: this.primaryRadius * 3.2 + 4.75 + (here.length + i) * 1.5, speed: -0.09, phase: 1 + i * 1.9 };
       this.fleets.add(hull);
     });

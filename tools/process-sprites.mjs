@@ -1,6 +1,6 @@
 // Cut the generated ship paintings out of their black backgrounds and fit them into square
 // sprites for the galaxy map.
-//   node tools/process-sprites.mjs
+//   node tools/process-sprites.mjs [name ...]   (only those named, or all)
 // Sources: art-src/ships/<name>.png (black background, bow pointing up)
 // Output:  public/art/ships/<name>.png (256×256, transparent, bow up)
 import sharp from 'sharp';
@@ -16,7 +16,9 @@ const PAD = 0.06; // empty margin around the hull, as a share of the sprite
 const SHIPS = {
   settler: 'ark.png', probe: 'probe.png', war: 'warden.png', other: 'hauler.png',
   lighter: 'lighter.png', seedcore: 'seedcore.png', spore: 'spore.png', vaultship: 'vaultship.png', aegis: 'aegis.png', tender: 'tender.png',
+  picket: 'picket.png', breacher: 'breacher.png', hunter: 'hunter.png', lance: 'lance.png',
 };
+const only = process.argv.slice(2);
 
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -25,6 +27,7 @@ const smooth = (a, b, x) => {
 
 fs.mkdirSync(OUT, { recursive: true });
 for (const [name, file] of Object.entries(SHIPS)) {
+  if (only.length && !only.includes(name)) continue;
   const src = path.join(SRC, file);
   if (!fs.existsSync(src)) {
     console.log(`skip ${name}: no ${src}`);

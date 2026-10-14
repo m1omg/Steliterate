@@ -81,7 +81,7 @@ export function isWarship(cls: string): boolean {
 }
 
 /** A painted hull in public/art/ships/<look>.png (the Ark is 'settler', the Warden 'war'). */
-export type FleetLook = 'settler' | 'probe' | 'war' | 'other' | 'lighter' | 'seedcore' | 'spore' | 'vaultship' | 'aegis' | 'tender';
+export type FleetLook = 'settler' | 'probe' | 'war' | 'other' | 'lighter' | 'seedcore' | 'spore' | 'vaultship' | 'aegis' | 'tender' | 'picket' | 'breacher' | 'hunter' | 'lance';
 
 const HULL: Record<string, FleetLook> = {
   ark: 'settler',
@@ -92,13 +92,21 @@ const HULL: Record<string, FleetLook> = {
   warden: 'war',
   aegis: 'aegis',
   tender: 'tender',
+  picket: 'picket',
+  breacher: 'breacher',
+  hunter: 'hunter',
+  lance: 'lance',
 };
+
+/** The warships' hulls, heaviest first: a fleet wears the first it carries. */
+const WAR_HULLS = ['aegis', 'breacher', 'hunter', 'warden', 'picket'];
 
 /** Which painted hull stands for a fleet on the map and in the lists: its heaviest warship, else its first settler, else its tender. */
 export function fleetLook(classes: string[]): FleetLook {
-  if (classes.includes('aegis')) return HULL.aegis;
-  // (the Hunter, the Picket, the Breacher and the Lance wear the Warden's hull until they have their own)
-  if (classes.includes('warden') || classes.includes('hunter') || classes.includes('picket') || classes.includes('breacher') || classes.includes('lance')) return 'war';
+  const war = WAR_HULLS.find((c) => classes.includes(c));
+  if (war) return HULL[war];
+  // (a Lance shows its own only with no other warship to escort it)
+  if (classes.includes('lance')) return HULL.lance;
   const settler = classes.find((c) => SHIP_BY_ID[c]?.settles);
   if (settler) return HULL[settler] ?? 'settler';
   if (classes.length > 0 && classes.every((c) => c === 'probe')) return 'probe';
@@ -108,6 +116,6 @@ export function fleetLook(classes: string[]): FleetLook {
 
 /** What a hull is for, which sets the colour of its glow on the map. */
 export function lookRole(look: FleetLook): 'war' | 'settler' | 'other' {
-  if (look === 'war' || look === 'aegis') return 'war';
+  if (look === 'war' || look === 'aegis' || look === 'picket' || look === 'breacher' || look === 'hunter' || look === 'lance') return 'war';
   return look === 'settler' || look === 'lighter' || look === 'seedcore' || look === 'spore' || look === 'vaultship' ? 'settler' : 'other';
 }
