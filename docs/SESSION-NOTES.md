@@ -674,7 +674,15 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     there (its plate). Skip, Skip all, Enter or Escape (no turn ends); Survey reveals on or off in
     Settings. Validated: tsc, the build (`index-CrfEF9mB.js`), the playtest, 76 unit checks and
     59 browser checks at once (`survey-reveal` new).
-  - Next: Part 5 (`/next/`).
+  - up at /next/ (part 5, 14 Oct): https://m1omg.github.io/Steliterate/next/, the `next` branch (a
+    copy of the work branch), built beside `main` by the Pages workflow on `next`, without a second
+    copy of the archive. The root stays today's game and `/archive/2026-10-13/` the backup. The new
+    version's first saves are in `tools/saves/` (`*-next.json.gz`), and "Saves are sacred" holds
+    for them from here. `main`'s own workflow was left as it is (it builds `main` alone, so a push
+    to it takes `/next/` down until the workflow runs on `next` again): changing it needs a branch
+    of its own for the PR, which the plan's permissions did not cover, so it is put to the player.
+    The films' frame cost on Medium: about 20 ms at 1920×1080 here (CHANGELOG, "Up at /next/").
+  - Next: the player's word on the open threads (HANDOVER, section 3).
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home

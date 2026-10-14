@@ -1208,6 +1208,10 @@ Today these are only marks on the Dark Era ruler and Codex text. They become eve
 
    Then send the player the /next/ link. `main` switches only when the player says, by a PR from
    `next` with a merge commit.
+   - As built (14 Oct): as above on `next`. `main`'s workflow is left as it is: a PR into `main`
+     needs a branch of its own, which the permissions above did not name, so it is put to the
+     player; meanwhile a push to `main` builds `main` alone, and the workflow is run on `next`
+     again after one.
 
 ## Verification (every part)
 

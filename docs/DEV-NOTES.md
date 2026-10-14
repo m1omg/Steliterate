@@ -1379,6 +1379,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `start(name, { films: true })`; `__stel.filmFrames(id, times)` hashes frames, `__stel.filmList()`
   lists them. Videos: `tools/film-render.mjs` (needs an ffmpeg path, e.g. imageio-ffmpeg in a
   scratch venv; it starts `vite` on port 5179 for `film.html`).
+- **`/next/` (part 5):** the `next` branch (a copy of the work branch: `git push origin
+  claude/epic-wozniak-lyhulf:next`) carries a Pages workflow that checks out `main` and `next`
+  into folders of those names, builds each (`npm ci && npm run build`), drops `next/dist/archive`
+  and copies `next/dist` to `main/dist/next` before publishing `main/dist` to `gh-pages`. The build
+  is relocatable (`base: './'`), so the new version runs under `/next/` unchanged, and its storage
+  keys (`steliterate2.`) keep its saves apart from today's game on the same origin. A push runs
+  the workflow file of the branch pushed: `main`'s still builds `main` alone (HANDOVER, Traps).
 - **The survey reveal (part 4):** `SystemView` keeps it (`reveal`: its system, its start, the
   worlds' order and times; `REVEAL` is the pace) outside `build()`, which reruns on every
   `bump()`. `build()` tags whatever it draws for each body (`userData.reveal`; `orbit` holds an

@@ -28,7 +28,7 @@ import { STORE } from './keys';
 import './ui/styles.css';
 import { colonies, ownColony } from './game/sim/util';
 import { hashSeed } from './game/rng';
-import { FILMS, type FilmId } from './film/films';
+import { FILMS, type FilmId, type FilmQuality } from './film/films';
 import { FilmPlayer } from './film/player';
 
 const stage = document.getElementById('stage')!;
@@ -418,11 +418,15 @@ window.__stel = {
   slowSlices: (ms: number) => setSlowSlices(ms),
   /** The films, by id, with their names. */
   filmList: () => Object.fromEntries(Object.values(FILMS).map((f) => [f.id, f.name])),
-  /** A film's frames at these times, drawn one after another on one canvas (a hash of each), for the checks: a moment draws the same picture whatever was drawn before it. */
-  filmFrames(id: FilmId, times: number[], w = 480, h = 270) {
-    const p = new FilmPlayer(document.createElement('div'), id, { quality: 'high', width: w, height: h, pixelRatio: 1 });
+  /** A film's frames at these times, drawn one after another on one canvas (a hash of each), for the checks: a moment draws the same picture whatever was drawn before it. `timed`: each one's drawing time (ms) instead. */
+  filmFrames(id: FilmId, times: number[], w = 480, h = 270, quality: FilmQuality = 'high', timed = false) {
+    const p = new FilmPlayer(document.createElement('div'), id, { quality, width: w, height: h, pixelRatio: 1 });
+    const c = p.canvas.getContext('2d')!;
     const out = times.map((t) => {
+      const a = performance.now();
       p.frame(t);
+      // timed: how long the moment took to draw (a pixel read back, so the drawing is done)
+      if (timed) return c.getImageData(0, 0, 1, 1) && performance.now() - a;
       return hashSeed(p.canvas.toDataURL());
     });
     p.dispose();

@@ -41,33 +41,31 @@ last.
 5. `docs/CHANGELOG.md`, the last few entries (every change, with its balance figures), and
    `docs/DESIGN.md` when a rule's intent matters.
 
-## 3. Where things stand (13 Oct)
+## 3. Where things stand (14 Oct)
 
-- **The new version is being built** (13 Oct, the player's nine-part request: the other
-  civilizations playing the same game, the Hunger in diplomacy, war and new units, life after
-  matter, positronium, films, young dwarfs, charting on the way). The approved plan is
-  `docs/plans/new-version.md`; read it before anything else.
-  - The work is on `claude/epic-wozniak-lyhulf`, pushed but not merged: "Preview address, but
-    once all is done". Nothing of it goes into `main` until all of it is done. Then it goes up at
-    `/next/`, and `main` switches only when the player says.
-  - Saves don't carry over ("For the new version, don't worry about saves"). The new version
-    keeps its own storage keys (`steliterate2.`).
-  - Done (13 Oct): its own storage; young glowing dwarfs (1a); the civilizations playing the same
-    game (2a-0 to 2a-6); the Hunger among them (2b); war, units and conquest (2c); the AI's
-    judgement (2d); life after matter as far as 3-5 (the end of matter fixed, what a settlement is
-    made of, the Passage, the Thinning, leaving a hole and the Horizon form, positronium). On 14
-    Oct, asked whether 71% surviving was too easy: "make it harder pls" (done: an empty reserve
-    costs the dark's Continuity twice as much, Error-Correction Arrays keep only their own
-    settlement, and a swarm's part whose ship is gone goes on to the ship's nearest settlement;
-    CHANGELOG, "Harder"); then the stable fate's late game (3-6: black dwarf supernovae, iron
-    stars, tunnelling collapse, the Passage where matter is stable) and the look of what is not
-    matter (3-7: fields, horizon writing, the positronium's ellipses); then the films (Part 4: one
-    for each age and ending, every frame drawn by code, a 10-second test piece sent to the player
-    first) and the survey reveal (a system just charted shows its worlds one by one). Next: Part 5
-    (`/next/`). Waiting for the
-    player: ships seeing what they pass (1b, a census done), the Quiet Lattice (four options put
-    to them, 13 Oct; see SESSION-NOTES, "Picking up"), the new hulls (2c-5, a sheet shown), and
-    their word on the films' look.
+- **The new version is done, and up** at https://m1omg.github.io/Steliterate/next/ (14 Oct; the
+  player's nine-part request of 13 Oct: the other civilizations playing the same game, the Hunger
+  in diplomacy, war and new units, life after matter, positronium, films, young dwarfs, charting
+  on the way). The approved plan is `docs/plans/new-version.md`; read it before anything else.
+  - It is built on `claude/epic-wozniak-lyhulf`. The `next` branch is a copy of it, which the
+    Pages workflow builds at `/next/` beside `main` (`.github/workflows/pages.yml`, its copy on
+    `next`). After each validated batch: `git push origin claude/epic-wozniak-lyhulf:next`.
+  - `main` keeps today's game, and switches only when the player says: a PR from `next`, merged
+    with a merge commit.
+  - Its saves are its own (`steliterate2.` keys), and since it went up "Saves are sacred" holds
+    for them too: `tools/saves/*-next.json.gz`, which `savecompat` loads and plays to the end.
+  - Done: its own storage; young glowing dwarfs (1a); the civilizations playing the same game
+    (2a-0 to 2a-6); the Hunger among them (2b); war, units and conquest (2c); the AI's judgement
+    (2d); life after matter and positronium (3-0 to 3-5); harder ("make it harder pls", 14 Oct:
+    an empty reserve costs the dark's Continuity twice as much, Error-Correction Arrays keep only
+    their own settlement, a swarm's part whose ship is gone goes on to the ship's nearest
+    settlement); the stable fate's late game (3-6) and the look of what is not matter (3-7); the
+    films and the survey reveal (Part 4); `/next/` (Part 5).
+  - Waiting for the player: ships seeing what they pass (1b, a census done), the Quiet Lattice
+    (four options put to them, 13 Oct; see SESSION-NOTES, "Picking up"), the new hulls (2c-5, a
+    sheet shown), their word on the films' look (a 10-second test piece), whether to soften the
+    stable fate (43% survive), and whether `main`'s own Pages workflow should build `/next/` too
+    (section 9).
 - **The backup** (13 Oct, PR m1omg/Steliterate#28, `db34424`): today's game, frozen and playable,
   at https://m1omg.github.io/Steliterate/archive/2026-10-13/ (`public/archive/`, with its own
   README), on the same origin and so with the player's current saves. Its source is
@@ -312,6 +310,11 @@ The full list is in DEV-NOTES, "Gotchas".
   `"${VAR:?}"/…` so an empty variable stops the command.
 - **The stop hook** won't let a turn end with uncommitted, untracked or unpushed changes. Keep
   scratch files outside the clone.
+- **A push to `main` takes `/next/` down.** A push runs the Pages workflow of the branch pushed,
+  and `main`'s still builds `main` alone (its copy of the new workflow, which builds both, waits
+  for the player's word: pushing it needs a branch of its own for the PR). After any merge into
+  `main`, run the workflow on `next` again (Actions, "Deploy to GitHub Pages", Run workflow on
+  `next`; or `actions_run_trigger` with `ref: next`), and check `/next/` once it has run.
 - **A container restart** stops background runs without a word, and the session can resume in a
   new one with the working tree kept: check `git status` and the servers first. If an output
   stops short, run it again.

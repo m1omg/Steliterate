@@ -23,11 +23,15 @@ The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
 
-**The new version** (13 Oct): the player's large request is planned in
-`docs/plans/new-version.md` (approved). It is built on `claude/epic-wozniak-lyhulf` and stays off
-`main` until all of it is done ("Preview address, but once all is done"); then it goes up at
-`/next/`. Its saves are its own (`steliterate2.` keys), and "Saves are sacred" is suspended for it
-until then. `public/archive/` holds frozen builds: never edit them.
+**The new version** (13 and 14 Oct): the player's large request, planned in
+`docs/plans/new-version.md` (approved) and built on `claude/epic-wozniak-lyhulf`. All of it is done,
+and since 14 Oct it is up at https://m1omg.github.io/Steliterate/next/ ("Preview address, but once
+all is done"): the `next` branch, a copy of the work branch (`git push origin
+claude/epic-wozniak-lyhulf:next` after each validated batch), built beside `main` by the Pages
+workflow (`.github/workflows/pages.yml`). `main` keeps today's game until the player says to
+switch, by a PR from `next` merged with a merge commit. Its saves are its own (`steliterate2.`
+keys), and now that it is up, "Saves are sacred" holds for them too: `tools/saves/` has its first
+saves, which `savecompat` plays. `public/archive/` holds frozen builds: never edit them.
 
 A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (rewritten
 12 Oct):
@@ -92,6 +96,9 @@ and the autoplayer through the end of matter, `24fbc18`): 175 of 300, 62 victori
 3-4 (drifting between black holes, the Horizon form): 217 of 300, 69 victories; 900 games 639 /
 226, a Degenerate Age of 74 turns; by fate decay 73%, stable 71%, curvature 66%. With part 3-5
 (positronium): 900 games 636 / 226 / 74, decay and stable as before game for game. Harder (14 Oct,
+the player's word): 520 / 218 / 72; by fate decay 251 / 450, stable 164 / 239, curvature 105 / 211.
+With part 3-6 (the stable fate's late game): 460 / 209 / 72, stable 103 / 239, the others as
+before. Part 3-7 and Part 4 change no rule. Harder (14 Oct,
 the player: "make it harder pls"; the dark's Continuity, swarms on to our settlements): 167 of
 300, 67 victories; 900 games 520 / 218 / 72; by fate decay 56%, stable 69%, curvature 50%.
 With part 3-6 (the stable fate's late game: black dwarf supernovae, iron stars, tunnelling

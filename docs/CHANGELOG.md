@@ -3046,3 +3046,27 @@ Space 2: display only, no rule changed. New: `ui/hud/RevealCard.tsx`, `browser/s
   `browser/survey-reveal` (Look plays it; the worlds and their names wait; the card names each
   world; Enter skips it and ends no turn; Escape skips it; Skip all; off in Settings; the same
   2 s in at 30 and at 144 frames a second; its place in the magnifier column).
+
+## Up at /next/ (14 Oct, part 5)
+
+The new version goes up beside today's game: https://m1omg.github.io/Steliterate/next/.
+- **The `next` branch** is a copy of `claude/epic-wozniak-lyhulf`. Its Pages workflow
+  (`.github/workflows/pages.yml`) checks out `main` and `next`, builds each, and puts the new
+  version's build at `/next/` without its own copy of the archive, which the root already serves;
+  it runs on a push to either branch (no longer on the old live branch). `main` keeps its own
+  workflow until the player says: until then a push to `main` builds `main` alone and takes
+  `/next/` down until the workflow runs on `next` again (HANDOVER, Traps).
+- **Saves:** the new version's first saves go into `tools/saves/` (`*-next.json.gz`), and
+  `savecompat` loads them by the player's path and plays them to the end of time, as it plays the
+  older build's through the checks' legacy path. "Saves are sacred" holds for them from here.
+- **The design** (`DESIGN.md`) says what the new version is: the other civilizations playing the
+  same game (section 8, without the "light simulation" and "not rivals on a scoreboard" of
+  before), the free energy every civilization spends, the reserve's home, life after matter and
+  the stable fate's deep time, the Conquered defeat, the films and the survey reveal.
+- **The films' cost, measured** (the plan's last measurement; `__stel.filmFrames(id, times, w, h,
+  quality, true)` gives each moment's drawing time, a pixel read back so the drawing is done):
+  at 1920×1080 a frame takes 17 to 23 ms at the median on every quality, Medium 22 to 32 ms at
+  the 95th percentile (four films, 96 moments each; software rendering here, no GPU). The quality
+  barely matters: the cost is the full-screen work (grain, glow, vignette), not the strokes; in
+  the game Medium also draws at most 1.25 pixels a point to High's 2. A film's first frame takes
+  up to 0.3 s while its layers are made, and the first in a page up to 2 s.
