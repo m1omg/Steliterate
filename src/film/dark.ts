@@ -4,7 +4,7 @@ import type { FilmDef } from './films';
 import { camera, landscape, layer, reticle, skyRatio } from './kit';
 import { Lazy, World, heatOf, paintBanded, paintLens, paintStar, paintWorldMap } from './paint';
 import { ease, note, reel2, type Moment, type Scene } from './reel';
-import { AMBER_RGB, ELECTRON, INK, TEAL_RGB, drawRing, figure, hash, noise1x, paintDark, plainHole, quanta, seen, wavy, type RingLook } from './holes';
+import { AMBER_RGB, ELECTRON, INK, TEAL_RGB, drawRing, figure, hash, lattice, noise1x, pairs, paintDark, plainHole, quanta, seen, wavy, type RingLook } from './holes';
 
 // The last two age films, second cut. The Great Evaporation (curvature radiation, near η 89.5):
 // the last world unmade by the bending of space, every scrap of matter going in turn, what was
@@ -20,71 +20,6 @@ const VSOFT = '#d2c6ff';
 const GREY = '#9aa3b0';
 const GSOFT = '#c9ced6';
 const TEAL = '#7fd8ff';
-
-/** A settlement of fields, not matter (the game's look for life after matter): dipole field lines round an axis, standing rings, minds riding the lines, breathing. */
-function lattice(c: Ctx, x: number, y: number, R: number, t: number, S: number, o: { color: string; node: string; alpha: number; incl?: number; seed: number; lines?: number }) {
-  if (o.alpha <= 0 || R <= 0) return;
-  const incl = o.incl ?? 0.3;
-  const breath = 1 + 0.04 * Math.sin(t * 0.9 + o.seed);
-  const spin = t * 0.08 + o.seed;
-  const n = o.lines ?? 8;
-  c.save();
-  c.globalCompositeOperation = 'lighter';
-  c.lineWidth = Math.max(1, S * 0.0013);
-  for (let j = 0; j < n; j++) {
-    const az = (j / n) * Math.PI * 2 + spin;
-    const L = (j % 2 ? 0.8 : 1) * R * breath;
-    c.strokeStyle = rgba(o.color, o.alpha * (0.38 + 0.14 * Math.sin(t * 1.3 + j)));
-    c.beginPath();
-    for (let i = 0; i <= 48; i++) {
-      const th = 0.15 + (i / 48) * (Math.PI - 0.3);
-      const r = L * Math.sin(th) ** 2;
-      const [px, py] = seen(r * Math.sin(th) * Math.cos(az), r * Math.cos(th), r * Math.sin(th) * Math.sin(az), incl);
-      if (i === 0) c.moveTo(x + px, y + py);
-      else c.lineTo(x + px, y + py);
-    }
-    c.stroke();
-    // a mind, riding it
-    const u = (((t * 0.07 + j * 0.37 + o.seed) % 1) + 1) % 1;
-    const th = 0.15 + u * (Math.PI - 0.3);
-    const r = L * Math.sin(th) ** 2;
-    const [px, py] = seen(r * Math.sin(th) * Math.cos(az), r * Math.cos(th), r * Math.sin(th) * Math.sin(az), incl);
-    glow(c, x + px, y + py, Math.max(2, R * 0.08), o.node, o.alpha * 0.9);
-  }
-  for (const up of [-0.35, 0, 0.35]) {
-    const rho = R * (0.72 - Math.abs(up) * 0.6) * breath;
-    c.strokeStyle = rgba(o.color, o.alpha * 0.5);
-    c.beginPath();
-    for (let i = 0; i <= 64; i++) {
-      const ph = (i / 64) * Math.PI * 2;
-      const [px, py] = seen(rho * Math.cos(ph), up * R, rho * Math.sin(ph), incl);
-      if (i === 0) c.moveTo(x + px, y + py);
-      else c.lineTo(x + px, y + py);
-    }
-    c.stroke();
-  }
-  glow(c, x, y, R * 0.6, o.color, o.alpha * 0.14);
-  c.restore();
-}
-
-/** Pairs born of space's bending near a body at (x, y), radius R, flying off: electrons and positrons, `rate` a second. */
-function pairs(c: Ctx, x: number, y: number, R: number, t: number, S: number, o: { n: number; seed: number; alpha: number; speed?: number }) {
-  if (o.alpha <= 0) return;
-  c.save();
-  c.globalCompositeOperation = 'lighter';
-  const sz = Math.max(1, S * 0.0022);
-  for (let j = 0; j < o.n; j++) {
-    const f = (((t * (o.speed ?? 0.25) * (0.6 + hash(o.seed, j)) + hash(o.seed + 1, j)) % 1) + 1) % 1;
-    const a0 = hash(o.seed + 2, j) * Math.PI * 2;
-    const r = R * (1.02 + f * 1.4);
-    const spread = 0.04 + f * 0.1;
-    for (const s of [1, -1]) {
-      c.fillStyle = rgba(s > 0 ? VIOLET : ELECTRON, o.alpha * 0.8 * Math.sin(Math.PI * f));
-      c.fillRect(x + Math.cos(a0 + s * spread) * r - sz / 2, y + Math.sin(a0 + s * spread) * r - sz / 2, sz, sz);
-    }
-  }
-  c.restore();
-}
 
 /** The Great Evaporation: where space unmade matter (curvature radiation), the last of it goes. */
 export const GREAT_EVAPORATION2: FilmDef = reel2({ id: 'great_evaporation', name: 'The Great Evaporation', bpm: 90, beats: 48, accent: VIOLET }, (w, h, S, k, args) => {

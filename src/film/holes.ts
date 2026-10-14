@@ -345,3 +345,68 @@ export function noise1x(seed: number, x: number): number {
   const u = f * f * (3 - 2 * f);
   return (hash(Math.round(seed), i) * (1 - u) + hash(Math.round(seed), i + 1) * u) * 2 - 1;
 }
+
+/** A settlement of fields, not matter (the game's look for life after matter): dipole field lines round an axis, standing rings, minds riding the lines, breathing. */
+export function lattice(c: Ctx, x: number, y: number, R: number, t: number, S: number, o: { color: string; node: string; alpha: number; incl?: number; seed: number; lines?: number }) {
+  if (o.alpha <= 0 || R <= 0) return;
+  const incl = o.incl ?? 0.3;
+  const breath = 1 + 0.04 * Math.sin(t * 0.9 + o.seed);
+  const spin = t * 0.08 + o.seed;
+  const n = o.lines ?? 8;
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  c.lineWidth = Math.max(1, S * 0.0013);
+  for (let j = 0; j < n; j++) {
+    const az = (j / n) * Math.PI * 2 + spin;
+    const L = (j % 2 ? 0.8 : 1) * R * breath;
+    c.strokeStyle = rgba(o.color, o.alpha * (0.38 + 0.14 * Math.sin(t * 1.3 + j)));
+    c.beginPath();
+    for (let i = 0; i <= 48; i++) {
+      const th = 0.15 + (i / 48) * (Math.PI - 0.3);
+      const r = L * Math.sin(th) ** 2;
+      const [px, py] = seen(r * Math.sin(th) * Math.cos(az), r * Math.cos(th), r * Math.sin(th) * Math.sin(az), incl);
+      if (i === 0) c.moveTo(x + px, y + py);
+      else c.lineTo(x + px, y + py);
+    }
+    c.stroke();
+    // a mind, riding it
+    const u = (((t * 0.07 + j * 0.37 + o.seed) % 1) + 1) % 1;
+    const th = 0.15 + u * (Math.PI - 0.3);
+    const r = L * Math.sin(th) ** 2;
+    const [px, py] = seen(r * Math.sin(th) * Math.cos(az), r * Math.cos(th), r * Math.sin(th) * Math.sin(az), incl);
+    glow(c, x + px, y + py, Math.max(2, R * 0.08), o.node, o.alpha * 0.9);
+  }
+  for (const up of [-0.35, 0, 0.35]) {
+    const rho = R * (0.72 - Math.abs(up) * 0.6) * breath;
+    c.strokeStyle = rgba(o.color, o.alpha * 0.5);
+    c.beginPath();
+    for (let i = 0; i <= 64; i++) {
+      const ph = (i / 64) * Math.PI * 2;
+      const [px, py] = seen(rho * Math.cos(ph), up * R, rho * Math.sin(ph), incl);
+      if (i === 0) c.moveTo(x + px, y + py);
+      else c.lineTo(x + px, y + py);
+    }
+    c.stroke();
+  }
+  glow(c, x, y, R * 0.6, o.color, o.alpha * 0.14);
+  c.restore();
+}
+
+/** Pairs born of space's bending near a body at (x, y), radius R, flying off: electrons and positrons, `rate` a second. */
+export function pairs(c: Ctx, x: number, y: number, R: number, t: number, S: number, o: { n: number; seed: number; alpha: number; speed?: number }) {
+  if (o.alpha <= 0) return;
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  const sz = Math.max(1, S * 0.0022);
+  for (let j = 0; j < o.n; j++) {
+    const f = (((t * (o.speed ?? 0.25) * (0.6 + hash(o.seed, j)) + hash(o.seed + 1, j)) % 1) + 1) % 1;
+    const a0 = hash(o.seed + 2, j) * Math.PI * 2;
+    const r = R * (1.02 + f * 1.4);
+    const spread = 0.04 + f * 0.1;
+    for (const s of [1, -1]) {
+      c.fillStyle = rgba(s > 0 ? '#a48dff' : ELECTRON, o.alpha * 0.8 * Math.sin(Math.PI * f));
+      c.fillRect(x + Math.cos(a0 + s * spread) * r - sz / 2, y + Math.sin(a0 + s * spread) * r - sz / 2, sz, sz);
+    }
+  }
+  c.restore();
+}

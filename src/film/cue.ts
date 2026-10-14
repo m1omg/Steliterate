@@ -119,11 +119,10 @@ function reelCue(spec: CueSpec) {
   };
 }
 
-const END = (root: number, notes: [number, number], chord: number[]): CueSpec => ({ bpm: 84, root, cuts: [[0, notes[0]], [5.5, notes[1]]], titleAt: 11, chord });
-
-// the ages go down as they go on: A, E, D, C, B; the endings, F major for a victory, G for endurance, C minor for the Hunger, A minor for a defeat
-const VICTORY = END(43.65, [349.23, 440], [87.31, 110, 130.81]);
-const DEFEAT = END(55, [329.63, 261.63], [110, 130.81, 164.81]);
+/** An ending's cue (36 beats at 84, the title at 31): a bell on each scene's cut, a pad under it. */
+const END = (root: number, cuts: [number, number][], chord: number[]): CueSpec => ({ bpm: 84, root, cuts, titleAt: 31, chord, pads: true });
+const VICTORY = [87.31, 110, 130.81];
+const DEFEAT = [110, 130.81, 164.81];
 const SPECS: Record<FilmId, CueSpec> = {
   // (the Long Dusk's second cut: 72 beats at 90, a cut at each scene)
   dusk: { bpm: 90, root: 55, cuts: [[0, 440], [6, 392], [10.5, 329.63], [17, 293.66], [23, 261.63], [36, 329.63], [41, 220], [45.5, 246.94], [49.5, 196], [55.5, 220], [60.5, 164.81]], titleAt: 66, chord: [110, 164.81, 277.18], pads: true },
@@ -133,16 +132,17 @@ const SPECS: Record<FilmId, CueSpec> = {
   last_warmth: { bpm: 90, root: 36.71, cuts: [[0, 349.23], [7.5, 293.66], [15, 261.63], [22, 220], [30, 196], [38, 233.08], [46, 220], [54, 174.61], [61, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
   great_evaporation: { bpm: 90, root: 32.7, cuts: [[0, 311.13], [8.5, 261.63], [16.5, 233.08], [25.5, 196], [33.5, 174.61]], titleAt: 42, chord: [65.41, 77.78, 98], pads: true },
   last_horizon: { bpm: 90, root: 30.87, cuts: [[0, 293.66], [8, 246.94], [15.5, 220], [23.5, 185], [33.5, 196], [43, 164.81], [52.5, 146.83]], titleAt: 62, chord: [61.74, 73.42, 92.5], pads: true },
-  end_long_thought: VICTORY,
-  end_one_voice: VICTORY,
-  end_quiet_lattice: VICTORY,
-  end_aeon_seed: VICTORY,
-  end_last_garden: VICTORY,
-  end_hunger: END(32.7, [311.13, 277.18], [65.41, 77.78, 92.5]),
-  end_recurrence: END(49, [392, 293.66], [98, 146.83, 196]),
-  end_silence: DEFEAT,
-  end_fade: DEFEAT,
-  end_will_fails: DEFEAT,
+  // (the endings' second cut: a cut at each scene; Recurrence comes back to the note it began on)
+  end_long_thought: END(43.65, [[0, 349.23], [14.5, 293.66], [22.5, 261.63]], VICTORY),
+  end_one_voice: END(43.65, [[0, 440], [8.5, 349.23], [16, 293.66], [23.5, 261.63]], VICTORY),
+  end_quiet_lattice: END(43.65, [[0, 392], [7, 329.63], [19.5, 261.63]], VICTORY),
+  end_aeon_seed: END(43.65, [[0, 349.23], [8, 440], [16, 392], [24, 523.25]], VICTORY),
+  end_last_garden: END(43.65, [[0, 293.66], [8, 349.23], [16, 392], [24, 440]], VICTORY),
+  end_hunger: END(32.7, [[0, 311.13], [7.5, 277.18], [15.5, 233.08]], [65.41, 77.78, 92.5]),
+  end_recurrence: END(49, [[0, 392], [8.5, 293.66], [18.5, 392]], [98, 146.83, 196]),
+  end_silence: END(55, [[0, 329.63], [7.5, 261.63], [15.5, 220]], DEFEAT),
+  end_fade: END(55, [[0, 329.63], [8.5, 261.63], [16.5, 196]], DEFEAT),
+  end_will_fails: END(55, [[0, 329.63], [8, 246.94], [16, 220]], DEFEAT),
 };
 
 /** A film whose scenes fall on other beats in another fate of matter: its cue for that fate (`id:fate`). */
