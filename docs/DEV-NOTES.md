@@ -140,6 +140,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     the CHANGELOG ("Lighter on phones and tablets").
   - A new rule or fix gets a check here. One-off investigations (traces, censuses) stay in the
     scratchpad.
+- **A background command stops after 30 minutes** unless it is given a longer limit (14 Oct): start
+  `vite preview` in the background with the longest one (two hours), or the browser suite, about
+  45 minutes now, loses its server partway and every check after that fails at once ("no server").
+  Stop it with `pkill -f "vite prev[i]ew"`: the bracket keeps the pattern from matching the shell
+  running the command, which a plain `pkill -f "vite preview"` kills along with it.
 - **The container is ephemeral.** Anything installed with pip is gone next session: numpy,
   scipy, matplotlib, imageio-ffmpeg (ffmpeg binary at
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).
@@ -1353,6 +1358,26 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   (`selRing`) takes its colour, with an opacity floor of 0.35 (0.12 and the pale `SELECT` on a
   world no one lives on). It holds still: since 7 Oct neither it nor the galaxy map's selected
   star ring (`galaxyView.ts`) pulses.
+- **What is not matter, drawn (part 3-7, `src/render/fields.ts`):** `fieldLattice` (a dipole's
+  lines r = L sin²θ, a standing-wave torus whose `userData.markColor` the selection circle takes,
+  motes bouncing between the mirror points in `MOTE_VERT`, loops for Field Stores, a
+  `fieldCage` for Burst Catchers), `fieldCage` (a Bastion Shell round its hole too) and
+  `positroniumVeil` (ellipses about a centre far out along their long axis, so the middle ones
+  cross the system). `systemView.ts` `addField` puts one in the Deep (`buildDeep`, in place of
+  the box hull) or round a world (`buildBody`, in place of the habitat torus, and the planet's
+  city lights off), for ours and the others' (`theirForms`, `styleOf`); `horizonWriters` sets
+  `GLOW_FRAG`'s `uWrit`/`uWritColor` on a hole's photon ring; `buildVeil` while
+  `positroniumHere`. Every field material sits in `fieldMats` (its `uTime` set from elapsed time
+  in `update`), what turns slowly in `fieldSpin`. The Thinning: `THIN` (the share gone, set on
+  each build) feeds `withDissolve`, which patches a `MeshBasicMaterial` (composes with
+  `withNearFade`; its own `customProgramCacheKey`; an instance's holes keyed by `gl_InstanceID`
+  so they stay put as it orbits), and `thinMotes` drift off worlds (through `eatMotes`, which
+  moves `uFrom`) and off a Dyson shell. Iron (`ironAge`, or a dwarf `exploded`): `IRON_STAR` and
+  `PLANET_FRAG`'s `uIron`. `SystemView.quality` (from `Engine.setQuality`, which rebuilds an open
+  system view) sets the counts and `fieldGain` (colour past white only where bloom runs).
+  `SystemView.look` counts what the last build drew, for `browser/leptonic-look`. The map:
+  `aForm` (`FORM_RING`, the highest form of ours at a star) styles `NODE_FRAG`'s settlement
+  ring. `turnflow.ts` pings the turn's `blackdwarf_sn` and `collapse` notes (`MAX_FLASH_PINGS`).
 - **UI:**
   - `Story.tsx`: `LoreModal`, `loreView`, `worldFinds`.
   - `Drawer.tsx`: Raid button, settler list sorts, Sunlight row, resident lines, Ruins "Read

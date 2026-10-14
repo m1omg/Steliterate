@@ -3,14 +3,20 @@ import { bodyClimate, brownWarmth, diskLight, emberShare, haloDrawn, primaryTemp
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
 import { seenThere } from '../game/sim/claims';
-import type { Body, GameState, StarSystem, Survivor, Swarm } from '../game/types';
+import type { Body, Colony, ColonyForm, GameState, StarSystem, Survivor, Swarm } from '../game/types';
 import { coolDwarfShine, radialTexture, type Pickable } from './galaxyView';
 import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, STAR_FRAG, STAR_VERT, VIEW_MODE, thermalRGB } from './shaders/bodies';
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
 import { flowing } from '../game/sim/flow';
-import { allColonies, allFleets, colonies, coloniesOf, fleets, ownColony } from '../game/sim/util';
+import { allColonies, allFleets, colonies, coloniesOf, fleets, formOf, ownColony } from '../game/sim/util';
 import { fleetSeen, settlementSeen } from '../game/sim/others';
+import { positroniumHere } from '../game/sim/positronium';
+import { thinShare } from '../game/sim/thinning';
+import { ironAge } from '../game/sim/deeptime';
+import { ERA_BY_ID } from '../game/eras';
+import type { Quality } from './engine';
+import { fieldCage, fieldLattice, positroniumVeil, type FieldStyle } from './fields';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -51,6 +57,13 @@ export class SystemView {
   private habitats: { obj: THREE.Object3D; spin: number; follow: THREE.Object3D | null; pulse: THREE.MeshBasicMaterial[] }[] = [];
   /** Sleepers' vault lights, breathing slowly. */
   private sleepLights: THREE.ShaderMaterial[] = [];
+  /** What is not matter (fields.ts): every material that breathes on elapsed time, and what turns slowly. */
+  private fieldMats: THREE.ShaderMaterial[] = [];
+  private fieldSpin: { obj: THREE.Object3D; speed: number }[] = [];
+  /** The quality setting (Engine.setQuality): how many filaments, motes and ellipses, and whether colour may go past white for the bloom. */
+  quality: Quality = 'high';
+  /** What the last build drew of what is not matter, and of matter thinning or turned to iron (for the checks). */
+  look = { fields: 0, segments: 0, motes: 0, loops: 0, cages: 0, writ: 0, veil: 0, thin: 0, iron: 0 };
   private stars: THREE.Points;
   private time = 0;
   /** Orbital clock: stands still while orbits are paused (the stars keep burning on `time`). */
@@ -106,6 +119,9 @@ export class SystemView {
     this.eatMotes = [];
     this.habitats = [];
     this.sleepLights = [];
+    this.fieldMats = [];
+    this.fieldSpin = [];
+    this.look = { fields: 0, segments: 0, motes: 0, loops: 0, cages: 0, writ: 0, veil: 0, thin: 0, iron: 0 };
     this.fleets = new THREE.Group();
     this.starMat = null;
   }
@@ -125,23 +141,39 @@ export class SystemView {
     // other civilizations living here: a civilization of its own in every settlement of its whose
     // light has reached us, one simulated lightly on the world its way of life calls for
     const residents = new Map<string, Survivor>();
+    // (and what their settlements there are made of, where they are civilizations of their own)
+    const theirForms = new Map<string, ColonyForm>();
     if (surveyed) {
       for (const v of Object.values(state.survivors)) {
         if (!v.alive || !v.systems.includes(sys.id) || (v.homeSystemId !== sys.id && !seenThere(state, v, sys.id))) continue;
-        const worlds = state.civs[v.id] ? coloniesOf(state, v.id).filter((c) => c.systemId === sys.id && settlementSeen(state, c)).map((c) => state.bodies[c.bodyId]) : [survivorWorld(state, v, sys.id)];
-        for (const w of worlds) if (w) residents.set(w.id, v);
+        if (state.civs[v.id]) {
+          for (const c of coloniesOf(state, v.id)) {
+            if (c.systemId !== sys.id || !settlementSeen(state, c) || !state.bodies[c.bodyId]) continue;
+            residents.set(c.bodyId, v);
+            theirForms.set(c.bodyId, formOf(c));
+          }
+        } else {
+          const w = survivorWorld(state, v, sys.id);
+          if (w) residents.set(w.id, v);
+        }
       }
     }
+    // the Thinning: the share of ordinary matter gone, for whatever here is still made of it
+    THIN.value = thinShare(state);
+    this.look.thin = THIN.value;
+    const iron = ironAge(state);
     for (const bid of surveyed ? sys.bodies : []) {
       const b = state.bodies[bid];
       if (!b || b.dissolved) continue;
       if (b.kind === 'deep') {
-        this.buildDeep(state, sys, b, colonized.has(b.id), residents.get(b.id));
+        this.buildDeep(state, sys, b, colonized.has(b.id), residents.get(b.id), theirForms.get(b.id));
         continue;
       }
-      this.buildBody(state, sys, b, light, colonized.has(b.id), residents.get(b.id));
+      this.buildBody(state, sys, b, light, colonized.has(b.id), residents.get(b.id), theirForms.get(b.id), iron);
     }
     if (surveyed) this.buildStructures(state, sys);
+    // the positronium, everywhere at once while it lasts: brighter where our minds are woven through it
+    if (positroniumHere(state)) this.buildVeil(state, sys);
     this.buildSwarm(state, sys);
     this.buildFleets(state, sys);
     this.group.add(this.fleets);
@@ -149,6 +181,7 @@ export class SystemView {
 
   private buildPrimary(state: GameState, sys: StarSystem) {
     const p = sys.primary;
+    const iron = ironAge(state);
     const seed = (hashSeed(sys.id) % 1000) / 10;
     const temp = primaryTemperature(p, state.years, calendarEra(state), 0, 0, haloDrawn(state));
     const col = new THREE.Color(...blackbody(Math.max(1500, temp)));
@@ -156,7 +189,7 @@ export class SystemView {
       const m = new THREE.ShaderMaterial({
         vertexShader: GLOW_VERT,
         fragmentShader: GLOW_FRAG,
-        uniforms: { uTime: { value: 0 }, uColor: { value: color }, uPower: { value: power }, uBeams: { value: beams }, uRing: { value: ring } },
+        uniforms: { uTime: { value: 0 }, uColor: { value: color }, uPower: { value: power }, uBeams: { value: beams }, uRing: { value: ring }, uWrit: { value: 0 }, uWritColor: { value: new THREE.Color() }, uGain: { value: this.quality === 'low' ? 1 : 1.6 } },
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -203,7 +236,11 @@ export class SystemView {
         addGlow(70, new THREE.Color('#ffb98a'), 1.2);
         break;
       case 'white_dwarf':
-        if (calendarEra(state) === 'dusk') {
+        if (iron || p.exploded) {
+          // everything fused to iron by tunnelling (or the iron core a black dwarf supernova left): a cold, faintly metallic sphere
+          addStar(1.6, IRON_STAR.clone(), 0.08, 0, 0.7);
+          this.look.iron++;
+        } else if (calendarEra(state) === 'dusk') {
           // too cool to glow (below about 780 K, where hot ground starts to) it looks like an ember,
           // a little more copper; it brightens into its own colour as it gets hotter
           const shine = coolDwarfShine(temp);
@@ -218,7 +255,8 @@ export class SystemView {
         }
         break;
       case 'black_dwarf':
-        addStar(1.6, new THREE.Color('#2a2628'), 0.1, 0, 0.6);
+        addStar(1.6, iron || p.exploded ? IRON_STAR.clone() : new THREE.Color('#2a2628'), 0.1, 0, iron || p.exploded ? 0.7 : 0.6);
+        if (iron || p.exploded) this.look.iron++;
         break;
       case 'brown_dwarf': {
         // after the Dusk it darkens as it cools, its glow going with its warmth: in the Black Hole
@@ -243,7 +281,26 @@ export class SystemView {
         this.group.add(hole);
         this.primaryRadius = r;
         this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: r });
-        addGlow(r * 6, new THREE.Color('#ffd2a8'), 0.0, 0, 1.0);
+        const ringGlow = addGlow(r * 6, new THREE.Color('#ffd2a8'), 0.0, 0, 1.0);
+        // minds written into the horizon ride the photon ring: ours in the age's neon, another's in its colour
+        const writ = this.horizonWriters(state, sys);
+        if (writ) {
+          const u = (ringGlow.material as THREE.ShaderMaterial).uniforms;
+          u.uWrit.value = 1;
+          u.uWritColor.value.copy(writ);
+          this.look.writ++;
+        }
+        // a Bastion Shell of ours: a shell of field lines round the hole
+        const bastions = colonies(state).filter((c) => c.systemId === sys.id).reduce((a, c) => a + (c.structures.bastion ?? 0), 0);
+        if (bastions > 0) {
+          const cage = fieldCage(r * 2.2, new THREE.Color(ERA_BY_ID[state.era].accent), this.quality, hashSeed(sys.id + 'bastion'), 0.35 + 0.15 * Math.min(3, bastions));
+          cage.obj.rotation.x = 0.4;
+          this.group.add(cage.obj);
+          this.fieldMats.push(cage.mat);
+          this.fieldSpin.push({ obj: cage.obj, speed: 0.02 });
+          this.look.cages++;
+          this.look.segments += cage.segments;
+        }
         const fed = allColonies(state).some((c) => c.systemId === sys.id && ((c.structures.accretion_engine ?? 0) > 0 || (c.structures.penrose_harvester ?? 0) > 0));
         const shine = diskLight(kind, calendarEra(state), state.years, !matterGone(state));
         const heat = fed ? 1.0 : kind === 'smbh' ? Math.min(0.75, 0.12 + shine * 0.4) : 0.18;
@@ -275,7 +332,7 @@ export class SystemView {
     this.group.add(disk);
   }
 
-  private buildDeep(state: GameState, sys: StarSystem, b: Body, settled: boolean, sv?: Survivor) {
+  private buildDeep(state: GameState, sys: StarSystem, b: Body, settled: boolean, sv?: Survivor, theirForm?: ColonyForm) {
     const r = this.primaryRadius * 2.4 + 3;
     const other = sv ? othersColor(sv) : null;
     const ring = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.12, 128), new THREE.MeshBasicMaterial({ color: settled ? this.neon : (other ?? '#6b6f7a'), transparent: true, opacity: settled ? 0.55 : other ? 0.4 : 0.18, side: THREE.DoubleSide, depthWrite: false }));
@@ -283,21 +340,76 @@ export class SystemView {
     this.group.add(ring);
     const pos = new THREE.Vector3(r, 0, 0);
     this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos });
-    if (settled) {
-      // a station: a small lit hull on the Deep ring
-      const hull = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.3), new THREE.MeshBasicMaterial({ color: '#1a1a1f' }));
+    const ours = settled ? colonies(state).find((c) => c.bodyId === b.id) : undefined;
+    const form = ours ? formOf(ours) : 'baryonic';
+    // (minds written into the horizon are on its photon ring: buildPrimary)
+    if (ours && form !== 'baryonic') {
+      if (form !== 'horizon') this.addField(state, ours, ours.id, pos, null, 0, this.neon, 'ours', form === 'positronium' ? 0.6 : 1);
+    } else if (settled) {
+      // a station of matter: a small lit hull on the Deep ring (it thins with matter)
+      const hull = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.3), withDissolve(new THREE.MeshBasicMaterial({ color: '#1a1a1f' })));
       hull.position.copy(pos);
-      const lights = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.06, 0.32), new THREE.MeshBasicMaterial({ color: this.neon }));
+      const lights = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.06, 0.32), withDissolve(new THREE.MeshBasicMaterial({ color: this.neon })));
       lights.position.copy(pos);
       this.group.add(hull, lights);
     }
-    // another civilization's orbital habitats, where the Deep is theirs
-    if (sv && other) this.addHabitats(sv, other, pos.clone(), null, 0);
-    void state;
+    // another civilization's, where the Deep is theirs: its fields, if it is no longer made of matter, or its orbital habitats
+    if (sv && other) {
+      if (theirForm && theirForm !== 'baryonic') {
+        if (theirForm !== 'horizon') this.addField(state, null, sv.id + b.id, pos, null, 0, other, styleOf(sv), theirForm === 'positronium' ? 0.6 : 1);
+      } else this.addHabitats(sv, other, pos.clone(), null, 0);
+    }
     void sys;
   }
 
-  private buildBody(state: GameState, sys: StarSystem, b: Body, light: { color: THREE.Color; power: number }, settled: boolean, sv?: Survivor) {
+  /**
+   * A settlement no longer made of matter, drawn as its fields (fields.ts): round a point of its
+   * own in the Deep (`at`), or round its world (`follow`, of radius `core`). Ours carries the age's
+   * neon wave, another's its own colour; what stands there (`c`, ours) shows in it. Returns the
+   * standing wave, the ring that says whose it is.
+   */
+  private addField(state: GameState, c: Colony | null, key: string, at: THREE.Vector3 | null, follow: THREE.Mesh | null, core: number, mark: THREE.Color, style: FieldStyle, faint = 1): THREE.Mesh {
+    const n = (ids: string[]) => (c ? ids.reduce((a, id) => a + (c.structures[id] ?? 0), 0) : 0);
+    const accent = new THREE.Color(ERA_BY_ID[state.era].accent);
+    const deep = !follow;
+    const rig = fieldLattice({
+      core: deep ? 0.3 : core,
+      reach: deep ? 2.4 : core * 2.9,
+      color: (style === 'ours' ? accent : mark.clone().lerp(accent, 0.3)).multiplyScalar(faint),
+      mark,
+      quality: this.quality,
+      seed: hashSeed(key + 'fields'),
+      style,
+      minds: n(['substrate_core', 'cold_vault', 'lattice_foundry', 'confluence_node', 'lepton_substrate', 'lepton_confluence']),
+      stores: n(['reserve_vault', 'superconducting_ring']),
+      catchers: n(['burst_catcher']),
+      nets: n(['positronium_net']),
+    });
+    const g = rig.group;
+    if (deep) {
+      // a point of light at its heart, so it can be found from across the system
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTexture(), color: mark, transparent: true, opacity: 0.45 * faint, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.scale.setScalar(1.3);
+      g.add(glow);
+      g.position.copy(at!);
+      g.rotation.set(0.45, 0, 0.2);
+      this.group.add(g);
+      this.fieldSpin.push({ obj: g, speed: 0.03 });
+    } else {
+      g.rotation.x = 0.25;
+      follow.add(g);
+    }
+    rig.ring.userData.mark = true;
+    this.fieldMats.push(...rig.mats);
+    this.look.fields++;
+    this.look.segments += rig.counts.segments;
+    this.look.motes += rig.counts.motes;
+    this.look.loops += rig.counts.loops;
+    if (c && (c.structures.burst_catcher ?? 0) > 0) this.look.cages++;
+    return rig.ring;
+  }
+
+  private buildBody(state: GameState, sys: StarSystem, b: Body, light: { color: THREE.Color; power: number }, settled: boolean, sv?: Survivor, theirForm?: ColonyForm, iron = false) {
     const pivot = new THREE.Object3D();
     const orbitR = b.rogue ? b.orbit * 2.6 + 30 : b.orbit + this.primaryRadius * 1.5;
     const size = b.size;
@@ -316,6 +428,8 @@ export class SystemView {
     const climate = bodyClimate(state, b);
     const eating = feedingSwarm(state, sys);
     const pops = col ? col.pops.kin + col.pops.echoes + col.pops.chorus + col.pops.lattice + col.pops.coldminds : 0;
+    // a settlement of ours that made the Passage is its fields now, round the world: no cities on it
+    const fields = settled && !!col && formOf(col) !== 'baryonic';
     // another civilization that lives on the surface: their cities, in their own colour
     const other = sv ? othersColor(sv) : null;
     const surface = !!sv && (sv.way === 'garden' || sv.way === 'dormant' || sv.way === 'fork');
@@ -327,9 +441,9 @@ export class SystemView {
         uSeed: { value: (hashSeed(b.id) % 1000) / 37 },
         uKind: { value: KIND_INDEX[b.kind] ?? 0 },
         uVitality: { value: b.vitality },
-        uLights: { value: settled ? Math.min(1, 0.35 + pops / 12) : surface ? (sv!.way === 'dormant' ? 0.3 : sv!.way === 'fork' ? 0.7 : 0.85) : 0 },
+        uLights: { value: fields ? 0 : settled ? Math.min(1, 0.35 + pops / 12) : surface ? (sv!.way === 'dormant' ? 0.3 : sv!.way === 'fork' ? 0.7 : 0.85) : 0 },
         // how built-up the settlement is: people plus everything they have built
-        uDev: { value: settled && col ? Math.min(1, 0.15 + pops / 30 + Object.values(col.structures).reduce((a, n) => a + n, 0) / 40) : surface ? (sv!.way === 'dormant' ? 0.12 : Math.min(1, 0.25 + sv!.pop / 40)) : 0 },
+        uDev: { value: fields ? 0 : settled && col ? Math.min(1, 0.15 + pops / 30 + Object.values(col.structures).reduce((a, n) => a + n, 0) / 40) : surface ? (sv!.way === 'dormant' ? 0.12 : Math.min(1, 0.25 + sv!.pop / 40)) : 0 },
         uNeon: { value: surface && other ? other : this.neon },
         uCityCol: { value: surface && other ? other.clone().lerp(new THREE.Color(1.0, 0.62, 0.3), 0.25) : new THREE.Color(1.0, 0.62, 0.3) },
         uSunDir: { value: new THREE.Vector3(1, 0, 0) },
@@ -349,8 +463,11 @@ export class SystemView {
         uWater: { value: b.water ?? 0 },
         // an eyeball is one face to its star by definition; any other world only if it is locked
         uLocked: { value: b.kind === 'eyeball' || b.traits.includes('tidally_locked') ? 1 : 0 },
+        // matter stable, past 10^1500 years: iron through and through
+        uIron: { value: iron ? 1 : 0 },
       },
     });
+    if (iron) this.look.iron++;
     mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 64, 48), mat);
     mesh.position.set(orbitR, 0, 0);
     pivot.add(mesh);
@@ -360,22 +477,28 @@ export class SystemView {
       ringM.rotation.x = -Math.PI / 2 + 0.3;
       mesh.add(ringM);
     }
-    if (settled) {
-      // habitat ring: a thin lit band around the settled world
-      const hab = new THREE.Mesh(new THREE.TorusGeometry(size * 1.5, 0.03 + size * 0.01, 6, 96), new THREE.MeshBasicMaterial({ color: this.neon, transparent: true, opacity: 0.7 }));
+    if (fields) {
+      // its fields round the world; their standing wave says whose it is (the selection circle takes its place)
+      extra.push(this.addField(state, col!, col!.id, null, mesh, size, this.neon, 'ours', formOf(col!) === 'positronium' ? 0.6 : 1));
+    } else if (settled) {
+      // habitat ring: a thin lit band around the settled world (it thins with matter)
+      const hab = new THREE.Mesh(new THREE.TorusGeometry(size * 1.5, 0.03 + size * 0.01, 6, 96), withDissolve(new THREE.MeshBasicMaterial({ color: this.neon, transparent: true, opacity: 0.7 })));
       hab.rotation.x = Math.PI / 2 + 0.25;
       // whose world this is: selected, the selection circle takes its place and colour (update)
       hab.userData.mark = true;
       mesh.add(hab);
       extra.push(hab);
       if (col && (col.structures.mag_shield ?? 0) > 0) {
-        const shield = new THREE.Mesh(new THREE.TorusGeometry(size * 0.9, 0.05, 8, 64), new THREE.MeshBasicMaterial({ color: '#a8d8ff', transparent: true, opacity: 0.8 }));
+        const shield = new THREE.Mesh(new THREE.TorusGeometry(size * 0.9, 0.05, 8, 64), withDissolve(new THREE.MeshBasicMaterial({ color: '#a8d8ff', transparent: true, opacity: 0.8 })));
         shield.userData.l1 = true;
         pivot.add(shield);
         extra.push(shield);
       }
     }
-    if (sv && other) {
+    if (sv && other && theirForm && theirForm !== 'baryonic' && theirForm !== 'horizon' && !surface) {
+      // another's settlement past matter: its fields round the world, in its colour
+      extra.push(this.addField(state, null, sv.id + b.id, null, mesh, size, other, styleOf(sv), theirForm === 'positronium' ? 0.6 : 1));
+    } else if (sv && other) {
       if (surface) {
         // a thin ring in their colour marks a world someone else lives on (sleepers show only their faint lights)
         if (sv.way !== 'dormant') {
@@ -398,6 +521,8 @@ export class SystemView {
     const speed = b.rogue ? 0.004 : 0.25 / Math.pow(orbitR / 12, 1.5);
     this.planets.push({ body: b, pivot, mesh, mat, speed, phase: b.phase, radius: orbitR, extra });
     if (eating) this.addFeedingMotes(this.planets[this.planets.length - 1], eating, size);
+    // the Thinning: the world's matter going, a haze of motes drifting off it
+    if (THIN.value > 0) this.addThinMotes(this.planets[this.planets.length - 1], size);
     this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos: mesh.position.clone(), radius: size });
   }
 
@@ -480,6 +605,93 @@ export class SystemView {
     this.habitats.push({ obj: g, spin: sv.way === 'lattice' ? 0.05 : 0.12, follow, pulse });
   }
 
+  /** Whose minds are written into this hole's horizon: ours (in the age's neon) first, else another's whose light has shown them to us. */
+  private horizonWriters(state: GameState, sys: StarSystem): THREE.Color | null {
+    if (colonies(state).some((c) => c.systemId === sys.id && formOf(c) === 'horizon')) return this.neon.clone();
+    for (const c of allColonies(state)) {
+      if (c.owner === state.player || c.systemId !== sys.id || formOf(c) !== 'horizon' || !settlementSeen(state, c)) continue;
+      const sv = state.survivors[c.owner];
+      if (sv) return othersColor(sv);
+    }
+    return null;
+  }
+
+  /** The positronium across the whole system (fields.ts): brighter, in the age's neon, where our minds are woven through it. */
+  private buildVeil(state: GameState, sys: StarSystem) {
+    const woven = colonies(state).some((c) => c.systemId === sys.id && formOf(c) === 'positronium');
+    const era = ERA_BY_ID[state.era];
+    const v = positroniumVeil({ seed: hashSeed(`positronium:${sys.id}`), quality: this.quality, color: new THREE.Color(woven ? era.neon : era.accentSoft), opacity: woven ? 0.24 : 0.11 });
+    this.group.add(v.obj);
+    this.fieldMats.push(v.mat);
+    this.fieldSpin.push({ obj: v.obj, speed: 0.0008 });
+    this.look.veil = v.rings;
+  }
+
+  /**
+   * The Thinning (part 3-3): a world's matter going, a haze of motes drifting off it and fading,
+   * more of them the more of matter is gone. In world space, following the world (update() moves
+   * uFrom, as for a swarm's motes), on elapsed time.
+   */
+  private addThinMotes(rig: PlanetRig, size: number) {
+    const mat = this.thinMotes(hashSeed(rig.body.id + 'thin'), size, this.quality === 'low' ? 24 : this.quality === 'medium' ? 60 : 110);
+    this.eatMotes.push({ mat, rig });
+  }
+
+  /** Motes leaving something of matter as it thins: `base` of them at the most, from a sphere of radius `size` about uFrom. */
+  private thinMotes(seed: number, size: number, base: number): THREE.ShaderMaterial {
+    const rng = new Rng(seed);
+    const n = Math.max(6, Math.round(base * Math.min(1, 0.3 + THIN.value)));
+    const pos: number[] = [];
+    const params: number[] = [];
+    const dirs: number[] = [];
+    for (let i = 0; i < n; i++) {
+      pos.push(0, 0, 0);
+      params.push(rng.next(), rng.range(0.03, 0.08), rng.range(0.6, 1), 0);
+      const d = new THREE.Vector3(rng.range(-1, 1), rng.range(-1, 1), rng.range(-1, 1)).normalize();
+      dirs.push(d.x, d.y, d.z);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('aParams', new THREE.Float32BufferAttribute(params, 4));
+    g.setAttribute('aDir', new THREE.Float32BufferAttribute(dirs, 3));
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: /* glsl */ `
+        attribute vec4 aParams; // x: phase, y: how fast it leaves, z: how far it goes
+        attribute vec3 aDir;
+        uniform float uTime;
+        uniform vec3 uFrom;
+        uniform float uSize;
+        varying float vAlpha;
+        void main() {
+          float f = fract(uTime * aParams.y + aParams.x);
+          vec3 pos = uFrom + aDir * uSize * (1.02 + f * 1.6 * aParams.z);
+          vAlpha = smoothstep(0.0, 0.1, f) * (1.0 - f);
+          vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = clamp(40.0 / -mv.z, 1.0, 3.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uColor;
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - 0.5);
+          if (d > 0.5) discard;
+          float a = (1.0 - d * 2.0) * vAlpha * 0.8;
+          gl_FragColor = vec4(uColor * a, a);
+        }
+      `,
+      uniforms: { uTime: { value: 0 }, uFrom: { value: new THREE.Vector3() }, uSize: { value: size }, uColor: { value: new THREE.Color('#d9a47e') } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const pts = new THREE.Points(g, mat);
+    pts.frustumCulled = false;
+    this.group.add(pts);
+    return mat;
+  }
+
   private buildStructures(state: GameState, sys: StarSystem) {
     const cols = colonies(state).filter((c) => c.systemId === sys.id);
     const count = (k: string) => cols.reduce((a, c) => a + (c.structures[k] ?? 0), 0);
@@ -488,7 +700,7 @@ export class SystemView {
     const dysonCount = count('dyson_swarm') * 1400 + count('orbital_collector') * 90 + count('ember_collector') * 160 + count('infrared_shroud') * 160;
     if (dysonCount > 0) {
       const geo = new THREE.PlaneGeometry(0.5, 0.32);
-      const mat = withNearFade(new THREE.MeshBasicMaterial({ color: '#2a2622', side: THREE.DoubleSide }));
+      const mat = withDissolve(withNearFade(new THREE.MeshBasicMaterial({ color: '#2a2622', side: THREE.DoubleSide })));
       const inst = new THREE.InstancedMesh(geo, mat, dysonCount);
       const rng = new Rng(hashSeed(sys.id + 'dyson'));
       const lit = new THREE.Color('#ffb070');
@@ -504,6 +716,8 @@ export class SystemView {
       }
       this.dyson = inst;
       this.group.add(inst);
+      // the Thinning: the collectors' matter going too, motes drifting off the shell
+      if (THIN.value > 0) this.fieldMats.push(this.thinMotes(hashSeed(sys.id + 'thin'), r0 * 2.8, this.quality === 'low' ? 40 : this.quality === 'medium' ? 100 : 180));
     }
   }
 
@@ -732,6 +946,9 @@ export class SystemView {
       for (const m of h.pulse) m.opacity = 0.6 + 0.35 * Math.sin(t * 1.3);
     }
     for (const m of this.sleepLights) m.uniforms.uLights.value = 0.2 + 0.12 * Math.sin(t * 0.35);
+    // what is not matter breathes on elapsed time, and turns slowly
+    for (const m of this.fieldMats) m.uniforms.uTime.value = t;
+    for (const f of this.fieldSpin) f.obj.rotation.y = t * f.speed;
     if (this.dyson) {
       const m = new THREE.Matrix4();
       const q = new THREE.Quaternion();
@@ -772,7 +989,7 @@ export class SystemView {
         const r = rig ? (rig.body.kind === 'asteroids' ? 3 : rig.body.size * 1.9) : 2;
         marked = rig?.extra.find((e) => e.userData.mark) as THREE.Mesh | undefined;
         const mat = this.selRing.material as THREE.MeshBasicMaterial;
-        mat.color.copy(marked ? (marked.material as THREE.MeshBasicMaterial).color : SELECT);
+        mat.color.copy(marked ? ((marked.userData.markColor as THREE.Color | undefined) ?? (marked.material as THREE.MeshBasicMaterial).color) : SELECT);
         this.selRing.visible = true;
         this.selRing.position.copy(p.pos);
         this.selRing.lookAt(camera.position);
@@ -914,6 +1131,43 @@ function withNearFade<T extends THREE.Material>(m: T): T {
       .replace('void main() {', 'void main() {\n  if (vViewDepth < uNearFade) discard;');
   };
   return m;
+}
+
+/** Shared: the share of ordinary matter gone (the Thinning), for whatever in the view is still made of matter (set on each build). */
+const THIN = { value: 0 };
+
+/**
+ * What is still made of matter thins with it (the Thinning, part 3-3): blocky holes eaten into it
+ * as the share of matter gone grows, their edges glowing as it goes. Composes with withNearFade.
+ */
+function withDissolve<T extends THREE.Material>(m: T): T {
+  const prev = m.onBeforeCompile;
+  const prevKey = prev ? prev.toString() : '';
+  m.onBeforeCompile = (sh, r) => {
+    prev?.call(m, sh, r);
+    sh.uniforms.uThin = THIN;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vDisPos;')
+      // (where on the thing itself, so the holes stay put as it moves: an instance by its number)
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n  vDisPos = position + vec3(float(gl_InstanceID) * 1.618, 0.0, 0.0);\n#else\n  vDisPos = position;\n#endif');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vDisPos;\nuniform float uThin;')
+      .replace(
+        '#include <dithering_fragment>',
+        '#include <dithering_fragment>\n  if (uThin > 0.0) {\n    float n = fract(sin(dot(floor(vDisPos * 9.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453);\n    if (n < uThin) discard;\n    gl_FragColor.rgb += vec3(1.0, 0.55, 0.25) * (1.0 - smoothstep(0.0, 0.07, n - uThin)) * 1.2;\n  }',
+      );
+  };
+  // (its own program: the cache key would otherwise be this wrapper's text, whatever it wraps)
+  m.customProgramCacheKey = () => `${prevKey}|dissolve`;
+  return m;
+}
+
+/** A dead star turned to iron (matter stable, past 10^1500 years, or the core a black dwarf supernova left): a cold, faintly metallic grey. */
+const IRON_STAR = new THREE.Color('#3a3c42');
+
+/** How another civilization holds itself together as fields: a Chorus breathes as one, the Lattice lays its lines out exactly. */
+function styleOf(sv: Survivor): FieldStyle {
+  return sv.way === 'chorus' ? 'chorus' : sv.way === 'lattice' ? 'lattice' : 'archive';
 }
 
 /** How we see another civilization's lights: in their colour once we know them. */

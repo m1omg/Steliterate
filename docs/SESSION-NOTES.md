@@ -643,7 +643,18 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     (`a11y` once failed to give focus back to the Research button after its window closed, and
     passed four runs after; three others had lost the preview server, which the background limit
     stopped: start it with a longer limit).
-  - Next: 3-7 (the look of life after matter), then Part 4 and Part 5, in the plan's order.
+  - the look of what is not matter (part 3-7, 14 Oct, display only): leptonic settlements drawn
+    as their fields (`render/fields.ts`: a dipole's lines, a standing wave in whose colour, motes
+    in the belts; loops for Field Stores, cages for Burst Catchers and Bastion Shells, nets strung
+    out), horizon minds as marks riding the photon ring, the positronium as vast faint ellipses,
+    the map's ring by form, matter dissolving in the Thinning, iron in the stable deep time, the
+    supernovae and collapses ringing on the map; the system view reads the quality setting for
+    the first time. Screenshots of the Black Hole Age's sent to the player; the Dark Era's deep
+    time (iron, the supernova's ring) kept until they say. Validated: tsc, the build
+    (`index-CosIVzyB.js`), the playtest, 76 unit checks and 57 browser checks
+    (`leptonic-look` new).
+  - Next: Part 4 (the films, a 10-second test piece first, and the survey reveal), then Part 5
+    (`/next/`), in the plan's order.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home

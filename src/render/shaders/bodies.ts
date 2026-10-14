@@ -145,6 +145,7 @@ export const PLANET_FRAG = /* glsl */ `
   uniform float uFeeding;     // being torn into a stream
   uniform float uEaten;       // a swarm of the Hunger feeding on it now, by its size (0..1)
   uniform float uFlow;        // the Long Flow has come: the ground has run smooth (0 or 1)
+  uniform float uIron;        // matter stable, past 10^1500 years: everything has fused to iron (0 or 1)
   varying vec3 vNormal;
   varying vec3 vObj;
   varying vec3 vWorldN;
@@ -244,6 +245,11 @@ export const PLANET_FRAG = /* glsl */ `
         }
       }
     }
+    // everything fused to iron by tunnelling: the ground, the ice and the giants' depths alike are
+    // iron now, a dull grey with a little metallic sheen
+    albedo = mix(albedo, vec3(0.3, 0.3, 0.32) * (0.82 + 0.3 * detail), uIron * 0.85);
+    spec = mix(spec, 0.3, uIron);
+    clouds *= 1.0 - uIron;
     // the Hunger's rust: patches that spread the longer a swarm has fed here (it fades once the swarms are gone),
     // dull oxide pitted where the harvesters bored in; on a giant, a thinner brown haze
     float rustN = fbm3(p * 5.0 + uSeed * 3.0) + 0.3 * snoise(p * 16.0 + uSeed);
@@ -413,7 +419,11 @@ export const GLOW_VERT = /* glsl */ `
   }
 `;
 
-/** Billboard glow with slow corona filaments and optional lighthouse beams. */
+/**
+ * Billboard glow with slow corona filaments and optional lighthouse beams. A black hole's photon
+ * ring carries what is written into its horizon (uWrit): glyph-like marks travelling round it and
+ * two bright arcs, in the colour of whose they are (brighter than white only where bloom runs, uGain).
+ */
 export const GLOW_FRAG = /* glsl */ `
   ${NOISE_GLSL}
   uniform float uTime;
@@ -421,6 +431,9 @@ export const GLOW_FRAG = /* glsl */ `
   uniform float uPower;
   uniform float uBeams;
   uniform float uRing; // photon ring for black holes
+  uniform float uWrit; // minds written into the horizon: 0 none, 1 some
+  uniform vec3 uWritColor;
+  uniform float uGain;
   varying vec2 vUv;
   void main() {
     vec2 c = vUv - 0.5;
@@ -439,6 +452,23 @@ export const GLOW_FRAG = /* glsl */ `
     }
     vec3 col = uColor * (corona * uPower + beams * uPower + ring);
     float alpha = clamp(corona * uPower + beams + ring, 0.0, 1.0);
+    if (uWrit > 0.0) {
+      // a band just outside the ring, cut into cells that ride round it; each cell a mark of its
+      // own: lit or dark, notched across the band, breathing slowly
+      float band = smoothstep(0.04, 0.0, abs(d - 0.372));
+      float u = (a / 6.2832 + 0.5) * 72.0 - uTime * 0.35;
+      float id = floor(u);
+      float f = fract(u);
+      float lit = step(0.42, fract(sin(id * 12.9898) * 43758.5453));
+      float stroke = smoothstep(0.5, 0.32, abs(f - 0.5));
+      float notch = step(0.35, fract(sin(id * 78.233 + floor((d - 0.33) * 60.0) * 3.1) * 12345.678));
+      float glyph = band * lit * stroke * notch * (0.55 + 0.45 * sin(uTime * 0.7 + id * 1.3));
+      // and two bright arcs travelling round it, the other way
+      float arcs = pow(max(0.0, cos(a * 2.0 + uTime * 0.22)), 14.0) * smoothstep(0.012, 0.0, abs(d - 0.415));
+      float w = (glyph * 1.1 + arcs * 1.3) * uWrit;
+      col += uWritColor * w * uGain;
+      alpha = clamp(alpha + w, 0.0, 1.0);
+    }
     gl_FragColor = vec4(col, alpha);
   }
 `;

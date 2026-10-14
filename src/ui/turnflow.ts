@@ -26,6 +26,9 @@ const SLICE_MS = 12;
  */
 const TIMER_MS = 40;
 
+/** At most this many of a turn's deep-dark flashes are marked on the map. */
+const MAX_FLASH_PINGS = 16;
+
 /** Let the browser breathe: a task of its own (a message to ourselves, without a timer's clamp), or, with `timer`, after the timers due. */
 function breathe(timer: boolean): Promise<void> {
   return new Promise((done) => {
@@ -144,6 +147,10 @@ export async function doEndTurn() {
   const surveyed = Object.keys(s.civ.known).filter((id) => s.civ.known[id] === 2 && knownBefore[id] !== 2 && !colonies(s).some((c) => c.systemId === id));
   for (const id of detected) engine()?.ping(id, '#bfe9ff');
   for (const id of surveyed) engine()?.ping(id, '#9ff5e6');
+  // the deep dark's flashes, where matter is stable: a black dwarf exploding, a system's matter
+  // tunnelling into black holes (a few at most: in a turn of the collapse there can be many)
+  const flashes = r.notes.filter((n) => (n.kind === 'blackdwarf_sn' || n.kind === 'collapse') && s.civ.known[n.systemId]);
+  for (const n of flashes.slice(0, MAX_FLASH_PINGS)) engine()?.ping(n.systemId, n.kind === 'blackdwarf_sn' ? '#fff3dc' : '#cdbcff');
   const living = surveyed.flatMap((id) => livingWorlds(s, id));
   if (living.length) {
     const b = living.sort((x, y) => y.habitability * y.vitality - x.habitability * x.vitality)[0];

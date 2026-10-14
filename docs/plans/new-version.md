@@ -684,6 +684,46 @@ Each step validated on its own, with the harness by fate:
    ring, the dissolve; every quality tier, with screenshots asked about first (the player has not
    reached that far).
 
+### 3-7, as it will be built (14 Oct, written before starting it)
+
+Display only: no rule changes, so the harness is not run (a check confirms no game state is read
+differently). New: `render/fields.ts`.
+
+1. **Leptonic settlements are drawn as fields** (`fieldLattice`): filaments along a tilted
+   dipole's lines (r = L sin²θ) from just above the core, a standing wave round the equator in
+   the colour that says whose it is (it takes the habitat ring's place for the selection circle),
+   and motes trapped in the field, bouncing between the mirror points and drifting round as in a
+   planet's radiation belts. Additive, breathing on elapsed time, in the age's accent; ours with
+   the age's neon wave, the others' in their colour (a Chorus breathing as one, the Lattice laid
+   out exactly). On a world it replaces the habitat torus (and the surface's city lights: the
+   settlement is no longer there); in the Deep, the box hull. Its structures show in it: a
+   current loop for each Field Store, more shells for what houses minds, a wide cage for Burst
+   Catchers, lines strung outward for Positronium Nets; a Bastion Shell is a shell of field lines
+   round its hole.
+2. **Horizon settlements** ride the photon ring (`GLOW_FRAG` `uWrit`): glyph-like marks that
+   travel round it, and two bright arcs, in the colour of whose they are.
+3. **The positronium** (η 85 to its decay): a few vast, faint ellipses about a centre far outside
+   every system, barely moving (`positroniumVeil`); brighter, in the age's neon, where our minds
+   are woven through it.
+4. **The galaxy map:** a new attribute (`aForm`) gives our settlements' ring a style by form: a
+   standing wave for leptonic, travelling arcs for horizon, a wide soft ellipse for positronium.
+5. **The Thinning:** structures still made of matter dissolve (`uThin`, the share of matter gone):
+   blocky holes eaten into the Dyson swarm's panels, the habitat ring and the Deep's hull, with
+   glowing edges, and motes drifting off them and off the worlds.
+6. **The stable fate's deep time:** after the iron (η 1500), worlds and dead stars are iron grey,
+   faintly metallic; the turn's black dwarf supernovae and collapses ping the map (at most 16).
+7. **Quality:** the system view reads the setting: fewer filaments, motes and ellipses on Low,
+   colour brighter than white (for the bloom) only on Medium and High.
+8. **Checks:** `browser/leptonic-look` (each tier: the lattice, its counts falling on Low, the
+   horizon arcs, the veil, the map's form, the dissolve, the iron, a frame drawn the same at 30
+   and 144 Hz); screenshots for the player (the Black Hole Age's are theirs to see; the Dark
+   Era's far end only if they say).
+   - As built (14 Oct): as above. The writing rides just outside the photon ring, where the
+     ring's own glow does not drown it; the veil's centre lies along the orbits' long axis, so the
+     middle ellipses cross the system; a dissolving instance keys its holes by `gl_InstanceID`
+     (by its position they swam as it orbited). The Codex says the look is invention, borrowed
+     from magnetospheres and current loops; the Manual has "How they look".
+
 ### 3-6, as it will be built (14 Oct, written before starting it)
 
 The sources, checked: Caplan 2020 (MNRAS 497, 4357, arXiv:2008.02296) gives black dwarfs of

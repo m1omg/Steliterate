@@ -2925,3 +2925,43 @@ black dwarfs of 1.16 to 1.35 M☉ explode as their cores turn to iron, 10^1100 y
   autoplayer never sleeps and reaches the dark on whatever reserve it happens to hold; a player
   can prepare (stores, Coldminds, the Long Sleep, the Passage before the iron). The new version
   as a whole now stands where `main`'s game does (456 / 203 of 900).
+
+## The look of what is not matter (14 Oct, part 3-7)
+
+What outlasts matter had looked like what it replaced: a small lit box in the Deep, the habitat
+ring round a world, the same ring on the map. Display only (no rule changes; the harness is not
+run). New: `render/fields.ts`, `browser/leptonic-look`.
+
+- **A leptonic settlement is drawn as its fields:** thin glowing filaments along the lines of a
+  tilted dipole field, a standing wave round its middle in the colour that says whose it is (the
+  selection circle takes its place, as it does the habitat ring's), and motes caught in it that
+  bounce between the mirror points and drift round, as charged particles do in a planet's
+  radiation belts. Additive, breathing slowly on elapsed time, in the age's accent. In the Deep it
+  replaces the box hull; round a world (a settlement that made the Passage before the end) it
+  replaces the habitat ring, and the world's city lights go out: the settlement is not on it any
+  more. What stands there shows in it: more shells for what houses minds, a current loop for each
+  Field Store, a wide cage for Burst Catchers, lines strung far out for Positronium Nets; a
+  Bastion Shell is a cage of field lines round its hole. Another civilization's, in its colour: a
+  Chorus's lines breathe as one, the Lattice's are laid out exactly.
+- **Minds written into a horizon** ride the hole's photon ring: marks like glyphs travelling round
+  just outside it, and two thin arcs further out, in the colour of whose they are.
+- **The positronium** (from η 85 to its decay): a few vast, faint ellipses about a centre far
+  outside the system, the middle ones crossing it, barely moving; brighter, in the age's neon,
+  where our minds are woven through it.
+- **The galaxy map:** our settlement ring takes a style by what the settlement is made of: a
+  standing wave for fields, travelling arcs for a horizon, a wide soft ellipse for the
+  positronium (`aForm`).
+- **The Thinning:** what is still made of matter (the Dyson swarm's panels, the habitat ring, the
+  Deep's hull, a magnetic shield) is eaten away in blocks as the share of matter gone grows, with
+  glowing edges, and motes drift off the worlds and the collectors.
+- **The stable fate's deep time:** past 10^1500 years the worlds are iron grey, faintly metallic,
+  and so are the dead stars (and the core a black dwarf supernova leaves); the turn's black dwarf
+  supernovae and collapses ring on the map (16 at most).
+- **Quality:** the system view reads the setting for the first time: fewer filaments, motes and
+  ellipses on Low (a vault's field, 5,952 / 3,696 / 1,080 segments and 220 / 110 / 40 motes on
+  High / Medium / Low), and colour past white, for the bloom, only on Medium and High.
+- **Texts:** the Manual ("How they look"), the Codex (the look is invention, borrowed from
+  magnetospheres and current loops).
+- **Checks:** `browser/leptonic-look` (each tier; the horizon, the veil, the map's forms, the
+  Thinning, a Passage world, iron, a supernova's ring on the map, the fields at the same moment
+  after two seconds at 30 and at 144 frames a second).

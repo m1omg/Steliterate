@@ -60,8 +60,9 @@ last.
     costs the dark's Continuity twice as much, Error-Correction Arrays keep only their own
     settlement, and a swarm's part whose ship is gone goes on to the ship's nearest settlement;
     CHANGELOG, "Harder"); then the stable fate's late game (3-6: black dwarf supernovae, iron
-    stars, tunnelling collapse, the Passage where matter is stable). Next: the look (3-7), then
-    Part 4 (films and the survey reveal) and Part 5 (`/next/`). Waiting for the player: ships seeing
+    stars, tunnelling collapse, the Passage where matter is stable) and the look of what is not
+    matter (3-7: fields, horizon writing, the positronium's ellipses). Next: Part 4 (films and the
+    survey reveal) and Part 5 (`/next/`). Waiting for the player: ships seeing
     what they pass (1b, a census done), the Quiet Lattice (four options put to them, 13 Oct; see
     SESSION-NOTES, "Picking up"), and the new hulls (2c-5, a sheet shown).
 - **The backup** (13 Oct, PR m1omg/Steliterate#28, `db34424`): today's game, frozen and playable,

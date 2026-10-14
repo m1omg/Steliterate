@@ -175,9 +175,13 @@ export class Engine {
   }
 
   setQuality(q: Quality) {
+    const was = this.system.quality;
     this.quality = q;
     this.resize();
     this.post.bloom.enabled = q !== 'low';
+    // the system view draws fewer filaments, motes and ellipses on Low, and colour past white only where bloom runs
+    this.system.quality = q;
+    if (was !== q && this.view === 'system' && this.system.systemId && this.state) this.system.build(this.state, this.system.systemId);
   }
 
   private pixelRatio(): number {
