@@ -383,7 +383,7 @@ export class World {
   constructor(
     n: number,
     private map: WorldMap,
-    private o: { light: readonly [number, number, number]; sun: RGB; tilt?: number; air: RGB; lights: RGB; airThick?: number },
+    private o: { light: readonly [number, number, number]; sun: RGB; tilt?: number; air: RGB; lights: RGB; airThick?: number; heat?: number },
   ) {
     this.n = Math.max(8, Math.round(n));
     const N = this.n;
@@ -436,6 +436,7 @@ export class World {
     const [ar, ag, ab] = this.o.air;
     const [cr, cg, cb] = this.o.lights;
     const thick = this.o.airThick ?? 1;
+    const heat = this.o.heat ?? 0;
     const off = (spin / (Math.PI * 2)) * W;
     for (let k = 0; k < N * N; k++) {
       const p = k * 4;
@@ -461,9 +462,20 @@ export class World {
       const rim = this.rim[k] * thick;
       const airLit = rim * (smooth(-0.35, 0.2, ndl) * 1.1 + 0.08);
       const gl = sea[m] ? this.glint[k] * (1 - cl) * 1.4 : 0;
-      d[p] = Math.min(255, 255 * (s0 * sr * lit + ar * airLit + cr * lamp * 1.4 + sr * gl));
-      d[p + 1] = Math.min(255, 255 * (s1 * sg * lit + ag * airLit + cg * lamp * 1.25 + sg * gl));
-      d[p + 2] = Math.min(255, 255 * (s2 * sb * lit + ab * airLit + cb * lamp * 0.9 + sb * gl));
+      const r = Math.min(255, 255 * (s0 * sr * lit + ar * airLit + cr * lamp * 1.4 + sr * gl));
+      const gg = Math.min(255, 255 * (s1 * sg * lit + ag * airLit + cg * lamp * 1.25 + sg * gl));
+      const b = Math.min(255, 255 * (s2 * sb * lit + ab * airLit + cb * lamp * 0.9 + sb * gl));
+      if (heat) {
+        // seen by its faint heat: its brightness through the thermal palette
+        const i = Math.min(255, Math.round((0.3 * r + 0.59 * gg + 0.11 * b) * heat)) * 3;
+        d[p] = HEAT_LUT[i];
+        d[p + 1] = HEAT_LUT[i + 1];
+        d[p + 2] = HEAT_LUT[i + 2];
+      } else {
+        d[p] = r;
+        d[p + 1] = gg;
+        d[p + 2] = b;
+      }
       d[p + 3] = 255;
     }
     this.g.putImageData(this.img, 0, 0);
@@ -498,6 +510,51 @@ export class World {
     g.restore();
     return this.canvas;
   }
+}
+
+// ------------------------------------------------------------------ faint heat
+
+/**
+ * A thermal camera's palette (like matplotlib's magma: black, violet, rose, peach, cream), 256 RGB
+ * triples: the films show what is too cold to see by its faint heat, and say so.
+ */
+export const HEAT_LUT: Uint8ClampedArray = (() => {
+  const stops: [number, RGB][] = [
+    [0, [0, 0, 0.01]],
+    [0.18, [0.1, 0.04, 0.22]],
+    [0.42, [0.38, 0.12, 0.5]],
+    [0.66, [0.78, 0.3, 0.52]],
+    [0.85, [0.98, 0.6, 0.48]],
+    [1, [1, 0.92, 0.78]],
+  ];
+  const lut = new Uint8ClampedArray(256 * 3);
+  for (let i = 0; i < 256; i++) {
+    const x = i / 255;
+    let j = 1;
+    while (j < stops.length - 1 && x > stops[j][0]) j++;
+    const [x0, c0] = stops[j - 1];
+    const [x1, c1] = stops[j];
+    const u = clamp01((x - x0) / (x1 - x0));
+    for (let k = 0; k < 3; k++) lut[i * 3 + k] = 255 * mix(c0[k], c1[k], u);
+  }
+  return lut;
+})();
+
+/** A disc's picture in the thermal palette, by its brightness (times `gain`), made once. */
+export function heatOf(src: HTMLCanvasElement, gain = 1): HTMLCanvasElement {
+  const out = canvas(src.width, src.height);
+  const g = out.getContext('2d')!;
+  g.drawImage(src, 0, 0);
+  const img = g.getImageData(0, 0, out.width, out.height);
+  const d = img.data;
+  for (let p = 0; p < d.length; p += 4) {
+    const i = Math.min(255, Math.round((0.3 * d[p] + 0.59 * d[p + 1] + 0.11 * d[p + 2]) * gain)) * 3;
+    d[p] = HEAT_LUT[i];
+    d[p + 1] = HEAT_LUT[i + 1];
+    d[p + 2] = HEAT_LUT[i + 2];
+  }
+  g.putImageData(img, 0, 0);
+  return out;
 }
 
 // ------------------------------------------------------------------ fields of stars

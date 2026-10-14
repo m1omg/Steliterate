@@ -1,6 +1,7 @@
 import { Rng } from '../game/rng';
 import { pow10 } from '../ui/fmt';
 import { Hatch, Stipple, circlePath, corners, glow, grain, ink, rgba, ss, vignette, type Ctx, type Pt } from './draw';
+import { blackHoleAge2 } from './blackhole';
 import { DUSK2 } from './dusk';
 import { LAST_LIGHT2 } from './lastlight';
 
@@ -219,85 +220,6 @@ function hatchedBall(c: Ctx, x: number, y: number, R: number, S: number, hatch: 
 }
 
 // ------------------------------------------------------------------ the ages
-
-/** Into the Black Hole Age: the worlds dissolve (the Great Decay), or the last warm things cool or burst (the Last Warmth); the black holes remain. */
-function blackHoleAge(id: 'great_decay' | 'last_warmth', name: string): FilmDef {
-  return reel({ id, name, bpm: 96, beats: 16, accent: '#a48dff' }, (w, h, S, k, args) => {
-    const fate = args.fate ?? (id === 'great_decay' ? 'decay' : 'stable');
-    const world = new Hatch(51, Math.round(48 * k), [1, -0.3]);
-    const motes = new Stipple(52, Math.round(900 * k), (r) => 1 - r * 0.4);
-    const ns = new Stipple(53, Math.round(220 * k), (r) => Math.pow(1 - r, 2));
-    const rng = new Rng(54);
-    const small = Array.from({ length: 7 }, (_, i) => ({ x: rng.range(0.12, 0.88) * w, y: rng.range(0.18, 0.66) * h, r: S * rng.range(0.012, 0.026), at: 8.6 + i * 0.45 }));
-    const first =
-      fate === 'decay'
-        ? ['Ordinary matter has decayed away.', 'Only the black holes remain.']
-        : fate === 'curvature'
-          ? ['The neutron stars have burst.', 'Now the black holes are the warmest things in the universe.']
-          : ['The protons held, and nothing marked the moment.', 'Now the black holes are the warmest things in the universe.'];
-    return {
-      numeral: 'III',
-      title: 'The Black Hole Age',
-      sub: `Age III · ${name}`,
-      titleAt: 12,
-      eta: [fate === 'decay' ? 38.6 : 39.2, 40],
-      narration: [
-        { from: 0.6, to: 4, text: first[0] },
-        { from: 4.3, to: 8, text: first[1] },
-        { from: 8.3, to: 11.9, text: 'They spin, and they very slowly evaporate.' },
-      ],
-      shots: [
-        {
-          from: 0,
-          to: 4,
-          draw(c, b, t) {
-            const [x, y, R] = [w * 0.5, h * 0.46, S * 0.22];
-            if (fate === 'decay') {
-              // a world coming apart into motes
-              const gone = ss(0.8, 3.8, b);
-              c.save();
-              c.globalAlpha = 1 - gone;
-              hatchedBall(c, x, y, R, S, world, { color: INK, rim: INK, seed: 55 });
-              c.restore();
-              motes.draw(c, x, y, R * (1 + 0.9 * gone), { color: INK, dot: S * 0.0022, show: gone * 1.2, gone: ss(2.6, 4, b), t, alpha: 0.7 });
-            } else {
-              // a neutron star, the last thing warm of its own accord: it cools, or it bursts
-              const fade = ss(0.8, 3.6, b);
-              const r = S * 0.03;
-              if (fate === 'curvature') {
-                glow(c, x, y, S * 0.2, '#9cc3ff', 0.4 * (1 - ss(1.6, 2.2, b)));
-                if (b < 2) ns.draw(c, x, y, r, { color: '#dde8ff', dot: S * 0.0022, t });
-                burst(c, x, y, S * 0.2, S, ss(1.9, 3.6, b), '#cfe0ff', 56);
-              } else {
-                glow(c, x, y, S * 0.2, '#9cc3ff', 0.4 * (1 - fade));
-                ns.draw(c, x, y, r, { color: '#dde8ff', dot: S * 0.0022, gone: fade * 0.85, t });
-              }
-            }
-          },
-        },
-        {
-          from: 4,
-          to: 8,
-          draw(c, b) {
-            const z = 1 + 0.04 * ((b - 4) / 4);
-            hole(c, w * 0.5, h * 0.46, S * 0.11 * z, S, { disk: ss(4.2, 6.5, b), seed: 57 });
-          },
-        },
-        {
-          from: 8,
-          to: 12,
-          draw(c, b) {
-            // the small ones go first, each in a last burst
-            small.forEach((s, i) => {
-              if (b < s.at) hole(c, s.x, s.y, s.r, S, { disk: 0.5, ring: 0.8, seed: 58 + i });
-              burst(c, s.x, s.y, s.r * 4, S, ss(s.at, s.at + 1, b), '#e9dcff', 59 + i);
-            });
-          },
-        },
-      ],
-    };
-  });
-}
 
 /** The Great Evaporation (where space unmakes matter): the last worlds evaporate into particles and light. */
 const GREAT_EVAPORATION = reel({ id: 'great_evaporation', name: 'The Great Evaporation', bpm: 96, beats: 16, accent: '#a48dff' }, (w, h, S, k) => {
@@ -558,8 +480,8 @@ const WILL_FAILS = endingFilm('end_will_fails', 'The Will Fails', 'defeat', ['Yo
 export const FILMS: Record<FilmId, FilmDef> = {
   dusk: DUSK2,
   last_light: LAST_LIGHT2,
-  great_decay: blackHoleAge('great_decay', 'The Great Decay'),
-  last_warmth: blackHoleAge('last_warmth', 'The Last Warmth'),
+  great_decay: blackHoleAge2('great_decay', 'The Great Decay'),
+  last_warmth: blackHoleAge2('last_warmth', 'The Last Warmth'),
   great_evaporation: GREAT_EVAPORATION,
   last_horizon: LAST_HORIZON,
   end_long_thought: LONG_THOUGHT,

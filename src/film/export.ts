@@ -21,6 +21,6 @@ const player = new FilmPlayer(host, FILMS[id] ? id : 'dusk', { quality: 'high', 
 (window as unknown as { __film: unknown }).__film = {
   length: player.length,
   frame: (t: number) => player.frame(t),
-  cue: async () => wavBase64(await renderCue(player.id, player.length + 1.5)),
+  cue: async () => wavBase64(await renderCue(player.id, player.length + 1.5, 48000, fate ?? undefined)),
   ready: () => document.fonts.ready.then(() => true),
 };

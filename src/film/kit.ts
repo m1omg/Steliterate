@@ -90,3 +90,18 @@ export function reticle(c: Ctx, x: number, y: number, r: number, S: number, reve
   }
 }
 
+/** A disc too cold to see, painted as the instruments show its faint heat: in false colour (`hue`), dim (`shade`). */
+export function falseColour(c: CanvasRenderingContext2D, img: HTMLCanvasElement, x: number, y: number, R: number, hue = '#7a62b8', shade = '#6d6a78') {
+  c.drawImage(img, x - R, y - R, R * 2, R * 2);
+  c.save();
+  c.beginPath();
+  c.arc(x, y, R * 0.995, 0, Math.PI * 2);
+  c.clip();
+  c.globalCompositeOperation = 'color';
+  c.fillStyle = hue;
+  c.fillRect(x - R, y - R, R * 2, R * 2);
+  c.globalCompositeOperation = 'multiply';
+  c.fillStyle = shade;
+  c.fillRect(x - R, y - R, R * 2, R * 2);
+  c.restore();
+}

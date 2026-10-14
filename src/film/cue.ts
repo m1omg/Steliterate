@@ -129,8 +129,9 @@ const SPECS: Record<FilmId, CueSpec> = {
   // (the Long Dusk's second cut: 72 beats at 90, a cut at each scene)
   dusk: { bpm: 90, root: 55, cuts: [[0, 440], [6, 392], [10.5, 329.63], [17, 293.66], [23, 261.63], [36, 329.63], [41, 220], [45.5, 246.94], [49.5, 196], [55.5, 220], [60.5, 164.81]], titleAt: 66, chord: [110, 164.81, 277.18], pads: true },
   last_light: { bpm: 90, root: 41.2, cuts: [[0, 392], [6.5, 329.63], [12, 293.66], [18.3, 246.94], [30, 329.63], [37.5, 392], [44.5, 246.94], [51.5, 220], [58.5, 196]], titleAt: 64, chord: [82.41, 98, 123.47], pads: true },
-  great_decay: AGE(36.71, [349.23, 293.66, 220], [73.42, 87.31, 110]),
-  last_warmth: AGE(36.71, [349.23, 293.66, 220], [73.42, 87.31, 110]),
+  // (the Black Hole Age's second cut: 74 beats at 90, a cut at each scene; the Last Warmth's under curvature radiation below)
+  great_decay: { bpm: 90, root: 36.71, cuts: [[0, 349.23], [8, 293.66], [15.5, 261.63], [22.5, 220], [30.5, 233.08], [38.5, 196], [46.5, 174.61], [55.5, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
+  last_warmth: { bpm: 90, root: 36.71, cuts: [[0, 349.23], [7.5, 293.66], [15, 261.63], [22, 220], [30, 196], [38, 233.08], [46, 220], [54, 174.61], [61, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
   great_evaporation: AGE(32.7, [311.13, 261.63, 196], [65.41, 77.78, 98]),
   last_horizon: AGE(30.87, [293.66, 246.94, 185], [61.74, 73.42, 92.5]),
   end_long_thought: VICTORY,
@@ -145,14 +146,22 @@ const SPECS: Record<FilmId, CueSpec> = {
   end_will_fails: DEFEAT,
 };
 
-const CUES = Object.fromEntries(Object.entries(SPECS).map(([id, spec]) => [id, reelCue(spec)])) as Record<FilmId, (ctx: BaseAudioContext, out: AudioNode, at: number) => void>;
+/** A film whose scenes fall on other beats in another fate of matter: its cue for that fate (`id:fate`). */
+const FATE_SPECS: Record<string, CueSpec> = {
+  'last_warmth:curvature': { bpm: 90, root: 36.71, cuts: [[0, 392], [7.5, 293.66], [21.5, 220], [29.5, 261.63], [38, 196], [46.5, 233.08], [54, 174.61], [61, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
+};
+
+type Cue = (ctx: BaseAudioContext, out: AudioNode, at: number) => void;
+const CUES = Object.fromEntries(Object.entries(SPECS).map(([id, spec]) => [id, reelCue(spec)])) as Record<FilmId, Cue>;
+const FATE_CUES: Record<string, Cue> = Object.fromEntries(Object.entries(FATE_SPECS).map(([id, spec]) => [id, reelCue(spec)]));
+const cueOf = (id: FilmId, fate?: string): Cue => (fate && FATE_CUES[`${id}:${fate}`]) || CUES[id];
 
 /** Play a film's cue into `out` from `at` (on its context's clock). */
-export function playCue(id: FilmId, ctx: BaseAudioContext, out: AudioNode, at: number): Voice {
+export function playCue(id: FilmId, ctx: BaseAudioContext, out: AudioNode, at: number, fate?: string): Voice {
   const bus = ctx.createGain();
   bus.gain.value = 1;
   bus.connect(out);
-  CUES[id](ctx, bus, at);
+  cueOf(id, fate)(ctx, bus, at);
   return {
     stop(secs = 0.4) {
       const now = ctx.currentTime;
@@ -165,13 +174,13 @@ export function playCue(id: FilmId, ctx: BaseAudioContext, out: AudioNode, at: n
 }
 
 /** A film's cue rendered offline (for the exported video): stereo samples at `rate`. */
-export async function renderCue(id: FilmId, secs: number, rate = 48000): Promise<AudioBuffer> {
+export async function renderCue(id: FilmId, secs: number, rate = 48000, fate?: string): Promise<AudioBuffer> {
   const ctx = new OfflineAudioContext(2, Math.ceil(secs * rate), rate);
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -16;
   comp.ratio.value = 3;
   comp.connect(ctx.destination);
-  CUES[id](ctx, comp, 0);
+  cueOf(id, fate)(ctx, comp, 0);
   return ctx.startRendering();
 }
 

@@ -39,7 +39,7 @@ export function FilmScreen({ id, args, then }: { id: FilmId; args?: FilmArgs; th
     let voice: ReturnType<typeof playCue> | null = null;
     if (a && a.ctx.state === 'running') {
       const at = a.ctx.currentTime + 0.1;
-      voice = playCue(id, a.ctx, a.film, at);
+      voice = playCue(id, a.ctx, a.film, at, args?.fate);
       duckMusic(true);
       clock = { now: () => Math.max(0, a.ctx.currentTime - at) };
     }

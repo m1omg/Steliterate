@@ -1,26 +1,10 @@
 import { Rng } from '../game/rng';
 import { circlePath, glow, ink, ss, type Pt } from './draw';
 import type { FilmDef } from './films';
-import { landscape, layer, put, reticle, ship, skyRatio } from './kit';
+import { falseColour, landscape, layer, put, reticle, ship, skyRatio } from './kit';
 import { Lazy, dotSprite, kelvin, paintBanded, paintElliptical, paintLens, paintSky, paintStar, tint } from './paint';
 import { ease, note, reel2, type Scene } from './reel';
 import { pow10 } from '../ui/fmt';
-
-/** A disc too cold to see, painted as the instruments show its faint heat: in false colour, dim. */
-function falseColour(c: CanvasRenderingContext2D, img: HTMLCanvasElement, x: number, y: number, R: number) {
-  c.drawImage(img, x - R, y - R, R * 2, R * 2);
-  c.save();
-  c.beginPath();
-  c.arc(x, y, R * 0.995, 0, Math.PI * 2);
-  c.clip();
-  c.globalCompositeOperation = 'color';
-  c.fillStyle = '#7a62b8';
-  c.fillRect(x - R, y - R, R * 2, R * 2);
-  c.globalCompositeOperation = 'multiply';
-  c.fillStyle = '#6d6a78';
-  c.fillRect(x - R, y - R, R * 2, R * 2);
-  c.restore();
-}
 
 // The Degenerate Age (Age II), second cut: the last red dwarf turning blue as it burns out and
 // shrinking to a white dwarf; the dark that is left; the corpses laid out as specimens (a white
