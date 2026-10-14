@@ -44,7 +44,9 @@ withWorld.primary.evaporateAt = s.years * (1 + 1e-12);
 empty.primary.evaporateAt = s.years * (1 + 1e-12);
 s.civ.pending.length = 0;
 s.civ.energy = 10;
-// nothing else finishes this turn, so the storage change is the vault's alone
+// nothing else finishes this turn, so the storage change is the vault's alone, and no swarm
+// strikes anywhere (a strike can strip a structure: hunger.ts), so what changes is the hole's doing
+for (const id of Object.keys(s.swarms)) delete s.swarms[id];
 for (const x of Object.values(s.colonies)) x.queue = [];
 const structs = JSON.stringify(c.structures);
 endTurn(s);

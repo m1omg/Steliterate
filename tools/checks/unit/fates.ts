@@ -23,17 +23,28 @@ check(old.saveVersion === SAVE_VERSION && old.fate === (old.protonsDecay ? 'deca
 /**
  * Play a game of this fate with the autoplayer until `stop` says so; every crossing seen is kept.
  * (The neighbours asleep: these are the universe's rules, and a game that ends early, as the others'
- * play can make it, would not reach them.)
+ * play can make it, would not reach them.) A game that ends before `stop` says so (the autoplayer
+ * lost it) is played again from the next seed, as is one that stops where `fits` says it cannot
+ * show what is checked (a turn can run past two moments at once): these checks are about the
+ * universe, not the play.
  */
-function play(fate: ProtonFate, stop: (s: GameState) => boolean, seed = 1000) {
-  const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate, civsAsleep: true });
-  const crossings: CrossingReport[] = [];
-  for (let g = 0; g < 1200 && !s.civ.outcome && !stop(s); g++) {
-    autoPlay(s, 'competent');
-    const r = endTurn(s);
-    if (r.crossing) crossings.push(r.crossing);
+function play(fate: ProtonFate, stop: (s: GameState) => boolean, fits: (s: GameState) => boolean = () => true, seed = 1000) {
+  let last: { s: GameState; crossings: CrossingReport[] } | null = null;
+  for (let tries = 0; tries < 8; tries++) {
+    const s = newGame({ seed: seed + tries, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate, civsAsleep: true });
+    const crossings: CrossingReport[] = [];
+    for (let g = 0; g < 1200 && !s.civ.outcome && !stop(s); g++) {
+      autoPlay(s, 'competent');
+      const r = endTurn(s);
+      if (r.crossing) crossings.push(r.crossing);
+    }
+    last = { s, crossings };
+    if ((stop(s) && fits(s)) || (!stop(s) && !s.civ.outcome)) {
+      if (tries) console.log(`  (${fate}: seed ${seed + tries}; the games before it ended early or ran past the moment)`);
+      return last;
+    }
   }
-  return { s, crossings };
+  return last!;
 }
 const text = (r: CrossingReport | undefined) => (r ? [r.title, r.intro, ...r.lines.map((l) => l.text)].join(' ') : '');
 
@@ -55,7 +66,7 @@ const text = (r: CrossingReport | undefined) => (r ? [r.title, r.intro, ...r.lin
   check(s.era === 'blackhole' && s.eta >= 68 && s.eta < 70, `curvature: the Black Hole Age begins at η ${s.eta.toFixed(2)}`);
   check(r?.title === 'The Last Warmth' && /neutron stars have burst/.test(text(r)), 'the neutron stars burst at the Last Warmth');
   check(!Object.values(s.systems).some((x) => x.primary.kind === 'neutron_star'), 'none is left');
-  const { s: s1 } = play('curvature', (g) => g.eta >= 85.5);
+  const { s: s1 } = play('curvature', (g) => g.eta >= 85.5, (g) => g.eta < 89.5);
   const white = (g: GameState) => Object.values(g.systems).filter((x) => !x.gone && ['white_dwarf', 'black_dwarf'].includes(shownKind(x.primary, g.years)));
   check(s1.eta < 89.5 && white(s1).length === 0, `by η ${s1.eta.toFixed(2)} every white dwarf has faded (${white(s1).map((x) => `${x.name} ${x.primary.kind}`).join(', ') || 'none left'})`);
   const { s: s2, crossings: c2 } = play('curvature', (g) => g.eta >= 90 || matterGone(g));
