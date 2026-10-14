@@ -1,5 +1,5 @@
 // Renders one of the films (src/film) to an MP4, every frame drawn at its exact time:
-//   node tools/film-render.mjs <film> <out.mp4> [--size=1920x1080] [--fps=60] [--ffmpeg=<path>]
+//   node tools/film-render.mjs <film> <out.mp4> [--size=1920x1080] [--fps=60] [--ffmpeg=<path>] [--jpeg]
 // It starts the Vite dev server for film.html (the export page, never built into the game),
 // steps the film's time by 1/fps, screenshots each frame (the canvas and the words over it),
 // renders the film's cue offline, and encodes with ffmpeg: H.264 and AAC. ffmpeg is not a
@@ -24,6 +24,9 @@ const [film = 'dusk', out = `${film}.mp4`, ...rest] = process.argv.slice(2);
 const opt = (k, d) => rest.find((a) => a.startsWith(`--${k}=`))?.split('=')[1] ?? d;
 const [w, h] = opt('size', '1920x1080').split('x').map(Number);
 const fps = Number(opt('fps', '60'));
+// (JPEG frames are much quicker to capture at 1080p, and H.264 loses more than they do)
+const jpeg = rest.includes('--jpeg');
+const ext = jpeg ? 'jpg' : 'png';
 const ffmpeg = opt('ffmpeg', process.env.FFMPEG ?? 'ffmpeg');
 const port = 5179;
 
@@ -49,13 +52,13 @@ try {
   const n = Math.ceil(length * fps);
   for (let i = 0; i < n; i++) {
     await page.evaluate((t) => window.__film.frame(t), i / fps);
-    writeFileSync(join(dir, `${String(i).padStart(5, '0')}.png`), await page.screenshot({ type: 'png' }));
+    writeFileSync(join(dir, `${String(i).padStart(5, '0')}.${ext}`), await page.screenshot(jpeg ? { type: 'jpeg', quality: 94 } : { type: 'png' }));
     if (i % fps === 0) process.stdout.write(`\r${film}: ${i} / ${n} frames`);
   }
   writeFileSync(join(dir, 'cue.wav'), Buffer.from(await page.evaluate(() => window.__film.cue()), 'base64'));
   await browser.close();
   console.log(`\r${film}: ${n} frames, encoding…`);
-  const r = spawnSync(ffmpeg, ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', join(dir, '%05d.png'), '-i', join(dir, 'cue.wav'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'slow', '-c:a', 'aac', '-b:a', '192k', '-shortest', out], { stdio: 'inherit' });
+  const r = spawnSync(ffmpeg, ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', join(dir, `%05d.${ext}`), '-i', join(dir, 'cue.wav'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'slow', '-c:a', 'aac', '-b:a', '192k', '-shortest', out], { stdio: 'inherit' });
   rmSync(dir, { recursive: true, force: true });
   if (r.status !== 0) throw new Error(`ffmpeg failed (${r.status ?? r.error})`);
   console.log(`${out}: ${w}×${h}, ${length.toFixed(2)} s at ${fps} fps`);

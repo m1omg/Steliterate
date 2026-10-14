@@ -896,7 +896,14 @@ html.lv .map-label.province { font-size: calc(18px * var(--z, 1)); color: rgba(2
 .film-line.at-mid.title { left: 50%; top: 50%; transform: translate(-50%, -62%); }
 .film-line.at-mid.sub { left: 50%; top: calc(50% + 8.6vmin); transform: translateX(-50%); }
 .film-line.at-low { left: 50%; bottom: 13vmin; transform: translateX(-50%); }
+.film-line.note { font-family: var(--f-mono); font-size: 1.35vmin; letter-spacing: 0.18em; text-transform: uppercase; color: #d9cfbd; font-variant-numeric: tabular-nums; transform: translateY(-50%); }
+.film-line.note.size-m { font-size: 1.7vmin; }
+.film-line.note.align-c { transform: translate(-50%, -50%); }
+.film-line.note.align-r { transform: translate(-100%, -50%); }
+.film-line.note.tone-accent { color: var(--film-accent, #f28a4f); }
+.film-line.note.tone-dim { color: #8f8676; }
 .film-skip { position: absolute; right: 8vmin; bottom: 7vmin; z-index: 2; }
 html.lv .film-line.narration { font-size: 5vmin; max-width: 88vw; }
 html.lv .film-line.title { font-size: 11vmin; }
 html.lv .film-line.label, html.lv .film-line.code { font-size: 2.2vmin; }
+html.lv .film-line.note { font-size: 2vmin; }

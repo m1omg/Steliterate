@@ -43,7 +43,7 @@ export class FilmPlayer {
     this.canvas.style.height = `${h}px`;
     this.c = this.canvas.getContext('2d')!;
     this.c.scale(pr, pr);
-    this.scene = def.setup(w, h, opts.quality, opts.args);
+    this.scene = def.setup(w, h, opts.quality, { ...opts.args, pr });
   }
 
   /** Draw the moment `t` (seconds), the picture and the words over it. */
@@ -63,6 +63,8 @@ export class FilmPlayer {
         this.finish();
         return;
       }
+      // the paintings of scenes to come, a slice a frame
+      this.scene.warm?.(performance.now() + (this.opts.quality === 'high' ? 4 : this.opts.quality === 'medium' ? 3 : 2));
       this.raf = requestAnimationFrame(loop);
     };
     this.raf = requestAnimationFrame(loop);
@@ -88,9 +90,17 @@ export class FilmPlayer {
       let el = this.texts.get(it.id);
       if (!el) {
         el = document.createElement('div');
-        el.className = `film-line ${it.kind} at-${it.at}`;
+        el.className = `film-line ${it.kind} at-${it.at}${it.kind === 'note' ? ` align-${it.align ?? 'l'} tone-${it.tone ?? 'ink'} size-${it.size ?? 's'}` : ''}`;
+        // (a diagram's labels are for the eye: the narration says what it shows)
+        if (it.kind === 'note') el.setAttribute('aria-hidden', 'true');
         this.layer.append(el);
         this.texts.set(it.id, el);
+      }
+      if (it.x !== undefined && it.y !== undefined) {
+        const left = `${(it.x * 100).toFixed(2)}%`;
+        const top = `${(it.y * 100).toFixed(2)}%`;
+        if (el.style.left !== left) el.style.left = left;
+        if (el.style.top !== top) el.style.top = top;
       }
       if (el.textContent !== it.text) el.textContent = it.text;
       const o = Math.round(it.opacity * 1000) / 1000;

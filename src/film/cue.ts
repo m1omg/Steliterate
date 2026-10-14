@@ -66,6 +66,32 @@ interface CueSpec {
   titleAt: number;
   /** The chord under the title (Hz). */
   chord: number[];
+  /** A long film's: a soft chord under each scene, built on its cut's note, and the reel's tick only on each bar. */
+  pads?: boolean;
+}
+
+/** A soft pad: a few detuned sines, swelling in over `attack` and away over `release`. */
+function pad(ctx: BaseAudioContext, out: AudioNode, notes: number[], at: number, attack: number, hold: number, release: number, gain: number) {
+  for (const hz of notes) for (const d of [-0.004, 0.004]) tone(ctx, out, hz * (1 + d), at, attack, hold, release, gain / notes.length);
+}
+
+/** A rising breath of noise into a moment (the title), over `secs`. */
+function swell(ctx: BaseAudioContext, out: AudioNode, buf: AudioBuffer, at: number, secs: number, gain: number) {
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const f = ctx.createBiquadFilter();
+  f.type = 'bandpass';
+  f.Q.value = 1.2;
+  f.frequency.setValueAtTime(300, at - secs);
+  f.frequency.exponentialRampToValueAtTime(2400, at);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, at - secs);
+  g.gain.exponentialRampToValueAtTime(gain, at - 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + 0.6);
+  src.connect(f).connect(g).connect(out);
+  src.start(at - secs);
+  src.stop(at + 0.7);
 }
 
 function reelCue(spec: CueSpec) {
@@ -75,9 +101,20 @@ function reelCue(spec: CueSpec) {
     const hold = spec.titleAt * beat;
     tone(ctx, out, spec.root, at, 1.6, hold - 1.6, 2, 0.16);
     tone(ctx, out, spec.root * 1.4983, at + 0.4, 1.8, hold - 2.2, 2.2, 0.08);
-    for (const [b, hz] of spec.cuts) bell(ctx, out, hz, at + b * beat, 0.09);
-    for (let i = 0; i < Math.floor(spec.titleAt); i++) tick(ctx, out, n, at + i * beat, i % 4 === 0 ? 0.07 : 0.035);
-    for (const hz of spec.chord) tone(ctx, out, hz, at + hold, 0.5, 1.4, 1.6, 0.06);
+    spec.cuts.forEach(([b, hz], i) => {
+      bell(ctx, out, hz, at + b * beat, 0.09);
+      if (!spec.pads) return;
+      // under the scene, its cut's note two octaves down with its fifth and tenth, until the next cut
+      const end = (spec.cuts[i + 1]?.[0] ?? spec.titleAt) * beat;
+      const start = b * beat;
+      pad(ctx, out, [hz / 4, (hz / 4) * 1.4983, (hz / 4) * 2.52], at + start, 1.8, Math.max(0.2, end - start - 1.8), 2.4, 0.05);
+    });
+    for (let i = 0; i < Math.floor(spec.titleAt); i++) {
+      if (spec.pads && i % 4 !== 0) continue;
+      tick(ctx, out, n, at + i * beat, i % 4 === 0 ? 0.07 : 0.035);
+    }
+    if (spec.pads) swell(ctx, out, n, at + hold, beat * 3, 0.05);
+    for (const hz of spec.chord) tone(ctx, out, hz, at + hold, 0.5, spec.pads ? 3 : 1.4, spec.pads ? 3 : 1.6, 0.06);
     bell(ctx, out, spec.chord[0] * 2, at + hold, 0.07);
   };
 }
@@ -89,8 +126,9 @@ const END = (root: number, notes: [number, number], chord: number[]): CueSpec =>
 const VICTORY = END(43.65, [349.23, 440], [87.31, 110, 130.81]);
 const DEFEAT = END(55, [329.63, 261.63], [110, 130.81, 164.81]);
 const SPECS: Record<FilmId, CueSpec> = {
-  dusk: AGE(55, [440, 329.63, 293.66], [110, 164.81, 277.18]),
-  last_light: AGE(41.2, [392, 329.63, 246.94], [82.41, 98, 123.47]),
+  // (the Long Dusk's second cut: 72 beats at 90, a cut at each scene)
+  dusk: { bpm: 90, root: 55, cuts: [[0, 440], [6, 392], [10.5, 329.63], [17, 293.66], [23, 261.63], [36, 329.63], [41, 220], [45.5, 246.94], [49.5, 196], [55.5, 220], [60.5, 164.81]], titleAt: 66, chord: [110, 164.81, 277.18], pads: true },
+  last_light: { bpm: 90, root: 41.2, cuts: [[0, 392], [6.5, 329.63], [12, 293.66], [18.3, 246.94], [30, 329.63], [37.5, 392], [44.5, 246.94], [51.5, 220], [58.5, 196]], titleAt: 64, chord: [82.41, 98, 123.47], pads: true },
   great_decay: AGE(36.71, [349.23, 293.66, 220], [73.42, 87.31, 110]),
   last_warmth: AGE(36.71, [349.23, 293.66, 220], [73.42, 87.31, 110]),
   great_evaporation: AGE(32.7, [311.13, 261.63, 196], [65.41, 77.78, 98]),

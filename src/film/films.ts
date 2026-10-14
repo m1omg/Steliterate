@@ -1,6 +1,8 @@
 import { Rng } from '../game/rng';
 import { pow10 } from '../ui/fmt';
 import { Hatch, Stipple, circlePath, corners, glow, grain, ink, rgba, ss, vignette, type Ctx, type Pt } from './draw';
+import { DUSK2 } from './dusk';
+import { LAST_LIGHT2 } from './lastlight';
 
 // The films (the new version, part 4): one for each age and each ending, every frame drawn by
 // code from the film's time. A film is laid out once for its size and quality (`setup`), then
@@ -32,21 +34,31 @@ export type FilmId =
 export interface FilmArgs {
   fate?: 'decay' | 'stable' | 'curvature';
   eta?: number;
+  /** Device pixels per CSS pixel the film is drawn at (for paintings sharp at that size). */
+  pr?: number;
 }
 
 /** A line of text over the film: where, in which voice, and how present it is now (0..1). */
 export interface FilmText {
   id: string;
   text: string;
-  /** title (display face), sub (mono, spaced), narration (serif italic), label and code (mono, small, in a corner) */
-  kind: 'title' | 'sub' | 'narration' | 'label' | 'code';
-  at: 'tl' | 'tr' | 'bl' | 'br' | 'mid' | 'low';
+  /** title (display face), sub (mono, spaced), narration (serif italic), label and code (mono, small, in a corner), note (mono, small, anywhere: a diagram's labels) */
+  kind: 'title' | 'sub' | 'narration' | 'label' | 'code' | 'note';
+  at: 'tl' | 'tr' | 'bl' | 'br' | 'mid' | 'low' | 'free';
   opacity: number;
+  /** A note's place (fractions of the frame's width and height), alignment, tone and size. */
+  x?: number;
+  y?: number;
+  align?: 'l' | 'c' | 'r';
+  tone?: 'accent' | 'ink' | 'dim';
+  size?: 's' | 'm';
 }
 
 export interface FilmScene {
   draw(c: Ctx, t: number): void;
   text(t: number): FilmText[];
+  /** Paint what later scenes need, until `until` (performance.now()), while the film plays. */
+  warm?(until: number): void;
 }
 
 export interface FilmDef {
@@ -64,7 +76,6 @@ export const filmLength = (f: FilmDef) => (f.beats * 60) / f.bpm;
 
 const INK = '#e6dccb';
 const VOID = '#030304';
-const DWARF = '#ff7a4c';
 const PEACH = '#ffd2a8';
 
 /** Present from a0 to a1 (in beats), easing in and out over `e` beats. */
@@ -208,150 +219,6 @@ function hatchedBall(c: Ctx, x: number, y: number, R: number, S: number, hatch: 
 }
 
 // ------------------------------------------------------------------ the ages
-
-/** The Long Dusk: the reel opens on one red dwarf, cuts to the dying world in its light, then to the last stars going out one by one. */
-const DUSK = reel({ id: 'dusk', name: 'The Long Dusk', bpm: 96, beats: 16, accent: '#f28a4f' }, (w, h, S, k) => {
-  const star = new Stipple(11, Math.round(1500 * k), (r) => Math.pow(1 - r, 2.4));
-  const small = new Stipple(13, Math.round(140 * k), (r) => Math.pow(1 - r, 1.6));
-  const world = new Hatch(12, Math.round(54 * k), [1, -0.35]);
-  const field = starField(w, h, S, Math.round(90 * k), 21, 0.45, 8.6, 11.8);
-  const [wx, wy] = [w * 0.42, h * 0.46];
-  const toWorld = Math.atan2(wy - h * 0.2, wx - w * 0.9);
-  const orbit = circlePath(w * 0.9, h * 0.2, Math.hypot(w * 0.48, h * 0.26), 160, 5, toWorld - 0.5, toWorld + 0.27);
-  const rim = circlePath(wx, wy, S * 0.25, 120, 9);
-  const path: Pt[] = Array.from({ length: 80 }, (_, i) => [w * (0.05 + 0.9 * (i / 79)), h * (0.58 - 0.16 * Math.sin((i / 79) * Math.PI)) + S * 0.012 * Math.sin((i / 79) * Math.PI * 3)] as const);
-  return {
-    numeral: 'I',
-    title: 'The Long Dusk',
-    sub: 'Age I · the Late Stelliferous Era',
-    titleAt: 12,
-    eta: [Math.log10(9.0e13), 14],
-    narration: [
-      { from: 4.3, to: 8, text: 'Ninety trillion years after the first light,' },
-      { from: 8.3, to: 11.9, text: 'the galaxy has run out of gas to make new stars.' },
-    ],
-    shots: [
-      {
-        from: 0,
-        to: 4,
-        draw(c, b, t) {
-          const show = ss(0.3, 3.2, b);
-          glow(c, w * 0.5, h * 0.5, S * 0.3, DWARF, 0.32 * show);
-          star.draw(c, w * 0.5, h * 0.5, S * 0.075, { color: DWARF, dot: S * 0.0026, show, t });
-        },
-      },
-      {
-        from: 4,
-        to: 8,
-        draw(c, b, t) {
-          const z = 1 + 0.05 * ((b - 4) / 4);
-          c.save();
-          c.translate(wx, wy);
-          c.scale(z, z);
-          c.translate(-wx, -wy);
-          ink(c, orbit, ss(4.4, 7.6, b), { width: S * 0.0024, color: INK, seed: 4, alpha: 0.55 });
-          glow(c, w * 0.9, h * 0.2, S * 0.22, DWARF, 0.3);
-          small.draw(c, w * 0.9, h * 0.2, S * 0.03, { color: DWARF, dot: S * 0.003, t });
-          const R = S * 0.25;
-          c.fillStyle = '#0a0807';
-          c.beginPath();
-          c.arc(wx, wy, R, 0, Math.PI * 2);
-          c.fill();
-          glow(c, wx + R * 0.55, wy - R * 0.25, R * 0.9, DWARF, 0.12);
-          world.draw(c, wx, wy, R, { color: INK, width: S * 0.0018, reveal: ss(4.1, 6.8, b), alpha: 0.8 });
-          ink(c, rim, ss(4, 5.4, b), { width: S * 0.003, color: INK, seed: 9, alpha: 0.9 });
-          c.restore();
-        },
-      },
-      {
-        from: 8,
-        to: 12,
-        draw(c, b, t) {
-          for (const f of field) {
-            const gone = ss(f.out, f.out + 0.35, b);
-            if (gone >= 1) continue;
-            glow(c, f.x, f.y, f.r * 5, DWARF, 0.18 * (1 - gone));
-            small.draw(c, f.x, f.y, f.r, { color: DWARF, dot: Math.max(1, S * 0.0018), gone, t });
-          }
-          ink(c, path, ss(8.2, 11.6, b), { width: S * 0.0016, color: INK, seed: 6, alpha: 0.6 });
-        },
-      },
-    ],
-  };
-});
-
-/** The Last Light: the last red dwarf goes out; white dwarfs and brown dwarfs are what is left; now and then two brown dwarfs collide and a small star burns again. */
-const LAST_LIGHT = reel({ id: 'last_light', name: 'The Last Light', bpm: 96, beats: 16, accent: '#93c4ff' }, (w, h, S, k) => {
-  const star = new Stipple(31, Math.round(1300 * k), (r) => Math.pow(1 - r, 2.4));
-  const white = new Stipple(32, Math.round(90 * k), (r) => Math.pow(1 - r, 2));
-  const brown = new Hatch(33, Math.round(16 * k + 6), [1, -0.2]);
-  const rng = new Rng(34);
-  const remnants = Array.from({ length: Math.round(26 * k + 8) }, () => ({ x: rng.range(0.08, 0.92) * w, y: rng.range(0.16, 0.7) * h, r: S * rng.range(0.012, 0.03), white: rng.chance(0.55) }));
-  const pathA: Pt[] = Array.from({ length: 40 }, (_, i) => [w * (0.28 + 0.22 * (i / 39)), h * (0.36 + 0.12 * (i / 39))] as const);
-  const pathB: Pt[] = Array.from({ length: 40 }, (_, i) => [w * (0.72 - 0.22 * (i / 39)), h * (0.6 - 0.12 * (i / 39))] as const);
-  return {
-    numeral: 'II',
-    title: 'The Degenerate Age',
-    sub: 'Age II · the Degenerate Era',
-    titleAt: 12,
-    eta: [14, 15],
-    narration: [
-      { from: 0.6, to: 4, text: 'The last ordinary stars are gone.' },
-      { from: 4.3, to: 8, text: 'What remains are their corpses.' },
-      { from: 8.3, to: 11.9, text: 'Now and then two brown dwarfs collide, and a small star burns again.' },
-    ],
-    shots: [
-      {
-        from: 0,
-        to: 4,
-        draw(c, b, t) {
-          // the last light: the red dwarf thins dot by dot to nothing
-          const gone = ss(0.6, 3.6, b);
-          glow(c, w * 0.5, h * 0.48, S * 0.3, DWARF, 0.32 * (1 - gone));
-          star.draw(c, w * 0.5, h * 0.48, S * 0.075, { color: DWARF, dot: S * 0.0026, gone, t });
-        },
-      },
-      {
-        from: 4,
-        to: 8,
-        draw(c, b, t) {
-          remnants.forEach((x, i) => {
-            const show = ss(4 + i * 0.08, 4.6 + i * 0.08, b);
-            if (x.white) {
-              glow(c, x.x, x.y, x.r * 3, '#cfe3ff', 0.16 * show);
-              white.draw(c, x.x, x.y, x.r * 0.5, { color: '#dfeaff', dot: Math.max(1, S * 0.0016), show, t });
-            } else hatchedBall(c, x.x, x.y, x.r, S, brown, { color: '#9a6a52', rim: '#b98a6a', reveal: show, seed: i });
-          });
-        },
-      },
-      {
-        from: 8,
-        to: 12,
-        draw(c, b, t) {
-          // two brown dwarfs fall together, and a star burns again where they meet
-          const p = ss(8, 10.2, b);
-          const meet: Pt = [w * 0.5, h * 0.48];
-          ink(c, pathA, p, { width: S * 0.0016, color: INK, seed: 41, alpha: 0.45 });
-          ink(c, pathB, p, { width: S * 0.0016, color: INK, seed: 42, alpha: 0.45 });
-          if (b < 10.2)
-            for (const [path, seed] of [
-              [pathA, 43],
-              [pathB, 44],
-            ] as const) {
-              const at = path[Math.min(path.length - 1, Math.floor(p * (path.length - 1)))];
-              hatchedBall(c, at[0], at[1], S * 0.05, S, brown, { color: '#9a6a52', rim: '#b98a6a', seed });
-            }
-          burst(c, meet[0], meet[1], S * 0.12, S, ss(10.1, 11.6, b), '#ffb38a', 45);
-          if (b >= 10.4) {
-            const lit = ss(10.4, 11.4, b);
-            glow(c, meet[0], meet[1], S * 0.2, DWARF, 0.35 * lit);
-            star.draw(c, meet[0], meet[1], S * 0.04, { color: DWARF, dot: S * 0.0022, show: lit, t });
-          }
-        },
-      },
-    ],
-  };
-});
 
 /** Into the Black Hole Age: the worlds dissolve (the Great Decay), or the last warm things cool or burst (the Last Warmth); the black holes remain. */
 function blackHoleAge(id: 'great_decay' | 'last_warmth', name: string): FilmDef {
@@ -689,8 +556,8 @@ const WILL_FAILS = endingFilm('end_will_fails', 'The Will Fails', 'defeat', ['Yo
 });
 
 export const FILMS: Record<FilmId, FilmDef> = {
-  dusk: DUSK,
-  last_light: LAST_LIGHT,
+  dusk: DUSK2,
+  last_light: LAST_LIGHT2,
   great_decay: blackHoleAge('great_decay', 'The Great Decay'),
   last_warmth: blackHoleAge('last_warmth', 'The Last Warmth'),
   great_evaporation: GREAT_EVAPORATION,

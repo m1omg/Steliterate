@@ -15,6 +15,7 @@ host.style.width = `${w}px`;
 host.style.height = `${h}px`;
 const fate = q.get('fate') as 'decay' | 'stable' | 'curvature' | null;
 const eta = q.get('eta');
+host.style.setProperty('--film-accent', (FILMS[id] ?? FILMS.dusk).accent);
 const player = new FilmPlayer(host, FILMS[id] ? id : 'dusk', { quality: 'high', args: { fate: fate ?? undefined, eta: eta ? Number(eta) : undefined }, width: w, height: h, pixelRatio: 1 });
 
 (window as unknown as { __film: unknown }).__film = {
