@@ -87,6 +87,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     element playing), for `browser/music-hidden`
   - `notify(text, kind)`: a message as the game shows them (`browser/lowvision`: how long one
     stays)
+  - `films(on)` (null: as the settings say), `filmList()`, `filmFrames(id, times, w, h)`: the
+    films, for `browser/films`
+  - `slowSlices(ms)`: every slice of End Turn's turn made to take at least that long, a slow phone
+    on any machine (`browser/turn-slices`; a CPU slowed through CDP is paused in windows, so one
+    turn's length there is anyone's guess)
+  - `lastTurn()`: the last End Turn's own work, its longest run without a breath, and its length
 - **Playwright:** `require('/opt/node22/lib/node_modules/playwright')`. Launch with
   `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`, and add
   `--autoplay-policy=no-user-gesture-required` for music tests. Watch `request` events for
@@ -1358,6 +1364,21 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   (`selRing`) takes its colour, with an opacity floor of 0.35 (0.12 and the pale `SELECT` on a
   world no one lives on). It holds still: since 7 Oct neither it nor the galaxy map's selected
   star ring (`galaxyView.ts`) pulses.
+- **The films (part 4, `src/film/`):** `films.ts` defines each film as a `reel()` (shots cut on
+  a beat grid, corners, labels, timecode, narration, title card) whose `setup(w, h, quality,
+  args)` lays it out once and returns `draw(c, t)` and `text(t)`: pure in `t`, so never keep state
+  between frames (`browser/films` compares a frame reached at 30 and at 144 frames a second).
+  `FilmArgs` carries the fate and η. `cue.ts` schedules each film's sound from `SPECS` on any
+  `BaseAudioContext` (`renderCue` for the videos). `player.ts` (`FilmPlayer`) draws on one canvas
+  and keeps the words as DOM (`.film-line`, styles at the end of `styles.css`, larger under
+  `html.lv`). `ui/screens/Film.tsx` mounts it on `document.body` (outside `#ui`'s zoom), stops
+  the engine, ducks the music (`duckMusic`, the `duck` gain in `core.ts`) and plays the cue on
+  `audio().film`. `playFilm(id, then, args)` (`store.ts`) honours `filmsOn()`: Settings, reduced
+  motion, `?nofilms` and `__stel.films(on)`. `crossingFilm` and `endingFilmFor` map a crossing's
+  title and an ending's name to films (`turnflow.ts`). Checks: `lib.cjs` adds `?nofilms` unless
+  `start(name, { films: true })`; `__stel.filmFrames(id, times)` hashes frames, `__stel.filmList()`
+  lists them. Videos: `tools/film-render.mjs` (needs an ffmpeg path, e.g. imageio-ffmpeg in a
+  scratch venv; it starts `vite` on port 5179 for `film.html`).
 - **What is not matter, drawn (part 3-7, `src/render/fields.ts`):** `fieldLattice` (a dipole's
   lines r = L sin²θ, a standing-wave torus whose `userData.markColor` the selection circle takes,
   motes bouncing between the mirror points in `MOTE_VERT`, loops for Field Stores, a

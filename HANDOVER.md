@@ -61,10 +61,12 @@ last.
     settlement, and a swarm's part whose ship is gone goes on to the ship's nearest settlement;
     CHANGELOG, "Harder"); then the stable fate's late game (3-6: black dwarf supernovae, iron
     stars, tunnelling collapse, the Passage where matter is stable) and the look of what is not
-    matter (3-7: fields, horizon writing, the positronium's ellipses). Next: Part 4 (films and the
-    survey reveal) and Part 5 (`/next/`). Waiting for the player: ships seeing
-    what they pass (1b, a census done), the Quiet Lattice (four options put to them, 13 Oct; see
-    SESSION-NOTES, "Picking up"), and the new hulls (2c-5, a sheet shown).
+    matter (3-7: fields, horizon writing, the positronium's ellipses); then the films (Part 4: one
+    for each age and ending, every frame drawn by code, a 10-second test piece sent to the player
+    first). Next: the survey reveal (the rest of Part 4) and Part 5 (`/next/`). Waiting for the
+    player: ships seeing what they pass (1b, a census done), the Quiet Lattice (four options put
+    to them, 13 Oct; see SESSION-NOTES, "Picking up"), the new hulls (2c-5, a sheet shown), and
+    their word on the films' look.
 - **The backup** (13 Oct, PR m1omg/Steliterate#28, `db34424`): today's game, frozen and playable,
   at https://m1omg.github.io/Steliterate/archive/2026-10-13/ (`public/archive/`, with its own
   README), on the same origin and so with the player's current saves. Its source is
@@ -91,9 +93,10 @@ last.
     track for the Dusk, and PR m1omg/Steliterate#26 (`a16d43b`), a darker remix of it for the Dark;
     then, 13 Oct, PR m1omg/Steliterate#27 (section 6).
 - **Branches:**
-  - `claude/lucid-newton-v2`, `claude/epic-wozniak-lyhulf` and
-    `claude/affectionate-johnson-qqr7p2` are fully merged. A follow-up starts its branch again
-    from `main` (`git checkout -B <branch> origin/main`).
+  - `claude/epic-wozniak-lyhulf` carries the new version, pushed and not merged (above): never
+    restart it from `main`.
+  - `claude/lucid-newton-v2` and `claude/affectionate-johnson-qqr7p2` are fully merged. A
+    follow-up on one of them starts it again from `main` (`git checkout -B <branch> origin/main`).
   - `claude/lucid-newton-30cbpk` is the old live branch, frozen at `fc6c59a`. Pages builds it
     too: never push to it.
 - **The claude.ai artifact** has not been updated since 28 Sep. GitHub Pages is the live build.

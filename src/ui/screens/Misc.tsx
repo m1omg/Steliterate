@@ -7,7 +7,9 @@ import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
-import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, between, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
+import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, between, bump, engine, filmsOn, filmsSeen, game, modal, notify, rev, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
+import { FILMS, type FilmId } from '../../film/films';
+import { fateOf } from '../../game/fate';
 import { Icon } from '../Icon';
 import { CODEX } from './Codex';
 import { MANUAL } from './Manual';
@@ -84,17 +86,50 @@ export function CodexModal({ topic }: { topic?: string }) {
         <nav class="codex-nav">
           {group('How to play', MANUAL)}
           {group('The science', CODEX)}
+          <div class="eyebrow codex-group">Films</div>
+          <button class={`btn small ${cur === 'films' ? 'primary' : 'ghost'}`} onClick={() => setCur('films')}>
+            Films seen
+          </button>
         </nav>
-        <article class={`codex-body${isManual ? ' manual' : ''}`}>
-          <h2>{entry.title}</h2>
-          {entry.body.map((p, i) => (
-            <p key={i} class={isManual ? '' : 'flavor'} style={{ color: 'var(--ink)' }}>
-              {p}
-            </p>
-          ))}
-        </article>
+        {cur === 'films' ? (
+          <FilmsSeen />
+        ) : (
+          <article class={`codex-body${isManual ? ' manual' : ''}`}>
+            <h2>{entry.title}</h2>
+            {entry.body.map((p, i) => (
+              <p key={i} class={isManual ? '' : 'flavor'} style={{ color: 'var(--ink)' }}>
+                {p}
+              </p>
+            ))}
+          </article>
+        )}
       </div>
     </ModalFrame>
+  );
+}
+
+/** The Codex's films: those this player has seen, in any game, to play again (back to this page after). */
+function FilmsSeen() {
+  const seen = filmsSeen();
+  return (
+    <article class="codex-body">
+      <h2>Films seen</h2>
+      {seen.length === 0 ? (
+        <p class="flavor" style={{ color: 'var(--ink)' }}>
+          A film plays as each age begins and as a game ends. Those you have seen are kept here, to play again.
+        </p>
+      ) : (
+        <div class="col" style={{ gap: '6px' }}>
+          {(Object.keys(FILMS) as FilmId[])
+            .filter((id) => seen.includes(id))
+            .map((id) => (
+              <button key={id} class="btn" onClick={() => (modal.value = { kind: 'film', id, args: { fate: game.value ? fateOf(game.value) : undefined }, then: { kind: 'codex', topic: 'films' } })}>
+                <Icon name="system" /> {FILMS[id].name}
+              </button>
+            ))}
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -153,6 +188,20 @@ export function SettingsModal() {
                 {q}
               </button>
             ))}
+          </div>
+        </div>
+        <div class="field">
+          <label>Films</label>
+          <div class="seg">
+            <button class={`btn small ${filmsOn() ? 'primary' : ''}`} aria-pressed={filmsOn()} onClick={() => set({ films: true })}>
+              On
+            </button>
+            <button class={`btn small ${!filmsOn() ? 'primary' : ''}`} aria-pressed={!filmsOn()} onClick={() => set({ films: false })}>
+              Off
+            </button>
+          </div>
+          <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
+            A short film, drawn as it plays, as each age begins and as a game ends. A click, Space or Escape skips one; the Codex plays again those you have seen. Off to begin with where the system asks for less motion.
           </div>
         </div>
         <div class="field">
@@ -291,7 +340,8 @@ export function startLoaded(g: GameState) {
   if (!between()) return;
   game.value = g;
   screen.value = 'game';
-  modal.value = null;
+  // a crossing's report not yet read (the game was saved, or the page closed, with it open) opens again
+  modal.value = g.civ.crossing ? { kind: 'crossing' } : null;
   selection.value = null;
   bump();
   // start centred on the capital (or the homeworld, if there is no capital)

@@ -2965,3 +2965,58 @@ run). New: `render/fields.ts`, `browser/leptonic-look`.
 - **Checks:** `browser/leptonic-look` (each tier; the horizon, the veil, the map's forms, the
   Thinning, a Passage world, iron, a supernova's ring on the map, the fields at the same moment
   after two seconds at 30 and at 144 frames a second).
+
+## The films (14 Oct, part 4)
+
+A film as each age begins and as a game ends, every frame drawn by code: the player's
+"programmatic beautiful ones". New: `src/film/` (`draw.ts`, `films.ts`, `cue.ts`, `player.ts`,
+`export.ts`), `film.html`, `tools/film-render.mjs`, `ui/screens/Film.tsx`, `browser/films`.
+
+- **The look:** an ink line that draws itself, a timecoded reel (frame corners, mono labels, a
+  shot counter, a timecode in η and years, cut on the beat), and hatched, stippled, grained
+  illustration; the game's black skies, each age's accent, Big Shoulders Display titles, Spectral
+  narration, IBM Plex Mono figures. Each film is laid out once for its size and quality (fewer
+  strokes and dots on Medium and Low), then draws any moment from its time alone: the same moment
+  is the same picture at any frame rate.
+- **The set (16):** the Long Dusk; the Last Light; into the Black Hole Age, the Great Decay and the
+  Last Warmth (its words and its first shot by the fate: a world coming apart, a neutron star
+  cooling, or bursting); the Great Evaporation; the Last Horizon (the dark's iron or its
+  positronium, by fate); and one for each ending: the Long Thought, One Voice, the Quiet Lattice,
+  the Aeon Seed, the Last Garden, the Hunger, Recurrence, Silence, the Fade, the Will Fails. The
+  words are the game's own, each age's introduction and each ending's epilogue, and nothing more.
+- **Its sound:** a cue for each, made as it plays: a drone on the film's root and its fifth, a bell
+  on each cut, the reel's tick on each beat, a chord under the title. The film keeps time with
+  the cue's audio clock (with no sound, with elapsed time); the music steps back under it.
+- **Where they play:** beginning a game (then the age's introduction), each crossing (then its
+  report), each ending (then the outcome, whose music waits for the film). In a layer of its own,
+  outside the interface's zoom; the game's view stops meanwhile. A click, Space, Enter or Escape
+  skips one, or its Skip button, which has the focus; Enter under a film ends no turn. Settings:
+  Films on or off (off to begin with where the system asks for less motion). The Codex's "Films
+  seen" plays again any film seen in any game.
+- **Videos:** `tools/film-render.mjs <film> <out.mp4> --size= --fps= --ffmpeg=` draws every frame
+  at its exact time from the Vite dev server's `film.html` (never built into the game), renders
+  the cue offline and encodes H.264 and AAC; videos are never committed. The 10-second test piece
+  (the Long Dusk, 1920×1080 and 1080×1080) went to the player.
+- **Fixes along the way:** the crossing, outcome and introduction screens take the focus on their
+  titles; a game loaded with a crossing's report unread opens it again.
+- **Checks:** every check runs without films (`?nofilms`, the default in `lib.cjs` and the
+  playtest) unless it asks for them; `browser/films` (the film on a new game, its words as text,
+  Skip with the focus, Enter skips it and ends no turn, the Codex plays it again and Escape
+  returns there, off in Settings, the same frame after two seconds at 30 and at 144 frames a
+  second, all 16 films drawn).
+- **Two checks made sure of what they measure** (`turn-slices` failed in the full run, `a11y`
+  twice in four runs after it):
+  - `browser/turn-slices` needs a turn longer than the 40 ms after which a breath waits for the
+    timers. Six times slower through the DevTools protocol, its turn had come down to about 40 ms,
+    and a CPU slowed so is paused in windows (one turn took anything from 4 to 158 ms), so a
+    timer in its middle was luck. Now every slice is made to take 4 ms (`__stel.slowSlices`): the
+    turn takes about 170 ms, the timers get 8 turns in it, and they never wait more than about
+    35 ms (now checked: under 100).
+  - `browser/a11y` read where focus was 400 ms after a window closed. Focus comes back a frame
+    later (`useFocusOnOpen`), and a frame of the map drawn in software here can take 600 ms; on a
+    device with a GPU it takes a few. It now waits for the focus, up to 3 s, on opening too.
+- **End Turn on a slowed CPU** after Parts 3 and 4 (`tools/turn-timing.cjs`, CPU four times
+  slower, 40 turns of seed 8919): the turn's own work 20 ms at the median and 85 at worst; the
+  longest it runs without the browser getting its turn 13 ms at the median and 20 at worst (31,
+  72, 14 and 34 after part 2). From the click to done, 0.8 s at the median: drawing the map in
+  software.

@@ -2,7 +2,9 @@ import { SHIP_BY_ID } from '../game/data/ships';
 import { turnSlices, type TurnResult } from '../game/sim/turn';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
-import { autosave, busy, bump, engine, game, modal, notify, selection, settings, toasts } from './store';
+import { autosave, busy, bump, engine, filmsOn, game, modal, notify, playFilm, selection, settings, toasts } from './store';
+import { crossingFilm, endingFilmFor } from '../film/films';
+import { fateOf } from '../game/fate';
 import { goToBody, goToFleet, pivotToSystem } from './screens/Lists';
 import { TECH_BY_ID } from '../game/data/techs';
 import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
@@ -25,6 +27,12 @@ const SLICE_MS = 12;
  * timers that are due, and the synth's lookahead timer (every 40 ms, music.ts) needs its turn.
  */
 const TIMER_MS = 40;
+
+/** For the checks (`__stel.slowSlices`): every slice of the turn made to take at least this long (ms), as on a slow phone. */
+let slowSlices = 0;
+export function setSlowSlices(ms: number) {
+  slowSlices = ms;
+}
 
 /** At most this many of a turn's deep-dark flashes are marked on the map. */
 const MAX_FLASH_PINGS = 16;
@@ -56,6 +64,8 @@ async function playTurn(s: GameState): Promise<TurnResult> {
   for (;;) {
     const a = performance.now();
     const r = g.next();
+    // (a check's slow phone: the slice runs on until it has taken that long)
+    if (slowSlices > 0) for (const until = a + slowSlices; performance.now() < until; );
     const b = performance.now();
     work += b - a;
     if (r.done) {
@@ -101,12 +111,20 @@ export async function doEndTurn() {
   bump();
   autosave();
   if (r.outcome) {
-    modal.value = { kind: 'outcome' };
-    music.setMood('outcome');
+    // the ending's film first, where it has one (the music turns once the film is over)
+    const film = endingFilmFor(r.outcome.ending);
+    if (film && filmsOn()) playFilm(film, { kind: 'outcome' }, { eta: s.eta, fate: fateOf(s) });
+    else {
+      modal.value = { kind: 'outcome' };
+      music.setMood('outcome');
+    }
     return;
   }
   if (r.crossing) {
-    modal.value = { kind: 'crossing' };
+    // the crossing's film, then its report
+    const film = crossingFilm(r.crossing.title, r.crossing.to);
+    if (film) playFilm(film, { kind: 'crossing' }, { fate: fateOf(s) });
+    else modal.value = { kind: 'crossing' };
     sfx('crossing');
     return;
   }

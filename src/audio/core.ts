@@ -6,6 +6,10 @@ export interface AudioCore {
   ctx: AudioContext;
   master: GainNode;
   music: GainNode;
+  /** Between the music and the master: lowered while a film plays (duckMusic). */
+  duck: GainNode;
+  /** A film's own sound, at the music's volume (part 4). */
+  film: GainNode;
   sfx: GainNode;
   reverb: ConvolverNode;
   reverbIn: GainNode;
@@ -71,9 +75,13 @@ export function unlockAudio() {
   master.connect(comp).connect(ctx.destination);
   const music = ctx.createGain();
   const sfx = ctx.createGain();
+  const duck = ctx.createGain();
+  const film = ctx.createGain();
   music.gain.value = volumes.music * volumes.music;
+  film.gain.value = volumes.music * volumes.music;
   sfx.gain.value = volumes.sfx * volumes.sfx;
-  music.connect(master);
+  music.connect(duck).connect(master);
+  film.connect(master);
   sfx.connect(master);
   const reverb = ctx.createConvolver();
   reverb.buffer = impulse(ctx, 5.5, 3.2);
@@ -82,7 +90,7 @@ export function unlockAudio() {
   const reverbOut = ctx.createGain();
   reverbOut.gain.value = 0.55;
   reverbIn.connect(reverb).connect(reverbOut).connect(master);
-  core = { ctx, master, music, sfx, reverb, reverbIn, noise: noiseBuffer(ctx) };
+  core = { ctx, master, music, duck, film, sfx, reverb, reverbIn, noise: noiseBuffer(ctx) };
   void ctx.resume();
   for (const fn of listeners.splice(0)) fn();
 }
@@ -93,7 +101,17 @@ export function setVolumes(music: number, sfx: number) {
   const t = core.ctx.currentTime;
   // perceptual (squared) volume curve
   core.music.gain.setTargetAtTime(music * music, t, 0.1);
+  core.film.gain.setTargetAtTime(music * music, t, 0.1);
   core.sfx.gain.setTargetAtTime(sfx * sfx, t, 0.05);
+}
+
+/** The music steps back while a film plays its own (and comes back after), ramped on the audio clock. */
+export function duckMusic(on: boolean) {
+  if (!core) return;
+  const t = core.ctx.currentTime;
+  core.duck.gain.cancelScheduledValues(t);
+  core.duck.gain.setValueAtTime(core.duck.gain.value, t);
+  core.duck.gain.linearRampToValueAtTime(on ? 0.12 : 1, t + (on ? 0.6 : 1.2));
 }
 
 export function installUnlock() {

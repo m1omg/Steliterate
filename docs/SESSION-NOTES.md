@@ -653,8 +653,22 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     time (iron, the supernova's ring) kept until they say. Validated: tsc, the build
     (`index-CosIVzyB.js`), the playtest, 76 unit checks and 57 browser checks
     (`leptonic-look` new).
-  - Next: Part 4 (the films, a 10-second test piece first, and the survey reveal), then Part 5
-    (`/next/`), in the plan's order.
+  - the films (part 4, 14 Oct): a film as each age begins and as a game ends, every frame drawn
+    by code ("the programmatic beautiful ones"): an ink line that draws itself, a timecoded reel
+    cut on the beat, hatching, stipple and grain, and the game's own words. There are 16: the
+    ages' (the Black Hole Age's by fate) and one for each of the seven endings and three defeats,
+    each with a cue made as it plays while the music steps back. A click, Space, Enter or Escape
+    skips one (Enter ends no turn); Films on or off in Settings; the Codex plays again those seen.
+    `tools/film-render.mjs` makes the videos (never committed). The 10-second test piece (the Long
+    Dusk) went to the player before the rest was built; their word on its look is awaited, and
+    the set can change with it. Other films go to them only when asked, and the endings they have
+    not had and the Dark Era's far end only once they say. Validated: tsc, the build
+    (`index-BLaKqR0I.js`), the playtest, 76 unit checks, and 58 browser checks (`films` new) on
+    `index-DwkWmDe7.js`, all but `turn-slices` at once. It and `a11y` (which then failed twice in
+    four runs) had been measuring by luck, and are now sure of it (CHANGELOG), passing every run
+    since. End Turn
+    on a slowed CPU after Parts 3 and 4: at worst 20 ms without a breath (34 after part 2).
+  - Next: the survey reveal (the rest of Part 4), then Part 5 (`/next/`).
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home

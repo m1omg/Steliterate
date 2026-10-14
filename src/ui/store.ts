@@ -4,6 +4,7 @@ import { assertPlayerView } from '../game/civs';
 import { saveGame } from '../game/save';
 import { OLD_HUD_KEY, OLD_SETTINGS_KEY, STORE } from '../keys';
 import type { GameState } from '../game/types';
+import type { FilmArgs, FilmId } from '../film/films';
 
 // UI state around the simulation. The game state is mutated in place by the simulation;
 // `rev` bumps after every change so components re-render.
@@ -24,6 +25,8 @@ export type Modal =
   | { kind: 'save' }
   | { kind: 'crossing' }
   | { kind: 'outcome' }
+  /** A film (part 4), then what comes after it. */
+  | { kind: 'film'; id: FilmId; args?: FilmArgs; then?: Modal }
   | { kind: 'era_intro' }
   | null;
 
@@ -50,6 +53,8 @@ export interface Settings {
   lvSide?: 'left' | 'right';
   /** The graphics were picked by hand in Settings (else a touch device starts at medium). */
   qualityChosen?: boolean;
+  /** The films (part 4): unset, on, unless the system asks for reduced motion. */
+  films?: boolean;
 }
 
 export const game = signal<GameState | null>(null);
@@ -284,4 +289,43 @@ export function toggleOrbits() {
   setHudPrefs({ orbitsPaused: paused });
   const e = engine();
   if (e) e.orbitsPaused = paused;
+}
+
+/** Films off for this page (`?nofilms`, for the checks), or forced on or off (`__stel.films`). */
+let filmOverride: boolean | null = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nofilms') ? false : null;
+export function setFilmOverride(on: boolean | null) {
+  filmOverride = on;
+}
+
+/** Whether the films play: as set in Settings; unset, on unless the system asks for reduced motion. */
+export function filmsOn(): boolean {
+  if (filmOverride !== null) return filmOverride;
+  const s = settings.value.films;
+  if (s !== undefined) return s;
+  return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/** Play a film (when films are on), then go on to `then`; with films off, straight to `then`. */
+export function playFilm(id: FilmId, then: Modal = null, args?: FilmArgs) {
+  modal.value = filmsOn() ? { kind: 'film', id, args, then: then ?? undefined } : then;
+}
+
+/** The films this player has seen, kept across games (the Codex lists them to play again). */
+export function filmsSeen(): FilmId[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(`${STORE}films`) ?? '[]');
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+export function sawFilm(id: FilmId) {
+  const seen = filmsSeen();
+  if (seen.includes(id)) return;
+  try {
+    localStorage.setItem(`${STORE}films`, JSON.stringify([...seen, id]));
+  } catch {
+    // (no storage here: it is only forgotten)
+  }
 }

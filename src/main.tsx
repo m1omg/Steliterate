@@ -14,9 +14,9 @@ import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import type { Pickable } from './render/galaxyView';
 import { App } from './ui/App';
-import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, saveSettings, screen, selection, setEngine, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
+import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, saveSettings, screen, selection, setEngine, setFilmOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
 import { PRIMARY_NAME, bodyKindName } from './ui/labels';
-import { doEndTurn, lastTurn } from './ui/turnflow';
+import { doEndTurn, lastTurn, setSlowSlices } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
 import { sendPicked } from './ui/screens/Lists';
 import { guardTranslation } from './ui/translateGuard';
@@ -26,6 +26,9 @@ import { eventResult, loreView } from './ui/screens/Story';
 import { STORE } from './keys';
 import './ui/styles.css';
 import { colonies, ownColony } from './game/sim/util';
+import { hashSeed } from './game/rng';
+import { FILMS, type FilmId } from './film/films';
+import { FilmPlayer } from './film/player';
 
 const stage = document.getElementById('stage')!;
 /** The star system a pick stands for: the star itself, the one a fleet is parked at, or a swarm's (where it is, or where it is going). */
@@ -401,6 +404,22 @@ window.__stel = {
   notify: (text: string, kind: 'info' | 'bad' | 'good' = 'info') => notify(text, kind),
   state: () => game.value,
   engine: () => engine(),
+  /** The films on or off for this page (null: as the settings say), for the checks. */
+  films: (on: boolean | null) => setFilmOverride(on),
+  /** Every slice of End Turn's turn made to take at least this long (ms), as on a slow phone (turn-slices). */
+  slowSlices: (ms: number) => setSlowSlices(ms),
+  /** The films, by id, with their names. */
+  filmList: () => Object.fromEntries(Object.values(FILMS).map((f) => [f.id, f.name])),
+  /** A film's frames at these times, drawn one after another on one canvas (a hash of each), for the checks: a moment draws the same picture whatever was drawn before it. */
+  filmFrames(id: FilmId, times: number[], w = 480, h = 270) {
+    const p = new FilmPlayer(document.createElement('div'), id, { quality: 'high', width: w, height: h, pixelRatio: 1 });
+    const out = times.map((t) => {
+      p.frame(t);
+      return hashSeed(p.canvas.toDataURL());
+    });
+    p.dispose();
+    return out;
+  },
   /** The music player (its layer: the synth bus, and the recording playing), for the checks. */
   music: () => music,
 };

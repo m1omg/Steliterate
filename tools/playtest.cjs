@@ -29,7 +29,8 @@ async function page(browser, w, h) {
     if (m.type() === 'error' && !IGNORE.test(m.text())) p.errors.push(m.text());
   });
   p.on('pageerror', (e) => p.errors.push(String(e)));
-  await p.goto(url);
+  // (the films off: the playtest walks the game, not them; browser/films plays them)
+  await p.goto(`${url}${url.includes('?') ? '&' : '?'}nofilms`);
   await p.waitForTimeout(1500);
   return p;
 }

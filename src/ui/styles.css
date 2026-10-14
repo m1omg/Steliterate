@@ -870,3 +870,25 @@ html.lv .map-label.seen { color: rgba(233, 223, 207, 0.8); }
 html.lv .map-label.province { font-size: calc(18px * var(--z, 1)); color: rgba(233, 223, 207, 0.72); }
 .map-hover { position: fixed; z-index: 15; pointer-events: none; padding: 4px 10px; font-size: 16px; line-height: 1.35; background: var(--panel-solid); border: 2px solid var(--line-3); color: var(--ink); white-space: nowrap; }
 .map-hover .faint { font-size: 13.5px; }
+
+/* The films (part 4): a full-screen canvas with the words over it, sized by the screen's smaller side. */
+.film-screen { position: fixed; inset: 0; z-index: 60; background: #030304; overflow: hidden; cursor: pointer; }
+.film-screen.export { position: relative; cursor: default; }
+.film-canvas { position: absolute; inset: 0; display: block; }
+.film-text { position: absolute; inset: 0; pointer-events: none; }
+.film-line { position: absolute; color: #e6dccb; white-space: nowrap; }
+.film-line.title { font-family: var(--f-display); font-weight: 800; font-size: 9.5vmin; letter-spacing: 0.1em; text-transform: uppercase; color: var(--film-accent, #f28a4f); }
+.film-line.sub { font-family: var(--f-mono); font-size: 1.9vmin; letter-spacing: 0.32em; text-transform: uppercase; color: #cfc4b2; }
+.film-line.narration { font-family: var(--f-text); font-style: italic; font-weight: 300; font-size: 3.6vmin; color: #efe6d6; white-space: normal; text-align: center; max-width: 78vw; }
+.film-line.label, .film-line.code { font-family: var(--f-mono); font-size: 1.55vmin; letter-spacing: 0.22em; color: #bdb2a0; font-variant-numeric: tabular-nums; }
+.film-line.at-tl { top: 7.6vmin; left: 8vmin; }
+.film-line.at-tr { top: 7.6vmin; right: 8vmin; }
+.film-line.at-bl { bottom: 7.6vmin; left: 8vmin; }
+.film-line.at-br { bottom: 7.6vmin; right: 8vmin; }
+.film-line.at-mid.title { left: 50%; top: 50%; transform: translate(-50%, -62%); }
+.film-line.at-mid.sub { left: 50%; top: calc(50% + 8.6vmin); transform: translateX(-50%); }
+.film-line.at-low { left: 50%; bottom: 13vmin; transform: translateX(-50%); }
+.film-skip { position: absolute; right: 8vmin; bottom: 7vmin; z-index: 2; }
+html.lv .film-line.narration { font-size: 5vmin; max-width: 88vw; }
+html.lv .film-line.title { font-size: 11vmin; }
+html.lv .film-line.label, html.lv .film-line.code { font-size: 2.2vmin; }

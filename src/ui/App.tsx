@@ -11,6 +11,7 @@ import { ResearchModal } from './screens/Research';
 import { SignalsModal } from './screens/Signals';
 import { FleetsModal, SystemsModal } from './screens/Lists';
 import { CrossingScreen, EraIntro, EventModal, LoreModal, OutcomeScreen, eventResult, loreView } from './screens/Story';
+import { FilmScreen } from './screens/Film';
 import { TipLayer, uiFactor } from './Tip';
 import { Icon } from './Icon';
 import { dismissToast, engine, game, hoverStar, lvFolded, mapHover, modal, rev, screen, settings, targeting, toasts, touchInput, uiZoom } from './store';
@@ -75,6 +76,8 @@ function ModalHost({ s }: { s: GameState | null }) {
   const m = modal.value;
   if (!m) return null;
   switch (m.kind) {
+    case 'film':
+      return <FilmScreen id={m.id} args={m.args} then={m.then} />;
     case 'codex':
       return <CodexModal topic={m.topic} />;
     case 'settings':

@@ -79,7 +79,7 @@ async function fresh(browser, opts = {}) {
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(String(e)));
   page.on('console', (m) => m.type() === 'error' && !IGNORE.test(m.text()) && page.errors.push(m.text()));
-  await page.goto(url, { timeout: 90000 });
+  await page.goto(`${url}?nofilms`, { timeout: 90000 });
   await page.waitForTimeout(1500);
   await page.evaluate(() => window.__stel.newGame({ seed: 1000 }));
   await page.waitForTimeout(1500);

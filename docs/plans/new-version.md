@@ -684,6 +684,49 @@ Each step validated on its own, with the harness by fate:
    ring, the dissolve; every quality tier, with screenshots asked about first (the player has not
    reached that far).
 
+### Part 4, as it will be built (14 Oct, written before starting it)
+
+1. **The films' engine** (`src/film/`): `draw.ts` (an ink line that draws itself, stipple,
+   hatching, glow, a grain tile laid at 24 offsets a second, the reel's corners, a vignette),
+   `films.ts` (each film laid out once for its size and quality, then any moment drawn from its
+   time alone; a reel template: shots cut on a beat grid, corners, labels, a timecode in η and
+   years, the narration and a title card), `cue.ts` (each film's sound on an audio clock: a drone,
+   a bell on each cut, the reel's tick, a chord under the title; the same rendered offline for the
+   videos), `player.ts` (one 2D canvas and real DOM text over it; time from the cue's clock, else
+   elapsed time).
+2. **The set:** the Long Dusk; the Last Light; into the Black Hole Age (the Great Decay, the Last
+   Warmth, by fate); the Great Evaporation; the Last Horizon; and one template for the endings,
+   with a motif of its own for each of the seven endings and the three defeats. The words are the
+   game's own (each age's introduction, each ending's epilogue), and nothing beyond them.
+3. **Where they play:** beginning a game (then the age's introduction), each crossing (then its
+   report), each ending (then the outcome, its music held until the film is over). A layer of its
+   own on the page, outside the interface's zoom; the game's view stops meanwhile; the music
+   ducks (a gain between the music and the master) under the film's cue (its own bus, at the
+   music's volume). A click, Space, Enter or Escape skips one, as does its Skip button, which has
+   the focus; Enter under a film ends no turn.
+4. **Settings and the Codex:** "Films: on/off", off to begin with under reduced motion; the
+   Codex's "Films seen" plays again those seen in any game (kept in the new version's storage).
+   The checks run without films (`?nofilms`, the default in `lib.cjs`) unless they ask for them.
+5. **Videos:** `tools/film-render.mjs` (the Vite dev server's `film.html`, never built into the
+   game): every frame at its exact time, the cue rendered offline, ffmpeg (H.264, AAC) from a path
+   given; never committed. The 10-second test piece (the Long Dusk) to the player first, the rest
+   as they are asked for.
+6. **Fixes along the way:** the crossing, outcome and introduction screens take the focus on
+   their titles; a reload with a crossing's report still unread opens it again.
+7. **The survey reveal** (after the films, its own commit): entering a system just charted plays
+   its worlds in one by one in orbit order (the star first; about 1.2 s a world, at most about 8
+   s): each orbit fades in, a scan line sweeps the world from silhouette to its look, labels and
+   picks wait for it, and a card names it (kind, temperature, water, habitability, room for Kin,
+   a find with its plate last). Skip, and Skip all for the turn; Enter and Escape skip it, never
+   ending the turn; "Survey reveals: on/off" (off under reduced motion; off in the checks unless
+   asked for). It plays on entering such a system (the survey toast's Look, or any way in),
+   rather than taking the view by itself after a turn.
+8. **Checks:** `browser/films` (play, skip by key and button, the Codex, off, the same frame at
+   30 and 144 frames a second, every film drawn) and `browser/survey-reveal`.
+   - As built (14 Oct), the films (items 1 to 6): as above. Their layer hangs on the page's body,
+     outside `#ui`, whose zoom had scaled the canvas with the interface; the narration sits low
+     and the picture above it, so the words never cross the world drawn.
+
 ### 3-7, as it will be built (14 Oct, written before starting it)
 
 Display only: no rule changes, so the harness is not run (a check confirms no game state is read

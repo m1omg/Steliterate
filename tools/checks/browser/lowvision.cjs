@@ -249,7 +249,7 @@ run(async () => {
   check(!off.lv && off.hud === 'contents' && off.scale <= 1.4, `Off: the HUD as before (${off.hud}), the size back within the usual ones (${off.scale}, --z ${off.z})`);
   // a link turns it on (a fresh browser profile)
   const other = await ck.another(1280, 720);
-  await other.goto(`${process.argv[2] || 'http://localhost:4173/'}?lowvision`, { timeout: 90000, waitUntil: 'domcontentloaded' });
+  await other.goto(`${process.argv[2] || 'http://localhost:4173/'}?lowvision&nofilms`, { timeout: 90000, waitUntil: 'domcontentloaded' });
   await other.waitForTimeout(1500);
   const linked = await other.evaluate(() => ({ lv: document.documentElement.classList.contains('lv'), saved: JSON.parse(localStorage.getItem('steliterate2.settings') || '{}').lowVision }));
   check(linked.lv && linked.saved === true, 'the link …/?lowvision turns it on, and it is kept');

@@ -231,12 +231,17 @@ export function EventModal({ s }: { s: GameState }) {
 
 export function EraIntro({ s }: { s: GameState }) {
   const era = ERA_BY_ID[s.era];
+  // its title takes the focus, as every window's does
+  const title = useRef<HTMLHeadingElement>(null);
+  useFocusOnOpen(title, s.era);
   return (
     <div class="crossing" role="dialog" aria-modal="true" aria-label={era.name}>
       <div class="crossing-art" style={{ backgroundImage: `url(art/${s.era}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{era.numeral} · {era.science}</div>
-        <h1>{era.name}</h1>
+        <h1 ref={title} tabIndex={-1}>
+          {era.name}
+        </h1>
         <p class="intro">{ageIntro(s.era, fateOf(s))}</p>
         <p class="dim" style={{ fontSize: '14.5px', maxWidth: '60ch' }}>
           η {formatEta(s.eta, s.era)}: {formatYears(s.years, s.eta)} since the Big Bang. Keep your people alive through what is coming. Every turn covers more time than the last.
@@ -259,6 +264,8 @@ export function EraIntro({ s }: { s: GameState }) {
 
 export function CrossingScreen({ s }: { s: GameState }) {
   const r = s.civ.crossing;
+  const title = useRef<HTMLHeadingElement>(null);
+  useFocusOnOpen(title, r?.title ?? r?.to);
   if (!r) return null;
   const to = ERA_BY_ID[r.to];
   const from = ERA_BY_ID[r.from];
@@ -267,7 +274,9 @@ export function CrossingScreen({ s }: { s: GameState }) {
       <div class="crossing-art" style={{ backgroundImage: `url(art/${r.to}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{r.from === r.to ? from.name : `The end of ${from.name}${r.title ? ` · ${r.title}` : ''}`}</div>
-        <h1>{r.from === r.to && r.title ? r.title : to.name}</h1>
+        <h1 ref={title} tabIndex={-1}>
+          {r.from === r.to && r.title ? r.title : to.name}
+        </h1>
         <p class="intro">{r.intro ?? to.intro}</p>
         <div class="row wrap" style={{ gap: '18px', justifyContent: 'center' }}>
           <div>
@@ -317,6 +326,8 @@ const DEFEAT_TEXT: Record<string, string> = {
 
 export function OutcomeScreen({ s }: { s: GameState }) {
   const o = s.civ.outcome;
+  const title = useRef<HTMLHeadingElement>(null);
+  useFocusOnOpen(title, o?.ending);
   if (!o) return null;
   const work = WORKS.find((w) => w.ending === o.ending);
   const epilogue = work?.epilogue ?? (o.kind === 'dark' ? DARK_ENDING.epilogue : o.kind === 'endurance' ? ENDURANCE_ENDING.epilogue : DEFEAT_TEXT[o.ending] ?? '');
@@ -328,7 +339,9 @@ export function OutcomeScreen({ s }: { s: GameState }) {
       <div class="crossing-art" style={{ backgroundImage: `url(art/${o.kind === 'dark' ? 'hunger' : s.era}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{head} · turn {o.turn} · <span class="greek">η</span> {formatEta(o.eta, s.era)}</div>
-        <h1 class={o.kind === 'defeat' || o.kind === 'dark' ? 'bad' : ''}>{o.ending}</h1>
+        <h1 ref={title} tabIndex={-1} class={o.kind === 'defeat' || o.kind === 'dark' ? 'bad' : ''}>
+          {o.ending}
+        </h1>
         <p class="intro">{epilogue}</p>
         <div class="lines panel" style={{ padding: '12px 16px', width: '100%' }}>
           <div class="dim">

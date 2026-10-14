@@ -1,16 +1,18 @@
-// Browser check: End Turn plays the turn in slices (the new version, part 2a-6). With the CPU
-// slowed as a phone's would be, the browser gets its turn while the game's turn is under way (a
-// timer runs in the middle of it, as the synth's lookahead timer must); meanwhile End Turn is
-// disabled and an order is refused (act); when it is done, the turn has advanced once and the game
-// is seen from our side again.
+// Browser check: End Turn plays the turn in slices (the new version, part 2a-6). On a slow phone
+// the browser gets its turn while the game's turn is under way (a timer runs in the middle of it,
+// as the synth's lookahead timer must); meanwhile End Turn is disabled and an order is refused
+// (act); when it is done, the turn has advanced once and the game is seen from our side again.
+// The slow phone is every slice made to take 4 ms (`__stel.slowSlices`): a breath waits for the
+// timers once the turn has run 40 ms (turnflow.ts), and a CPU slowed through the DevTools protocol
+// is paused in windows, so one turn there took anything from 4 to 158 ms (14 Oct) and whether a
+// timer came in its middle was luck.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('turn-slices', { seed: 8919 });
   const { page } = ck;
   await page.evaluate(() => window.__stel.endTurns(30));
   await page.waitForTimeout(500);
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
+  await page.evaluate(() => window.__stel.slowSlices(4));
   const r = await page.evaluate(
     () =>
       new Promise((resolve) => {
@@ -45,10 +47,15 @@ run(async () => {
         document.querySelector('button.endturn').click();
       }),
   );
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-  console.log('slices', JSON.stringify(r));
-  // (a breath waits for the timers due at least every 40 ms, turnflow.ts: a message to ourselves alone can run ahead of them)
+  const own = await page.evaluate(() => {
+    window.__stel.slowSlices(0);
+    return window.__stel.lastTurn();
+  });
+  console.log('slices', JSON.stringify(r), JSON.stringify(own));
+  check((own?.wall ?? 0) >= 80, `the slow phone's turn took long enough to need a breath for the timers (${Math.round(own?.wall ?? 0)} ms; a timer is due after 40)`);
   check(r.busyTicks > 0, `the browser had its turn while ours was under way (${r.busyTicks} timer ticks in the middle of its ${r.wall} ms; the timers waited ${r.gap} ms at most)`);
+  // (every 40 ms of the turn, then the slice under way: about 50 at most; the whole turn without breaths would be one wait)
+  check(r.gap < 100, `the timers never waited long (${r.gap} ms at most, in a turn of ${Math.round(own?.wall ?? 0)})`);
   check(r.refused === true, 'an order given in the middle of the turn is refused');
   check(r.advanced === 1 && r.ours, 'when it is done the turn has advanced once, and the game is seen from our side');
   await finish('TURN SLICES', ck);

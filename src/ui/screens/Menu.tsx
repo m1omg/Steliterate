@@ -5,7 +5,7 @@ import { hasOldGames, OLDER_BUILD } from '../../keys';
 import type { Difficulty, EpochLength, GameSettings, ProtonFate } from '../../game/types';
 import { music } from '../../audio/music';
 import { sfx } from '../../audio/sfx';
-import { modal, screen, settings } from '../store';
+import { modal, playFilm, screen, settings } from '../store';
 import { startTutorial } from '../hud/Tutorial';
 import { startLoaded } from './Misc';
 
@@ -117,7 +117,8 @@ export function Setup() {
     const g = newGame(st);
     if (guide) startTutorial(g);
     startLoaded(g);
-    modal.value = { kind: 'era_intro' };
+    // the Long Dusk's film, then the age's own words
+    playFilm('dusk', { kind: 'era_intro' });
   };
   return (
     <div class="menu">
