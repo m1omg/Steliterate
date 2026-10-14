@@ -682,6 +682,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     to it takes `/next/` down until the workflow runs on `next` again): changing it needs a branch
     of its own for the PR, which the plan's permissions did not cover, so it is put to the player.
     The films' frame cost on Medium: about 20 ms at 1920×1080 here (CHANGELOG, "Up at /next/").
+    Verified live (14 Oct, Pages run 38577291741 on `next`, `5375272`): `/next/` serves
+    `index-B9snKdTy.js`, the build validated here; the root still `index-DZiWCpcP.js` and the
+    backup `index-B4EKBtSN.js`; no second archive under `/next/`. On the live page a new game plays
+    the Long Dusk's film, Enter skips to the introduction, a turn ends, and only `steliterate2.`
+    keys are written (the browser here does not trust the session proxy's certificate, so the
+    check fetched the live files through curl, which does).
   - Next: the player's word on the open threads (HANDOVER, section 3).
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census

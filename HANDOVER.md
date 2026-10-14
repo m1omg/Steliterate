@@ -43,7 +43,8 @@ last.
 
 ## 3. Where things stand (14 Oct)
 
-- **The new version is done, and up** at https://m1omg.github.io/Steliterate/next/ (14 Oct; the
+- **The new version is done, and up** at https://m1omg.github.io/Steliterate/next/ (14 Oct, live
+  script `index-B9snKdTy.js`; the
   player's nine-part request of 13 Oct: the other civilizations playing the same game, the Hunger
   in diplomacy, war and new units, life after matter, positronium, films, young dwarfs, charting
   on the way). The approved plan is `docs/plans/new-version.md`; read it before anything else.
