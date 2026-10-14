@@ -1,9 +1,12 @@
-# Build the game and publish it to the gh-pages branch, which GitHub Pages serves.
+# Build the game and publish it to the gh-pages branch, which GitHub Pages serves: `main` at the
+# root (today's game), and the new version, the `next` branch, at /next/ (without its own copy of
+# the archive, which the root already serves). A push runs the workflow file of the branch pushed,
+# so `main` and `next` carry this same file, and a push to either rebuilds both.
 name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, claude/lucid-newton-30cbpk]
+    branches: [main, next]
   workflow_dispatch:
 
 permissions:
@@ -18,17 +21,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+      - uses: actions/checkout@v4
+        with:
+          ref: next
+          path: next
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run build
-      - name: Publish dist/ to gh-pages
+          cache-dependency-path: |
+            main/package-lock.json
+            next/package-lock.json
+      - name: Build today's game
+        working-directory: main
+        run: npm ci && npm run build
+      - name: Build the new version
+        working-directory: next
+        run: npm ci && npm run build
+      - name: The new version at /next/
         run: |
-          touch dist/.nojekyll
-          cd dist
+          rm -rf next/dist/archive
+          cp -r next/dist main/dist/next
+      - name: Publish to gh-pages
+        run: |
+          touch main/dist/.nojekyll
+          m=$(git -C main rev-parse --short HEAD)
+          n=$(git -C next rev-parse --short HEAD)
+          cd main/dist
           git init -q -b gh-pages
           git add -A
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Deploy ${GITHUB_SHA::7}"
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Deploy main $m, next $n"
           git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
