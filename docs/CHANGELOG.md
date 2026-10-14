@@ -3219,3 +3219,30 @@ the game's art style". All sixteen films are rebuilt.
   the dev server (a frame depends on its time alone).
 - **Videos sent:** the Long Dusk and the Black Hole Age (decay), 1920×1080. No ending's video goes
   out unasked.
+
+## The Degenerate Age's film: darker as it begins, its remnants cooling (14 Oct, the player's word)
+
+The player on the second cut's Degenerate Age: "this looks absolutely awesome", with two asks:
+"maybe a little bit more dimming when the era starts in that cutscene" and "the glowing remnants
+should be visibly cooling with stated temps lowering as the time goes by", and "Save the current
+version as well in case if I don't like the slightly changed one".
+
+- **Saved:** the version first sent is `src/film/saved/lastlight-v1.ts` (commit `4e1e80e`), not
+  imported and so not in the game; one import in `films.ts` brings it back. Its video went to the
+  player. (A tag would not reach GitHub from this session: no tag has.)
+- **Darker as the age begins:** the last red dwarfs elsewhere in the sky go out one by one while
+  the last one burns out in the middle, and the sky of the dead darkens from the Dusk's end to a
+  third of it. The dark that is left stays dark, and the rest of the film keeps to it.
+- **The corpses cooling:** in the dark that is left, the white and brown dwarfs redden and fade as
+  we watch. Among the specimens a clock runs their age from a million years to a hundred trillion,
+  and each cools by the game's own laws (`dwarfCoolingK` for a white dwarf of 0.6 Suns: Mestel's
+  cooling, then the crystallised core's; `brownCoolingK` for a brown dwarf of 0.05, Burrows' fit;
+  the residual 7 × 10⁶ K / √t for a neutron star): its colour is a blackbody's at its temperature,
+  and once it is too cold to see, its faint heat in the thermal palette, stepping down from cream
+  to violet as it goes on cooling. Their temperatures are stated under them as they fall (the white
+  dwarf 16,300 K to 47 K, the brown dwarf 3,200 K to 39 K, the neutron star 7,000 K to 0.7 K); the
+  pulsar's beams fade as it spins down; the black hole stays at 6 × 10⁻⁹ K.
+- **A check made sure of what it measures:** `browser/films` waited a fixed 3.8 s after Begin for
+  the Long Dusk's first narration (at beat 2.5, 1.7 s in), but the film's first frame takes 2 to 3 s
+  here while its paintings are made: the line came 2.8 to 4.9 s after Begin on this build and the
+  one before alike, so it had passed by luck. It now waits for the line, up to 10 s.

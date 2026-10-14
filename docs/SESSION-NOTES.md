@@ -718,6 +718,13 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     "The films, second cut"). Sent: the Long Dusk and the Black Hole Age (decay) as videos. The
     endings' videos only when asked (spoilers); the player had said they would be away watching a
     film: "please don't ask me questions unless it's something absolutely crucial".
+  - the Degenerate Age's film (the Last Light), sent as a video: "this looks absolutely awesome",
+    "maybe a little bit more dimming when the era starts in that cutscene", "the glowing remnants
+    should be visibly cooling with stated temps lowering as the time goes by. Otherwise, it's
+    basically like I envisioned it", and "Save the current version as well in case if I don't
+    like the slightly changed one". Saved as `src/film/saved/lastlight-v1.ts` (not in the game;
+    one import brings it back), its video kept; the new one sent beside it. If they prefer the
+    first, swap the import in `films.ts`.
   - Next: the player's word on the films' second cut and the open threads (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak

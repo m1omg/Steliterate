@@ -68,8 +68,13 @@ last.
     (46% of its games survive), all sixteen films rebuilt ("the films, second cut"), and `main`'s
     Pages workflow building `/next/` too (PR m1omg/Steliterate#30, `3a3f4c2`).
   - Waiting for the player: their word on the films' second cut (sent as videos: the Long Dusk,
-    the Black Hole Age under decay; the endings only when asked), switching `main` to the new
-    version ("Not yet", 14 Oct), and the open threads (section 8).
+    the Black Hole Age under decay, the Degenerate Age twice, before and after their two asks; the
+    endings only when asked), switching `main` to the new version ("Not yet", 14 Oct), and the open
+    threads (section 8). The Degenerate Age's first version is kept in `src/film/saved/` in case
+    they prefer it.
+  - Run the browser suite with a long background limit (`timeout` 7200000): it takes about 45
+    minutes, and a background command stops at 30 by default. The same for the preview server it
+    needs.
 - **The backup** (13 Oct, PR m1omg/Steliterate#28, `db34424`): today's game, frozen and playable,
   at https://m1omg.github.io/Steliterate/archive/2026-10-13/ (`public/archive/`, with its own
   README), on the same origin and so with the player's current saves. Its source is

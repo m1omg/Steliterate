@@ -1403,6 +1403,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `World`'s `heat` option), `hr.ts` (the H–R diagram's stars), `kit.ts` (layout, layers, the
   camera, a ship, `falseColour`). A film's cue is `SPECS[id]`, or `FATE_SPECS['id:fate']` where a
   fate's version cuts on other beats (`cueOf`); keep its cuts on its scenes' `from`.
+  `src/film/saved/` keeps earlier versions the player may want back (not imported, so not in the
+  game): to restore one, import it in `films.ts` in place of the current one. A film that shows
+  a body's temperature reads it from the game's own laws (`dwarfCoolingK`, `brownCoolingK` in
+  `physics.ts`), as the Degenerate Age's specimens do.
 - **`/next/` (part 5):** the `next` branch (a copy of the work branch: `git push origin
   claude/epic-wozniak-lyhulf:next`) carries a Pages workflow that checks out `main` and `next`
   into folders of those names, builds each (`npm ci && npm run build`), drops `next/dist/archive`

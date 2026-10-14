@@ -2,9 +2,11 @@ import { Rng } from '../game/rng';
 import { circlePath, glow, ink, ss, type Pt } from './draw';
 import type { FilmDef } from './films';
 import { falseColour, landscape, layer, put, reticle, ship, skyRatio } from './kit';
-import { Lazy, dotSprite, kelvin, paintBanded, paintElliptical, paintLens, paintSky, paintStar, tint } from './paint';
+import { HEAT_LUT, Lazy, css, dotSprite, heatOf, kelvin, paintBanded, paintElliptical, paintLens, paintSky, paintStar, tint } from './paint';
 import { ease, note, reel2, type Scene } from './reel';
 import { pow10 } from '../ui/fmt';
+import { brownCoolingK, dwarfCoolingK } from '../game/physics';
+import type { Primary } from '../game/types';
 
 // The Degenerate Age (Age II), second cut: the last red dwarf turning blue as it burns out and
 // shrinking to a white dwarf; the dark that is left; the corpses laid out as specimens (a white
@@ -12,7 +14,10 @@ import { pow10 } from '../ui/fmt';
 // into a dwarf and keeping it faintly warm; two brown dwarfs colliding into a small new star; two
 // white dwarfs merging into a brilliant, brief helium star; the galaxy flinging its remnants into
 // the void; the proton's open question; a settlement round an ember; the title. The words are the
-// age's own introduction.
+// age's own introduction. (14 Oct, the player: more dimming as the age begins, and the remnants
+// "visibly cooling with stated temps lowering as the time goes by": the last red dwarfs go out one
+// by one as the sky darkens, and the specimens cool by the game's own laws as their age runs on.
+// The version first sent is kept in saved/lastlight-v1.ts.)
 
 const INK = '#e6dccb';
 const ACC = '#93c4ff';
@@ -57,6 +62,29 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
   const spec = S * (land ? 0.075 : 0.085);
   const wd = paintStar(dpx(spec * 2), { T: 10500, seed: 204, limb: [0.35, 0.2], cells: 18, grain: 0.1 });
   const bd = paintBanded(dpx(spec * 2.4), { seed: 205, T: 1100, bands: 8 });
+  // once they are too cold to see: the same discs by their faint heat, at four levels of warmth
+  // (the thermal palette from cream down to violet), so the instruments' picture cools too
+  const heatLevels = (img: Lazy<HTMLCanvasElement>, gains: number[]) =>
+    new Lazy(function* () {
+      const src = img.get();
+      const out: HTMLCanvasElement[] = [];
+      for (const g of gains) {
+        yield;
+        out.push(heatOf(src, g));
+      }
+      return out;
+    });
+  const wdHeat = heatLevels(wd, [1.25, 0.8, 0.5, 0.3]);
+  const bdHeat = heatLevels(bd, [2.3, 1.45, 0.9, 0.5]);
+  /** A blackbody's colour at T, as hex (what glow() takes). */
+  const kHex = (T: number) => `#${kelvin(T).map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('')}`;
+  /** Where a temperature below sight falls among the heat views: 0 at 560 K, 3 at about 1 K. */
+  const heatLevel = (T: number) => Math.max(0, Math.min(3, ((Math.log10(560) - Math.log10(Math.max(1, T))) / Math.log10(560)) * 3));
+  /** The thermal palette's colour for a point source at T (for the neutron star). */
+  const heatHex = (T: number) => {
+    const i = Math.round(Math.max(0, Math.min(1, 0.85 - heatLevel(T) * 0.22)) * 255) * 3;
+    return `#${[HEAT_LUT[i], HEAT_LUT[i + 1], HEAT_LUT[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+  };
   const ember = paintStar(dpx(S * 0.2 * 2), { T: 1600, seed: 206, limb: [0.4, 0.3], cells: 20, grain: 0.15 });
   const bdA = paintBanded(dpx(S * 0.1 * 2), { seed: 207, T: 1050, bands: 9, tilt: 0.3 });
   const bdB = paintBanded(dpx(S * 0.08 * 2), { seed: 208, T: 950, bands: 7, tilt: -0.2 });
@@ -97,12 +125,31 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
   // ------------------------------------------------------------ 1. the last red dwarf: blue, then a white dwarf
   const cx = w * 0.5;
   const cy = h * 0.46;
+  // the last red dwarfs elsewhere, going out one by one as the age begins (clear of the middle and the words)
+  const lastStars: { x: number; y: number; r: number; out: number; col: string }[] = [];
+  {
+    const rng = new Rng(219);
+    for (let i = 0; lastStars.length < Math.round(46 * k) + 14 && i < 900; i++) {
+      const x = rng.next() * w;
+      const y = rng.next() * h * 0.8;
+      if (Math.hypot(x - cx, y - cy) < R1 * 1.9) continue;
+      lastStars.push({ x, y, r: S * rng.range(0.004, 0.011), out: rng.range(0.6, 5.2), col: rng.chance(0.6) ? '#ff8a5a' : '#ffb070' });
+    }
+  }
+  /** How bright the sky of the dead is: the Dusk's end at first, then darker as the last stars go. */
+  const skyA = (b: number) => 0.55 - 0.37 * ease(ss(0.4, 6.6, b));
   const lastRed: Scene = {
     from: 0,
     to: 7,
     assets: [sky, red, blue],
     draw(c, m) {
-      layer(c, sky.get(), w, h, M, 0, 0, 1.05 + 0.03 * m.p, 0.5);
+      layer(c, sky.get(), w, h, M, 0, 0, 1.05 + 0.03 * m.p, skyA(m.b));
+      for (const st of lastStars) {
+        const on = 1 - ss(st.out, st.out + 0.55, m.b);
+        if (on <= 0) continue;
+        glow(c, st.x, st.y, st.r * 3.2, st.col, 0.45 * on);
+        glow(c, st.x, st.y, st.r * 0.8, '#fff1e0', 0.7 * on);
+      }
       // it burns out hotter: red to blue-white, and brighter, then falls in on itself
       const hot = ss(0.8, 4.2, m.b);
       const shrink = ss(4.2, 5.6, m.b);
@@ -128,7 +175,7 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     },
     notes(m) {
       return [
-        note('lr-a', 'THE LAST RED DWARF', 0.5, (cy + R1 * 1.35) / h, ss(0.8, 1.6, m.b) * (1 - ss(3.8, 4.4, m.b)), { align: 'c', tone: 'dim' }),
+        note('lr-a', 'THE LAST RED DWARFS · GOING OUT', 0.5, (cy + R1 * 1.35) / h, ss(0.8, 1.6, m.b) * (1 - ss(3.8, 4.4, m.b)), { align: 'c', tone: 'dim' }),
         note('lr-b', 'BURNING OUT · HOTTER AND BLUER', 0.5, (cy + R1 * 1.35) / h, ss(3.2, 3.9, m.b) * (1 - ss(5, 5.6, m.b)), { align: 'c', tone: 'accent' }),
         note('lr-c', 'A WHITE DWARF', 0.5, (cy + S * 0.08) / h, ss(6, 6.6, m.b), { align: 'c', tone: 'ink' }),
       ];
@@ -144,14 +191,20 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     from: 6.5,
     to: 12.5,
     fade: 1.5,
+    notes(m) {
+      return [note('dk-a', 'WHITE DWARFS, BROWN DWARFS · COOLING', 0.5, land ? 0.12 : 0.1, ss(8, 8.8, m.b) * (1 - ss(11.6, 12.4, m.b)), { align: 'c', tone: 'dim' })];
+    },
     draw(c, m) {
       const u = ease(m.p);
-      layer(c, sky.get(), w, h, M, -w * 0.03 * u, 0, 1.1, 0.85);
-      layer(c, nearSky.get(), w, h, M, -w * 0.06 * u, 0, 1.12, 0.9);
+      layer(c, sky.get(), w, h, M, -w * 0.03 * u, 0, 1.1, 0.2);
+      layer(c, nearSky.get(), w, h, M, -w * 0.06 * u, 0, 1.12, 0.4);
+      // the cinders cooling as we watch: redder and fainter
+      const cool = 1 - 0.45 * ss(6.8, 12.5, m.b);
       for (const s of cinders) {
         const x = s.x - w * 0.045 * u;
-        if (s.T > 3000) glow(c, x, s.y, s.s * 3, SOFT, 0.35);
-        else glow(c, x, s.y, s.s * 2.4, '#9a5a6a', 0.3);
+        const T = s.T * cool;
+        if (s.T > 3000) glow(c, x, s.y, s.s * 5, kHex(T), 0.55 * Math.pow(cool, 1.5));
+        else glow(c, x, s.y, s.s * 4, kHex(T), 0.42 * Math.pow(cool, 2.5));
       }
     },
   };
@@ -168,27 +221,66 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
       }),
     ),
   );
+  // their age as the scene runs, a million years to a hundred trillion, and what each is at it, by
+  // the game's own laws: Mestel's cooling, then the crystallised core's, for a white dwarf of 0.6
+  // Suns (physics.ts, dwarfCoolingK); Burrows' fit for a brown dwarf of 0.05 (brownCoolingK); the
+  // residual 7 × 10⁶ K / √t for a neutron star (its beams gone as it spins down, by 10⁹ years)
+  const WD: Primary = { kind: 'white_dwarf', mass: 0.6 } as Primary;
+  const BD: Primary = { kind: 'brown_dwarf', mass: 0.05 } as Primary;
+  const ageAt = (b: number) => Math.pow(10, 6 + 8 * Math.min(1, Math.max(0, (b - 19.6) / 9.6)));
+  const tempsAt = (b: number) => {
+    const a = ageAt(b);
+    return { wd: dwarfCoolingK(WD, a), bd: brownCoolingK(BD, a), ns: 7e6 / Math.sqrt(a), beams: 1 - ss(7.5, 9, Math.log10(a)) };
+  };
+  const kfmt = (T: number) => (T >= 1000 ? `${(Math.round(T / 100) * 100).toLocaleString('en-US')} K` : T >= 100 ? `${Math.round(T / 10) * 10} K` : T >= 10 ? `${Math.round(T)} K` : `${T.toFixed(1)} K`);
+  /** How visible a body of temperature T still is (1 glowing, 0 seen only by its heat). */
+  const visible = (T: number) => ss(560, 950, T);
+  /** A disc painted at T0, drawn as it is at T: its blackbody colour and dimmer, or, once too cold to see, by its heat. */
+  const cooled = (c: CanvasRenderingContext2D, img: HTMLCanvasElement, heat: HTMLCanvasElement[], x: number, y: number, R: number, T: number, T0: number, alpha: number) => {
+    if (alpha <= 0) return;
+    const v = visible(T);
+    if (v > 0) {
+      c.save();
+      c.globalAlpha = alpha * v * Math.max(0.6, Math.min(1, Math.pow(T / T0, 0.3)));
+      c.drawImage(img, x - R, y - R, R * 2, R * 2);
+      c.globalCompositeOperation = 'color';
+      c.fillStyle = css(kelvin(T));
+      c.beginPath();
+      c.arc(x, y, R * 0.98, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+    }
+    if (v < 1) {
+      // between the two views that bracket its warmth
+      const f = heatLevel(T);
+      const i0 = Math.min(2, Math.floor(f));
+      const u = f - i0;
+      c.save();
+      c.globalAlpha = alpha * (1 - v);
+      c.drawImage(heat[i0], x - R, y - R, R * 2, R * 2);
+      if (u > 0) {
+        c.globalAlpha = alpha * (1 - v) * u;
+        c.drawImage(heat[i0 + 1], x - R, y - R, R * 2, R * 2);
+      }
+      c.restore();
+    }
+  };
   const specimens: Scene = {
     from: 18.3,
     to: 30.5,
     fade: 1.5,
-    assets: [wd, bd, lens],
+    assets: [wd, bd, lens, wdHeat, bdHeat],
     draw(c, m) {
-      layer(c, sky.get(), w, h, M, 0, 0, lensZ, 0.7);
+      layer(c, sky.get(), w, h, M, 0, 0, lensZ, 0.45);
       const at = (i: number) => ss(18.8 + i * 1.6, 19.8 + i * 1.6, m.b);
-      // a white dwarf: small and white-hot still, here at the age's start
+      const T = tempsAt(m.b);
+      // a white dwarf: white-hot when it is young, cooling: yellow, orange, red, then only its heat
       const [x0, y0] = slots[0];
-      glow(c, x0, y0, spec * 3, SOFT, 0.3 * at(0));
-      c.save();
-      c.globalAlpha = at(0);
-      c.drawImage(wd.get(), x0 - spec * 0.5, y0 - spec * 0.5, spec, spec);
-      c.restore();
-      // a brown dwarf: never lit, glowing faintly by its own heat
+      glow(c, x0, y0, spec * 3, kHex(T.wd), 0.3 * at(0) * visible(T.wd) * Math.min(1, T.wd / 6000 + 0.25));
+      cooled(c, wd.get(), wdHeat.get(), x0, y0, spec * 0.5, T.wd, 10500, at(0));
+      // a brown dwarf: never lit, glowing by its own heat, and less of it every year
       const [x1, y1] = slots[1];
-      c.save();
-      c.globalAlpha = at(1);
-      c.drawImage(bd.get(), x1 - spec * 1.2, y1 - spec * 1.2, spec * 2.4, spec * 2.4);
-      c.restore();
+      cooled(c, bd.get(), bdHeat.get(), x1, y1, spec * 1.2, T.bd, 1100, at(1));
       // a pulsar: a point spinning, its field's lines, its two beams sweeping round
       const [x2, y2] = slots[2];
       if (at(2) > 0) {
@@ -198,12 +290,12 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
         c.rotate(0.35);
         field.forEach((ln, i) => ink(c, ln.map(([a, b]) => [a * spec, b * spec] as const), at(2), { width: Math.max(1, S * 0.0011), color: ACC, seed: 230 + i, alpha: 0.35 }));
         c.restore();
-        const a = rotBeam(m.t);
+        const a = rotBeam(m.t) * (0.3 + 0.7 * T.beams);
         c.save();
         c.globalCompositeOperation = 'lighter';
         for (const side of [0, Math.PI]) {
           const g2 = c.createRadialGradient(x2, y2, 0, x2, y2, spec * 2.2);
-          g2.addColorStop(0, `rgba(210,225,255,${0.5 * at(2)})`);
+          g2.addColorStop(0, `rgba(210,225,255,${0.5 * at(2) * T.beams})`);
           g2.addColorStop(1, 'rgba(210,225,255,0)');
           c.fillStyle = g2;
           c.beginPath();
@@ -213,7 +305,8 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
           c.fill();
         }
         c.restore();
-        glow(c, x2, y2, spec * 0.5, '#e8f0ff', 0.9 * at(2));
+        glow(c, x2, y2, spec * 0.5, kHex(T.ns), 0.9 * at(2) * visible(T.ns));
+        if (visible(T.ns) < 1) glow(c, x2, y2, spec * 0.45, heatHex(T.ns), 0.85 * at(2) * (1 - visible(T.ns)));
       }
       // a black hole: nothing but the stars behind it bent into a ring round its shadow
       const [x3, y3] = slots[3];
@@ -221,7 +314,7 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
         const patch = lens.get();
         const sz = patch.width / skyPerScreen;
         c.save();
-        c.globalAlpha = at(3);
+        c.globalAlpha = at(3) * 0.68;
         c.drawImage(patch, x3 - sz / 2, y3 - sz / 2, sz, sz);
         c.restore();
       }
@@ -231,13 +324,27 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
       }
     },
     notes(m) {
+      const T = tempsAt(m.b);
       const names = ['WHITE DWARF', 'BROWN DWARF', 'NEUTRON STAR', 'BLACK HOLE'];
-      const facts = ['EARTH-SIZED · 10,000 K, COOLING', 'NEVER LIT · 1,000 K', 'CITY-SIZED · SPINNING', 'NO LIGHT OF ITS OWN'];
-      return names.flatMap((n, i) => {
-        const [x, y] = slots[i];
-        const o = ss(19.4 + i * 1.6, 20.4 + i * 1.6, m.b);
-        return [note(`sp-${i}`, n, x / w, (y + spec * 2.1) / h, o, { align: 'c', tone: 'accent' }), note(`sp-f${i}`, facts[i], x / w, (y + spec * 2.1 + S * 0.03) / h, o * 0.85, { align: 'c', tone: 'dim' })];
-      });
+      const heat = (t: number) => (visible(t) < 0.5 ? ' · BY ITS HEAT' : '');
+      const facts = ['EARTH-SIZED', 'NEVER LIT', `CITY-SIZED · ${T.beams > 0.5 ? 'SPINNING' : T.beams > 0.02 ? 'SPINNING DOWN' : 'SPUN DOWN'}`, 'NO LIGHT OF ITS OWN'];
+      const temps = [`${kfmt(T.wd)}${heat(T.wd)}`, `${kfmt(T.bd)}${heat(T.bd)}`, `${kfmt(T.ns)}${heat(T.ns)}`, '6 × 10⁻⁹ K'];
+      const a = ageAt(m.b);
+      const e = Math.floor(Math.log10(a) + 1e-9);
+      const clock = `THEIR AGE · ${(a / Math.pow(10, e)).toFixed(1)}×${pow10(e)} YEARS`;
+      return [
+        note('sp-age', clock, 0.5, land ? 0.16 : 0.13, ss(19.2, 19.8, m.b) * (1 - ss(29.6, 30.4, m.b)), { align: 'c', tone: 'ink' }),
+        note('sp-law', 'EACH COOLING AS IT AGES', 0.5, (land ? 0.16 : 0.13) + (S * 0.028) / h, ss(20.4, 21, m.b) * (1 - ss(29.6, 30.4, m.b)), { align: 'c', tone: 'dim' }),
+        ...names.flatMap((n, i) => {
+          const [x, y] = slots[i];
+          const o = ss(19.4 + i * 1.6, 20.4 + i * 1.6, m.b);
+          return [
+            note(`sp-${i}`, n, x / w, (y + spec * 2.1) / h, o, { align: 'c', tone: 'accent' }),
+            note(`sp-f${i}`, facts[i], x / w, (y + spec * 2.1 + S * 0.028) / h, o * 0.85, { align: 'c', tone: 'dim' }),
+            note(`sp-t${i}`, temps[i], x / w, (y + spec * 2.1 + S * 0.058) / h, o, { align: 'c', tone: 'ink', size: 'm' }),
+          ];
+        }),
+      ];
     },
   };
 
@@ -256,7 +363,7 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     fade: 1.5,
     assets: [ember],
     draw(c, m) {
-      layer(c, sky.get(), w, h, M, 0, 0, 1.2, 0.45);
+      layer(c, sky.get(), w, h, M, 0, 0, 1.2, 0.32);
       // the ember: a dwarf long cooled, its faint heat shown as the instruments see it
       glow(c, ex, ey, ER * 2.4, '#8a5a8a', 0.18);
       falseColour(c, ember.get(), ex, ey, ER);
@@ -295,7 +402,7 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     fade: 1.5,
     assets: [bdA, bdB, newStar],
     draw(c, m) {
-      layer(c, sky.get(), w, h, M, w * 0.02 * m.p, 0, 1.15, 0.6);
+      layer(c, sky.get(), w, h, M, w * 0.02 * m.p, 0, 1.15, 0.42);
       // the orbit shrinks as they spiral in (faster and faster), and they touch
       const meet = 35;
       const u = ss(30, meet, m.b);
@@ -345,7 +452,7 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     to: 45,
     fade: 1.5,
     draw(c, m) {
-      layer(c, sky.get(), w, h, M, -w * 0.02 * m.p, 0, 1.18, 0.6);
+      layer(c, sky.get(), w, h, M, -w * 0.02 * m.p, 0, 1.18, 0.42);
       const meet = 41.5;
       const u = ss(37.6, meet, m.b);
       const sep = S * 0.3 * Math.pow(1 - u, 0.5) + S * 0.005;
@@ -415,7 +522,7 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     fade: 1.5,
     assets: [galaxy],
     draw(c, m) {
-      layer(c, sky.get(), w, h, M, 0, 0, 1.1, 0.3);
+      layer(c, sky.get(), w, h, M, 0, 0, 1.1, 0.24);
       const z = 1 - 0.2 * ease(m.p);
       const img = galaxy.get();
       c.save();
@@ -469,7 +576,7 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     to: 59,
     fade: 1.5,
     draw(c, m) {
-      layer(c, sky.get(), w, h, M, 0, 0, 1.15, 0.25);
+      layer(c, sky.get(), w, h, M, 0, 0, 1.15, 0.2);
       const o = ss(51.8, 53, m.b);
       ink(c, circlePath(px, py, PR, 120, 291), o, { width: Math.max(1, S * 0.0022), color: INK, seed: 291, alpha: 0.8 });
       // the three quarks, held by the strong force's gluon lines
@@ -538,8 +645,8 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     assets: [ember],
     draw(c, m) {
       const u = ease(m.p);
-      layer(c, sky.get(), w, h, M, w * 0.02 * u, 0, 1.12, 0.6);
-      layer(c, nearSky.get(), w, h, M, w * 0.04 * u, 0, 1.14, 0.7);
+      layer(c, sky.get(), w, h, M, w * 0.02 * u, 0, 1.12, 0.42);
+      layer(c, nearSky.get(), w, h, M, w * 0.04 * u, 0, 1.14, 0.5);
       const R = S * 0.07;
       const spin = m.t * 0.15;
       const tilt = 0.3;
@@ -592,7 +699,7 @@ export const LAST_LIGHT2: FilmDef = reel2({ id: 'last_light', name: 'The Last Li
     ],
     scenes: [lastRed, dark, darkMatter, specimens, collide, helium, flinging, proton, ours],
     card(c, m) {
-      layer(c, sky.get(), w, h, M, 0, 0, 1.0 + 0.04 * m.p, 0.45);
+      layer(c, sky.get(), w, h, M, 0, 0, 1.0 + 0.04 * m.p, 0.32);
       glow(c, w * 0.5, h * 0.5, S * 0.6, '#5a7ab0', 0.07 * (1 - m.p));
     },
   };

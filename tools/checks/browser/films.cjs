@@ -29,9 +29,13 @@ run(async () => {
   check(open.film && open.canvas && open.label === 'Film: The Long Dusk', `beginning a game plays the Long Dusk's film, full screen on its own canvas (${open.label})`);
   check(open.lines.some((x) => /STELITERATE · REEL I/.test(x)) && open.lines.some((x) => /^η \d/.test(x)), `its words are text over it: ${open.lines.join(' | ')}`);
   check(open.focus === 'Skip', `its Skip button has the focus (${open.focus})`);
-  // the narration comes in as it plays
-  await page.waitForTimeout(2600);
-  const later = await page.evaluate(() => [...document.querySelectorAll('.film-screen .film-line.narration')].filter((x) => !x.hidden && Number(x.style.opacity) > 0.05).map((x) => x.textContent));
+  // the narration comes in as it plays (the Long Dusk's first line at beat 2.5, 1.7 s in; the film's
+  // first frame can take 2 to 3 s here while its paintings are made, so wait for it, up to 10 s)
+  let later = [];
+  for (let i = 0; i < 50 && !later.length; i++) {
+    await page.waitForTimeout(200);
+    later = await page.evaluate(() => [...document.querySelectorAll('.film-screen .film-line.narration')].filter((x) => !x.hidden && Number(x.style.opacity) > 0.05).map((x) => x.textContent));
+  }
   check(later.length >= 1, `the narration comes in as it plays (${later.join(' | ')})`);
   await page.keyboard.press('Enter');
   await page.waitForTimeout(600);
