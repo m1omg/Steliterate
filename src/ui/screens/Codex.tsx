@@ -32,7 +32,7 @@ export const CODEX: CodexEntry[] = [
     body: [
       'Your civilization is made of Threads: the Kin (the original people), Echoes (uploads), the Chorus (merged minds), the Lattice (self-maintaining processes) and Coldminds (minds held near absolute zero).',
       'Each kind of mind lives at its own clock. When a turn is much longer than a Thread’s clock, that Thread has to stay awake through the whole span, and its upkeep climbs: this is tempo strain. When a turn is much shorter than a slow mind’s clock, it idles and produces little.',
-      'Freeman Dyson (1979) argued that a mind which keeps slowing its thinking, and hibernates between bursts, could have an unlimited number of thoughts on a finite energy budget. Krauss & Starkman (2000) disputed it: with accelerating expansion, and quantum limits on memory, eternal thought is probably impossible. The game lets you try.',
+      'Freeman Dyson (1979) argued that a mind which keeps slowing its thinking, and hibernates between bursts, could have an unlimited number of thoughts on a finite energy budget. Krauss & Starkman (2000) disputed it: with accelerating expansion, and quantum limits on memory, eternal thought is probably impossible. The game lets you try. Its Continuity is that argument in game form: a pattern stays intact only while its errors are corrected, and erasing a bit costs at least kT ln 2 (Landauer 1961), even at the coldest the universe will ever be, the faint glow of its horizon. So with the reserve empty nothing can be corrected and the pattern frays fast, while a sleeping mind risks less. How fast it frays is the game’s own number.',
     ],
   },
   {
@@ -130,6 +130,7 @@ export const CODEX: CodexEntry[] = [
       'F. C. Adams, G. Laughlin & G. J. M. Graves, “Red dwarfs and the end of the main sequence”, RevMexAA (2004).',
       'F. J. Dyson, “Time without end: physics and biology in an open universe”, Reviews of Modern Physics 51, 447 (1979).',
       'L. M. Krauss & G. D. Starkman, “Life, the universe, and nothing”, ApJ 531, 22 (2000).',
+      'R. Landauer, “Irreversibility and heat generation in the computing process”, IBM J. Res. Dev. 5, 183 (1961).',
       'L. M. Krauss & R. J. Scherrer, “The return of a static universe and the end of cosmology”, GRG 39, 1545 (2007).',
       'R. Penrose, Cycles of Time (2010). Speculative.',
       'J. D. Bekenstein, “Black holes and entropy”, Physical Review D 7, 2333 (1973); G. ’t Hooft, “Dimensional reduction in quantum gravity”, arXiv:gr-qc/9310026 (1993); L. Susskind, “The world as a hologram”, Journal of Mathematical Physics 36, 6377 (1995). The horizon form is the game’s speculation on them.',

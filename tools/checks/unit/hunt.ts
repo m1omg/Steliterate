@@ -2,8 +2,10 @@
 // ship", when it sat at a star near one). An awake swarm of size 2 or more notices the nearest of
 // our ships stopped within 25 ly, at a star where we have no settlement and no swarm sits, and on
 // 30% of turns (15% under the Blackout) sends part of itself after it. The part strikes that ship
-// wherever it finds it stopped, surely; once the ship is gone it goes back to its swarm and rejoins
-// it (going on to our nearest settlement instead cost 18 to 30 of 300 harness games).
+// wherever it finds it stopped, surely; once the ship is gone it goes on to the warmth the ship
+// came from, our nearest settlement, as the first swarm's part does, a swarm of its own (14 Oct,
+// the player: "make it harder pls"; from 11 Oct it went back to its swarm, as it still does where
+// we have no settlement to go to, and rejoins it).
 // And when a swarm breaks through a settlement, the ships there share its losses.
 import { newGame } from '../../../src/game/newGame';
 import { createColony } from '../../../src/game/sim/fleets';
@@ -136,27 +138,72 @@ const hunting = () => {
   check(stayed === 50, `nothing to eat there, it still waits for the ship (${stayed} of 50)`);
 }
 
-// the ship moved on: the part turns back for its swarm
+/** The star of our settlement nearest to this one. */
+const warmest = (s: GameState, from: string) =>
+  colonies(s)
+    .map((c) => c.systemId)
+    .sort((x, y) => distLy(s.systems[from], s.systems[x]) - distLy(s.systems[from], s.systems[y]))[0];
+
+// the ship moved on: the part goes on to the warmth it came from, our nearest settlement
 {
   const s = hunting();
   Object.assign(s.fleets.fx, { at: null, from: base.b, to: base.c, distance: 30 });
   updateHunger(s, L, computeMods(s));
   const w = s.swarms.hunt;
-  const nest = s.swarms.hgx;
-  check(!!w && !w.prey && !w.systemId && w.from === base.b && w.to === (nest.systemId ?? nest.to) && w.nest === 'hgx', `arriving to find the ship gone, it turns back for the swarm it broke away from (${nest.systemId ? 'where it sits' : 'where it is going'})`);
+  const to = warmest(s, base.b);
+  check(!!to && !!w && !w.prey && !w.nest && !w.systemId && w.from === base.b && w.to === to && Math.abs(w.distance - distLy(s.systems[base.b], s.systems[to])) < 1e-9, `arriving to find the ship gone, it goes on to our nearest settlement, at ${s.systems[to]?.name}, a swarm of its own`);
   const said = s.civ.log.find((e) => e.fleet === 'fx');
-  check(!!said && said.kind === 'info' && /found it gone, and is going back to its swarm/.test(said.text), `and we are told: "${said?.text}"`);
+  check(!!said && said.kind === 'bad' && said.systemId === to && /found it gone, and is heading for the warmth of /.test(said.text), `and we are told: "${said?.text}"`);
 }
 
-// the ship is lost while it waits: back too, and we hear it had it
+// the ship is lost while it waits: on to the warmth too, and we hear it had it
 {
   const s = hunting();
   updateHunger(s, L, computeMods(s));
   delete s.fleets.fx;
   updateHunger(s, L, computeMods(s));
   const w = s.swarms.hunt;
-  check(!!w && !w.prey && w.to === (s.swarms.hgx.systemId ?? s.swarms.hgx.to), 'its ship lost, it goes back to its swarm');
-  check(s.civ.log.some((e) => /has had it, and is going back/.test(e.text) && !e.fleet), 'and we are told (with no ship to look at)');
+  check(!!w && !w.prey && !w.nest && w.to === warmest(s, base.b), 'its ship lost, it goes on to our nearest settlement');
+  check(s.civ.log.some((e) => /has had it, and is heading for the warmth of /.test(e.text) && !e.fleet), 'and we are told (with no ship to look at)');
+}
+
+// the ship's people settled right where it was (an ark that came down): it turns on them there
+{
+  const s = hunting();
+  delete s.fleets.fx;
+  createColony(s, s.bodies[s.systems[base.b].bodies.find((id) => s.bodies[id].kind !== 'deep') ?? s.systems[base.b].bodies[0]], { echoes: 1 });
+  updateHunger(s, L, computeMods(s));
+  const w = s.swarms.hunt;
+  check(!!w && w.systemId === base.b && !w.prey && !w.nest, 'its ship gone and our settlement where it was, it stays there, a swarm of its own');
+  check(s.civ.log.some((e) => e.kind === 'bad' && /has turned on our settlement there/.test(e.text)), 'and we are told it has turned on it');
+}
+
+// with no settlement of ours to go to, it turns back for its swarm
+{
+  const s = hunting();
+  for (const c of colonies(s)) {
+    s.bodies[c.bodyId].colonyId = null;
+    delete s.colonies[c.id];
+  }
+  Object.assign(s.fleets.fx, { at: null, from: base.b, to: base.c, distance: 30 });
+  updateHunger(s, L, computeMods(s));
+  const w = s.swarms.hunt;
+  const nest = s.swarms.hgx;
+  check(!!w && !w.prey && !w.systemId && w.from === base.b && w.to === (nest.systemId ?? nest.to) && w.nest === 'hgx', `with nowhere of ours to go, it turns back for the swarm it broke away from (${nest.systemId ? 'where it sits' : 'where it is going'})`);
+  const said = s.civ.log.find((e) => e.fleet === 'fx');
+  check(!!said && said.kind === 'info' && /found it gone, and is going back to its swarm/.test(said.text), `and we are told: "${said?.text}"`);
+}
+
+// at the settlement it is any swarm: it feeds there, and goes for the settlement as swarms do
+{
+  const s = hunting();
+  Object.assign(s.fleets.fx, { at: null, from: base.b, to: base.c, distance: 30 });
+  updateHunger(s, L, computeMods(s));
+  const to = warmest(s, base.b);
+  Object.assign(s.swarms.hunt, { traveled: s.swarms.hunt.distance - 0.01 });
+  updateHunger(s, L, computeMods(s));
+  const w = s.swarms.hunt;
+  check(!!w && w.systemId === to && !w.prey && !w.nest, `it arrives at ${s.systems[to]?.name} and stays, a swarm of its own`);
 }
 
 // back with its swarm, it rejoins it; if the swarm has moved on, it follows; no random draw taken
@@ -186,10 +233,14 @@ const hunting = () => {
   check(!!moved && !!w && w.from === base.a && w.to === moved.s.swarms.hgx.to && w.nest === 'hgx' && moved.s.rng === moved.without.rng, 'its swarm moved on: it follows it there');
 }
 
-// its swarm gone: a swarm of its own, which feeds and moves on as any swarm does
+// its swarm gone and nowhere of ours to go: a swarm of its own, which feeds and moves on as any swarm does
 {
   const s = hunting();
   updateHunger(s, L, computeMods(s));
+  for (const c of colonies(s)) {
+    s.bodies[c.bodyId].colonyId = null;
+    delete s.colonies[c.id];
+  }
   delete s.fleets.fx;
   delete s.swarms.hgx;
   updateHunger(s, L, computeMods(s));

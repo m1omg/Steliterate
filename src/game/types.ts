@@ -440,7 +440,8 @@ export interface Swarm {
   tamed: boolean;
   appetite: number;
   /** A part sent after one of our ships (its fleet id): it strikes that ship wherever it finds it
-   * stopped, and once the ship is gone goes back to its swarm (11 Oct). */
+   * stopped, and once the ship is gone goes on to the ship's nearest settlement, or back to its
+   * swarm if its people have none (11 Oct; on to the settlement from 14 Oct). */
   prey?: string;
   /** The swarm a part broke away from (its id): it rejoins it on its way back. */
   nest?: string;

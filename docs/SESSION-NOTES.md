@@ -616,6 +616,17 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     window and 20 after it, whatever the pace. 900 games 636 / 226 / 74, decay and stable exactly as
     at 3-4; the autoplayer weaves only in a real shortage (2 games), so the weave is mostly the
     player's tool. Its research rules took four harness runs to stop costing victories (CHANGELOG).
+  - harder (14 Oct): asked whether 71% surviving was too easy, the player: "make it harder pls".
+    Two grounded changes, neither undoing the drift or the Passage: in the Dark Era an empty
+    reserve costs Continuity 10 a turn (5), nothing being left to correct the errors with, and
+    Error-Correction Arrays keep only their own settlement's minds (they had multiplied across
+    settlements, to nothing at ten); and a swarm's part whose ship is gone goes on to the ship's
+    nearest settlement, the harsher version offered on 11 Oct. 900 games 520 / 218 / 72 (636 /
+    226 / 74): decay 251 / 450, stable 164 / 239, curvature 105 / 211. Victories as before. The
+    Harsh setting, for comparison, had 198 of 300 before the change. If they want it harder still,
+    the next notches: a costlier Dark Era for everyone (its 2.2 a turn), bigger or more swarms, or
+    dearer Great Works (victories have not moved). Validated: tsc, the build (`index-BwUArnSE.js`),
+    the playtest, savecompat (6 saves), 75 unit checks and 56 browser checks.
   - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census

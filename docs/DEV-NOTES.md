@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form, positronium), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form, positronium, continuity), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -496,6 +496,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     is banked at half, but not the weaving, which is seldom used). `WEAVE_TURNS` (6): fewer turns
     to the decay, the weaving is not worth researching. The tech has `needsUnstable` (`techVisible`,
     `sim/research.ts`): any fate but stable matter.
+  - **Continuity in the Dark Era** (14 Oct, harder; `sim/continuity.ts`): `continuityLoss(state,
+    starving)` is what a turn takes, `DARK_DECAY` (2.2) times `correctedShare` (each settlement's
+    Error-Correction Arrays, `continuityMult` 0.6 each, keep its own minds and sleepers; the mean
+    over ours weighed by `popsOf + cryo`: arrays no longer multiply across settlements), times
+    `DARK_SLEEP` (0.35) while dormant and `1 − 0.5 × wovenShare`, plus `DARK_STARVE` (10) when the
+    reserve ran out this turn. `continuity()` in `turn.ts` applies it; the HUD's Continuity tip
+    shows `continuityLoss(s, false)`.
   - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a
     report per civilization; the universe's part runs once (`toAll` puts its lines in every
     report where they fall), each civilization's under `eachCiv`; `leftOnSubstrate` is one
@@ -937,8 +944,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     on its turn, nor under Communion). The part (1 to 1.6, taken from the swarm) carries
     `Swarm.prey` (the fleet) and `Swarm.nest` (its swarm). In `swarmsHunt` it strikes its prey
     with no draw (`sw.prey === f.id`); while the prey is there it does not move on. Once the prey
-    is not where it is (`loseTheScent`, on arrival and each turn) it heads for its swarm's star or
-    destination (`headForNest`) and on arrival merges into it (`rejoin`), following it if it moved
+    is not where it is (`loseTheScent`, on arrival and each turn) it goes on to the nearest
+    settlement of the prey's civilization (`nearestOf`; 14 Oct, harder), dropping `nest`: a swarm
+    of its own from then on, which feeds there and strikes the settlement as any swarm. Only if
+    that civilization has none (or lives in Communion) does it head for its swarm's star or
+    destination (`headForNest`) and on arrival merge into it (`rejoin`), following it if it moved
     on; with its swarm gone or tamed it is a swarm of its own. None of these take a draw. Taming
     and `drawSwarmTo` clear both fields. Swarms travel at 0.05 × the turn length in light-years
     in the Dusk (2 ly a turn at a 40-year turn), so a part can take several turns to arrive.
@@ -1636,6 +1646,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the Thinning (13 Oct; part 3-3, `a0352ef`) | 173 | 58 victories, Degenerate Age 73 turns; 900 games 522 / 205 / 74 (530 / 219 / 74 before): decay 210 / 450 (53 wins), stable as before game for game, curvature 143 / 211 (40); 760 of 900 end as before. First built, the early drift merged a passed settlement into one of ours still of matter: 531 / 192, decay wins 40 |
 | the widest atoms: the weave, the nets, the countdown (13 Oct; part 3-5) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 636 / 226 / 74 (639 / 226 / 74 at 3-4): decay and stable end exactly as before, game for game; curvature 136 / 211 (139), its 36 wins as before; 893 of 900 as before. The weave in 2 games. First built: 632 / 217 (the weaving researched into the Dark Era after the decay, and from the cheapest-left fallback in 100 stable games), then 637 / 218, 634 / 218, 635 / 226 (nets before the Last Horizon from what Continuity counts; a vault that could not afford to leave the weave, lost at the decay) |
 | leaving a hole, and the Horizon form (13 Oct; part 3-4) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 639 / 226 / 74 (522 / 205 / 74 before): decay 330 / 450 (210; 77 wins, 53), stable 170 / 239 (169; 235 of 239 end as before), curvature 139 / 211 (143; 36 wins, 40), within the noise. Drifts in 384 games, the Horizon form in 4. Under decay the vaults now drift to a hole with spin, the Heart above all, where before they starved at the small hole the Migration found, slowed the pace to stretch the reserve, and entered the Dark Era short: of the 450, 125 saved (72 had faded, 41 lost their will), 5 lost. The first drift rule, the nearest hole with spin: 638 / 227 with Horizon Writing researched everywhere |
+| harder: the dark's Continuity (an empty reserve 10 a turn, arrays for their own settlement), swarms on to our settlements (14 Oct; the player: "make it harder pls") | 167 | 67 victories, Degenerate Age 71 turns; 900 games 520 / 218 / 72 (636 / 226 / 74 at 3-5): decay 251 / 450 (73 wins), stable 164 / 239 (107), curvature 105 / 211 (38); victories as before. The Fade 126 (78), Silence 224 (159), The Will Fails 30 (27); 466 of 900 end the same way (88 line for line). The dark alone (300): 186 / 68, The Fade 23 → 56; the swarms on top: 167 / 67, Silence in the Degenerate Age 12 → 23. The Harsh setting before both: 198 / 58 of 300. A part turning on a settlement founded where it waits (an ark come down) changes none of the 900 |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

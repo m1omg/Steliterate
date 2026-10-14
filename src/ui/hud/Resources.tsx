@@ -7,6 +7,7 @@ import { Icon } from '../Icon';
 import { modal, rev } from '../store';
 import { pressable } from '../a11y';
 import { matterGone } from '../../game/fate';
+import { DARK_STARVE, continuityLoss } from '../../game/sim/continuity';
 import { beaconUpkeep, litBeacons } from '../../game/sim/beacons';
 import { fleetUpkeep, warshipCount } from '../../game/sim/fleets';
 
@@ -94,7 +95,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         <span class={`mono ${s.gfe < 0.7 ? 'warn' : 'dim'}`}>{pct(s.gfe)}</span>
       </div>
       {s.era === 'dark' && (
-        <div class="res" data-tip="Continuity: how intact the pattern of you still is. Every cycle in the dark loses a little. At zero, you fade.">
+        <div class="res" data-tip={`Continuity: how intact the pattern of you still is. Every turn in the dark costs some of it: ${n1(continuityLoss(s, false))} a turn now, and ${DARK_STARVE} more each turn the reserve is empty, with nothing left to correct the errors.\nError-Correction Arrays keep the minds of their own settlement; the Long Sleep and the weave keep more. At zero, you fade.`}>
           <Icon name="continuity" size="lg" />
           <div class="col" style={{ gap: '2px' }}>
             <span class={`mono ${civ.continuity < 30 ? 'bad' : ''}`}>{n0(civ.continuity)}</span>

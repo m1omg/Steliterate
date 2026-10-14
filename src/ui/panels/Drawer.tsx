@@ -1733,8 +1733,8 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
           <div class="warn" style={{ fontSize: '13.5px', marginBottom: '8px' }}>
             <Icon name="warning" />{' '}
             {hunter.systemId
-              ? 'Part of a swarm came here for this ship. It strikes each turn the ship stays; once the ship is gone, it goes back to its swarm.'
-              : `Part of the swarm at ${s.systems[hunter.from ?? '']?.name ?? 'a star nearby'} is coming for this ship. A ship under way is safe from it; once the ship is gone, it goes back to its swarm.`}
+              ? 'Part of a swarm came here for this ship. It strikes each turn the ship stays; once the ship is gone, it goes on to our nearest settlement.'
+              : `Part of the swarm at ${s.systems[hunter.from ?? '']?.name ?? 'a star nearby'} is coming for this ship. A ship under way is safe from it; once the ship is gone, it goes on to our nearest settlement.`}
           </div>
         )}
         {!here && f.to && (
@@ -1994,7 +1994,7 @@ function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
         <div class="row wrap" style={{ marginTop: '6px' }}>
           <span class={`chip ${sw.tamed ? 'neon' : 'danger'}`}>{sw.tamed ? 'answers to us' : sw.awake ? 'awake' : 'dormant'}</span>
           {sw.prey && s.fleets[sw.prey] && (
-            <span class="chip danger" data-tip="Part of a swarm sent after one of our ships: it strikes that ship wherever it finds it stopped, and once the ship is gone it goes back to its swarm.">
+            <span class="chip danger" data-tip="Part of a swarm sent after one of our ships: it strikes that ship wherever it finds it stopped, and once the ship is gone it goes on to the nearest settlement of the ship’s people.">
               after {s.fleets[sw.prey].name}
             </span>
           )}

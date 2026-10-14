@@ -2833,3 +2833,40 @@ Positronium now does something in the late game.
   weave in 2 games: it is a refuge for a civilization short of energy in the window, which the
   black holes now seldom leave one. The first builds lost 5 to 9 victories, all the autoplayer's
   research and its nets (above).
+
+## Harder (14 Oct, the player's word)
+
+Asked whether the game should be harder now that 71% of autoplayed games survive (since 3-4 the
+vaults drift to the Heart and live off its spin, where before they starved at small holes), the
+player: "make it harder pls". Two changes, each grounded, neither undoing the drift or the Passage:
+
+- **The dark costs what it should** (`sim/continuity.ts`, new). In the Dark Era an empty reserve
+  costs Continuity 10 a turn, not 5: with nothing to spend, nothing is left to correct the errors
+  with (erasing a bit costs at least kT ln 2, even at the horizon's 10⁻³⁰ K; Landauer 1961, now in
+  the Codex with Dyson and Krauss & Starkman). Error-Correction Arrays keep the pattern of their
+  own settlement's minds and sleepers: our loss is the mean over our settlements, weighed by who
+  is where. Before, every array anywhere multiplied the whole civilization's loss, so arrays in
+  many settlements took it to nothing: in harness games with ten settlements Continuity stopped
+  falling altogether. A turn still costs 2.2 before anything keeps it; the Long Sleep leaves 0.35
+  of that, the weave half for its share. The HUD's Continuity tip says what a turn costs now, and
+  the Manual has the rules. On its own, 300 games: 186 survive (217), 68 victories (69); The Fade
+  23 → 56.
+- **Swarms go on to our settlements.** A part sent after one of our ships, finding the ship gone
+  (moved on or lost), goes on to the nearest settlement of the ship's people, as the first swarm's
+  part does, a swarm of its own from then on, which feeds there and strikes the settlement as any
+  swarm (where they have just settled the very star, an ark come down, it turns on them there);
+  back to its swarm only if they have no settlement (or live in Communion). This is the
+  harsher version offered on 11 Oct, which then cost 18 to 30 of 300 games. The ship's and the
+  swarm's panels and the Manual say so. On top of the first, 300 games: 167 (186), 67 victories;
+  Silence in the Degenerate Age 12 → 23, The Will Fails 5 → 14.
+- **Checks:** `unit/continuity` (new: a turn's cost, the arrays by settlement, the sleep, an empty
+  reserve, a whole turn in the dark); `unit/hunt` for the new rule, the old one where we have no
+  settlement, and a part turning on a settlement founded where it was. `browser/systems-tab` sets
+  the Tide before it places its collision stars: the game it autoplays now slows to the slowest
+  pace just before, and the next turn, a hundred times longer, outlasted its "long" star.
+- **Balance:** 167 of 300 standard competent games survive, 67 victories, a Degenerate Age of 71
+  turns; 900 games 520 / 218 / 72 (636 / 226 / 74 at 3-5): decay 251 / 450 (330), stable 164 /
+  239 (170), curvature 105 / 211 (136). Victories as before (the first Last Garden among them).
+  Games now end across the ages: of the 380 defeats, 39 in the Dusk, 73 in the Degenerate Age,
+  139 in the Black Hole Age and 129 in the Dark Era. For comparison, the Harsh setting had 198 of
+  300 before these changes, and `main`'s game 456 of 900.

@@ -91,4 +91,6 @@ and the autoplayer through the end of matter, `24fbc18`): 175 of 300, 62 victori
 530 / 219, a Degenerate Age of 74 turns; by fate decay 49%, stable 71%, curvature 66%. With part
 3-4 (drifting between black holes, the Horizon form): 217 of 300, 69 victories; 900 games 639 /
 226, a Degenerate Age of 74 turns; by fate decay 73%, stable 71%, curvature 66%. With part 3-5
-(positronium): 900 games 636 / 226 / 74, decay and stable as before game for game.
+(positronium): 900 games 636 / 226 / 74, decay and stable as before game for game. Harder (14 Oct,
+the player: "make it harder pls"; the dark's Continuity, swarms on to our settlements): 167 of
+300, 67 victories; 900 games 520 / 218 / 72; by fate decay 56%, stable 69%, curvature 50%.

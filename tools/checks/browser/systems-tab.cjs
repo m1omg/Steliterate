@@ -69,6 +69,9 @@ run(async () => {
   // three stars made by hand: one with several turns left, one going out this turn, one already out
   const made = await page.evaluate(() => {
     const s = window.__stel.state();
+    // at the Tide: the autoplayer may have just slowed to its slowest pace (100× the turn), and a
+    // star with 40 of the last turn's lengths left would then go out within the next one
+    s.civ.pace = 0;
     const L = s.turnLength;
     const bds = Object.values(s.systems).filter((x) => x.primary.kind === 'brown_dwarf' && !x.gone && !x.ejected && s.civ.known[x.id]);
     const [a, b, c] = bds;

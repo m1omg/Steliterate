@@ -152,7 +152,7 @@ export const HUNT_MIN_SIZE = 2;
  * An awake swarm notices the nearest of our ships stopped within HUNT_REACH, at a star where we
  * have no settlement and no swarm sits, and may send part of itself after it, as the first swarm
  * does. The part keeps after that ship (`prey`): it strikes it wherever it finds it stopped
- * (`swarmsHunt`), and once the ship is gone it goes back to its swarm. One part per
+ * (`swarmsHunt`), and once the ship is gone it goes on to the ship's nearest settlement (`loseTheScent`). One part per
  * ship; not before the first swarm's own moment; noticed half as often under the Blackout.
  */
 function sendHunter(state: GameState, sw: Swarm, sys: StarSystem, rng: { chance(p: number): boolean }, noticed: (owner: string) => number) {
@@ -209,13 +209,32 @@ function headForNest(state: GameState, sw: Swarm): boolean {
   return true;
 }
 
+/** The star of this civilization's settlement nearest to `here` (it may be `here`); null if it has none. */
+function nearestOf(state: GameState, owner: string, here: StarSystem): StarSystem | null {
+  let best: StarSystem | null = null;
+  let d = Infinity;
+  for (const c of allColonies(state)) {
+    if (c.owner !== owner) continue;
+    const s = state.systems[c.systemId];
+    const x = distLy(here, s);
+    if (x < d) {
+      best = s;
+      d = x;
+    }
+  }
+  return best;
+}
+
 /**
- * A part sent after a ship, where the ship is not (moved on, or gone): it forgets it and goes back
- * to the swarm it broke away from (`nest`), following it if it has moved on; with that swarm gone
- * or tamed, it stays where it is as a swarm of its own. True if it set off. Takes no random draw.
+ * A part sent after a ship, where the ship is not (moved on, or gone): it forgets it and goes on to
+ * the warmth the ship came from, the nearest settlement of the ship's civilization, as the first
+ * swarm's part does, a swarm of its own from then on. With none to go to, it goes back to the swarm
+ * it broke away from (`nest`), following it if it has moved on; with that swarm gone or tamed, it
+ * stays where it is as a swarm of its own. True if it set off (false where it stays: the ship's
+ * people settled right there, and it turns on them as any swarm). Takes no random draw.
  *
- * (11 Oct: going on to our nearest settlement instead, as the first swarm's part does, cost 18 to 30
- * of 300 harness games, even with the autoplayer bringing its idle probes home.)
+ * (11 Oct it went back to its swarm, the gentler version, chosen then; 14 Oct, the player: "make
+ * it harder pls".)
  */
 function loseTheScent(state: GameState, sw: Swarm): boolean {
   if (!sw.prey || !sw.systemId) return false;
@@ -223,11 +242,27 @@ function loseTheScent(state: GameState, sw: Swarm): boolean {
   if (f && f.at === sw.systemId && f.ships.length) return false;
   delete sw.prey;
   const here = state.systems[sw.systemId];
-  if (!headForNest(state, sw)) return false;
-  const what = f ? `What came for ${f.name} at ${here.name} found it gone` : `What came for our ship at ${here.name} has had it`;
   const owner = state.civs[f?.owner ?? sw.preyOwner ?? state.player];
-  if (owner) logTo(state, owner, `${what}, and is going back to its swarm.`, 'info', here.id, f?.id);
   delete sw.preyOwner;
+  const what = f ? `What came for ${f.name} at ${here.name} found it gone` : `What came for our ship at ${here.name} has had it`;
+  const warmth = owner && !communes(state, owner.id) ? nearestOf(state, owner.id, here) : null;
+  if (warmth) {
+    delete sw.nest;
+    // (the ship's people settled right here, an ark that came down: it turns on them where it is)
+    if (warmth.id === here.id) {
+      logTo(state, owner, `${what}, and has turned on our settlement there.`, 'bad', here.id, f?.id);
+      return false;
+    }
+    sw.from = here.id;
+    sw.to = warmth.id;
+    sw.systemId = null;
+    sw.traveled = 0;
+    sw.distance = distLy(here, warmth);
+    logTo(state, owner, `${what}, and is heading for the warmth of ${warmth.name}.`, 'bad', warmth.id, f?.id);
+    return true;
+  }
+  if (!headForNest(state, sw)) return false;
+  if (owner) logTo(state, owner, `${what}, and is going back to its swarm.`, 'info', here.id, f?.id);
   return true;
 }
 
@@ -512,7 +547,7 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
         continue;
       }
 
-      // sent after a ship that has gone: back to its swarm
+      // sent after a ship that has gone: on to the ship's people, or back to its swarm
       if (loseTheScent(state, sw)) continue;
 
       // eat

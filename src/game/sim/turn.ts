@@ -12,7 +12,8 @@ import { completePassage } from './passage';
 import { flowComes, theLongFlow } from './flow';
 import { theThinning } from './thinning';
 import { completeHorizon, horizonGone } from './horizon';
-import { POSITRONIUM_DECAY, completeWeave, positroniumComes, positroniumHere, theWeaveEnds, turnsToDecay, wovenShare } from './positronium';
+import { POSITRONIUM_DECAY, completeWeave, positroniumComes, positroniumHere, theWeaveEnds, turnsToDecay } from './positronium';
+import { continuityLoss } from './continuity';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
 import { battlesTurn } from './conflict';
@@ -701,22 +702,10 @@ function growth(state: GameState, t: CivTurn) {
   }
 }
 
-/** Continuity in the Dark Era: every cycle risks a little of the pattern. */
+/** Continuity in the Dark Era: every cycle risks a little of the pattern (continuity.ts). */
 function continuity(state: GameState, t: CivTurn) {
   if (calendarEra(state) !== 'dark') return;
-  const civ = state.civ;
-  let decay = 2.2;
-  for (const c of colonies(state)) {
-    for (const [id, n] of Object.entries(c.structures)) {
-      const d = STRUCTURE_BY_ID[id];
-      if (d?.continuityMult && n) decay *= Math.pow(d.continuityMult, n);
-    }
-  }
-  if (civ.dormant) decay *= 0.35;
-  // minds woven through the positronium keep their pattern better: half the loss for their share
-  decay *= 1 - 0.5 * wovenShare(state);
-  if (t.starving) decay += 5;
-  civ.continuity = Math.max(0, civ.continuity - decay);
+  state.civ.continuity = Math.max(0, state.civ.continuity - continuityLoss(state, t.starving));
 }
 
 /** 8. What has reached us: signals, their deliveries, the turn's events and forecasts. Returns the signals that arrived. */
