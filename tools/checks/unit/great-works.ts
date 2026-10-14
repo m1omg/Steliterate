@@ -58,6 +58,27 @@ const heartGame = (fate: Fate = 'decay', at = 50): GameState => {
   check(!o, 'without the Slow Ones’ trust it does not (as before)');
 }
 
+// a Work finished in the turn Continuity runs out: it was done before the turn's end (and is
+// announced as it completes), so it stands, ahead of The Fade (the stable fate's seed 24757 lost it)
+{
+  const s = heartGame('decay', 101);
+  s.era = 'dark';
+  s.years = Infinity;
+  s.civ.continuity = 0;
+  for (const c of Object.values(s.colonies)) if (c.owner === s.player) c.pops.coldminds = 6;
+  s.civ.works.hibernal_cascade = workCost(s, 'hibernal_cascade');
+  const o = checkEndings(s);
+  check(o?.kind === 'victory' && o.ending === 'The Long Thought', `a Work finished as Continuity runs out stands (${o?.kind}: ${o?.ending})`);
+  const t = heartGame('decay', 101);
+  t.era = 'dark';
+  t.years = Infinity;
+  t.civ.continuity = 0;
+  for (const c of Object.values(t.colonies)) if (c.owner === t.player) c.pops.coldminds = 6;
+  t.civ.works.hibernal_cascade = workCost(t, 'hibernal_cascade') - 1;
+  const f = checkEndings(t);
+  check(f?.kind === 'defeat' && f.ending === 'The Fade', `one a little short does not: The Fade (${f?.ending})`);
+}
+
 // ---------------------------------------------------------------- positronium
 const heard = (s: GameState) => s.civ.pending.filter((p) => p.defId === 'positronium_forms').length;
 const turnFrom = (fate: Fate, at: number) => {

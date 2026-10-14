@@ -13,6 +13,7 @@
 // The universe's part is here (no draws: every date is a hash or a mass); what each civilization
 // makes of it is in `handleNotes` (turn.ts).
 
+import { STRUCTURE_BY_ID } from '../data/structures';
 import { ERA_BY_ID, stepTime } from '../eras';
 import { fateOf } from '../fate';
 import type { EvolutionNote } from '../physics';
@@ -139,8 +140,9 @@ export function deepTime(state: GameState, from: number, to: number): EvolutionN
           const b = state.bodies[id];
           if (b && b.kind !== 'deep') b.dissolved = true;
         }
-        // nothing of matter is left: the system goes, unless something leptonic stays in it
-        const leptonic = allColonies(state).some((c) => c.systemId === sys.id && formOf(c) !== 'baryonic');
+        // nothing of matter is left: the system goes, unless something leptonic stays in it (a
+        // settlement that made the Passage, or minds on decay-proof substrate, which go on: turn.ts)
+        const leptonic = allColonies(state).some((c) => c.systemId === sys.id && (formOf(c) !== 'baryonic' || Object.entries(c.structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.decayProof)));
         if (!leptonic) sys.gone = true;
         notes.push({ systemId: sys.id, kind: 'collapse' });
       }
@@ -167,6 +169,23 @@ export function turnsToEta(state: GameState, eta: number, pace: number, max = 20
     years = step.years;
     now = step.eta;
     if (Math.log10(now) >= ERA_BY_ID.dark.endEta + 0.5) return Infinity;
+  }
+  return Infinity;
+}
+
+/**
+ * Turns from the Dark Era's start (η 100) to η `eta` at the Tide, up to `max` (Infinity past
+ * them): for a forecast made before the age begins, when `turnsToEta` cannot count yet.
+ */
+export function darkTurnsAtTide(state: GameState, eta: number, max = 200): number {
+  let years = ERA_BY_ID.dark.startYears;
+  let now = Math.log10(years);
+  for (let n = 1; n <= max; n++) {
+    const step = stepTime('dark', years, now, 0, state.settings.length);
+    if (step.eta >= eta) return n;
+    if (!(step.eta > now)) return Infinity;
+    years = step.years;
+    now = step.eta;
   }
   return Infinity;
 }

@@ -7,7 +7,7 @@ import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
 import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal, StarSystem } from '../types';
 import { THREADS } from '../types';
-import { burstShare, decayProof, finalBurstCatch, goOnAlone, greatEvaporation, moveToHole, runCrossing } from './crossing';
+import { burstShare, decayProof, finalBurstCatch, goLeptonic, goOnAlone, greatEvaporation, moveToHole, protocolsMult, runCrossing } from './crossing';
 import { completePassage } from './passage';
 import { flowComes, theLongFlow } from './flow';
 import { theThinning } from './thinning';
@@ -873,14 +873,23 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
       }
       case 'collapse': {
         // its matter tunnelled into black holes, which evaporated at once (deeptime.ts): what is of
-        // matter is lost; what is leptonic goes on, in the Deep where the system was
+        // matter is lost; what is leptonic goes on, in the Deep where the system was. A settlement
+        // of matter with decay-proof substrate goes on as at the end of matter in the other fates
+        // (goLeptonic): what was re-encoded, its Kin and the rest of what was matter lost
         let lost = 0;
         for (const c of colonies(state)) {
           if (c.systemId !== sys.id) continue;
-          if (formOf(c) === 'baryonic') {
+          if (formOf(c) === 'baryonic' && !decayProof(c)) {
             lost += popsOf(c) + c.cryo;
             destroyColony(state, c, 'its matter tunnelled into black holes');
-          } else if (state.bodies[c.bodyId]?.kind !== 'deep') moveToHole(state, c, sys);
+            continue;
+          }
+          if (formOf(c) === 'baryonic') {
+            const gone = goLeptonic(state, c, protocolsMult(state, 'degenerate'));
+            lost += gone;
+            log(state, `${c.name}: what was re-encoded on its substrate goes on as leptonic${gone ? `; ${gone} of its people, made of matter, were lost` : ''}.`, 'bad', sys.id);
+          }
+          if (state.bodies[c.bodyId]?.kind !== 'deep') moveToHole(state, c, sys);
         }
         flashes.push(sys);
         if (!state.civ.fired.tunnelling_collapse && (mine || seen || colonies(state).length)) queueEvent(state, 'tunnelling_collapse', { systemId: sys.id });

@@ -859,7 +859,7 @@ export const EVENTS: EventDef[] = [
     once: true,
     // the first system to tunnel into black holes, matter stable (deeptime.ts; Dyson 1979)
     text: (s, d) =>
-      `The iron at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'} is gone. Given long enough, any lump of matter can tunnel all at once into a black hole (if holes that small can exist, and a whole star can, in any case), and such a hole evaporates almost as soon as it forms, in a flash. Somewhere between 10^(10²⁶) and 10^(10⁷⁶) years this happens to everything: no one can say which system goes when, only that none will be left. Whatever is still made of matter goes with it; what made the Passage stays, in the dark where the system was. Burst Catchers bank the flashes.`,
+      `The iron at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'} is gone. Given long enough, any lump of matter can tunnel all at once into a black hole (if holes that small can exist, and a whole star can, in any case), and such a hole evaporates almost as soon as it forms, in a flash. Somewhere between 10^(10²⁶) and 10^(10⁷⁶) years this happens to everything: no one can say which system goes when, only that none will be left. Whatever is still made of matter goes with it; what made the Passage stays, in the dark where the system was, and so do minds on decay-proof substrate, without the Kin and what has no leptonic form. Burst Catchers bank the flashes.`,
     choices: [
       { label: 'Watch them go', hint: 'Insight +40.', run: (s) => { insight(s, 40); } },
       { label: 'Hold to what is left', hint: 'Resolve +3.', run: (s) => { res(s, 3); } },

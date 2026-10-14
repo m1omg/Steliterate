@@ -58,12 +58,14 @@ export function checkEndings(state: GameState, atLastHorizon = false): Outcome |
     if (!atLastHorizon) civ.flags.despair = (civ.flags.despair ?? 0) + 1;
     if ((civ.flags.despair ?? 0) >= 6) return end(state, 'defeat', 'The Will Fails');
   } else if (!atLastHorizon) civ.flags.despair = 0;
-  if (calendarEra(state) === 'dark' && civ.continuity <= 0) return end(state, 'defeat', 'The Fade');
+  // a Great Work finished this turn was finished before the turn's end took the last of Continuity
+  // (it is announced as it completes): it stands, ahead of The Fade
   if (atLastHorizon && (civ.works.aeon_seed ?? 0) >= workCost(state, 'aeon_seed') && workRequirementMet(state, 'aeon_seed')) return end(state, 'victory', WORK_BY_ID.aeon_seed.ending);
   for (const id of Object.keys(WORK_BY_ID)) {
     if (id === 'aeon_seed') continue;
     if ((civ.works[id] ?? 0) >= workCost(state, id) && workRequirementMet(state, id)) return end(state, 'victory', WORK_BY_ID[id].ending);
   }
+  if (calendarEra(state) === 'dark' && civ.continuity <= 0) return end(state, 'defeat', 'The Fade');
   if (calendarEra(state) === 'dark' && Math.log10(state.eta) >= 122) return end(state, 'endurance', ENDURANCE_ENDING.ending);
   return null;
 }

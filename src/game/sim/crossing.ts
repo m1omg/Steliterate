@@ -339,7 +339,7 @@ export const CARRIED = 0.35;
  * sleepers, made of matter, are gone, and re-encoding the Lattice costs half of it (`mult` of
  * that, under the protocols), once. Returns how many were lost.
  */
-function goLeptonic(state: GameState, c: Colony, mult: number): number {
+export function goLeptonic(state: GameState, c: Colony, mult: number): number {
   // (written into a hole's horizon or woven through the positronium, it is not matter, and keeps all it has)
   if (formOf(c) === 'horizon' || formOf(c) === 'positronium') return 0;
   const was = formOf(c) === 'leptonic';

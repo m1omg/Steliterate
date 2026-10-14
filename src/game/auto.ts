@@ -28,7 +28,8 @@ import {
   structureCheck,
 } from './sim/actions';
 import { capacity, reserveCapacity } from './sim/economy';
-import { workRequirementMet } from './sim/endings';
+import { workCost, workRequirementMet } from './sim/endings';
+import { DARK_STARVE, continuityLoss } from './sim/continuity';
 import { computeMods, strainFor } from './sim/mods';
 import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
@@ -1140,6 +1141,38 @@ function planPace(state: GameState) {
   else if (civ.pace < 0 && civ.energy > cap * 0.5 && netAt(civ.pace + 1) > 0) setPace(state, civ.pace + 1);
 }
 
+/** The Long Sleep in the dark, as long as it can be taken at once (actions.ts). */
+const DARK_SLEEP_FOR = 20;
+
+/**
+ * Matter stable, once everything is iron: nothing will come in again (deeptime.ts). Where the
+ * reserve would not last to the end of the age at the rate it is going, and no Great Work would
+ * be done while Continuity holds, the Long Sleep, Dyson's hibernation: a tenth of the upkeep (three
+ * tenths while matter flows) and about a third of what a turn takes from Continuity. Awake again,
+ * it looks again. (Our own play: another civilization keeps to its way.)
+ */
+function planDarkSleep(state: GameState) {
+  const civ = state.civ;
+  if (civ.id !== state.player || civ.dormant || plannedFate(state) !== 'stable' || state.era !== 'dark' || !ironAge(state)) return;
+  if (!hasTech(state, 'hibernation_protocols')) return;
+  const pr = project(state);
+  const drain = pr.energyOut - pr.energyIn;
+  if (!(drain > 0)) return;
+  const lasts = civ.energy / drain;
+  if (lasts >= darkTurnsLeft(state)) return;
+  // (a Great Work done while Continuity holds is worth staying awake for, even with the reserve
+  // run dry for its last turns: then each turn costs it DARK_STARVE more; a turn's margin)
+  if (civ.work) {
+    const need = workCost(state, civ.work) - (civ.works[civ.work] ?? 0);
+    const per = (civ.flags.last_insight ?? 0) * (civ.researching ? 0.5 : 1);
+    const loss = continuityLoss(state, false);
+    const after = civ.continuity - lasts * loss;
+    const holds = after > 0 ? lasts + after / (loss + DARK_STARVE) : civ.continuity / Math.max(0.01, loss);
+    if (per > 0 && need / per <= holds - 1) return;
+  }
+  longSleep(state, DARK_SLEEP_FOR);
+}
+
 function planWorks(state: GameState) {
   const civ = state.civ;
   if (civ.work) return;
@@ -1184,6 +1217,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planSignals(state);
   planPace(state);
   planWorks(state);
+  planDarkSleep(state);
   planDefence(state);
   if (strategy === 'warlike') planWar(state);
 }

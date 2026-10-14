@@ -187,6 +187,28 @@ function settleAt(s: GameState, sys: StarSystem, form: Colony['form'] = 'baryoni
   check(!!still && formOf(still) === 'leptonic' && s.bodies[still.bodyId].kind === 'deep', `what made the Passage goes on, in the Deep (${still?.name})`);
   check(s.civ.energy - e0 >= BURST_CATCH, `its Burst Catcher banks its own system's flash (+${Math.round(s.civ.energy - e0)})`);
   check(s.civ.pending.some((p) => p.defId === 'tunnelling_collapse'), 'the first is an event');
+  // a settlement of matter with decay-proof substrate goes on, as at the end of matter in the other
+  // fates (the forecast says so): what was re-encoded, leptonic, in the Deep; its Kin, its sleepers
+  // and what has no leptonic form lost
+  {
+    const t = dark(Math.pow(10, 25.9));
+    const sys2 = Object.values(t.systems).filter((x) => hasMatter(t, x) && !x.special && x.id !== sys.id && x.bodies.filter((id) => t.bodies[id].kind !== 'deep' && !t.bodies[id].rogue && !t.bodies[id].colonyId).length >= 2)[0];
+    for (const c of colonies(t)) if (c.systemId === sys2.id) delete t.colonies[c.id];
+    const kept = settleAt(t, sys2);
+    kept.pops = pops({ kin: 3, echoes: 3, coldminds: 2 });
+    kept.cryo = 2;
+    kept.structures = { lepton_substrate: 1, fusion_plant: 1 };
+    const bare = settleAt(t, sys2);
+    const at2 = collapseLambda(sys2);
+    const n2 = deepTime(t, Math.pow(10, at2 - 0.01), Math.pow(10, at2 + 0.01));
+    check(n2.some((n) => n.systemId === sys2.id && n.kind === 'collapse') && !sys2.gone, 'with minds on decay-proof substrate there, the system stays');
+    handleNotes(t, n2);
+    const on = t.colonies[kept.id];
+    check(!t.colonies[bare.id], 'a settlement of matter with nothing decay-proof is lost');
+    check(!!on && formOf(on) === 'leptonic' && t.bodies[on.bodyId].kind === 'deep' && on.pops.kin === 0 && on.cryo === 0 && on.pops.echoes === 3 && on.pops.coldminds === 2, `one with Leptonic Substrate goes on, leptonic, in the Deep: its Kin and sleepers lost, its minds kept (${on ? `${on.pops.echoes} Echoes, ${on.pops.coldminds} Coldminds` : 'gone'})`);
+    check(!!on && (on.structures.lepton_substrate ?? 0) === 1 && !on.structures.fusion_plant, 'keeping its substrate, and nothing that has no leptonic form');
+  }
+
   // and by 10^(10^76) nothing of matter is left anywhere
   deepTime(s, Math.pow(10, 25.9), Math.pow(10, COLLAPSE_TO + 0.01));
   check(Object.values(s.systems).every((x) => !hasMatter(s, x)) && s.flags.matter_gone !== undefined, 'by 10^(10^76) years no matter is left, and matter is gone');
@@ -217,6 +239,44 @@ function settleAt(s: GameState, sys: StarSystem, form: Colony['form'] = 'baryoni
   ec.last = { ...(ec.last ?? ({} as NonNullable<Colony['last']>)), industry: 40 } as Colony['last'];
   autoPlay(early, 'competent');
   check(!ec.queue.some((q) => q.kind === 'passage'), `with it ${turnsToCollapse(early, early.civ.pace)} turns off, not yet`);
+}
+
+// the autoplayer once everything is iron: the Long Sleep where the reserve would not last the age
+// and no Great Work would be done first
+{
+  const iron = (energy: number) => {
+    const s = dark(1600);
+    const c = s.colonies[s.civ.capitalId!];
+    s.civ.techs.push('hibernation_protocols');
+    s.bodies[c.bodyId].coreHeat = 0;
+    Object.assign(s.systems[c.systemId].primary, { kind: 'black_dwarf', mass: 0.6, lum: 0 });
+    c.pops = pops({ echoes: 2, coldminds: 4 });
+    c.cryo = 0;
+    c.structures = { mag_shield: 1, core_stimulator: 1, orbital_mirrors: 1, atmosphere_works: 1, preservation_array: 2, cold_vault: 1 };
+    c.queue = [];
+    s.civ.energy = energy;
+    s.civ.matter = 0;
+    s.civ.researching = null;
+    s.civ.pending = [];
+    return s;
+  };
+  const short = iron(60);
+  autoPlay(short, 'competent');
+  check(short.civ.dormant && short.civ.sleepTurns > 0, `a reserve that would not last the age: the Long Sleep (${short.civ.sleepTurns} turns)`);
+  const plenty = iron(50000);
+  autoPlay(plenty, 'competent');
+  check(!plenty.civ.dormant, 'one that would: awake');
+  const working = iron(60);
+  working.civ.work = 'hibernal_cascade';
+  working.civ.works.hibernal_cascade = 1490;
+  working.civ.flags.last_insight = 40;
+  autoPlay(working, 'competent');
+  check(!working.civ.dormant, 'a Great Work done before the reserve runs out: awake for it');
+  const before = iron(60);
+  before.eta = 1400;
+  before.years = Infinity;
+  autoPlay(before, 'competent');
+  check(!before.civ.dormant, 'before the iron: awake');
 }
 
 done('STABLE DARK');
