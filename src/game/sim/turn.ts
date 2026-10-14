@@ -323,11 +323,11 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
     coolAccord(state);
     if (state.civ.wakeBonus > 0 && !state.civ.dormant) state.civ.wakeBonus--;
     // ---------------------------------------------- 6. fleets, hazards, other minds
-    advanceFleets(state, step.turnLength, c.mods);
+    const flown = advanceFleets(state, step.turnLength, c.mods);
     surveyWhereStationed(state);
     repairFleets(state);
     // look around before exploring ships set off again, so they scan every star they reach
-    updateDetection(state, c.mods);
+    updateDetection(state, c.mods, flown);
     firstSwarm(state);
   });
   // swarms go for ships that have just stopped at their star, before exploring probes move on

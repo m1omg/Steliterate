@@ -1,7 +1,7 @@
 import { SHIP_BY_ID, isWarship } from '../data/ships';
 import { residentsOf } from './homes';
 import { STRUCTURE_BY_ID } from '../data/structures';
-import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../types';
+import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId, Vec3 } from '../types';
 import { THREADS } from '../types';
 import { formatDistance } from '../eras';
 import { boilingAway, frozenHard } from '../physics';
@@ -114,16 +114,32 @@ export function isLance(f: Fleet): boolean {
   return f.ships.length > 0 && f.ships.every((s) => SHIP_BY_ID[s.cls]?.lance);
 }
 
-export function advanceFleets(state: GameState, L: number, mods: Mods) {
+/** The stretch a fleet flew this turn, from where it was to where it is now (true light-years). */
+export interface Flown {
+  f: Fleet;
+  a: Vec3;
+  b: Vec3;
+}
+
+const along = (p: Vec3, q: Vec3, t: number): Vec3 => ({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t });
+
+/** Moves every fleet under way, and returns the stretches flown (for what they see on the way). */
+export function advanceFleets(state: GameState, L: number, mods: Mods): Flown[] {
+  const flown: Flown[] = [];
   for (const f of fleets(state)) {
     if (!f.to || f.at) continue;
     const step = isFinite(L) ? (isLance(f) ? Math.max(mods.speed, LANCE_SPEED) : mods.speed) * L : Infinity;
+    const t0 = f.traveled;
     f.traveled = Math.min(f.distance, f.traveled + step);
+    const p = f.from ? state.systems[f.from]?.phys : undefined;
+    const q = state.systems[f.to]?.phys;
+    if (p && q && f.distance > 0) flown.push({ f, a: along(p, q, t0 / f.distance), b: along(p, q, f.traveled / f.distance) });
     if (f.traveled >= f.distance) {
       f.at = f.to;
       arrive(state, f);
     }
   }
+  return flown;
 }
 
 function arrive(state: GameState, f: Fleet) {
@@ -291,21 +307,53 @@ export function destroyColony(state: GameState, c: Colony, reason: string) {
   logTo(state, owner, `${c.name} is lost: ${reason}`, 'bad', c.systemId);
 }
 
-/** Systems within detection range of any settlement or fleet become known. */
 /** Past this, even a ship's long-baseline scan picks nothing out (ly). */
 const SCAN_REACH = 60000;
 /** A ship scans for new stars only once no known star this close is still uncharted (ly). */
 const SCAN_LOCAL = 2000;
 
+/** How far a fleet sees, stopped or under way: as far as a settlement, a survey ship three times as far, a Picket twice. */
+function eyesOf(f: Fleet, mods: Mods): number {
+  return mods.detect * Math.max(canSurvey(f) ? 3 : 1, ...f.ships.map((s) => SHIP_BY_ID[s.cls]?.eyes ?? 1));
+}
+
+/** How far a point lies from the stretch from a to b (ly). */
+function fromStretch(s: Vec3, a: Vec3, b: Vec3): number {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+  const len2 = dx * dx + dy * dy + dz * dz;
+  const t = len2 > 0 ? Math.min(1, Math.max(0, ((s.x - a.x) * dx + (s.y - a.y) * dy + (s.z - a.z) * dz) / len2)) : 0;
+  return Math.hypot(s.x - (a.x + dx * t), s.y - (a.y + dy * t), s.z - (a.z + dz * t));
+}
+
+/**
+ * The nearest stars no one has seen yet from a point, for a long-baseline look: the far outliers
+ * in the void stay hidden, and past SCAN_REACH nothing is picked out.
+ */
+function nearestUnseen(state: GameState, here: Vec3, n: number): { s: StarSystem; ly: number }[] {
+  return Object.values(state.systems)
+    .filter((s) => !state.civ.known[s.id] && !s.gone && s.special !== 'outlier')
+    .map((s) => ({ s, ly: Math.hypot(s.phys.x - here.x, s.phys.y - here.y, s.phys.z - here.z) }))
+    .filter((x) => x.ly <= SCAN_REACH)
+    .sort((a, b) => a.ly - b.ly)
+    .slice(0, n);
+}
+
+/** Whether a star we know of but have not charted lies within SCAN_LOCAL of a point. */
+function unchartedNear(state: GameState, here: Vec3): boolean {
+  return Object.values(state.systems).some((s) => state.civ.known[s.id] === 1 && !s.gone && Math.hypot(s.phys.x - here.x, s.phys.y - here.y, s.phys.z - here.z) <= SCAN_LOCAL);
+}
+
 /**
  * What we can see. Settlements see as far as research allows; a ship sees from wherever it is
- * (a survey ship three times as far). And a ship at the edge of what is known (no uncharted
- * star it knows of within SCAN_LOCAL) takes a long-baseline look, once per system, and picks
- * out the nearest stars no one has seen yet (a survey ship three, any other ship one), so
- * exploring can always go on, even across the gulfs between clusters. The far outliers in the
- * void stay hidden.
+ * (a survey ship three times as far), and under way it sees, with the same eyes, every star near
+ * the stretch it flew this turn (`flown`, from advanceFleets). A ship at the edge of what is known
+ * (no uncharted star it knows of within SCAN_LOCAL) takes a long-baseline look, once per system,
+ * and picks out the nearest stars no one has seen yet (a survey ship three, any other ship one),
+ * so exploring can always go on, even across the gulfs between clusters; a survey ship under way
+ * takes one a turn. Seen is only seen: charting still needs a stop. The far outliers in the void
+ * stay hidden.
  */
-export function updateDetection(state: GameState, mods: Mods) {
+export function updateDetection(state: GameState, mods: Mods, flown: Flown[] = []) {
   const eyes = [
     ...colonies(state).map((c) => ({ sys: state.systems[c.systemId], range: mods.detect })),
     // Shared Watch: the stars our partners watch, we see too
@@ -315,24 +363,40 @@ export function updateDetection(state: GameState, mods: Mods) {
       .filter((e) => !!e.sys),
     ...fleets(state)
       .filter((f) => f.at)
-      .map((f) => ({ sys: state.systems[f.at!], range: mods.detect * Math.max(canSurvey(f) ? 3 : 1, ...f.ships.map((s) => SHIP_BY_ID[s.cls]?.eyes ?? 1)) })),
+      .map((f) => ({ sys: state.systems[f.at!], range: eyesOf(f, mods) })),
   ];
   for (const s of Object.values(state.systems)) {
     if (state.civ.known[s.id]) continue;
     if (eyes.some((e) => distLy(e.sys, s) <= e.range)) state.civ.known[s.id] = 1;
   }
+  // under way (part 1b): what lay near the way, and a survey ship's look from where it is now
+  // (a Kinetic Lance has no eyes; a ship that has stopped this turn looked from its star, above)
+  const seen: StarSystem[] = [];
+  for (const { f, a, b } of flown) {
+    if (isLance(f)) continue;
+    const range = eyesOf(f, mods);
+    for (const s of Object.values(state.systems)) {
+      if (state.civ.known[s.id] || s.gone || s.special === 'outlier') continue;
+      if (fromStretch(s.phys, a, b) <= range) {
+        state.civ.known[s.id] = 1;
+        seen.push(s);
+      }
+    }
+    if (f.at || !canSurvey(f) || unchartedNear(state, b)) continue;
+    for (const x of nearestUnseen(state, b, 3)) {
+      state.civ.known[x.s.id] = 1;
+      seen.push(x.s);
+    }
+  }
+  if (seen.length)
+    log(state, `Under way, our ships pick out ${seen.length === 1 ? 'a star' : `${seen.length} stars`} no one had seen: ${seen.slice(0, 4).map((s) => s.name).join(', ')}${seen.length > 4 ? ` and ${seen.length - 4} more` : ''}.`, 'info', seen[0].id);
   for (const f of fleets(state)) {
     if (!f.at || f.scanned === f.at) continue;
     const here = state.systems[f.at];
     // only from the edge of what is known: while an uncharted star lies close by, look there first
-    if (Object.values(state.systems).some((s) => state.civ.known[s.id] === 1 && !s.gone && distLy(here, s) <= SCAN_LOCAL)) continue;
+    if (unchartedNear(state, here.phys)) continue;
     f.scanned = f.at;
-    const found = Object.values(state.systems)
-      .filter((s) => !state.civ.known[s.id] && !s.gone && s.special !== 'outlier')
-      .map((s) => ({ s, ly: distLy(here, s) }))
-      .filter((x) => x.ly <= SCAN_REACH)
-      .sort((a, b) => a.ly - b.ly)
-      .slice(0, canSurvey(f) ? 3 : 1);
+    const found = nearestUnseen(state, here.phys, canSurvey(f) ? 3 : 1);
     for (const x of found) state.civ.known[x.s.id] = 1;
     if (found.length)
       log(state, `From ${here.name}, ${f.name} picks out ${found.length === 1 ? 'a distant star' : `${found.length} distant stars`}: ${found.map((x) => `${x.s.name} (${formatDistance(x.ly)})`).join(', ')}.`, 'info', here.id);

@@ -1,8 +1,7 @@
 # Build the game and publish it to the gh-pages branch, which GitHub Pages serves: `main` at the
 # root (today's game), and the new version, the `next` branch, at /next/ (without its own copy of
-# the archive, which the root already serves). A push runs the workflow file of the branch pushed:
-# this one, on `next`, rebuilds both. `main` keeps its own (main alone) until the player says to
-# put this one there too; until then, after a push to `main`, run this workflow on `next` again.
+# the archive, which the root already serves). A push runs the workflow file of the branch pushed,
+# so `main` and `next` carry this same file, and a push to either rebuilds both.
 name: Deploy to GitHub Pages
 
 on:
