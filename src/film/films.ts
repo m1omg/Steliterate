@@ -1,7 +1,8 @@
 import { Rng } from '../game/rng';
 import { pow10 } from '../ui/fmt';
-import { Hatch, Stipple, circlePath, corners, glow, grain, ink, rgba, ss, vignette, type Ctx, type Pt } from './draw';
+import { Stipple, circlePath, corners, glow, grain, ink, rgba, ss, vignette, type Ctx, type Pt } from './draw';
 import { blackHoleAge2 } from './blackhole';
+import { GREAT_EVAPORATION2, LAST_HORIZON2 } from './dark';
 import { DUSK2 } from './dusk';
 import { LAST_LIGHT2 } from './lastlight';
 
@@ -188,14 +189,6 @@ function burst(c: Ctx, x: number, y: number, r: number, S: number, p: number, co
   }
 }
 
-/** Faint, vast ellipses (the positronium), about a centre far off the frame. */
-function ellipses(c: Ctx, w: number, h: number, S: number, reveal: number, color: string, alpha: number) {
-  for (let k = 0; k < 6; k++) {
-    const r = S * (1.6 - 0.18 * k);
-    ink(c, circlePath(w * 1.15, h * 0.2, r, 200, 30 + k, Math.PI * 0.45, Math.PI * 1.15, 0.62), reveal, { width: S * 0.0012, color, seed: 30 + k, alpha });
-  }
-}
-
 /** A field of small stars, laid out once, each with a beat it goes out at (99: it stays), clear of where the words stand. */
 function starField(w: number, h: number, S: number, n: number, seed: number, outShare: number, outFrom: number, outTo: number) {
   const rng = new Rng(seed);
@@ -209,109 +202,7 @@ function starField(w: number, h: number, S: number, n: number, seed: number, out
   return out;
 }
 
-/** A dark sphere, hatched on its night side and inked round. */
-function hatchedBall(c: Ctx, x: number, y: number, R: number, S: number, hatch: Hatch, o: { color: string; rim: string; reveal?: number; alpha?: number; seed: number }) {
-  c.fillStyle = '#0a0807';
-  c.beginPath();
-  c.arc(x, y, R, 0, Math.PI * 2);
-  c.fill();
-  hatch.draw(c, x, y, R, { color: o.color, width: Math.max(1, S * 0.0014), reveal: o.reveal, alpha: o.alpha ?? 0.8 });
-  ink(c, circlePath(x, y, R, 60, o.seed), o.reveal ?? 1, { width: Math.max(1, S * 0.0016), color: o.rim, seed: o.seed, alpha: 0.8 });
-}
-
 // ------------------------------------------------------------------ the ages
-
-/** The Great Evaporation (where space unmakes matter): the last worlds evaporate into particles and light. */
-const GREAT_EVAPORATION = reel({ id: 'great_evaporation', name: 'The Great Evaporation', bpm: 96, beats: 16, accent: '#a48dff' }, (w, h, S, k) => {
-  const rng = new Rng(61);
-  const worlds = Array.from({ length: Math.round(6 * k + 3) }, (_, i) => ({
-    x: rng.range(0.14, 0.86) * w,
-    y: rng.range(0.2, 0.66) * h,
-    r: S * rng.range(0.03, 0.07),
-    at: 1 + i * 0.9,
-    hatch: new Hatch(62 + i, 18, [1, -0.3]),
-    motes: new Stipple(70 + i, Math.round(160 * k + 40), (r) => 1 - r * 0.5),
-  }));
-  return {
-    numeral: 'III',
-    title: 'The Great Evaporation',
-    sub: 'Every world, every dead star',
-    titleAt: 12,
-    eta: [88.6, 89.5],
-    narration: [
-      { from: 0.6, to: 6, text: 'Space took some 10⁹⁰ years to unmake it all, and now it is done.' },
-      { from: 6.3, to: 11.9, text: 'Only what was re-encoded in electrons and positrons goes on.' },
-    ],
-    shots: [
-      {
-        from: 0,
-        to: 12,
-        draw(c, b, t) {
-          worlds.forEach((x, i) => {
-            const gone = ss(x.at, x.at + 2.4, b);
-            if (gone < 1) {
-              c.save();
-              c.globalAlpha = 1 - gone;
-              hatchedBall(c, x.x, x.y, x.r, S, x.hatch, { color: INK, rim: INK, seed: 64 + i });
-              c.restore();
-            }
-            x.motes.draw(c, x.x, x.y, x.r * (1 + 2.2 * gone), { color: '#d2c6ff', dot: Math.max(1, S * 0.0018), show: gone * 1.3, gone: ss(x.at + 1.6, x.at + 3.4, b), t, alpha: 0.7 });
-          });
-          hole(c, w * 0.82, h * 0.3, S * 0.05, S, { disk: ss(6, 9, b) * 0.6, seed: 63 });
-        },
-      },
-    ],
-  };
-});
-
-/** The Last Horizon: the last black hole shrinks and bursts; after it only the dark, and what was saved. */
-const LAST_HORIZON = reel({ id: 'last_horizon', name: 'The Last Horizon', bpm: 96, beats: 16, accent: '#9aa3b0' }, (w, h, S, k, args) => {
-  const stable = args.fate === 'stable';
-  const iron = new Hatch(81, Math.round(30 * k + 10), [1, -0.3]);
-  const rng = new Rng(82);
-  const dead = Array.from({ length: Math.round(10 * k + 4) }, () => ({ x: rng.range(0.1, 0.9) * w, y: rng.range(0.18, 0.7) * h, r: S * rng.range(0.012, 0.03) }));
-  return {
-    numeral: 'IV',
-    title: 'The Dark Era',
-    sub: 'Age IV · nothing warmer than the sky',
-    titleAt: 12,
-    eta: [99.4, 100.2],
-    narration: [
-      { from: 0.6, to: 4, text: 'The last black hole has evaporated.' },
-      { from: 4.3, to: 8, text: 'There are no more sources, only what you saved.' },
-      { from: 8.3, to: 11.9, text: stable ? 'The matter is still here, as cold as the sky itself.' : 'Positronium atoms wider than the old observable universe drift through the dark.' },
-    ],
-    shots: [
-      {
-        from: 0,
-        to: 4,
-        draw(c, b) {
-          // the last horizon tightens, and goes
-          const shrink = 1 - ss(0.4, 3.0, b) * 0.85;
-          if (b < 3.1) hole(c, w * 0.5, h * 0.46, S * 0.12 * shrink, S, { disk: 0, ring: 1, seed: 83 });
-          burst(c, w * 0.5, h * 0.46, S * 0.3, S, ss(3.0, 4, b), '#f2eefc', 84);
-        },
-      },
-      {
-        from: 4,
-        to: 8,
-        draw(c, b) {
-          // nothing: the frame, the grain, and a faint afterglow going
-          glow(c, w * 0.5, h * 0.46, S * 0.5, '#c9ced6', 0.06 * (1 - ss(4, 7.5, b)));
-        },
-      },
-      {
-        from: 8,
-        to: 12,
-        draw(c, b) {
-          if (stable)
-            dead.forEach((d, i) => hatchedBall(c, d.x, d.y, d.r, S, iron, { color: '#9aa3b0', rim: '#b9c0ca', reveal: ss(8.2 + i * 0.12, 9 + i * 0.12, b), alpha: 0.7, seed: 85 + i }));
-          else ellipses(c, w, h, S, ss(8.2, 11.5, b), '#c9ced6', 0.35);
-        },
-      },
-    ],
-  };
-});
 
 // ------------------------------------------------------------------ the endings
 
@@ -482,8 +373,8 @@ export const FILMS: Record<FilmId, FilmDef> = {
   last_light: LAST_LIGHT2,
   great_decay: blackHoleAge2('great_decay', 'The Great Decay'),
   last_warmth: blackHoleAge2('last_warmth', 'The Last Warmth'),
-  great_evaporation: GREAT_EVAPORATION,
-  last_horizon: LAST_HORIZON,
+  great_evaporation: GREAT_EVAPORATION2,
+  last_horizon: LAST_HORIZON2,
   end_long_thought: LONG_THOUGHT,
   end_one_voice: ONE_VOICE,
   end_quiet_lattice: QUIET_LATTICE,

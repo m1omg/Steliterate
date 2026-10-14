@@ -213,11 +213,11 @@ export function plainHole(c: Ctx, x: number, y: number, rsh: number, S: number, 
  * direction, each longer than the hole is wide (the peak of its spectrum is some sixteen horizon
  * radii long). `rate`: packets a second.
  */
-export function quanta(c: Ctx, x: number, y: number, rsh: number, t: number, S: number, o: { rate: number; seed: number; color?: string; alpha?: number; reach?: number; life?: number }) {
+export function quanta(c: Ctx, x: number, y: number, rsh: number, t: number, S: number, o: { rate: number; seed: number; color?: string; alpha?: number; reach?: number; life?: number; lam?: number }) {
   const life = o.life ?? 1.8;
   const n = Math.ceil(o.rate * life) + 1;
   // (a crest a hole-and-a-half long: the real peak is longer still, some six shadow radii)
-  const lam = rsh * 3;
+  const lam = o.lam ?? rsh * 3;
   const reach = o.reach ?? S * 0.2;
   c.save();
   c.globalCompositeOperation = 'lighter';

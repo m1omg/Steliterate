@@ -119,7 +119,6 @@ function reelCue(spec: CueSpec) {
   };
 }
 
-const AGE = (root: number, notes: [number, number, number], chord: number[]): CueSpec => ({ bpm: 96, root, cuts: [[0, notes[0]], [4, notes[1]], [8, notes[2]]], titleAt: 12, chord });
 const END = (root: number, notes: [number, number], chord: number[]): CueSpec => ({ bpm: 84, root, cuts: [[0, notes[0]], [5.5, notes[1]]], titleAt: 11, chord });
 
 // the ages go down as they go on: A, E, D, C, B; the endings, F major for a victory, G for endurance, C minor for the Hunger, A minor for a defeat
@@ -132,8 +131,8 @@ const SPECS: Record<FilmId, CueSpec> = {
   // (the Black Hole Age's second cut: 74 beats at 90, a cut at each scene; the Last Warmth's under curvature radiation below)
   great_decay: { bpm: 90, root: 36.71, cuts: [[0, 349.23], [8, 293.66], [15.5, 261.63], [22.5, 220], [30.5, 233.08], [38.5, 196], [46.5, 174.61], [55.5, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
   last_warmth: { bpm: 90, root: 36.71, cuts: [[0, 349.23], [7.5, 293.66], [15, 261.63], [22, 220], [30, 196], [38, 233.08], [46, 220], [54, 174.61], [61, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
-  great_evaporation: AGE(32.7, [311.13, 261.63, 196], [65.41, 77.78, 98]),
-  last_horizon: AGE(30.87, [293.66, 246.94, 185], [61.74, 73.42, 92.5]),
+  great_evaporation: { bpm: 90, root: 32.7, cuts: [[0, 311.13], [8.5, 261.63], [16.5, 233.08], [25.5, 196], [33.5, 174.61]], titleAt: 42, chord: [65.41, 77.78, 98], pads: true },
+  last_horizon: { bpm: 90, root: 30.87, cuts: [[0, 293.66], [8, 246.94], [15.5, 220], [23.5, 185], [33.5, 196], [43, 164.81], [52.5, 146.83]], titleAt: 62, chord: [61.74, 73.42, 92.5], pads: true },
   end_long_thought: VICTORY,
   end_one_voice: VICTORY,
   end_quiet_lattice: VICTORY,
@@ -148,6 +147,7 @@ const SPECS: Record<FilmId, CueSpec> = {
 
 /** A film whose scenes fall on other beats in another fate of matter: its cue for that fate (`id:fate`). */
 const FATE_SPECS: Record<string, CueSpec> = {
+  'last_horizon:stable': { bpm: 90, root: 30.87, cuts: [[0, 293.66], [6, 246.94], [12, 220], [20, 196], [26.5, 233.08], [34.5, 185], [40, 196], [46.5, 164.81], [53.5, 146.83]], titleAt: 62, chord: [61.74, 73.42, 92.5], pads: true },
   'last_warmth:curvature': { bpm: 90, root: 36.71, cuts: [[0, 392], [7.5, 293.66], [21.5, 220], [29.5, 261.63], [38, 196], [46.5, 233.08], [54, 174.61], [61, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
 };
 
