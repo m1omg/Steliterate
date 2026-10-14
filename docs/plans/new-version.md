@@ -788,6 +788,11 @@ Each step validated on its own, with the harness by fate:
 10. **Checks:** `unit/positronium` (the window, the form, leaving, the loss at the decay, the
     nets' total as stated, the autoplayer); `browser/weave`; the harness by fate.
 
+**As built** (13 Oct), where it differs: leaving the weave is at once, not at the turn's end (one
+click before the turn that would cross the decay is enough, and the warning comes the turn before
+it), and never refused for want of energy (it costs what is left); the weaving is refused once the atoms have decayed, and a weaving finished too late does
+nothing. Nets give 40 over the window and 20 after it, each.
+
 ### 3a. Ways of existence
 
 Each settlement has a **form**, `Colony.form`. The form decides who can live there, what feeds

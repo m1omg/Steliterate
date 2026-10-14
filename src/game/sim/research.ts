@@ -19,12 +19,13 @@ export function techCost(state: GameState, id: string): number {
 }
 
 export function techVisible(state: GameState, def: TechDef): boolean {
-  if (def.needsStable || def.needsDecay || def.needsCurvature) {
+  if (def.needsStable || def.needsDecay || def.needsCurvature || def.needsUnstable) {
     if (!protonFateKnown(state)) return false;
     const fate = fateOf(state);
     if (def.needsStable && fate !== 'stable') return false;
     if (def.needsDecay && fate !== 'decay') return false;
     if (def.needsCurvature && fate !== 'curvature') return false;
+    if (def.needsUnstable && fate === 'stable') return false;
   }
   return true;
 }

@@ -340,8 +340,8 @@ export const CARRIED = 0.35;
  * that, under the protocols), once. Returns how many were lost.
  */
 function goLeptonic(state: GameState, c: Colony, mult: number): number {
-  // (written into a hole's horizon, it is not matter, and keeps all it has)
-  if (formOf(c) === 'horizon') return 0;
+  // (written into a hole's horizon or woven through the positronium, it is not matter, and keeps all it has)
+  if (formOf(c) === 'horizon' || formOf(c) === 'positronium') return 0;
   const was = formOf(c) === 'leptonic';
   const atHole = isHole(state.systems[c.systemId]?.primary.kind);
   const keeps = (id: string) => {

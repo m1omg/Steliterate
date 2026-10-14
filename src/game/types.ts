@@ -156,7 +156,7 @@ export interface Body {
 export interface QueueItem {
   uid: string;
   /** A structure, a ship, or the settlement's Passage (passage.ts: key 'passage'). */
-  kind: 'structure' | 'ship' | 'passage' | 'horizon';
+  kind: 'structure' | 'ship' | 'passage' | 'horizon' | 'weave';
   key: string;
   progress: number;
   cost: number;
@@ -191,7 +191,7 @@ export interface YieldBreakdown {
  * end of matter; leptonic, re-encoded in electron–positron structures held by fields, for what goes
  * on after it. The form decides who can live there.
  */
-export type ColonyForm = 'baryonic' | 'leptonic' | 'horizon';
+export type ColonyForm = 'baryonic' | 'leptonic' | 'horizon' | 'positronium';
 
 export interface Colony {
   id: string;

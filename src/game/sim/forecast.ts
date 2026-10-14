@@ -8,6 +8,7 @@ import { computeMods } from './mods';
 import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf, matterGone } from '../fate';
 import { decayProof } from './crossing';
 import { thinShare, thinning, thinningFrom } from './thinning';
+import { POSITRONIUM_DECAY, positroniumHere } from './positronium';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
 // question is whether you can prepare in time.
@@ -166,6 +167,20 @@ export function updateForecasts(state: GameState) {
     const from = thinningFrom(state);
     if (thinning(state)) add({ kind: 'thinning', title: 'The Thinning', text: `Ordinary matter is ${fate === 'decay' ? 'dissolving' : 'evaporating'}: ${Math.round(thinShare(state) * 100)}% of it is gone, and what is still made of it fails with it, structure by structure. ${stillOfMatter(state)}`, dueYears: Math.pow(10, MATTER_END[fate]), severity: 'danger' });
     else if (fate === 'curvature' && state.eta < from) add({ kind: 'thinning', title: 'The Thinning', text: `Once the brown dwarfs have faded the worlds themselves evaporate, and whatever is still made of matter will fail with them, structure by structure, until the Great Evaporation. ${stillOfMatter(state)}`, dueYears: Math.pow(10, from), severity: 'warn' });
+  }
+
+  // the widest atoms: their decay, counted down at our pace (Hud.tsx counts it in the Dark Era too)
+  if (positroniumHere(state)) {
+    const woven = colonies(state).filter((c) => formOf(c) === 'positronium').map((c) => c.name);
+    const nets = colonies(state).some((c) => (c.structures.positronium_net ?? 0) > 0);
+    const list = woven.length > 1 ? `${woven.slice(0, -1).join(', ')} and ${woven[woven.length - 1]}` : woven[0];
+    add({
+      kind: 'positronium',
+      title: 'The widest atoms end',
+      text: `The positronium atoms decay near η ${POSITRONIUM_DECAY}, each in a last flash of light.${woven.length ? ` Still woven through them: ${list}. Whoever is still there when they end, ends with them: leave the weave in time (the settlement’s panel).` : ' Nothing of ours is woven through them.'}${nets ? ' Our nets gather the light of their falling until then, and the last of the annihilation after it.' : ''}`,
+      dueYears: Math.pow(10, POSITRONIUM_DECAY),
+      severity: woven.length ? 'danger' : 'info',
+    });
   }
 
   // black holes we live on

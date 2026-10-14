@@ -38,6 +38,7 @@ import { allColonies, allFleets, capital, colonies, distLy, eraIndex, fleets, fo
 import { beginPassage, endForeseen, etaToEndOfMatter, passageEta, passageTerms } from './sim/passage';
 import { LEAVE_MARGIN, SPENT_SPIN, holeFailing } from './sim/crossing';
 import { beginHorizon, driftToAnotherHole, horizonCheck } from './sim/horizon';
+import { beginWeave, leaveWeave, positroniumComes, positroniumGone, positroniumHere, turnsToDecay, weaveCheck } from './sim/positronium';
 import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, ThreadId, War } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
@@ -368,7 +369,7 @@ const TECH_PRIORITY = [
   'garden_arks', 'aegis_lattices', 'command_language',
   // black hole
   'bastion_architecture', 'horizon_cognition', 'error_correction', 'hawking_patience', 'horizon_writing', 'last_horizon_protocols',
-  'conformal_mathematics', 'archive_theory', 'total_confluence', 'ultimate_slowness',
+  'conformal_mathematics', 'archive_theory', 'total_confluence', 'ultimate_slowness', 'positronium_weaving',
   // dark
   'asymptotic_mind', 'horizon_siphon', 'garden_of_embers',
 ];
@@ -385,6 +386,24 @@ function pickResearch(state: GameState) {
   }
   if (civ.flags.auto_paused && civ.energy < cap * 0.35) return;
   civ.flags.auto_paused = 0;
+  // research that can never be of use in this game: Horizon Writing where matter is stable or no
+  // hole would hold a vault ten decades more, Positronium Weaving where no positronium forms, once
+  // it has decayed, or in the Dark Era (where what a civilization needs is the age's own research)
+  const never = (id: string) =>
+    (id === 'horizon_writing' && ((fateKnown(state) && fateOf(state) === 'stable') || state.eta > ERA_BY_ID.blackhole.endEta - 2 * LEAVE_MARGIN)) ||
+    (id === 'positronium_weaving' && (!positroniumComes(state) || positroniumGone(state) || calendarEra(state) === 'dark'));
+  // and research of no use now, which the list waits with (the cheapest-left fallback may still
+  // take it: insight left idle is banked at half). Horizon Writing once something of ours is
+  // leptonic; Positronium Weaving in the Black Hole Age's part of the window once matter is gone,
+  // where it would weave a vault in (its reserve would not last to the decay at its net, with time
+  // left to use it): before the Great Evaporation the crossing changes the reserve
+  const leptonic = colonies(state).some((c) => formOf(c) === 'leptonic');
+  const useless = (id: string) =>
+    never(id) ||
+    (id === 'horizon_writing' && !leptonic) ||
+    (id === 'positronium_weaving' && (!leptonic || !positroniumHere(state) || !matterGone(state) || state.eta > WEAVE_WORTH || net >= 0 || civ.energy >= -net * turnsToDecay(state) || turnsToDecay(state) < WEAVE_TURNS));
+  // what can no longer be of use is put down (what was put into it stays)
+  if (civ.researching && never(civ.researching)) setResearch(state, null);
   // a pick that stored insight already covers is done at once: pick again, as a player would
   for (let i = 0; i < 6 && !civ.researching; i++) {
     const avail = new Set(availableTechs(state).map((t) => t.id));
@@ -395,10 +414,9 @@ function pickResearch(state: GameState) {
     const way = wayOf(state);
     const dark = hungerSteps(state);
     const order = [...(dark ? HUNGER_FIRST : []), ...(way ? WAY_RESEARCH[way] : []), ...TECH_PRIORITY];
-    // (Horizon Writing only once something of ours could be written, nothing being leptonic if matter
-    // is stable, and while a hole could still hold it for ten decades: research draws on the reserve)
-    const useless = (id: string) => id === 'horizon_writing' && (!colonies(state).some((c) => formOf(c) === 'leptonic') || state.eta > ERA_BY_ID.blackhole.endEta - 2 * LEAVE_MARGIN);
-    const next = guard ?? order.find((id) => avail.has(id) && !useless(id)) ?? [...avail].filter((id) => (dark || !TECHS.find((t) => t.id === id)?.taint) && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
+    // (and the cheapest left, when the list is done, never one that can be of no use, nor the
+    // weaving unless it would weave now: it is seldom of use, and idle insight is kept for what is)
+    const next = guard ?? order.find((id) => avail.has(id) && !useless(id)) ?? [...avail].filter((id) => !never(id) && !(id === 'positronium_weaving' && useless(id)) && (dark || !TECHS.find((t) => t.id === id)?.taint) && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
     if (!next) break;
     setResearch(state, next);
   }
@@ -553,6 +571,28 @@ function planHorizon(state: GameState) {
   }
 }
 
+/** Past this η a weaving or a net would not pay for itself before the atoms decay (η 141). */
+const WEAVE_WORTH = 130;
+/** Fewer turns than this before the decay, the weaving is not worth researching: the research, the weaving and a few turns in the weave. */
+const WEAVE_TURNS = 6;
+
+/**
+ * In the positronium's window, where the reserve would run out before the atoms decay at the
+ * rate it is going, a leptonic settlement is woven through them (a fiftieth of the upkeep, a tenth
+ * of the pace); and every settlement in the weave leaves it when the decay is within two turns at
+ * our pace (only those still in it then are lost).
+ */
+function planWeave(state: GameState) {
+  if (!positroniumHere(state)) return;
+  const civ = state.civ;
+  const left = turnsToDecay(state);
+  for (const c of colonies(state)) if (formOf(c) === 'positronium' && left <= 2) leaveWeave(state, c.id);
+  if (!hasTech(state, 'positronium_weaving') || state.eta > WEAVE_WORTH || left < 4) return;
+  const net = civ.flags.last_energy_net ?? 0;
+  if (net >= 0 || civ.energy >= -net * left) return;
+  for (const c of colonies(state)) if (weaveCheck(state, c) === null && beginWeave(state, c.id) === null) c.queue.unshift(c.queue.pop()!);
+}
+
 function planBuilds(state: GameState) {
   const civ = state.civ;
   const mods = computeMods(state);
@@ -599,7 +639,7 @@ function planBuilds(state: GameState) {
     if (preEnd && c.queue[0]?.key === 'lepton_confluence') rushBuild(state, c.id);
     if (c.queue[0] && c.queue[0].kind !== 'passage' && civ.matter > 600) rushBuild(state, c.id);
     // while the Passage rewrites it, nothing else is built there
-    if (c.queue.length >= 2 || c.queue.some((q) => q.kind === 'passage' || q.kind === 'horizon')) continue;
+    if (c.queue.length >= 2 || c.queue.some((q) => q.kind === 'passage' || q.kind === 'horizon' || q.kind === 'weave')) continue;
     const b = state.bodies[c.bodyId];
     const capc = capacity(state, c, mods);
     const light = lightAt(state, c);
@@ -657,6 +697,10 @@ function planBuilds(state: GameState) {
     if (t.echoes > 0 && hasTech(state, 'upload')) plan.push('upload_clinic');
     if (way !== 'lattice' && hasTech(state, 'cold_computation')) plan.push('cold_vault');
     if (Object.values(state.swarms).some((s) => !s.tamed && s.awake)) plan.push('defense_grid');
+    // nets for the widest atoms, while what is left of their light still pays for them, and only
+    // from spare energy: they pay back mostly near the decay, after the Last Horizon, whose
+    // Continuity counts the reserve saved
+    if (positroniumHere(state) && state.eta < WEAVE_WORTH && civ.energy > cap * 0.8) plan.push('positronium_net');
     plan.push('archive_spire', 'orbital_collector', 'solar_array', 'foundry', 'ember_collector', 'infrared_shroud', 'relic_dig', 'commons', 'reserve_vault');
     tryBuild(state, c, plan);
   }
@@ -1099,6 +1143,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planDismantle(state);
   planDrift(state);
   planHorizon(state);
+  planWeave(state);
   planBuilds(state);
   planFleets(state);
   planWarAI(state);

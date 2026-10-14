@@ -278,7 +278,8 @@ const COMMON_MILESTONES: Milestone[] = [
 /**
  * Where protons decayed or space unmade matter, the electrons and positrons left over pair into
  * positronium atoms wider than today's observable universe, about here (η; Page & McKee 1981).
- * News, once (turn.ts): nothing anyone does touches them. They decay near η 141.
+ * News, once (turn.ts); minds can be woven through them and nets strung through them until they
+ * decay near η 141 (sim/positronium.ts).
  */
 export const POSITRONIUM_ETA = 85;
 

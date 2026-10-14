@@ -32,6 +32,7 @@ export function driftTerms(state: GameState, c: Colony): DriftTerms {
 /** Why this settlement cannot drift to another hole now, or null if it can. */
 export function driftCheck(state: GameState, c: Colony): string | null {
   if (formOf(c) === 'horizon') return 'Written into its hole’s horizon, it is bound to it.';
+  if (formOf(c) === 'positronium') return 'Woven through the positronium, it is everywhere at once: it has no hole to leave.';
   if (formOf(c) !== 'leptonic') return 'Only a leptonic settlement can drift between the black holes.';
   if (c.flags_drifted === state.turn) return 'It has drifted once this turn.';
   const t = driftTerms(state, c);

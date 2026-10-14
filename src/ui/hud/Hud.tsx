@@ -164,7 +164,8 @@ function BottomLeft({ s }: { s: GameState }) {
       {ui.forecasts &&
         shown.map((f) => {
           // turns at the pace you have chosen (the Tide figure too, when they differ)
-          const due = isFinite(f.dueYears) && calendarEra(s) !== 'dark';
+          // (in the Dark Era only the widest atoms' decay is near enough to count)
+          const due = isFinite(f.dueYears) && (calendarEra(s) !== 'dark' || f.kind === 'positronium');
           // (as they will really fall: a flare's own clock and its first moment shorten them)
           const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : Infinity;
           const tideTurns = due && s.civ.pace !== 0 ? turnsUntilYears(s, f.dueYears, 0, 5000) : turns;

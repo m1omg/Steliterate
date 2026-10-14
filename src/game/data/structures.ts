@@ -10,6 +10,7 @@ export type EnergyMode =
   | 'decay' // proton decay in degenerate matter
   | 'curvature' // curvature radiation: a neutron star's mass turned into particles by the space around it
   | 'siphon' // horizon siphoning (speculative)
+  | 'positronium' // the shrinking orbits of positronium, then its never-ending annihilation (positronium.ts)
   | 'rekindle'; // debris stream of a feeding world
 
 export interface StructureDef {
@@ -125,6 +126,7 @@ export const STRUCTURES: StructureDef[] = [
   // ---------------------------------------------------------------- Black Hole Age
   S({ id: 'penrose_harvester', name: 'Penrose Harvester', desc: 'Throws mass into the ergosphere and catches it coming back heavier.', era: 'degenerate', tech: 'penrose_process', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'spin', amount: 20 }, signature: 2, leptonic: {} }),
   S({ id: 'hawking_collector', name: 'Hawking Collector', desc: 'Listens to the faint heat of a black hole slowly boiling away.', era: 'degenerate', tech: 'hawking_capture', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'hawking', amount: 12 }, signature: 1, leptonic: {} }),
+  S({ id: 'positronium_net', name: 'Positronium Net', desc: 'Speculative: fields strung through the widest atoms there will ever be, catching the faint light of their shrinking orbits: a trickle that grows toward their decay near η 141, then the last of the annihilation, half as much each turn. Only in a settlement no longer made of matter, once positronium has formed.', era: 'blackhole', tech: 'positronium_weaving', cost: 60, matter: 20, max: 3, energy: { mode: 'positronium', amount: 1 }, signature: 0, leptonic: {} }),
   S({ id: 'bastion', name: 'Bastion Shell', desc: 'A shell of leptonic structure around a black hole.', era: 'blackhole', tech: 'bastion_architecture', cost: 90, matter: 0, max: 3, primaries: ['black_hole', 'smbh'], cap: { echoes: 3, coldminds: 4, lattice: 3 }, decayProof: true, signature: 1 }),
 
   // ---------------------------------------------------------------- Dark Era
@@ -241,7 +243,7 @@ export function structureLabel(id: string, sys?: StarSystem | null, form?: Colon
   const def = STRUCTURE_BY_ID[id];
   if (!def) return { name: id, desc: '' };
   // in leptonic form, its own name where it has one (an Energy Vault is a Field Store)
-  if ((form === 'leptonic' || form === 'horizon') && def.leptonic?.name) return { name: def.leptonic.name, desc: def.leptonic.desc ?? def.desc };
+  if (form && form !== 'baryonic' && def.leptonic?.name) return { name: def.leptonic.name, desc: def.leptonic.desc ?? def.desc };
   const local = sys ? LOCAL_NAMES[id]?.[lightSourceOf(sys)] : undefined;
   return local ? { name: local[0], desc: local[1] } : { name: def.name, desc: def.desc };
 }

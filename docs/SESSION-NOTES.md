@@ -608,6 +608,14 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     noise. Survival is now 71%: the difficulty question to the player stands, with this number
     (59% at 3-2, 48% before the Passage). End Turn's breaths now let due timers run every 40 ms
     (the turn-slices check had seen none under load).
+  - the widest atoms (part 3-5): Positronium Weaving (only where matter does not last) weaves a
+    leptonic settlement through the positronium between η 85 and its decay near η 141 (a fiftieth
+    of the upkeep, a tenth of the pace, room to spare, Continuity kept better); Leave the weave at
+    any time, never refused for want of energy; whoever is still woven at the decay is lost, with a
+    countdown at our pace and a last warning the turn before. Positronium Nets: 40 energy over the
+    window and 20 after it, whatever the pace. 900 games 636 / 226 / 74, decay and stable exactly as
+    at 3-4; the autoplayer weaves only in a real shortage (2 games), so the weave is mostly the
+    player's tool. Its research rules took four harness runs to stop costing victories (CHANGELOG).
   - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census

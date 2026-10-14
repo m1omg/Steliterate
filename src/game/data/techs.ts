@@ -39,6 +39,7 @@ export interface TechDef {
   needsStable?: boolean; // only if protons are stable
   needsDecay?: boolean; // only if protons decay
   needsCurvature?: boolean; // only if curvature radiation is unmaking matter
+  needsUnstable?: boolean; // only if matter does not last (protons decay, or curvature radiation unmakes it)
 }
 
 const T = (t: TechDef) => t;
@@ -118,6 +119,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'bastion_architecture', name: 'Bastion Architecture', era: 'blackhole', field: 'stewardship', cost: 550, requires: [], desc: 'Shells of leptonic structure around black holes. Unlocks Bastion Shells.' }),
   T({ id: 'horizon_cognition', name: 'Horizon Cognition', era: 'blackhole', field: 'mind', cost: 800, requires: [], desc: 'Echo clock limit 10⁶⁰ years.', effects: { echoMaxClock: 60 } }),
   T({ id: 'hawking_patience', name: 'Hawking-Scale Patience', era: 'blackhole', field: 'mind', cost: 1000, requires: ['horizon_cognition'], desc: 'Echo clock limit 10⁸⁰ years.', effects: { echoMaxClock: 80 } }),
+  T({ id: 'positronium_weaving', name: 'Positronium Weaving', era: 'blackhole', field: 'mind', cost: 1000, requires: ['horizon_cognition'], speculative: true, needsUnstable: true, desc: 'Speculative: weave minds through atoms of positronium wider than the old observable universe, where they cost a fiftieth of their upkeep and think at a tenth of their pace, until the atoms decay near η 141. Positronium Nets gather the light of their shrinking orbits. Only where protons decayed or space unmade matter, from η 85.' }),
   T({ id: 'horizon_writing', name: 'Horizon Writing', era: 'blackhole', field: 'mind', cost: 900, requires: ['horizon_cognition'], speculative: true, desc: 'Speculative: write minds into a black hole’s horizon, where they cost a tenth of their upkeep and think at a quarter of their pace, bound to the hole. A leptonic settlement in a hole’s Deep can do it, as a project.' }),
   T({ id: 'ultimate_slowness', name: 'Ultimate Slowness', era: 'blackhole', field: 'mind', cost: 1250, requires: ['hawking_patience'], desc: 'Echo clock limit 10¹⁰⁰ years.', effects: { echoMaxClock: 100 } }),
   T({ id: 'total_confluence', name: 'Total Confluence', era: 'blackhole', field: 'mind', cost: 950, requires: [], desc: 'What it would take for everyone to become one. Enables the Great Work Confluence.' }),

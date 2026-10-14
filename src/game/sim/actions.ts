@@ -11,6 +11,7 @@ import { sanctuaryHeard } from './refuge';
 import { declareWar, makePeace } from './war';
 import { THREADS } from '../types';
 import { MATTER_AS_ENERGY, capacity } from './economy';
+import { positroniumComes, positroniumGone, positroniumHere } from './positronium';
 import { workCost, workRequirementMet } from './endings';
 import { resolveEvent } from './events';
 import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
@@ -56,6 +57,13 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (onlyKin) return `Kin are made of matter: a ${form.name.toLowerCase()} settlement has no room for them.`;
   // and a leptonic settlement builds only what has a leptonic form (passage.ts)
   if (formOf(c) !== 'baryonic' && !inLeptonicForm(d)) return `Made of matter: a ${formOf(c)} settlement cannot build it.`;
+  // nets for the widest atoms (positronium.ts): of fields, once they have formed, and not after they decay
+  if (d.energy?.mode === 'positronium') {
+    if (formOf(c) === 'baryonic') return 'Strung of fields: only a settlement no longer made of matter can build it.';
+    if (!positroniumComes(state)) return 'Matter is stable: no positronium will form.';
+    if (positroniumGone(state)) return 'The positronium has decayed: too little of it is left to build for.';
+    if (!positroniumHere(state)) return 'No positronium has formed yet: it pairs from η 85.';
+  }
   if (d.terraform) {
     const why = terraformBlocked(state, b, c, d.terraform);
     if (why) return why;

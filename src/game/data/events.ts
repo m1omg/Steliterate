@@ -1,6 +1,6 @@
 import type { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
-import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '../sim/util';
+import { capital, colonies, formOf, hasCharter, hasTech, log, threadTotals, uid } from '../sim/util';
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime, sup } from '../eras';
@@ -10,6 +10,7 @@ import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
 import { send } from '../civs';
 import { easeTaint, hungerAct } from '../sim/judge';
+import { leaveWeave, leaveWeaveCost } from '../sim/positronium';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -781,10 +782,38 @@ export const EVENTS: EventDef[] = [
     // queued as the calendar passes η 85 (turn.ts), where protons decayed or space unmade matter;
     // until 12 Oct the milestone was on the chronometer and nothing came of it
     text: (s) =>
-      `The electrons and positrons that ${fateOf(s) === 'curvature' ? 'space has made out of the dead stars’ matter' : 'the dying protons left behind'} are spread thinner than anything has ever been, and still, since about 10⁸⁵ years, here and there one electron and one positron have found each other. Each pair is an atom of positronium, bound across a gulf wider than the whole universe anyone could once see, going once around in far longer than the stars lasted. They will be the last atoms there are. Nothing we do can touch them: they fall slowly together and, near η 141, end in a flash of light.`,
+      `The electrons and positrons that ${fateOf(s) === 'curvature' ? 'space has made out of the dead stars’ matter' : 'the dying protons left behind'} are spread thinner than anything has ever been, and still, since about 10⁸⁵ years, here and there one electron and one positron have found each other. Each pair is an atom of positronium, bound across a gulf wider than the whole universe anyone could once see, going once around in far longer than the stars lasted. They will be the last atoms there are, and the widest: they fall slowly together and, near η 141, end in a flash of light. Until then minds could be woven through them, the slowest and cheapest thinking there will ever be, and nets strung through them could catch the faint light of their falling (Positronium Weaving).`,
     choices: [
       { label: 'Study them', hint: 'Insight +40.', run: (s) => { insight(s, 40); } },
       { label: 'Let them be', hint: 'Resolve +1.', run: (s) => { res(s, 1); } },
+    ],
+  },
+  {
+    id: 'positronium_ends',
+    title: 'The Widest Atoms End',
+    art: 'dark',
+    once: true,
+    // queued the turn before they decay (turn.ts), for whoever has woven anything through them or strung nets
+    text: (s) => {
+      const woven = colonies(s).filter((c) => formOf(c) === 'positronium');
+      return `The positronium atoms have fallen nearly all the way together. Before the next turn is out they will annihilate, each in a last flash of light, and after them only scattered electrons and positrons are left, meeting less and less often, for ever.${woven.length ? ` ${woven.length === 1 ? `${woven[0].name} is` : `${woven.map((c) => c.name).join(', ')} are`} still woven through them: whoever is still there when they end, ends with them.` : ' Our nets will catch the last of it, and then less and less of the annihilation that never quite stops.'}`;
+    },
+    choices: [
+      {
+        label: 'Leave the weave, all of it',
+        hint: (s) => `Every settlement of ours in the weave comes back out, leptonic: ${Math.min(Math.floor(s.civ.energy), colonies(s).filter((c) => formOf(c) === 'positronium').reduce((a, c) => a + leaveWeaveCost(s, c), 0))} energy.`,
+        ok: (s) => colonies(s).some((c) => formOf(c) === 'positronium'),
+        run: (s) => {
+          for (const c of colonies(s).filter((x) => formOf(x) === 'positronium')) leaveWeave(s, c.id);
+        },
+      },
+      {
+        label: 'Watch them end',
+        hint: (s) => `${colonies(s).some((c) => formOf(c) === 'positronium') ? 'Whoever is still woven through them ends with them. ' : ''}Insight +20.`,
+        run: (s) => {
+          insight(s, 20);
+        },
+      },
     ],
   },
   {

@@ -40,6 +40,7 @@ import { PASSAGE_OUTPUT, capacity } from '../../game/sim/economy';
 import { beginPassage, endForeseen, passageCheck, passageTerms, turnsToEndOfMatter } from '../../game/sim/passage';
 import { SPENT_SPIN, holeFailing } from '../../game/sim/crossing';
 import { beginHorizon, driftCheck, driftTerms, driftToAnotherHole, horizonCheck, horizonTerms } from '../../game/sim/horizon';
+import { POSITRONIUM_DECAY, beginWeave, leaveWeave, leaveWeaveCheck, leaveWeaveCost, positroniumHere, turnsToDecay, weaveCheck, weaveTerms } from '../../game/sim/positronium';
 import { spareYield, type SpareYield } from '../../game/sim/spare';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
@@ -1013,6 +1014,73 @@ function HorizonSection({ s, c }: { s: GameState; c: Colony }) {
   );
 }
 
+/**
+ * The widest atoms (positronium.ts): a leptonic settlement, once Positronium Weaving is known and
+ * the atoms have formed, can be woven through them, as a project in its queue; woven, the section
+ * counts down to their decay at our pace and offers to leave the weave. Asks once more each time.
+ */
+function WeaveSection({ s, c }: { s: GameState; c: Colony }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [sure, setSure] = useState(false);
+  const going = c.queue.find((q) => q.kind === 'weave');
+  const woven = formOf(c) === 'positronium';
+  if (!woven && (formOf(c) !== 'leptonic' || !positroniumHere(s) || (!going && !hasTech(s, 'positronium_weaving')))) return null;
+  const left = turnsToDecay(s);
+  const when = isFinite(left) ? (left <= 1 ? 'within the next turn' : `in about ${left} turns at this pace`) : 'one day';
+  if (woven) {
+    const why = leaveWeaveCheck(s, c);
+    const cost = leaveWeaveCost(s, c);
+    return (
+      <div class="section weave">
+        <h3>In the weave</h3>
+        <p class="dim">
+          Woven through the positronium: its minds cost a fiftieth of their upkeep and think at a tenth of their pace. The atoms decay {when} {`(η\u00a0${POSITRONIUM_DECAY})`}: whoever is still woven through them then ends with them.
+        </p>
+        <button
+          class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+          data-tip={why ?? `Back out at once, leptonic: ${cost} energy.`}
+          onClick={() => {
+            if (why) return;
+            if (!sure) return setSure(true);
+            setSure(false);
+            if (act((g) => leaveWeave(g, c.id))) sfx('click');
+          }}
+        >
+          {sure ? 'Really leave the weave? (click again)' : 'Leave the weave'}
+        </button>
+      </div>
+    );
+  }
+  const t = weaveTerms(c);
+  const why = going ? null : weaveCheck(s, c);
+  return (
+    <div class="section weave">
+      <h3>The positronium</h3>
+      {going ? (
+        <p class="dim">Under way: {Math.round((going.progress / going.cost) * 100)}%, in the queue. While it is worked here, this settlement makes {Math.round(PASSAGE_OUTPUT * 100)}% of its energy, insight and accord. The atoms decay {when}.</p>
+      ) : (
+        <>
+          <p class="dim">
+            Weave this settlement through the positronium: {t.industry} industry and {t.energy} energy now. Its minds would cost a fiftieth of their upkeep and think at a tenth of their pace, with room to spare, until the atoms decay {when} {`(η\u00a0${POSITRONIUM_DECAY})`}. It can leave the weave at any time before.
+          </p>
+          <button
+            class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+            data-tip={why ?? 'It goes into the queue as a project; taking it off gives the energy back.'}
+            onClick={() => {
+              if (why) return;
+              if (!sure) return setSure(true);
+              setSure(false);
+              if (act((g) => beginWeave(g, c.id))) sfx('build');
+            }}
+          >
+            {sure ? 'Really weave it through the positronium? (click again)' : 'Weave through the positronium'}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   void rev.value; // mutable game state: re-render on every change
   const [tab, setTab] = useState<'overview' | 'build'>('overview');
@@ -1217,6 +1285,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
             <PassageSection s={s} c={c} />
             <DriftSection s={s} c={c} />
             <HorizonSection s={s} c={c} />
+            <WeaveSection s={s} c={c} />
           </>
         ) : (
           <BuildTab s={s} c={c} industry={y?.industry ?? 0} energyMade={y?.energy ?? 0} />
@@ -1348,10 +1417,10 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
                     <KindIcon id={q.key} />
                   ) : (
                     <span class="kind-icon">
-                      <Icon name={q.kind === 'passage' || q.kind === 'horizon' ? 'upload' : 'fleet'} />
+                      <Icon name={q.kind === 'passage' || q.kind === 'horizon' || q.kind === 'weave' ? 'upload' : 'fleet'} />
                     </span>
                   )}
-                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId], formOf(c)).name : q.kind === 'passage' ? 'The Passage' : q.kind === 'horizon' ? 'Writing into the horizon' : def?.name ?? q.key}
+                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId], formOf(c)).name : q.kind === 'passage' ? 'The Passage' : q.kind === 'horizon' ? 'Writing into the horizon' : q.kind === 'weave' ? 'Weaving through the positronium' : def?.name ?? q.key}
                 </span>
                 <span class="mono faint" style={{ fontSize: '12.5px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
                 <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>

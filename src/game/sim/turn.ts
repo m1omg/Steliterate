@@ -12,6 +12,7 @@ import { completePassage } from './passage';
 import { flowComes, theLongFlow } from './flow';
 import { theThinning } from './thinning';
 import { completeHorizon, horizonGone } from './horizon';
+import { POSITRONIUM_DECAY, completeWeave, positroniumComes, positroniumHere, theWeaveEnds, turnsToDecay, wovenShare } from './positronium';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
 import { battlesTurn } from './conflict';
@@ -84,6 +85,7 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
         log(state, `${c.name}: ${structureLabel(item.key, state.systems[c.systemId], formOf(c)).name} complete.`, 'good', c.systemId);
       } else if (item.kind === 'passage') completePassage(state, c);
       else if (item.kind === 'horizon') completeHorizon(state, c);
+      else if (item.kind === 'weave') completeWeave(state, c);
       else {
         const def = SHIP_BY_ID[item.key];
         if (def?.crew) c.pops.kin = Math.max(0, c.pops.kin - def.crew);
@@ -354,6 +356,8 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
   result.notes = notes;
   // from 10^65 years solid matter flows: once, the ruins no one awake is digging run into smooth lumps
   flowComes(state, step.eta, logL, modsOf, Math.log10(paceFactor));
+  // the widest atoms decay as this turn passes η 141: the never-ending annihilation counts its turns from here (positronium.ts)
+  if (positroniumComes(state) && state.eta < POSITRONIUM_DECAY && step.eta >= POSITRONIUM_DECAY) state.flags.positronium_end = state.turn;
   yield* each((c, id) => {
     handleNotes(state, notes);
     // the Unlit's gathering is done: the Last Star lights as the turn ends, as every new star does
@@ -365,6 +369,8 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
     theLongFlow(state, step.eta, logL, c.mods, Math.log10(c.ctx.paceFactor));
     // in the last decades of matter, what is still made of it thins with it
     theThinning(state, state.eta, step.eta);
+    // and as positronium decays, whatever is still woven through it ends with it
+    theWeaveEnds(state, state.eta, step.eta);
     continuity(state, c);
   });
   state.years = step.years;
@@ -707,6 +713,8 @@ function continuity(state: GameState, t: CivTurn) {
     }
   }
   if (civ.dormant) decay *= 0.35;
+  // minds woven through the positronium keep their pattern better: half the loss for their share
+  decay *= 1 - 0.5 * wovenShare(state);
   if (t.starving) decay += 5;
   civ.continuity = Math.max(0, civ.continuity - decay);
 }
@@ -750,6 +758,8 @@ function signalsAndEvents(state: GameState): Signal[] {
   // positronium forms where matter has decayed or been unmade (η 85): news, once, after the random
   // roll so that it never changes what the roll draws (a game already past it hears it now)
   if (state.era === 'blackhole' && state.eta >= POSITRONIUM_ETA && fateOf(state) !== 'stable') queueEvent(state, 'positronium_forms');
+  // and the turn before they decay, for whoever has woven anything through them or strung nets
+  if (mine && positroniumHere(state) && colonies(state).some((c) => formOf(c) === 'positronium' || (c.structures.positronium_net ?? 0) > 0) && turnsToDecay(state) <= 1) queueEvent(state, 'positronium_ends');
   // (the forecasts are for the player to read)
   if (mine) updateForecasts(state);
   return arrived;

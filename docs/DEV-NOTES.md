@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form, positronium), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -260,8 +260,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   every `TIMER_MS` (40 ms, `turnflow.ts`); the timers' longest wait is bounded by the longest
   slice that cannot be split (a civilization's part of a step), some 100 ms at a sixfold slowdown.
 - `pkill -f 'tools/sim.ts'` (or `pgrep -f 'node.*tools/sim.ts'` fed to `kill`) run from a shell
-  whose own command line holds that pattern kills the shell too (exit 144, twice on 13 Oct). Keep
-  the pattern from matching itself: `pgrep -f '[n]ode.*tools/sim[.]ts'`.
+  whose own command line holds that pattern kills the shell too (exit 144, three times on 13 Oct).
+  The bracket trick (`'[n]ode.*tools/sim[.]ts'`) fails as soon as the same command also holds the
+  text unbracketed (starting the next run, say). Anchor it instead: `pgrep -f '^node '` matches a
+  process started as `node …`, never the `bash -c …` around it.
 - **Save compatibility:** only add optional fields, or compute things live. Put small counters
   in `civ.flags` (a `Record<string, number>`), or `state.flags` for a fact about the universe.
   `SAVE_VERSION` is 4, the new version's first (`FIRST_OF_THIS_LINE`): until the new version is
@@ -472,6 +474,28 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     form but `'baryonic'` alike; `goLeptonic` leaves a horizon settlement as it is. The autoplayer:
     `planDrift` and `planHorizon` (`auto.ts`, before `planBuilds`); the harness line counts
     `horizon N` (settlements written in) and `drift N` (chosen drifts) from `civ.flags`.
+  - **Positronium** (part 3-5, `sim/positronium.ts`): `positroniumComes` (not under stable
+    matter), `positroniumHere(state, η)` (η 85 to `POSITRONIUM_DECAY`, 141), `positroniumGone`,
+    `turnsToDecay` (at our pace, `turnsUntilYears`: one slow turn can jump past it). The form
+    `'positronium'` (`data/forms.ts`: `WEAVE_UPKEEP` 0.02, `WEAVE_PACE` 0.1, `WEAVE_ROOM` 30) is a
+    queue item of kind `'weave'` (`weaveTerms`, `weaveCheck`, `beginWeave`; `applyIndustry` calls
+    `completeWeave`, which refuses once the atoms have decayed); `leaveWeave` is immediate (2 energy
+    a mind). `theWeaveEnds(state, from, to)` runs in each civilization's part after the Thinning;
+    the universe marks the turn they decayed in (`state.flags.positronium_end`), from which the
+    nets' dole counts. Positronium Nets: energy mode `'positronium'`, `netYield(state, years, L)`
+    (the window's 40 shared by `trickleShare`, a cube, so the sum does not depend on the pace; then
+    20 halving each turn), divided by the lived share in `colonyTurn` since it is already a turn's
+    worth; `structureCheck` lets them stand only in a settlement no longer of matter, inside the
+    window. Continuity in the Dark Era loses half as much for `wovenShare`. The forecast `kind`
+    `'positronium'` is the one the HUD counts turns for in the Dark Era. The event
+    `positronium_ends` is queued the turn before the decay for whoever has woven anything or strung
+    nets. The autoplayer: `planWeave` (`auto.ts`), nets in `planBuilds` before η 130
+    (`WEAVE_WORTH`) from spare energy, the research by two tests in `pickResearch`: `never` (of no
+    use for the rest of the game: never taken, and put down if it was) and `useless` (of no use
+    now: the list waits; the cheapest-left fallback may still take Horizon Writing, as idle insight
+    is banked at half, but not the weaving, which is seldom used). `WEAVE_TURNS` (6): fewer turns
+    to the decay, the weaving is not worth researching. The tech has `needsUnstable` (`techVisible`,
+    `sim/research.ts`): any fate but stable matter.
   - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a
     report per civilization; the universe's part runs once (`toAll` puts its lines in every
     report where they fall), each civilization's under `eachCiv`; `leftOnSubstrate` is one
@@ -1610,6 +1634,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the Lattice lives on energy after matter (13 Oct; the player's word) | 144 | 39 victories, Degenerate Age 73 turns; 900 games 431 / 133 / 75 (421 / 124 / 75 before): decay 190 / 450 (14 wins), curvature 100 / 211 (24), stable as before; the wins the Long Thought's |
 | the Passage; the autoplayer through the end of matter (13 Oct; part 3-2, `24fbc18`) | 175 | 62 victories, Degenerate Age 73 turns; 900 games 530 / 219 / 74 (431 / 133 / 75 before): decay 221 / 450 (65 wins), stable 169 / 239 (112), curvature 140 / 211 (42); 456 of 900 end as before. The Long Thought 174 (98), Silence 164 (211). The Passage as first built, by turns and rushed: 372 / 172, decay 138; with the timing, the Migration and cooling but not the pace: 428 / 210, decay 160; the pace rule at every age: Silence 107 of 295 where 60 had been |
 | the Thinning (13 Oct; part 3-3, `a0352ef`) | 173 | 58 victories, Degenerate Age 73 turns; 900 games 522 / 205 / 74 (530 / 219 / 74 before): decay 210 / 450 (53 wins), stable as before game for game, curvature 143 / 211 (40); 760 of 900 end as before. First built, the early drift merged a passed settlement into one of ours still of matter: 531 / 192, decay wins 40 |
+| the widest atoms: the weave, the nets, the countdown (13 Oct; part 3-5) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 636 / 226 / 74 (639 / 226 / 74 at 3-4): decay and stable end exactly as before, game for game; curvature 136 / 211 (139), its 36 wins as before; 893 of 900 as before. The weave in 2 games. First built: 632 / 217 (the weaving researched into the Dark Era after the decay, and from the cheapest-left fallback in 100 stable games), then 637 / 218, 634 / 218, 635 / 226 (nets before the Last Horizon from what Continuity counts; a vault that could not afford to leave the weave, lost at the decay) |
 | leaving a hole, and the Horizon form (13 Oct; part 3-4) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 639 / 226 / 74 (522 / 205 / 74 before): decay 330 / 450 (210; 77 wins, 53), stable 170 / 239 (169; 235 of 239 end as before), curvature 139 / 211 (143; 36 wins, 40), within the noise. Drifts in 384 games, the Horizon form in 4. Under decay the vaults now drift to a hole with spin, the Heart above all, where before they starved at the small hole the Migration found, slowed the pace to stretch the reserve, and entered the Dark Era short: of the 450, 125 saved (72 had faded, 41 lost their will), 5 lost. The first drift rule, the nearest hole with spin: 638 / 227 with Horizon Writing researched everywhere |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |

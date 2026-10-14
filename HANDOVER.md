@@ -54,9 +54,9 @@ last.
     keeps its own storage keys (`steliterate2.`).
   - Done (13 Oct): its own storage; young glowing dwarfs (1a); the civilizations playing the same
     game (2a-0 to 2a-6); the Hunger among them (2b); war, units and conquest (2c); the AI's
-    judgement (2d); life after matter as far as 3-4 (the end of matter fixed, what a settlement is
-    made of, the Passage, the Thinning, leaving a hole and the Horizon form). Next: positronium
-    (3-5), the stable fate's late game (3-6) and the look (3-7), then Part 4 (films and the survey
+    judgement (2d); life after matter as far as 3-5 (the end of matter fixed, what a settlement is
+    made of, the Passage, the Thinning, leaving a hole and the Horizon form, positronium). Next: the
+    stable fate's late game (3-6) and the look (3-7), then Part 4 (films and the survey
     reveal) and Part 5 (`/next/`). Waiting for the player: ships seeing what they pass (1b, a
     census done), the Quiet Lattice (four options put to them, 13 Oct; see SESSION-NOTES,
     "Picking up"), the new hulls (2c-5, a sheet shown), and whether survival, much higher since

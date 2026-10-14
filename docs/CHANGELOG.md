@@ -2778,3 +2778,58 @@ has a way to happen.
   slowed the pace to stretch the reserve, and came into the Dark Era short. Of the 450 decay games
   125 were saved (72 had faded, 41 had lost their will) and 5 lost. Survival is now 71% of games,
   up from 59% at 3-2 and 48% before the Passage: the player is asked whether that is too easy.
+
+## The widest atoms (13 Oct, part 3-5)
+
+Positronium now does something in the late game.
+- **The window:** where protons decayed or space unmade matter, positronium forms from η 85 and
+  decays near η 141 (Page & McKee's reference case): 14 Black Hole Age turns and 5 Dark Era turns
+  at the Tide; 8 and 4 at a pace ten times slower, whose last Dark Era turn jumps from η 139.5 to
+  192. Never under stable matter.
+- **Positronium Weaving** (Black Hole Age, mind, 1,000 insight after Horizon Cognition;
+  speculative): a leptonic settlement is woven through the positronium as a project in its queue,
+  40 industry and 4 for each mind, 5 energy for each structure, 70% of its yields while worked;
+  inside the window only, and not a settlement written into a horizon (bound) or still of matter.
+  Woven, its minds cost a fiftieth of their upkeep and do a tenth of their work, with no tempo
+  strain, and each Thread it houses has room for 30 more; it is bound to no hole. In the Dark Era
+  Continuity falls half as fast for the share of our minds in the weave. A tech rather than the
+  event's choice the plan gave: an answer given once would have closed it for good. It is there
+  only where matter does not last (a new gate, `needsUnstable`: a question mark until the fate is
+  known, then gone if matter is stable).
+- **Leave the weave** (its panel; no research, no event): leptonic again at once, for 2 energy a
+  mind, or what the reserve has left: never refused for want of it. (First built it was, and a
+  vault woven in because its reserve was short could not afford to come out: one harness game
+  ended in Silence at the decay.) Whoever is still woven through the atoms when they decay ends
+  with them, the Record naming each settlement; one with no one left goes.
+- **The countdown:** a forecast of the decay in turns at our pace (the HUD counts it in the Dark
+  Era too), a danger while anything of ours is woven; the turn before, "The Widest Atoms End"
+  asks once more (Leave the weave, all of it; Watch them end).
+- **Positronium Nets** (the same research; in a settlement no longer of matter, inside the
+  window): 40 energy each over the window, little at first and most near the end, the same
+  whatever the pace; then the never-ending annihilation, 20 more, half the turn before each turn.
+- **"The Widest Atoms"** no longer says that nothing we do can touch them.
+- **The autoplayer** researches the weaving only in the Black Hole Age's part of the window once
+  matter is gone, where its reserve would not last to the decay at its net (six turns or more
+  before it); weaves a vault in on the same test (four turns or more before it, and before η 130);
+  leaves when the decay is within two turns; strings nets before η 130 from spare energy (its
+  reserve above four fifths of its room), after the room its minds need: they pay back mostly
+  near the decay, after the Last Horizon, whose Continuity counts the reserve saved. Research that can never be of use in a game (Horizon Writing where matter is stable or in
+  the age's last ten decades; the weaving where no positronium forms, after the decay or in the
+  Dark Era) is never taken, even when its list is done, and is put down if it was, its progress
+  kept. First built, it went on researching the weaving into the Dark Era after the atoms had
+  decayed, the Great Work getting half the insight meanwhile: five Long Thought victories of 450
+  decay games lost. Refusing what is only not yet of use, its list done, cost curvature games
+  too: insight left idle is banked at half.
+- **The Codex** gives the spread of the dates, says that minds woven through the atoms are the
+  game's speculation and that taking the positrons from unmade matter is a bend; Adams &
+  Laughlin's book is in the Sources. The Manual describes it all.
+- **Checks:** `unit/positronium` and `browser/weave` (new); `browser/research-fate` counts the
+  weaving among the projects that depend on the fate (four before it is known; three go where
+  matter is stable). The harness line counts `weave N`.
+- **Balance:** 217 of 300 standard competent games survive, 69 victories, a Degenerate Age of 73
+  turns; 900 games 636 / 226 / 74 (639 / 226 / 74 at 3-4): decay 330 / 450 and stable 170 / 239
+  ending exactly as before, game for game; curvature 136 / 211 (139), its wins as before; 893 of
+  900 end as before, the rest knife-edge curvature games that the research's timing tips. The
+  weave in 2 games: it is a refuge for a civilization short of energy in the window, which the
+  black holes now seldom leave one. The first builds lost 5 to 9 victories, all the autoplayer's
+  research and its nets (above).

@@ -128,7 +128,7 @@ export function migrate(s: GameState): GameState {
     c.structures ??= {};
     c.queue ??= [];
     for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]) delete c.structures[k];
-    c.queue = c.queue.filter((q) => (q.kind === 'ship' ? SHIP_BY_ID[q.key] : q.kind === 'passage' || q.kind === 'horizon' ? true : STRUCTURE_BY_ID[q.key]));
+    c.queue = c.queue.filter((q) => (q.kind === 'ship' ? SHIP_BY_ID[q.key] : q.kind === 'passage' || q.kind === 'horizon' || q.kind === 'weave' ? true : STRUCTURE_BY_ID[q.key]));
   }
   for (const f of Object.values(s.fleets)) {
     f.owner ??= s.player;
