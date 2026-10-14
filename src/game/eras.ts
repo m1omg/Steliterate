@@ -97,7 +97,7 @@ export function ageIntro(era: EraId, fate: Fate): string {
   if (era === 'blackhole' && fate === 'curvature')
     return 'The neutron stars have burst. For 10⁶⁸ years each gave its mass, a little at a time, to the curvature of space around it; at a tenth of a Sun it could hold together no longer. They were the last things warm of their own accord. Now the black holes are the warmest things in the universe, and the lightest of them are already bursting too. White dwarfs, brown dwarfs and worlds remain, cold and dark, and space is unmaking them as well, slowly: the dwarfs will fade by η 85, every world by η 90. Whatever you are now, you live around the holes.';
   if (era === 'dark' && fate === 'stable')
-    return 'The last black hole has evaporated. There are no more sources, only what you saved. The matter is still here, dead stars and worlds as cold as the sky itself, giving nothing back. Photons stretched longer than galaxies once were drift through the dark. Every thought now draws on a reserve that will never refill, and time itself now passes in powers of powers.';
+    return 'The last black hole has evaporated. There are no more sources, only what you saved. The matter is still here, dead stars and worlds as cold as the sky itself, giving nothing back, and slowly, a few nuclei at a time, tunnelling toward iron: the few dead stars born heaviest will explode as their cores turn, the last flashes there will be. Photons stretched longer than galaxies once were drift through the dark. Every thought now draws on a reserve that will never refill, and time itself now passes in powers of powers. Even the matter will not last: in the end it tunnels into black holes.';
   return ERA_BY_ID[era].intro;
 }
 
@@ -249,6 +249,12 @@ export function formatEta(e: number, era: EraId): string {
   return e.toFixed(digits);
 }
 
+/** A date in deep time, from its η: 10¹⁵⁰⁰ years, or 10^(10²⁶) years once the exponent itself is huge. */
+export function formatDeepYears(eta: number): string {
+  if (eta < 1e4) return `10${sup(Math.round(eta))} years`;
+  return `10^(10${sup(Math.round(Math.log10(eta)))}) years`;
+}
+
 export function formatDistance(ly: number): string {
   if (ly < 1000) return `${num(ly, ly < 10 ? 1 : 0)} ly`;
   if (ly < 1e6) return `${num(ly / 1000, 1)} kly`;
@@ -333,16 +339,17 @@ export const MILESTONES: Milestone[] = milestonesFor(null);
 export const DEEP_MILESTONES: Milestone[] = [
   { at: Math.log10(141), label: 'Positronium decays', detail: 'η ≈ 141 (Page & McKee), where protons decayed or space unmade matter.' },
   { at: Math.log10(161), label: 'Vacuum decay?', detail: 'One Standard Model estimate puts the vacuum lifetime near 10¹⁶¹ years, with an uncertainty spanning over a thousand orders of magnitude.' },
-  { at: Math.log10(1500), label: 'Iron stars', detail: 'If protons are stable, cold fusion by tunnelling turns all matter to iron by about 10¹⁵⁰⁰ years (Dyson 1979).' },
-  { at: 26, label: 'Tunnelling collapse', detail: 'If protons are stable, iron stars tunnel into neutron stars and black holes between 10^(10²⁶) and 10^(10⁷⁶) years.' },
-  { at: 76, label: 'Last collapse', detail: 'The slowest estimate for matter tunnelling into black holes.' },
+  { at: Math.log10(1100), label: 'Black dwarf supernovae', detail: 'If protons are stable, the few dead stars born heavy enough (1.16 to 1.35 Suns) explode as pycnonuclear fusion turns their cores to iron: from about 10¹¹⁰⁰ years, the heaviest first, the lightest near 10³²⁰⁰⁰ (Caplan 2020).' },
+  { at: Math.log10(1500), label: 'Iron stars', detail: 'If protons are stable, cold fusion by tunnelling turns all matter to iron by about 10¹⁵⁰⁰ years (Dyson 1979): nothing is left to fuse or burn.' },
+  { at: 26, label: 'Tunnelling collapse', detail: 'If protons are stable, matter tunnels into black holes that evaporate at once, between 10^(10²⁶) and 10^(10⁷⁶) years (Dyson 1979): each system at a time of its own, and whatever is still made of matter with it.' },
+  { at: 76, label: 'Last collapse', detail: 'The slowest estimate for matter tunnelling into black holes: whole stars at once. After it no matter is left.' },
   { at: 122, label: 'Recurrence', detail: 'Poincaré recurrence of a de Sitter horizon, about 10^(10¹²²) years: given long enough, any state returns.' },
 ];
 
 /** The deep-time milestones for a fate: iron and collapse only if matter is stable, positronium only if it is not. */
 export function deepMilestonesFor(fate: Fate | null): Milestone[] {
   return DEEP_MILESTONES.filter((m) => {
-    if (m.label === 'Iron stars' || m.label === 'Tunnelling collapse' || m.label === 'Last collapse') return fate === 'stable' || fate === null;
+    if (m.label === 'Black dwarf supernovae' || m.label === 'Iron stars' || m.label === 'Tunnelling collapse' || m.label === 'Last collapse') return fate === 'stable' || fate === null;
     if (m.label === 'Positronium decays') return fate !== 'stable';
     return true;
   });

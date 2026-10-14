@@ -636,7 +636,9 @@ export interface EvolutionNote {
     | 'evaporated'
     | 'dissolved'
     | 'boiled'
-    | 'faded';
+    | 'faded'
+    | 'blackdwarf_sn'
+    | 'collapse';
   bodyId?: string;
   /** (boiled) inside a giant's own radius, rather than boiled by its light */
   swallowed?: boolean;

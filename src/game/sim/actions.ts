@@ -12,6 +12,7 @@ import { declareWar, makePeace } from './war';
 import { THREADS } from '../types';
 import { MATTER_AS_ENERGY, capacity } from './economy';
 import { positroniumComes, positroniumGone, positroniumHere } from './positronium';
+import { ironAge } from './deeptime';
 import { workCost, workRequirementMet } from './endings';
 import { resolveEvent } from './events';
 import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
@@ -64,6 +65,8 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
     if (positroniumGone(state)) return 'The positronium has decayed: too little of it is left to build for.';
     if (!positroniumHere(state)) return 'No positronium has formed yet: it pairs from η 85.';
   }
+  // once everything has fused to iron (deeptime.ts) nothing is left to fuse
+  if (d.energy?.mode === 'fusion' && ironAge(state)) return 'Everything has fused to iron: nothing is left to fuse.';
   if (d.terraform) {
     const why = terraformBlocked(state, b, c, d.terraform);
     if (why) return why;

@@ -38,6 +38,7 @@ import {
 } from '../../game/sim/actions';
 import { PASSAGE_OUTPUT, capacity } from '../../game/sim/economy';
 import { beginPassage, endForeseen, passageCheck, passageTerms, turnsToEndOfMatter } from '../../game/sim/passage';
+import { turnsToCollapse } from '../../game/sim/deeptime';
 import { SPENT_SPIN, holeFailing } from '../../game/sim/crossing';
 import { beginHorizon, driftCheck, driftTerms, driftToAnotherHole, horizonCheck, horizonTerms } from '../../game/sim/horizon';
 import { POSITRONIUM_DECAY, beginWeave, leaveWeave, leaveWeaveCheck, leaveWeaveCost, positroniumHere, turnsToDecay, weaveCheck, weaveTerms } from '../../game/sim/positronium';
@@ -874,6 +875,9 @@ function PassageSection({ s, c }: { s: GameState; c: Colony }) {
   const left = turnsToEndOfMatter(s);
   // (under decay matter begins to dissolve a decade and a half before it is gone)
   const dissolves = fateOf(s) === 'decay' && s.eta < MATTER_DISSOLVES ? turnsToEndOfMatter(s, MATTER_DISSOLVES) : Infinity;
+  // (if matter is stable it tunnels into black holes, from 10^(10^26) years, deep in the Dark Era: deeptime.ts)
+  const stable = fateOf(s) === 'stable';
+  const collapse = stable ? turnsToCollapse(s, s.civ.pace) : Infinity;
   const out = Math.round(PASSAGE_OUTPUT * 100);
   const what = `${t.crossing} structure${t.crossing === 1 ? '' : 's'} cross${t.crossing === 1 ? 'es' : ''} over (Energy Vaults as Field Stores, the homes of minds, harvesters at a black hole); ${t.apart} ${t.apart === 1 ? 'is' : 'are'} taken apart${t.matterBack ? ` (+${t.matterBack} matter)` : ''}.${t.kin ? ` Its ${t.kin} Kin cannot go: their patterns are kept in the archive (+${t.insight} insight).` : ''}${t.lattice ? ` ${t.lattice} of its Lattice will not survive the re-encoding.` : ''}`;
   return (
@@ -887,7 +891,16 @@ function PassageSection({ s, c }: { s: GameState; c: Colony }) {
         <>
           <p class="dim">
             Rewrite this settlement in electron–positron structures held by fields, which will outlast matter: {t.industry} industry ({isFinite(turns) ? `about ${turns} turn${turns === 1 ? '' : 's'} here` : 'nothing builds here'}
-            {isFinite(dissolves) ? `; matter begins to dissolve in about ${Math.floor(dissolves)}, and is gone in about ${Math.floor(left)}` : isFinite(left) ? `; matter ends in about ${Math.floor(left)}` : ''}) and {t.energy} energy now. {what} While it is worked, the settlement makes {out}% of its energy, matter, insight and accord; then only what has a leptonic form can be built there.
+            {stable
+              ? isFinite(collapse)
+                ? `; matter begins to tunnel into black holes in about ${collapse}`
+                : '; matter, stable, tunnels into black holes from 10^(10²⁶) years, deep in the Dark Era'
+              : isFinite(dissolves)
+                ? `; matter begins to dissolve in about ${Math.floor(dissolves)}, and is gone in about ${Math.floor(left)}`
+                : isFinite(left)
+                  ? `; matter ends in about ${Math.floor(left)}`
+                  : ''}
+            ) and {t.energy} energy now. {what} While it is worked, the settlement makes {out}% of its energy, matter, insight and accord; then only what has a leptonic form can be built there.
           </p>
           <button
             class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}

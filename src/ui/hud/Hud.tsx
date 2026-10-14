@@ -1,5 +1,6 @@
 import { SHIP_BY_ID } from '../../game/data/ships';
-import { formatYears } from '../../game/eras';
+import { formatDeepYears, formatYears } from '../../game/eras';
+import { turnsToEta } from '../../game/sim/deeptime';
 import { computeMods } from '../../game/sim/mods';
 import { project, type Projection } from '../../game/sim/projection';
 import { setDormant, setPace, longSleep } from '../../game/sim/actions';
@@ -166,9 +167,11 @@ function BottomLeft({ s }: { s: GameState }) {
           // turns at the pace you have chosen (the Tide figure too, when they differ)
           // (in the Dark Era only the widest atoms' decay is near enough to count)
           const due = isFinite(f.dueYears) && (calendarEra(s) !== 'dark' || f.kind === 'positronium');
+          // (deep time, past what a year can hold: counted on the deep-time calendar, deeptime.ts)
+          const deep = !due && f.dueEta !== undefined && s.era === 'dark';
           // (as they will really fall: a flare's own clock and its first moment shorten them)
-          const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : Infinity;
-          const tideTurns = due && s.civ.pace !== 0 ? turnsUntilYears(s, f.dueYears, 0, 5000) : turns;
+          const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : deep ? turnsToEta(s, f.dueEta!, s.civ.pace) : Infinity;
+          const tideTurns = s.civ.pace === 0 ? turns : due ? turnsUntilYears(s, f.dueYears, 0, 5000) : deep ? turnsToEta(s, f.dueEta!, 0) : turns;
           const tip = isFinite(turns) ? `${f.text}\n~${turns} turn${turns === 1 ? '' : 's'} at this pace${tideTurns !== turns && isFinite(tideTurns) ? ` (~${tideTurns} at the Tide)` : ''}.` : f.text;
           return (
             <div
@@ -188,7 +191,7 @@ function BottomLeft({ s }: { s: GameState }) {
               <div class="grow">
                 <div class="t">{f.title}</div>
                 <div class="faint" style={{ fontSize: '12.5px' }}>
-                  {isFinite(f.dueYears) ? `in ${formatYears(f.dueYears - s.years)}` : 'now'}
+                  {isFinite(f.dueYears) ? `in ${formatYears(f.dueYears - s.years)}` : f.dueEta !== undefined ? (s.eta >= f.dueEta ? 'now' : `at ${formatDeepYears(f.dueEta)}`) : 'now'}
                   {isFinite(turns) ? ` · ~${turns} turn${turns === 1 ? '' : 's'}` : ''}
                 </div>
               </div>

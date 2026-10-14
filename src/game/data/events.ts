@@ -817,6 +817,45 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
+    id: 'black_dwarf_supernova',
+    title: 'The Last Flashes',
+    art: 'dark',
+    once: true,
+    // the first heavy black dwarf to explode (deeptime.ts; Caplan 2020), matter stable: the rest are lines in the Record
+    text: (s, d) =>
+      `For longer than anything else has lasted, the nuclei inside the black dwarf at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'} have been tunnelling into one another, crushed together, fusing a few at a time, until its core was iron. Iron has fewer electrons for its weight than the carbon and oxygen it was made from, and it is the electrons that hold a dead star up: this one, one of the few born heavy, could stand no longer. It has collapsed and exploded, a supernova in a universe that had forgotten what light was, and its worlds went with it. The heaviest dead stars go first; the lightest that can, at 1.16 times the Sun, will hold out for some 10³²⁰⁰⁰ years. Burst Catchers bank their flashes.`,
+    choices: [
+      { label: 'Study the flash', hint: 'Insight +60.', run: (s) => { insight(s, 60); } },
+      { label: 'Mark it in the Record', hint: 'Resolve +2.', run: (s) => { res(s, 2); } },
+    ],
+  },
+  {
+    id: 'iron_stars',
+    title: 'Iron Stars',
+    art: 'dark',
+    once: true,
+    // as the calendar passes 10^1500 years, matter stable (deeptime.ts; Dyson 1979)
+    text: () =>
+      'By tunnelling, a few nuclei at a time, everything lighter than iron has fused up to it, and everything heavier has split or decayed down to it. Every dead star and every world is iron-56 now, where every nuclear road ends, and nothing is left in any of it to fuse or burn: Fusion Plants and the Hearths’ fuel give nothing more. The matter is still here, cold and dark and perfectly still. It will not be here for ever: from 10^(10²⁶) years it begins to tunnel into black holes.',
+    choices: [
+      { label: 'Study the iron', hint: 'Insight +30.', run: (s) => { insight(s, 30); } },
+      { label: 'Let it be', hint: 'Resolve +1.', run: (s) => { res(s, 1); } },
+    ],
+  },
+  {
+    id: 'tunnelling_collapse',
+    title: 'The Matter Goes',
+    art: 'dark',
+    once: true,
+    // the first system to tunnel into black holes, matter stable (deeptime.ts; Dyson 1979)
+    text: (s, d) =>
+      `The iron at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'} is gone. Given long enough, any lump of matter can tunnel all at once into a black hole (if holes that small can exist, and a whole star can, in any case), and such a hole evaporates almost as soon as it forms, in a flash. Somewhere between 10^(10²⁶) and 10^(10⁷⁶) years this happens to everything: no one can say which system goes when, only that none will be left. Whatever is still made of matter goes with it; what made the Passage stays, in the dark where the system was. Burst Catchers bank the flashes.`,
+    choices: [
+      { label: 'Watch them go', hint: 'Insight +40.', run: (s) => { insight(s, 40); } },
+      { label: 'Hold to what is left', hint: 'Resolve +3.', run: (s) => { res(s, 3); } },
+    ],
+  },
+  {
     id: 'final_burst',
     title: 'The Last Burst',
     art: 'blackhole',

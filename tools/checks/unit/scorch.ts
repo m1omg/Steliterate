@@ -13,6 +13,7 @@ import { generateWorld } from '../../../src/game/gen';
 import { DEFAULT_SETTINGS, newGame } from '../../../src/game/newGame';
 import { LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, decayWarmth, frozenFromTheStart, primaryLuminosity, steamWorld, waterFromTheStart } from '../../../src/game/physics';
 import { calendarEra } from '../../../src/game/fate';
+import { heavyDwarfs } from '../../../src/game/sim/deeptime';
 import { scorched } from '../../../src/game/sim/flare';
 import { endTurn } from '../../../src/game/sim/turn';
 import type { Body, GameState, StarSystem } from '../../../src/game/types';
@@ -33,6 +34,7 @@ const same = (a: Body, b: Body) => JSON.stringify({ ...a, colonyId: null }) === 
   for (const seed of [1000, 2000, 3000, 4000, 5000, 6000]) {
     const opts = { seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' } as const;
     const pre = generateWorld({ ...DEFAULT_SETTINGS, ...opts });
+    heavyDwarfs(pre);
     frozenFromTheStart(pre);
     waterFromTheStart(pre);
     const s = newGame(opts);

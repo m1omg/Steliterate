@@ -9,6 +9,8 @@ import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf, matterG
 import { decayProof } from './crossing';
 import { thinShare, thinning, thinningFrom } from './thinning';
 import { POSITRONIUM_DECAY, positroniumHere } from './positronium';
+import { COLLAPSE_FROM, IRON_ETA, collapsing, ironAge, supernovaEta, willExplode } from './deeptime';
+import { STRUCTURE_BY_ID } from '../data/structures';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
 // question is whether you can prepare in time.
@@ -193,6 +195,23 @@ export function updateForecasts(state: GameState) {
     }
   }
 
+  // matter stable, in the Dark Era: the last flashes, the iron, the collapse (deeptime.ts; dated by η, too far for years)
+  if (fateOf(state) === 'stable' && state.era === 'dark') {
+    for (const sys of Object.values(state.systems)) {
+      if (sys.gone || !willExplode(sys.primary) || !state.civ.known[sys.id]) continue;
+      const ours = colonies(state).filter((c) => c.systemId === sys.id && inItsSystem(state, c));
+      add({ kind: 'blackdwarf', title: `${sys.name} will explode`, text: `One of the few dead stars born heavy enough (${sys.primary.mass.toFixed(2)} times the Sun): as its core turns to iron it will collapse and explode, its worlds with it.${ours.length ? ` Our settlements there will be lost: ${ours.map((c) => c.name).join(', ')}. Move what can be moved.` : ''} Burst Catchers bank its flash, the more the nearer.`, dueYears: Infinity, dueEta: supernovaEta(sys.primary.mass), systemId: sys.id, severity: ours.length ? 'danger' : 'info' });
+    }
+    if (!ironAge(state)) {
+      const fusing = colonies(state).some((c) => Object.entries(c.structures).some(([id, n]) => n && STRUCTURE_BY_ID[id]?.energy?.mode === 'fusion'));
+      add({ kind: 'iron', title: 'Iron stars', text: `By about 10¹⁵⁰⁰ years everything will have fused to iron, a few nuclei at a time: nothing will be left to fuse or burn.${fusing ? ' Our Fusion Plants will give nothing, nor the Hearths’ fuel.' : ''}`, dueYears: Infinity, dueEta: IRON_ETA, severity: fusing ? 'warn' : 'info' });
+    }
+    if (!matterGone(state)) {
+      const of = colonies(state).some((c) => formOf(c) === 'baryonic');
+      add({ kind: 'collapse', title: collapsing(state) ? 'Matter is tunnelling into black holes' : 'Tunnelling collapse', text: `From 10^(10²⁶) years matter tunnels into black holes that evaporate at once, each system at a time no one can foresee, all of it by 10^(10⁷⁶): a flash for Burst Catchers. What is still made of matter goes with it; what made the Passage goes on. ${stillOfMatter(state)}`, dueYears: Infinity, dueEta: Math.pow(10, COLLAPSE_FROM), severity: of ? 'danger' : 'info' });
+    }
+  }
+
   // the galaxy's free energy
   const prev = state.civ.flags.gfe_prev ?? 1;
   const rate = prev - state.gfe;
@@ -214,6 +233,6 @@ export function updateForecasts(state: GameState) {
     add({ kind: 'hunger', title: `A swarm is heading for ${state.systems[sw.to].name}`, text: 'It has smelled the heat of our settlement.', dueYears: Infinity, systemId: sw.to, severity: 'danger' });
   }
 
-  out.sort((a, b) => a.dueYears - b.dueYears);
+  out.sort((a, b) => a.dueYears - b.dueYears || (a.dueEta ?? Infinity) - (b.dueEta ?? Infinity));
   state.civ.forecasts = out;
 }

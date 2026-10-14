@@ -684,6 +684,48 @@ Each step validated on its own, with the harness by fate:
    ring, the dissolve; every quality tier, with screenshots asked about first (the player has not
    reached that far).
 
+### 3-6, as it will be built (14 Oct, written before starting it)
+
+The sources, checked: Caplan 2020 (MNRAS 497, 4357, arXiv:2008.02296) gives black dwarfs of
+1.16 to 1.35 M☉ exploding as pycnonuclear fusion turns their cores to iron: 10^1100 years at 1.35,
+10^1600 at 1.24, 10^32000 at 1.16 (the lightest that can, a pure iron-56 dwarf), about 1% of all
+stars, if protons do not decay; what is left (an iron-cored dwarf, likelier, or a neutron star) is
+open. Dyson 1979: everything fused to iron by about 10^1500 years; matter tunnelling into black
+holes between 10^(10^26) years (any lump, if Planck-mass black holes can form) and 10^(10^76)
+(whole stars). The game's white dwarfs are 0.45 to 0.9 M☉ (mergers' remnants up to 1.1): none
+could explode. So:
+
+1. **Heavy dwarfs:** about one white dwarf in 30 (about 1% of the galaxy's stars, as Caplan
+   counts) begins the game at 1.16 to 1.35 M☉, by a hash of its mass draw: no draw is taken, every
+   other star and world is as before, and the passes that read temperature run after it.
+2. **Black dwarf supernovae** (stable only): each heavy dwarf explodes in the turn that passes its
+   date (Caplan's three points, interpolated in log η): its worlds are blown away, and whatever
+   we had in its system with them; Burst Catchers elsewhere bank a share of the flash by distance
+   (`burstShare`, once a turn each, from the nearest); an iron-cored dwarf is left. The first is an
+   event; each is forecast once the fate is known.
+3. **Iron stars** (stable, η 1500): nothing is left to fuse. Fusion Plants make nothing, and
+   cannot be built. An event; a forecast.
+4. **Tunnelling collapse** (stable, λ = log10 η from 26 to 76): each system's matter, its dead
+   star and its worlds, tunnels into black holes that evaporate within the turn, at a time of its
+   own in that span that no one can foresee (a hash per system; which estimate holds is unknown,
+   and the game spreads them, which the Codex says). What we have of matter there is lost; a
+   leptonic settlement on a world goes on in the system's Deep; Burst Catchers bank the flash as
+   above. The first is an event; the forecast gives the span. When the last is gone, matter is.
+5. **The Passage opens for the stable fate** once the fate is known: matter does end, if
+   unimaginably late. The autoplayer, in the Dark Era, builds Leptonic Substrate and begins the
+   Passage by turns before λ 26 (its decades rule cannot work where one turn spans so many).
+6. Codex (the dates, the bends: the heavy dwarfs' share and the spread of the collapse), Manual,
+   the age's introduction for the stable fate, the deep-time ruler; `unit/stable-dark`; the harness
+   by fate.
+   - As built (14 Oct): as above, and iron also takes a Hearth's "stored fuel and salvage" where
+     nothing local is left. The autoplayer began its Passage at once in the dark (λ 2), and with
+     a stable civilization's small industry never finished it; it now begins two turns before the
+     iron (matter pays its way until then) and rushes the turn before. Forecasts past 10^300
+     years carry their η (`Forecast.dueEta`). 900 games 460 / 209 / 72 (520 / 218 / 72 at
+     "Harder"): decay and curvature as before (a few curvature games moved by the heavy dwarfs),
+     stable 103 / 239 (164): the stable dark is a finite budget now, and the autoplayer reaches it
+     awake on whatever it holds.
+
 ### 3-2, as it will be built (13 Oct, written before starting it)
 
 1. **A leptonic form for some structures** (`StructureDef.leptonic`, with a name of its own where it

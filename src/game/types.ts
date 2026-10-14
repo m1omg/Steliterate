@@ -89,6 +89,7 @@ export interface Primary {
   spinMax: number;
   evaporateAt?: number; // black holes: Hawking evaporation (cosmic year)
   rekindle?: number; // extra light from a feeding world or rekindling (era-normalised)
+  exploded?: boolean; // a heavy black dwarf that has gone supernova (deeptime.ts): an iron-cored dwarf is left
 }
 
 export interface StarSystem {
@@ -496,6 +497,7 @@ export interface Forecast {
   title: string;
   text: string;
   dueYears: number; // cosmic year of the event (Infinity = open)
+  dueEta?: number; // in deep time, where the year is too large to hold: its η (the HUD counts turns from it)
   systemId?: string;
   bodyId?: string;
   severity: 'info' | 'warn' | 'danger' | 'boon';

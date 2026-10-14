@@ -110,6 +110,8 @@ export const CODEX: CodexEntry[] = [
     body: [
       'After the last galaxy-sized black hole evaporates (around η 100) there is only thin radiation and, unless matter was stable, the occasional positronium atom, which decays around η 141. If it was, the dead stars and worlds are still there, as cold as the sky.',
       'Far beyond: the vacuum might decay (one Standard Model estimate is near 10¹⁶¹ years, but uncertain by more than a thousand orders of magnitude). If protons are stable, iron stars tunnel into black holes between 10^(10²⁶) and 10^(10⁷⁶) years. A de Sitter horizon returns to any previous state after roughly 10^(10¹²²) years (Poincaré recurrence).',
+      'If protons are stable, the matter has three more things to do (Dyson 1979; Caplan 2020). Inside a dead star, crushed together, nuclei now and then tunnel through the barrier between them and fuse, a few at a time: pycnonuclear fusion. Iron has fewer electrons for its weight than the carbon and oxygen it is made from, and it is the electrons that hold a dead star up, so as the core turns to iron the most a dwarf can weigh falls. One born between 1.16 and 1.35 Suns becomes too heavy to stand, collapses and explodes: the heaviest after some 10¹¹⁰⁰ years, one of 1.24 after 10¹⁶⁰⁰, the lightest that can after 10³²⁰⁰⁰. Caplan counts about one star in a hundred among them. By about 10¹⁵⁰⁰ years everything else is iron too, and nothing in it can be fused or burned. Then, between 10^(10²⁶) years (any lump of matter, if black holes as small as the Planck mass can form) and 10^(10⁷⁶) (whole stars at once), it tunnels into black holes, which at that age evaporate as soon as they form, in a flash. Burst Catchers bank all of these flashes.',
+      'Where the game bends it: about one white dwarf in thirty is born heavy enough, by a hash of its mass rather than a draw, so a galaxy of fifty has one or two; between Caplan’s three masses the dates are drawn along a smooth line. Which of Dyson’s estimates holds no one knows, and the game takes each system at a time of its own anywhere in the span between them, which no one can foresee; what explodes leaves an iron-cored dwarf, which Caplan thinks likelier than a neutron star.',
       'Roger Penrose’s conformal cyclic cosmology suggests the end of one universe might be the start of another. It is speculative; the game’s Aeon Seed is built on it.',
     ],
   },
@@ -129,6 +131,7 @@ export const CODEX: CodexEntry[] = [
       'F. C. Adams & G. Laughlin, “A dying universe: the long-term fate and evolution of astrophysical objects”, Reviews of Modern Physics 69, 337 (1997).',
       'F. C. Adams, G. Laughlin & G. J. M. Graves, “Red dwarfs and the end of the main sequence”, RevMexAA (2004).',
       'F. J. Dyson, “Time without end: physics and biology in an open universe”, Reviews of Modern Physics 51, 447 (1979).',
+      'M. E. Caplan, “Black dwarf supernova in the far future”, MNRAS 497, 4357 (2020); arXiv:2008.02296.',
       'L. M. Krauss & G. D. Starkman, “Life, the universe, and nothing”, ApJ 531, 22 (2000).',
       'R. Landauer, “Irreversibility and heat generation in the computing process”, IBM J. Res. Dev. 5, 183 (1961).',
       'L. M. Krauss & R. J. Scherrer, “The return of a static universe and the end of cosmology”, GRG 39, 1545 (2007).',

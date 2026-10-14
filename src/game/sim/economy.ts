@@ -12,6 +12,7 @@ import { calendarEra, fateOf, matterGone } from '../fate';
 import { FLOW_DORMANT, FLOW_WATCH, flowing, keeping } from './flow';
 import { thinShare } from './thinning';
 import { netYield } from './positronium';
+import { ironAge } from './deeptime';
 
 export interface TurnContext {
   years: number; // start of the coming turn
@@ -224,6 +225,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
           break;
         case 'fusion':
         case 'accretion': {
+          // once everything has fused to iron (matter stable, η 1500) nothing is left to fuse
+          if (d.energy.mode === 'fusion' && ironAge(state)) break;
           const want = (d.energy.input ?? 1) * n * pf;
           const got = Math.min(want, Math.max(0, matterAvailable - matterBurn));
           matterBurn += got;
@@ -284,10 +287,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     accord += acc;
     energyUpkeep += up;
     // a collector with nothing to collect says so, rather than vanishing from the list
-    const idle = away || (!!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion');
+    const iron = d.energy?.mode === 'fusion' && ironAge(state);
+    const idle = away || iron || (!!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion');
     // a Search Foundry or Protocol Registry with no Lattice here to run it says so too
     const unrun = !!d.search && !(c.pops.lattice > 0);
-    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${away ? ': out of reach, its world drifted loose from the star' : idle ? ': nothing to gather' : unrun ? ': no Lattice here to run it' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
+    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${away ? ': out of reach, its world drifted loose from the star' : iron ? ': nothing left to fuse, all of it iron' : idle ? ': nothing to gather' : unrun ? ': no Lattice here to run it' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
   }
   if (matterBurn > 0) lines.push({ label: 'Fuel burned', matter: -matterBurn });
 
@@ -297,10 +301,12 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const hole = (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh') && !body.rogue;
     const fed = Math.max(Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
     // where nothing local is left to draw on, it burns what was stored and salvaged, a little
-    const local = Math.max(0.25, fed);
+    // (once all of it is iron there is no fuel left in it to burn, nor anything to salvage)
+    const iron = ironAge(state);
+    const local = iron ? fed : Math.max(0.25, fed);
     const hearth = 2 * local * (1 - c.damage) * pf * overdrive * focusMul(c, 'energy') * taintBoost;
     energy += hearth;
-    lines.push({ label: `Hearth${c.overdrive ? ' (overdriven)' : ''}${fed < 0.25 ? ': stored fuel and salvage' : ''}`, energy: hearth });
+    lines.push({ label: `Hearth${c.overdrive ? ' (overdriven)' : ''}${fed < 0.25 ? (iron ? ': nothing left to burn, all of it iron' : ': stored fuel and salvage') : ''}`, energy: hearth });
   }
 
   industry *= ctx.mods.industryMult * focusMul(c, 'industry');

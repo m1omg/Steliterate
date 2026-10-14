@@ -76,7 +76,7 @@ function holeFor(state: GameState, c: Colony, holes: StarSystem[], leaving = fal
 }
 
 /** Into the Deep at this hole: its own civilization's vault there, if it has one, beside any other's. Returns where it is now. */
-function moveToHole(state: GameState, c: Colony, target: StarSystem): Colony {
+export function moveToHole(state: GameState, c: Colony, target: StarSystem): Colony {
   const deep = deepFor(state, target, c.owner) ?? state.bodies[target.bodies[0]];
   const oldBody = state.bodies[c.bodyId];
   if (oldBody) oldBody.colonyId = null;

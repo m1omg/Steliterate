@@ -98,7 +98,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form, positronium, continuity), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form, positronium, continuity, stable-dark), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -496,6 +496,29 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     is banked at half, but not the weaving, which is seldom used). `WEAVE_TURNS` (6): fewer turns
     to the decay, the weaving is not worth researching. The tech has `needsUnstable` (`techVisible`,
     `sim/research.ts`): any fate but stable matter.
+  - **The stable fate's late game** (part 3-6, `sim/deeptime.ts`): `heavyDwarfs(state)` runs in
+    `newGame` straight after `generateWorld`, before the passes that read temperatures: about one
+    white dwarf in `HEAVY_ONE_IN` (30) gets `HEAVY_MIN`–`HEAVY_MAX` (1.16–1.35 M☉), by a hash of its
+    mass draw (no draw taken). `deepTime(state, fromEta, toEta)` is the universe's part, called in
+    `endTurn` right after `evolveUniverse`, its notes pushed onto the same list; stable only: a heavy
+    dwarf (`willExplode`) explodes at `supernovaEta(mass)` (Caplan's three points, interpolated in
+    log η; `Primary.exploded`, mass to 1.0, its non-rogue worlds dissolved; note
+    `'blackdwarf_sn'`); `state.flags.iron` is set as η passes `IRON_ETA` (1500); each system with
+    matter (`hasMatter`) collapses at `collapseLambda(sys)` (a hash in `COLLAPSE_FROM`–`COLLAPSE_TO`,
+    λ = log10 η 26–76): primary to `'void'`, every non-Deep body dissolved, `gone` unless something
+    leptonic is there (note `'collapse'`); past λ 76 `state.flags.matter_gone`. `handleNotes` takes
+    each civilization's losses (`blackdwarf_sn`: everything in its system, in its system;
+    `collapse`: baryonic lost, a leptonic settlement on a world moved into the Deep with
+    `moveToHole`) and `catchFlashes` banks the turn's flashes (each catcher from the nearest, once,
+    `burstShare`). `ironAge(state)`: Fusion Plants make nothing (`colonyTurn`, labelled), cannot
+    be built (`structureCheck`), and the Hearth loses its 0.25 floor. Events `black_dwarf_supernova`,
+    `iron_stars`, `tunnelling_collapse` (once each). Forecasts `blackdwarf`, `iron`, `collapse`
+    carry `Forecast.dueEta`: the HUD counts their turns with `turnsToEta` (stepping `stepTime` in
+    the Dark Era) and writes the date with `formatDeepYears`. `endForeseen` is true for the stable
+    fate too once the fate is known (the Passage opens). The autoplayer: in the stable Dark Era the
+    Passage is begun `IRON_LEAD` (2) turns before iron and rushed the turn before (`passageDue`,
+    `passageLate`; its decades rule cannot work where a turn spans so many), substrate from
+    `COLLAPSE_PREPARE` (12) turns before the collapse, and Burst Catchers.
   - **Continuity in the Dark Era** (14 Oct, harder; `sim/continuity.ts`): `continuityLoss(state,
     starving)` is what a turn takes, `DARK_DECAY` (2.2) times `correctedShare` (each settlement's
     Error-Correction Arrays, `continuityMult` 0.6 each, keep its own minds and sleepers; the mean
@@ -1647,6 +1670,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the widest atoms: the weave, the nets, the countdown (13 Oct; part 3-5) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 636 / 226 / 74 (639 / 226 / 74 at 3-4): decay and stable end exactly as before, game for game; curvature 136 / 211 (139), its 36 wins as before; 893 of 900 as before. The weave in 2 games. First built: 632 / 217 (the weaving researched into the Dark Era after the decay, and from the cheapest-left fallback in 100 stable games), then 637 / 218, 634 / 218, 635 / 226 (nets before the Last Horizon from what Continuity counts; a vault that could not afford to leave the weave, lost at the decay) |
 | leaving a hole, and the Horizon form (13 Oct; part 3-4) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 639 / 226 / 74 (522 / 205 / 74 before): decay 330 / 450 (210; 77 wins, 53), stable 170 / 239 (169; 235 of 239 end as before), curvature 139 / 211 (143; 36 wins, 40), within the noise. Drifts in 384 games, the Horizon form in 4. Under decay the vaults now drift to a hole with spin, the Heart above all, where before they starved at the small hole the Migration found, slowed the pace to stretch the reserve, and entered the Dark Era short: of the 450, 125 saved (72 had faded, 41 lost their will), 5 lost. The first drift rule, the nearest hole with spin: 638 / 227 with Horizon Writing researched everywhere |
 | harder: the dark's Continuity (an empty reserve 10 a turn, arrays for their own settlement), swarms on to our settlements (14 Oct; the player: "make it harder pls") | 167 | 67 victories, Degenerate Age 71 turns; 900 games 520 / 218 / 72 (636 / 226 / 74 at 3-5): decay 251 / 450 (73 wins), stable 164 / 239 (107), curvature 105 / 211 (38); victories as before. The Fade 126 (78), Silence 224 (159), The Will Fails 30 (27); 466 of 900 end the same way (88 line for line). The dark alone (300): 186 / 68, The Fade 23 → 56; the swarms on top: 167 / 67, Silence in the Degenerate Age 12 → 23. The Harsh setting before both: 198 / 58 of 300. A part turning on a settlement founded where it waits (an ark come down) changes none of the 900 |
+| the stable fate's late game: a few heavy dwarfs, black dwarf supernovae, iron stars, tunnelling collapse; the Passage where matter is stable (14 Oct; part 3-6) | 144 | 61 victories, Degenerate Age 71 turns; 900 games 460 / 209 / 72 (520 / 218 / 72 at "Harder"): decay 251 / 450 (449 line for line, every outcome the same), curvature 106 / 211 (105; the heavy dwarfs are in every fate), stable 103 / 239 (164): The Long Thought 80 (89), Recurrence 5 (57), The Fade 79 (37), Silence in the Dark Era 21 (2). The stable dark is a finite budget now; the autoplayer never sleeps. 748 of 900 line for line |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

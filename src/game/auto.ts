@@ -36,6 +36,7 @@ import { availableTechs, techCost } from './sim/research';
 import { FORTIFY_BONUS, canSettle, fleetUpkeep, launchCost, travelEstimate } from './sim/fleets';
 import { allColonies, allFleets, capital, colonies, distLy, eraIndex, fleets, formOf, hasTech, leftBehind, popsOf, swarmSeenAt, temperament, threadTotals } from './sim/util';
 import { beginPassage, endForeseen, etaToEndOfMatter, passageEta, passageTerms } from './sim/passage';
+import { IRON_ETA, ironAge, turnsToCollapse, turnsToEta } from './sim/deeptime';
 import { LEAVE_MARGIN, SPENT_SPIN, holeFailing } from './sim/crossing';
 import { beginHorizon, driftToAnotherHole, horizonCheck } from './sim/horizon';
 import { beginWeave, leaveWeave, positroniumComes, positroniumGone, positroniumHere, turnsToDecay, weaveCheck } from './sim/positronium';
@@ -498,6 +499,16 @@ function planDismantle(state: GameState) {
  * (under decay, matter begins to dissolve a decade and a half before it: physics.ts).
  */
 const PASSAGE_SPARE = 2;
+/** Matter stable: Leptonic Substrate built from this many turns before matter can begin to tunnel into black holes (deeptime.ts). */
+const COLLAPSE_PREPARE = 12;
+/** The Passage begun this many turns before everything is iron (deeptime.ts). */
+const IRON_LEAD = 2;
+
+/** Turns of its own industry the Passage (or what is left of it) would take here: Infinity with none. */
+function passageTurns(c: Colony, industry: number): number {
+  const per = c.last?.industry ?? 0;
+  return per > 0 ? Math.ceil(industry / per) : Infinity;
+}
 
 /**
  * How many decades the Passage would take here: at the Tide, or at our pace if it is quicker. A
@@ -519,6 +530,17 @@ function passageDue(state: GameState, c: Colony): boolean {
   if (!hasTech(state, 'leptonic_computation') || !endForeseen(state)) return false;
   const terms = passageTerms(state, c);
   if (state.civ.energy < terms.energy + 20) return false;
+  // matter stable: it tunnels into black holes deep in the Dark Era, where one turn spans more
+  // decades than the rule below could count. What it gives (fusion, a Hearth's fuel) it gives
+  // until everything is iron: so it is kept until then, and the Passage begun two turns before
+  // (or at once, past it), and rushed the turn before, while that last energy can pay for it, with
+  // matter that is about to be worth nothing (passageLate)
+  if (plannedFate(state) === 'stable') {
+    if (state.era !== 'dark') return false;
+    const pace = clockCiv(state).pace;
+    if (!isFinite(turnsToCollapse(state, pace))) return false;
+    return ironAge(state) || turnsToEta(state, IRON_ETA, pace) <= IRON_LEAD;
+  }
   const left = etaToEndOfMatter(state);
   const need = passageNeeds(state, c, terms.industry);
   return need < left && left <= need + PASSAGE_SPARE;
@@ -531,6 +553,10 @@ function passageDue(state: GameState, c: Colony): boolean {
  */
 function passageLate(state: GameState, c: Colony): boolean {
   const q = c.queue[0];
+  if (q?.kind === 'passage' && plannedFate(state) === 'stable') {
+    const pace = clockCiv(state).pace;
+    return ironAge(state) || turnsToEta(state, IRON_ETA, pace) <= 1 || turnsToCollapse(state, pace) <= passageTurns(c, q.cost - q.progress) + 1;
+  }
   const left = etaToEndOfMatter(state);
   return q?.kind === 'passage' && left <= PASSAGE_SPARE + 1 && passageEta(state, c, q.cost - q.progress) > left - 1;
 }
@@ -602,7 +628,12 @@ function planBuilds(state: GameState) {
   // before matter ends (the Great Decay, or the Great Evaporation), re-encode onto leptonic substrate
   const fate = plannedFate(state);
   // about as many turns ahead for either: the Black Hole Age's Tide covers a decade a turn, the Degenerate Age's under half
-  const preEnd = fate === 'decay' ? calendarEra(state) === 'degenerate' && state.eta > 27 : fate === 'curvature' ? state.eta > 62 && !matterGone(state) : false;
+  const preEnd =
+    fate === 'decay'
+      ? calendarEra(state) === 'degenerate' && state.eta > 27
+      : fate === 'curvature'
+        ? state.eta > 62 && !matterGone(state)
+        : state.era === 'dark' && !matterGone(state) && turnsToCollapse(state, clockCiv(state).pace) <= COLLAPSE_PREPARE;
   // under curvature the end is far off, but a settlement's matter runs out long before it (near η
   // 45 to 55), and a Bastion Shell, which costs none, stands only at a black hole: so from η 27 it
   // re-encodes too, in the ordinary way, after what it needs for energy, from matter to spare
@@ -651,6 +682,8 @@ function planBuilds(state: GameState) {
     if (calendarEra(state) === 'blackhole') plan.push('penrose_harvester', 'hawking_collector', 'bastion', 'horizon_vault');
     if (calendarEra(state) === 'degenerate' && state.eta > 30) plan.push('penrose_harvester', 'hawking_collector');
     if (calendarEra(state) === 'dark') plan.push('preservation_array', 'horizon_siphon');
+    // matter stable: the last flashes and the collapse, banked (deeptime.ts)
+    if (calendarEra(state) === 'dark' && fate === 'stable' && !matterGone(state)) plan.push('burst_catcher');
     if (fate === 'curvature' && state.eta > 29 && state.eta < DEGENERATE_END.curvature) plan.push('curvature_collector');
     // after the embers: burn matter (it is going anyway), feed black holes, catch the decay
     if (calendarEra(state) === 'degenerate' && light < 0.3) {

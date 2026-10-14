@@ -94,3 +94,6 @@ and the autoplayer through the end of matter, `24fbc18`): 175 of 300, 62 victori
 (positronium): 900 games 636 / 226 / 74, decay and stable as before game for game. Harder (14 Oct,
 the player: "make it harder pls"; the dark's Continuity, swarms on to our settlements): 167 of
 300, 67 victories; 900 games 520 / 218 / 72; by fate decay 56%, stable 69%, curvature 50%.
+With part 3-6 (the stable fate's late game: black dwarf supernovae, iron stars, tunnelling
+collapse): 144 of 300, 61 victories; 900 games 460 / 209 / 72; by fate decay 56%, stable 43%,
+curvature 50%.

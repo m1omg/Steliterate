@@ -5,15 +5,16 @@ import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
 import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
 import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
-import type { Body, Colony, CrossingReport, GameState, Outcome, Signal } from '../types';
+import type { Body, Colony, CrossingReport, GameState, Outcome, Signal, StarSystem } from '../types';
 import { THREADS } from '../types';
-import { decayProof, finalBurstCatch, goOnAlone, greatEvaporation, runCrossing } from './crossing';
+import { burstShare, decayProof, finalBurstCatch, goOnAlone, greatEvaporation, moveToHole, runCrossing } from './crossing';
 import { completePassage } from './passage';
 import { flowComes, theLongFlow } from './flow';
 import { theThinning } from './thinning';
 import { completeHorizon, horizonGone } from './horizon';
 import { POSITRONIUM_DECAY, completeWeave, positroniumComes, positroniumHere, theWeaveEnds, turnsToDecay } from './positronium';
 import { continuityLoss } from './continuity';
+import { deepTime } from './deeptime';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
 import { battlesTurn } from './conflict';
@@ -34,7 +35,7 @@ import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost }
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
-import { allColonies, clamp, colonies, distLy, fleets, formOf, hasCharter, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
+import { allColonies, clamp, colonies, distLy, fleets, formOf, hasCharter, inItsSystem, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
 import { becomeHunger } from './judge';
 import { WORKS_WATER, seededVitality } from './terraform';
 import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf, matterGone } from '../fate';
@@ -354,6 +355,8 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
   // while Halo Siphons run, the halo falls twice as fast: its clock gains this turn's years again
   if (ids.some((id) => t[id].siphoning)) drainHalo(state, from, step.years);
   const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
+  // matter stable: the heaviest dead stars explode, everything turns to iron, then tunnels into black holes (no draw)
+  notes.push(...deepTime(state, state.eta, step.eta));
   result.notes = notes;
   // from 10^65 years solid matter flows: once, the ruins no one awake is digging run into smooth lumps
   flowComes(state, step.eta, logL, modsOf, Math.log10(paceFactor));
@@ -747,6 +750,8 @@ function signalsAndEvents(state: GameState): Signal[] {
   // positronium forms where matter has decayed or been unmade (η 85): news, once, after the random
   // roll so that it never changes what the roll draws (a game already past it hears it now)
   if (state.era === 'blackhole' && state.eta >= POSITRONIUM_ETA && fateOf(state) !== 'stable') queueEvent(state, 'positronium_forms');
+  // matter stable: by 10^1500 years everything is iron (deeptime.ts), news once
+  if (state.flags.iron !== undefined) queueEvent(state, 'iron_stars');
   // and the turn before they decay, for whoever has woven anything through them or strung nets
   if (mine && positroniumHere(state) && colonies(state).some((c) => formOf(c) === 'positronium' || (c.structures.positronium_net ?? 0) > 0) && turnsToDecay(state) <= 1) queueEvent(state, 'positronium_ends');
   // (the forecasts are for the player to read)
@@ -760,6 +765,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const known = state.civ.known;
   // (each civilization sees to its own settlements, in its own part of the turn)
   const own = (id: string | null | undefined) => (id && state.colonies[id]?.owner === state.civ.id ? state.colonies[id] : undefined);
+  // the deep dark's flashes this turn, for the Burst Catchers (catchFlashes)
+  const flashes: StarSystem[] = [];
   for (const n of notes) {
     const sys = state.systems[n.systemId];
     if (!sys) continue;
@@ -851,6 +858,35 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         // and what we built there stays (with nothing left there to warm it)
         if (mine || seen) log(state, `The dwarf at ${sys.name} is gone: space has turned the last of its mass into particles. Whatever orbited it drifts loose.`, mine ? 'bad' : 'info', sys.id);
         break;
+      case 'blackdwarf_sn': {
+        // a heavy black dwarf exploded (deeptime.ts): its worlds blown away, and whatever we had in its system with them
+        let lost = 0;
+        for (const c of colonies(state)) {
+          if (c.systemId !== sys.id || !inItsSystem(state, c)) continue;
+          lost += popsOf(c) + c.cryo;
+          destroyColony(state, c, 'its dead star exploded');
+        }
+        flashes.push(sys);
+        if (!state.civ.fired.black_dwarf_supernova) queueEvent(state, 'black_dwarf_supernova', { systemId: sys.id });
+        else if (mine || seen) log(state, `The black dwarf at ${sys.name} has exploded, its core turned to iron.${lost ? ` ${lost} of our people were lost with it.` : ''}`, lost ? 'bad' : 'info', sys.id);
+        break;
+      }
+      case 'collapse': {
+        // its matter tunnelled into black holes, which evaporated at once (deeptime.ts): what is of
+        // matter is lost; what is leptonic goes on, in the Deep where the system was
+        let lost = 0;
+        for (const c of colonies(state)) {
+          if (c.systemId !== sys.id) continue;
+          if (formOf(c) === 'baryonic') {
+            lost += popsOf(c) + c.cryo;
+            destroyColony(state, c, 'its matter tunnelled into black holes');
+          } else if (state.bodies[c.bodyId]?.kind !== 'deep') moveToHole(state, c, sys);
+        }
+        flashes.push(sys);
+        if (!state.civ.fired.tunnelling_collapse && (mine || seen || colonies(state).length)) queueEvent(state, 'tunnelling_collapse', { systemId: sys.id });
+        else if (mine) log(state, `The matter at ${sys.name} has tunnelled into black holes and gone in a flash.${lost ? ` ${lost} of our people, still made of it, went with it.` : ''}`, lost ? 'bad' : 'info', sys.id);
+        break;
+      }
       case 'dissolved':
         for (const c of colonies(state)) {
           if (c.systemId !== sys.id) continue;
@@ -864,6 +900,32 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         }
         break;
     }
+  }
+  if (flashes.length) catchFlashes(state, flashes);
+}
+
+/**
+ * The turn's flashes in the deep dark (black dwarf supernovae, matter tunnelling into black holes):
+ * each of our Burst Catchers banks from the nearest, once, by its distance (`burstShare`: all of it
+ * in its own system or within 10 ly), as from a neutron star bursting.
+ */
+function catchFlashes(state: GameState, systems: StarSystem[]) {
+  let got = 0;
+  const where: string[] = [];
+  for (const c of colonies(state)) {
+    const n = c.structures.burst_catcher ?? 0;
+    const home = state.systems[c.systemId];
+    if (!n || !home || home.ejected || !inItsSystem(state, c)) continue;
+    let share = 0;
+    for (const s of systems) share = Math.max(share, burstShare(distLy(home, s)));
+    if (share > 0) {
+      got += share * n;
+      where.push(c.name);
+    }
+  }
+  if (got > 0) {
+    state.civ.energy += got;
+    log(state, `Burst Catchers at ${where.length > 2 ? `${where.slice(0, 2).join(', ')} and ${where.length - 2} more` : where.join(' and ')} caught the flash: +${Math.round(got)} energy.`, 'good');
   }
 }
 

@@ -1,4 +1,5 @@
 import { generateWorld } from './gen';
+import { heavyDwarfs } from './sim/deeptime';
 import { frozenFromTheStart, waterFromTheStart } from './physics';
 import { createColony, newFleet } from './sim/fleets';
 import { foundCiv } from './sim/others';
@@ -22,6 +23,8 @@ export function newGame(partial: Partial<GameSettings> = {}): GameState {
   const settings: GameSettings = { ...DEFAULT_SETTINGS, ...partial };
   settings.civName = savableName(settings.civName);
   const state = generateWorld(settings);
+  // a few dwarfs born heavy enough to explode one day (deeptime.ts): no draw, before the passes that read temperatures
+  heavyDwarfs(state);
   frozenFromTheStart(state);
   waterFromTheStart(state);
   scorchedFromTheStart(state);

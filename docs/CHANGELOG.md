@@ -2870,3 +2870,58 @@ player: "make it harder pls". Two changes, each grounded, neither undoing the dr
   Games now end across the ages: of the 380 defeats, 39 in the Dusk, 73 in the Degenerate Age,
   139 in the Black Hole Age and 129 in the Dark Era. For comparison, the Harsh setting had 198 of
   300 before these changes, and `main`'s game 456 of 900.
+
+## The stable fate's late game (14 Oct, part 3-6)
+
+Where protons are stable, matter outlasted the black holes and simply stayed, cold, for ever: the
+ruler showed iron stars and tunnelling collapse, and nothing came of them. Now the matter has
+three more things to do, with the dates checked against the papers: Caplan 2020 (MNRAS 497, 4357;
+black dwarfs of 1.16 to 1.35 M☉ explode as their cores turn to iron, 10^1100 years at 1.35,
+10^1600 at 1.24, 10^32000 at 1.16, about 1% of stars, if protons do not decay) and Dyson 1979
+(everything iron by 10^1500 years; matter tunnelling into black holes between 10^(10^26) and
+10^(10^76)). New: `sim/deeptime.ts`.
+
+- **A few heavy dwarfs.** The galaxy's white dwarfs were 0.45 to 0.9 M☉, and none could ever
+  explode. Now about one in 30 is born 1.16 to 1.35 M☉ (about 1% of the galaxy's stars, as Caplan
+  counts), by a hash of its mass draw: nothing drawn, so every seed's galaxy is otherwise as it was
+  (the check compares the generator's random state).
+- **Black dwarf supernovae** (matter stable, in the Dark Era): each heavy dwarf explodes in the turn
+  that passes its date, the heaviest first (between Caplan's three masses the dates follow a smooth
+  line in log η): its worlds are blown away, and whatever we had in its system with them; an
+  iron-cored dwarf is left (Caplan's likelier remnant). Burst Catchers elsewhere bank a share of
+  the flash by distance, all of it within 10 ly, once a turn each from the nearest. The first is an
+  event ("The Last Flashes"); each known one is forecast with its date.
+- **Iron stars** (10^1500 years): nothing is left to fuse or burn. Fusion Plants make nothing and
+  can no longer be built, and a Hearth with nothing local to draw on loses its "stored fuel and
+  salvage". An event; a forecast. A stable Dark Era had lived on fusion for ever; now, as in the
+  other fates, it lives on what was saved.
+- **Tunnelling collapse** (10^(10^26) to 10^(10^76) years): each system's matter, its dead star and
+  its worlds, tunnels into black holes that evaporate within the turn, at a time of its own in that
+  span that no one can foresee (a hash per system: which of Dyson's estimates holds is not known,
+  and the game spreads them, which the Codex says). What is of matter there is lost; a leptonic
+  settlement on a world goes on in the system's Deep; Burst Catchers bank the flash. By 10^(10^76)
+  no matter is left. The first is an event ("The Matter Goes"); the forecast names what is still
+  made of matter.
+- **The Passage opens where matter is stable**, once the fate is known: matter does end, if
+  unimaginably late. Its panel says when the collapse can begin.
+- **Forecasts in deep time:** a date too large for years carries its η (`Forecast.dueEta`); the
+  HUD counts the turns to it at our pace on the deep-time calendar and writes "at 10¹⁵⁰⁰ years" or
+  "at 10^(10²⁶) years".
+- **The autoplayer** (stable, in the Dark Era): begins the Passage two turns before everything is
+  iron (until then matter still pays its way), rushes it the turn before with matter about to be
+  worth nothing, builds Leptonic Substrate in time for the collapse, and Burst Catchers. Its old
+  rule counts decades, which cannot work where one turn spans so many.
+- **Texts:** the stable fate's introduction to the Dark Era, the deep-time ruler (black dwarf
+  supernovae added), the Codex (the physics and where the game bends it; Caplan in the Sources),
+  the Manual.
+- **Checks:** `unit/stable-dark` (new); `unit/scorch` builds its galaxies with the heavy dwarfs,
+  as a new game does.
+- **Balance:** 144 of 300 standard competent games survive (167 at "Harder"), 61 victories (67),
+  a Degenerate Age of 71 turns; 900 games 460 / 209 / 72 (520 / 218 / 72). Decay is as before
+  game for game (449 of 450 identical, all 450 the same outcome); curvature 106 / 211 (105; the
+  heavy dwarfs are there in every fate, which moves a few games); stable 103 / 239 (164). Where
+  matter is stable the dark is now a finite budget, as in the other fates: of its 239 games The
+  Long Thought 80 (89), Recurrence 5 (57), The Fade 79 (37), Silence in the Dark Era 21 (2). The
+  autoplayer never sleeps and reaches the dark on whatever reserve it happens to hold; a player
+  can prepare (stores, Coldminds, the Long Sleep, the Passage before the iron). The new version
+  as a whole now stands where `main`'s game does (456 / 203 of 900).

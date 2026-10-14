@@ -627,7 +627,23 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     the next notches: a costlier Dark Era for everyone (its 2.2 a turn), bigger or more swarms, or
     dearer Great Works (victories have not moved). Validated: tsc, the build (`index-BwUArnSE.js`),
     the playtest, savecompat (6 saves), 75 unit checks and 56 browser checks.
-  - Next: Part 3, in the order the plan's "Part 3, the order it will be built in" gives.
+  - the stable fate's late game (part 3-6, 14 Oct): about one white dwarf in 30 now begins 1.16 to
+    1.35 M☉ (a hash of its mass draw: nothing drawn, every seed's galaxy otherwise the same), and
+    where protons are stable it explodes in the Dark Era at Caplan's dates (10^1100 years at 1.35
+    M☉ to 10^32000 at 1.16), blowing its worlds away; by 10^1500 years everything is iron (Fusion
+    Plants make nothing, a Hearth loses its stored fuel); between 10^(10^26) and 10^(10^76) each
+    system's matter tunnels into black holes that evaporate within the turn, at a time of its own
+    (a hash). Burst Catchers bank the flashes; the Passage opens there once the fate is known.
+    900 games 460 / 209 / 72 (520 / 218 / 72): decay and curvature as before, stable 103 / 239
+    (164; Recurrence 57 → 5, The Fade 37 → 79). The stable dark is a finite budget now, as in the
+    other fates: the autoplayer reaches it awake on whatever it holds, where a player can prepare
+    (stores, Coldminds, the Long Sleep, the Passage before the iron). Told the player plainly,
+    with the offer to soften it if they find it too hard. Validated: tsc, the build
+    (`index-BChwPo-9.js`), the playtest, savecompat (6 saves), 76 unit checks and 56 browser checks
+    (`a11y` once failed to give focus back to the Research button after its window closed, and
+    passed four runs after; three others had lost the preview server, which the background limit
+    stopped: start it with a longer limit).
+  - Next: 3-7 (the look of life after matter), then Part 4 and Part 5, in the plan's order.
   - the plan's "2a, as it is being built" lists the steps from here.
   - Waiting for the player's word: ships seeing what they pass (item 9, Part 1b). The census
     found only about 7 unknown stars a game within 180, 450 or 2,000 ly of a probe's path from home

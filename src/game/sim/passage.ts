@@ -64,9 +64,12 @@ export function passageTerms(state: GameState, c: Colony): PassageTerms {
   };
 }
 
-/** Can the end of matter be foreseen: its fate known, and not stable? */
+/**
+ * Can the end of matter be foreseen: its fate known, and matter not gone yet? If it is stable it
+ * ends too, unimaginably late: from 10^(10^26) years it tunnels into black holes (deeptime.ts).
+ */
 export function endForeseen(state: GameState): boolean {
-  return fateKnown(state) && fateOf(state) !== 'stable' && !matterGone(state);
+  return fateKnown(state) && !matterGone(state);
 }
 
 /** Why this settlement cannot begin the Passage now, or null if it can. */
@@ -74,7 +77,7 @@ export function passageCheck(state: GameState, c: Colony): string | null {
   if (formOf(c) !== 'baryonic') return 'It is leptonic already.';
   if (c.queue.some((q) => q.kind === 'passage')) return 'The Passage is under way here.';
   if (!hasTech(state, 'leptonic_computation')) return 'Needs Leptonic Computation.';
-  if (!endForeseen(state)) return fateKnown(state) && fateOf(state) === 'stable' ? 'Matter is stable: it will not end.' : 'Not until the end of matter can be foreseen.';
+  if (!endForeseen(state)) return matterGone(state) ? 'Matter is gone.' : 'Not until the end of matter can be foreseen.';
   if (c.queue.length >= 6) return 'The queue is full.';
   const t = passageTerms(state, c);
   if (state.civ.energy < t.energy) return `Needs ${t.energy} energy.`;
