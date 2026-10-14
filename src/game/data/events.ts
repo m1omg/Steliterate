@@ -634,6 +634,7 @@ export const EVENTS: EventDef[] = [
     id: 'last_star',
     title: 'Light in the Halo',
     art: 'degenerate',
+    plate: 'last_star',
     text: (s, d) => {
       const sys = s.systems[String(d.systemId)];
       // where protons decay it can light as the Great Decay comes, and go with the rest of matter
@@ -975,6 +976,7 @@ export const EVENTS: EventDef[] = [
     id: 'relic_tomb',
     title: 'A Tomb',
     art: 'ruins',
+    plate: 'relic_tomb',
     text: (s, d) => `On ${bodyById(s, d)?.name}: rows upon rows of markers in a script no one alive can read, and one monument in the middle. Someone stayed to bury everyone else.`,
     choices: [
       { label: 'Mourn them', hint: 'Resolve +4.', run: (s, d) => { res(s, 4); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },

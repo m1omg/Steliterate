@@ -1,5 +1,5 @@
 // Renders one of the films (src/film) to an MP4, every frame drawn at its exact time:
-//   node tools/film-render.mjs <film> <out.mp4> [--size=1920x1080] [--fps=60] [--ffmpeg=<path>] [--jpeg]
+//   node tools/film-render.mjs <film> <out.mp4> [--size=1920x1080] [--fps=60] [--ffmpeg=<path>] [--jpeg] [--fate=decay|stable|curvature]
 // It starts the Vite dev server for film.html (the export page, never built into the game),
 // steps the film's time by 1/fps, screenshots each frame (the canvas and the words over it),
 // renders the film's cue offline, and encodes with ffmpeg: H.264 and AAC. ffmpeg is not a
@@ -28,6 +28,8 @@ const fps = Number(opt('fps', '60'));
 const jpeg = rest.includes('--jpeg');
 const ext = jpeg ? 'jpg' : 'png';
 const ffmpeg = opt('ffmpeg', process.env.FFMPEG ?? 'ffmpeg');
+// (the films that differ by the fate of matter: which one)
+const fate = opt('fate', '');
 const port = 5179;
 
 const server = spawn('npx', ['vite', '--port', String(port), '--strictPort'], { stdio: 'ignore' });
@@ -44,7 +46,7 @@ try {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   await routeFonts(ctx);
   const page = await ctx.newPage();
-  await page.goto(`http://localhost:${port}/film.html?film=${film}&w=${w}&h=${h}`, { timeout: 120000 });
+  await page.goto(`http://localhost:${port}/film.html?film=${film}&w=${w}&h=${h}${fate ? `&fate=${fate}` : ''}`, { timeout: 120000 });
   await page.waitForFunction(() => !!window.__film, null, { timeout: 120000 });
   await page.evaluate(() => window.__film.ready());
   const length = await page.evaluate(() => window.__film.length);
