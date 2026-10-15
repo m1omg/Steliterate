@@ -3304,3 +3304,35 @@ plus regular background music plays during cutscenes, pls fix".
   system's view 2 s to show the reveal's first moment; drawn in software here the switch takes
   0.8 to 3.3 s (the build before alike), so it failed on both. It now waits up to 15 s; the
   reveal's clock is the view's, so its first moment is still caught.
+
+## The purple oval: its source, and the galaxy's own light (15 Oct, the player's word)
+
+The player, with a screenshot of the map: "why this weird purplish blob around most of the
+playfield?", then "oh it doesnt dispay in firefox and its in orig version too, i get it was
+supposed to be for ambient light likely? implement something but...prettier pls" and "pls do
+track down the source".
+
+- **The source:** the post chain's grade (`post.ts`) added a lift to every pixel, `(0.004,
+  0.0035, 0.004)`, a little less green than red and blue. The renderer's neutral tone mapping
+  takes the darkest channel of a dark colour off all three (a dark grey becomes black), so what
+  was left of the lift was red and blue only: a dark magenta, and the vignette made it an oval
+  over the middle of the screen. Read from the frame (Chromium): the empty sky 2,0,3 in the
+  middle and 1,0,2 at the edge as it was; 0,0,1 everywhere without the lift; 2,0,3 everywhere
+  with the lift and no vignette. It had been there since the first rendering (28 Sep), in the
+  galaxy and in every system; Firefox likely loses the small difference between the channels on
+  its way to the screen (not checked here: there is no Firefox in this container).
+- **Gone:** no lift. The empty sky is black, in the galaxy and in a system.
+- **The galaxy's own light** (the player picked it: "The galaxy's own light"): the glow of its
+  billions of red dwarfs too faint to be seen one by one, warm, lying where its stars are: the
+  shared envelope and its brighter middle, each ancestral galaxy's remnant, the streams as faint
+  arcs, the globular clusters. Each glow is flattened as the stars are and looks flatter as the
+  view tilts toward edge-on. Seen from close by, among the stars, there is no glow: it fades in
+  as the view draws back. It dims as the stars go out, as the stars drawn above it do (full in
+  the Dusk, a tenth in the Degenerate Age, barely there in the Black Hole Age, none in the Dark),
+  in their tint. A few dozen soft sprites (`galaxyView.ts`, `buildGlows`), made from the world's
+  own layout without a random draw: nothing to slow a phone, and no seed's galaxy changes.
+- **In both versions:** today's game at the main address (on a branch of its own from `main`, at
+  the player's word) and the new version at `/next/`.
+- **Check:** `browser/sky`: the empty sky black in every channel, far out and in a system; the
+  glow there and warm when the view is drawn back; none close by among the stars; none in the
+  Dark.

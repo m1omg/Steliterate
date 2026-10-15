@@ -734,6 +734,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     twice as fast, fewer pixels on a device that cannot keep up, the music silent and paused
     under a film and carrying on after it, and the sound's notes made as they come (CHANGELOG,
     "The films on a tablet").
+  - 15 Oct, the map: "why this weird purplish blob around most of the playfield?", then "oh it
+    doesnt dispay in firefox and its in orig version too, i get it was supposed to be for ambient
+    light likely? implement something but...prettier pls" and "pls do track down the source".
+    Found: the grade's lift of the blacks (CHANGELOG, "The purple oval"). Asked what should take
+    its place: "The galaxy's own light (Recommended)"; and whether to fix today's game at the
+    main address too, on a branch of its own: "Yes, fix main too (Recommended)".
   - Next: the player's word on the films' second cut and the open threads (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak

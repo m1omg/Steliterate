@@ -231,6 +231,10 @@ export class GalaxyView {
   private pr = 1;
   private markScale = 1;
   private heartGlow: THREE.Sprite;
+  /** The galaxy's own light: soft glows, each its size, how flattened its shape is, and how bright at most. */
+  private glows: { sprite: THREE.Sprite; size: number; flat: number; base: number; color: THREE.Color }[] = [];
+  private glowBright = 1;
+  private look = new THREE.Vector3();
   private territory: THREE.Points | null = null;
   pickables: Pickable[] = [];
   /** 0 natural, 1 enhanced, 2 thermal (see VIEW_MODE). */
@@ -399,6 +403,51 @@ export class GalaxyView {
     this.dust = new THREE.Points(g, this.dustMat);
     this.dust.frustumCulled = false;
     this.group.add(this.dust);
+    this.buildGlows(state);
+  }
+
+  /**
+   * The galaxy's own light (15 Oct): the glow of its billions of red dwarfs too faint to be seen one
+   * by one, warm, in the shapes the stars above trace: the shared envelope and its brighter middle,
+   * each ancestral galaxy's remnant, the streams, the globular clusters. It took the place of a
+   * lift of the blacks that the tone mapping had turned into a purple oval on the screen. Made from
+   * the world's own layout, without a draw of any random stream; it dims as the stars go out (`sync`).
+   */
+  private buildGlows(state: GameState) {
+    for (const x of this.glows) {
+      this.group.remove(x.sprite);
+      x.sprite.material.dispose();
+    }
+    this.glows = [];
+    const tex = glowTexture();
+    const add = (x: number, y: number, z: number, size: number, flat: number, kelvin: number, base: number) => {
+      const [r, g, b] = blackbody(kelvin);
+      const color = new THREE.Color(r, g, b);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: color.clone(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, opacity: 0 }));
+      sprite.position.set(x, y, z);
+      sprite.renderOrder = -1;
+      sprite.visible = false;
+      this.group.add(sprite);
+      this.glows.push({ sprite, size, flat, base, color });
+    };
+    // the envelope, wide and faint, and its brighter middle (the dust above: r up to about 840, flattened to 0.62)
+    add(0, 0, 0, 1900, 0.62, 3200, 0.05);
+    add(0, 0, 0, 760, 0.62, 3500, 0.08);
+    for (const p of state.provinces) {
+      if (p.kind === 'ancestral') add(p.pos.x, p.pos.y, p.pos.z, p.radius * 2.6, 0.45, 3300, 0.09);
+      else if (p.kind === 'stream') {
+        // a stream: soft glows close enough along its arc to run together, fainter toward its ends (as its stars above lie: buildDust)
+        const ang0 = Math.atan2(p.pos.z, p.pos.x);
+        const rad = Math.hypot(p.pos.x, p.pos.z);
+        const n = 15;
+        for (let i = 0; i < n; i++) {
+          const u = i / (n - 1) - 0.5;
+          const a = ang0 + u * 1.8;
+          add(Math.cos(a) * rad, p.pos.y + Math.sin(a * 3) * 40, Math.sin(a) * rad, 130, 0.6, 3100, 0.018 * Math.cos(u * Math.PI * 0.9));
+        }
+      }
+    }
+    for (const r of state.regions) if (r.kind === 'globular') add(r.pos.x, r.pos.y, r.pos.z, 80, 1, 3700, 0.08);
   }
 
   /** Rebuild everything that changes with the game state. */
@@ -439,6 +488,10 @@ export class GalaxyView {
     this.dustMat.uniforms.uBright.value = this.viewMode === 1 ? Math.max(bright, 0.28) : this.viewMode === 2 ? Math.max(bright, 0.14) : bright;
     this.dustMat.uniforms.uTint.value.set(state.era === 'dusk' ? '#ffffff' : state.era === 'degenerate' ? '#9fb8ff' : '#8c86b8');
     this.heartGlow.material.opacity = state.era === 'dusk' ? 0.35 : state.era === 'degenerate' ? 0.16 : state.era === 'blackhole' ? 0.06 : 0;
+    // the galaxy's own light dims as its stars go out, as the stars drawn above it do, in their tint
+    this.glowBright = this.dustMat.uniforms.uBright.value;
+    const tint = this.dustMat.uniforms.uTint.value as THREE.Color;
+    for (const x of this.glows) x.sprite.material.color.copy(x.color).multiply(tint);
 
     // system nodes
     const known = state.civ.known;
@@ -685,6 +738,16 @@ export class GalaxyView {
       pg.mesh.scale.setScalar(Math.max(1.5, cameraDistance * 0.01) * (1 + e * 9));
       mat.opacity = u < 0 ? 0 : 0.9 * (1 - e) * (1 - e);
     }
+    // a flattened glow looks rounder from above and flatter edge-on: its height on the screen follows the camera's elevation
+    const dir = camera.getWorldDirection(this.look);
+    const up = Math.min(1, Math.abs(dir.y));
+    // and seen from close by, among the stars, it is no glow: they show one by one (the glow fades in as the view draws back)
+    const far = THREE.MathUtils.smoothstep(cameraDistance, 220, 900);
+    for (const x of this.glows) {
+      x.sprite.scale.set(x.size, x.size * Math.sqrt(x.flat * x.flat * (1 - up * up) + up * up), 1);
+      x.sprite.material.opacity = x.base * this.glowBright * far;
+      x.sprite.visible = x.sprite.material.opacity > 0.0005;
+    }
     this.dustMat.uniforms.uTime.value = t;
     this.nodeMat.uniforms.uTime.value = t;
     this.swarmMat.uniforms.uTime.value = t;
@@ -798,6 +861,32 @@ function nodeSize(s: StarSystem, state: GameState): number {
 }
 
 let _radial: THREE.Texture | null = null;
+let _glow: THREE.Texture | null = null;
+/**
+ * A glow's falloff, painted once: bright and soft in the middle, long faint wings, reaching
+ * nothing exactly at the edge (a profile like a galaxy's light: brightness falling as e^(−3.2 r^0.7)).
+ */
+export function glowTexture(): THREE.Texture {
+  if (_glow) return _glow;
+  const N = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(N, N);
+  const edge = Math.exp(-3.2);
+  for (let j = 0; j < N; j++)
+    for (let i = 0; i < N; i++) {
+      const r = Math.hypot((i + 0.5) / N - 0.5, (j + 0.5) / N - 0.5) * 2;
+      const v = r >= 1 ? 0 : (Math.exp(-3.2 * Math.pow(r, 0.7)) - edge) / (1 - edge);
+      const k = (j * N + i) * 4;
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = 255;
+      img.data[k + 3] = Math.round(255 * v);
+    }
+  g.putImageData(img, 0, 0);
+  _glow = new THREE.CanvasTexture(c);
+  return _glow;
+}
+
 export function radialTexture(): THREE.Texture {
   if (_radial) return _radial;
   const c = document.createElement('canvas');

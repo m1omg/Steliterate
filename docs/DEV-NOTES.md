@@ -1438,6 +1438,15 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   touch), CDP `Emulation.setCPUThrottlingRate` 4, rAF gaps over a film and a DevTools trace
   (`Tracing.start` with `devtools.timeline`, tasks over 150 ms and what ran in them); frame rates
   here measure the software rasteriser, so compare the main thread's own stops.
+- **The galaxy's own light (15 Oct, `galaxyView.ts`):** `buildGlows` (from `buildDust`, once per
+  world) adds soft additive sprites over the dust: the envelope (1900 across, flattened 0.62) and
+  its middle (760), each ancestral province (2.6 × its radius), 15 along each stream, each
+  globular cluster, with `glowTexture()` (brightness as e^(−3.2 r^0.7), zero at the edge) and a
+  blackbody colour. `sync` tints them with the dust's era tint; `update` sets each one's height
+  on the screen from the camera's elevation (√(flat² cos² + sin²)) and its opacity as base ×
+  the dust's era brightness × a fade in with distance (`smoothstep(distance, 220, 900)`). The
+  grade in `post.ts` has no lift: with the neutral tone mapping a lift with unequal channels shows
+  as a tinted cast (the purple oval), and one with equal channels is taken away anyway.
 - **`/next/` (part 5):** the `next` branch (a copy of the work branch: `git push origin
   claude/epic-wozniak-lyhulf:next`) carries a Pages workflow that checks out `main` and `next`
   into folders of those names, builds each (`npm ci && npm run build`), drops `next/dist/archive`

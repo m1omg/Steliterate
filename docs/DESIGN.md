@@ -474,7 +474,9 @@ stop them from talking.
   holes with disks and photon rings, dying eyeball worlds that freeze, Dyson swarms, swarm
   murmurations) and a restrained post chain: a faint, tight bloom only on what is brighter
   than white (light sources carry their own coronae, as in ra-system-alpha), fine midtone
-  grain, vignette, edge chromatic aberration. No full-screen haze and no lens dirt.
+  grain, vignette, edge chromatic aberration. No full-screen haze and no lens dirt: the empty
+  sky is black (15 Oct: no lift of the blacks), and the galaxy's own light, the glow of its
+  unresolved red dwarfs, lies where its stars are, seen from afar, dimming as they go out.
 * **Plates:** painterly images for the ages and events (fifteen more for the events in the new
   version) and thirteen for the survey discoveries (Krea and Codex image generation), one grade
   for all (`tools/process-art.mjs`); painted ship sprites (Higgsfield, `tools/process-sprites.mjs`),

@@ -68,7 +68,9 @@ last.
     (46% of its games survive), all sixteen films rebuilt ("the films, second cut"), and `main`'s
     Pages workflow building `/next/` too (PR m1omg/Steliterate#30, `3a3f4c2`).
   - Done since, 15 Oct: the films on a tablet (painted in a thread of their own, the music
-    silent under them, their sound lighter; CHANGELOG).
+    silent under them, their sound lighter; CHANGELOG), and the map's purple oval traced to the
+    grade's lift of the blacks and replaced by the galaxy's own light, in both versions (the
+    player's word; CHANGELOG, "The purple oval").
   - Waiting for the player: their word on the films' second cut (sent as videos: the Long Dusk,
     the Black Hole Age under decay, the Degenerate Age twice, before and after their two asks; the
     endings only when asked), switching `main` to the new version ("Not yet", 14 Oct), and the open
