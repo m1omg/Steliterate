@@ -3,7 +3,7 @@ import { audio } from '../../audio/core';
 import { music } from '../../audio/music';
 import { playCue } from '../../film/cue';
 import { FILMS, type FilmArgs, type FilmId } from '../../film/films';
-import { FilmPlayer, elapsedClock, type FilmClock } from '../../film/player';
+import { FilmPlayer, audioClock, elapsedClock, type FilmClock } from '../../film/player';
 import { engine, modal, sawFilm, settings, type Modal } from '../store';
 
 /**
@@ -38,7 +38,7 @@ export function FilmScreen({ id, args, then }: { id: FilmId; args?: FilmArgs; th
       if (then?.kind === 'outcome') music.setMood('outcome');
     };
     let voice: ReturnType<typeof playCue> | null = null;
-    const player = new FilmPlayer(el, id, { quality: settings.value.quality, args, onEnd: go, painter: true });
+    const player = new FilmPlayer(el, id, { quality: settings.value.quality, args, onEnd: go, painter: true, pageOverlays: true });
     const wait = document.createElement('div');
     wait.className = 'film-line label film-wait';
     wait.textContent = 'PREPARING THE REEL';
@@ -64,7 +64,7 @@ export function FilmScreen({ id, args, then }: { id: FilmId; args?: FilmArgs; th
         if (a && a.ctx.state === 'running') {
           const at = a.ctx.currentTime + 0.1;
           voice = playCue(id, a.ctx, a.film, at, args?.fate);
-          clock = { now: () => Math.max(0, a.ctx.currentTime - at) };
+          clock = audioClock(a.ctx, at);
         }
         player.play(clock);
       }),

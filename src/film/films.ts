@@ -40,6 +40,8 @@ export interface FilmArgs {
   eta?: number;
   /** Device pixels per CSS pixel the film is drawn at (for paintings sharp at that size). */
   pr?: number;
+  /** The vignette and the grain laid over the frame by the page (as the game plays it), not drawn into it. */
+  pageOverlays?: boolean;
 }
 
 /** A line of text over the film: where, in which voice, and how present it is now (0..1). */

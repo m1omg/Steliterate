@@ -134,8 +134,11 @@ export function reel2(def: Omit<FilmDef, 'setup'> & { ink?: string }, make: (w: 
             ink(c, underline, ss(r.titleAt + 0.3, r.titleAt + 1.8, b), { width: S * 0.003, color: def.accent, seed: 8, alpha: 0.9 });
           }
           if (b < r.titleAt) corners(c, w, h, ss(0, 1.6, b) * (1 - ss(r.titleAt - 0.4, r.titleAt, b)), INK);
-          vignette(c, w, h, 0.62);
-          grain(c, w, h, t, 0.12 * k + 0.04);
+          // (played in the game, the page lays the vignette and the grain over the frame itself: FilmPlayer)
+          if (!args.pageOverlays) {
+            vignette(c, w, h, 0.62);
+            grain(c, w, h, t, 0.12 * k + 0.04);
+          }
           // in from black, and the last beat goes to black
           const fin = 1 - ss(0, 1.2, b);
           const out = Math.max(fin, ss(def.beats - 1, def.beats, b));

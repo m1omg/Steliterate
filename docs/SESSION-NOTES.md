@@ -740,7 +740,20 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     Found: the grade's lift of the blacks (CHANGELOG, "The purple oval"). Asked what should take
     its place: "The galaxy's own light (Recommended)"; and whether to fix today's game at the
     main address too, on a branch of its own: "Yes, fix main too (Recommended)".
-  - Next: the player's word on the films' second cut and the open threads (HANDOVER, section 3).
+  - 15 Oct, after that: "it's much better in Chrome. Thing is, Firefox runs it very slow. Well, I
+    mean the cutscenes. The game itself is choppy but playable in Firefox, but smooth in Chrome.
+    But there is a little bit of choppiness in Chrome and Vivaldi as well. And the sound does
+    crackle". Asked what the crackle is like: "Also outside the films" and "Irregular pops or
+    stutter"; asked whether to fix the sound in today's game too: "Yes, fix main too
+    (Recommended)". Found: the film's clock stepped with the sound's buffer (a frame in four
+    repeated); the vignette and grain were two passes over every pixel; the recordings went
+    through the sound's graph, the way known to stutter, worst in Firefox; a heavy reverb. Now:
+    a clock from the sound being heard, the vignette and grain as page layers or in the canvas,
+    whichever the device draws quicker, a quicker step down, the recordings played by their
+    element, and a lighter reverb (CHANGELOG, "Smoother films in every browser"). There is no
+    Firefox here: software Chromium stood in for it, so ask the player how it plays there now.
+  - Next: the player's word on Firefox now, the films' second cut and the open threads
+    (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word

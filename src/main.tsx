@@ -443,10 +443,18 @@ window.__stel = {
     p.dispose();
     return { sent: p.sent, frames };
   },
+  /** The last frames played: [film time (s), the page's time (ms)] (FilmPlayer.times). */
+  filmTimes: () => FilmPlayer.times.map((x) => [...x]),
+  /** The last trial of where a film's vignette and grain go (FilmPlayer.overlayTrial). */
+  filmOverlays: () => FilmPlayer.overlayTrial,
   /** Play a film as the game does (with films on), then back to the game. */
   playFilm: (id: FilmId, args?: FilmArgs) => playFilm(id, null, args),
   /** The music player (its layer: the synth bus, and the recording playing), for the checks. */
   music: () => music,
   /** The sound's graph (the films' check: the music's gain under a film). */
   audio: () => audio(),
+  /** Set the music's and the sounds' volumes, 0..1, as the settings' sliders do (for this page only). */
+  setVolumes: (m: number, s: number) => setVolumes(m, s),
+  /** Play one of the interface's sounds. */
+  sfx: (name: Parameters<typeof sfx>[0]) => sfx(name),
 };

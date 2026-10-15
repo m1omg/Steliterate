@@ -884,6 +884,9 @@ html.lv .map-label.province { font-size: calc(18px * var(--z, 1)); color: rgba(2
 .film-screen.export { position: relative; cursor: default; }
 .film-canvas { position: absolute; inset: 0; display: block; }
 .film-text { position: absolute; inset: 0; pointer-events: none; }
+/* the lens's vignette and the film's grain, laid over the frame by the page (FilmPlayer), under its words */
+.film-vignette, .film-grain { position: absolute; inset: 0; pointer-events: none; }
+.film-grain { background-repeat: repeat; background-size: 256px 256px; mix-blend-mode: overlay; }
 .film-line { position: absolute; color: #e6dccb; white-space: nowrap; }
 .film-line.title { font-family: var(--f-display); font-weight: 800; font-size: 9.5vmin; letter-spacing: 0.1em; text-transform: uppercase; color: var(--film-accent, #f28a4f); }
 .film-line.sub { font-family: var(--f-mono); font-size: 1.9vmin; letter-spacing: 0.32em; text-transform: uppercase; color: #cfc4b2; }

@@ -71,7 +71,13 @@ last.
     silent under them, their sound lighter; CHANGELOG), and the map's purple oval traced to the
     grade's lift of the blacks and replaced by the galaxy's own light, in both versions (the
     player's word; CHANGELOG, "The purple oval"; in `main` by PR m1omg/Steliterate#31, `f9be053`,
-    from `claude/sky-glow-main`, the live script `index-CUyk9uQO.js`).
+    from `claude/sky-glow-main`, the live script `index-CUyk9uQO.js`). Then the films smooth in
+    every browser and the sound without its stutter (the player: Firefox "very slow", "a little
+    bit of choppiness in Chrome and Vivaldi", "Irregular pops or stutter", "Also outside the
+    films"): a film's clock from the sound being heard, its vignette and grain as page layers or
+    in the canvas, whichever the device draws quicker, the recordings played by their own
+    element, a lighter reverb (CHANGELOG, "Smoother films in every browser"; the sound in `main`
+    too, at the player's word). Not run in Firefox: there is none here.
   - Waiting for the player: their word on the films' second cut (sent as videos: the Long Dusk,
     the Black Hole Age under decay, the Degenerate Age twice, before and after their two asks; the
     endings only when asked), switching `main` to the new version ("Not yet", 14 Oct), and the open

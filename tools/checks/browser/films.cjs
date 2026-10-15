@@ -7,7 +7,9 @@
 // on the same frame, and a moment drawn twice is the same. The other checks run without films.
 // On a tablet (15 Oct): the music falls silent and pauses under a film and carries on after it;
 // the film's sound makes its voices as they come, not all at once; and its pictures, painted in a
-// thread of their own, draw the same frames as pictures painted on the page.
+// thread of their own, draw the same frames as pictures painted on the page. Its time moves with
+// the page's, frame by frame (not in the audio clock's steps), and its vignette and grain are
+// layers of the page, or in the canvas where that draws quicker.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('films', { films: true });
@@ -61,20 +63,40 @@ run(async () => {
           if (now - t[0] < 2400) requestAnimationFrame(step);
           else {
             const gaps = t.slice(1).map((x, i) => x - t[i]).sort((a, b) => a - b);
-            done({ w0, w1: c.width, cssW: c.clientWidth, gap: gaps[gaps.length >> 1] });
+            done({ w0, w1: c.width, cssW: c.clientWidth, dpr: devicePixelRatio, gap: gaps[gaps.length >> 1] });
           }
         };
         requestAnimationFrame(step);
       }),
   );
-  check(pace.gap > 50 ? pace.w1 < pace.w0 : pace.w1 === pace.w0, `frames ${Math.round(pace.gap)} ms apart: drawn at ${pace.w0} pixels across, then ${pace.w1} (on a page ${pace.cssW} wide)`);
+  // (since 15 Oct it comes down within a second or two, often before this looks)
+  check(pace.gap > 50 ? pace.w1 < pace.cssW * pace.dpr : pace.w1 === pace.w0, `frames ${Math.round(pace.gap)} ms apart: drawn at ${pace.w0} pixels across, then ${pace.w1} (on a page ${pace.cssW} wide)`);
+  // its time moves with the page's, frame by frame (15 Oct: read straight from the audio clock, which
+  // moves in steps of its buffer, a frame in four repeated the one before and the next jumped)
+  const steps = await page.evaluate(() => {
+    const f = window.__stel.filmTimes().slice(-40);
+    const d = f.slice(1).map(([t, n], i) => [t - f[i][0], (n - f[i][1]) / 1000]);
+    const off = d.map(([a, b]) => Math.abs(a - b)).sort((x, y) => x - y);
+    return { frames: f.length, repeats: d.filter(([a]) => a === 0).length, mid: off[off.length >> 1] ?? 1 };
+  });
+  check(steps.frames >= 10 && steps.repeats === 0 && steps.mid < 0.004, `its time moves with the page's, frame by frame (${steps.repeats} repeated of ${steps.frames}; off by ${(steps.mid * 1000).toFixed(1)} ms at the median)`);
+  // the vignette and the grain are layers of the page over the frame, under its words; with frames
+  // as slow as here (a compositor without the graphics chip), it tried them in the canvas and kept
+  // the quicker way
+  const lay = await page.evaluate(() => {
+    const kids = [...document.querySelector('.film-screen').children];
+    return { order: kids.map((x) => x.className.split(' ')[0]).join(' '), shown: !document.querySelector('.film-grain').hidden, trial: window.__stel.filmOverlays() };
+  });
+  check(/film-canvas film-vignette film-grain film-text/.test(lay.order), `the vignette and the grain lie over the frame, under its words (${lay.order})`);
+  const tr = lay.trial;
+  check(!!tr && tr.kept === (tr.canvas < tr.page * 0.9 ? 'canvas' : 'page') && lay.shown === (tr.kept === 'page'), `slow, it tried them in the canvas and kept the quicker way (${tr ? `${Math.round(tr.page)} ms a frame as layers, ${Math.round(tr.canvas)} in the canvas: ${tr.kept}` : 'no trial'})`);
   // the music is silent and paused under it (it had only stepped back, and played on under the films)
   const under = await page.evaluate(() => {
     const m = window.__stel.music();
     const L = m.layer;
-    return { holding: m.holding, duck: window.__stel.audio()?.duck.gain.value ?? 0, playing: !!L?.track && !L.track.el.paused, voices: window.__voices };
+    return { holding: m.holding, duck: window.__stel.audio()?.duck.gain.value ?? 0, vol: L?.track?.el.volume ?? 0, playing: !!L?.track && !L.track.el.paused, voices: window.__voices };
   });
-  check(under.holding && under.duck < 0.02 && !under.playing, `the music is silent and paused under the film (gain ${under.duck.toFixed(3)}, a recording ${under.playing ? 'still playing' : 'paused'})`);
+  check(under.holding && under.duck < 0.02 && under.vol < 0.01 && !under.playing, `the music is silent and paused under the film (gain ${under.duck.toFixed(3)}, volume ${under.vol.toFixed(3)}, a recording ${under.playing ? 'still playing' : 'paused'})`);
   // its voices come as they are due: two seconds in, those of its first seconds only (all at once were 119)
   check(under.voices <= 40 && under.voices > 0, `its sound makes its voices as they come: ${under.voices} by its second second, of the 119 it makes`);
   // the narration comes in as it plays (the Long Dusk's first line at beat 2.5, 1.7 s in; the film's

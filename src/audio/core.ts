@@ -19,6 +19,17 @@ export interface AudioCore {
 let core: AudioCore | null = null;
 let volumes = { music: 0.7, sfx: 0.7 };
 const listeners: (() => void)[] = [];
+const volumeListeners: (() => void)[] = [];
+
+/** The music's level (the slider, on its perceptual curve): what a recording played by its own element is set to (music.ts, trackOut.ts). */
+export function musicLevel(): number {
+  return volumes.music * volumes.music;
+}
+
+/** Run whenever the volumes change. */
+export function onVolumes(fn: () => void) {
+  volumeListeners.push(fn);
+}
 
 export function audio(): AudioCore | null {
   return core;
@@ -30,15 +41,22 @@ export function onAudioReady(fn: () => void) {
   else listeners.push(fn);
 }
 
-function impulse(ctx: AudioContext, seconds: number, decay: number): AudioBuffer {
+/**
+ * The room's impulse: noise decaying as (1 − τ/shape)^decay over `shape` seconds, kept for the
+ * first `seconds` of it and faded out over its last fifth of a second (15 Oct: the full 5.5 s
+ * made the reverb's work long and heavy for the audio thread, which stuttered under load; past
+ * 3 s the tail was 22 dB down and more).
+ */
+function impulse(ctx: AudioContext, seconds: number, decay: number, shape: number): AudioBuffer {
   const len = Math.floor(ctx.sampleRate * seconds);
+  const fade = Math.floor(ctx.sampleRate * 0.2);
   const buf = ctx.createBuffer(2, len, ctx.sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const d = buf.getChannelData(ch);
     for (let i = 0; i < len; i++) {
-      const t = i / len;
+      const tau = i / ctx.sampleRate;
       // dense early part, darker long tail
-      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, decay) * (i < 400 ? i / 400 : 1);
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - tau / shape, decay) * (i < 400 ? i / 400 : 1) * (i > len - fade ? (len - i) / fade : 1);
     }
   }
   return buf;
@@ -84,7 +102,7 @@ export function unlockAudio() {
   film.connect(master);
   sfx.connect(master);
   const reverb = ctx.createConvolver();
-  reverb.buffer = impulse(ctx, 5.5, 3.2);
+  reverb.buffer = impulse(ctx, 3, 3.2, 5.5);
   const reverbIn = ctx.createGain();
   reverbIn.gain.value = 1;
   const reverbOut = ctx.createGain();
@@ -97,6 +115,7 @@ export function unlockAudio() {
 
 export function setVolumes(music: number, sfx: number) {
   volumes = { music, sfx };
+  for (const fn of volumeListeners) fn();
   if (!core) return;
   const t = core.ctx.currentTime;
   // perceptual (squared) volume curve

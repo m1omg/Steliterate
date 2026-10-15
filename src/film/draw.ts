@@ -213,9 +213,8 @@ export function glow(c: Ctx, x: number, y: number, r: number, color: string, alp
 
 let grainTile: HTMLCanvasElement | null = null;
 
-/** Film grain: a noise tile made once, laid over the frame at an offset that changes 24 times a second of film time. */
-export function grain(c: Ctx, w: number, h: number, t: number, alpha: number) {
-  if (alpha <= 0) return;
+/** The grain's noise tile, 256 pixels square, made once (the same noise every time). */
+export function grainTile256(): HTMLCanvasElement {
   if (!grainTile) {
     grainTile = document.createElement('canvas');
     grainTile.width = grainTile.height = 256;
@@ -229,13 +228,24 @@ export function grain(c: Ctx, w: number, h: number, t: number, alpha: number) {
     }
     g.putImageData(img, 0, 0);
   }
+  return grainTile;
+}
+
+/** Where the grain's tile sits at film time `t`: it moves 24 times a second of film time. */
+export function grainOffset(t: number): [number, number] {
   const k = Math.floor(t * 24);
-  const ox = (k * 97) % 256;
-  const oy = (k * 57) % 256;
+  return [(k * 97) % 256, (k * 57) % 256];
+}
+
+/** Film grain: a noise tile made once, laid over the frame at an offset that changes 24 times a second of film time. */
+export function grain(c: Ctx, w: number, h: number, t: number, alpha: number) {
+  if (alpha <= 0) return;
+  const tile = grainTile256();
+  const [ox, oy] = grainOffset(t);
   c.save();
   c.globalAlpha = alpha;
   c.globalCompositeOperation = 'overlay';
-  const pat = c.createPattern(grainTile, 'repeat');
+  const pat = c.createPattern(tile, 'repeat');
   if (pat) {
     c.translate(-ox, -oy);
     c.fillStyle = pat;

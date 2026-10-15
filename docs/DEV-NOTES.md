@@ -92,7 +92,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `notify(text, kind)`: a message as the game shows them (`browser/lowvision`: how long one
     stays)
   - `films(on)` (null: as the settings say), `filmList()`, `filmFrames(id, times, w, h)`: the
-    films, for `browser/films`
+    films, for `browser/films`; `filmTimes()`: the last frames played, as [film time (s), the
+    frame's time (ms)]; `filmOverlays()`: the last trial of where the vignette and grain go
+  - `setVolumes(music, sfx)` (0..1, as the sliders, for this page only) and `sfx(name)`: for
+    `browser/music-route`
   - `slowSlices(ms)`: every slice of End Turn's turn made to take at least that long, a slow phone
     on any machine (`browser/turn-slices`; a CPU slowed through CDP is paused in windows, so one
     turn's length there is anyone's guess)
@@ -1328,6 +1331,19 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     rotation) starts with the synth silent (`silenced`, the hiss at 0). It wakes the synth only
     if the recording has not started within `RECORDING_GRACE` (8 s), or fails, so the synth is the
     fallback, not a stopgap while a slow browser loads the file. Check `browser/music-hidden`.
+  - How a recording reaches the speakers (15 Oct, `src/audio/trackOut.ts`): `trackOut(el)` gives
+    an `ElementOut` where the browser lets a page set an element's volume (`elementVolumeWorks`:
+    set 0.5, read it back; iOS Safari reads 1), else a `GraphOut` (the old route: a
+    `MediaElementSource` into a gain into `audio().music`). `ElementOut` sets `el.volume` = its
+    level × the films' hold × `musicLevel()` (the slider squared) × `MASTER` (0.9, the master's
+    gain), on a 40 ms timer while anything fades, and at once when `setVolumes` runs
+    (`onVolumes`). `fade(to, secs)` is a ramp on `performance.now()`; `holdElements(on)` fades
+    every element out over 0.6 s and in over 1.2 s, as `duckMusic` does the graph (`music.hold`
+    calls both). Do not make a `MediaElementSource` for an element that plays this way: once
+    made, the element's sound goes only through the graph. Check `browser/music-route`.
+  - The reverb (`core.ts`): `impulse(ctx, 3, 3.2, 5.5)`, 3 s of noise decaying as
+    (1 − τ/5.5)^3.2 with a 0.2 s fade at its end (it was the full 5.5 s). The interface's sounds
+    send into it through one `bus` made once in `sfx.ts`.
   - `TRACK_CHOICES`, `setTrack`/`current`/`chosen` (Settings → Music track).
   - The synth hiss runs through `layer.hiss`, which fades when a recording plays.
   - `src/ui/store.ts`: `UI_SCALES` must stay above `settings`, because `loadSettings` reads it
@@ -1438,6 +1454,31 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   touch), CDP `Emulation.setCPUThrottlingRate` 4, rAF gaps over a film and a DevTools trace
   (`Tracing.start` with `devtools.timeline`, tasks over 150 ms and what ran in them); frame rates
   here measure the software rasteriser, so compare the main thread's own stops.
+- **Films smooth in every browser (15 Oct):**
+  - **The clock** (`audioClock`, `player.ts`): film time is `getOutputTimestamp()`'s
+    `contextTime` carried on by `performance.now()` from its `performanceTime`, at the frame's own
+    time (the rAF timestamp, passed to `clock.now(at)`), never backwards, less the cue's start.
+    Without a timestamp (or with `performanceTime` 0, or one ahead of `currentTime` or more than
+    a second behind it), `currentTime` carried on between its steps;
+    without sound, `elapsedClock`. Do not read `currentTime` straight: it steps by the output's
+    buffer (23 ms with `latencyHint: 'playback'`), and frames repeat.
+  - **The overlays:** with `pageOverlays` (the game's `Film.tsx`), `FilmPlayer` lays
+    `.film-vignette` (a CSS radial gradient, as `vignette` in `draw.ts`) and `.film-grain` (the
+    256-pixel tile from `grainTile256()` as a data URL, `mix-blend-mode: overlay`, its
+    `backgroundPosition` from `grainOffset(t)`) between the canvas and `.film-text`; the reel
+    skips its own `vignette` and `grain` while `args.pageOverlays` is set (read as each frame is
+    drawn). The trial: at the first half-second judgement with frames more than 45 ms apart, the
+    player sets `args.pageOverlays` false and hides the layers; at the next, it keeps the canvas
+    if its median gap is under 0.9 of the layers', else it shows the layers again
+    (`FilmPlayer.overlayTrial`). Only then does it step the resolution down: every half second,
+    by `clamp(√(30/median gap), 0.6, 0.85)`, to 0.5 a CSS pixel at least. Export and the checks'
+    `filmFrames` leave `pageOverlays` unset, so their frames keep both in the canvas.
+  - **Measuring:** a frame's drawing in software at 1920×1080, with and without the two passes
+    (`setup(..., { pr: 1, pageOverlays })` on the dev server's `film.html`, each frame flushed by
+    `getImageData(0, 0, 1, 1)`); a whole film in the game in Chromium with
+    `--disable-accelerated-2d-canvas` (and swiftshader's GL) at 1920×1080: rAF gaps and the
+    canvas's width. Without the graphics chip for compositing too, as here, each page layer over a
+    changing canvas costs more than its canvas pass.
 - **The galaxy's own light (15 Oct, `galaxyView.ts`):** `buildGlows` (from `buildDust`, once per
   world) adds soft additive sprites over the dust: the envelope (1900 across, flattened 0.62) and
   its middle (760), each ancestral province (2.6 × its radius), 15 along each stream, each

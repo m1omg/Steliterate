@@ -1,3 +1,4 @@
+import { grainOffset, grainTile256 } from './draw';
 import { FILMS, filmLength, type FilmArgs, type FilmId, type FilmQuality, type FilmScene, type FilmText } from './films';
 import type { PaintJob, PaintReply } from './paintWorker';
 import { unpack } from './transfer';
@@ -12,10 +13,18 @@ import { unpack } from './transfer';
 // own (paintWorker.ts), in the order the film needs them, while the page draws; the film begins once
 // its first scene's are there (`ready`). Where that thread cannot run, the page paints them as
 // before. And a device that cannot keep up draws the frame with fewer pixels, a step at a time.
+//
+// In the game (`pageOverlays`) the vignette and the grain are layers of the page over the canvas,
+// put together by the browser's compositor for nothing where it composes on the graphics chip,
+// instead of two passes over every pixel of every frame (16 ms a frame at 1920×1080 where the
+// canvas is drawn without the chip, as Firefox may draw it: 15 Oct). Where the compositor works
+// without the chip too, each layer costs more than its pass did: so a device whose frames come
+// slowly tries them in the canvas for half a second, and keeps whichever came quicker. The exported
+// videos and the checks' frames keep them in the canvas.
 
 export interface FilmClock {
-  /** Seconds of film shown now. */
-  now(): number;
+  /** Seconds of film shown at the page's time `at` (ms, on performance.now's clock: the frame's own time; now if not given). */
+  now(at?: number): number;
 }
 
 /** Whether pictures can be painted in a thread of their own here (a worker with canvases off the page). */
@@ -24,6 +33,10 @@ const canPaintApart = () => typeof Worker !== 'undefined' && typeof OffscreenCan
 let jobs = 0;
 
 export class FilmPlayer {
+  /** The last frames played, as [film time (s), the page's time (ms)] (the checks: film time moves with the page's, frame by frame). */
+  static times: [number, number][] = [];
+  /** The last trial of where the vignette and grain go (the checks): the frames' gaps (ms) each way, and the way kept. */
+  static overlayTrial: { page: number; canvas: number; kept: 'page' | 'canvas' } | null = null;
   readonly canvas: HTMLCanvasElement;
   readonly layer: HTMLDivElement;
   readonly length: number;
@@ -43,6 +56,16 @@ export class FilmPlayer {
   private apart = false;
   private w: number;
   private h: number;
+  /** The grain laid over the frame by the page, and where its tile was last put. */
+  private grainEl: HTMLDivElement | null = null;
+  private vignetteEl: HTMLDivElement | null = null;
+  private grainAt = '';
+  /** The scene's args (where the vignette and grain go is read from them as each frame is drawn). */
+  private args: FilmArgs;
+  /** The trial of the overlays: not yet, under way (with the gap the page's layers gave), or over. */
+  private trial: { state: 'ready' | 'trying' | 'over'; page: number } = { state: 'over', page: 0 };
+  /** (the grain holds still where the system asks for less motion) */
+  private still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   /** Device pixels per CSS pixel the frame is drawn at now, and the least it may come down to. */
   private pr: number;
   private minPr: number;
@@ -50,7 +73,7 @@ export class FilmPlayer {
   constructor(
     host: HTMLElement,
     readonly id: FilmId,
-    private opts: { quality: FilmQuality; args?: FilmArgs; width?: number; height?: number; pixelRatio?: number; onEnd?: () => void; painter?: boolean },
+    private opts: { quality: FilmQuality; args?: FilmArgs; width?: number; height?: number; pixelRatio?: number; onEnd?: () => void; painter?: boolean; pageOverlays?: boolean },
   ) {
     const def = FILMS[id];
     this.length = filmLength(def);
@@ -59,18 +82,37 @@ export class FilmPlayer {
     this.canvas.setAttribute('aria-hidden', 'true');
     this.layer = document.createElement('div');
     this.layer.className = 'film-text';
-    host.append(this.canvas, this.layer);
     const w = (this.w = opts.width ?? host.clientWidth ?? window.innerWidth);
     const h = (this.h = opts.height ?? host.clientHeight ?? window.innerHeight);
+    host.append(this.canvas);
+    if (opts.pageOverlays) {
+      // the lens's vignette (as draw.ts's: clear to 0.35 of the smaller side, 0.62 dark at 0.6 of the diagonal)
+      const vig = document.createElement('div');
+      vig.className = 'film-vignette';
+      vig.setAttribute('aria-hidden', 'true');
+      vig.style.background = `radial-gradient(circle at 50% 50%, rgba(0,0,0,0) ${(Math.min(w, h) * 0.35).toFixed(1)}px, rgba(0,0,0,0.62) ${(Math.hypot(w, h) * 0.6).toFixed(1)}px)`;
+      // the grain: the same tile, blended as overlay at the same strength
+      const k = opts.quality === 'low' ? 0.45 : opts.quality === 'medium' ? 0.7 : 1;
+      const gr = document.createElement('div');
+      gr.className = 'film-grain';
+      gr.setAttribute('aria-hidden', 'true');
+      gr.style.backgroundImage = `url(${grainTile256().toDataURL()})`;
+      gr.style.opacity = String(0.12 * k + 0.04);
+      this.grainEl = gr;
+      this.vignetteEl = vig;
+      host.append(vig, gr);
+    }
+    host.append(this.layer);
     // fewer pixels on Medium and Low, as the game's own view draws
     const pr = opts.pixelRatio ?? Math.min(window.devicePixelRatio || 1, opts.quality === 'high' ? 2 : opts.quality === 'medium' ? 1.25 : 1);
     this.pr = pr;
-    this.minPr = Math.min(pr, 0.75);
+    this.minPr = Math.min(pr, 0.5);
     this.canvas.style.width = `${w}px`;
     this.canvas.style.height = `${h}px`;
     this.c = this.canvas.getContext('2d')!;
     this.resize(pr);
-    const args = { ...opts.args, pr };
+    const args = (this.args = { ...opts.args, pr, pageOverlays: !!opts.pageOverlays });
+    if (opts.pageOverlays) this.trial.state = 'ready';
     this.apart = !!opts.painter && canPaintApart();
     this.scene = def.setup(w, h, opts.quality, args, !this.apart);
     this.painted = new Promise<void>((r) => (this.allSent = r));
@@ -83,29 +125,52 @@ export class FilmPlayer {
     const tt = Math.max(0, Math.min(this.length, t));
     this.scene.draw(this.c, tt);
     this.setText(this.scene.text(tt));
+    if (this.grainEl && !(this.still && this.grainAt)) {
+      const [ox, oy] = grainOffset(tt);
+      const at = `${-ox}px ${-oy}px`;
+      if (at !== this.grainAt) {
+        this.grainAt = at;
+        this.grainEl.style.backgroundPosition = at;
+      }
+    }
   }
 
   /** Play on this clock until the film ends (or `stop`). */
   play(clock: FilmClock) {
-    // how long frames take to come round (ms): a second's worth, to see whether the device keeps up
+    // how long frames take to come round (ms): half a second's worth, to see whether the device keeps up
     const gaps: number[] = [];
     let prev = 0;
     let judged = 0;
     const loop = (now: number) => {
       if (this.done) return;
-      const t = clock.now();
+      // (the frame's time, not the moment this code runs: on a busy device that comes later, by more or less)
+      const t = clock.now(now);
       if (prev) {
         const gap = now - prev;
         // (a frame held up by a picture painted on demand says nothing of the frame rate)
-        if (gap < 250) gaps.push(gap);
+        if (gap < 400) gaps.push(gap);
       }
       prev = now;
-      // drawing slower than about 22 frames a second for a second: a fifth fewer pixels each way, down to the least
-      if (t - judged >= 1 && gaps.length >= 12) {
+      FilmPlayer.times.push([t, now]);
+      if (FilmPlayer.times.length > 240) FilmPlayer.times.shift();
+      if (!judged) judged = now;
+      // drawing slower than about 22 frames a second: fewer pixels each way, the slower the more
+      // (a fifth to two fifths a step), every half second, down to half a pixel a point
+      if (now - judged >= 500 && gaps.length >= 6) {
         const mid = [...gaps].sort((a, b) => a - b)[gaps.length >> 1];
-        if (mid > 45 && this.pr > this.minPr) this.resize(Math.max(this.minPr, this.pr * 0.8));
+        // slow with the page's layers: half a second with the vignette and grain in the canvas, and
+        // back to the layers unless that came a tenth quicker (before any fewer pixels)
+        if (this.trial.state === 'ready' && mid > 45) {
+          this.trial = { state: 'trying', page: mid };
+          this.overlaysOnPage(false);
+        } else if (this.trial.state === 'trying') {
+          const kept = mid < this.trial.page * 0.9 ? 'canvas' : 'page';
+          FilmPlayer.overlayTrial = { page: this.trial.page, canvas: mid, kept };
+          this.trial.state = 'over';
+          if (kept === 'page') this.overlaysOnPage(true);
+        } else if (mid > 45 && this.pr > this.minPr) this.resize(Math.max(this.minPr, this.pr * Math.min(0.85, Math.max(0.6, Math.sqrt(30 / mid)))));
         gaps.length = 0;
-        judged = t;
+        judged = now;
       }
       this.frame(t);
       if (t >= this.length) {
@@ -133,7 +198,16 @@ export class FilmPlayer {
     cancelAnimationFrame(this.raf);
     this.stopPainter();
     this.canvas.remove();
+    this.vignetteEl?.remove();
+    this.grainEl?.remove();
     this.layer.remove();
+  }
+
+  /** The vignette and grain as layers of the page (else drawn in the canvas). */
+  private overlaysOnPage(on: boolean) {
+    this.args.pageOverlays = on;
+    if (this.grainEl) this.grainEl.hidden = !on;
+    if (this.vignetteEl) this.vignetteEl.hidden = !on;
   }
 
   /** The frame's resolution (device pixels per CSS pixel); its size on the page stays. */
@@ -236,8 +310,43 @@ export class FilmPlayer {
   }
 }
 
+/**
+ * A clock from the sound being heard (15 Oct): the audio clock (`currentTime`) moves in steps of
+ * its buffer (23 ms and more with the large buffers that keep the sound from breaking up), so
+ * frames read from it repeated themselves and then jumped, a judder in every browser. The output's
+ * timestamp, carried on by the page's own clock between its updates, moves with the frames, and is
+ * the time of the sound reaching the ears (`currentTime` runs ahead of it by the output's latency).
+ * Never backwards; seconds since `at` (the cue's start, on the context's clock).
+ */
+export function audioClock(ctx: AudioContext, at: number): FilmClock {
+  let last = 0;
+  let base = -1;
+  let basePerf = 0;
+  return {
+    now(at2?: number) {
+      const p = at2 ?? performance.now();
+      const now = ctx.currentTime;
+      let t = NaN;
+      const ts = typeof ctx.getOutputTimestamp === 'function' ? ctx.getOutputTimestamp() : null;
+      if (ts && ts.performanceTime && ts.contextTime !== undefined) t = ts.contextTime + (p - ts.performanceTime) / 1000;
+      // (a timestamp that does not agree with the clock, ahead of it or more than a second behind,
+      // as a wireless headset's might be at most, is not trusted)
+      if (!(t <= now + 0.1 && t >= now - 1)) {
+        // (no timestamp, or none to trust: the context's clock, carried on between its steps)
+        if (now !== base) {
+          base = now;
+          basePerf = p;
+        }
+        t = base + (p - basePerf) / 1000;
+      }
+      last = Math.max(last, t - at);
+      return last;
+    },
+  };
+}
+
 /** A clock from elapsed time (when there is no sound to keep time with). */
 export function elapsedClock(): FilmClock {
   const t0 = performance.now();
-  return { now: () => (performance.now() - t0) / 1000 };
+  return { now: (at?: number) => Math.max(0, ((at ?? performance.now()) - t0) / 1000) };
 }

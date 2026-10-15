@@ -3336,3 +3336,78 @@ track down the source".
 - **Check:** `browser/sky`: the empty sky black in every channel, far out and in a system; the
   glow there and warm when the view is drawn back; none close by among the stars; none in the
   Dark.
+
+## Smoother films in every browser, and sound that does not stutter (15 Oct, the player's word)
+
+The player, after the films on a tablet: "it's much better in Chrome. Thing is, Firefox runs it
+very slow. Well, I mean the cutscenes. The game itself is choppy but playable in Firefox, but
+smooth in Chrome. But there is a little bit of choppiness in Chrome and Vivaldi as well. And the
+sound does crackle". Asked what the crackle is like: "Irregular pops or stutter", and "Also
+outside the films". Asked about today's game: "Yes, fix main too".
+
+There is no Firefox in this container. Chromium drawing its canvases without the graphics chip
+stands in for it, as Firefox often draws them.
+
+- **The judder in every browser: the film's clock.** A film took its time from the sound's clock
+  (`currentTime`), which moves in steps of its buffer: 23 ms here, with the large buffers that
+  keep the sound whole. Frames come every 17 ms, so one frame in four showed the same moment as the
+  one before and the next jumped (34 of 120). The film now keeps time with the sound being heard:
+  the output's timestamp, carried on by the page's clock to the moment each frame is shown
+  (`audioClock`, `player.ts`). No frame repeats one before it, and from frame to frame the film's
+  time moves with the page's to a tenth of a millisecond (the median). It is also the time of the
+  sound reaching the ears: before, the picture ran ahead of it by the output's latency (72 ms
+  here).
+- **The vignette and the grain where they cost least.** Drawn into the canvas, they were two
+  passes over every pixel of every frame. Without the graphics chip at 1920×1080, a frame of the
+  Long Dusk took 38 ms with them and 17 ms without; the Last Light 39 and 11; the Last Warmth 35
+  and 13 (medians). In the game they are now layers of the page over the canvas, which the
+  browser puts together for nothing where it composes on the graphics chip: the same gradient,
+  and the same grain tile blended the same way, stepping 24 times a second, held still where the
+  system asks for less motion. Where the browser composes without the chip too, as this container
+  does, each layer costs more than its pass did (frames 233 ms apart against 50). So a film whose
+  frames come slowly tries them in the canvas for half a second and keeps whichever way came
+  quicker. The exported videos and the checks' frames draw them in the canvas, as before.
+- **A slow device comes down sooner.** It judges every half second (it was every second), by how
+  slow the frames are: a fifth to two fifths fewer pixels each way a step, down to half a pixel a
+  point (it was three quarters). The words are text and stay sharp.
+- **Measured after:**
+  - Drawn without the graphics chip at 1920×1080, the Long Dusk's frames came 50 ms apart at the
+    median, 33 ms over its last six seconds, 960 pixels across. Before: 50 ms (67 at the slowest
+    tenth), 1440 across.
+  - On a tablet's screen with the CPU slowed four times: 33 frames a second, 33 ms apart at the
+    median. Before: 12 a second, 83 ms apart.
+  - The film's two long pauses at 47 s (0.7 s, the film ending and the game's map drawn after it)
+    are the same before and after.
+  - This container draws in software, so these numbers measure the software, not a real
+    graphics chip or Firefox.
+- **The music's stutter: played by the audio element itself.** The recordings went through the
+  sound's graph (a `MediaElementSource`). Their samples crossed into it on the sound's own thread,
+  resampled, and gave out when the browser was busy, in the films and out of them; this is known
+  to be worst in Firefox. Now the element plays them through the browser's media pipeline, with
+  buffers and decoding threads of its own (`src/audio/trackOut.ts`). Its loudness is its volume:
+  the piece's level, fading in and out on a timer, times the music's volume (the slider, on the
+  same curve), times the master's gain, so they play about as loud as before. The master's
+  compressor no longer touches them (they are mastered already). Under a film they fade out and pause as
+  before. Where a page cannot set an element's volume (iOS Safari reads it back as 1), the graph's
+  route stays. The synthesized score stays in the graph, as before.
+- **A lighter reverb.** The room's impulse was 5.5 s of stereo noise that every interface sound
+  with an echo fed, heavy work for the sound's thread. It is now 3 s, with the same decay; past
+  3 s the tail was 22 dB down and more, and it now fades out over its last fifth of a second.
+  The interface's sounds share one way into it, made once, instead of two new nodes for every
+  sound.
+- **The stutter itself was not measured:** a sound card's buffer running dry cannot be heard or
+  counted in this container. What was measured is the work taken off the sound's thread.
+- **In both versions:** the sound in today's game at the main address too, on a branch of its
+  own from `main` (at the player's word); the films are only in the new version.
+- **Checks:**
+  - `browser/films`: the film's time moves with the page's frame by frame, with no frame
+    repeated; the vignette and grain layers lie over the frame, under its words; with frames as
+    slow as here, it tried them in the canvas and kept the quicker way; slow frames bring the
+    resolution down; under the film the recording's volume is 0.
+  - `browser/music-route` (new): the recording plays by its element, and no sound makes a
+    `MediaElementSource`; its volume follows the music's slider (70%, 35%, 0); ten sounds with
+    an echo make only their tones' own nodes; under a film it is silent and paused, and plays
+    again after.
+- **Validated:** tsc and the build clean; the playtest passes; savecompat on the 8 saves; all 79
+  unit checks; all 61 browser checks (`mobile` measured in the game's real fonts, `STEL_FONTS`).
+  No rule changed, so no harness run.
