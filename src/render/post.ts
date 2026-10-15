@@ -17,7 +17,6 @@ const FinishShader = {
     uVignette: { value: 0.55 },
     uCA: { value: 0.6 },
     uTint: { value: new THREE.Color(1, 0.94, 0.88) },
-    uLift: { value: new THREE.Color(0.004, 0.0035, 0.004) },
     uFade: { value: 0 },
   },
   vertexShader: /* glsl */ `
@@ -32,7 +31,6 @@ const FinishShader = {
     uniform float uVignette;
     uniform float uCA;
     uniform vec3 uTint;
-    uniform vec3 uLift;
     uniform float uFade;
     varying vec2 vUv;
 
@@ -48,8 +46,9 @@ const FinishShader = {
       col.r = texture2D(tDiffuse, uv + d * ca).r;
       col.g = texture2D(tDiffuse, uv).g;
       col.b = texture2D(tDiffuse, uv - d * ca).b;
-      // grade: lifted blacks, era tint
-      col = col * uTint + uLift;
+      // grade: the era's tint (no lift of the blacks: the tone mapping takes a dark colour's grey part
+      // away, so a lift with a little less green had shown as a purple oval behind everything, 15 Oct)
+      col = col * uTint;
       // vignette
       float vig = smoothstep(0.85, 0.2, sqrt(r2) * (1.0 + uVignette * 0.6));
       col *= mix(1.0, vig, uVignette);
