@@ -750,7 +750,8 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     through the sound's graph, the way known to stutter, worst in Firefox; a heavy reverb. Now:
     a clock from the sound being heard, the vignette and grain as page layers or in the canvas,
     whichever the device draws quicker, a quicker step down, the recordings played by their
-    element, and a lighter reverb (CHANGELOG, "Smoother films in every browser"). There is no
+    element, and a lighter reverb (CHANGELOG, "Smoother films in every browser"; the sound in
+    `main` by PR m1omg/Steliterate#32, `4435f3f`). There is no
     Firefox here: software Chromium stood in for it, so ask the player how it plays there now.
   - Next: the player's word on Firefox now, the films' second cut and the open threads
     (HANDOVER, section 3).

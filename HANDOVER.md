@@ -77,7 +77,8 @@ last.
     films"): a film's clock from the sound being heard, its vignette and grain as page layers or
     in the canvas, whichever the device draws quicker, the recordings played by their own
     element, a lighter reverb (CHANGELOG, "Smoother films in every browser"; the sound in `main`
-    too, at the player's word). Not run in Firefox: there is none here.
+    too, at the player's word, by PR m1omg/Steliterate#32, `4435f3f`, from `claude/sound-main`).
+    Not run in Firefox: there is none here.
   - Waiting for the player: their word on the films' second cut (sent as videos: the Long Dusk,
     the Black Hole Age under decay, the Degenerate Age twice, before and after their two asks; the
     endings only when asked), switching `main` to the new version ("Not yet", 14 Oct), and the open

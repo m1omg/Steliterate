@@ -22,7 +22,9 @@ and lighter on phones, then PR m1omg/Steliterate#28, `db34424`, the backup of to
 PR m1omg/Steliterate#29, `75efadc`, put the new version's plan in `main`, and PR
 m1omg/Steliterate#30, `3a3f4c2`, has a push to `main` or `next` build both; PR
 m1omg/Steliterate#31, `f9be053`, the map's purple oval gone and the galaxy's own light in its
-place, from `claude/sky-glow-main`, a branch from `main` made at the player's word, 15 Oct).
+place, from `claude/sky-glow-main`, a branch from `main` made at the player's word, 15 Oct; PR
+m1omg/Steliterate#32, `4435f3f`, sound that does not stutter, from `claude/sound-main`, the same
+way).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
