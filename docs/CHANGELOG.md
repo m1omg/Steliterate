@@ -1889,3 +1889,29 @@ reading list: "yes add the positronium line to the codex pls".
   (2004, arXiv:astro-ph/0405273) find that electrons and positrons drift apart faster than they
   can pair, so it may never form. The game lets it form: a bend. The paper is in the Sources.
 - No rules changed.
+
+## The purple oval: its source, and the galaxy's own light (15 Oct, the player's word)
+
+The player, with a screenshot of the map: "why this weird purplish blob around most of the
+playfield?", then "oh it doesnt dispay in firefox and its in orig version too, i get it was
+supposed to be for ambient light likely? implement something but...prettier pls" and "pls do
+track down the source". Built for the new version and brought here at the player's word ("Yes,
+fix main too"), from a branch of its own.
+
+- **The source:** the post chain's grade (`post.ts`) added a lift to every pixel, `(0.004,
+  0.0035, 0.004)`, a little less green than red and blue. The renderer's neutral tone mapping
+  takes the darkest channel of a dark colour off all three (a dark grey becomes black), so what
+  was left of the lift was red and blue only: a dark magenta, and the vignette made it an oval
+  over the middle of the screen (the empty sky read 2,0,3 in the middle and 1,0,2 at the edge;
+  without the lift 0,0,1 everywhere). It had been there since the first rendering (28 Sep), in the
+  galaxy and in every system; Firefox likely loses the small difference between the channels on
+  its way to the screen (not checked here).
+- **Gone:** no lift. The empty sky is black, in the galaxy and in a system.
+- **The galaxy's own light:** the glow of its billions of red dwarfs too faint to be seen one by
+  one, warm, lying where its stars are: the shared envelope and its brighter middle, each
+  ancestral galaxy's remnant, the streams as faint arcs, the globular clusters; flattened as the
+  stars are, flatter as the view tilts toward edge-on. Seen from close by, among the stars, there
+  is no glow: it fades in as the view draws back. It dims as the stars go out, as the stars drawn
+  above it do, in their tint, and is gone in the Dark. A few dozen soft sprites (`galaxyView.ts`,
+  `buildGlows`), made from the world's own layout without a random draw.
+- **Check:** `browser/sky`.
