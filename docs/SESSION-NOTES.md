@@ -725,6 +725,15 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     like the slightly changed one". Saved as `src/film/saved/lastlight-v1.ts` (not in the game;
     one import brings it back), its video kept; the new one sent beside it. If they prefer the
     first, swap the import in `films.ts`.
+  - 15 Oct: "Thank you, looking great so far, but cutscenes are very slow on tablet and sound
+    crackles at times especially during them plus regular background music plays during
+    cutscenes, pls fix". Measured on a tablet's screen with the CPU slowed: the films stopped for
+    up to 2 s as each scene began while their pictures were painted, the music only stepped back,
+    and a film's sound made all its voices at once. Now: the pictures painted in a thread of their
+    own (the same frames), the film beginning once its first scene's are there, turning worlds
+    twice as fast, fewer pixels on a device that cannot keep up, the music silent and paused
+    under a film and carrying on after it, and the sound's notes made as they come (CHANGELOG,
+    "The films on a tablet").
   - Next: the player's word on the films' second cut and the open threads (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak

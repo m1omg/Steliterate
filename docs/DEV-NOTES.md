@@ -1407,6 +1407,37 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   game): to restore one, import it in `films.ts` in place of the current one. A film that shows
   a body's temperature reads it from the game's own laws (`dwarfCoolingK`, `brownCoolingK` in
   `physics.ts`), as the Degenerate Age's specimens do.
+- **The films on a tablet (15 Oct):** played in the game (`FilmPlayer` with `painter: true`, from
+  `ui/screens/Film.tsx`), a film is laid out with `setup(w, h, q, args, false)` (its first scene not
+  painted then) and its pictures are painted by `src/film/paintWorker.ts`, a module worker (Vite
+  builds it as `assets/paintWorker-*.js`), which lays out the same film at the same size and
+  quality and paints `scene.assets` (the reel's paintings in the order the film needs them, each
+  once; the first `scene.first` of them are the first scene's) one by one, sending each through
+  `transfer.ts`: `pack` turns an `OffscreenCanvas` into an `ImageBitmap`, a `World` into its
+  `save()` (its tables and its picture), typed arrays into copies handed over whole, lists and
+  plain records into their parts, and anything else into `local` (the page paints that one). The
+  page `unpack`s each into a canvas of its own and `Lazy.fulfil`s the job; `player.ready` resolves
+  once the first scene's are there, and Film.tsx starts the cue and the clock on the next frame
+  (the screen dark meanwhile, "PREPARING THE REEL" fading in after half a second, `.film-wait`).
+  Where there is no `Worker`, `OffscreenCanvas` or `createImageBitmap`, or the worker fails, the
+  page paints as before (`warm`, a slice a frame). `canvas()` (`paint.ts`) makes an
+  `OffscreenCanvas` where there is no document, so a painting job must not touch the page (none
+  does; text is drawn in the frame, not in a job). `browser/films` checks that frames drawn from
+  the worker's pictures hash the same as from the page's (`__stel.filmFramesApart`). `World`
+  keeps only its disc's pixels with their light (`WorldPixels`) and each map point's colours
+  (`texels`, nine numbers a point), and writes each pixel as one 32-bit word (`HEAT_WORD` for the
+  thermal palette). `player.play` steps the frame's resolution down by a fifth (to 0.75 a CSS
+  pixel at least) after a second of frames more than 45 ms apart (`resize`; the reel's crossfade
+  layer follows the canvas's size). The music under a film: `music.hold(true/false)` (core's
+  `duckMusic` to 0; the recording paused 0.7 s later; `tick` schedules nothing; a recording due
+  waits in `start()`; the slow-start grace timer waits for the hold to end; `music.holding` for
+  the checks). A cue is a sorted list of `CueNote`s (`reelCue`): `playCue` makes each `AHEAD` (3 s)
+  before it sounds from a 250 ms timer, `renderCue` makes them all at once. Hooks:
+  `__stel.playFilm(id, args)`, `__stel.filmFramesApart(id, times, w, h, q)`, `__stel.audio()`.
+  Measuring (scripts in a scratch folder, not kept): a tablet's screen (1280×800 at 2× with
+  touch), CDP `Emulation.setCPUThrottlingRate` 4, rAF gaps over a film and a DevTools trace
+  (`Tracing.start` with `devtools.timeline`, tasks over 150 ms and what ran in them); frame rates
+  here measure the software rasteriser, so compare the main thread's own stops.
 - **`/next/` (part 5):** the `next` branch (a copy of the work branch: `git push origin
   claude/epic-wozniak-lyhulf:next`) carries a Pages workflow that checks out `main` and `next`
   into folders of those names, builds each (`npm ci && npm run build`), drops `next/dist/archive`

@@ -3246,3 +3246,61 @@ version as well in case if I don't like the slightly changed one".
   the Long Dusk's first narration (at beat 2.5, 1.7 s in), but the film's first frame takes 2 to 3 s
   here while its paintings are made: the line came 2.8 to 4.9 s after Begin on this build and the
   one before alike, so it had passed by luck. It now waits for the line, up to 10 s.
+
+## The films on a tablet: smooth, with the music silent under them (15 Oct, the player's word)
+
+The player: "cutscenes are very slow on tablet and sound crackles at times especially during them
+plus regular background music plays during cutscenes, pls fix".
+
+- **What was measured** (a tablet's screen, 1280×800 at 2× with touch, so Medium: a frame of
+  1600×1000; the CPU slowed four times through the DevTools protocol):
+  - The films' pictures (skies, galaxies, stars, worlds) were painted on the thread that draws
+    the frames: the Long Dusk's took 0.8 s before its first frame and 6.2 s more as it played, up
+    to 2 s at a time as a scene began (1.3 s at 7 s, 2.0 s at 24 s, 1.7 s at 31 s); the Last
+    Light's 1.8 s and 1.9 s. The warming between frames (3 ms a frame on Medium) could not keep
+    up on a slow device, so each scene stopped the film while its pictures were made.
+  - The music did not stop under a film: it only stepped back to an eighth of its volume
+    (`duckMusic` 0.12), the recording playing on.
+  - A film's sound made all its voices at once as it began: the Long Dusk's 119 oscillators,
+    waiting in the sound's graph from the first second.
+  - A turning world painted itself pixel by pixel every frame: 11 ms for a world 500 pixels
+    across here, 15 ms for one seen by its heat (four times that on the slowed CPU).
+- **Painted in a thread of their own** (`src/film/paintWorker.ts`): the game lays the film out as
+  before but leaves its pictures to a worker, which lays out the same film at the same size and
+  paints them in the order the film needs them, sending each as it is done (a bitmap, or a world's
+  tables and picture; `src/film/transfer.ts`); the page takes each as it comes and draws frames
+  meanwhile. The film begins once its first scene's pictures are there, its sound and its clock
+  together on the next frame drawn; the dark screen says "PREPARING THE REEL" if that takes a
+  moment. The frames are the same as before: all sixteen films drawn from pictures painted there
+  hash the same as from pictures painted on the page. A world's tables are handed over whole,
+  not copied (copied, they had stopped the page for half a second on the slowed CPU). Where a
+  browser has no workers with canvases of their own, the page paints as before.
+- **Turning worlds about twice as fast:** each map point's colours in the star's light, the
+  towns' light and the sea's glint are worked out once, only the disc's own pixels are kept, and
+  each is written as one word: 5.8 ms for the 500-pixel world (from 11), 6.0 ms by its heat (from
+  15). The pictures are the same (stills of four films against the build before: no pixel differs
+  by more than 1 of 255).
+- **A device that cannot keep up** (frames more than 45 ms apart for a second) draws the film with
+  a fifth fewer pixels each way, as many times as it needs, down to three quarters of a pixel a
+  point; its words are text over it and stay sharp.
+- **The music is silent under a film:** it fades out, the recording pauses, the synth schedules
+  nothing and a recording due to start waits (`music.hold`); after the film the recording carries
+  on from where it was and fades back in.
+- **A film's sound makes each note three seconds before it sounds** (`playCue`), not all at once:
+  34 voices by the Long Dusk's second second, of its 119. The exported videos' sound is made the
+  same way, all at once (`renderCue`), and is unchanged.
+- **Checks:** `browser/films` waits for the film to begin (its pictures come from their thread
+  now), and checks that the music is silent and paused under it and back after it, that its
+  voices come as they are due, that slow frames bring the resolution down, and that pictures
+  painted in their own thread draw the same frames as on the page, in all sixteen films.
+- **Measured after** (the Long Dusk played through on the same tablet's screen, the CPU slowed
+  four times): the page stopped for a third of a second or more 10 times during the film before
+  (up to 0.45 s, as scenes began), and not once now; the film's last second is the game's map
+  drawn after it, the same in both. Receiving the pictures costs the page no long task (a
+  DevTools trace). Frames came 200 ms apart at the median before and 67 now, mostly the fewer
+  pixels: this container draws in software, so its frame rates measure the software, not a
+  tablet's GPU, which was not measured.
+- **A check made sure of what it measures:** `browser/survey-reveal` gave the switch into a
+  system's view 2 s to show the reveal's first moment; drawn in software here the switch takes
+  0.8 to 3.3 s (the build before alike), so it failed on both. It now waits up to 15 s; the
+  reveal's clock is the view's, so its first moment is still caught.

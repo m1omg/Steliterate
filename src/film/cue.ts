@@ -3,7 +3,9 @@ import type { FilmId } from './films';
 // The films' sound (part 4): each film's cue is scheduled on an audio clock from the moment it
 // starts, so the cuts and the sound keep time together; the same function renders it offline for
 // the exported video. Programmatic, like the pictures: a drone, a bell on each cut, the reel's
-// tick on each beat.
+// tick on each beat. A cue is a list of notes, each made a few seconds before it sounds (15 Oct:
+// made all at once, a film's three hundred voices waited in the sound's graph from the start, and
+// on a tablet the sound crackled); offline, all are made at once.
 
 interface Voice {
   /** Fade it all out from now over `secs` (a skip). */
@@ -94,29 +96,35 @@ function swell(ctx: BaseAudioContext, out: AudioNode, buf: AudioBuffer, at: numb
   src.stop(at + 0.7);
 }
 
-function reelCue(spec: CueSpec) {
-  return (ctx: BaseAudioContext, out: AudioNode, at: number) => {
-    const beat = 60 / spec.bpm;
-    const n = noise(ctx);
-    const hold = spec.titleAt * beat;
-    tone(ctx, out, spec.root, at, 1.6, hold - 1.6, 2, 0.16);
-    tone(ctx, out, spec.root * 1.4983, at + 0.4, 1.8, hold - 2.2, 2.2, 0.08);
-    spec.cuts.forEach(([b, hz], i) => {
-      bell(ctx, out, hz, at + b * beat, 0.09);
-      if (!spec.pads) return;
-      // under the scene, its cut's note two octaves down with its fifth and tenth, until the next cut
-      const end = (spec.cuts[i + 1]?.[0] ?? spec.titleAt) * beat;
-      const start = b * beat;
-      pad(ctx, out, [hz / 4, (hz / 4) * 1.4983, (hz / 4) * 2.52], at + start, 1.8, Math.max(0.2, end - start - 1.8), 2.4, 0.05);
-    });
-    for (let i = 0; i < Math.floor(spec.titleAt); i++) {
-      if (spec.pads && i % 4 !== 0) continue;
-      tick(ctx, out, n, at + i * beat, i % 4 === 0 ? 0.07 : 0.035);
-    }
-    if (spec.pads) swell(ctx, out, n, at + hold, beat * 3, 0.05);
-    for (const hz of spec.chord) tone(ctx, out, hz, at + hold, 0.5, spec.pads ? 3 : 1.4, spec.pads ? 3 : 1.6, 0.06);
-    bell(ctx, out, spec.chord[0] * 2, at + hold, 0.07);
-  };
+/** A note of a cue: when it begins (seconds from the cue's start) and what makes it, given the moment the cue starts. */
+interface CueNote {
+  at: number;
+  make(ctx: BaseAudioContext, out: AudioNode, t0: number, n: AudioBuffer): void;
+}
+
+function reelCue(spec: CueSpec): CueNote[] {
+  const beat = 60 / spec.bpm;
+  const hold = spec.titleAt * beat;
+  const notes: CueNote[] = [];
+  const add = (at: number, make: CueNote['make']) => notes.push({ at, make });
+  add(0, (ctx, out, t0) => tone(ctx, out, spec.root, t0, 1.6, hold - 1.6, 2, 0.16));
+  add(0.4, (ctx, out, t0) => tone(ctx, out, spec.root * 1.4983, t0 + 0.4, 1.8, hold - 2.2, 2.2, 0.08));
+  spec.cuts.forEach(([b, hz], i) => {
+    add(b * beat, (ctx, out, t0) => bell(ctx, out, hz, t0 + b * beat, 0.09));
+    if (!spec.pads) return;
+    // under the scene, its cut's note two octaves down with its fifth and tenth, until the next cut
+    const end = (spec.cuts[i + 1]?.[0] ?? spec.titleAt) * beat;
+    const start = b * beat;
+    add(start, (ctx, out, t0) => pad(ctx, out, [hz / 4, (hz / 4) * 1.4983, (hz / 4) * 2.52], t0 + start, 1.8, Math.max(0.2, end - start - 1.8), 2.4, 0.05));
+  });
+  for (let i = 0; i < Math.floor(spec.titleAt); i++) {
+    if (spec.pads && i % 4 !== 0) continue;
+    add(i * beat, (ctx, out, t0, n) => tick(ctx, out, n, t0 + i * beat, i % 4 === 0 ? 0.07 : 0.035));
+  }
+  if (spec.pads) add(hold - beat * 3, (ctx, out, t0, n) => swell(ctx, out, n, t0 + hold, beat * 3, 0.05));
+  for (const hz of spec.chord) add(hold, (ctx, out, t0) => tone(ctx, out, hz, t0 + hold, 0.5, spec.pads ? 3 : 1.4, spec.pads ? 3 : 1.6, 0.06));
+  add(hold, (ctx, out, t0) => bell(ctx, out, spec.chord[0] * 2, t0 + hold, 0.07));
+  return notes.sort((a, b) => a.at - b.at);
 }
 
 /** An ending's cue (36 beats at 84, the title at 31): a bell on each scene's cut, a pad under it. */
@@ -151,19 +159,31 @@ const FATE_SPECS: Record<string, CueSpec> = {
   'last_warmth:curvature': { bpm: 90, root: 36.71, cuts: [[0, 392], [7.5, 293.66], [21.5, 220], [29.5, 261.63], [38, 196], [46.5, 233.08], [54, 174.61], [61, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
 };
 
-type Cue = (ctx: BaseAudioContext, out: AudioNode, at: number) => void;
-const CUES = Object.fromEntries(Object.entries(SPECS).map(([id, spec]) => [id, reelCue(spec)])) as Record<FilmId, Cue>;
-const FATE_CUES: Record<string, Cue> = Object.fromEntries(Object.entries(FATE_SPECS).map(([id, spec]) => [id, reelCue(spec)]));
-const cueOf = (id: FilmId, fate?: string): Cue => (fate && FATE_CUES[`${id}:${fate}`]) || CUES[id];
+const CUES = Object.fromEntries(Object.entries(SPECS).map(([id, spec]) => [id, reelCue(spec)])) as Record<FilmId, CueNote[]>;
+const FATE_CUES: Record<string, CueNote[]> = Object.fromEntries(Object.entries(FATE_SPECS).map(([id, spec]) => [id, reelCue(spec)]));
+const cueOf = (id: FilmId, fate?: string): CueNote[] => (fate && FATE_CUES[`${id}:${fate}`]) || CUES[id];
 
-/** Play a film's cue into `out` from `at` (on its context's clock). */
+/** How far ahead (seconds) a playing cue's notes are made, and how often it looks. */
+const AHEAD = 3;
+const EVERY = 250;
+
+/** Play a film's cue into `out` from `at` (on its context's clock): each note made a few seconds before it sounds. */
 export function playCue(id: FilmId, ctx: BaseAudioContext, out: AudioNode, at: number, fate?: string): Voice {
   const bus = ctx.createGain();
   bus.gain.value = 1;
   bus.connect(out);
-  cueOf(id, fate)(ctx, bus, at);
+  const notes = cueOf(id, fate);
+  const n = noise(ctx);
+  let next = 0;
+  const feed = () => {
+    while (next < notes.length && at + notes[next].at <= ctx.currentTime + AHEAD) notes[next++].make(ctx, bus, at, n);
+    if (next >= notes.length) clearInterval(timer);
+  };
+  const timer = setInterval(feed, EVERY);
+  feed();
   return {
     stop(secs = 0.4) {
+      clearInterval(timer);
       const now = ctx.currentTime;
       bus.gain.cancelScheduledValues(now);
       bus.gain.setValueAtTime(bus.gain.value, now);
@@ -173,6 +193,12 @@ export function playCue(id: FilmId, ctx: BaseAudioContext, out: AudioNode, at: n
   };
 }
 
+/** How many notes a cue makes, and how many of them a playing cue has made `secs` after it starts (the checks: they are made as they come). */
+export function cueNotes(id: FilmId, secs: number, fate?: string): { all: number; made: number } {
+  const notes = cueOf(id, fate);
+  return { all: notes.length, made: notes.filter((x) => x.at <= secs + AHEAD).length };
+}
+
 /** A film's cue rendered offline (for the exported video): stereo samples at `rate`. */
 export async function renderCue(id: FilmId, secs: number, rate = 48000, fate?: string): Promise<AudioBuffer> {
   const ctx = new OfflineAudioContext(2, Math.ceil(secs * rate), rate);
@@ -180,7 +206,8 @@ export async function renderCue(id: FilmId, secs: number, rate = 48000, fate?: s
   comp.threshold.value = -16;
   comp.ratio.value = 3;
   comp.connect(ctx.destination);
-  cueOf(id, fate)(ctx, comp, 0);
+  const n = noise(ctx);
+  for (const x of cueOf(id, fate)) x.make(ctx, comp, 0, n);
   return ctx.startRendering();
 }
 

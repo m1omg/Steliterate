@@ -8,13 +8,13 @@ import { endTurn } from './game/sim/turn';
 import { autoPlay } from './game/auto';
 import { exportCode, importCode, loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
-import { installUnlock, setVolumes } from './audio/core';
+import { audio, installUnlock, setVolumes } from './audio/core';
 import { music } from './audio/music';
 import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import type { Pickable } from './render/galaxyView';
 import { App } from './ui/App';
-import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, saveSettings, screen, selection, revealsOn, setEngine, setFilmOverride, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
+import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, playFilm, saveSettings, screen, selection, revealsOn, setEngine, setFilmOverride, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
 import { PRIMARY_NAME, bodyKindName } from './ui/labels';
 import { doEndTurn, lastTurn, setSlowSlices } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
@@ -28,7 +28,7 @@ import { STORE } from './keys';
 import './ui/styles.css';
 import { colonies, ownColony } from './game/sim/util';
 import { hashSeed } from './game/rng';
-import { FILMS, type FilmId, type FilmQuality } from './film/films';
+import { FILMS, type FilmArgs, type FilmId, type FilmQuality } from './film/films';
 import { FilmPlayer } from './film/player';
 
 const stage = document.getElementById('stage')!;
@@ -432,6 +432,21 @@ window.__stel = {
     p.dispose();
     return out;
   },
+  /** The same frames with the film's pictures painted in the painter thread (15 Oct), once it has sent them all, and how many it sent: the same pictures as painted on the page. */
+  async filmFramesApart(id: FilmId, times: number[], w = 480, h = 270, quality: FilmQuality = 'high') {
+    const p = new FilmPlayer(document.createElement('div'), id, { quality, width: w, height: h, pixelRatio: 1, painter: true });
+    await p.painted;
+    const frames = times.map((t) => {
+      p.frame(t);
+      return hashSeed(p.canvas.toDataURL());
+    });
+    p.dispose();
+    return { sent: p.sent, frames };
+  },
+  /** Play a film as the game does (with films on), then back to the game. */
+  playFilm: (id: FilmId, args?: FilmArgs) => playFilm(id, null, args),
   /** The music player (its layer: the synth bus, and the recording playing), for the checks. */
   music: () => music,
+  /** The sound's graph (the films' check: the music's gain under a film). */
+  audio: () => audio(),
 };

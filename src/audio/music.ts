@@ -1,5 +1,5 @@
 import type { EraId } from '../game/types';
-import { audio, midiHz, onAudioReady } from './core';
+import { audio, duckMusic, midiHz, onAudioReady } from './core';
 
 // Procedural score. Dusk is worn synthwave over a dark-ambient bed; each age strips a layer away
 // until the Dark Era is a drone and the occasional distant tone. Notes are scheduled ahead on
@@ -213,6 +213,9 @@ class Music {
   private step = 0;
   private next = 0;
   private started = false;
+  /** A film is playing: the music is silent and paused under it (`hold`), and since when it was let go (performance.now()). */
+  private held = false;
+  private releasedAt = -Infinity;
 
   start() {
     if (this.started) return;
@@ -244,6 +247,42 @@ class Music {
     const was = this.styleKey();
     this.mood = mood;
     if (this.styleKey() !== was) this.apply();
+  }
+
+  /**
+   * Silent while a film plays its own sound (15 Oct, the player: the background music played on
+   * under the films): it fades out, the recording pauses and the synth schedules nothing; let go,
+   * the recording carries on from where it was and fades back in. Nothing plays unheard meanwhile.
+   */
+  hold(on: boolean) {
+    if (on === this.held) return;
+    this.held = on;
+    duckMusic(on);
+    const a = audio();
+    const L = this.layer;
+    if (on) {
+      // once faded out, nothing more to play: the recording pauses, the synth's continuous sounds stop
+      window.setTimeout(() => {
+        const layer = this.layer;
+        if (!this.held || !layer) return;
+        layer.track?.el.pause();
+        if (layer.persistent.length) this.hush(layer);
+      }, 700);
+      return;
+    }
+    this.releasedAt = performance.now();
+    if (!a || !L) return;
+    // the synth (if it is the one heard) takes up its notes from now, not where it stopped
+    if (!L.silenced) {
+      this.voice(L, a.ctx.currentTime);
+      this.next = a.ctx.currentTime + 0.05;
+    }
+    L.onShow?.();
+  }
+
+  /** Whether a film holds the music (the checks). */
+  get holding(): boolean {
+    return this.held;
   }
 
   /** Play one track by hand until set back to null (automatic). */
@@ -429,13 +468,17 @@ class Music {
       if (layer.hiss) ramp(layer.hiss.gain, 1, 3);
       layer.synthUntil = span > 0 ? a.ctx.currentTime + span : 0;
     };
+    // (held under a film, a recording waits to start until it ends: `hold`)
+    const start = () => {
+      if (!this.held) el.play().catch(() => {});
+    };
     const play = (p: Piece) => {
       if (!p.url) return wakeSynth(list.length > 1 ? SYNTH_SPAN : 0);
       layer.synthUntil = 0;
       wanted = true;
       el.src = p.url;
       el.loop = list.length === 1;
-      el.play().catch(() => {});
+      start();
     };
     const advance = () => {
       if (this.layer !== layer) return;
@@ -473,23 +516,30 @@ class Music {
       ramp(gain.gain, 0, Math.max(0.3, left));
     });
     // a recording slow to start (a slow connection): the synth fills the silence until it does
-    window.setTimeout(() => {
+    // (a film holding the music meanwhile: the wait starts again when it lets go)
+    const grace = () => {
       if (this.layer !== layer || started || !wanted || !layer.silenced) return;
+      const since = performance.now() - this.releasedAt;
+      if (this.held || since < RECORDING_GRACE * 1000) {
+        window.setTimeout(grace, this.held ? 1000 : RECORDING_GRACE * 1000 - since);
+        return;
+      }
       layer.silenced = false;
       layer.hushAt = 0;
       this.next = a.ctx.currentTime + 0.05;
       this.voice(layer, a.ctx.currentTime);
       ramp(layer.bus.gain, 1, 3);
       if (layer.hiss) ramp(layer.hiss.gain, 1, 3);
-    }, RECORDING_GRACE * 1000);
+    };
+    window.setTimeout(grace, RECORDING_GRACE * 1000);
     layer.onShow = () => {
-      if (this.layer === layer && wanted && el.paused && !el.ended) el.play().catch(() => {});
+      if (this.layer === layer && wanted && el.paused && !el.ended) start();
     };
     if (intro) {
       layer.intro = true;
       wanted = true;
       el.src = intro;
-      el.play().catch(() => {});
+      start();
     } else play(list[0]);
   }
 
@@ -580,7 +630,7 @@ class Music {
       L.synthUntil = 0;
       L.onSynthEnd?.();
     }
-    if (L.silenced) return;
+    if (L.silenced || this.held) return;
     if (this.next < now - 0.2) this.next = now + 0.05; // fell behind (tab was asleep): skip, don't burst
     const stepDur = 60 / L.style.bpm / 4;
     while (this.next < now + 0.3) {

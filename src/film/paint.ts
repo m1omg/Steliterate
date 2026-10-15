@@ -33,6 +33,13 @@ export class Lazy<T> {
     while (!this.finished) this.step();
     return this.value as T;
   }
+  /** Done elsewhere (the films' painter thread, 15 Oct): its result taken as this job's own. */
+  fulfil(v: T) {
+    if (this.finished) return;
+    this.value = v;
+    this.finished = true;
+    this.it = null;
+  }
   /** Work on it until `until` (performance.now()); whether it is done. */
   warm(until: number): boolean {
     while (!this.finished && performance.now() < until) this.step();
@@ -49,9 +56,13 @@ export class Lazy<T> {
 }
 
 export function canvas(w: number, h: number): HTMLCanvasElement {
+  const W = Math.max(1, Math.round(w));
+  const H = Math.max(1, Math.round(h));
+  // (in the films' painter thread there is no page: a canvas off it, drawn on the same way)
+  if (typeof document === 'undefined') return new OffscreenCanvas(W, H) as unknown as HTMLCanvasElement;
   const c = document.createElement('canvas');
-  c.width = Math.max(1, Math.round(w));
-  c.height = Math.max(1, Math.round(h));
+  c.width = W;
+  c.height = H;
   return c;
 }
 
@@ -366,117 +377,170 @@ export interface WorldMap {
  * A world's disc, `n` pixels across, lit from `light` (a direction in the view: x right, y up, z
  * toward us) by a star of colour `sun`: what it shows turns with `spin` (radians), over a map made
  * once. The lighting, the air at the limb and the glint on its seas are worked out once per disc;
- * each frame only looks the map up, so a turning world costs a few milliseconds.
+ * each frame only looks the map up, so a turning world costs a few milliseconds. Only the disc's own
+ * pixels are kept and painted (15 Oct: a tablet's frame had spent a third of its time here).
  */
+export interface WorldPixels {
+  /** For each pixel of the disc: where it is in the picture, its map row (times the map's width), the map column it shows at no turn, and its light: by day, by night (the towns), in the air at the limb, and the sea's glint. */
+  at: Int32Array;
+  row: Int32Array;
+  u0: Float32Array;
+  lit: Float32Array;
+  night: Float32Array;
+  air: Float32Array;
+  glint: Float32Array;
+}
+
+/** How a world is lit and coloured: the star's direction and colour, its tilt, its air, its towns' lights, and, if seen by its heat, that palette's gain. */
+export interface WorldLight {
+  light: readonly [number, number, number];
+  sun: RGB;
+  tilt?: number;
+  air: RGB;
+  lights: RGB;
+  airThick?: number;
+  heat?: number;
+}
+
 export class World {
   readonly n: number;
   private img: ImageData;
   readonly canvas: HTMLCanvasElement;
   private g: CanvasRenderingContext2D;
-  private lon0: Float32Array;
-  private row: Int32Array;
-  private day: Float32Array;
-  private rim: Float32Array;
-  private glint: Float32Array;
-  private inside: Uint8Array;
+  private px: WorldPixels;
+  /** Each map point's colour in the star's light, in its towns' light and in its sea's glint (0..255, three channels each: nine numbers a point), worked out once. */
+  private tex: Float32Array;
+  private d32: Uint32Array;
   private last = NaN;
   constructor(
     n: number,
     private map: WorldMap,
-    private o: { light: readonly [number, number, number]; sun: RGB; tilt?: number; air: RGB; lights: RGB; airThick?: number; heat?: number },
+    private o: WorldLight,
+    pre?: WorldPixels,
   ) {
     this.n = Math.max(8, Math.round(n));
     const N = this.n;
     this.canvas = canvas(N, N);
     this.g = this.canvas.getContext('2d')!;
     this.img = this.g.createImageData(N, N);
-    this.lon0 = new Float32Array(N * N);
-    this.row = new Int32Array(N * N);
-    this.day = new Float32Array(N * N);
-    this.rim = new Float32Array(N * N);
-    this.glint = new Float32Array(N * N);
-    this.inside = new Uint8Array(N * N);
+    this.d32 = new Uint32Array(this.img.data.buffer);
+    this.px = pre ?? World.pixels(N, map, o);
+    this.tex = World.texels(map, o);
+  }
+
+  private static texels(map: WorldMap, o: WorldLight): Float32Array {
+    const { W, H, albedo, sea, cloud, light } = map;
+    // nine numbers a point, side by side (the point a pixel shows is read in one go)
+    const tex = new Float32Array(W * H * 9);
+    const lamp = [o.lights[0] * 1.4, o.lights[1] * 1.25, o.lights[2] * 0.9];
+    const white = [0.92, 0.9, 0.88];
+    for (let m = 0; m < W * H; m++) {
+      // the ground's colour under its cloud; the towns' light through the cloud; the glint on open sea
+      const cl = cloud[m] / 255;
+      const lit = (light[m] / 255) * (1 - cl * 0.7);
+      const gl = sea[m] ? (1 - cl) * 1.4 : 0;
+      for (let c = 0; c < 3; c++) {
+        const a = albedo[m * 3 + c] / 255;
+        tex[m * 9 + c] = 255 * (a + (white[c] - a) * cl) * o.sun[c];
+        tex[m * 9 + 3 + c] = 255 * lit * lamp[c];
+        tex[m * 9 + 6 + c] = 255 * gl * o.sun[c];
+      }
+    }
+    return tex;
+  }
+
+  private static pixels(N: number, map: WorldMap, o: WorldLight): WorldPixels {
+    const all = N * N;
+    const at = new Int32Array(all);
+    const row = new Int32Array(all);
+    const u0 = new Float32Array(all);
+    const lit = new Float32Array(all);
+    const night = new Float32Array(all);
+    const air = new Float32Array(all);
+    const glint = new Float32Array(all);
     const [lx, ly, lz] = o.light;
     const ll = Math.hypot(lx, ly, lz) || 1;
     const tilt = o.tilt ?? 0.2;
     const ct = Math.cos(tilt);
     const st = Math.sin(tilt);
+    const thick = o.airThick ?? 1;
+    let q = 0;
     for (let j = 0; j < N; j++) {
       for (let i = 0; i < N; i++) {
         const x = (i + 0.5) / N * 2 - 1;
         const y = 1 - (j + 0.5) / N * 2;
         const r2 = x * x + y * y;
-        const k = j * N + i;
         if (r2 > 1) continue;
-        this.inside[k] = 1;
         const z = Math.sqrt(1 - r2);
         // into the body's frame: its axis tilted toward us by `tilt`
         const by = y * ct + z * st;
         const bz = -y * st + z * ct;
-        this.lon0[k] = Math.atan2(x, bz);
-        this.row[k] = Math.min(map.H - 1, Math.max(0, Math.floor((0.5 - Math.asin(Math.max(-1, Math.min(1, by))) / Math.PI) * map.H)));
+        at[q] = j * N + i;
+        u0[q] = ((Math.atan2(x, bz) + Math.PI) / (Math.PI * 2)) * map.W;
+        row[q] = Math.min(map.H - 1, Math.max(0, Math.floor((0.5 - Math.asin(Math.max(-1, Math.min(1, by))) / Math.PI) * map.H))) * map.W;
         const ndl = (x * lx + y * ly + z * lz) / ll;
-        this.day[k] = ndl;
+        // daylight with a soft terminator (the air scatters a little past it), and the night side for the towns
+        lit[q] = smooth(-0.08, 0.32, ndl) * (0.25 + 0.75 * Math.max(0, ndl));
+        night[q] = 1 - smooth(-0.15, 0.05, ndl);
         // the air: brighter toward the limb on the lit side, a thin ring on the dark one
-        this.rim[k] = Math.pow(1 - z, 2.6);
+        air[q] = Math.pow(1 - z, 2.6) * thick * (smooth(-0.35, 0.2, ndl) * 1.1 + 0.08);
         // the star's glint on the sea: its light reflected toward us (R = 2(N·L)N − L, seen along z)
         const rz = 2 * ndl * z - lz / ll;
-        this.glint[k] = ndl > 0 ? Math.pow(Math.max(0, rz), 60) : 0;
+        glint[q] = ndl > 0 ? Math.pow(Math.max(0, rz), 60) : 0;
+        q++;
       }
     }
+    return { at: at.slice(0, q), row: row.slice(0, q), u0: u0.slice(0, q), lit: lit.slice(0, q), night: night.slice(0, q), air: air.slice(0, q), glint: glint.slice(0, q) };
   }
+
+  /** What it paints from, to be sent from the painter thread to the page, with its picture at the turn it was last painted at (`load` makes it again, as it was). */
+  save() {
+    return { n: this.n, map: this.map, o: this.o, px: this.px, spin: this.last, pic: this.canvas };
+  }
+
+  static load(d: ReturnType<World['save']>): World {
+    const w = new World(d.n, d.map, d.o, d.px);
+    if (!Number.isNaN(d.spin)) {
+      w.g.drawImage(d.pic, 0, 0);
+      w.last = d.spin;
+    }
+    return w;
+  }
+
   /** Paint the disc at `spin` (radians of rotation); the same spin paints the same pixels. */
   paint(spin: number): HTMLCanvasElement {
     if (spin === this.last) return this.canvas;
     this.last = spin;
-    const { W, albedo, sea, cloud, light } = this.map;
-    const d = this.img.data;
+    const W = this.map.W;
     const N = this.n;
-    const [sr, sg, sb] = this.o.sun;
     const [ar, ag, ab] = this.o.air;
     const [cr, cg, cb] = this.o.lights;
-    const thick = this.o.airThick ?? 1;
     const heat = this.o.heat ?? 0;
+    const { at, row, u0, lit: LIT, night: NIGHT, air: AIR, glint: GLINT } = this.px;
+    const T = this.tex;
+    // the turn as whole map columns and the rest (so a pixel's column needs no division)
     const off = (spin / (Math.PI * 2)) * W;
-    for (let k = 0; k < N * N; k++) {
-      const p = k * 4;
-      if (!this.inside[k]) {
-        d[p + 3] = 0;
-        continue;
-      }
-      let u = Math.floor(((this.lon0[k] + Math.PI) / (Math.PI * 2)) * W + off) % W;
-      if (u < 0) u += W;
-      const m = this.row[k] * W + u;
-      const ndl = this.day[k];
-      // daylight with a soft terminator (the air scatters a little past it)
-      const lit = smooth(-0.08, 0.32, ndl) * (0.25 + 0.75 * Math.max(0, ndl));
-      const cl = cloud[m] / 255;
-      const a0 = albedo[m * 3] / 255;
-      const a1 = albedo[m * 3 + 1] / 255;
-      const a2 = albedo[m * 3 + 2] / 255;
-      const s0 = a0 + (0.92 - a0) * cl;
-      const s1 = a1 + (0.9 - a1) * cl;
-      const s2 = a2 + (0.88 - a2) * cl;
-      const night = 1 - smooth(-0.15, 0.05, ndl);
-      const lamp = (light[m] / 255) * night * (1 - cl * 0.7);
-      const rim = this.rim[k] * thick;
-      const airLit = rim * (smooth(-0.35, 0.2, ndl) * 1.1 + 0.08);
-      const gl = sea[m] ? this.glint[k] * (1 - cl) * 1.4 : 0;
-      const r = Math.min(255, 255 * (s0 * sr * lit + ar * airLit + cr * lamp * 1.4 + sr * gl));
-      const gg = Math.min(255, 255 * (s1 * sg * lit + ag * airLit + cg * lamp * 1.25 + sg * gl));
-      const b = Math.min(255, 255 * (s2 * sb * lit + ab * airLit + cb * lamp * 0.9 + sb * gl));
+    const whole = Math.floor(off);
+    const frac = off - whole;
+    const shift = ((whole % W) + W) % W;
+    // (each pixel written whole, as one 32-bit word: red in its lowest byte, as the canvas's bytes run)
+    const d32 = this.d32;
+    for (let q = 0; q < at.length; q++) {
+      let u = ((u0[q] + frac) | 0) + shift;
+      while (u >= W) u -= W;
+      const m9 = (row[q] + u) * 9;
+      const lit = LIT[q];
+      const night = NIGHT[q];
+      const gl = GLINT[q];
+      const air = AIR[q] * 255;
+      const r = Math.min(255, T[m9] * lit + ar * air + T[m9 + 3] * night + T[m9 + 6] * gl);
+      const gg = Math.min(255, T[m9 + 1] * lit + ag * air + T[m9 + 4] * night + T[m9 + 7] * gl);
+      const b = Math.min(255, T[m9 + 2] * lit + ab * air + T[m9 + 5] * night + T[m9 + 8] * gl);
       if (heat) {
         // seen by its faint heat: its brightness through the thermal palette
-        const i = Math.min(255, Math.round((0.3 * r + 0.59 * gg + 0.11 * b) * heat)) * 3;
-        d[p] = HEAT_LUT[i];
-        d[p + 1] = HEAT_LUT[i + 1];
-        d[p + 2] = HEAT_LUT[i + 2];
-      } else {
-        d[p] = r;
-        d[p + 1] = gg;
-        d[p + 2] = b;
-      }
-      d[p + 3] = 255;
+        const i = Math.min(255, (((0.3 * r + 0.59 * gg + 0.11 * b) * heat + 0.5) | 0));
+        d32[at[q]] = HEAT_WORD[i];
+      } else d32[at[q]] = 0xff000000 | (((b + 0.5) | 0) << 16) | (((gg + 0.5) | 0) << 8) | ((r + 0.5) | 0);
     }
     this.g.putImageData(this.img, 0, 0);
     // the towns: sharp points on the night side, each where its place on the map has turned to
@@ -538,6 +602,13 @@ export const HEAT_LUT: Uint8ClampedArray = (() => {
     for (let k = 0; k < 3; k++) lut[i * 3 + k] = 255 * mix(c0[k], c1[k], u);
   }
   return lut;
+})();
+
+/** The thermal palette as whole pixels (opaque, red in the lowest byte), for painting a world by its heat. */
+const HEAT_WORD: Uint32Array = (() => {
+  const w = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) w[i] = (0xff000000 | (HEAT_LUT[i * 3 + 2] << 16) | (HEAT_LUT[i * 3 + 1] << 8) | HEAT_LUT[i * 3]) >>> 0;
+  return w;
 })();
 
 /** A disc's picture in the thermal palette, by its brightness (times `gain`), made once. */

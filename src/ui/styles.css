@@ -903,6 +903,10 @@ html.lv .map-label.province { font-size: calc(18px * var(--z, 1)); color: rgba(2
 .film-line.note.tone-accent { color: var(--film-accent, #f28a4f); }
 .film-line.note.tone-dim { color: #8f8676; }
 .film-skip { position: absolute; right: 8vmin; bottom: 7vmin; z-index: 2; }
+/* while the first scene's pictures are painted: the dark screen says so, if it takes a moment */
+.film-line.film-wait { left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0; animation: film-wait 1.4s ease-in-out 0.5s infinite alternate; }
+@keyframes film-wait { from { opacity: 0.2; } to { opacity: 0.75; } }
+@media (prefers-reduced-motion: reduce) { .film-line.film-wait { animation: none; opacity: 0.6; } }
 html.lv .film-line.narration { font-size: 5vmin; max-width: 88vw; }
 html.lv .film-line.title { font-size: 11vmin; }
 html.lv .film-line.label, html.lv .film-line.code { font-size: 2.2vmin; }

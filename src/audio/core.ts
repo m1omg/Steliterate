@@ -6,7 +6,7 @@ export interface AudioCore {
   ctx: AudioContext;
   master: GainNode;
   music: GainNode;
-  /** Between the music and the master: lowered while a film plays (duckMusic). */
+  /** Between the music and the master: silent while a film plays (duckMusic). */
   duck: GainNode;
   /** A film's own sound, at the music's volume (part 4). */
   film: GainNode;
@@ -105,13 +105,13 @@ export function setVolumes(music: number, sfx: number) {
   core.sfx.gain.setTargetAtTime(sfx * sfx, t, 0.05);
 }
 
-/** The music steps back while a film plays its own (and comes back after), ramped on the audio clock. */
+/** The music fades out while a film plays its own (and back in after), ramped on the audio clock (music.hold pauses it too). */
 export function duckMusic(on: boolean) {
   if (!core) return;
   const t = core.ctx.currentTime;
   core.duck.gain.cancelScheduledValues(t);
   core.duck.gain.setValueAtTime(core.duck.gain.value, t);
-  core.duck.gain.linearRampToValueAtTime(on ? 0.12 : 1, t + (on ? 0.6 : 1.2));
+  core.duck.gain.linearRampToValueAtTime(on ? 0 : 1, t + (on ? 0.6 : 1.2));
 }
 
 export function installUnlock() {

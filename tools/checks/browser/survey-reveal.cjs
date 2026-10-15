@@ -42,9 +42,10 @@ run(async () => {
     return window.__stel.state().turn;
   });
   await page.locator('.toast', { hasText: 'Survey complete' }).locator('.toast-act').click();
-  // as soon as the system is shown: the star alone, its worlds waiting
+  // as soon as the system is shown: the star alone, its worlds waiting (the switch into its view
+  // takes 0.8 to 3.3 s here, drawn in software: 15 Oct, a window of 2 s missed it on any build)
   let first = null;
-  for (let i = 0; i < 40 && !first; i++) {
+  for (let i = 0; i < 300 && !first; i++) {
     await page.waitForTimeout(50);
     first = await page.evaluate((id) => {
       const e = window.__stel.engine();

@@ -76,13 +76,16 @@ export function reel2(def: Omit<FilmDef, 'setup'> & { ink?: string }, make: (w: 
   const INK = def.ink ?? '#e6dccb';
   return {
     ...def,
-    setup(w, h, q, args = {}): FilmScene {
+    setup(w, h, q, args = {}, eager = true): FilmScene {
       const S = Math.min(w, h);
       const k = q === 'low' ? 0.45 : q === 'medium' ? 0.7 : 1;
       const r = make(w, h, S, k, args, q);
-      // the first scene's paintings before the first frame; the rest while it plays
-      for (const a of r.scenes[0]?.assets ?? []) a.get();
-      const order = [...r.scenes].sort((a, b) => a.from - b.from).flatMap((s) => s.assets ?? []);
+      // the paintings in the order the film needs them, each once: the first scene's before the
+      // first frame (here, unless the painter thread makes them: `eager` false), the rest while it plays
+      const sorted = [...r.scenes].sort((a, b) => a.from - b.from);
+      const order = [...new Set(sorted.flatMap((s) => s.assets ?? []))];
+      const first = new Set(sorted[0]?.assets ?? []).size;
+      if (eager) for (const a of order.slice(0, first)) a.get();
       const underline: Pt[] = Array.from({ length: 64 }, (_, i) => [w * 0.5 + S * (-0.32 + 0.64 * (i / 63)), h * 0.553 + S * 0.0018 * Math.sin((i / 63) * Math.PI * 2)] as const);
       const beat = (t: number) => (t * def.bpm) / 60;
       let layer: HTMLCanvasElement | null = null;
@@ -104,7 +107,8 @@ export function reel2(def: Omit<FilmDef, 'setup'> & { ink?: string }, make: (w: 
                 s.draw(c, moment(s, b, t));
                 return;
               }
-              if (!layer) {
+              // (made again if the frame's resolution changed: a slow device's player lowers it)
+              if (!layer || layer.width !== c.canvas.width || layer.height !== c.canvas.height) {
                 layer = canvas(c.canvas.width, c.canvas.height);
                 lc = layer.getContext('2d')!;
               }
@@ -166,6 +170,8 @@ export function reel2(def: Omit<FilmDef, 'setup'> & { ink?: string }, make: (w: 
         warm(until) {
           for (const a of order) if (!a.warm(until)) return;
         },
+        assets: order,
+        first,
       };
     },
   };

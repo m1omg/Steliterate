@@ -1,4 +1,5 @@
 import type { Ctx } from './draw';
+import type { Lazy } from './paint';
 import { blackHoleAge2 } from './blackhole';
 import { GREAT_EVAPORATION2, LAST_HORIZON2 } from './dark';
 import { DUSK2 } from './dusk';
@@ -62,6 +63,9 @@ export interface FilmScene {
   text(t: number): FilmText[];
   /** Paint what later scenes need, until `until` (performance.now()), while the film plays. */
   warm?(until: number): void;
+  /** Its paintings in the order it needs them, each once, and how many of them its first scene needs (the films' painter thread makes them in that order). */
+  assets?: Lazy<unknown>[];
+  first?: number;
 }
 
 export interface FilmDef {
@@ -71,7 +75,8 @@ export interface FilmDef {
   bpm: number;
   beats: number;
   accent: string;
-  setup(w: number, h: number, q: FilmQuality, args?: FilmArgs): FilmScene;
+  /** Lay it out for this size and quality; `eager` (the default) paints its first scene's pictures now. */
+  setup(w: number, h: number, q: FilmQuality, args?: FilmArgs, eager?: boolean): FilmScene;
 }
 
 /** How long a film runs, in seconds. */
