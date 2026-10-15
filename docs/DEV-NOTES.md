@@ -79,6 +79,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `engine()`
   - `music()`: the music player (its `layer`: the synth `bus`, `silenced`, and the `track`
     element playing), for `browser/music-hidden`
+  - `setVolumes(music, sfx)` (0..1, as the sliders, for this page only) and `sfx(name)`: for
+    `browser/music-route`
   - `notify(text, kind)`: a message as the game shows them (`browser/lowvision`: how long one
     stays)
 - **Playwright:** `require('/opt/node22/lib/node_modules/playwright')`. Launch with
@@ -939,6 +941,19 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     rotation) starts with the synth silent (`silenced`, the hiss at 0). It wakes the synth only
     if the recording has not started within `RECORDING_GRACE` (8 s), or fails, so the synth is the
     fallback, not a stopgap while a slow browser loads the file. Check `browser/music-hidden`.
+  - How a recording reaches the speakers (15 Oct, `src/audio/trackOut.ts`, the same file as the
+    new version's): `trackOut(el)` gives an `ElementOut` where the browser lets a page set an
+    element's volume (`elementVolumeWorks`: set 0.5, read it back; iOS Safari reads 1), else a
+    `GraphOut` (the old route: a `MediaElementSource` into a gain into `audio().music`).
+    `ElementOut` sets `el.volume` = its level × `musicLevel()` (the slider squared) × `MASTER`
+    (0.9, the master's gain), on a 40 ms timer while anything fades, and at once when
+    `setVolumes` runs (`onVolumes`). `fade(to, secs)` is a ramp on `performance.now()`.
+    (`holdElements` is the new version's, for its films; nothing here calls it.) Do not make a
+    `MediaElementSource` for an element that plays this way: once made, the element's sound goes
+    only through the graph. Check `browser/music-route`.
+  - The reverb (`core.ts`): `impulse(ctx, 3, 3.2, 5.5)`, 3 s of noise decaying as
+    (1 − τ/5.5)^3.2 with a 0.2 s fade at its end (it was the full 5.5 s). The interface's sounds
+    send into it through one `bus` made once in `sfx.ts`.
   - `TRACK_CHOICES`, `setTrack`/`current`/`chosen` (Settings → Music track).
   - The synth hiss runs through `layer.hiss`, which fades when a recording plays.
   - `src/ui/store.ts`: `UI_SCALES` must stay above `settings`, because `loadSettings` reads it
