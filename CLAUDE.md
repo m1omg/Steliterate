@@ -20,7 +20,9 @@ latest game batch, PR m1omg/Steliterate#27, `4aaaa2a`, a burst reaches only what
 and lighter on phones, then PR m1omg/Steliterate#28, `db34424`, the backup of today's game at
 `/archive/2026-10-13/` and the positronium bend in the Codex, all from `claude/epic-wozniak-lyhulf`;
 PR m1omg/Steliterate#29, `75efadc`, put the new version's plan in `main`, and PR
-m1omg/Steliterate#30, `3a3f4c2`, has a push to `main` or `next` build both).
+m1omg/Steliterate#30, `3a3f4c2`, has a push to `main` or `next` build both; PR
+m1omg/Steliterate#31, `f9be053`, the map's purple oval gone and the galaxy's own light in its
+place, from `claude/sky-glow-main`, a branch from `main` made at the player's word, 15 Oct).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.

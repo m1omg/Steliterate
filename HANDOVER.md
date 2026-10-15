@@ -70,7 +70,8 @@ last.
   - Done since, 15 Oct: the films on a tablet (painted in a thread of their own, the music
     silent under them, their sound lighter; CHANGELOG), and the map's purple oval traced to the
     grade's lift of the blacks and replaced by the galaxy's own light, in both versions (the
-    player's word; CHANGELOG, "The purple oval").
+    player's word; CHANGELOG, "The purple oval"; in `main` by PR m1omg/Steliterate#31, `f9be053`,
+    from `claude/sky-glow-main`, the live script `index-CUyk9uQO.js`).
   - Waiting for the player: their word on the films' second cut (sent as videos: the Long Dusk,
     the Black Hole Age under decay, the Degenerate Age twice, before and after their two asks; the
     endings only when asked), switching `main` to the new version ("Not yet", 14 Oct), and the open
