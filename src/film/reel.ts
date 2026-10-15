@@ -137,7 +137,7 @@ export function reel2(def: Omit<FilmDef, 'setup'> & { ink?: string }, make: (w: 
           // (played in the game, the page lays the vignette and the grain over the frame itself: FilmPlayer)
           if (!args.pageOverlays) {
             vignette(c, w, h, 0.62);
-            grain(c, w, h, t, 0.12 * k + 0.04);
+            grain(c, w, h, args.stillGrain ? 0 : t, 0.12 * k + 0.04);
           }
           // in from black, and the last beat goes to black
           const fin = 1 - ss(0, 1.2, b);

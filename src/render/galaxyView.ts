@@ -488,8 +488,9 @@ export class GalaxyView {
     this.dustMat.uniforms.uBright.value = this.viewMode === 1 ? Math.max(bright, 0.28) : this.viewMode === 2 ? Math.max(bright, 0.14) : bright;
     this.dustMat.uniforms.uTint.value.set(state.era === 'dusk' ? '#ffffff' : state.era === 'degenerate' ? '#9fb8ff' : '#8c86b8');
     this.heartGlow.material.opacity = state.era === 'dusk' ? 0.35 : state.era === 'degenerate' ? 0.16 : state.era === 'blackhole' ? 0.06 : 0;
-    // the galaxy's own light dims as its stars go out, as the stars drawn above it do, in their tint
-    this.glowBright = this.dustMat.uniforms.uBright.value;
+    // the galaxy's own light dims as its stars go out, in their tint (in natural light whatever the
+    // view: the enhanced and thermal views keep the stars drawn faintly visible, not a glow there is none of)
+    this.glowBright = bright;
     const tint = this.dustMat.uniforms.uTint.value as THREE.Color;
     for (const x of this.glows) x.sprite.material.color.copy(x.color).multiply(tint);
 

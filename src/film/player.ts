@@ -32,6 +32,25 @@ const canPaintApart = () => typeof Worker !== 'undefined' && typeof OffscreenCan
 
 let jobs = 0;
 
+/** A painter thread (paintWorker.ts). */
+const newPainter = () => new Worker(new URL('./paintWorker.ts', import.meta.url), { type: 'module' });
+
+/** The painter's first answer to a job (the checks: a film it cannot lay out is answered `failed`, so the page paints it itself). */
+export function askPainter(job: PaintJob): Promise<PaintReply | null> {
+  return new Promise((done) => {
+    if (!canPaintApart()) return done(null);
+    const w = newPainter();
+    const end = (r: PaintReply | null) => {
+      w.terminate();
+      done(r);
+    };
+    w.onmessage = (e: MessageEvent<PaintReply>) => end(e.data);
+    w.onerror = () => end(null);
+    setTimeout(() => end(null), 10000);
+    w.postMessage(job);
+  });
+}
+
 export class FilmPlayer {
   /** The last frames played, as [film time (s), the page's time (ms)] (the checks: film time moves with the page's, frame by frame). */
   static times: [number, number][] = [];
@@ -111,7 +130,7 @@ export class FilmPlayer {
     this.canvas.style.height = `${h}px`;
     this.c = this.canvas.getContext('2d')!;
     this.resize(pr);
-    const args = (this.args = { ...opts.args, pr, pageOverlays: !!opts.pageOverlays });
+    const args = (this.args = { ...opts.args, pr, pageOverlays: !!opts.pageOverlays, stillGrain: opts.args?.stillGrain ?? (!!opts.pageOverlays && this.still) });
     if (opts.pageOverlays) this.trial.state = 'ready';
     this.apart = !!opts.painter && canPaintApart();
     this.scene = def.setup(w, h, opts.quality, args, !this.apart);
@@ -245,7 +264,7 @@ export class FilmPlayer {
       };
       let worker: Worker;
       try {
-        worker = new Worker(new URL('./paintWorker.ts', import.meta.url), { type: 'module' });
+        worker = newPainter();
       } catch {
         fallBack();
         return;
@@ -255,6 +274,11 @@ export class FilmPlayer {
       worker.onmessage = (e: MessageEvent<PaintReply>) => {
         const d = e.data;
         if (d.job !== job || this.done) return;
+        // the film could not be laid out or sent there: the page paints it all
+        if ('failed' in d) {
+          fallBack();
+          return;
+        }
         // all sent: any it could not send the page warms as the film plays
         if ('done' in d) {
           this.stopPainter();
@@ -332,12 +356,14 @@ export function audioClock(ctx: AudioContext, at: number): FilmClock {
       // (a timestamp that does not agree with the clock, ahead of it or more than a second behind,
       // as a wireless headset's might be at most, is not trusted)
       if (!(t <= now + 0.1 && t >= now - 1)) {
-        // (no timestamp, or none to trust: the context's clock, carried on between its steps)
+        // (no timestamp, or none to trust: the context's clock, carried on between its steps, for
+        // 250 ms at most, more than its longest step, and only while it runs: a stopped sound
+        // stops the film with it)
         if (now !== base) {
           base = now;
           basePerf = p;
         }
-        t = base + (p - basePerf) / 1000;
+        t = base + (ctx.state === 'running' ? Math.min(p - basePerf, 250) : 0) / 1000;
       }
       last = Math.max(last, t - at);
       return last;

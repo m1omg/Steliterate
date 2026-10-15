@@ -42,6 +42,8 @@ export interface FilmArgs {
   pr?: number;
   /** The vignette and the grain laid over the frame by the page (as the game plays it), not drawn into it. */
   pageOverlays?: boolean;
+  /** The grain held still (where the system asks for less motion), when it is drawn into the frame. */
+  stillGrain?: boolean;
 }
 
 /** A line of text over the film: where, in which voice, and how present it is now (0..1). */

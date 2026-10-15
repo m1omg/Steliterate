@@ -15,7 +15,7 @@ export interface PaintJob {
   args: FilmArgs;
 }
 
-export type PaintReply = { job: number; i: number; v: Packed } | { job: number; i: number; local: true } | { job: number; done: true };
+export type PaintReply = { job: number; i: number; v: Packed } | { job: number; i: number; local: true } | { job: number; done: true } | { job: number; failed: true };
 
 // (the thread's own scope, typed as far as it is used here: the project's types are the page's)
 const me = self as unknown as { onmessage: ((e: MessageEvent<PaintJob | { stop: number }>) => void) | null; postMessage(m: PaintReply, transfer?: Transferable[]): void };
@@ -29,20 +29,26 @@ me.onmessage = async (e: MessageEvent<PaintJob | { stop: number }>) => {
     return;
   }
   current = d.job;
-  const scene = FILMS[d.id].setup(d.w, d.h, d.q, d.args, false);
-  const assets = scene.assets ?? [];
-  for (let i = 0; i < assets.length; i++) {
-    // (between pictures, a stop can come in: the film was skipped)
-    await breath();
-    if (current !== d.job) return;
-    let reply: PaintReply;
-    const transfer: Transferable[] = [];
-    try {
-      reply = { job: d.job, i, v: await pack(assets[i].get(), transfer) };
-    } catch {
-      reply = { job: d.job, i, local: true };
+  // (a film that cannot be laid out or sent here says so, and the page paints it itself: an error
+  // in this handler, which is async, would reach the page as no error at all, and the film would wait)
+  try {
+    const scene = FILMS[d.id].setup(d.w, d.h, d.q, d.args, false);
+    const assets = scene.assets ?? [];
+    for (let i = 0; i < assets.length; i++) {
+      // (between pictures, a stop can come in: the film was skipped)
+      await breath();
+      if (current !== d.job) return;
+      let reply: PaintReply;
+      const transfer: Transferable[] = [];
+      try {
+        reply = { job: d.job, i, v: await pack(assets[i].get(), transfer) };
+      } catch {
+        reply = { job: d.job, i, local: true };
+      }
+      me.postMessage(reply, transfer);
     }
-    me.postMessage(reply, transfer);
+    me.postMessage({ job: d.job, done: true } satisfies PaintReply);
+  } catch {
+    me.postMessage({ job: d.job, failed: true } satisfies PaintReply);
   }
-  me.postMessage({ job: d.job, done: true } satisfies PaintReply);
 };

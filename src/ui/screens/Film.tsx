@@ -80,6 +80,8 @@ export function FilmScreen({ id, args, then }: { id: FilmId; args?: FilmArgs; th
     };
     window.addEventListener('keydown', keys, true);
     return () => {
+      // (gone by whatever way: a cue not yet begun never begins)
+      left = true;
       window.removeEventListener('keydown', keys, true);
       player.dispose();
       el.remove();

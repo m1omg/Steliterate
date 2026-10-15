@@ -217,6 +217,8 @@ class Music {
   /** A film is playing: the music is silent and paused under it (`hold`), and since when it was let go (performance.now()). */
   private held = false;
   private releasedAt = -Infinity;
+  /** The pause once a hold has faded the music out (cleared if let go first, so a hold soon after is not cut short). */
+  private holdTimer = 0;
 
   start() {
     if (this.started) return;
@@ -262,9 +264,10 @@ class Music {
     holdElements(on);
     const a = audio();
     const L = this.layer;
+    window.clearTimeout(this.holdTimer);
     if (on) {
       // once faded out, nothing more to play: the recording pauses, the synth's continuous sounds stop
-      window.setTimeout(() => {
+      this.holdTimer = window.setTimeout(() => {
         const layer = this.layer;
         if (!this.held || !layer) return;
         layer.track?.el.pause();
@@ -377,7 +380,7 @@ class Music {
     bus.connect(a.music);
     const send = a.ctx.createGain();
     send.gain.value = 0.6;
-    bus.connect(send).connect(a.reverbIn);
+    bus.connect(send).connect(a.musicWet);
 
     // arp bus: dry plus a dark dotted-eighth echo
     const arpIn = a.ctx.createGain();
@@ -792,7 +795,7 @@ class Music {
     // big gated-room snare, run through extra reverb
     const wet = a.ctx.createGain();
     wet.gain.value = 1.3;
-    wet.connect(a.reverbIn);
+    wet.connect(a.musicWet);
     this.noiseHit(t, 0.22, 0.12 * vol, 'bandpass', 1900, L.bus);
     this.noiseHit(t, 0.22, 0.12 * vol, 'bandpass', 1900, wet);
     const o = a.ctx.createOscillator();

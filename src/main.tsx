@@ -29,7 +29,8 @@ import './ui/styles.css';
 import { colonies, ownColony } from './game/sim/util';
 import { hashSeed } from './game/rng';
 import { FILMS, type FilmArgs, type FilmId, type FilmQuality } from './film/films';
-import { FilmPlayer } from './film/player';
+import { FilmPlayer, askPainter } from './film/player';
+import type { PaintJob } from './film/paintWorker';
 
 const stage = document.getElementById('stage')!;
 /** The star system a pick stands for: the star itself, the one a fleet is parked at, or a swarm's (where it is, or where it is going). */
@@ -443,6 +444,21 @@ window.__stel = {
     p.dispose();
     return { sent: p.sent, frames };
   },
+  /** How much a film's frame changes between two moments, with these args: the mean difference of its pixels' channels (0..255), for the checks (the grain held still). */
+  filmChange(id: FilmId, t1: number, t2: number, args: FilmArgs = {}, w = 480, h = 270) {
+    const p = new FilmPlayer(document.createElement('div'), id, { quality: 'high', args, width: w, height: h, pixelRatio: 1 });
+    const c = p.canvas.getContext('2d')!;
+    p.frame(t1);
+    const a = c.getImageData(0, 0, w, h).data;
+    p.frame(t2);
+    const b = c.getImageData(0, 0, w, h).data;
+    p.dispose();
+    let sum = 0;
+    for (let i = 0; i < a.length; i += 4) sum += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+    return sum / (a.length / 4) / 3;
+  },
+  /** The painter thread's first answer to a job (askPainter), for the checks. */
+  askPainter: (job: PaintJob) => askPainter(job),
   /** The last frames played: [film time (s), the page's time (ms)] (FilmPlayer.times). */
   filmTimes: () => FilmPlayer.times.map((x) => [...x]),
   /** The last trial of where a film's vignette and grain go (FilmPlayer.overlayTrial). */

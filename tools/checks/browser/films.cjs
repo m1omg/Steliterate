@@ -9,7 +9,9 @@
 // the film's sound makes its voices as they come, not all at once; and its pictures, painted in a
 // thread of their own, draw the same frames as pictures painted on the page. Its time moves with
 // the page's, frame by frame (not in the audio clock's steps), and its vignette and grain are
-// layers of the page, or in the canvas where that draws quicker.
+// layers of the page, or in the canvas where that draws quicker. The project check (15 Oct): the
+// grain in the canvas holds still when asked, as the page's does, and a film the painter thread
+// cannot lay out it says so, for the page to paint.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('films', { films: true });
@@ -163,6 +165,28 @@ run(async () => {
   }
   const differ = apart.filter((x) => !x.same || x.sent < 1);
   check(!differ.length, `pictures painted in their own thread draw the same frames as on the page, in all ${apart.length} films (${apart.reduce((n, x) => n + x.sent, 0)} pictures sent${differ.length ? `; not in ${differ.map((x) => x.id).join(', ')}` : ''})`);
+  // the grain drawn into the frame (a slow device's way) holds still where the system asks for less
+  // motion, as the page's layer does (the project check, 15 Oct): over one step of the grain a frame
+  // changes far less with it held
+  const grainMoves = await page.evaluate(() =>
+    [3, 30].map((t) => {
+      const d = 1 / 24 + 0.002;
+      return [window.__stel.filmChange('dusk', t, t + d, {}), window.__stel.filmChange('dusk', t, t + d, { stillGrain: true })];
+    }),
+  );
+  check(
+    grainMoves.every(([m, s]) => s < m * 0.5),
+    `the grain in the frame holds still when asked (a frame changes ${grainMoves.map(([m, s]) => `${s.toFixed(2)} held, ${m.toFixed(2)} moving`).join('; ')})`,
+  );
+  // a film the painter thread cannot lay out is answered as such, and the page paints it itself
+  // (an error in its handler, which is async, used to reach the page as no error at all)
+  const painter = await page.evaluate(() =>
+    Promise.all([
+      window.__stel.askPainter({ job: 7, id: 'none', w: 64, h: 36, q: 'low', args: {} }),
+      window.__stel.askPainter({ job: 8, id: 'dusk', w: 64, h: 36, q: 'low', args: {} }),
+    ]),
+  );
+  check(painter[0]?.failed === true && painter[1]?.i === 0, `a film the painter cannot lay out it answers "failed" (${JSON.stringify(painter[0])}), and paints one it can`);
   // off in Settings: a new game goes straight to the introduction
   await page.reload();
   await page.waitForTimeout(1500);

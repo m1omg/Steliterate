@@ -13,6 +13,13 @@ export interface AudioCore {
   sfx: GainNode;
   reverb: ConvolverNode;
   reverbIn: GainNode;
+  /**
+   * The music's way into the reverb (the synth's echo): at the music's volume, then silent under a
+   * film as the music is (`wetDuck`). It went into the reverb directly before (15 Oct), so the
+   * slider at 0, or a film, still left the synth's echo heard.
+   */
+  musicWet: GainNode;
+  wetDuck: GainNode;
   noise: AudioBuffer;
 }
 
@@ -24,6 +31,11 @@ const volumeListeners: (() => void)[] = [];
 /** The music's level (the slider, on its perceptual curve): what a recording played by its own element is set to (music.ts, trackOut.ts). */
 export function musicLevel(): number {
   return volumes.music * volumes.music;
+}
+
+/** The music's echo at the music's volume, as loud as it was at the slider's 70% (where it was set), so the mix stays the same at every volume. */
+function wetLevel(music: number): number {
+  return (music * music) / 0.49;
 }
 
 /** Run whenever the volumes change. */
@@ -108,7 +120,11 @@ export function unlockAudio() {
   const reverbOut = ctx.createGain();
   reverbOut.gain.value = 0.55;
   reverbIn.connect(reverb).connect(reverbOut).connect(master);
-  core = { ctx, master, music, duck, film, sfx, reverb, reverbIn, noise: noiseBuffer(ctx) };
+  const musicWet = ctx.createGain();
+  const wetDuck = ctx.createGain();
+  musicWet.gain.value = wetLevel(volumes.music);
+  musicWet.connect(wetDuck).connect(reverbIn);
+  core = { ctx, master, music, duck, film, sfx, reverb, reverbIn, musicWet, wetDuck, noise: noiseBuffer(ctx) };
   void ctx.resume();
   for (const fn of listeners.splice(0)) fn();
 }
@@ -121,6 +137,7 @@ export function setVolumes(music: number, sfx: number) {
   // perceptual (squared) volume curve
   core.music.gain.setTargetAtTime(music * music, t, 0.1);
   core.film.gain.setTargetAtTime(music * music, t, 0.1);
+  core.musicWet.gain.setTargetAtTime(wetLevel(music), t, 0.1);
   core.sfx.gain.setTargetAtTime(sfx * sfx, t, 0.05);
 }
 
@@ -128,9 +145,11 @@ export function setVolumes(music: number, sfx: number) {
 export function duckMusic(on: boolean) {
   if (!core) return;
   const t = core.ctx.currentTime;
-  core.duck.gain.cancelScheduledValues(t);
-  core.duck.gain.setValueAtTime(core.duck.gain.value, t);
-  core.duck.gain.linearRampToValueAtTime(on ? 0 : 1, t + (on ? 0.6 : 1.2));
+  for (const g of [core.duck.gain, core.wetDuck.gain]) {
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(on ? 0 : 1, t + (on ? 0.6 : 1.2));
+  }
 }
 
 export function installUnlock() {
