@@ -396,4 +396,8 @@ window.__stel = {
   engine: () => engine(),
   /** The music player (its layer: the synth bus, and the recording playing), for the checks. */
   music: () => music,
+  /** Set the music's and the sounds' volumes, 0..1, as the settings' sliders do (for this page only). */
+  setVolumes: (m: number, s: number) => setVolumes(m, s),
+  /** Play one of the interface's sounds. */
+  sfx: (name: Parameters<typeof sfx>[0]) => sfx(name),
 };

@@ -39,18 +39,24 @@ function noise(start: number, dur: number, vol: number, dest: AudioNode, filter:
 }
 
 let lastClick = 0;
+// the sounds' way into the room's reverb, made once (15 Oct: two new nodes for every sound before)
+let bus: { ctx: BaseAudioContext; send: GainNode } | null = null;
 
 export function sfx(name: Sfx) {
   const a = audio();
   if (!a) return;
   const t = a.ctx.currentTime + 0.005;
   const out = a.sfx;
-  const wet = a.ctx.createGain();
-  wet.gain.value = 0.35;
-  wet.connect(a.reverbIn);
-  const send = a.ctx.createGain();
-  send.connect(out);
-  send.connect(wet);
+  if (!bus || bus.ctx !== a.ctx) {
+    const wet = a.ctx.createGain();
+    wet.gain.value = 0.35;
+    wet.connect(a.reverbIn);
+    const s = a.ctx.createGain();
+    s.connect(out);
+    s.connect(wet);
+    bus = { ctx: a.ctx, send: s };
+  }
+  const send = bus.send;
   switch (name) {
     case 'click':
       if (t - lastClick < 0.03) return;
@@ -99,9 +105,4 @@ export function sfx(name: Sfx) {
       tone(740, t + 0.18, 0.12, 'square', 0.03, out);
       break;
   }
-  // let the temporary buses be collected once the sound has rung out
-  window.setTimeout(() => {
-    send.disconnect();
-    wet.disconnect();
-  }, 6000);
 }

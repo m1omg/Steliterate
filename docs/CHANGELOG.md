@@ -1915,3 +1915,30 @@ fix main too"), from a branch of its own.
   above it do, in their tint, and is gone in the Dark. A few dozen soft sprites (`galaxyView.ts`,
   `buildGlows`), made from the world's own layout without a random draw.
 - **Check:** `browser/sky`.
+
+## Sound that does not stutter (15 Oct, the player's word)
+
+The player heard the sound crackle: "Irregular pops or stutter", in the new version's films and
+outside them, worst in Firefox. Built for the new version and brought here at the player's word
+("Yes, fix main too"), from a branch of its own.
+
+- **The music played by the audio element itself.** The recordings went through the sound's
+  graph (a `MediaElementSource`). Their samples crossed into it on the sound's own thread,
+  resampled, and gave out when the browser was busy; this is known to be worst in Firefox. Now the
+  element plays them through the browser's media pipeline, with buffers and decoding threads of
+  its own (`src/audio/trackOut.ts`). Its loudness is its volume: the piece's level, fading in and
+  out on a timer, times the music's volume (the slider, on the same curve), times the master's
+  gain, so they play about as loud as before. The master's compressor no longer touches them
+  (they are mastered already). Where a page cannot set an element's volume (iOS Safari reads it
+  back as 1), the graph's route stays. The synthesized score stays in the graph, as before.
+- **A lighter reverb.** The room's impulse was 5.5 s of stereo noise that every interface sound
+  with an echo fed, heavy work for the sound's thread. It is now 3 s, with the same decay; past
+  3 s the tail was 22 dB down and more, and it now fades out over its last fifth of a second.
+  The interface's sounds share one way into it, made once, instead of two new nodes for every
+  sound.
+- **The stutter itself was not measured:** a sound card's buffer running dry cannot be heard or
+  counted in this container, and there is no Firefox here. What was measured is the work taken
+  off the sound's thread.
+- **Check:** `browser/music-route` (new): the recording plays by its element, and no sound makes
+  a `MediaElementSource`; its volume follows the music's slider (70%, 35%, 0); ten sounds with an
+  echo make only their tones' own nodes.

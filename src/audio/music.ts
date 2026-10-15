@@ -1,5 +1,6 @@
 import type { EraId } from '../game/types';
 import { audio, midiHz, onAudioReady } from './core';
+import { trackOut, type TrackOut } from './trackOut';
 
 // Procedural score. Dusk is worn synthwave over a dark-ambient bed; each age strips a layer away
 // until the Dark Era is a drone and the occasional distant tone. Notes are scheduled ahead on
@@ -136,7 +137,7 @@ interface Layer {
   wobble: GainNode; // tape wobble, in cents, fed to every oscillator
   persistent: AudioScheduledSourceNode[];
   silenced: boolean; // a recorded track is playing instead
-  track: { el: HTMLAudioElement; gain: GainNode } | null;
+  track: { el: HTMLAudioElement; out: TrackOut } | null; // a recording, and its way to the speakers (trackOut.ts)
   hiss: GainNode | null; // the synth's tape hiss: part of the synth, so it goes when a recording plays
   hushAt: number; // audio-clock time at which the fading synth stops scheduling notes (0 = none)
   synthUntil: number; // audio-clock time at which a synthesized piece gives way to the next (0 = none)
@@ -318,16 +319,12 @@ class Music {
       old.bus.gain.linearRampToValueAtTime(0, t + 3.5);
       for (const n of old.persistent) n.stop(t + 3.6);
       const tr = old.track;
-      if (tr) {
-        tr.gain.gain.cancelScheduledValues(t);
-        tr.gain.gain.setValueAtTime(tr.gain.gain.value, t);
-        tr.gain.gain.linearRampToValueAtTime(0, t + 3.5);
-      }
+      tr?.out.fade(0, 3.5);
       window.setTimeout(() => {
         old.bus.disconnect();
         if (tr) {
           tr.el.pause();
-          tr.gain.disconnect();
+          tr.out.dispose();
         }
       }, 5000);
     }
@@ -392,16 +389,9 @@ class Music {
     if (intro) this.introsPlayed.add(key as StyleKey);
     const el = new Audio();
     el.preload = 'auto';
-    let src: MediaElementAudioSourceNode;
-    try {
-      src = a.ctx.createMediaElementSource(el);
-    } catch {
-      return;
-    }
-    const gain = a.ctx.createGain();
-    gain.gain.value = 0;
-    src.connect(gain).connect(a.music);
-    layer.track = { el, gain };
+    const out = trackOut(el);
+    if (!out) return;
+    layer.track = { el, out };
     let idx = 0;
     let fails = 0;
     let fading = false;
@@ -418,7 +408,7 @@ class Music {
     const wakeSynth = (span: number) => {
       wanted = false;
       el.pause();
-      ramp(gain.gain, 0, 0.5);
+      out.fade(0, 0.5);
       if (layer.silenced) {
         layer.silenced = false;
         this.next = a.ctx.currentTime + 0.05;
@@ -457,7 +447,7 @@ class Music {
       started = true;
       fails = 0;
       fading = false;
-      ramp(gain.gain, TRACK_GAIN, 3);
+      out.fade(TRACK_GAIN, 3);
       if (!layer.silenced && !layer.hushAt) {
         ramp(layer.bus.gain, 0, 3);
         if (layer.hiss) ramp(layer.hiss.gain, 0, 3);
@@ -470,7 +460,7 @@ class Music {
       const left = el.duration - el.currentTime;
       if (left > TRACK_CHANGE) return;
       fading = true;
-      ramp(gain.gain, 0, Math.max(0.3, left));
+      out.fade(0, Math.max(0.3, left));
     });
     // a recording slow to start (a slow connection): the synth fills the silence until it does
     window.setTimeout(() => {
