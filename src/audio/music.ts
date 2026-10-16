@@ -337,7 +337,7 @@ class Music {
     bus.connect(a.music);
     const send = a.ctx.createGain();
     send.gain.value = 0.6;
-    bus.connect(send).connect(a.reverbIn);
+    bus.connect(send).connect(a.musicWet);
 
     // arp bus: dry plus a dark dotted-eighth echo
     const arpIn = a.ctx.createGain();
@@ -741,7 +741,7 @@ class Music {
     // big gated-room snare, run through extra reverb
     const wet = a.ctx.createGain();
     wet.gain.value = 1.3;
-    wet.connect(a.reverbIn);
+    wet.connect(a.musicWet);
     this.noiseHit(t, 0.22, 0.12 * vol, 'bandpass', 1900, L.bus);
     this.noiseHit(t, 0.22, 0.12 * vol, 'bandpass', 1900, wet);
     const o = a.ctx.createOscillator();

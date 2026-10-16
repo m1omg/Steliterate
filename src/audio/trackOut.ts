@@ -104,6 +104,7 @@ class GraphOut implements TrackOut {
   readonly route = 'graph';
   constructor(
     private a: AudioCore,
+    private src: MediaElementAudioSourceNode,
     private gain: GainNode,
   ) {}
   get level() {
@@ -117,6 +118,7 @@ class GraphOut implements TrackOut {
     p.linearRampToValueAtTime(to, t + secs);
   }
   dispose() {
+    this.src.disconnect();
     this.gain.disconnect();
   }
 }
@@ -131,7 +133,7 @@ export function trackOut(el: HTMLAudioElement): TrackOut | null {
     const gain = a.ctx.createGain();
     gain.gain.value = 0;
     src.connect(gain).connect(a.music);
-    return new GraphOut(a, gain);
+    return new GraphOut(a, src, gain);
   } catch {
     return null;
   }

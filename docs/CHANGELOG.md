@@ -1942,3 +1942,27 @@ outside them, worst in Firefox. Built for the new version and brought here at th
 - **Check:** `browser/music-route` (new): the recording plays by its element, and no sound makes
   a `MediaElementSource`; its volume follows the music's slider (70%, 35%, 0); ten sounds with an
   echo make only their tones' own nodes.
+
+## The project check: the synth's echo, and the glow in every view (15 Oct, the player's word)
+
+The player asked for a comprehensive check of the whole project ("please, do a comprehensive
+project check to compensate"). Today's two batches here (the purple oval and the sound) were read
+again from their code; three faults were found and confirmed, and are fixed here as in the new
+version. No rule changed: 300 standard competent games play out game for game as before, all 300
+(154 / 72 / 72).
+
+- **The synth's echo went into the reverb at full whatever the music's slider.** It now follows
+  the slider, as loud as before at 70% (the default), so the mix is the same at every volume.
+  Only heard where the synth plays: chosen in Settings, or where a recording fails or is slow to
+  start.
+- **The galaxy's own light showed in the Dark in the enhanced and thermal views** (the magnifier
+  mode uses the enhanced one): a lavender haze at those views' floor for the stars drawn, and
+  fifteen times its natural level in the Black Hole Age. It follows the natural light in every
+  view now.
+- The graph's route for a recording (iOS) left its element's source connected when done.
+- **Checks:** `browser/music-route`: the synth's echo follows the slider (0, 35%, 70%).
+  `browser/sky`: no glow in the Dark in the enhanced and thermal views (it fails on the build
+  before the fix: 37 and 33 glows).
+- **Validated:** tsc and the build clean; the playtest passes; savecompat on the 6 saves; all 49
+  unit checks; all 53 browser checks (in the game's real fonts). The checks' `audio()` hook
+  (the sound's graph) is new here, for `browser/music-route`.

@@ -3,7 +3,8 @@
 // whose samples cross into the graph on its audio thread, and gave out when the browser was busy.
 // Now the audio element plays it itself, by its own volume: the piece's level times the music's
 // volume (the slider), fading in and out on a timer. The interface's sounds share one reverb, and
-// no sound the game makes here makes a MediaElementSource.
+// no sound the game makes here makes a MediaElementSource. The project check (15 Oct): the synth's
+// echo follows the slider too.
 const { check, start, finish, run } = require('../lib.cjs');
 
 function hooks() {
@@ -65,6 +66,17 @@ run(async () => {
   await page.evaluate(() => window.__stel.setVolumes(0, 0.7));
   const d = await look(page);
   check(d.vol === 0, `at 0 it is silent (${d.vol})`);
+  // the synth's echo goes into the reverb at the music's volume too, as loud as before at 70% (it
+  // went in at full whatever the slider, the project check found, 15 Oct)
+  const wetAt = async (m) => {
+    await page.evaluate((m) => window.__stel.setVolumes(m, 0.7), m);
+    await page.waitForTimeout(700);
+    return page.evaluate(() => window.__stel.audio().musicWet.gain.value);
+  };
+  const w0 = await wetAt(0);
+  const w35 = await wetAt(0.35);
+  const w70 = await wetAt(0.7);
+  check(w0 < 0.01 && Math.abs(w35 - 0.25) < 0.02 && Math.abs(w70 - 1) < 0.02, `the synth's echo follows the slider: ${w0.toFixed(3)} at 0, ${w35.toFixed(2)} at 35%, ${w70.toFixed(2)} at 70% (as before)`);
   await page.evaluate(() => window.__stel.setVolumes(0.7, 0.7));
   // the interface's sounds share one way into the reverb: a sound with an echo makes its own tones'
   // gains and no more (two more for each, before)

@@ -79,8 +79,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `engine()`
   - `music()`: the music player (its `layer`: the synth `bus`, `silenced`, and the `track`
     element playing), for `browser/music-hidden`
-  - `setVolumes(music, sfx)` (0..1, as the sliders, for this page only) and `sfx(name)`: for
-    `browser/music-route`
+  - `setVolumes(music, sfx)` (0..1, as the sliders, for this page only), `sfx(name)` and
+    `audio()` (the sound's graph): for `browser/music-route`
   - `notify(text, kind)`: a message as the game shows them (`browser/lowvision`: how long one
     stays)
 - **Playwright:** `require('/opt/node22/lib/node_modules/playwright')`. Launch with
@@ -951,6 +951,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     (`holdElements` is the new version's, for its films; nothing here calls it.) Do not make a
     `MediaElementSource` for an element that plays this way: once made, the element's sound goes
     only through the graph. Check `browser/music-route`.
+  - The synth's echo (the layer's `send`, the snare's `wet`) goes into `audio().musicWet`, at the
+    music's volume (`music² / 0.49`, so as loud as before at the slider's 70%), then the reverb.
+    It went into `reverbIn` directly before the project check (15 Oct), so the slider at 0 left
+    it heard.
   - The reverb (`core.ts`): `impulse(ctx, 3, 3.2, 5.5)`, 3 s of noise decaying as
     (1 − τ/5.5)^3.2 with a 0.2 s fade at its end (it was the full 5.5 s). The interface's sounds
     send into it through one `bus` made once in `sfx.ts`.
