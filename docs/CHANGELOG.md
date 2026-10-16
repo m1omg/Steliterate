@@ -3411,3 +3411,67 @@ stands in for it, as Firefox often draws them.
 - **Validated:** tsc and the build clean; the playtest passes; savecompat on the 8 saves; all 79
   unit checks; all 61 browser checks (`mobile` measured in the game's real fonts, `STEL_FONTS`).
   No rule changed, so no harness run.
+
+## The project check (15 Oct, the player's word)
+
+The player, after two compactions of this session: "please, do a comprehensive project check to
+compensate". So everything was checked again from the ground up: the branches and what is live,
+every check and the harness on both versions, and today's three batches read again from their
+code by two reviewers, each finding confirmed in the code before anything was changed.
+
+- **Found sound:** every branch's work is in `main` or here, nothing pushed is left out; no open
+  pull requests or issues; the last Pages run put both versions live; the builds here make the
+  very scripts the two addresses serve; `public/archive/` is untouched since it was made; the
+  Pages workflow is the same on `main` and `next`.
+- **No rule has moved:** 300 standard competent games play out game for game as at `d92849a`,
+  all 300 (153 / 63 / 70), and `main`'s 300 as at its last rules change, all 300 (154 / 72 / 72).
+- **Fixed in the films** (the new version):
+  - **A film's clock ran on without its sound.** Where the output's timestamp is not to be
+    trusted, the context's clock is carried on by the page's between its steps; it was carried
+    on without end, so a sound that stopped (a suspended or interrupted context, a stalled audio
+    thread) left the film running on in silence, then frozen until the sound caught up. Now it is
+    carried on 250 ms at most, more than any buffer's step, and only while the sound runs.
+  - **The grain moved under reduced motion** on a device slow enough to draw it into the canvas;
+    the page's layer held still. Now both do, in the game's films (the exported videos as before).
+  - **A film the painter thread could not lay out would wait for ever** ("Preparing the reel"):
+    the thread's handler is async, so its error reached the page as no error at all. It says so
+    now, and the page paints that film itself. No film does this today; it is a net for one that
+    might.
+  - **A film screen taken down by another way than its own exit** could still begin its sound
+    after it was gone.
+- **Fixed in the sound:**
+  - **The synth's echo went into the reverb at full whatever the music's slider**, and on under a
+    film. It now follows the slider (as loud as before at 70%, the default, so the mix is the same
+    at every volume) and falls silent with the music under a film. Only heard where the synth
+    plays: chosen in Settings, or where a recording fails or is slow to start. In both versions.
+  - **A hold taken again within 0.7 s of one let go** (a film skipped at once, then another) was
+    cut short by the first one's pause, part-way through the second's fade.
+  - The graph's route (iOS) left its element's source connected when done. In both versions.
+- **Fixed in the sky:** the galaxy's own light showed in the Dark in the enhanced and thermal
+  views (the magnifier mode uses the enhanced one), a lavender haze at those views' floor for the
+  stars drawn, and fifteen times its natural level in the Black Hole Age. It follows the natural
+  light in every view now, as the CHANGELOG said it did. In both versions.
+- **Seen and left as they are** (each a choice for the player, not a fault):
+  - a slow device steps a film's resolution down and never back up, so a slow first few seconds
+    (its pictures still being painted on a two-core tablet) can leave the whole film at half
+    resolution;
+  - one build tool (`source-map-js`, used only to build, never shipped to the player) has a
+    reported flaw, a slow parse of a hostile source map; nothing here reads one.
+- **Checks:** `unit/film-clock` (new): no frame repeats without a timestamp; a stopped clock holds
+  the film within 250 ms, a suspended one stops it, and it goes on from there; the timestamp
+  trusted, zeros and one ahead of the clock not. `browser/films`: the grain in the canvas held
+  still changes a frame far less over one of its steps; the painter answers "failed" for a film it
+  cannot lay out. `browser/music-route`: the synth's echo follows the slider and falls silent
+  under a film; held, let go and held again, the recording still plays 0.35 s into the second
+  hold and pauses once it has faded (the steps made without timers between them: see DEV-NOTES,
+  "A check about timers' order"). `browser/sky`: no glow in the Dark in the enhanced and thermal
+  views. The new parts of `music-route` and `sky` fail on the build before the fixes.
+- **In both versions:** the three fixes that apply to today's game (the synth's echo, the iOS
+  route, the glow in every view) went to `main` by PR m1omg/Steliterate#33, from a branch of
+  its own (`claude/check-main`), and `main` was then merged into this branch, keeping this
+  branch's code where the two differed, so that the PR from `next` into `main` the player will
+  one day ask for merges cleanly (it would have clashed in the sound's code and the notes).
+- **Validated:** the new version: tsc and the build clean; the playtest passes; savecompat on
+  the 8 saves; all 80 unit checks; all 61 browser checks (in the game's real fonts). Today's
+  game: tsc and the build clean; the playtest passes; savecompat on its 6 saves; its 49 unit
+  checks; all 53 browser checks (in the real fonts).

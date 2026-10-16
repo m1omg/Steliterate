@@ -93,9 +93,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     stays)
   - `films(on)` (null: as the settings say), `filmList()`, `filmFrames(id, times, w, h)`: the
     films, for `browser/films`; `filmTimes()`: the last frames played, as [film time (s), the
-    frame's time (ms)]; `filmOverlays()`: the last trial of where the vignette and grain go
-  - `setVolumes(music, sfx)` (0..1, as the sliders, for this page only) and `sfx(name)`: for
-    `browser/music-route`
+    frame's time (ms)]; `filmOverlays()`: the last trial of where the vignette and grain go;
+    `filmChange(id, t1, t2, args)`: how much a frame changes between two moments (the mean
+    difference of its pixels' channels), and `askPainter(job)`: the painter thread's first answer
+    to a job (the project check, 15 Oct)
+  - `setVolumes(music, sfx)` (0..1, as the sliders, for this page only), `sfx(name)` and
+    `audio()` (the sound's graph): for `browser/music-route` (and `browser/films`, the music's
+    gain under a film)
   - `slowSlices(ms)`: every slice of End Turn's turn made to take at least that long, a slow phone
     on any machine (`browser/turn-slices`; a CPU slowed through CDP is paused in windows, so one
     turn's length there is anyone's guess)
@@ -392,6 +396,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   as it would on a slow machine. A check that waits on something eased (a camera move, a fade)
   polls in a bounded loop until it has settled, as `browser/lowvision` does, rather than trust
   one fixed wait.
+- **A check about timers' order, under load** (15 Oct, `browser/music-route`'s hold): waits
+  between steps (`setTimeout`) stretch when the page is busy, and a timer that should have come
+  between them comes after; the check then passes on the bug it was written for. Make the steps
+  that must come before a timer synchronous (a short busy wait on `performance.now()`), then
+  wait: timers fire in the order they are due, however late.
 - **`protonFate` is `'decays'`, not `'decay'`** (12 Oct): `newGame({ protonFate: 'decay' })` gets
   the seed's drawn fate without a word (a check thought it was testing decay on a stable game).
   `tsx` runs a check without type-checking it; `tsc` catches it, so run `tsc` before trusting one.
@@ -1341,6 +1350,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     every element out over 0.6 s and in over 1.2 s, as `duckMusic` does the graph (`music.hold`
     calls both). Do not make a `MediaElementSource` for an element that plays this way: once
     made, the element's sound goes only through the graph. Check `browser/music-route`.
+  - The synth's echo (the layer's `send`, the snare's `wet`) goes into `audio().musicWet` (at the
+    music's volume, `music² / 0.49`, so as loud as before at the slider's 70%), then `wetDuck`
+    (ramped with `duck` by `duckMusic`), then the reverb. It went into `reverbIn` directly before
+    the project check (15 Oct), so the slider at 0, or a film, left it heard. `music.hold` keeps
+    its pause's timer (`holdTimer`) and clears it on every hold: a hold taken again within 0.7 s
+    of one let go was paused by the first one's timer, part-way through its fade.
   - The reverb (`core.ts`): `impulse(ctx, 3, 3.2, 5.5)`, 3 s of noise decaying as
     (1 − τ/5.5)^3.2 with a 0.2 s fade at its end (it was the full 5.5 s). The interface's sounds
     send into it through one `bus` made once in `sfx.ts`.
@@ -1459,7 +1474,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `contextTime` carried on by `performance.now()` from its `performanceTime`, at the frame's own
     time (the rAF timestamp, passed to `clock.now(at)`), never backwards, less the cue's start.
     Without a timestamp (or with `performanceTime` 0, or one ahead of `currentTime` or more than
-    a second behind it), `currentTime` carried on between its steps;
+    a second behind it), `currentTime` carried on between its steps, for 250 ms at most and only
+    while the context runs (the project check: carried on without end, a stopped sound left the
+    film running on in silence, then frozen; `unit/film-clock`);
     without sound, `elapsedClock`. Do not read `currentTime` straight: it steps by the output's
     buffer (23 ms with `latencyHint: 'playback'`), and frames repeat.
   - **The overlays:** with `pageOverlays` (the game's `Film.tsx`), `FilmPlayer` lays
@@ -1472,7 +1489,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     if its median gap is under 0.9 of the layers', else it shows the layers again
     (`FilmPlayer.overlayTrial`). Only then does it step the resolution down: every half second,
     by `clamp(√(30/median gap), 0.6, 0.85)`, to 0.5 a CSS pixel at least. Export and the checks'
-    `filmFrames` leave `pageOverlays` unset, so their frames keep both in the canvas.
+    `filmFrames` leave `pageOverlays` unset, so their frames keep both in the canvas. Under
+    reduced motion the game's films set `args.stillGrain`, and the canvas's grain holds still too
+    (drawn at time 0), as the page's layer does.
+  - **The painter thread's failures:** `paintWorker.ts`'s handler is async, so an error in it
+    rejects a promise inside the thread and reaches the page as no error at all. Its whole body
+    is in a `try`: a film it cannot lay out or send it answers `{ job, failed: true }`, and the
+    page paints that film itself (`fallBack`).
   - **Measuring:** a frame's drawing in software at 1920×1080, with and without the two passes
     (`setup(..., { pr: 1, pageOverlays })` on the dev server's `film.html`, each frame flushed by
     `getImageData(0, 0, 1, 1)`); a whole film in the game in Chromium with
@@ -1485,7 +1508,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   globular cluster, with `glowTexture()` (brightness as e^(−3.2 r^0.7), zero at the edge) and a
   blackbody colour. `sync` tints them with the dust's era tint; `update` sets each one's height
   on the screen from the camera's elevation (√(flat² cos² + sin²)) and its opacity as base ×
-  the dust's era brightness × a fade in with distance (`smoothstep(distance, 220, 900)`). The
+  the era's natural brightness (not the enhanced and thermal views' floors, which keep the dust
+  faintly visible: the glow showed in the Dark there until the project check, 15 Oct) × a fade in
+  with distance (`smoothstep(distance, 220, 900)`). The
   grade in `post.ts` has no lift: with the neutral tone mapping a lift with unequal channels shows
   as a tinted cast (the purple oval), and one with equal channels is taken away anyway.
 - **`/next/` (part 5):** the `next` branch (a copy of the work branch: `git push origin

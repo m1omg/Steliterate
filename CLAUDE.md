@@ -24,7 +24,9 @@ m1omg/Steliterate#30, `3a3f4c2`, has a push to `main` or `next` build both; PR
 m1omg/Steliterate#31, `f9be053`, the map's purple oval gone and the galaxy's own light in its
 place, from `claude/sky-glow-main`, a branch from `main` made at the player's word, 15 Oct; PR
 m1omg/Steliterate#32, `4435f3f`, sound that does not stutter, from `claude/sound-main`, the same
-way).
+way; PR m1omg/Steliterate#33, `4b92446`, the project check's three fixes for today's game, from
+`claude/check-main`, the same way, then merged into the work branch with `-s ours`, `9e5907b`, so
+that the switch merges cleanly).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -40,7 +42,7 @@ keys), and now that it is up, "Saves are sacred" holds for them too: `tools/save
 saves, which `savecompat` plays. `public/archive/` holds frozen builds: never edit them.
 
 A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (rewritten
-12 Oct):
+16 Oct):
 where things stand, what to read in which order, the player, the open threads and the traps.
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
@@ -113,4 +115,5 @@ curvature 50%. With the dearer Archive, ships seeing what they pass and the soft
 Oct, `d92849a`; the films change no rule): 153 of 300, 63 victories; 900 games 444 / 160 / 70; by
 fate decay 53%, stable 46%, curvature 46%. With real neighbours the noise is larger: the same rules
 with only the neighbours' dice reshuffled give 440 / 177 / 69, and two such runs of 900 can differ
-by 32 survivors and 37 victories.
+by 32 survivors and 37 victories. The project check (15 Oct, no rule changed): 300 games on each
+version game for game as before (153 / 63 / 70 here, 154 / 72 / 72 in `main`).

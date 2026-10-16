@@ -51,7 +51,11 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - The game is as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
+  - Now (15 Oct): `main` as of PR m1omg/Steliterate#33 (live script `index-CZei1OFo.js`), and the new
+    version at `/next/` from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script
+    `index-ChAdSDIO.js`). HANDOVER, section 3, has where things stand; CLAUDE.md lists every PR. What
+    follows is the history up to 13 Oct.
+  - The game was as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
     live script `index-BRmxB_Lf.js`), from `claude/affectionate-johnson-qqr7p2`, the plan's
     second session (merged; a follow-up starts it again from `main`). Then PR m1omg/Steliterate#18
@@ -82,7 +86,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - `claude/lucid-newton-30cbpk`, the old live branch, stays at `fc6c59a`, behind `main`. Pages
     builds it too, so leave it alone: a push of anything older than `main` would put that build
     live.
-  - `claude/epic-wozniak-lyhulf` was this session's branch, and it is merged.
+  - `claude/epic-wozniak-lyhulf` carries the new version since 13 Oct, pushed and not merged;
+    `next` is its copy, live at `/next/` (HANDOVER, section 3). Before that it was the halo's
+    branch (11 Oct) and the third Dusk track's (12 Oct), both merged.
   - 10 Oct, from the first account's session: the phone interface, on `claude/lucid-newton-v2`
     (started from `main` at `83f498e`), merged by PR m1omg/Steliterate#6 (CHANGELOG: "A phone
     interface that leaves the map usable"). That session's work branch; a follow-up batch starts
@@ -753,6 +759,18 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     element, and a lighter reverb (CHANGELOG, "Smoother films in every browser"; the sound in
     `main` by PR m1omg/Steliterate#32, `4435f3f`). There is no
     Firefox here: software Chromium stood in for it, so ask the player how it plays there now.
+  - 15 Oct, after the session was compacted twice: "um, sorry....compacted twice, please, do a
+    comprehensive project check to compensate". A plan was approved for it: the branches and
+    GitHub, a fresh reading of today's code, every check on both versions, 300 games on each, the
+    live scripts against the builds, `main` merged into the work branch for the switch, and the
+    notes. Found: all as the notes said, 300 games game for game as before on both versions, and
+    six faults in today's code (two reviewers, each finding confirmed in the code first), fixed
+    with checks, three of them in `main` too by PR m1omg/Steliterate#33 (CHANGELOG, "The project
+    check"). Not changed, for the player to decide: a film's resolution steps down on a slow
+    device and never back up; a build tool's reported flaw (`source-map-js`, build only).
+    The container restarted mid-way (the suites and servers stopped, the trees kept); the plan to
+    finish was approved with "All good but pls also do a .MD for handover": `HANDOVER.md` was
+    rewritten from the ground up on 16 Oct, as of `main` at PR #33 and `next` after the check.
   - Next: the player's word on Firefox now, the films' second cut and the open threads
     (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
