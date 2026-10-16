@@ -9,6 +9,11 @@ export interface AudioCore {
   sfx: GainNode;
   reverb: ConvolverNode;
   reverbIn: GainNode;
+  /**
+   * The music's way into the reverb (the synth's echo), at the music's volume. It went into the
+   * reverb directly before (15 Oct), so the slider at 0 still left the synth's echo heard.
+   */
+  musicWet: GainNode;
   noise: AudioBuffer;
 }
 
@@ -20,6 +25,11 @@ const volumeListeners: (() => void)[] = [];
 /** The music's level (the slider, on its perceptual curve): what a recording played by its own element is set to (music.ts, trackOut.ts). */
 export function musicLevel(): number {
   return volumes.music * volumes.music;
+}
+
+/** The music's echo at the music's volume, as loud as it was at the slider's 70% (where it was set), so the mix stays the same at every volume. */
+function wetLevel(music: number): number {
+  return (music * music) / 0.49;
 }
 
 /** Run whenever the volumes change. */
@@ -100,7 +110,10 @@ export function unlockAudio() {
   const reverbOut = ctx.createGain();
   reverbOut.gain.value = 0.55;
   reverbIn.connect(reverb).connect(reverbOut).connect(master);
-  core = { ctx, master, music, sfx, reverb, reverbIn, noise: noiseBuffer(ctx) };
+  const musicWet = ctx.createGain();
+  musicWet.gain.value = wetLevel(volumes.music);
+  musicWet.connect(reverbIn);
+  core = { ctx, master, music, sfx, reverb, reverbIn, musicWet, noise: noiseBuffer(ctx) };
   void ctx.resume();
   for (const fn of listeners.splice(0)) fn();
 }
@@ -112,6 +125,7 @@ export function setVolumes(music: number, sfx: number) {
   const t = core.ctx.currentTime;
   // perceptual (squared) volume curve
   core.music.gain.setTargetAtTime(music * music, t, 0.1);
+  core.musicWet.gain.setTargetAtTime(wetLevel(music), t, 0.1);
   core.sfx.gain.setTargetAtTime(sfx * sfx, t, 0.05);
 }
 

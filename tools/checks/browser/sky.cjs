@@ -3,7 +3,8 @@
 // tone mapping, which takes a dark colour's grey part away, left a dark magenta, made an oval by
 // the vignette. Now the empty sky is black, the same in every channel, in the galaxy and in a
 // system. In its place, the galaxy's own light: a warm glow where its stars are, drawn back from,
-// that fades as the view comes in among them and is gone once the stars have gone out.
+// that fades as the view comes in among them and is gone once the stars have gone out, in every
+// view (the project check, 15 Oct).
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('sky', { seed: 31 });
@@ -59,6 +60,22 @@ run(async () => {
   });
   await page.waitForTimeout(1500);
   check((await glows()) === 0, `in the Dark it is gone (${await glows()} glows shown)`);
+  // in the enhanced and thermal views too, which keep the stars drawn faintly visible, not a glow
+  // there is none of (the project check, 15 Oct: it showed there, a lavender haze, at their floor)
+  const inViews = [];
+  for (const m of [1, 2]) {
+    await page.evaluate((m) => {
+      window.__stel.engine().viewMode = m;
+      window.__stel.refresh();
+    }, m);
+    await page.waitForTimeout(600);
+    inViews.push(await glows());
+  }
+  await page.evaluate(() => {
+    window.__stel.engine().viewMode = 0;
+    window.__stel.refresh();
+  });
+  check(inViews.every((n) => n === 0), `in the enhanced and thermal views it is gone too (${inViews.join(', ')} glows shown)`);
   // a system's sky is black too
   await page.evaluate(() => {
     const s = window.__stel.state();

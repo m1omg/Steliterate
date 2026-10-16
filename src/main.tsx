@@ -8,7 +8,7 @@ import { endTurn } from './game/sim/turn';
 import { autoPlay } from './game/auto';
 import { exportCode, importCode, loadGame, saveGame } from './game/save';
 import type { GameState } from './game/types';
-import { installUnlock, setVolumes } from './audio/core';
+import { audio, installUnlock, setVolumes } from './audio/core';
 import { music } from './audio/music';
 import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
@@ -396,6 +396,8 @@ window.__stel = {
   engine: () => engine(),
   /** The music player (its layer: the synth bus, and the recording playing), for the checks. */
   music: () => music,
+  /** The sound's graph (`browser/music-route`: the synth's echo at the music's volume). */
+  audio: () => audio(),
   /** Set the music's and the sounds' volumes, 0..1, as the settings' sliders do (for this page only). */
   setVolumes: (m: number, s: number) => setVolumes(m, s),
   /** Play one of the interface's sounds. */
