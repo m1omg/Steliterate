@@ -44,6 +44,9 @@ saves, which `savecompat` plays. `public/archive/` holds frozen builds: never ed
 A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (rewritten
 16 Oct):
 where things stand, what to read in which order, the player, the open threads and the traps.
+**Its section 0 (19 Oct) comes first.** It covers the work in progress: the batch "the game keeps
+its word", built in both versions but not yet validated, put on `next` or merged; and the
+approved plan for what follows, `docs/plans/2026-10-19-falling-worlds-and-the-list.md`.
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 

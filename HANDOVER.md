@@ -8,6 +8,86 @@ the details stay in the other notes, and every section says where.
 Spoiler-light, like everything the player may read. The stranger minds and the endings are in
 `docs/spoilers/`, for you only: never repeat them to the player.
 
+## 0. Start here: the handover of 19 Oct
+
+The player ran out of usage late on 19 Oct ("93% of usage is gone right now… I'll be back, don't
+worry") and asked for this: "please put this plan along with updating the handover MD, because I
+will need to continue in another session". Sections 1 to 8 below are from 16 Oct and still hold.
+Here is what came after.
+
+**Done since 16 Oct:**
+- `docs/REPLICATE.md`: a full spec of today's game (`main` at `4b92446`), written 16 to 17 Oct.
+- **"The game keeps its word"** (19 Oct), in both versions at the player's word. REPLICATE found
+  places where the game's text promised one thing and the code did another. Each was made to keep
+  its promise:
+  - the Long Record, Hunger Studies, the Communion Charter, Harsh's "crueller crossings";
+  - worlds now fall into brown dwarfs and black holes, in new games (`flags.all_fall`);
+  - the Expansion Mandate, a charter the code named and the book lacked;
+  - rules no text told of, fixed or written into the Manual;
+  - a hidden step made reachable. Its details are in `docs/spoilers/slow-ones.md`; never tell
+    the player.
+
+  The CHANGELOG entry is drafted in `docs/plans/2026-10-19-changelog-draft.md`. Where it stands:
+  - **Work branch:** built and pushed (code up to `9e0e44f`; the handover adds only docs). It is
+    not yet on `next`.
+  - **Today's game:** ported on `claude/promises-main` (`7d4c702`, from `4b92446`), pushed, with
+    no PR yet.
+  - **Validated so far, work branch:**
+    - tsc, savecompat and the playtest pass;
+    - the full unit run failed only `ways`, before its fix in `9e0e44f`, which then passed alone;
+    - the browser suite was stopped after `a11y`.
+  - **Harness, work branch** (300 games, survivors / victories / Degenerate Age):
+
+    | Run | Before | After |
+    |---|---|---|
+    | Standard | 153 / 63 / 70 | 156 / 65 / 71 |
+    | Harsh | 114 / 29 / 66 | 124 / 35 / 66 |
+
+    By fate after: decay 82 of 148, stable 44 of 81, curvature 30 of 71.
+  - **Today's game:** nothing run yet. Its harsh baseline before is 140 / 52 / 70.
+- **Planned and approved, not built** ("It sounds good"):
+  `docs/plans/2026-10-19-falling-worlds-and-the-list.md`. It covers:
+  - the player's request for falling worlds: rubble you can mine, an evacuation event with a dark
+    choice, giants' flashes, Flash Shelters and Shadow Shields, more black-hole worlds;
+  - the player's list of 16 Oct: seven items about `/next/`.
+
+  The physics, the code findings with file:line, and every choice the player made are in the
+  plan. Don't ask them again.
+
+**What to do, in order:**
+1. **Finish "the game keeps its word"** (the plan's part A).
+   - **Work branch:**
+     - run the full validation in CLAUDE.md, every browser check included;
+     - write the CHANGELOG entry from the draft, with the figures;
+     - update the DEV-NOTES balance rows, SESSION-NOTES ("Picking up" and the 19 Oct entry are
+       there), this section and CLAUDE.md;
+     - REPLICATE.md: `git apply docs/plans/2026-10-19-replicate-wip.patch`, then fill its tokens
+       (PRNUM, STD_S, N900_S, F_DEC, H_S and the rest) from today's game's harness once its PR is
+       merged;
+     - commit, push, then `git push origin claude/epic-wozniak-lyhulf:next`.
+   - **Today's game:**
+     - make a worktree of `claude/promises-main`, run `npm ci` and the same validation;
+     - run the harness: `npx tsx tools/sim.ts 300 standard competent`, and again with
+       `--diff=harsh` (`--from=150` splits a run in two; `tools/tally.sh` counts);
+     - its `tools/checks/unit/ways.ts` may need the seed loop the work branch got in `9e0e44f`;
+     - open the PR into `main` and merge it with a merge commit (`expectedHeadSha`), then check
+       Pages and the live site;
+     - then `git merge -s ours origin/main` into the work branch, after checking that `main` has
+       nothing the work branch lacks, and push it and `next`.
+2. **The list** (the plan's part C).
+   - Ask the player to upload its file again,
+     `Questions_issues_requests_for_Claude_regarding_Steliterate_next_16_october_2026_0056.odt`.
+     It was in the old container only. The items' text is in the plan.
+   - Look at its four screenshots before anything else. The player: "Please look at the pictures
+     as well in the document". To get them out: `python3 -I` with `zipfile`, into a folder of
+     their own; they are in `Pictures/`.
+   - Then items 7, 1 and 6 (bugs), then 3 to 5 (the pace: "Ten per Tide turn"), then 2 together
+     with part B.
+3. **Falling worlds** (the plan's part B), with item 2.
+
+**The player's usage** ran out twice on 19 Oct (the weekly limit, then the five-hour one). They
+pause and come back. Work in batches that end validated and pushed, and keep messages short.
+
 ## 1. What this is
 
 Steliterate is a turn-based survival strategy game at the end of starlight. You keep a
