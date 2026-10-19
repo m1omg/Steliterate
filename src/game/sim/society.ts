@@ -75,7 +75,8 @@ export function updateSociety(state: GameState, logL: number, popsLost: number, 
       const share = totals[t] / Math.max(1, all);
       if (ok) {
         met++;
-        civ.standing[t] = Math.min(80, civ.standing[t] + 1.2);
+        // a met demand lifts a Thread toward 80, and never pulls one above it down (until 19 Oct it did)
+        civ.standing[t] = Math.max(civ.standing[t], Math.min(80, civ.standing[t] + 1.2));
       } else {
         unmet++;
         civ.standing[t] -= 1.4 + share * 1.5;

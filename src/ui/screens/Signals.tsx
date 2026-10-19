@@ -548,6 +548,7 @@ export function SignalsModal({ s }: { s: GameState }) {
             <div class="card">
               <div class="eyebrow">Around the Heart</div>
               <h4>The Slow Ones</h4>
+              <div class="drawer-plate" style={{ backgroundImage: 'url(art/slow.webp)' }} role="img" aria-label="The Heart, and the stars around it dimming and brightening in a pattern" />
               <div class="flavor" style={{ fontSize: '14.5px' }}>{slow.flags.silent ? 'Silent. They stopped answering when we began to eat.' : SLOW_STAGE[slow.stage]}</div>
               <dl class="kv">
                 <dt>Their clock</dt>

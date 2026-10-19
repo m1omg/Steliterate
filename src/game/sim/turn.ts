@@ -19,7 +19,7 @@ import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
 import { battlesTurn } from './conflict';
 import { feedBeacons } from './beacons';
-import { spareYield } from './spare';
+import { spareYield, type SpareYield } from './spare';
 import { coolAccord } from './accord';
 import { MATTER_AS_ENERGY, capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
@@ -48,8 +48,8 @@ export interface TurnResult {
   wasted: number;
 }
 
-/** Industry drives the build queue; leftover goes to the settlement's spare work. Returns the insight it made. */
-function applyIndustry(state: GameState, c: Colony, industry: number, energyMade: number, mods: Mods): number {
+/** Industry drives the build queue; leftover goes to the settlement's spare work. Returns what that made (its resolve already given). */
+function applyIndustry(state: GameState, c: Colony, industry: number, energyMade: number, mods: Mods): SpareYield {
   let left = Math.max(industry, c.queue[0] && c.queue[0].progress >= c.queue[0].cost - 0.01 ? 0.01 : 0);
   let guard = 0;
   while (left > 0 && c.queue.length && guard++ < 8) {
@@ -99,12 +99,10 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
     }
   }
   void mods;
-  if (!(left > 0) || c.queue.length || state.civ.dormant) return 0;
+  if (!(left > 0) || c.queue.length || state.civ.dormant) return { matter: 0, energy: 0, insight: 0, resolve: 0 };
   const y = spareYield(state, c, left, energyMade);
-  state.civ.matter += y.matter;
-  state.civ.energy += y.energy;
   if (y.resolve) state.civ.resolve = clamp(state.civ.resolve + y.resolve, 0, 100);
-  return y.insight;
+  return y;
 }
 
 /** After the Last Light a world's core heat keeps this share of itself each turn: half is gone in three turns, nearly all of it in eighteen. */
@@ -238,7 +236,7 @@ function worldDies(state: GameState, b: Body, scorched = false) {
 }
 
 /** What one civilization carries from one part of its turn to the next. */
-interface CivTurn {
+export interface CivTurn {
   mods: Mods;
   /** Its Halo Siphons as the turn began (its economy reads them so): research or a shut-down counts from the next. */
   siphoning: boolean;
@@ -540,7 +538,12 @@ function economy(state: GameState, t: CivTurn) {
       // (a lifter left behind by a world flung loose lifts nothing, and drains nothing)
       if (d?.gfeDrain && n && !leftBehind(state, c, d)) state.gfe = Math.max(0.05, state.gfe - d.gfeDrain * n * ctx.paceFactor);
     }
-    insight += applyIndustry(state, c, y.y.industry, y.y.energy, mods);
+    // spare work's yields count in the turn's own (and so in the energy net it reports: until
+    // 19 Oct they went straight into the stores, unreported)
+    const spare = applyIndustry(state, c, y.y.industry, y.y.energy, mods);
+    insight += spare.insight;
+    eIn += spare.energy;
+    mIn += spare.matter;
   }
   eIn += jointIncome(state) * ctx.paceFactor;
   eOut += fleetUpkeep(state, ctx.paceFactor);
@@ -660,7 +663,8 @@ function researchAndWorks(state: GameState, t: CivTurn) {
 }
 
 /** 4. Growth: Echoes out of the archive first, then every Thread grows toward the room it has, or is crowded out. */
-function growth(state: GameState, t: CivTurn) {
+/** People grow where there is room (exported for the checks: unit/unwritten). */
+export function growth(state: GameState, t: CivTurn) {
   const civ = state.civ;
   const { mods, starving } = t;
   // Echoes waiting in the archive move into any free substrate before anyone is counted
@@ -678,14 +682,16 @@ function growth(state: GameState, t: CivTurn) {
       if (c.pops.lattice < capc.lattice && (noMatter ? civ.energy > 15 : civ.matter >= 4)) c.growth.lattice += 0.35;
     }
     for (const th of THREADS) {
-      if (c.growth[th] >= 1) {
+      // a grown point becomes a person where there is room, and is paid for then; without room it
+      // waits, unpaid (until 19 Oct it was paid for and lost)
+      if (c.growth[th] >= 1 && (c.pops[th] < capc[th] || (th === 'kin' && c.pops.kin === 0))) {
         c.growth[th] -= 1;
         if (th === 'lattice') {
           if (noMatter) civ.energy -= 3 * MATTER_AS_ENERGY;
           else civ.matter -= 3;
         }
         if (th === 'echoes') civ.energy -= 3;
-        if (c.pops[th] < capc[th] || (th === 'kin' && c.pops.kin === 0)) c.pops[th]++;
+        c.pops[th]++;
       }
       if (c.pops[th] > capc[th] && !(th === 'kin' && capc.kin === 0 && c.pops.kin <= 0)) {
         c.pops[th]--;

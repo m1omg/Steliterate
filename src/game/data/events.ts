@@ -1004,7 +1004,8 @@ export const EVENTS: EventDef[] = [
     title: 'The Vault of Sleepers',
     art: 'sleepers',
     text: (s, d) =>
-      `Under ${bodyById(s, d)?.name} is a vault, still warm. Inside, a whole people chose Dyson’s bargain long ago: sleep through the lean ages, wake briefly, think a little, sleep again. They have been sleeping for longer than our species has existed. They are not expecting visitors.`,
+      // (where its white dwarf has no worlds, the vault is in orbit, in its Deep)
+      `${bodyById(s, d)?.kind === 'deep' ? `In orbit around ${s.systems[bodyById(s, d)!.systemId]?.name}` : `Under ${bodyById(s, d)?.name}`} is a vault, still warm. Inside, a whole people chose Dyson’s bargain long ago: sleep through the lean ages, wake briefly, think a little, sleep again. They have been sleeping for longer than our species has existed. They are not expecting visitors.`,
     choices: [
       { label: 'Leave them be', hint: 'Resolve +2.', run: (s, d) => { res(s, 2); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
       { label: 'Study the vault', hint: 'Insight +80. Research toward Hibernation Protocols.', run: (s, d) => { insight(s, 80); s.civ.research.hibernation_protocols = (s.civ.research.hibernation_protocols ?? 0) + 60; const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },

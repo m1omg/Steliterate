@@ -542,6 +542,13 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
     }
     // the crossing's cost falls on what we had saved; what the catchers caught comes after it
     eachCiv(state, ids, (id) => (state.civ.energy = state.civ.energy * 0.6 + (caught[id] ?? 0)));
+    // one thought an age: awake through this one too, as at the Last Light (the player's alone to know)
+    eachCiv(state, ids, (id) => {
+      if (id === state.player && !state.civ.dormant && state.minds.slow.stage >= 2) {
+        state.minds.slow.understanding += 15;
+        lines[id].push({ text: 'We were awake as the Degenerate Age ended, as the Slow Ones were. Another thought passed between us.', kind: 'good' });
+      }
+    });
     if (fateOf(state) === 'decay') eachCiv(state, ids, (id) => reserveAfterMatter(state, mods[id], lines[id]));
   } else if (from === 'blackhole') {
     // ---------------------------------------------------------------- The Last Horizon
