@@ -344,17 +344,11 @@ function unchartedNear(state: GameState, here: Vec3): boolean {
 }
 
 /**
- * What we can see. Settlements see as far as research allows; a ship sees from wherever it is
- * (a survey ship three times as far), and under way it sees, with the same eyes, every star near
- * the stretch it flew this turn (`flown`, from advanceFleets). A ship at the edge of what is known
- * (no uncharted star it knows of within SCAN_LOCAL) takes a long-baseline look, once per system,
- * and picks out the nearest stars no one has seen yet (a survey ship three, any other ship one),
- * so exploring can always go on, even across the gulfs between clusters; a survey ship under way
- * takes one a turn. Seen is only seen: charting still needs a stop. The far outliers in the void
- * stay hidden.
+ * The eyes we chart stars with (updateDetection) and watch the Hunger with (sight.ts): our
+ * settlements, the stars our Shared Watch partners watch, and our ships stopped at a star.
  */
-export function updateDetection(state: GameState, mods: Mods, flown: Flown[] = []) {
-  const eyes = [
+export function watchEyes(state: GameState, mods: Mods): { sys: StarSystem; range: number }[] {
+  return [
     ...colonies(state).map((c) => ({ sys: state.systems[c.systemId], range: mods.detect })),
     // Shared Watch: the stars our partners watch, we see too
     ...Object.values(state.survivors)
@@ -365,6 +359,20 @@ export function updateDetection(state: GameState, mods: Mods, flown: Flown[] = [
       .filter((f) => f.at)
       .map((f) => ({ sys: state.systems[f.at!], range: eyesOf(f, mods) })),
   ];
+}
+
+/**
+ * What we can see. Settlements see as far as research allows; a ship sees from wherever it is
+ * (a survey ship three times as far), and under way it sees, with the same eyes, every star near
+ * the stretch it flew this turn (`flown`, from advanceFleets). A ship at the edge of what is known
+ * (no uncharted star it knows of within SCAN_LOCAL) takes a long-baseline look, once per system,
+ * and picks out the nearest stars no one has seen yet (a survey ship three, any other ship one),
+ * so exploring can always go on, even across the gulfs between clusters; a survey ship under way
+ * takes one a turn. Seen is only seen: charting still needs a stop. The far outliers in the void
+ * stay hidden.
+ */
+export function updateDetection(state: GameState, mods: Mods, flown: Flown[] = []) {
+  const eyes = watchEyes(state, mods);
   for (const s of Object.values(state.systems)) {
     if (state.civ.known[s.id]) continue;
     if (eyes.some((e) => distLy(e.sys, s) <= e.range)) state.civ.known[s.id] = 1;

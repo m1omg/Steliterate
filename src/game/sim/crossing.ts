@@ -210,6 +210,14 @@ export function protocolsMult(state: GameState, era: EraId): number {
   return protocols && state.civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1;
 }
 
+/** How much more a crossing takes at Harsh ("crueller crossings", its setup tip): a quarter more. */
+export const HARSH_CROSSING = 1.25;
+
+/** What a crossing takes from this civilization: its protocols' share, a quarter more at Harsh (the crossings only, not the Passage or the Thinning). */
+export function crossingHarm(state: GameState, era: EraId): number {
+  return protocolsMult(state, era) * (state.settings.difficulty === 'harsh' ? HARSH_CROSSING : 1);
+}
+
 /**
  * Curvature radiation: each neutron star, its mass given to the curvature of space for 10^68 years,
  * bursts at a tenth of a Sun in a last flash of particles and neutrinos (some 10^42 J): whatever we
@@ -301,7 +309,7 @@ function endOfMatter(state: GameState, ids: readonly string[], mods: Record<stri
   }
   for (const b of Object.values(state.bodies)) if (b.kind !== 'deep') b.dissolved = true;
   toAll(lines, { text: `Every planet, every dead star and every scrap of ordinary matter has ${how}. ${dissolved} systems are simply gone.`, kind: 'info' });
-  eachCiv(state, ids, (id) => leftOnSubstrate(state, mods[id], lines[id], protocolsMult(state, protocolsEra), how));
+  eachCiv(state, ids, (id) => leftOnSubstrate(state, mods[id], lines[id], crossingHarm(state, protocolsEra), how));
   withRng(state, (rng) => {
     for (const sw of Object.values(state.swarms)) {
       const at = sw.systemId ? state.systems[sw.systemId] : null;
@@ -376,12 +384,14 @@ function leftOnSubstrate(state: GameState, mods: Mods, lines: CrossingReport['li
   for (const c of cs) if (decayProof(c)) lost += goLeptonic(state, c, crossingMult);
   // then what does not: through the protocols, a share of its minds onto what goes on, as far as it has room for them
   const room = cap && crossingMult < 1 ? capacity(state, cap, mods) : null;
+  // (at Harsh fewer are carried over, as the losses are a quarter more)
+  const carried = CARRIED / (state.settings.difficulty === 'harsh' ? HARSH_CROSSING : 1);
   const named: string[] = [];
   for (const c of cs) {
     if (decayProof(c)) continue;
     if (cap && room) {
       for (const t of ['echoes', 'coldminds', 'chorus'] as const) {
-        const m = Math.min(Math.floor(c.pops[t] * CARRIED), Math.max(0, room[t] - cap.pops[t]));
+        const m = Math.min(Math.floor(c.pops[t] * carried), Math.max(0, room[t] - cap.pops[t]));
         if (m <= 0) continue;
         c.pops[t] -= m;
         cap.pops[t] += m;
@@ -460,7 +470,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
     toAll(lines, { text: converted > 0 ? `${converted} of the last red dwarfs went out during the crossing. The last ordinary starlight is gone.` : 'The last ordinary starlight is gone. Every star that ever formed from gas has burned out.', kind: 'info' });
     eachCiv(state, ids, (id) => {
       const civ = state.civ;
-      const crossingMult = protocolsMult(state, from);
+      const crossingMult = crossingHarm(state, from);
       const cs = colonies(state);
       const reserveScore = Math.min(1, civ.energy / 220);
       const sourceScore = cs.length ? cs.filter((c) => hasStarlessSource(state, c)).length / cs.length : 0;
@@ -515,7 +525,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
       toAll(lines, { text: 'The neutron stars, the last things warm of their own accord, are colder now than the faint glow of the black holes. For the whole life of the universe the holes were the coldest things in it; from now on they are the warmest. The astronomers close the Degenerate Age here.', kind: 'info' });
       for (const s of Object.values(state.systems)) if (s.primary.kind === 'white_dwarf') s.primary.kind = 'black_dwarf';
       eachCiv(state, ids, (id) => {
-        const crossingMult = protocolsMult(state, from);
+        const crossingMult = crossingHarm(state, from);
         let lost = 0;
         for (const c of colonies(state)) {
           const cap = capacity(state, c, mods[id]);
@@ -540,7 +550,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
     toAll(lines, { text: 'The Heart, the last and largest black hole, has evaporated. Nothing in the universe is making light any more.', kind: 'info' });
     eachCiv(state, ids, (id) => {
       const civ = state.civ;
-      const crossingMult = protocolsMult(state, from);
+      const crossingMult = crossingHarm(state, from);
       const prep = Math.min(1, civ.energy / Math.max(200, reserveCapacity(state, mods[id]) * 0.5));
       // what the crossing costs: Continuity short of 100, and energy (the protocols halve both)
       civ.continuity = Math.round(100 - 50 * (1 - prep) * crossingMult);
@@ -557,7 +567,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
       if (written.length) lines[id].push({ text: `With the last horizon gone, ${written.length === 1 ? `${written[0].name} is` : `${written.length} settlements are`} written back out of the horizons, leptonic${latticeLost ? `: ${latticeLost} of the Lattice did not come through` : ''}.`, kind: 'info' });
     });
     for (const sv of Object.values(state.survivors)) if (sv.alive && !state.civs[sv.id]) sv.health = Math.max(0, sv.health - 0.4);
-    eachCiv(state, ids, () => (state.civ.energy *= 1 - 0.15 * protocolsMult(state, from)));
+    eachCiv(state, ids, () => (state.civ.energy *= 1 - 0.15 * crossingHarm(state, from)));
   }
 
   // clean up settlements that are now empty

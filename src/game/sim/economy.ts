@@ -33,6 +33,9 @@ export const MATTER_AS_ENERGY = 1.5;
 /** What a settlement makes while the Passage rewrites it (passage.ts): its energy, matter, insight and accord. */
 export const PASSAGE_OUTPUT = 0.7;
 
+/** The Long Record's accord, at each settlement awake, a turn (its description: "+1 Accord per settlement"). */
+export const LONG_RECORD_ACCORD = 1;
+
 export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number {
   const b = state.bodies[c.bodyId];
   if (!b || b.dissolved) return 0;
@@ -312,7 +315,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   industry *= ctx.mods.industryMult * focusMul(c, 'industry');
   insight *= ctx.mods.insightMult * focusMul(c, 'insight');
   accord *= focusMul(c, 'accord');
-  if (flags.has('charters')) accord += dormant ? 0 : 0.25;
+  // The Long Record: an honest account kept at every settlement, +1 accord each, as it says
+  if (flags.has('charters') && !dormant) {
+    accord += LONG_RECORD_ACCORD;
+    lines.push({ label: 'The Long Record', accord: LONG_RECORD_ACCORD });
+  }
   // the Lattice's search and registry turn industry into insight and accord, where the Lattice is here to run them
   if (c.pops.lattice > 0) {
     for (const [id, n] of Object.entries(c.structures)) {

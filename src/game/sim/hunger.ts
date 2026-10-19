@@ -1,7 +1,7 @@
 import { SHIP_BY_ID, strength } from '../data/ships';
 import { watchPartners } from './ties';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
-import type { Fleet, GameState, StarSystem, Swarm } from '../types';
+import type { Colony, Fleet, GameState, StarSystem, Swarm } from '../types';
 import { FORTIFY_BONUS, destroyColony, isWarFleet, signatureOf } from './fleets';
 import type { Mods } from './mods';
 import { allColonies, allFleets, colonies, distLy, fleets, hasCharter, log, logTo, ownColony, ownFleet, tellKnown, uid, withRng } from './util';
@@ -10,6 +10,7 @@ import { queueEvent } from './events';
 import { foughtFor, theirWarmth } from './claims';
 import { warHeat } from './war';
 import { calendarEra } from '../fate';
+import { swarmSpeed } from './sight';
 
 // The Hunger: harvesters left running by a civilization that died long ago. Its makers built
 // it to survive; it still does, the way a tumour does. It has no plan beyond the next meal,
@@ -88,7 +89,11 @@ export function firstSwarm(state: GameState) {
     state.civ.flags.first_swarm = state.turn;
     if (!state.civ.known[nest.id]) state.civ.known[nest.id] = 1;
     let outcome = '';
-    withRng(state, (rng) => {
+    // under the Communion Charter it takes us for its own
+    if (communes(state, state.civ.id)) {
+      outcome = `It knew ${f.name} for one of its own, and let it be.`;
+      log(state, `${f.name} came near the swarm at ${nest.name}. Under the Communion Charter it knew the ship for one of its own.`, 'info', here.id);
+    } else withRng(state, (rng) => {
       // not every swarm cares: some let the ship go, for now
       if (!rng.chance(0.55)) {
         outcome = `It paid ${f.name} no attention. Yet.`;
@@ -500,7 +505,7 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
       }
       // travelling
       if (!sw.systemId && sw.to) {
-        const step = isFinite(L) ? (calendarEra(state) === 'dusk' ? 0.05 : 0.5) * L : Infinity;
+        const step = isFinite(L) ? swarmSpeed(state) * L : Infinity;
         sw.traveled += step;
         if (sw.traveled >= sw.distance) {
           sw.systemId = sw.to;
@@ -510,6 +515,8 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
           const sys = state.systems[sw.systemId];
           // a part back with its swarm rejoins it; one whose ship is not here turns back
           if (rejoin(state, sw) || loseTheScent(state, sw)) continue;
+          // come to a settlement under the Communion Charter, it merges into its Lattice
+          if (!sw.tamed && commune(state, sw, ids)) continue;
           for (const v of Object.values(state.civs)) {
             if (!v.known[sys.id]) continue;
             const ours = sw.tamed && (sw.tamedBy ?? state.player) === v.id;
@@ -549,6 +556,8 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
 
       // sent after a ship that has gone: on to the ship's people, or back to its swarm
       if (loseTheScent(state, sw)) continue;
+      // at a settlement under the Communion Charter (enacted since it came), it merges in
+      if (commune(state, sw, ids)) continue;
 
       // eat
       const matter = systemMatter(state, sys);
@@ -743,11 +752,40 @@ export function absorbSwarm(state: GameState, swarmId: string, colonyId: string)
   const c = ownColony(state, colonyId);
   if (!sw || !sw.tamed || !c || (sw.tamedBy ?? state.player) !== state.civ.id || c.owner !== state.civ.id) return 'Only a tamed swarm can be absorbed.';
   if (sw.systemId !== c.systemId) return 'The swarm must be at that settlement.';
+  const pops = foldIn(state, sw, c, hasCharter(state, 'communion_charter') ? COMMUNION_TAINT : 3);
+  log(state, `${pops} Lattice formed from the swarm at ${c.name}. Something of its appetite comes with them.`, 'event', c.systemId);
+  return null;
+}
+
+/** What a swarm taken in under the Communion Charter adds to its taker's Taint. */
+export const COMMUNION_TAINT = 8;
+
+/** A swarm folded into a settlement as Lattice (a Lattice Foundry to keep them), and gone; its appetite taints the settlement's people. Returns the Lattice made. */
+function foldIn(state: GameState, sw: Swarm, c: Colony, taint: number): number {
   const pops = Math.max(1, Math.round(sw.size / 1.5));
   c.pops.lattice += pops;
   c.structures.lattice_foundry = Math.max(c.structures.lattice_foundry ?? 0, Math.ceil(pops / 6));
-  delete state.swarms[swarmId];
-  hungerAct(state, state.civ.id, hasCharter(state, 'communion_charter') ? 8 : 3, c.systemId, 'took a swarm in');
-  log(state, `${pops} Lattice formed from the swarm at ${c.name}. Something of its appetite comes with them.`, 'event', c.systemId);
-  return null;
+  delete state.swarms[sw.id];
+  hungerAct(state, c.owner, taint, c.systemId, 'took a swarm in');
+  return pops;
+}
+
+/**
+ * The Communion Charter ("Swarms merge into your Lattice instead of attacking you"): an untamed
+ * swarm at a star where a civilization under it has a settlement merges into that settlement, as
+ * an absorbed swarm does, with no taming, and its appetite comes with it. The first such
+ * civilization in turn order takes it, at its first settlement there. No draw.
+ */
+function commune(state: GameState, sw: Swarm, ids: string[]): boolean {
+  if (sw.tamed || !sw.systemId) return false;
+  for (const id of ids) {
+    if (!communes(state, id)) continue;
+    const c = allColonies(state).find((x) => x.systemId === sw.systemId && x.owner === id);
+    if (!c) continue;
+    const pops = foldIn(state, sw, c, COMMUNION_TAINT);
+    const civ = state.civs[id];
+    if (civ) logTo(state, civ, `A swarm came to ${c.name} and merged into its Lattice: ${pops} Lattice, and something of its appetite with them.`, 'event', c.systemId);
+    return true;
+  }
+  return false;
 }

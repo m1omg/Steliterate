@@ -2,7 +2,8 @@ import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
 import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
-import { colonies, formOf, inItsSystem, protonFateKnown } from './util';
+import { colonies, formOf, hasCharter, inItsSystem, protonFateKnown } from './util';
+import { readsSwarms, swarmArrives, swarmSight } from './sight';
 import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
 import { computeMods } from './mods';
 import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf, matterGone } from '../fate';
@@ -39,7 +40,7 @@ function stillOfMatter(state: GameState): string {
 
 export function updateForecasts(state: GameState) {
   const out: Forecast[] = [];
-  const add = (f: Omit<Forecast, 'uid'>) => out.push({ ...f, uid: `${f.kind}:${f.systemId ?? ''}:${f.bodyId ?? ''}` });
+  const add = (f: Omit<Forecast, 'uid'>, key?: string) => out.push({ ...f, uid: key ?? `${f.kind}:${f.systemId ?? ''}:${f.bodyId ?? ''}` });
   const colonized = new Set(colonies(state).map((c) => c.systemId));
   const years = state.years;
   const horizon = calendarEra(state) === 'dusk' ? 60 : 40;
@@ -233,11 +234,21 @@ export function updateForecasts(state: GameState) {
     });
   }
 
-  // swarms heading our way
+  // swarms heading our way, as far as we see them; Hunger Studies reads when they will come
+  // (sight.ts), and under the Communion Charter they come to join us (hunger.ts: commune)
+  const seen = swarmSight(state);
+  const reads = readsSwarms(state);
+  const communion = hasCharter(state, 'communion_charter');
   for (const sw of Object.values(state.swarms)) {
-    if (sw.tamed || !sw.to) continue;
+    if (sw.tamed || !sw.to || !seen(sw)) continue;
     if (!colonized.has(sw.to)) continue;
-    add({ kind: 'hunger', title: `A swarm is heading for ${state.systems[sw.to].name}`, text: 'It has smelled the heat of our settlement.', dueYears: Infinity, systemId: sw.to, severity: 'danger' });
+    const name = state.systems[sw.to].name;
+    add(
+      communion
+        ? { kind: 'hunger', title: `A swarm is coming to join us at ${name}`, text: 'Under the Communion Charter it will merge into our Lattice there, and its appetite will come with it (Taint).', dueYears: reads ? swarmArrives(state, sw) : Infinity, systemId: sw.to, severity: 'info' }
+        : { kind: 'hunger', title: `A swarm is heading for ${name}`, text: reads ? 'It has smelled the heat of our settlement. Hunger Studies reads its way: it arrives at the speed it crosses at now.' : 'It has smelled the heat of our settlement.', dueYears: reads ? swarmArrives(state, sw) : Infinity, systemId: sw.to, severity: 'danger' },
+      `hunger:${sw.id}`,
+    );
   }
 
   out.sort((a, b) => a.dueYears - b.dueYears || (a.dueEta ?? Infinity) - (b.dueEta ?? Infinity));

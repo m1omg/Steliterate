@@ -16,11 +16,12 @@ import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
 import { colonies, distLy, fleets, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { nestSeenAt } from '../../game/sim/sight';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, solarMass } from '../fmt';
 import { Icon } from '../Icon';
-import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, SWARM_TIP } from '../labels';
+import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
 import { act, engine, game, hoverStar, modal, notify, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
@@ -391,6 +392,7 @@ function AfarList({ s, send }: { s: GameState; send?: Fleet }) {
             {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
             {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
             {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip={SWARM_TIP}>swarm</span>}
+            {nestSeenAt(s, sys.id) && <span class="chip" style={{ marginLeft: '6px' }} data-tip={NEST_TIP}>nest asleep</span>}
             <div class="faint" style={{ fontSize: '12.5px' }}>
               {formatDistance(ly)} from {from.name}
             </div>
@@ -611,6 +613,7 @@ function HolesList({ s, send }: { s: GameState; send?: Fleet }) {
                 {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
                 {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
                 {swarmSeenAt(s, sys.id) && <span class="chip danger" style={chipGap} data-tip={SWARM_TIP}>swarm</span>}
+                {nestSeenAt(s, sys.id) && <span class="chip" style={chipGap} data-tip={NEST_TIP}>nest asleep</span>}
                 {v && (
                   <span class="chip" style={{ ...chipGap, color: v.color, borderColor: v.color }} data-tip={v.contact ? `${v.name} live there` : 'Someone lives there'}>
                     {v.contact ? v.name : 'someone lives there'}
@@ -704,6 +707,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
                 {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
                 {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
                 {swarmSeenAt(s, sys.id) && <span class="chip danger" style={chipGap} data-tip={SWARM_TIP}>swarm</span>}
+                {nestSeenAt(s, sys.id) && <span class="chip" style={chipGap} data-tip={NEST_TIP}>nest asleep</span>}
                 {v && (
                   <span class="chip" style={{ ...chipGap, color: v.color, borderColor: v.color }} data-tip={v.contact ? `${v.name} live there` : 'Someone lives there'}>
                     {v.contact ? v.name : 'someone lives there'}
