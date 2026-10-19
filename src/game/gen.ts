@@ -633,7 +633,8 @@ export function generateWorld(settings: GameSettings): GameState {
     swarms: {},
     battles: [],
     nextId: 1,
-    flags: {},
+    // brown dwarfs and black holes take their worlds in, in a game begun since 19 Oct (physics.ts: fallsInAt)
+    flags: { all_fall: 1 },
   };
   const state = pointAt(world, civ);
   void coreSystems;

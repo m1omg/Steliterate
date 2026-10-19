@@ -10,7 +10,8 @@
 //   gravitational-wave date, which never comes there).
 // - Turns to many dates at once (the Black holes tab) are the turns to each one.
 import { newGame } from '../../../src/game/newGame';
-import { brownWarmth, pulsarBeam, sourceLight, primaryTemperature, haloDrawn } from '../../../src/game/physics';
+import { brownWarmth, fallsInAt, pulsarBeam, sourceLight, primaryTemperature, haloDrawn } from '../../../src/game/physics';
+import { copyState } from '../../../src/game/save';
 import { lastsUntil, siteValue } from '../../../src/game/sim/sites';
 import { turnsUntilAll, turnsUntilYears } from '../../../src/game/sim/flare';
 import { calendarEra } from '../../../src/game/fate';
@@ -69,7 +70,11 @@ near('its collectors’ light is as it was', sourceLight(s, ns, s.years, 0).ligh
   const rogue = { ...deepOf(small), kind: 'ice' as const, rogue: true };
   check(lastsUntil(g, rogue) === Infinity, 'a world flung loose from it never falls in, as before');
   const bdWorld = Object.values(g.bodies).find((b) => b.kind !== 'deep' && !b.rogue && b.inspiralAt && g.systems[b.systemId].primary.kind === 'brown_dwarf');
-  check(!!bdWorld && lastsUntil(g, bdWorld) === Infinity && siteValue(g, bdWorld, 'coldminds').label === 'never falls in', `a world of a brown dwarf never falls in (it read its date, ${bdWorld?.inspiralAt?.toExponential(1)} years, which never comes there)`);
+  // (in a game begun before 19 Oct; since then a brown dwarf takes its worlds in too: fall-in.ts)
+  const og = copyState(g);
+  delete og.flags.all_fall;
+  check(!!bdWorld && lastsUntil(og, og.bodies[bdWorld.id]) === Infinity && siteValue(og, og.bodies[bdWorld.id], 'coldminds').label === 'never falls in', `in a game begun before 19 Oct a world of a brown dwarf never falls in (it read its date, ${bdWorld?.inspiralAt?.toExponential(1)} years, which never comes there)`);
+  check(!!bdWorld && lastsUntil(g, bdWorld) === fallsInAt(g, bdWorld) && isFinite(lastsUntil(g, bdWorld)), `in a new game it lasts until it falls in, at ${bdWorld ? lastsUntil(g, bdWorld).toExponential(1) : '?'} years`);
 }
 
 // ---------------------------------------------------------------- turns to many dates at once

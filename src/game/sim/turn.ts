@@ -819,8 +819,10 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         if (n.bodyId) {
           const b = state.bodies[n.bodyId];
           const c = own(b?.colonyId);
-          if (c) evacuate(state, c, 'its world finished falling into its star');
-          if (seen) log(state, `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
+          // (into a black hole all at once: its tides tore the world apart, physics.ts)
+          const hole = sys.primary.kind === 'black_hole';
+          if (c) evacuate(state, c, hole ? 'its world was torn apart by the black hole' : 'its world finished falling into its star');
+          if (seen) log(state, hole ? `${b?.name} was torn apart by the black hole at ${sys.name} and fell in: one flash, then nothing.` : `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
           state.civ.energy += colonized.has(sys.id) ? 20 : 0;
         }
         break;

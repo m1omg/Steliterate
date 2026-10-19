@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, enabledAt, structureKind, structureLa
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, ICE_MELTS_K, NEVER_FEED, WATER_RICH, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, ICE_MELTS_K, WATER_RICH, fallsInAt, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -635,8 +635,10 @@ function EvaporatesRow({ s, at }: { s: GameState; at: number }) {
 /** When a world reaches its dead star's tidal limit: never for a rogue world, which has no star to fall into. */
 function FallsInwardRow({ s, b }: { s: GameState; b: Body }) {
   if (!b.inspiralAt || !isFinite(b.inspiralAt) || b.feeding) return null;
-  // around a star that never takes its worlds in, or once the date has passed without it, say nothing
-  if (!b.rogue && (NEVER_FEED.has(s.systems[b.systemId]?.primary.kind ?? 'void') || b.inspiralAt <= s.years)) return null;
+  // around a star that never takes its worlds in (in a game begun before 19 Oct, a brown dwarf or
+  // a black hole: physics.ts, NEVER_FEED), or once the date has passed without it, say nothing
+  const at = fallsInAt(s, b);
+  if (!b.rogue && (!isFinite(at) || at <= s.years)) return null;
   if (b.rogue) {
     const tip = 'Flung loose from its star, it drifts on its own: it has no star to fall into.';
     return (
@@ -646,11 +648,17 @@ function FallsInwardRow({ s, b }: { s: GameState; b: Body }) {
       </>
     );
   }
-  const tip = "When gravitational-wave orbital decay brings it to its dead star's tidal limit.";
+  const kind = s.systems[b.systemId]?.primary.kind;
+  const tip =
+    kind === 'black_hole'
+      ? 'When gravitational-wave orbital decay brings it close enough for the black hole’s tides to tear it apart.'
+      : kind === 'brown_dwarf'
+        ? 'When gravitational-wave orbital decay brings it to the brown dwarf’s tidal limit.'
+        : "When gravitational-wave orbital decay brings it to its dead star's tidal limit.";
   return (
     <>
       <dt data-tip={tip}>Falls inward</dt>
-      <dd class="mono">{formatYears(b.inspiralAt)}</dd>
+      <dd class="mono">{formatYears(at)}</dd>
     </>
   );
 }

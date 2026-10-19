@@ -699,6 +699,9 @@ export const EVENTS: EventDef[] = [
           ? 'Our models are confident: it will break up quickly and the dead star will rekindle, briefly and brilliantly.'
           : 'Our models are confident: it will be peeled away slowly, a stream feeding the dead star for trillions of years.'
         : 'Our astronomers disagree. Some models say the planet will be peeled away slowly over trillions of years. Others say it will break up fast and the dead star will blaze again, briefly.';
+      // a brown dwarf's world (in a game where they fall in: physics.ts, fallsInAt)
+      if (b && s.systems[b.systemId]?.primary.kind === 'brown_dwarf')
+        return `${b.name} has spiralled in to the brown dwarf it circles. Its tides are tearing the world apart, and the rubble rains onto the dwarf: a faint warmth, a hundredth of what a white dwarf would make of it, for trillions of years.`;
       return hw
         ? `Gravitational waves have finally drained the orbit of ${b?.name}, the world we were born on. It has reached its dead sun’s tidal limit. ${models} Either way, our birthworld is becoming the fuel that keeps its own dead sun faintly warm.`
         : `${b?.name} has spiralled in to the tidal limit of its dead star. ${models}`;

@@ -12,11 +12,20 @@ import { calendarEra } from '../../../src/game/fate';
 import { check, done } from '../lib';
 
 // stable matter, so worlds still circle the holes; holes evaporate by the calendar's Black Hole Age
-const s = newGame({ seed: 2360862, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-for (let g = 0; g < 900 && !s.civ.outcome && !(calendarEra(s) === 'blackhole' && s.eraTurn >= 3); g++) {
-  autoPlay(s, 'competent');
-  endTurn(s);
-}
+// (the first of these games the autoplayer takes there: as the rules change, which one does can)
+const reach = (seed: number) => {
+  const g = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
+  // as a game begun before 19 Oct: a world still bound to its hole at η 40 had long since fallen
+  // in otherwise (fall-in.ts), and this is about the hole's own end
+  delete g.flags.all_fall;
+  for (let t = 0; t < 900 && !g.civ.outcome && !(calendarEra(g) === 'blackhole' && g.eraTurn >= 3); t++) {
+    autoPlay(g, 'competent');
+    endTurn(g);
+  }
+  return g;
+};
+let s = reach(2360862);
+for (let k = 1; k <= 12 && !(calendarEra(s) === 'blackhole' && !s.civ.outcome); k++) s = reach(1000 + k * 7919);
 console.log(`  turn ${s.turn}, ${s.era}, η ${s.eta.toFixed(1)}, fate ${s.fate}`);
 const holes = Object.values(s.systems).filter((x) => x.primary.kind === 'black_hole' && !x.gone);
 const settledAt = (id: string) => Object.values(s.colonies).some((c) => c.systemId === id);
