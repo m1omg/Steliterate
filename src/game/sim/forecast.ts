@@ -1,8 +1,9 @@
 import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
-import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
+import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, fallsInAt, takesWorldsIn, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
-import { colonies, inItsSystem, protonFateKnown } from './util';
+import { colonies, hasCharter, inItsSystem, protonFateKnown } from './util';
+import { readsSwarms, swarmArrives, swarmSight } from './sight';
 import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
 import { computeMods } from './mods';
 import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf } from '../fate';
@@ -24,7 +25,7 @@ function tideTurnsTo(state: GameState, at: number, horizon: number): number {
 
 export function updateForecasts(state: GameState) {
   const out: Forecast[] = [];
-  const add = (f: Omit<Forecast, 'uid'>) => out.push({ ...f, uid: `${f.kind}:${f.systemId ?? ''}:${f.bodyId ?? ''}` });
+  const add = (f: Omit<Forecast, 'uid'>, key?: string) => out.push({ ...f, uid: key ?? `${f.kind}:${f.systemId ?? ''}:${f.bodyId ?? ''}` });
   const colonized = new Set(colonies(state).map((c) => c.systemId));
   const years = state.years;
   const horizon = calendarEra(state) === 'dusk' ? 60 : 40;
@@ -54,19 +55,29 @@ export function updateForecasts(state: GameState) {
     if (tideTurnsTo(state, ch.at, horizon) <= horizon) add(f);
   }
 
-  // worlds that will fall into dead stars
+  // worlds that will fall into their stars: around a star that takes its worlds in now (a dead
+  // star of ordinary matter; in a game begun since 19 Oct a brown dwarf or a black hole too), not
+  // one still burning, and never one that keeps them (until 19 Oct every star after the Dusk was
+  // taken for dead here, a brown dwarf's or a hole's worlds warned of and never falling)
   for (const c of colonies(state)) {
     const b = state.bodies[c.bodyId];
-    if (!b || !b.inspiralAt || b.feeding || b.rogue || b.dissolved) continue;
+    if (!b || b.feeding || b.rogue || b.dissolved) continue;
     const sys = state.systems[b.systemId];
-    const dead = ['white_dwarf', 'black_dwarf', 'neutron_star'].includes(sys.primary.kind) || calendarEra(state) !== 'dusk';
-    if (!dead || b.inspiralAt < years) continue;
-    if (tideTurnsTo(state, b.inspiralAt, horizon) > horizon) continue;
+    if (!takesWorldsIn(state, sys.primary.kind)) continue;
+    const at = fallsInAt(state, b);
+    if (!isFinite(at) || at < years) continue;
+    if (tideTurnsTo(state, at, horizon) > horizon) continue;
+    const hole = sys.primary.kind === 'black_hole';
+    const brown = sys.primary.kind === 'brown_dwarf';
     add({
       kind: 'inspiral',
-      title: `${b.name} will reach its dead star’s tidal limit`,
-      text: 'Gravitational waves are draining its orbit. The models disagree about what happens next.',
-      dueYears: b.inspiralAt,
+      title: hole ? `${b.name} will be torn apart by its black hole` : brown ? `${b.name} will reach its brown dwarf’s tidal limit` : `${b.name} will reach its dead star’s tidal limit`,
+      text: hole
+        ? 'Gravitational waves are draining its orbit. Far outside the horizon the hole’s tides will tear it apart, and it will be gone within the turn.'
+        : brown
+          ? 'Gravitational waves are draining its orbit. The dwarf’s tides will tear it apart, and the rubble will rain onto it, a faint warmth for trillions of years.'
+          : 'Gravitational waves are draining its orbit. The models disagree about what happens next.',
+      dueYears: at,
       bodyId: b.id,
       systemId: b.systemId,
       severity: 'warn',
@@ -172,11 +183,21 @@ export function updateForecasts(state: GameState) {
     });
   }
 
-  // swarms heading our way
+  // swarms heading our way, as far as we see them; Hunger Studies reads when they will come
+  // (sight.ts), and under the Communion Charter they come to join us (hunger.ts: commune)
+  const seen = swarmSight(state);
+  const reads = readsSwarms(state);
+  const communion = hasCharter(state, 'communion_charter');
   for (const sw of Object.values(state.swarms)) {
-    if (sw.tamed || !sw.to) continue;
+    if (sw.tamed || !sw.to || !seen(sw)) continue;
     if (!colonized.has(sw.to)) continue;
-    add({ kind: 'hunger', title: `A swarm is heading for ${state.systems[sw.to].name}`, text: 'It has smelled the heat of our settlement.', dueYears: Infinity, systemId: sw.to, severity: 'danger' });
+    const name = state.systems[sw.to].name;
+    add(
+      communion
+        ? { kind: 'hunger', title: `A swarm is coming to join us at ${name}`, text: 'Under the Communion Charter it will merge into our Lattice there, and its appetite will come with it (Taint).', dueYears: reads ? swarmArrives(state, sw) : Infinity, systemId: sw.to, severity: 'info' }
+        : { kind: 'hunger', title: `A swarm is heading for ${name}`, text: reads ? 'It has smelled the heat of our settlement. Hunger Studies reads its way: it arrives at the speed it crosses at now.' : 'It has smelled the heat of our settlement.', dueYears: reads ? swarmArrives(state, sw) : Infinity, systemId: sw.to, severity: 'danger' },
+      `hunger:${sw.id}`,
+    );
   }
 
   out.sort((a, b) => a.dueYears - b.dueYears);

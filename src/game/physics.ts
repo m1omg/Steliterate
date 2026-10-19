@@ -1,5 +1,5 @@
 import { STRUCTURE_BY_ID } from './data/structures';
-import { defaultWater, hawkingTime } from './gen';
+import { defaultWater, hawkingTime, inspiralTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
 import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from './fate';
 import { ERA_BY_ID } from './eras';
@@ -402,7 +402,8 @@ export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0
       return warmth(dwarfCoolingK(p, dwarfAge(p, years)), EMBER_K * Math.pow(emberShare(p, years, drawn), 0.25), rekindledK(p, dwarfRadius(p)), fromDecay(DECAY_K.dwarf), curved());
     case 'brown_dwarf':
       // its own cooling from its own age, and a few kelvin of dark matter while the halo lasts; curvature
-      return warmth(brownCoolingK(p, Math.max(0, years - formedAt(p))), BROWN_HALO_K * Math.pow(haloShare(years, drawn), 0.25), fromDecay(DECAY_K.brown), curvatureK(p.mass * SUN_KG, BROWN_R * SUN_M, BROWN_FADE_ETA) * curve);
+      // (and a world raining onto it, in a game where they do)
+      return warmth(brownCoolingK(p, Math.max(0, years - formedAt(p))), BROWN_HALO_K * Math.pow(haloShare(years, drawn), 0.25), fromDecay(DECAY_K.brown), curvatureK(p.mass * SUN_KG, BROWN_R * SUN_M, BROWN_FADE_ETA) * curve, rekindledK(p, BROWN_R));
     case 'neutron_star':
       // dark matter holds it near 900 K while the halo lasts, in the Dusk as after (its own heat
       // was long gone: about 100 K at a billion years with nothing to warm it)
@@ -516,14 +517,16 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       const own = brownCoolingK(p, Math.max(0, years - formedAt(p)));
       const halo = BROWN_HALO_K * Math.pow(haloShare(years, drawn), 0.25);
       const label =
-        era === 'dusk'
+        rek > 0
+          ? 'Brown dwarf, faintly warmed by a world raining onto it'
+          : era === 'dusk'
           ? 'Brown dwarf: a star that never ignited, cooling since it formed'
           : own >= Math.max(1, halo)
             ? 'Brown dwarf, long cold by any star’s measure, still giving off the last of the heat it formed with'
             : halo > 0
               ? 'Brown dwarf, nearly cold, faintly warmed by dark matter'
               : 'Brown dwarf gone cold';
-      return { light, label, temperatureK, alive: null };
+      return { light: light + rek, label, temperatureK, alive: null };
     }
     case 'neutron_star': {
       const light = era === 'dusk' ? 0.1 : era === 'degenerate' ? 0.25 * pulsarBeam(era, years) * (0.4 + 0.6 * gfe) : 0;
@@ -710,6 +713,22 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         }
       }
       const degenerate = p.kind === 'white_dwarf' || p.kind === 'black_dwarf' || p.kind === 'neutron_star';
+      const falls = takesWorldsIn(state, p.kind) ? fallsInAt(state, b) : Infinity;
+      // a black hole's tides tear the world apart far outside its horizon, and it is gone within
+      // the turn: a flare of a few years, nothing over a turn (no draw)
+      if (p.kind === 'black_hole' && to >= falls) {
+        b.dissolved = true;
+        b.vitality = 0;
+        notes.push({ systemId: sys.id, kind: 'plunge', bodyId: b.id });
+        continue;
+      }
+      // a brown dwarf's tear it apart outside it, and the rubble rains onto it, a faint warmth (no draw)
+      if (p.kind === 'brown_dwarf' && to >= falls) {
+        b.feeding = { start: Math.max(from, falls), tau: BROWN_FEED_TAU, base: BROWN_FEED_SHARE * Math.min(3, Math.max(0.3, b.massEarth)), model: 'feed', revealed: false };
+        b.vitality = 0;
+        notes.push({ systemId: sys.id, kind: 'feeding', bodyId: b.id });
+        continue;
+      }
       if (degenerate && b.inspiralAt && to >= b.inspiralAt && b.orbitAU > 0) {
         const jupiter = b.massEarth > 50;
         const rekindle = rand() < (jupiter ? 0.35 : 0.2);
@@ -905,8 +924,52 @@ function growHeart(p: Primary, dm: number) {
   p.spinMax = Math.max(p.spinMax, 40000 + p.mass / 2e6);
 }
 
-/** Stars whose worlds never fall in: only a dead star of ordinary matter pulls its worlds in (evolve, above). */
+/**
+ * Stars whose worlds never fall in, as games begun before 19 Oct have it: there only a dead star of
+ * ordinary matter pulls its worlds in (evolve, above). That was a bend: gravitational waves drain
+ * every orbit, whatever it circles. Since then (the player: "Yes, new games only") a new game
+ * carries `flags.all_fall`, and a brown dwarf and a black hole take their worlds in too
+ * (fallsInAt). Rogue worlds and the void never.
+ */
 export const NEVER_FEED: ReadonlySet<PrimaryKind> = new Set<PrimaryKind>(['brown_dwarf', 'black_hole', 'smbh', 'rogue', 'void']);
+
+/** Whether this game has brown dwarfs and black holes take their worlds in (a game begun since 19 Oct). */
+export function allFall(state: GameState): boolean {
+  return !!state.flags.all_fall;
+}
+
+/** Stars that take their worlds in now, by gravitational waves: a dead star of ordinary matter, and in a game begun since 19 Oct a brown dwarf or a black hole. */
+export function takesWorldsIn(state: GameState, kind: PrimaryKind): boolean {
+  if (kind === 'white_dwarf' || kind === 'black_dwarf' || kind === 'neutron_star') return true;
+  return (kind === 'brown_dwarf' || kind === 'black_hole') && allFall(state);
+}
+
+/**
+ * When a world reaches its star's tidal limit (years), as its star is or will become (a burning
+ * star's worlds by its white dwarf's date, as ever); Infinity if never. A brown dwarf's and a black
+ * hole's by the orbit's own decay with the star's true mass (the date drawn at the start floored
+ * that at a tenth of a Sun, and a Well's or the Wanderer's was drawn before its mass was set).
+ */
+export function fallsInAt(state: GameState, b: Body): number {
+  if (b.kind === 'deep' || b.rogue || b.dissolved || !(b.orbitAU > 0) || !b.inspiralAt) return Infinity;
+  const p = state.systems[b.systemId]?.primary;
+  if (!p) return Infinity;
+  if (NEVER_FEED.has(p.kind)) {
+    if (!takesWorldsIn(state, p.kind)) return Infinity;
+    return ERA_BY_ID.dusk.startYears + inspiralTime(b.orbitAU, b.massEarth, p.mass);
+  }
+  return b.inspiralAt;
+}
+
+/**
+ * What a world raining onto a brown dwarf gives it, beside what it would give a white dwarf: the
+ * warmth of infall is GM/R, and a brown dwarf (0.05 of a Sun, a tenth of its size) has about a
+ * 120th of a white dwarf's (0.6 of a Sun, a hundredth of its size). Its tides tear the world
+ * apart outside it (the Roche limit, some 0.003 AU), and the rubble rains in over 10^14.8 years:
+ * the middle of what a white dwarf takes, fixed, so no draw. A brown dwarf never rekindles.
+ */
+export const BROWN_FEED_SHARE = 0.008;
+export const BROWN_FEED_TAU = Math.pow(10, 14.8);
 
 /** When will this system's star next change? (for forecasts) */
 export function nextStellarChange(sys: StarSystem, years: number): { at: number; what: string } | null {

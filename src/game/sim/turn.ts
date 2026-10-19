@@ -9,7 +9,7 @@ import { theLongFlow } from './flow';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
 import { feedBeacons } from './beacons';
-import { spareYield } from './spare';
+import { spareYield, type SpareYield } from './spare';
 import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
@@ -38,7 +38,7 @@ export interface TurnResult {
 }
 
 /** Industry drives the build queue; leftover goes to the settlement's spare work. Returns the insight it made. */
-function applyIndustry(state: GameState, c: Colony, industry: number, energyMade: number, mods: Mods): number {
+function applyIndustry(state: GameState, c: Colony, industry: number, energyMade: number, mods: Mods): SpareYield {
   let left = Math.max(industry, c.queue[0] && c.queue[0].progress >= c.queue[0].cost - 0.01 ? 0.01 : 0);
   let guard = 0;
   while (left > 0 && c.queue.length && guard++ < 8) {
@@ -85,12 +85,10 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
     }
   }
   void mods;
-  if (!(left > 0) || c.queue.length || state.civ.dormant) return 0;
+  if (!(left > 0) || c.queue.length || state.civ.dormant) return { matter: 0, energy: 0, insight: 0, resolve: 0 };
   const y = spareYield(state, c, left, energyMade);
-  state.civ.matter += y.matter;
-  state.civ.energy += y.energy;
   if (y.resolve) state.civ.resolve = clamp(state.civ.resolve + y.resolve, 0, 100);
-  return y.insight;
+  return y;
 }
 
 /** After the Last Light a world's core heat keeps this share of itself each turn: half is gone in three turns, nearly all of it in eighteen. */
@@ -273,7 +271,12 @@ export function endTurn(state: GameState): TurnResult {
       // (a lifter left behind by a world flung loose lifts nothing, and drains nothing)
       if (d?.gfeDrain && n && !leftBehind(state, c, d)) state.gfe = Math.max(0.05, state.gfe - d.gfeDrain * n * ctx.paceFactor);
     }
-    insight += applyIndustry(state, c, t.y.industry, t.y.energy, mods);
+    // spare work's yields count in the turn's own (and so in the energy net it reports: until
+    // 19 Oct they went straight into the stores, unreported)
+    const spare = applyIndustry(state, c, t.y.industry, t.y.energy, mods);
+    insight += spare.insight;
+    eIn += spare.energy;
+    mIn += spare.matter;
   }
   eIn += jointIncome(state) * ctx.paceFactor;
   eOut += researchDraw(state, insight);
@@ -387,11 +390,13 @@ export function endTurn(state: GameState): TurnResult {
       if (c.pops.lattice < capc.lattice && civ.matter >= 4) c.growth.lattice += 0.35;
     }
     for (const t of THREADS) {
-      if (c.growth[t] >= 1) {
+      // a grown point becomes a person where there is room, and is paid for then; without room it
+      // waits, unpaid (until 19 Oct it was paid for and lost)
+      if (c.growth[t] >= 1 && (c.pops[t] < capc[t] || (t === 'kin' && c.pops.kin === 0))) {
         c.growth[t] -= 1;
         if (t === 'lattice') civ.matter -= 3;
         if (t === 'echoes') civ.energy -= 3;
-        if (c.pops[t] < capc[t] || (t === 'kin' && c.pops.kin === 0)) c.pops[t]++;
+        c.pops[t]++;
       }
       if (c.pops[t] > capc[t] && !(t === 'kin' && capc.kin === 0 && c.pops.kin <= 0)) {
         c.pops[t]--;
@@ -617,11 +622,13 @@ function handleNotes(state: GameState, notes: EvolutionNote[]) {
       case 'plunge':
         if (n.bodyId) {
           const b = state.bodies[n.bodyId];
+          // (into a black hole all at once: its tides tore the world apart, physics.ts)
+          const hole = sys.primary.kind === 'black_hole';
           if (b?.colonyId) {
             const c = state.colonies[b.colonyId];
-            if (c) evacuate(state, c, 'its world finished falling into its star');
+            if (c) evacuate(state, c, hole ? 'its world was torn apart by the black hole' : 'its world finished falling into its star');
           }
-          if (seen) log(state, `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
+          if (seen) log(state, hole ? `${b?.name} was torn apart by the black hole at ${sys.name} and fell in: one flash, then nothing.` : `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
           state.civ.energy += colonized.has(sys.id) ? 20 : 0;
         }
         break;

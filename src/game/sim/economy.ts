@@ -20,6 +20,12 @@ export interface TurnContext {
 
 export type Capacity = Record<ThreadId, number> & { cryo: number };
 
+/** What was paid in matter is paid in energy once no ordinary matter is left, at this many energy a unit (as construction is: actions.ts). */
+export const MATTER_AS_ENERGY = 1.5;
+
+/** The Long Record's accord, at each settlement awake, a turn (its description: "+1 Accord per settlement"). */
+export const LONG_RECORD_ACCORD = 1;
+
 export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number {
   const b = state.bodies[c.bodyId];
   if (!b || b.dissolved) return 0;
@@ -115,6 +121,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   const watch = flowNow && keeping(c, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor)) === 'watched' ? FLOW_WATCH : 1;
   // machines and sleepers run for the whole of a slowed turn; only minds can slow themselves down
   const slowTime = Math.max(1, pf);
+  const noMatter = matterGone(state);
   for (const t of THREADS) {
     const n = c.pops[t];
     const s = strainFor(t, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor));
@@ -126,14 +133,21 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const ind = n * d.industry * o;
     const ins = n * d.insight * o;
     const acc = n * d.accord * o;
-    const eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1);
-    const mUp = n * d.matterUpkeep * upkeepScale;
+    let eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1);
+    let mUp = n * d.matterUpkeep * upkeepScale;
+    // with no ordinary matter left, its repairs are paid in energy, as building is (until 19 Oct
+    // they were still asked in matter, and a Lattice wore out each turn for want of it)
+    const mended = noMatter && mUp > 0;
+    if (mended) {
+      eUp += mUp * MATTER_AS_ENERGY;
+      mUp = 0;
+    }
     industry += ind;
     insight += ins;
     accord += acc;
     energyUpkeep += eUp;
     matterUpkeep += mUp;
-    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
+    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}${mended ? ' (repairs in energy: no matter is left)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
   }
   if (c.cryo > 0) {
     const cu = c.cryo * 0.08 * (flags.has('charter:cold_sleep_lottery') ? 0.5 : 1) * slowTime;
@@ -259,7 +273,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   industry *= ctx.mods.industryMult * focusMul(c, 'industry');
   insight *= ctx.mods.insightMult * focusMul(c, 'insight');
   accord *= focusMul(c, 'accord');
-  if (flags.has('charters')) accord += dormant ? 0 : 0.25;
+  // The Long Record: an honest account kept at every settlement, +1 accord each, as it says
+  if (flags.has('charters') && !dormant) {
+    accord += LONG_RECORD_ACCORD;
+    lines.push({ label: 'The Long Record', accord: LONG_RECORD_ACCORD });
+  }
 
   const y: YieldBreakdown = {
     energy,
