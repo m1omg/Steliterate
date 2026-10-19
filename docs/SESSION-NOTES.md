@@ -771,6 +771,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     The container restarted mid-way (the suites and servers stopped, the trees kept); the plan to
     finish was approved with "All good but pls also do a .MD for handover": `HANDOVER.md` was
     rewritten from the ground up on 16 Oct, as of `main` at PR #33 and `next` after the check.
+  - 19 Oct: "Make a comprehensive full summary of this game for an AI agent to replicate."
+    Asked, they chose today's game (the main address), the spoilers in a sealed section at the end
+    ("Sealed section at the end"), a full spec rather than an open brief, and the repository as
+    its place. Written as `docs/REPLICATE.md`: about 78,000 words, every number read from the code
+    of `4b92446` (about 30 spot-checked by hand), its data tables generated from the data files,
+    and no spoiler above its sealed section (searched for every ending title and stranger mind).
   - Next: the player's word on Firefox now, the films' second cut and the open threads
     (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from

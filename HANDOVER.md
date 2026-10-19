@@ -55,6 +55,10 @@ last.
    - "Balance reference".
 6. `docs/CHANGELOG.md`, the last entries (the newest at the end), and `docs/DESIGN.md` when a
    rule's intent matters.
+7. `docs/REPLICATE.md` (19 Oct), when you need today's game (`main` at `4b92446`) in full: every
+   rule, number and formula read from its code, the interface, the sound, the assets and the
+   checks, written for another agent to rebuild it. Its last section is sealed: the stranger
+   minds, the Lattice's story and the endings.
 
 ## 3. Where things stand (16 Oct)
 
