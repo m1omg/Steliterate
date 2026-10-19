@@ -777,6 +777,16 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     its place. Written as `docs/REPLICATE.md`: about 78,000 words, every number read from the code
     of `4b92446` (about 30 spot-checked by hand), its data tables generated from the data files,
     and no spoiler above its sealed section (searched for every ending title and stranger mind).
+  - 19 Oct, then: "what are those things? In regular version or /next?", of the places the spec
+    found where the game's text promised one thing and its code did another. All were in both
+    versions. Asked, they chose to fix them in both ("Both versions"), the code made to keep each
+    promise ("Code matches the text"), and the step of a hidden storyline that could not be
+    reached made reachable without being told how ("Make it reachable"; docs/spoilers). Asked what
+    the leftover ship discount was ("wdym?": a charter the code named and the book never had) and
+    whether worlds merging with black holes and brown dwarfs is feasible (it is: gravitational
+    waves drain every orbit; only the game kept them apart), they chose "Yes, new games only" and
+    "Make the charter"; and for the rules no text told of, "Fix the bugs, document the rest". The
+    harder numbers for each are in CHANGELOG (19 Oct).
   - Next: the player's word on Firefox now, the films' second cut and the open threads
     (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from

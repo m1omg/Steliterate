@@ -420,6 +420,47 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
+- **The game keeps its word** (19 Oct, both versions; CHANGELOG, "The game keeps its word"):
+  where a text promised what the code did not do, the code now does it.
+  - The Long Record: `LONG_RECORD_ACCORD` (`economy.ts`, `colonyTurn`, its own yield line).
+  - What we see of the Hunger: `src/game/sim/sight.ts`. `swarmSight(state)` (a test for one
+    swarm, the eyes worked out once): an awake swarm at a star we know; one under way within
+    `watchEyes` (`fleets.ts`: settlements, Shared Watch stars, ships stopped, as
+    `updateDetection` charts with); with Hunger Studies (`readsSwarms`) a sleeping one in range;
+    always one under our command. `swarmArrives` (years: the rest of its leg at `swarmSpeed`,
+    0.05 c in the Dusk, 0.5 c after, the same `updateHunger` steps with); `nearestSwarmSeen`
+    (moved here from `util.ts`) and `nestSeenAt` (the "nest asleep" chip). The map
+    (`galaxyView.ts`, `syncSwarms`): `aSleep` dims and slows a sleeping swarm's motes;
+    `swarmLines` (public, for the checks) the ways, with the tech. The `hunger` forecast is keyed
+    `hunger:<swarm id>`, dated with the tech. `swarmSeenAt`, which the autoplayer reads, is as it
+    was: nothing here moves a game.
+  - Communion: `commune` in `updateHunger` (on arrival, and for one already sitting there), and
+    `foldIn` (shared with `absorbSwarm`); `COMMUNION_TAINT` 8; `firstSwarm` spares a ship under
+    it. No draw: only games under the charter change, and the autoplayer never takes it.
+  - Harsh: `HARSH_CROSSING` 1.25. The new version: `crossingHarm(state, era)` (`crossing.ts`) at
+    each crossing's losses, and `CARRIED` divided by it; `protocolsMult` alone stays for the
+    Passage, the Thinning and the collapse. Today's game: `harshness(state)` in `runCrossing`'s
+    and `greatEvaporation`'s `crossingMult`, and the carried share.
+  - Falls into brown dwarfs and black holes: `state.flags.all_fall` (set by `generateWorld`, no
+    draw), `allFall`, `takesWorldsIn`, `fallsInAt` (`physics.ts`), read by `evolveUniverse`, the
+    `inspiral` forecast, `lastsUntil` and `FallsInwardRow`. A brown dwarf's world feeds it
+    (`BROWN_FEED_SHARE` 0.008 of a white dwarf's warmth, `BROWN_FEED_TAU` 10^14.8 years, model
+    `feed`, no draw; `rekindledK` at `BROWN_R` in its temperature, `rek` in its light); a black
+    hole's is `dissolved` at once with a `plunge` note (the turn evacuates it). `NEVER_FEED` is
+    the old rule, for games without the flag.
+  - Spare work in the figures: `applyIndustry` (`turn.ts`) returns the `SpareYield`, counted into
+    the turn's `eIn`/`mIn`; `spareLeft(c, industry)` (`projection.ts`) for the coming turn.
+  - Growth paid only with room (`growth`, exported for `unit/unwritten`, in the new version; inline
+    in `endTurn` in today's game); a met demand never lowers a standing above 80 (`society.ts`).
+  - Today's game only: once matter is gone, matter upkeep is paid in energy (`MATTER_AS_ENERGY`
+    1.5 in its `economy.ts`), as the new version had done since part 3.
+  - The Expansion Mandate (`charters.ts`; its effect was always in `buildCost`). The energy
+    reading's `.hazard-edge` (`styles.css`). The vault's text in a Deep. The hidden step:
+    `docs/spoilers/slow-ones.md` (spoilers).
+  - Checks: `unit/promises`, `unit/fall-in`, `unit/unwritten`, `unit/slow-ones`,
+    `browser/hunger-sight`; `unit/late-sky` and `unit/evap` for both fall-in rules; `unit/evap`
+    and (new version) `unit/ways` find the first of a few seeds the autoplayer takes to the Black
+    Hole Age, as the rules move which one does.
 - **One rulebook** (13 Oct, the new version's part 2a-0; CHANGELOG, "One rulebook"): every
   civilization plays the same game, each its part of every step of the turn under its own
   perspective. Nothing changes in play with one civilization; part 2a gives the others a Civ.

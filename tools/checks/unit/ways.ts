@@ -164,7 +164,9 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
 
 // ---------------------------------------------------------------- spin, a commons
 {
-  const s = play(1000, (g) => calendarEra(g) === 'blackhole');
+  // (the first of these games the autoplayer takes there: as the rules change, which one does can)
+  let s = play(1000, (g) => calendarEra(g) === 'blackhole');
+  for (let k = 1; k <= 12 && !(calendarEra(s) === 'blackhole' && !s.civ.outcome); k++) s = play(1000 + k * 7919, (g) => calendarEra(g) === 'blackhole');
   check(calendarEra(s) === 'blackhole', `a stable game in the Black Hole Age (η ${s.eta.toFixed(1)})`);
   const sv = only(s, 'upload');
   const hole = Object.values(s.systems).find((x) => !x.gone && x.primary.kind === 'black_hole' && x.primary.spin > 10)!;
