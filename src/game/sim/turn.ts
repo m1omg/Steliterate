@@ -13,7 +13,7 @@ import { spareYield, type SpareYield } from './spare';
 import { coolAccord } from './accord';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
-import { queueEvent, rollRandomEvent } from './events';
+import { pruneFinds, queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
@@ -479,6 +479,8 @@ export function endTurn(state: GameState): TurnResult {
   clearStarClock(state);
 
   // ------------------------------------------------ 8. signals, forecasts, events
+  // a find about a world the universe has just changed is dropped (events.ts)
+  pruneFinds(state);
   result.arrived = deliverSignals(state);
   for (const s of result.arrived) {
     // a pact's answer: sealed, or our accord back

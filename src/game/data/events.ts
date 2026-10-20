@@ -4,7 +4,7 @@ import { capital, colonies, hasCharter, hasTech, log, popsOf, threadTotals, uid 
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime, sup } from '../eras';
-import { SURFACE_LIFE, boilingAway, embersOutEta, haloEta, haloMoved, siphonsRunning, steamWorld } from '../physics';
+import { SURFACE_LIFE, boilingAway, buriedOcean, embersOutEta, haloEta, haloMoved, siphonsRunning, steamWorld } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
@@ -1006,6 +1006,15 @@ export interface AnomalyDef {
 }
 
 const sysOf = (s: GameState, b: Body) => s.systems[b.systemId];
+/** The worlds still bound to a star in a world's system: not the Deep, not gone or flung loose, and only around a star. */
+const boundWorlds = (s: GameState, b: Body) => {
+  const sys = sysOf(s, b);
+  if (!sys || sys.primary.kind === 'rogue' || sys.primary.kind === 'void') return 0;
+  return sys.bodies.filter((id) => {
+    const x = s.bodies[id];
+    return !!x && x.kind !== 'deep' && !x.dissolved && !x.rogue;
+  }).length;
+};
 /**
  * The mass of a black hole finishing its Hawking evaporation at this age: about 5 × 10^11 kg at
  * 13.8 billion years (Carr et al. 2010), the lifetime going as the mass cubed.
@@ -1021,7 +1030,10 @@ export const ANOMALIES: AnomalyDef[] = [
     id: 'vent_life',
     name: 'Vent life',
     tip: 'Chemosynthetic life around hydrothermal vents in a buried ocean.',
-    fits: (s, b) => (b.kind === 'ocean_ice' || b.traits.includes('subsurface_ocean')) && !b.colonyId && !steamWorld(s, b),
+    // a buried ocean that is liquid, as the Water row says (around a star, not frozen through, not
+    // a world flung loose or in a starless Drift: buriedOcean), and not a world falling into its star
+    // (16 Oct, the player: "a sub-ice geothermally driven life event... about a planetless system")
+    fits: (s, b) => buriedOcean(s, b) && !b.feeding && !b.colonyId && !steamWorld(s, b),
     event: {
       title: 'Life Under the Ice',
       text: (s, d) =>
@@ -1176,7 +1188,9 @@ export const ANOMALIES: AnomalyDef[] = [
     id: 'resonance',
     name: 'Tidal resonance',
     tip: 'Locked in an orbital resonance with its neighbours: the flexing heats its interior.',
-    fits: (s, b) => ['ice', 'ocean_ice', 'eyeball', 'terran', 'super_earth'].includes(b.kind) && sysOf(s, b).bodies.length >= 4,
+    // (four worlds around a star, itself among them: the Deep counted as one until 20 Oct, so three
+    // drifting worlds in a starless Drift would do)
+    fits: (s, b) => ['ice', 'ocean_ice', 'eyeball', 'terran', 'super_earth'].includes(b.kind) && !b.rogue && !b.feeding && boundWorlds(s, b) >= 4,
     event: {
       title: 'Kept Warm by Its Neighbours',
       text: (s, d) =>
@@ -1212,5 +1226,6 @@ export const ANOMALIES: AnomalyDef[] = [
 
 // discoveries are events too (queued by the survey, never rolled at random)
 EVENTS.push(...ANOMALIES.map((a): EventDef => ({ id: `anom_${a.id}`, art: `finds/${a.id}`, ...a.event })));
+export const ANOMALY_BY_ID: Record<string, AnomalyDef> = Object.fromEntries(ANOMALIES.map((a) => [a.id, a]));
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

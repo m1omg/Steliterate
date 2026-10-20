@@ -2140,3 +2140,71 @@ player answered (the plan is on the new version's branch,
 - **Validated:** tsc and the build clean; the playtest passes; savecompat on the 6 saves; all 55
   unit checks; all 55 browser checks, in the game's real fonts (`browser/rubble` counts the belt's
   rocks: this game has no survey reveal to keep the count for it).
+
+## Finds where they can be, and one sea for the text and the picture (20 Oct, both versions)
+
+From the player's list of 16 Oct, items 7, 1 and 6: "I think I got a sub-ice geothermally driven
+life event...about a planetless system, once, unsure."; "Should show open terminator seas."; and
+"„All frozen“ water and cold but with visible seas?" The plan of 19 Oct (part C) had the causes.
+Both versions, the same code.
+
+- **Life Under the Ice only under real ice.** Every ice-shelled ocean is made with a buried ocean,
+  the starless Drifts' too, and the find asked no more: in forty galaxies it fitted 178 worlds in
+  Drifts whose Water row says "frozen through" at a few kelvin (seed 7's Drift 5167 II among
+  them). It now asks for a buried ocean the Water row calls liquid (`buriedOcean`: around a star,
+  not in a Drift, not on a world flung loose, not frozen through), on a world not falling into its
+  star: none in the Drifts, 794 worlds around stars as before.
+- **A find about a world that changed is dropped.** The survey finds things as ships arrive,
+  before the universe moves on in that same turn, which can tear the world apart, swallow it,
+  fling it loose or boil it, and a waiting find was never looked at again. Now, once the universe
+  has moved, a waiting find whose world no longer fits it is dropped: the world loses its mark,
+  and the find can still be made elsewhere. The survey offers nothing about a world already
+  falling into its star. Worlds flung loose stay among its candidates (the plan left them out, but
+  Warm in the Dark is found only on them).
+- **Kept Warm by Its Neighbours** counted the Deep as a neighbour, so three worlds drifting in a
+  Drift would do (181 in forty galaxies). It counts the worlds bound to a star: none in the
+  Drifts, and a world needs three real neighbours (2,704 worlds still fit; 1,469 with only two no
+  longer do).
+- **One sea for the Water row and the picture.** The picture drew seas by rules of its own: an
+  eyeball's by a ramp from 150 to 240 K and by its vitality, an ice world's from 263 K, a
+  super-Earth's never. So a world the row called all frozen showed open seas (item 6: an eyeball
+  at 95 to 224 K around a star just dead), and a hot locked super-Earth whose row read "open water
+  along the terminator" was bare rock (item 1). Now one band, `seaBand`, gives both:
+  - Under its star a locked world's ground is at its day side's figure, its warmest; away from it,
+    as warm as the starlight falling there keeps it, T_day·f^¼, f the sine of the star's height
+    (local radiative balance), and never colder than its night side. Water is liquid from 273 to
+    373 K: ice where colder, boiled off where hotter.
+  - The Water row reads it as before, and says when a sea under the star covers less than half of
+    the day side: "a small open sea under its star, ice all round it" (240 of the 446 such seas in
+    twenty galaxies). Our homeworld reads as it did: its sea reaches out to where its star stands
+    20° up.
+  - The picture draws it: open sea where liquid (in the low ground, as far as the water reaches,
+    on a super-Earth and on rock given an atmosphere too), ice where colder, a pale crust of salt
+    where boiled. Life colours the land only: a world that has died keeps its sea while it is warm,
+    its land grey. A veil of steam only where all of a world's water has boiled (thinner the less
+    there was); where part of the world is cooler, the water has gone there, and the hot ground
+    lies bare. A world with air is lit a little past its terminator, so the seas of its twilight
+    are not black. The thermal view and the lava follow the same profile.
+  - The worlds of the two pictures: the super-Earth at 178 to 480 K shows ice on its night side,
+    open sea where its star stands 6° to 21° up and salt flats beyond; the eyeball at 95 to 224 K
+    is all ice. A hot eyeball (an ice world at 150 to 420 K) shows its ring of sea round a bare,
+    boiled day side, no longer under steam.
+  - Where it bends physics: a world's air and seas carry heat from under its star toward the
+    terminator and flatten that profile; the game takes the day side's figure as the warmest
+    ground and lets the starlight alone shape the rest.
+- **Checks:** `unit/finds` (each wrong path: the Drifts, a world flung loose, one falling, the
+  survey, a find whose world changed, and the same in a whole turn; on the code before it fails 12
+  of its 14 steps, the other two being the controls), `unit/seas` (over 8,878 climates the band is
+  where the ground is 273 to 373 K, its edges where it crosses them, and the row names it; the
+  pictures' two worlds; the homeworld; every world with water in twenty galaxies). `unit/fates`
+  now plays the next seed when the autoplayer's game ends before the moment it checks, or crosses
+  it in a turn too long to show it, as the new version's does: its seed-1000 games now end early.
+- **Balance** (300 standard competent games: survive / victories / Degenerate Age turns): 165 / 77
+  / 70 (149 / 80 / 72 before). The finds' tests change which find a survey turns up, and so nearly
+  every game from its first finds on (36 of 300 play out as before); at Harsh 150 / 59 / 71 (154 /
+  58 / 68 before; 43 the same). Within the noise. By fate: decay 67 / 148, stable 63 / 81,
+  curvature 35 / 71.
+- **Validated:** tsc and the build clean; the playtest passes; savecompat on the 6 saves; all 57
+  unit checks; all 55 browser checks in the real fonts (`a11y` failed once with two suites running
+  at once and passes alone). `browser/fates` now plays the harness's seeds in turn for every fate,
+  as the new version's does, and takes up to twenty turns at the Tide to reach a crossing.

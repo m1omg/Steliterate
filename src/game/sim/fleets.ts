@@ -157,7 +157,8 @@ export function survey(state: GameState, systemId: string) {
   withRng(state, (rng) => {
     if (!rng.chance(0.3)) return;
     const found = new Set(ANOMALIES.map((a) => a.id));
-    const worlds = sys.bodies.map((id) => state.bodies[id]).filter((b) => b && !b.dissolved && !b.traits.some((t) => found.has(t)));
+    // (not a world already falling into its star: what was there to find is coming apart)
+    const worlds = sys.bodies.map((id) => state.bodies[id]).filter((b) => b && !b.dissolved && !b.feeding && !b.traits.some((t) => found.has(t)));
     const options: { b: Body; id: string }[] = [];
     for (const b of worlds) for (const a of ANOMALIES) if ((state.fired[`anom_${a.id}`] ?? 0) < 2 && a.fits(state, b)) options.push({ b, id: a.id });
     if (!options.length) return;
