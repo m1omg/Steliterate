@@ -150,6 +150,9 @@ const answer = (s: GameState, kind: string, choice: string) => {
   for (let i = 0; i < 40 && !tried; i++) {
     sv.lastSent = -99;
     sv.health = 0.1;
+    // (their clock drifts toward their own at each call, and the turn does not move on here: kept
+    // in step with ours, so that each try is one they can make, whatever the draws before it gave)
+    sv.clock = voiceClock(s, logTurnLength(turnStep(s)));
     theirTurn(s);
     tried = s.signals.some((x) => x.kind === 'raid');
   }

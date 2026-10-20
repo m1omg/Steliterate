@@ -620,12 +620,17 @@ export interface EvolutionNote {
     | 'evaporated'
     | 'dissolved'
     | 'boiled'
-    | 'faded';
+    | 'faded'
+    | 'flash';
   bodyId?: string;
   /** (boiled) inside a giant's own radius, rather than boiled by its light */
   swallowed?: boolean;
   /** (evaporated) the worlds the hole still held until its final burst set them loose */
   held?: string[];
+  /** (plunge) gone in a flash: the `flash` note after it says what the flash did */
+  inFlash?: boolean;
+  /** (flash) the world `bodyId` falling in, in a game begun since 20 Oct (`flashSystem`) */
+  flash?: FlashNote;
 }
 
 /** Advance every primary and body to cosmic year `to` (from `from`). Returns what happened. */
@@ -690,6 +695,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         const k = b.feeding.model === 'rekindle' ? 8 : 1;
         const power = b.feeding.base * k * Math.pow(1 + t / b.feeding.tau, -2);
         rek += power;
+        // a ring of rubble thins as it rains in: what is left of it, 1/(1 + t/τ) (breakUp)
+        if (b.traits.includes('rubble')) b.richness *= (1 + Math.max(0, from - b.feeding.start) / b.feeding.tau) / (1 + t / b.feeding.tau);
         if (t > 30 * b.feeding.tau) {
           b.dissolved = true;
           notes.push({ systemId: sys.id, kind: 'plunge', bodyId: b.id });
@@ -714,32 +721,54 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
       }
       const degenerate = p.kind === 'white_dwarf' || p.kind === 'black_dwarf' || p.kind === 'neutron_star';
       const falls = takesWorldsIn(state, p.kind) ? fallsInAt(state, b) : Infinity;
+      // (in a game begun since 20 Oct a world comes apart by what it is made of: rubbleGame)
+      const rubble = rubbleGame(state);
       // a black hole's tides tear the world apart far outside its horizon, and it is gone within
-      // the turn: a flare of a few years, nothing over a turn (no draw)
+      // the turn: a flare of a few years, nothing over a turn (no draw). Since 20 Oct its flash is
+      // caught: a rocky world's faint, a giant's at the hole's limit
       if (p.kind === 'black_hole' && to >= falls) {
         b.dissolved = true;
         b.vitality = 0;
-        notes.push({ systemId: sys.id, kind: 'plunge', bodyId: b.id });
+        notes.push({ systemId: sys.id, kind: 'plunge', bodyId: b.id, ...(rubble ? { inFlash: true } : {}) });
+        if (rubble) flashSystem(state, sys, b, giantWorld(b) ? giantFlash(p, b) : rubbleFlash(b), notes);
         continue;
       }
-      // a brown dwarf's tear it apart outside it, and the rubble rains onto it, a faint warmth (no draw)
+      // a brown dwarf's tear it apart outside it, and the rubble rains onto it, a faint warmth (no
+      // draw); since 20 Oct a giant's gas pours onto it in a flash
       if (p.kind === 'brown_dwarf' && to >= falls) {
-        b.feeding = { start: Math.max(from, falls), tau: BROWN_FEED_TAU, base: BROWN_FEED_SHARE * Math.min(3, Math.max(0.3, b.massEarth)), model: 'feed', revealed: false };
         b.vitality = 0;
+        if (rubble && giantWorld(b)) {
+          b.dissolved = true;
+          notes.push({ systemId: sys.id, kind: 'plunge', bodyId: b.id, inFlash: true });
+          flashSystem(state, sys, b, giantFlash(p, b), notes);
+          continue;
+        }
+        b.feeding = { start: Math.max(from, falls), tau: BROWN_FEED_TAU, base: BROWN_FEED_SHARE * Math.min(3, Math.max(0.3, b.massEarth)), model: 'feed', revealed: false };
+        if (rubble) breakUp(b, to);
         notes.push({ systemId: sys.id, kind: 'feeding', bodyId: b.id });
         continue;
       }
       if (degenerate && b.inspiralAt && to >= b.inspiralAt && b.orbitAU > 0) {
         const jupiter = b.massEarth > 50;
         const rekindle = rand() < (jupiter ? 0.35 : 0.2);
+        const tau = jupiter ? 1e13 : Math.pow(10, 14.2 + rand() * 1.2);
+        b.vitality = 0;
+        // since 20 Oct a giant goes in a flash, in place of its feeding (both draws are still
+        // made, so every later one stays where it was)
+        if (rubble && giantWorld(b)) {
+          b.dissolved = true;
+          notes.push({ systemId: sys.id, kind: 'plunge', bodyId: b.id, inFlash: true });
+          flashSystem(state, sys, b, giantFlash(p, b), notes);
+          continue;
+        }
         b.feeding = {
           start: Math.max(from, b.inspiralAt),
-          tau: jupiter ? 1e13 : Math.pow(10, 14.2 + rand() * 1.2),
+          tau,
           base: (jupiter ? 5 : 1) * Math.min(3, Math.max(0.3, b.massEarth / (jupiter ? 318 : 1))),
           model: rekindle ? 'rekindle' : 'feed',
           revealed: false,
         };
-        b.vitality = 0;
+        if (rubble) breakUp(b, to);
         notes.push({ systemId: sys.id, kind: rekindle ? 'rekindle' : 'feeding', bodyId: b.id });
       }
     }
@@ -970,6 +999,210 @@ export function fallsInAt(state: GameState, b: Body): number {
  */
 export const BROWN_FEED_SHARE = 0.008;
 export const BROWN_FEED_TAU = Math.pow(10, 14.8);
+
+// ------------------------------------------------------------ falling worlds (since 20 Oct)
+
+/**
+ * In a game begun since 20 Oct (the player, 19 Oct: "make the black hole flashes harvestable", a
+ * falling world "should then break up into asteroids and eventually be… accreted"), a world that
+ * reaches its star's tidal limit comes apart by what it is made of (`evolveUniverse`):
+ * - rock or ice becomes a ring of rubble at the limit (`breakUp`). Nothing makes rubble viscous,
+ *   so it is ground down and rains onto the star as slowly as ever, Disk Skimmers harvesting it
+ *   and mines working it; into a black hole all of it within the turn, a faint flash
+ *   (`rubbleFlash`);
+ * - a giant becomes a ring of gas, which drains in years to centuries, faster than the star can
+ *   take it in: the star shines at its limit until the gas is gone (`giantFlash`), melting what is
+ *   close, boiling the nearest small worlds away and filling Burst Catchers far off.
+ * Set without a draw when the galaxy is made (gen.ts). Older games keep the rule they began with.
+ */
+export function rubbleGame(state: GameState): boolean {
+  return !!state.flags.rubble;
+}
+
+/** A gas or ice giant: it falls in as gas, in a flash. */
+export function giantWorld(b: Body): boolean {
+  return b.kind === 'gas_giant' || b.kind === 'ice_giant';
+}
+
+const G = 6.674e-11;
+const AU_M = 1.496e11;
+const SUN_W = 3.828e26;
+/**
+ * The Eddington luminosity, in Suns per Sun of mass: the brightest anything can shine on what
+ * falls onto it, its light pushing on the gas as hard as gravity pulls (ionised hydrogen).
+ */
+export const EDDINGTON_SUNS = 3.2e4;
+/**
+ * The share of its mass-energy that what falls into a black hole gives off (6 to 42% by its spin)
+ * or onto a neutron star (GM/Rc², about 0.15): a tenth for both here.
+ */
+export const COMPACT_EFFICIENCY = 0.1;
+
+/** The share of its mass-energy that what falls onto this star gives off: a tenth at a black hole or a neutron star, GM/(Rc²) onto a white dwarf (about 10^-4) or a brown dwarf (about 10^-6). */
+export function fallEfficiency(p: Primary): number {
+  if (p.kind === 'black_hole' || p.kind === 'smbh' || p.kind === 'neutron_star') return COMPACT_EFFICIENCY;
+  const r = p.kind === 'brown_dwarf' ? BROWN_R : dwarfRadius(p);
+  return (G * Math.max(0.01, p.mass) * SUN_KG) / (r * SUN_M * C2);
+}
+
+/** A flash as a world falls in: its energy (J), its brightness while it lasts (L☉) and how long it lasts (years). */
+export interface Flash {
+  energy: number;
+  lum: number;
+  years: number;
+}
+
+/** What a flash did, for each civilization's part of the turn (`handleNotes`, turn.ts): the worlds inside its melt line (the Deep among them) and those it boiled away. */
+export interface FlashNote extends Flash {
+  inside: string[];
+  boiled: string[];
+}
+
+/**
+ * A giant falling in: its gas pours onto the star at the Eddington limit until it is gone. A
+ * Jupiter onto a 0.6 M☉ white dwarf gives 1.7 × 10^40 J, some 19,000 Suns for about 75 years; into
+ * a 10 M☉ black hole 1.7 × 10^43 J, 320,000 Suns for about 4,400 years.
+ */
+export function giantFlash(p: Primary, b: Body): Flash {
+  const energy = fallEfficiency(p) * Math.max(0.01, b.massEarth) * EARTH_KG * C2;
+  const lum = EDDINGTON_SUNS * Math.max(0.01, p.mass);
+  return { energy, lum, years: energy / (lum * SUN_W) / YEAR_S };
+}
+
+/** How long a black hole takes over a ring of rubble (years): ground down as slowly as at a white dwarf. */
+const RUBBLE_EATEN_YEARS = 1e14;
+
+/**
+ * A rocky world torn apart by a black hole: its rubble feeds the hole over some 10^14 years,
+ * inside the turn, giving off a tenth of its mass-energy (5 × 10^40 J for an Earth), far too
+ * faintly to harm anything (about 4 K at 1 AU), but a Burst Catcher fills on it.
+ */
+export function rubbleFlash(b: Body): Flash {
+  const energy = COMPACT_EFFICIENCY * Math.max(0.01, b.massEarth) * EARTH_KG * C2;
+  return { energy, lum: energy / (RUBBLE_EATEN_YEARS * YEAR_S) / SUN_W, years: RUBBLE_EATEN_YEARS };
+}
+
+/**
+ * How far out a flash of `lum` Suns melts rock (AU): where a turning world's ground reaches
+ * LAVA_K (a locked world's day side melts a little farther out: `flashMelts` decides). About 4 AU
+ * for a giant falling onto a white dwarf, 16 AU into a 10 M☉ hole.
+ */
+export function meltLineAU(lum: number): number {
+  return Math.pow((278 * Math.pow(0.7, 0.25)) / LAVA_K, 2) * Math.sqrt(lum);
+}
+
+/**
+ * Does a giant's flash melt this world's ground (a giant's cloud tops, a belt's rubble)? By the
+ * climate a new star's light is judged by (`boilsUnder`): its warmest ground at LAVA_K or more. The
+ * Deep, at the star itself, always. A world flung loose is far away.
+ */
+export function flashMelts(state: GameState, b: Body, f: Flash): boolean {
+  if (b.dissolved || b.rogue) return false;
+  if (b.kind === 'deep') return true;
+  const c = starClimate(state, b, f.lum, NO_TERRAFORMING);
+  return (c.day ?? c.mean) >= LAVA_K;
+}
+
+/**
+ * Does a giant's flash boil this world away? Inside the melt line, where a tenth of the energy it
+ * takes in could drive off its whole mass (0.6 GM²/R ≤ 0.1 × E/(4πd²) × πR²): an Earth within
+ * about 1.9 AU of a Jupiter falling into a black hole or onto a neutron star, 0.06 AU of one
+ * falling onto a white dwarf. Rubble anywhere inside the melt line, as under a new star. Giants
+ * are spared, as there, and so is the Deep.
+ */
+export function flashBoils(state: GameState, b: Body, f: Flash): boolean {
+  if (b.kind === 'deep' || giantWorld(b) || !flashMelts(state, b, f)) return false;
+  if (b.kind === 'asteroids') return true;
+  const r = EARTH_M * Math.pow(Math.max(0.01, b.massEarth), 0.27);
+  const m = Math.max(0.01, b.massEarth) * EARTH_KG;
+  const d = Math.max(0.003, b.orbitAU) * AU_M;
+  return (0.1 * f.energy * Math.PI * r * r) / (4 * Math.PI * d * d) >= (0.6 * G * m * m) / r;
+}
+
+/** Someone's Shadow Shield stands between this world (a belt, a giant's clouds, the Deep) and its star. */
+export function shadowShielded(state: GameState, b: Body): boolean {
+  const c = b.colonyId ? state.colonies[b.colonyId] : undefined;
+  return (c?.structures.shadow_shield ?? 0) > 0;
+}
+
+/**
+ * What a settlement inside a giant's melt line needs to live through its flash. A tidally locked
+ * world of rock or ice is its own shield: it keeps one face to its star, and its night side stays
+ * cold while the day side melts, as on today's lava worlds (K2-141b), so bunkers under a kilometre
+ * of rock there will do, a Flash Shelter (Deep Warrens or Night-side Shelters as well). Anywhere
+ * else every face turns into the flash many times a day for decades (a turning world, a giant's
+ * clouds, a belt), or there is nothing to hide behind (the Deep): a Shadow Shield.
+ */
+export function flashShelterFor(b: Body): 'flash_shelter' | 'shadow_shield' {
+  return b.traits.includes('tidally_locked') && b.kind !== 'deep' && b.kind !== 'asteroids' && !giantWorld(b) ? 'flash_shelter' : 'shadow_shield';
+}
+
+/** Does this settlement live through a giant's flash inside its melt line? (Not on a world the flash boils away: nothing there does.) */
+export function flashSheltered(c: Colony, b: Body): boolean {
+  const has = (id: string) => (c.structures[id] ?? 0) > 0;
+  return has('shadow_shield') || (flashShelterFor(b) === 'flash_shelter' && (has('flash_shelter') || has('warrens') || has('night_shelter')));
+}
+
+/** What a ring of rubble no longer is: a face kept to its star, a dynamo, an ocean. */
+const WHOLE_WORLD_TRAITS = new Set(['tidally_locked', 'failing_dynamo', 'subsurface_ocean', 'water_rich']);
+
+/**
+ * A world torn apart at its star's tidal limit into a ring of rubble: an asteroid belt, drawn as
+ * one (gen.ts gives a belt this size), its core laid open (twice as rich), thinning as it rains
+ * onto the star (the feeding loop, `evolveUniverse`), already by what fell in by `to`. It keeps
+ * its name, and what was found on it.
+ */
+function breakUp(b: Body, to: number) {
+  const f = b.feeding!;
+  b.kind = 'asteroids';
+  b.richness *= 2 / (1 + Math.max(0, to - f.start) / f.tau);
+  b.size = 0.6;
+  b.coreHeat = 0;
+  b.habitability = 0;
+  b.traits = [...b.traits.filter((t) => !WHOLE_WORLD_TRAITS.has(t)), 'rubble'];
+}
+
+/**
+ * A flash in `sys` as `src` falls in. A giant's, at its star's limit, boils away the worlds that go
+ * (gone as the turn ends, as under a new star) and melts the rest inside its melt line: their air
+ * and seas boil off (a water-rich world's rain back), nothing lives on them after, and they freeze
+ * again as bare rock (as frozenFromTheStart has a dead world start as what it is). A Shadow
+ * Shield shades the world it stands over, and the rubble of a belt behind it. A rocky world's
+ * flash at a black hole is too faint to harm anything. What it does to settlements is each
+ * civilization's to see to, from the note this leaves (`handleNotes`, turn.ts).
+ */
+function flashSystem(state: GameState, sys: StarSystem, src: Body, f: Flash, notes: EvolutionNote[]) {
+  const inside: string[] = [];
+  const boiled: string[] = [];
+  if (giantWorld(src)) {
+    for (const bid of sys.bodies) {
+      const b = state.bodies[bid];
+      if (!b || b.id === src.id || !flashMelts(state, b, f)) continue;
+      inside.push(b.id);
+      if (b.kind === 'deep') continue;
+      const shaded = shadowShielded(state, b);
+      if (flashBoils(state, b, f) && !(shaded && b.kind === 'asteroids')) {
+        b.dissolved = true;
+        boiled.push(b.id);
+        continue;
+      }
+      // (a giant has no ground to melt, a shaded belt is not boiled)
+      if (shaded || giantWorld(b) || b.kind === 'asteroids') continue;
+      // its air and seas boil off into space and it freezes again as bare rock, long before the
+      // turn is out (a water-rich world's seas are too much to drive off: they rain back)
+      if (b.vitality > 0 && !b.traits.includes('once_alive')) b.traits.push('once_alive');
+      b.vitality = 0;
+      if (!b.traits.includes('water_rich')) {
+        b.water = 0;
+        b.kind = 'barren';
+        b.habitability = 0;
+        b.traits = b.traits.filter((t) => t !== 'subsurface_ocean');
+      }
+      if (!b.traits.includes('flash_melted')) b.traits.push('flash_melted');
+    }
+  }
+  notes.push({ systemId: sys.id, kind: 'flash', bodyId: src.id, flash: { ...f, inside, boiled } });
+}
 
 /** When will this system's star next change? (for forecasts) */
 export function nextStellarChange(sys: StarSystem, years: number): { at: number; what: string } | null {
@@ -1404,10 +1637,12 @@ export function insolationByDistance(state: GameState, b: Body): number {
   if (p.kind === 'red_dwarf' || p.kind === 'blue_dwarf' || p.kind === 'collision_star') {
     aStd = 0.031 * Math.pow(Math.max(0.05, p.mass) / 0.1, 1.15);
   } else {
-    // (the close worlds set the standard: cold outer worlds far beyond them do not move it)
+    // (the close worlds set the standard: cold outer worlds far beyond them do not move it, nor
+    // do the worlds a hole was given since 20 Oct move it for the one it had)
+    const hole = b.traits.includes('hole_world');
     const orbits = sys.bodies
       .map((id) => state.bodies[id])
-      .filter((x) => x && x.kind !== 'deep' && !x.dissolved && !x.rogue && x.orbitAU > 0 && (!x.traits.includes('outer') || x === b))
+      .filter((x) => x && x.kind !== 'deep' && !x.dissolved && !x.rogue && x.orbitAU > 0 && (x === b || (!x.traits.includes('outer') && (hole || !x.traits.includes('hole_world')))))
       .map((x) => x.orbitAU)
       .sort((x, y) => x - y);
     aStd = orbits.length ? orbits[Math.floor(orbits.length / 2)] : b.orbitAU;

@@ -637,8 +637,9 @@ export function generateWorld(settings: GameSettings): GameState {
     nextId: 1,
     crossing: null,
     outcome: null,
-    // brown dwarfs and black holes take their worlds in, in a game begun since 19 Oct (physics.ts: fallsInAt)
-    flags: { all_fall: 1 },
+    // brown dwarfs and black holes take their worlds in, in a game begun since 19 Oct (physics.ts:
+    // fallsInAt), and since 20 Oct falling worlds break up into rubble, giants in a flash (rubbleGame)
+    flags: { all_fall: 1, rubble: 1 },
     fired: {},
   };
   void coreSystems;
@@ -663,6 +664,7 @@ export function generateWorld(settings: GameSettings): GameState {
   });
 
   addOuterWorlds(b, settings);
+  addHoleWorlds(b, settings);
 
   // ---- knowledge: the home reach is charted
   for (const s of Object.values(state.systems)) {
@@ -707,6 +709,55 @@ function addOuterWorlds(b: Builder, settings: GameSettings) {
       w.traits.push('outer');
       index++;
       a *= rng.range(1.7, 3.2);
+    }
+  }
+}
+
+/**
+ * More worlds at black holes (the player, 16 Oct: "add more black hole planets"; 19 Oct: "not all
+ * black holes should have planets, just a lot of them"). Worlds outlive a supernova, or form again
+ * from what falls back onto the remnant, as around the pulsar PSR B1257+12, three worlds at 0.19
+ * to 0.46 AU (Wolszczan & Frail 1992, Nature 355, 145). So, in a game begun since 20 Oct, two holes
+ * in three get one to three more, two in three of them close in (0.05 to 1 AU), the rest at 1 to
+ * 40 AU: rock and ice (now and then a super-Earth, frozen from the start as every world at a dead
+ * star is: frozenFromTheStart, physics.ts), and a giant in four. Around a hole heavier than 10
+ * Suns the orbits widen by √(M/10), so a Well's worlds take as long to spiral in as a stellar
+ * hole's (inspiralTime goes as a^4/M²) instead of having gone long ago. With the one world in three
+ * that holes had before, about three holes in four have worlds. The Heart gets none: so near its
+ * crowded core a world is soon flung loose, and one that fell in would be swallowed whole, its
+ * tides too gentle outside so wide a horizon to tear it apart. The Wanderer, a system of note,
+ * keeps its own. After everything else is generated, each hole from a draw of its own, so every
+ * seed's galaxy is as it was with these added; a hole's worlds are then drawn out by distance,
+ * the one it had among them, and named on from it.
+ */
+function addHoleWorlds(b: Builder, settings: GameSettings) {
+  for (const sys of Object.values(b.systems)) {
+    if (sys.special || sys.primary.kind !== 'black_hole') continue;
+    const rng = new Rng(hashSeed(`${settings.seed}:${sys.id}:hole`));
+    if (!rng.chance(0.65)) continue;
+    const n = rng.int(1, 3);
+    const widen = Math.max(1, Math.sqrt(sys.primary.mass / 10));
+    const before = sys.bodies.map((id) => b.bodies[id]).filter((x) => x.kind !== 'deep');
+    const taken = before.map((x) => x.orbitAU);
+    let index = before.length;
+    for (let i = 0; i < n; i++) {
+      const r = rng.next();
+      const kind: BodyKind = r < 0.3 ? 'barren' : r < 0.55 ? 'ice' : r < 0.75 ? 'super_earth' : r < 0.875 ? 'ice_giant' : 'gas_giant';
+      const mass = kind === 'barren' ? rng.range(0.1, 3) : kind === 'ice' ? rng.range(0.3, 5) : kind === 'super_earth' ? rng.range(2, 7) : kind === 'ice_giant' ? rng.range(10, 20) : rng.range(60, 300);
+      let a = widen * Math.exp(rng.chance(2 / 3) ? rng.range(Math.log(0.05), 0) : rng.range(0, Math.log(40)));
+      // clear of the worlds already there: no two within a factor of 1.4, about the room a stable pair needs
+      const crowds = (x: number) => a / x < 1.4 && x / a < 1.4;
+      for (let k = 0; k < 4 && taken.some(crowds); k++) a = (taken.find(crowds) ?? a) * 1.4;
+      if (taken.some(crowds)) continue;
+      taken.push(a);
+      b.addBody(sys, kind, a, mass, index++, rng).traits.push('hole_world');
+    }
+    // drawn out by distance, the world it had among them
+    const all = sys.bodies.map((id) => b.bodies[id]).filter((x) => x.kind !== 'deep').sort((x, y) => x.orbitAU - y.orbitAU);
+    let orbit = 16;
+    for (const [i, w] of all.entries()) {
+      if (i > 0) orbit += rng.range(8, 11);
+      w.orbit = orbit + (w.kind === 'gas_giant' ? 4 : 0);
     }
   }
 }
