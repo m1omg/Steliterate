@@ -72,9 +72,25 @@ word", then the player's list of 16 Oct, then the falling worlds.
   m1omg/Steliterate#37 (`d2abd2a`; code `bd86639`), merged back with `-s ours` (`95353de`).
   CHANGELOG, "The pace: ten turns to a Tide turn", has the rest.
 
-**What to do next:** the approved plan is done. Ask the player what comes next; the open threads
-are in SESSION-NOTES ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the
-rest). `main` keeps today's game until the player says to switch to the new version.
+- **Combat** (20 Oct, the new version only, at the player's word; live at `/next/`): the player
+  found that at war they could send ships into an enemy's system and nothing attacked them, and
+  asked for "a combat system ... an auto resolve one" with "custom tactics choosable as modifiers
+  that would modify the damage inflicted and damage received". Their answers: a set of tactics
+  per fleet, the new version only, "strike back" (in a war we begin they come for our
+  settlements too), tactics in every fight, swarms too. The plan is
+  `docs/plans/2026-10-20-combat.md`. Built: Hold the line, Close in (×1.5 both ways), Stand off
+  (×0.5 both ways, no siege), Escort; every ship at a star is a target and every settlement fires;
+  ships are lost one at a time; sieges and storming at any settlement by either side; the others
+  arm, hunt, pick tactics, retreat, strike back and make peace when losing; a forecast on each
+  tactic's button, a Battle section, the map's ✕. Two things to tell the player plainly: Stand off
+  takes ×0.5, not the ×0.35 they were offered (at ×0.35 it won every fight, four ships against
+  five); and the first forced wars wiped out our settlements at one star in a single turn, so the
+  blockade and the storming are once a star a turn now. CHANGELOG, "Combat", has the figures.
+
+**What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
+("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
+today's game until the player says to switch to the new version (which now has the combat
+system; today's game does not).
 
 **The player's usage** ran out twice on 19 Oct (the weekly limit, then the five-hour one). They
 pause and come back. Work in batches that end validated and pushed, and keep messages short.

@@ -1,4 +1,5 @@
 import { SHIP_BY_ID, strength } from '../data/ships';
+import { fleetDug, shareHurt, tacticOf } from '../data/tactics';
 import { watchPartners } from './ties';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import type { Colony, Fleet, GameState, StarSystem, Swarm } from '../types';
@@ -38,9 +39,10 @@ export function defenseAt(state: GameState, systemId: string, mods: Mods, owner 
   }
   for (const f of allFleets(state)) {
     if (f.at !== systemId || f.owner !== owner) continue;
-    // dug in with the settlement's own grid, a fortified fleet defends twice as well
-    const dug = f.order === 'fortify';
-    for (const s of f.ships) d += strength(s.cls, 'swarms') * (dug ? (SHIP_BY_ID[s.cls]?.dugIn ?? FORTIFY_BONUS) : 1);
+    // dug in with the settlement's own grid, a fortified fleet defends twice as well; by its tactic
+    const dug = fleetDug(f);
+    const dealt = tacticOf(f).dealt;
+    for (const s of f.ships) d += strength(s.cls, 'swarms') * (dug ? (SHIP_BY_ID[s.cls]?.dugIn ?? FORTIFY_BONUS) : 1) * dealt;
   }
   if (mods.flags.has('charter:wardens_oath')) d *= 1.5;
   // Shared Watch: a partner's warning, and a little of their strength (never a shield); the
@@ -296,7 +298,9 @@ function hurtShipsAt(state: GameState, sys: StarSystem, hit: () => number, owner
   for (const f of allFleets(state)) {
     if (f.at !== sys.id || f.owner !== owner) continue;
     const before = f.ships.length;
-    for (const s of f.ships) s.hp -= hit();
+    // (by its tactic: the same draws, its share of them, an Escort's warships taking the unarmed's)
+    const hurt = shareHurt(f, f.ships.map(() => hit()));
+    f.ships.forEach((s, i) => (s.hp -= hurt[i]));
     f.ships = f.ships.filter((s) => s.hp > 0);
     if (!f.ships.length) {
       delete state.fleets[f.id];
@@ -337,13 +341,15 @@ export function swarmsHunt(state: GameState, mods: ModsBy) {
         // a part sent after this very ship strikes it surely
         if (sw.prey !== f.id && !rng.chance((sw.awake ? HUNT_AWAKE : HUNT_ASLEEP) * dark)) continue;
         const what = sw.awake ? 'The swarm' : 'Something asleep';
-        const dug = f.order === 'fortify';
-        const attack = f.ships.reduce((a, s) => a + strength(s.cls, 'swarms') * (dug ? (SHIP_BY_ID[s.cls]?.dugIn ?? FORTIFY_BONUS) : 1), 0);
+        const dug = fleetDug(f);
+        const dealt = tacticOf(f).dealt;
+        const attack = f.ships.reduce((a, s) => a + strength(s.cls, 'swarms') * (dug ? (SHIP_BY_ID[s.cls]?.dugIn ?? FORTIFY_BONUS) : 1) * dealt, 0);
         if (attack > 0 && attack >= sw.size * 1.2 * rng.range(0.6, 1.1)) {
           const lost = Math.min(sw.size, attack * 0.3);
           sw.size -= lost;
           owner.matter += lost * 2;
-          for (const s of f.ships) s.hp = Math.max(1, s.hp - rng.range(0, sw.size * 0.3));
+          const scratch = shareHurt(f, f.ships.map(() => rng.range(0, sw.size * 0.3)));
+          f.ships.forEach((s, i) => (s.hp = Math.max(1, s.hp - scratch[i])));
           logTo(state, owner, `${what} at ${sys.name} came for ${f.name}, and ${f.name} beat it off (+${Math.round(lost * 2)} salvaged matter).`, 'combat', sys.id, f.id);
           state.battles.push({ systemId: sys.id, turn: state.turn, text: `${f.name} beat off the swarm.` });
           // (the neighbours who see it are the player's)
@@ -359,7 +365,8 @@ export function swarmsHunt(state: GameState, mods: ModsBy) {
         }
         // torn apart, unless the swarm is small
         const before = f.ships.length;
-        for (const s of f.ships) s.hp -= rng.range(0.6, 1.2) * sw.size * 0.8;
+        const torn = shareHurt(f, f.ships.map(() => rng.range(0.6, 1.2) * sw.size * 0.8));
+        f.ships.forEach((s, i) => (s.hp -= torn[i]));
         f.ships = f.ships.filter((s) => s.hp > 0);
         if (!f.ships.length) {
           delete state.fleets[f.id];
@@ -384,10 +391,10 @@ export function attackOdds(attack: number, size: number): number {
   return Math.max(0, Math.min(1, (attack / (1.2 * size) - 0.6) / 0.5));
 }
 
-/** Every warship of ours at this star, their attack added up (at their plain strength: attacking, they leave any fortifications). */
+/** Every warship of ours at this star, their attack added up (at their plain strength: attacking, they leave any fortifications; by each fleet's tactic). */
 export function warshipsAt(state: GameState, systemId: string): { fleets: Fleet[]; attack: number } {
   const here = fleets(state).filter((x) => x.at === systemId && isWarFleet(x));
-  const attack = here.reduce((a, x) => a + x.ships.reduce((b, sh) => b + (SHIP_BY_ID[sh.cls]?.settles ? 0 : strength(sh.cls, 'swarms')), 0), 0);
+  const attack = here.reduce((a, x) => a + x.ships.reduce((b, sh) => b + (SHIP_BY_ID[sh.cls]?.settles ? 0 : strength(sh.cls, 'swarms')), 0) * tacticOf(x).dealt, 0);
   return { fleets: here, attack };
 }
 
@@ -420,7 +427,10 @@ export function attackSwarm(state: GameState, fleetId: string): { ok: boolean; t
       const lost = Math.min(sw.size, attack * 0.3);
       sw.size -= lost;
       state.civ.matter += lost * 2;
-      for (const x of fleets) for (const sh of x.ships) sh.hp = Math.max(1, sh.hp - rng.range(0, sw.size * 0.3));
+      for (const x of fleets) {
+        const scratch = shareHurt(x, x.ships.map(() => rng.range(0, sw.size * 0.3)));
+        x.ships.forEach((sh, i) => (sh.hp = Math.max(1, sh.hp - scratch[i])));
+      }
       broke = sw.size <= 0.4;
       result = {
         ok: true,
@@ -432,7 +442,8 @@ export function attackSwarm(state: GameState, fleetId: string): { ok: boolean; t
       let gone = 0;
       for (const x of fleets) {
         const before = x.ships.length;
-        for (const sh of x.ships) sh.hp -= rng.range(0.6, 1.2) * sw.size * 0.8;
+        const torn = shareHurt(x, x.ships.map(() => rng.range(0.6, 1.2) * sw.size * 0.8));
+        x.ships.forEach((sh, i) => (sh.hp -= torn[i]));
         x.ships = x.ships.filter((sh) => sh.hp > 0);
         gone += before - x.ships.length;
         if (!x.ships.length) delete state.fleets[x.id];

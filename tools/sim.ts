@@ -1,17 +1,34 @@
 // Headless balance harness: autoplay whole games and report how far each strategy gets.
 declare const process: { argv: string[] };
-// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [--asleep] [-v]
+// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [--asleep] [--war=N] [-v]
 // Game g uses seed 1000 + g·7919; --from=N starts at game N, so runs can be split and run in parallel.
 // --asleep: the neighbours as they were before the new version, simulated lightly (civsAsleep).
+// --war=N: at turn N we go to war on our nearest neighbour that plays a game of its own, cause or
+// none (contact made, and the Threads' consent given), to see how a war goes: with the 'warlike'
+// strategy we fight it (planWar), with 'competent' we only defend.
 
 import { autoPlay, type Strategy } from '../src/game/auto';
 import { formatEta } from '../src/game/eras';
 import { newGame } from '../src/game/newGame';
 import { endTurn } from '../src/game/sim/turn';
-import { colonies, threadTotals, totalPops } from '../src/game/sim/util';
-import type { EpochLength, ProtonFate } from '../src/game/types';
+import { capital, colonies, distLy, threadTotals, totalPops } from '../src/game/sim/util';
+import type { EpochLength, GameState, ProtonFate } from '../src/game/types';
 import { fateOf } from '../src/game/fate';
 import { shuns } from '../src/game/sim/judge';
+import { WAR_ACCORD, declareWar } from '../src/game/sim/war';
+
+/** --war=N: we go to war on our nearest neighbour that plays a game of its own, contact made and the Threads' consent given. */
+function forceWar(state: GameState) {
+  const cap = capital(state);
+  const home = state.systems[cap?.systemId ?? state.civ.homeSystemId];
+  const sv = Object.values(state.survivors)
+    .filter((v) => v.alive && state.civs[v.id] && !state.civs[v.id].outcome && !v.war)
+    .sort((a, b) => distLy(home, state.systems[a.homeSystemId]) - distLy(home, state.systems[b.homeSystemId]))[0];
+  if (!sv) return;
+  sv.contact = true;
+  state.civ.accord = Math.max(state.civ.accord, WAR_ACCORD);
+  declareWar(state, sv.id);
+}
 
 // positional arguments, with the flags (-v, --diff=…) taken out wherever they stand
 const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));
@@ -22,6 +39,7 @@ const strategies: Strategy[] = which === 'both' ? ['competent', 'passive'] : [wh
 const verbose = process.argv.includes('-v');
 const from = Number(process.argv.find((a) => a.startsWith('--from='))?.slice(7) ?? 0);
 const asleep = process.argv.includes('--asleep');
+const warAt = Number(process.argv.find((a) => a.startsWith('--war='))?.slice(6) ?? 0);
 
 for (const strategy of strategies) {
   console.log(`\n=== ${strategy} · ${length} ===`);
@@ -35,6 +53,7 @@ for (const strategy of strategies) {
     const t0 = Date.now();
     let guard = 0;
     while (!state.civ.outcome && guard++ < 1200) {
+      if (warAt && state.turn === warAt) forceWar(state);
       autoPlay(state, strategy);
       const r = endTurn(state);
       eraTurns[state.era] = (eraTurns[state.era] ?? 0) + 1;

@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { SHIP_BY_ID, fleetLook, shipNote } from '../../game/data/ships';
+import { SHIP_BY_ID, fleetLook, isWarship, shipNote } from '../../game/data/ships';
 import { STRUCTURE_BY_ID, STRUCTURE_KINDS, enabledAt, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
@@ -20,7 +20,9 @@ import {
   moveQueued,
   orderFleet,
   setAutoExplore,
+  setTactic,
   standFleet,
+  storm,
   placeBeacon,
   putOutBeacon,
   queueBuild,
@@ -47,10 +49,12 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { allColonies, capital, colonies, distLy, fleets, formOf, hasCharter, hasTech, leftBehind, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { allColonies, allFleets, capital, colonies, distLy, fleets, formOf, hasCharter, hasTech, leftBehind, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
 import { nearestSwarmSeen, nestSeenAt, readsSwarms, swarmArrives, swarmSight } from '../../game/sim/sight';
 import { FORMS } from '../../game/data/forms';
-import { atWarWith, screensSeen, strikeBlocked } from '../../game/sim/conflict';
+import { assaultBlocked, assaultOdds, atWarWith, battleForecast, holdOf, screensSeen, settlementFire, shipsInWords, strikeBlocked, walled } from '../../game/sim/conflict';
+import { TACTICS, tacticNote, tacticOf } from '../../game/data/tactics';
+import { SIEGE_TURNS } from '../../game/sim/war';
 import { settlementSeen } from '../../game/sim/others';
 import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
 import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
@@ -62,7 +66,7 @@ import type { IconName } from '../icons';
 import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
 import { act, engine, following, hudPrefs, isPhone, notify, openBuildFor, rev, selection, setHudPrefs, sheetHint, sheetSize, targeting, view } from '../store';
 import { uiFactor } from '../Tip';
-import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
+import { RAID_COOLDOWN, raidForce, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { loreView } from '../screens/Story';
 import { siteValue } from '../../game/sim/sites';
@@ -459,6 +463,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
             Seen from afar: the star is known, its worlds are not. Send any ship to survey it (probes are the cheapest, and see farthest).
           </p>
         )}
+        <WarHere s={s} sys={sys} />
         {(fleetsHere.length > 0 || swarms.length > 0) && (
           <div class="section">
             <h3>In orbit</h3>
@@ -1176,6 +1181,11 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
             <span key={tr} class="chip" data-tip={TRAIT_NAME[tr]?.[1] ?? ''}>{TRAIT_NAME[tr]?.[0] ?? tr}</span>
           ))}
           {c.starving > 0 && <span class="chip danger">starving</span>}
+          {c.siege && (
+            <span class="chip danger" data-tip={`${s.civs[c.siege.by]?.name ?? 'The enemy'}’s warships hold this star with none of ours here: our stores and will run down each turn, and they carry off what the blockade drains. From turn ${SIEGE_TURNS} they can storm it (behind a Defence Grid or a Bastion Shell, only with a Breacher). Warships of ours here break the siege, even standing off.`}>
+              under siege {Math.min(c.siege.turns, SIEGE_TURNS)}/{SIEGE_TURNS}
+            </span>
+          )}
           {keep === 'unmanned' && nextToFlow(c) && <span class="chip danger" data-tip="No one is awake here to mend it against the Long Flow: a structure a turn runs into smooth lumps, the cheapest first, Cryo Halls last, with their sleepers. One awake Kin, a Lattice process or a mind that thinks faster than the flow would keep it whole.">flowing away</span>}
           {keep === 'watched' && <span class="chip warn" data-tip="Everyone here thinks more slowly than the Long Flow, so they keep watchers awake between their thoughts: half again their upkeep.">keeping watch</span>}
           {c.overdrive && <span class="chip warn">overdrive</span>}
@@ -1725,6 +1735,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   useEffect(() => setRaidArmed(false), [f.id, f.at]);
   const raidSv = here && isWarFleet(f) ? raidTarget(s, here.id) : null;
   const raidWait = raidSv?.raidedAt !== undefined ? RAID_COOLDOWN - (s.turn - raidSv.raidedAt) : 0;
+  const raiders = here && raidSv ? raidForce(s, here.id) : 0;
   const doRaid = () => {
     if (!raidArmed) {
       setRaidArmed(true);
@@ -1755,7 +1766,9 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               {SHIP_BY_ID[x.cls]?.name ?? x.cls}
             </span>
           ))}
-          {f.order === 'fortify' && <span class="chip neon" data-tip={`Dug in: counts ${FORTIFY_BONUS}× against swarms here, and turns raiders away from the capital.`}><Icon name="shield" /> fortified</span>}
+          {f.order === 'fortify' && <span class="chip neon" data-tip={`Dug in: counts ${FORTIFY_BONUS}× against ships and swarms here (an Aegis 3×; not while standing off), and turns raiders away from the capital.`}><Icon name="shield" /> fortified</span>}
+          {tacticOf(f).id !== 'line' && <span class="chip" data-tip={`${tacticOf(f).desc}
+${tacticNote(tacticOf(f))}`}>{tacticOf(f).name.toLowerCase()}</span>}
           {f.order === 'hold' && <span class="chip" data-tip="Parked on purpose: the game will not ask about it.">holding</span>}
           {f.order === 'strike' && <span class="chip danger" data-tip="A Kinetic Lance on its way at 99% of the speed of light: it strikes as it arrives, and is spent.">striking</span>}
           {f.auto === 'explore' && <span class="chip neon" data-tip={`Exploring by itself: always the nearest unsurveyed star. It waits while the reserve is under ${EXPLORE_RESERVE} energy plus the launch.`}><Icon name="survey" /> exploring</span>}
@@ -1775,6 +1788,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         </div>
       </div>
       <div class="drawer-body scroll">
+        <TacticRow s={s} f={f} />
         {hunter && (
           <div class="warn" style={{ fontSize: '13.5px', marginBottom: '8px' }}>
             <Icon name="warning" />{' '}
@@ -1828,7 +1842,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                   Stand down
                 </button>
               ) : isWarFleet(f) ? (
-                <button class="btn small primary" data-tip={`Dig in here: counts ${FORTIFY_BONUS}× against swarms in this system, turns raiders away from the capital, and stops asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
+                <button class="btn small primary" data-tip={`Dig in here: counts ${FORTIFY_BONUS}× against ships and swarms in this system (an Aegis 3×; not while standing off), turns raiders away from the capital, and stops asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
                   <Icon name="shield" /> Fortify
                 </button>
               ) : (
@@ -1840,12 +1854,14 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               {raidSv && (
                 <button
                   class={`btn small danger ${raidArmed ? 'on' : ''}`}
-                  disabled={raidWait > 0}
+                  disabled={raidWait > 0 || raiders <= 0}
                   onClick={doRaid}
                   data-tip={
                     raidWait > 0
                       ? `${raidSv.name} is on guard since our last raid. ${raidWait} more turn${raidWait === 1 ? '' : 's'}.`
-                      : `Take part of ${raidSv.name}’s reserve by force. Every warship here joins in (attack ${raidStrength(s, here.id)}); if their defences hold, it is our ships that get hurt.\nWhatever happens: they will not forgive it, every civilization we know hears of it, Resolve −3, Dissent +4. Once every ${RAID_COOLDOWN} turns at most.`
+                      : raiders <= 0
+                        ? 'Warships standing off cannot raid: they must hold the line, close in or escort.'
+                        : `Take part of ${raidSv.name}’s reserve by force. Every warship here not standing off joins in, by its fleet’s tactic (attack ${n1(raiders)}); if their defences hold, it is our ships that get hurt.\nWhatever happens: they will not forgive it, every civilization we know hears of it, Resolve −3, Dissent +4. Once every ${RAID_COOLDOWN} turns at most.`
                   }
                 >
                   <Icon name="attack" /> {raidArmed ? 'Really raid? (click again)' : `Raid ${raidSv.name}`}
@@ -1855,6 +1871,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                 Disband
               </button>
             </div>
+            <BattleSection s={s} f={f} />
             <StrikeSection s={s} f={f} />
             {settleTargets.length > 0 && (
               <div class="section">
@@ -1933,6 +1950,199 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         )}
       </div>
     </>
+  );
+}
+
+// ------------------------------------------------------------------ battle (the combat system, 20 Oct)
+
+/**
+ * War at a star, in its panel: the battle fought here last turn, as we saw it (both sides' fire
+ * and losses), and every siege here, ours or theirs. Nothing where there was neither.
+ */
+function WarHere({ s, sys }: { s: GameState; sys: StarSystem }) {
+  void rev.value; // mutable game state: re-render on every change
+  const me = s.civ.id;
+  const last = [...s.battles].reverse().find((b) => b.systemId === sys.id && b.turn === s.turn - 1 && b.sides?.some((x) => x.owner === me));
+  const sieges = allColonies(s).filter((c) => c.systemId === sys.id && c.siege && (c.owner === me || c.siege.by === me));
+  if (!last && !sieges.length) return null;
+  const mine = last?.sides?.find((x) => x.owner === me);
+  const theirLoss: Record<string, number> = {};
+  for (const x of last?.sides ?? []) if (x.owner !== me) for (const [k, n] of Object.entries(x.lost)) theirLoss[k] = (theirLoss[k] ?? 0) + n;
+  const who = (last?.sides ?? []).filter((x) => x.owner !== me).map((x) => s.civs[x.owner]?.name ?? 'the enemy');
+  return (
+    <div class="section">
+      <h3>
+        <Icon name="attack" /> War here
+      </h3>
+      {mine && (
+        <div class="dim" style={{ fontSize: '13.5px' }}>
+          Last turn, against {who.join(' and ')}: we dealt {n1(mine.dealt)} and took {n1(mine.taken)}
+          {lossWords(mine.lost, theirLoss, false)}.
+        </div>
+      )}
+      {sieges.map((c) => (
+        <div key={c.id} class={c.owner === me ? 'warn' : 'dim'} style={{ fontSize: '13.5px', marginTop: '4px' }}>
+          {c.owner === me ? `${s.civs[c.siege!.by]?.name ?? 'The enemy'} hold ${c.name} under siege` : `Our siege of ${c.name}, ${s.civs[c.owner]?.name ?? 'theirs'}`}: turn {c.siege!.turns}
+          {c.siege!.turns < SIEGE_TURNS ? ` of ${SIEGE_TURNS}` : ', and it can be stormed'}.
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+
+/** Ships counted by class, for `shipsInWords`. */
+function byClass(ships: { cls: string }[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const x of ships) out[x.cls] = (out[x.cls] ?? 0) + 1;
+  return out;
+}
+
+/** What a turn's losses would be, in words, after a forecast's figures. */
+function lossWords(weLose: Record<string, number>, theyLose: Record<string, number>, would = true): string {
+  const we = shipsInWords(weLose);
+  const they = shipsInWords(theyLose);
+  const v = would ? 'would lose' : 'lost';
+  return `${we ? `; we ${v} ${we}` : ''}${they ? `; they ${v} ${they}` : ''}${!we && !they ? (would ? '; no ship would be lost' : '; no ship was lost') : ''}`;
+}
+
+/**
+ * How this fleet fights: its tactic, one of four, in every fight it is in (ships, settlements,
+ * swarms) until told otherwise. With an enemy at its star, each button's tip says what it would
+ * deal and take there this turn. Nothing for a fleet without a warship: there is no one to fight.
+ */
+function TacticRow({ s, f }: { s: GameState; f: Fleet }) {
+  void rev.value; // mutable game state: re-render on every change
+  if (f.owner !== s.civ.id || !f.ships.some((x) => isWarship(x.cls))) return null;
+  const cur = tacticOf(f).id;
+  const unarmed = f.ships.some((x) => !isWarship(x.cls));
+  return (
+    <div class="row wrap tactics" style={{ gap: '4px', marginBottom: '8px', alignItems: 'center' }}>
+      <span class="eyebrow" style={{ marginRight: '2px' }} data-tip="How this fleet fights, in every fight it is in: against ships, settlements and swarms. Change it any turn; it holds until you do.">
+        Tactic
+      </span>
+      {TACTICS.map((t) => {
+        const fc = f.at ? battleForecast(s, f.at, f.id, t.id) : null;
+        const tip = [
+          `${t.name}: ${t.desc}`,
+          tacticNote(t),
+          t.escorts && !unarmed ? 'It has no unarmed ships aboard to escort.' : '',
+          !t.holds && f.order === 'fortify' ? 'Standing off, it gives up being dug in.' : '',
+          fc ? `Here, this turn, at an even draw: we would deal ${n1(fc.dealt)} and take ${n1(fc.taken)}${lossWords(fc.weLose, fc.theyLose)}.` : '',
+        ]
+          .filter(Boolean)
+          .join('\n');
+        return (
+          <button key={t.id} class={`btn small ${cur === t.id ? 'on' : ''}`} aria-pressed={cur === t.id} data-tip={tip} onClick={() => act((g) => setTactic(g, f.id, t.id)) && sfx('click')}>
+            {t.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * The war at this fleet's star: who stands here against us (their ships and tactics, their
+ * settlements' guns) and what stands with us, last turn's exchange, our siege of a settlement of
+ * theirs here (its turns, then Storm and Raze, asking first), and theirs of one of ours.
+ */
+function BattleSection({ s, f }: { s: GameState; f: Fleet }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => setArmed(null), [f.id, f.at]);
+  const at = f.at;
+  if (!at) return null;
+  const me = s.civ.id;
+  const theirFleets = allFleets(s).filter((x) => x.at === at && x.owner !== me && x.order !== 'strike' && x.ships.length > 0 && atWarWith(s, me, x.owner));
+  const theirColonies = allColonies(s).filter((c) => c.systemId === at && c.owner !== me && atWarWith(s, me, c.owner));
+  const foes = [...new Set([...theirFleets.map((x) => x.owner), ...theirColonies.map((c) => c.owner)])].sort();
+  if (!foes.length) return null;
+  const ours = fleets(s).filter((x) => x.at === at && x.ships.length > 0);
+  const ourGuns = colonies(s).filter((c) => c.systemId === at).reduce((a, c) => a + settlementFire(c), 0);
+  const last = [...s.battles].reverse().find((b) => b.systemId === at && b.turn === s.turn - 1 && b.sides?.some((x) => x.owner === me));
+  const mine = last?.sides?.find((x) => x.owner === me);
+  const theirLoss: Record<string, number> = {};
+  for (const x of last?.sides ?? []) if (x.owner !== me) for (const [k, n] of Object.entries(x.lost)) theirLoss[k] = (theirLoss[k] ?? 0) + n;
+  const besiegedHere = colonies(s).filter((c) => c.systemId === at && c.siege && c.siege.by !== me);
+  const go = (id: string, raze: boolean) => {
+    const key = `${raze ? 'raze' : 'storm'}:${id}`;
+    if (armed !== key) {
+      setArmed(key);
+      sfx('warn');
+      return;
+    }
+    setArmed(null);
+    if (act((g) => storm(g, id, raze))) sfx('bad');
+  };
+  return (
+    <div class="section battle">
+      <h3 data-tip="Wherever we and a civilization at war with us stand at one star, ships or a settlement, we fight once a turn, all at once. Every ship is a target, armed or not, the least hull left first (an Escort's unarmed ships last); every settlement fires with what it has, its Defence Grids and more. Fire is a warship's strength against ships, dug in if fortified, by its fleet's tactic, on a draw.">
+        <Icon name="attack" /> Battle
+      </h3>
+      {foes.map((o) => {
+        const fl = theirFleets.filter((x) => x.owner === o);
+        const guns = theirColonies.filter((c) => c.owner === o).reduce((a, c) => a + settlementFire(c), 0);
+        return (
+          <div key={o} class="row" style={{ fontSize: '13.5px', gap: '6px' }}>
+            <span class="bad">{s.civs[o]?.name ?? 'The enemy'}</span>
+            <span class="grow dim">
+              {fl.length ? fl.map((x) => `${shipsInWords(byClass(x.ships))} (${tacticOf(x).name.toLowerCase()})`).join('; ') : 'no ships'}
+              {guns > 0 ? ` · their guns ${n1(guns)}` : ''}
+            </span>
+          </div>
+        );
+      })}
+      <div class="row" style={{ fontSize: '13.5px', gap: '6px' }}>
+        <span class="good">With us</span>
+        <span class="grow dim">
+          {ours.map((x) => `${x.name}: ${shipsInWords(byClass(x.ships))}${x.ships.some((y) => isWarship(y.cls)) ? ` (${tacticOf(x).name.toLowerCase()}${x.order === 'fortify' && tacticOf(x).holds ? ', dug in' : ''})` : ''}`).join('; ')}
+          {ourGuns > 0 ? ` · our guns ${n1(ourGuns)}` : ''}
+        </span>
+      </div>
+      {mine && (
+        <div class="dim" style={{ fontSize: '13.5px', marginTop: '4px' }}>
+          Last turn: we dealt {n1(mine.dealt)} and took {n1(mine.taken)}
+          {lossWords(mine.lost, theirLoss, false)}.
+        </div>
+      )}
+      {besiegedHere.map((c) => (
+        <div key={c.id} class="warn" style={{ fontSize: '13.5px', marginTop: '4px' }}>
+          {s.civs[c.siege!.by]?.name ?? 'The enemy'} hold {c.name} under siege: turn {c.siege!.turns}
+          {c.siege!.turns < SIEGE_TURNS ? ` of ${SIEGE_TURNS}` : ', and can storm it'}.
+        </div>
+      ))}
+      {theirColonies.map((c) => {
+        const why = assaultBlocked(s, me, c);
+        const turns = c.siege?.by === me ? c.siege.turns : 0;
+        const odds = assaultOdds(s, me, c);
+        const terms = `It holds ${n1(holdOf(c))}${walled(c) ? ', walled' : ''}; about ${pct(odds)} to win.`;
+        return (
+          <div key={c.id} style={{ marginTop: '6px' }}>
+            <div class="row wrap" style={{ gap: '4px', alignItems: 'center' }}>
+              <span class="grow" style={{ fontSize: '13.5px' }}>
+                {turns ? `Our siege of ${c.name}: turn ${turns}${turns < SIEGE_TURNS ? ` of ${SIEGE_TURNS}` : ''}` : `${c.name}: no siege of ours`}
+              </span>
+              <button
+                class={`btn small danger ${armed === `storm:${c.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
+                data-tip={`${why ? `${why}\n` : ''}Storm ${c.name}: our warships here not standing off, their strength against settlements by their tactics, on a draw. ${terms} Taken, three tenths of its people flee to their own and the rest are ours, unwilling; three tenths of what was built there is wreckage. Thrown back, the siege begins again. Either way it costs hulls, and everyone hears of it.`}
+                onClick={() => !why && go(c.id, false)}
+              >
+                {armed === `storm:${c.id}` ? `Really storm? ${pct(odds)} (click again)` : why ? 'Storm' : `Storm (${pct(odds)})`}
+              </button>
+              <button
+                class={`btn small danger ${armed === `raze:${c.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
+                data-tip={`${why ? `${why}\n` : ''}Raze ${c.name}: the same assault, and won, nothing there is left, and no one. Everyone hears of it, and thinks worse of it than of a taking.`}
+                onClick={() => !why && go(c.id, true)}
+              >
+                {armed === `raze:${c.id}` ? 'Really raze? (click again)' : 'Raze'}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -2020,7 +2230,7 @@ function AttackButton({ s, systemId, fleetId }: { s: GameState; systemId: string
   };
   const tip =
     blocked ??
-    `Every warship of ours here goes for it together: attack ${n1(attack)} against its size ${n1(sw.size)} (fortified ships fight at their plain strength when they go out to attack). About ${pct(odds)} to win. A win kills ${n1(Math.min(sw.size, attack * 0.3))} of it, and we salvage twice that in matter, while what is left of it hurts our ships; a loss tears into all of them and can sink them.${sw.awake ? '' : ' It is asleep: unless we break it, it wakes.'} Once a turn.`;
+    `Every warship of ours here goes for it together: attack ${n1(attack)} against its size ${n1(sw.size)} (fortified ships fight at their plain strength when they go out to attack; each fleet by its tactic). About ${pct(odds)} to win. A win kills ${n1(Math.min(sw.size, attack * 0.3))} of it, and we salvage twice that in matter, while what is left of it hurts our ships; a loss tears into all of them and can sink them.${sw.awake ? '' : ' It is asleep: unless we break it, it wakes.'} Once a turn.`;
   return (
     <button class={`btn small danger ${armed ? 'on' : ''}`} disabled={!!blocked} onClick={go} data-tip={tip}>
       <Icon name="attack" /> {armed ? `Really attack? ${pct(odds)} to win (click again)` : `Attack the swarm (${pct(odds)})`}

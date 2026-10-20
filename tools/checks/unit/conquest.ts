@@ -20,7 +20,7 @@ import { checkEndings } from '../../../src/game/sim/endings';
 import { LANCE_SPEED, advanceFleets, createColony, deepFor, newFleet } from '../../../src/game/sim/fleets';
 import { computeMods } from '../../../src/game/sim/mods';
 import { seizeSurvivor } from '../../../src/game/sim/survivors';
-import { HUNGER_CAUSE, SIEGE_TURNS, declareWar, warTurn } from '../../../src/game/sim/war';
+import { HUNGER_CAUSE, SIEGE_TURNS, declareWar } from '../../../src/game/sim/war';
 import { allColonies, popsOf } from '../../../src/game/sim/util';
 import type { Colony, GameState } from '../../../src/game/types';
 import { THREADS } from '../../../src/game/types';
@@ -140,7 +140,7 @@ const heldBy = (c: Colony) => popsOf(c) + Object.values(c.structures).reduce((x,
   unguard(s, b, front);
   newFleet(s, front, Array(6).fill('breacher'), 'Spear');
   check(/Hold the siege/.test(seizeSurvivor(s, b) ?? ''), 'we must hold the siege first');
-  for (let i = 0; i < SIEGE_TURNS; i++) warTurn(s, () => 0.5);
+  for (let i = 0; i < SIEGE_TURNS; i++) battlesTurn(s);
   flushOutbox(s);
   const c = at(s, b, front)!;
   const taint0 = s.civ.taint;
@@ -148,25 +148,40 @@ const heldBy = (c: Colony) => popsOf(c) + Object.values(c.structures).reduce((x,
   check(sv.alive && sv.war?.at === far.systemId && s.civ.taint === taint0, `they live on, the war goes on at ${s.systems[far.systemId].name}, and the Hunger in them was our cause: no Taint`);
   unguard(s, b, far.systemId);
   for (const f of Object.values(s.fleets)) if (f.owner === s.player && f.name === 'Spear') f.at = far.systemId;
-  for (let i = 0; i < SIEGE_TURNS; i++) warTurn(s, () => 0.5);
+  for (let i = 0; i < SIEGE_TURNS; i++) battlesTurn(s);
   flushOutbox(s);
   check(seizeSurvivor(s, b, true) === null && !s.colonies[far.id], `we razed ${far.name}, their last`);
   flushOutbox(s);
   check(!sv.alive && sv.fate === 'destroyed' && !sv.war && s.civs[b].outcome?.ending === 'Seized', `and they are gone: ${sv.fate}`);
 }
 
-// a war they began: we fight where they come; a front that is gone moves on
+// a war they began: we strike back, besieging and storming theirs as they can ours
 {
-  const { s, a, b } = fresh();
+  const { s, a } = fresh();
   s.civs[a].accord = 200;
   const front = frontOf(s, s.player, a)!;
   declareOn(s, a, s.player, HUNGER_CAUSE, front);
   const sv = s.survivors[a];
   sv.contact = true;
+  // (a second settlement of theirs, so that taking one does not end them)
+  second(s, a, [front]);
   const theirFront = frontOf(s, a, s.player)!;
   unguard(s, a, theirFront);
   newFleet(s, theirFront, Array(6).fill('breacher'), 'Spear');
-  check(/They began this war/.test(seizeSurvivor(s, a) ?? ''), 'in a war they began, we cannot storm theirs');
+  check(/Hold the siege/.test(seizeSurvivor(s, a) ?? ''), `in a war they began, we too must hold the siege first (${seizeSurvivor(s, a)})`);
+  for (let i = 0; i < SIEGE_TURNS; i++) battlesTurn(s);
+  flushOutbox(s);
+  const taken = at(s, a, theirFront);
+  check(!!taken && seizeSurvivor(s, a) === null && taken.owner === s.player, `held ${SIEGE_TURNS} turns, we stormed ${taken?.name}, theirs, in the war they began`);
+  check((warOf(s, a, s.player)?.lost ?? 0) === 1 && warOf(s, a, s.player)?.at === front, 'their war goes on, at ours, and it has cost them a settlement');
+}
+
+// a war they began: a front that is gone moves on
+{
+  const { s, a } = fresh();
+  s.civs[a].accord = 200;
+  const front = frontOf(s, s.player, a)!;
+  declareOn(s, a, s.player, HUNGER_CAUSE, front);
   // the settlement the war is fought at is lost to something else: the war goes on at our next
   const mine = theirs(s, s.player);
   const next = second(s, s.player, [front]);
@@ -177,7 +192,6 @@ const heldBy = (c: Colony) => popsOf(c) + Object.values(c.structures).reduce((x,
   asCiv(s, a, () => newFleet(s, next.systemId, ['warden'], 'Raiders'));
   battlesTurn(s);
   check(warOf(s, a, s.player)?.at === next.systemId, `with ${s.systems[front].name} gone, the war goes on at ${s.systems[next.systemId].name}`);
-  void b;
 }
 
 // our last settlement taken: a defeat of its own

@@ -1,10 +1,11 @@
 import { sourceLight } from '../physics';
 import { isWarship, strength } from '../data/ships';
+import { tacticOf } from '../data/tactics';
 import { THREADS, type Body, type GameState, type PactKind, type Survivor, type ThreadId } from '../types';
 import { acceptOffer, hasPact, theirPacts, weighProposal } from './pacts';
 import { askRefuge, onTheirWay, sanctuaryTrust, takeThemIn } from './refuge';
 import { askAgainstHunger, claimEase, expand, judgePromise, promiseHelp } from './claims';
-import { atWar, inCoalition, raidedUs, seizeBlocked, warCause, warDefence } from './war';
+import { atWar, inCoalition, raidedUs, seizeBlocked, siegeStrength, stormTarget, warCause, warDefence } from './war';
 import { answerChoirWish, choirWish, drawTheirSpin, heardWaking, wakeForNewStar } from './ways';
 import { answered, feel, offerDue, offered, tradeOffer, type Offer } from './dealings';
 import { TECH_BY_ID } from '../data/techs';
@@ -14,7 +15,7 @@ import { canConverse, rangeWith, sendSignal, voiceRange, voiceThread } from './s
 import { queueEvent } from './events';
 import { survivorWorld } from './homes';
 import { formatDistance, formatYears, logTurnLength } from '../eras';
-import { allColonies, capital, clamp, colonies, distLy, fleets, hasCharter, log, marks, ownFleet, threadTotals, withRng } from './util';
+import { capital, clamp, colonies, distLy, fleets, hasCharter, log, marks, ownFleet, threadTotals, withRng } from './util';
 import { turnStep } from './flare';
 import { capacity } from './economy';
 import { computeMods } from './mods';
@@ -645,28 +646,33 @@ export function jointIncome(state: GameState): number {
  * took. A civilization of its own is stormed a settlement at a time, the one the war is fought at,
  * by the same rules as anyone's assault (conflict.ts): taken, or with `raze`, destroyed.
  */
-export function seizeSurvivor(state: GameState, id: string, raze = false): string | null {
+export function seizeSurvivor(state: GameState, id: string, raze = false, colonyId?: string): string | null {
   const sv = state.survivors[id];
   if (!sv || !sv.alive) return 'They are gone.';
-  const blocked = seizeBlocked(state, sv);
-  if (blocked) return blocked;
   const civ = state.civ;
   if (civOf(state, sv)) {
-    const at = sv.war!.at ?? sv.homeSystemId;
-    const c = allColonies(state).find((x) => x.owner === sv.id && x.systemId === at);
-    if (!c) return 'They hold no settlement there now.';
+    if (!sv.war) return 'Only in a war: declare one first.';
+    // (the settlement asked for, else the one of theirs we hold the longest siege on, or the one the war is fought at)
+    const c = colonyId ? state.colonies[colonyId] : stormTarget(state, sv);
+    if (!c || c.owner !== sv.id) return 'They hold no settlement there now.';
     const r = assault(state, civ.id, c.id, raze);
     return typeof r === 'string' ? r : null;
   }
+  const blocked = seizeBlocked(state, sv);
+  if (blocked) return blocked;
   const sys = state.systems[sv.homeSystemId];
-  const attack = raidStrength(state, sys.id);
+  const attack = siegeStrength(state, sys.id);
   const def = warDefence(state, sv);
   let won = false;
   withRng(state, (rng) => {
     won = attack * rng.range(0.6, 1.4) >= def;
-    // an assault costs ships either way, more if it fails
+    // an assault costs ships either way, more if it fails, and more for those closing in (those standing off take no part)
     for (const f of fleets(state).filter((x) => x.at === sys.id)) {
-      for (const s of f.ships) if (isWarship(s.cls)) s.hp -= won ? rng.range(0, 1.5) : rng.range(1, 3.5);
+      const t = tacticOf(f);
+      for (const s of f.ships) if (isWarship(s.cls)) {
+        const hit = won ? rng.range(0, 1.5) : rng.range(1, 3.5);
+        if (t.holds) s.hp -= hit * t.taken;
+      }
       f.ships = f.ships.filter((s) => s.hp > 0);
       if (!f.ships.length) delete state.fleets[f.id];
     }
@@ -781,7 +787,18 @@ export const RAID_COOLDOWN = 5;
 export const RAID_WAIT = 15;
 
 
-/** The combined attack of every warship stationed at `systemId`: they all join a raid. */
+/** What our warships at `systemId` bring to a raid: those holding the line, closing in or escorting (not standing off), by their tactics. */
+export function raidForce(state: GameState, systemId: string): number {
+  let a = 0;
+  for (const f of fleets(state)) {
+    if (f.at !== systemId) continue;
+    const t = tacticOf(f);
+    if (t.holds) for (const s of f.ships) if (isWarship(s.cls)) a += strength(s.cls, 'settlements') * t.dealt;
+  }
+  return a;
+}
+
+/** The combined attack of every warship stationed at `systemId`, whatever its tactic. */
 export function raidStrength(state: GameState, systemId: string): number {
   let a = 0;
   for (const f of fleets(state)) if (f.at === systemId) for (const s of f.ships) if (isWarship(s.cls)) a += strength(s.cls, 'settlements');
@@ -804,7 +821,8 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
   const sv = raidTarget(state, f.at);
   if (!sv) return 'No civilization we know of lives here.';
   if (!isWarFleet(f)) return 'Only warships can raid.';
-  const attack = raidStrength(state, f.at);
+  const attack = raidForce(state, f.at);
+  if (attack <= 0) return 'Warships standing off cannot raid: they must hold the line or close in.';
   if (sv.raidedAt !== undefined && state.turn - sv.raidedAt < RAID_COOLDOWN) return `They are on guard since the last raid. Wait ${RAID_COOLDOWN - (state.turn - sv.raidedAt)} more turn(s).`;
   const civ = state.civ;
   const sys = state.systems[f.at];
@@ -812,9 +830,14 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
   let result: { ok: boolean; text: string } = { ok: false, text: '' };
   withRng(state, (rng) => {
     const defence = Math.max(1, dealSize(state, sv) * sv.health * 0.3);
+    // (the same draws whatever their tactics; those standing off take no part)
     const hurt = (lo: number, hi: number) => {
       for (const x of fleets(state).filter((y) => y.at === f.at)) {
-        for (const s of x.ships) if (isWarship(s.cls)) s.hp -= rng.range(lo, hi);
+        const t = tacticOf(x);
+        for (const s of x.ships) if (isWarship(s.cls)) {
+          const hit = rng.range(lo, hi);
+          if (t.holds) s.hp -= hit * t.taken;
+        }
         x.ships = x.ships.filter((s) => s.hp > 0);
         if (!x.ships.length) delete state.fleets[x.id];
       }

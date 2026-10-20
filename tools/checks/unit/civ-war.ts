@@ -4,8 +4,8 @@
 //   Threads' consent and its costs, the pacts between them ended, and no infamy with the others;
 // - where civilizations at war meet, they fight once a turn, all at once, each side's fire from
 //   what stood at the start: the order of the fleets decides nothing;
-// - warships holding an enemy settlement's star with none of its owner's there besiege it, and its
-//   owner's stores run down;
+// - warships holding an enemy settlement's star with none of its owner's there besiege it (the
+//   siege is the settlement's), and its owner's stores run down;
 // - a war it began it ends after WAR_TIRES turns;
 // - a war on us: declared by one that has heard of our Hunger, with word of it crossing to us; we
 //   cannot end it ourselves, and our autoplayer gathers its warships at the front.
@@ -100,7 +100,8 @@ const arm = (s: GameState, id: string, guard: number) => {
   const e0 = s.civs[b].energy;
   for (let i = 0; i < 3; i++) battlesTurn(s);
   flushOutbox(s);
-  check(warOf(s, a, b)!.siege === 3, `three turns at ${s.systems[front]?.name} with none of theirs there: a siege of three turns`);
+  const held = Object.values(s.colonies).find((c) => c.owner === b && c.systemId === front)?.siege;
+  check(held?.by === a && held.turns === 3, `three turns at ${s.systems[front]?.name} with none of theirs there: a siege of three turns (${JSON.stringify(held)})`);
   check(s.civs[b].energy < e0, `and the besieged's stores run down (${Math.round(e0)} → ${Math.round(s.civs[b].energy)})`);
   // it tires
   warOf(s, a, b)!.since = s.turn - 31;

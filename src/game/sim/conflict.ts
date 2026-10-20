@@ -3,17 +3,20 @@
 // (`Tie.war`). By the same rules for everyone: the Threads' consent and its costs, the pacts
 // between them ended, infamy at the speed of light (none for a war on the Hunger in them).
 //
-// Wherever warships of two civilizations at war are stopped at the same star, or warships at an
-// enemy's settlement, they fight, once a turn and all of it at once (`battlesTurn`, in the
-// universe's part of the turn): each side's fire is its warships' strength against ships (dug in,
-// a fortified ship's own bonus) and a settlement's defences, on a draw; it falls on the hulls of
-// the other side, each by its share. Warships holding a settlement's star with none of its owner's
-// left there besiege it: its owner's stores and will run down while the siege holds. (Our sieges of
-// the others' first stars count in `warTurn`, as before; a war they began, here.)
+// The combat system (20 Oct, docs/plans/2026-10-20-combat.md): wherever two civilizations at war
+// stand at one star, ships stopped there or a settlement, they fight, once a turn and all of it at
+// once (`battlesTurn`, in the universe's part of the turn). Every ship there is a target, armed or
+// not; every settlement fires with what it has (`settlementFire`); each side's fire is its
+// warships' strength against ships (dug in, a fortified ship's own bonus) by each fleet's tactic
+// (data/tactics.ts), on a draw, and it falls on the other side's ships one at a time, the least hull
+// left first. Warships holding a settlement's star (not standing off) with none of its owner's
+// there besiege it, whoever began the war: its owner's stores and will run down while the siege
+// holds, and held three turns, it can be stormed (`siegesTurn`).
 
 import { STRUCTURE_BY_ID } from '../data/structures';
 import { SHIP_BY_ID, isWarship, strength } from '../data/ships';
-import type { Colony, Fleet, GameState, Ship, War } from '../types';
+import { fleetDug, tacticOf } from '../data/tactics';
+import type { BattleSide, Colony, Fleet, GameState, Ship, TacticId, War } from '../types';
 import { THREADS } from '../types';
 import { send } from '../civs';
 import { FORTIFY_BONUS, destroyColony, newFleet, orderMove, screenAt } from './fleets';
@@ -23,7 +26,7 @@ import { distanceToThem, spreadNews, voice } from './survivors';
 import { distanceBetween, hearOf, lightIn, othersPlaying, tieKey, tieOf } from './ties';
 import { allColonies, allFleets, clamp, distLy, log, logTo, popsOf } from './util';
 import { hashSeed } from '../rng';
-import { BLOCKADE, HUNGER_CAUSE, SIEGE_TURNS, WAR_ACCORD } from './war';
+import { BLOCKADE, DEFENCE_CAUSE, HUNGER_CAUSE, SIEGE_TURNS, WAR_ACCORD } from './war';
 import { CORRUPT_AT, hungerAct } from './judge';
 
 /** The share of a side's fire that lands on the other's hulls in a turn of battle. */
@@ -66,20 +69,32 @@ function capitalSystem(state: GameState, id: string) {
   return state.systems[cap?.systemId ?? civ?.homeSystemId ?? ''];
 }
 
-/** What a civilization's warships fight with against ships: their strength, fortified ones dug in. */
+/** What a civilization's warships fight with against ships: their strength, fortified ones dug in (unless standing off), before their tactic. */
 export function fleetFire(f: Fleet): number {
-  const dug = f.order === 'fortify';
+  const dug = fleetDug(f);
   return f.ships.reduce((a, s) => a + (isWarship(s.cls) ? strength(s.cls, 'ships') * (dug ? (SHIP_BY_ID[s.cls]?.dugIn ?? FORTIFY_BONUS) : 1) : 0), 0);
 }
 
-/** What stands for a civilization at a star: its warships stopped there and its settlements' defences. */
+/** What a settlement fires at enemy ships in its sky without a single Defence Grid: 0.5, and 0.075 a person, at most SETTLEMENT_FIRE_MAX. */
+export const SETTLEMENT_FIRE = 0.5;
+export const SETTLEMENT_FIRE_PER = 0.075;
+export const SETTLEMENT_FIRE_MAX = 6;
+
+/**
+ * What a settlement fires at enemy ships in its sky: its people's mining lasers and mass drivers
+ * turned on them (SETTLEMENT_FIRE, more the more of them), and its Defence Grids' on top.
+ */
+export function settlementFire(c: Colony): number {
+  let d = Math.min(SETTLEMENT_FIRE_MAX, SETTLEMENT_FIRE + SETTLEMENT_FIRE_PER * popsOf(c));
+  for (const [id, n] of Object.entries(c.structures)) d += (STRUCTURE_BY_ID[id]?.defense ?? 0) * n;
+  return d;
+}
+
+/** What stands for a civilization at a star: its warships stopped there and its settlements' fire. */
 export function guardAt(state: GameState, systemId: string, owner: string): number {
   let g = 0;
   for (const f of allFleets(state)) if (f.owner === owner && f.at === systemId) g += fleetFire(f);
-  for (const c of allColonies(state)) {
-    if (c.owner !== owner || c.systemId !== systemId) continue;
-    for (const [id, n] of Object.entries(c.structures)) g += (STRUCTURE_BY_ID[id]?.defense ?? 0) * n;
-  }
+  for (const c of allColonies(state)) if (c.owner === owner && c.systemId === systemId) g += settlementFire(c);
   return g;
 }
 
@@ -140,8 +155,16 @@ export function declareOn(state: GameState, by: string, on: string, cause?: stri
   return null;
 }
 
+/** A war is over for a civilization: its warships come home (the autoplayer's `planWarAI` and `planDefence` read it). */
+export function warOver(state: GameState, id: string): void {
+  const civ = state.civs[id];
+  if (civ) civ.flags.peace_at = state.turn;
+}
+
 /** Two civilizations make peace: the war ends, and they hear of it, each when the light arrives. */
 export function peaceBetween(state: GameState, a: string, b: string): void {
+  warOver(state, a);
+  warOver(state, b);
   if (a === state.player || b === state.player) {
     const sv = state.survivors[a === state.player ? b : a];
     if (!sv?.war) return;
@@ -178,46 +201,30 @@ function wars(state: GameState): { a: string; b: string; w: War }[] {
   return out;
 }
 
+/** Turns a battle or a siege stays on the record (`state.battles`): what the panels show of it. */
+export const BATTLE_MEMORY = 20;
+/** The odds from which another civilization storms a settlement it has held long enough (our own assaults are our choice). */
+export const STORM_ODDS = 0.5;
+
 /**
- * The battles of a turn, everywhere at once: at every star where civilizations at war stand (warships
- * stopped there, or a settlement), each side fires on the others' hulls with what stood at the start;
- * then the sieges of the wars the others began are counted, and their blockades run down the
- * besieged; held long enough, and its walls breached, a settlement is stormed. Our own sieges are
- * `warTurn`'s (war.ts), and our own assaults our choice. A Kinetic Lance strikes before all of it.
+ * The battles of a turn, everywhere at once: at every star where civilizations at war stand (ships
+ * stopped there, or a settlement), each side fires on the others' ships with what stood at the
+ * start (`battles`); then every settlement's siege is counted, whoever holds it, and its blockade
+ * runs the besieged down; held long enough, and its walls breached, another civilization storms it
+ * once the odds are with it (`siegesTurn`). Our own assaults are our choice. A Kinetic Lance
+ * strikes before all of it.
  */
 export function battlesTurn(state: GameState): void {
+  state.battles = state.battles.filter((b) => state.turn - b.turn < BATTLE_MEMORY);
   // a Kinetic Lance strikes as it arrives, before any battle
   strikesTurn(state);
   const fought = battles(state);
+  siegesTurn(state, fought);
+  // what a war was fought at is gone: on to the next of theirs
   for (const { a, b, w } of wars(state)) {
-    // a war we began counts its siege in warTurn
-    if (!w.by || w.by === state.player || !w.at) continue;
-    const by = w.by;
+    const by = w.by ?? state.player;
     const on = by === a ? b : a;
-    const here = allFleets(state).some((f) => f.owner === by && f.at === w.at && f.ships.some((s) => isWarship(s.cls)));
-    const held = allColonies(state).some((c) => c.owner === on && c.systemId === w.at);
-    const guarded = allFleets(state).some((f) => f.owner === on && f.at === w.at && f.ships.some((s) => isWarship(s.cls)));
-    if (!here || !held) {
-      w.siege = 0;
-      // what the war was fought at is gone: on to the next of theirs
-      if (!held) w.at = frontOf(state, on, by) ?? w.at;
-      continue;
-    }
-    if (guarded) continue;
-    w.siege++;
-    // a blockade: the besieged's stores and will run down, and the besiegers carry off what it drains
-    const take = plunder(state, on);
-    if (on === state.player) {
-      const me = state.civs[state.player];
-      me.energy -= take;
-      me.resolve = Math.max(0, me.resolve - 1);
-      log(state, `${state.civs[by]?.name}'s warships hold ${state.systems[w.at]?.name} under siege (turn ${w.siege}): they carry off ${take} energy of our stores, and our will runs down.`, 'combat', w.at);
-    } else send(state, on, { energy: -take, resolve: -1 });
-    if (take > 0) send(state, by, { energy: take });
-    if (!fought.has(w.at)) state.battles.push({ systemId: w.at, turn: state.turn, text: `The siege of ${state.systems[w.at]?.name}, turn ${w.siege}.` });
-    // held long enough, and its walls breached: they storm it (one far down the Hunger's path razes it)
-    const c = allColonies(state).find((x) => x.owner === on && x.systemId === w.at);
-    if (c && !assaultBlocked(state, by, c)) assault(state, by, c.id, (state.civs[by]?.taint ?? 0) >= CORRUPT_AT);
+    if (w.at && !allColonies(state).some((c) => c.owner === on && c.systemId === w.at)) w.at = frontOf(state, on, by) ?? w.at;
   }
 }
 
@@ -237,61 +244,261 @@ export function luck(state: GameState, systemId: string, id: string): number {
   return 0.6 + 0.8 * ((hashSeed(`${state.settings.seed}:battle:${state.turn}:${systemId}:${id}`) % 10007) / 10007);
 }
 
-/** Every battle of the turn, settled at once. Returns the stars fought at. */
-function battles(state: GameState): Set<string> {
-  type Side = { ships: { f: Fleet; s: Ship }[]; defence: number };
+/** Whether a fleet can hold a siege: warships, holding the line or closing in (not standing off), and not a Lance in flight. */
+export function holdsSiege(f: Fleet): boolean {
+  return f.order !== 'strike' && tacticOf(f).holds && f.ships.some((s) => isWarship(s.cls));
+}
+
+/**
+ * Who besieges a settlement now, if anyone: of the civilizations at war with its owner whose
+ * warships hold its star (not standing off), with none of its owner's warships there, the one with
+ * the most fire there (then the first by its id).
+ */
+export function besieger(state: GameState, c: Colony): string | null {
+  const here = allFleets(state).filter((f) => f.at === c.systemId && f.order !== 'strike');
+  if (here.some((f) => f.owner === c.owner && f.ships.some((s) => isWarship(s.cls)))) return null;
+  const fire = new Map<string, number>();
+  for (const f of here) if (f.owner !== c.owner && state.civs[f.owner] && holdsSiege(f) && atWarWith(state, f.owner, c.owner)) fire.set(f.owner, (fire.get(f.owner) ?? 0) + fleetFire(f));
+  return [...fire.entries()].sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1))[0]?.[0] ?? null;
+}
+
+/**
+ * Every settlement's siege, everyone at once: held another turn, begun, or broken. While it holds,
+ * the besieged's stores and will run down and the besiegers carry off what its blockade drains,
+ * once a turn for each star they hold (however many settlements of theirs are there); then another
+ * civilization storms what it has held long enough, once its odds are STORM_ODDS (far down the
+ * Hunger's path, it razes it): one settlement at a star a turn, the longest held first.
+ */
+function siegesTurn(state: GameState, fought: Set<string>): void {
+  const drained = new Set<string>();
+  for (const c of allColonies(state).sort((x, y) => (x.id < y.id ? -1 : 1))) {
+    const by = besieger(state, c);
+    if (!by) {
+      delete c.siege;
+      continue;
+    }
+    const turns = c.siege?.by === by ? c.siege.turns + 1 : 1;
+    c.siege = { by, turns };
+    const sys = state.systems[c.systemId];
+    if (!fought.has(c.systemId)) state.battles.push({ systemId: c.systemId, turn: state.turn, text: `The siege of ${c.name}, turn ${turns}.` });
+    // (one blockade a star: what its owner loses there, and the besiegers carry off)
+    const key = `${c.systemId}|${c.owner}|${by}`;
+    if (drained.has(key)) continue;
+    drained.add(key);
+    const names = allColonies(state)
+      .filter((x) => x.systemId === c.systemId && x.owner === c.owner)
+      .map((x) => x.name)
+      .join(', ');
+    const take = plunder(state, c.owner);
+    if (c.owner === state.player) {
+      const me = state.civs[state.player];
+      me.energy -= take;
+      me.resolve = Math.max(0, me.resolve - 1);
+      logTo(state, me, `${state.civs[by]?.name}'s warships hold ${sys?.name} under siege (${names}, turn ${turns}): they carry off ${take} energy of our stores, and our will runs down.`, 'combat', c.systemId);
+    } else send(state, c.owner, { energy: -take, resolve: -1 });
+    if (take > 0) send(state, by, { energy: take });
+    if (by === state.player) logTo(state, state.civs[by], `Our warships hold ${sys?.name} under siege (${names}, turn ${turns}${turns < SIEGE_TURNS ? ` of ${SIEGE_TURNS}` : ''}): we carry off ${take} energy of ${state.civs[c.owner]?.name ?? 'their'}’s stores${turns >= SIEGE_TURNS ? '. It can be stormed' : ''}.`, 'combat', c.systemId);
+  }
+  const stormed = new Set<string>();
+  const held = allColonies(state)
+    .filter((c) => c.siege && c.siege.by !== state.player)
+    .sort((x, y) => y.siege!.turns - x.siege!.turns || holdOf(x) - holdOf(y) || (x.id < y.id ? -1 : 1));
+  for (const c of held) {
+    const by = c.siege!.by;
+    const key = `${c.systemId}|${by}`;
+    if (stormed.has(key) || !state.colonies[c.id] || c.owner === by) continue;
+    if (assaultBlocked(state, by, c) !== null || assaultOdds(state, by, c) < STORM_ODDS) continue;
+    stormed.add(key);
+    assault(state, by, c.id, (state.civs[by]?.taint ?? 0) >= CORRUPT_AT);
+  }
+}
+
+/** One ship in a battle: its fleet, its fleet's tactic, and whether it can fire. */
+type Unit = { f: Fleet; s: Ship; i: number; dealt: number; taken: number; armed: boolean; escorted: boolean; dug: boolean };
+/** One civilization at a star in a battle. */
+type Side = { owner: string; units: Unit[]; settlement: number };
+
+/** A ship's place in the line of fire: an Escort's unarmed ships last, then the least hull left first, then a draw from the seed. */
+function fireOrder(state: GameState, systemId: string): (x: Unit, y: Unit) => number {
+  const tie = (u: Unit) => hashSeed(`${state.settings.seed}:aim:${state.turn}:${systemId}:${u.f.id}:${u.i}`);
+  return (x, y) => Number(x.escorted) - Number(y.escorted) || x.s.hp - y.s.hp || tie(x) - tie(y) || (x.f.id < y.f.id ? -1 : x.f.id > y.f.id ? 1 : x.i - y.i);
+}
+
+/** What a side fires in a turn of battle, before the draw: its warships' strength against ships (dug in, by each fleet's tactic), and its settlements'. */
+function sideFire(me: Side): number {
+  let fire = me.settlement;
+  for (const u of me.units) if (u.armed) fire += strength(u.s.cls, 'ships') * (u.dug ? (SHIP_BY_ID[u.s.cls]?.dugIn ?? FORTIFY_BONUS) : 1) * u.dealt;
+  return fire;
+}
+
+/**
+ * Fire falls on ships one at a time, in the line of fire (`fireOrder`): what destroys one goes on
+ * to the next; what reaches a ship is its fleet's tactic's share of what is aimed at it. Adds to
+ * `hits`, and returns what it took from their hulls.
+ */
+function allot(fire: number, targets: Unit[], hits: Map<Ship, number>): number {
+  let landed = 0;
+  for (const u of targets) {
+    if (fire <= 0) break;
+    const left = u.s.hp - (hits.get(u.s) ?? 0);
+    if (left <= 0) continue;
+    const need = left / u.taken;
+    const hit = fire >= need ? left : fire * u.taken;
+    fire -= fire >= need ? need : fire;
+    hits.set(u.s, (hits.get(u.s) ?? 0) + hit);
+    landed += hit;
+  }
+  return landed;
+}
+
+/** A count of ships by class, in words ("2 Wardens and a Probe"). */
+export function shipsInWords(lost: Record<string, number>): string {
+  const parts = Object.entries(lost)
+    .filter(([, n]) => n > 0)
+    .map(([cls, n]) => {
+      const name = SHIP_BY_ID[cls]?.name ?? cls;
+      return n === 1 ? `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}` : `${n} ${name}s`;
+    });
+  return parts.length <= 1 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * Every star's sides, as they stand: each civilization's ships stopped there (a Kinetic Lance in
+ * flight does not stop where it strikes) and its settlements' fire. `tactics`: a tactic to weigh a
+ * fleet by instead of its own, for a forecast.
+ */
+function sidesAt(state: GameState, tactics?: Map<string, TacticId>): Map<string, Map<string, Side>> {
   const at = new Map<string, Map<string, Side>>();
   const side = (sys: string, id: string): Side => {
     let m = at.get(sys);
     if (!m) at.set(sys, (m = new Map()));
     let x = m.get(id);
-    if (!x) m.set(id, (x = { ships: [], defence: 0 }));
+    if (!x) m.set(id, (x = { owner: id, units: [], settlement: 0 }));
     return x;
   };
-  for (const f of allFleets(state)) {
-    if (!f.at || !state.civs[f.owner]) continue;
-    for (const s of f.ships) if (isWarship(s.cls)) side(f.at, f.owner).ships.push({ f, s });
+  // (in the order of their ids, so that no list's order decides anything)
+  const byId = <T extends { id: string }>(xs: T[]) => xs.sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+  for (const f of byId(allFleets(state))) {
+    if (!f.at || f.order === 'strike' || !state.civs[f.owner]) continue;
+    const t = tacticOf(tactics?.has(f.id) ? { ...f, tactic: tactics.get(f.id) } : f);
+    const guards = !!t.escorts && f.ships.some((s) => isWarship(s.cls));
+    f.ships.forEach((s, i) => {
+      const armed = isWarship(s.cls);
+      side(f.at!, f.owner).units.push({ f, s, i, dealt: t.dealt, taken: t.taken, armed, escorted: guards && !armed, dug: armed && (tactics?.has(f.id) ? f.order === 'fortify' && t.holds : fleetDug(f)) });
+    });
   }
-  for (const c of allColonies(state)) {
-    let d = 0;
-    for (const [id, n] of Object.entries(c.structures)) d += (STRUCTURE_BY_ID[id]?.defense ?? 0) * n;
-    side(c.systemId, c.owner).defence += d;
+  for (const c of byId(allColonies(state))) if (state.civs[c.owner]) side(c.systemId, c.owner).settlement += settlementFire(c);
+  return at;
+}
+
+/** The civilizations at war with `id` among those at a star, and whether any of them can fire on another's ships there. */
+function foesAmong(state: GameState, sides: Map<string, Side>): { ids: string[]; foesOf: (id: string) => string[]; fights: boolean } {
+  const ids = [...sides.keys()].sort();
+  const foesOf = (id: string) => ids.filter((o) => o !== id && atWarWith(state, id, o));
+  const can = (id: string) => sideFire(sides.get(id)!) > 0 && foesOf(id).some((o) => sides.get(o)!.units.length > 0);
+  return { ids, foesOf, fights: sides.size > 1 && ids.some(can) };
+}
+
+/** A turn's exchange at a star: each side's fire (on its draw, `luckOf`) falls on its foes' ships, adding to `hits`; returns what each side took from their hulls. */
+function exchange(state: GameState, sys: string, sides: Map<string, Side>, luckOf: (id: string) => number, hits: Map<Ship, number>): Map<string, number> {
+  const { ids, foesOf } = foesAmong(state, sides);
+  const order = fireOrder(state, sys);
+  const dealt = new Map<string, number>();
+  for (const id of ids) {
+    const targets = foesOf(id)
+      .flatMap((o) => sides.get(o)!.units)
+      .sort(order);
+    const fire = sideFire(sides.get(id)!) * FIRE * luckOf(id);
+    if (fire <= 0 || !targets.length) continue;
+    dealt.set(id, allot(fire, targets, hits));
   }
-  // where two sides at war meet, and one of them can fire
-  const sites: { sys: string; sides: Map<string, Side> }[] = [];
-  for (const [sys, sides] of at) {
-    if (sides.size < 2) continue;
-    const ids = [...sides.keys()];
-    if (ids.some((x) => ids.some((y) => y !== x && atWarWith(state, x, y) && (sides.get(x)!.ships.length || sides.get(y)!.ships.length)))) sites.push({ sys, sides });
-  }
-  const fought = new Set<string>();
-  if (!sites.length) return fought;
+  return dealt;
+}
+
+/**
+ * What a turn of battle at a star would be as things stand, at an even draw, with our fleet
+ * `fleetId` fighting by `tactic`: what our side there would deal and take, and the ships each side
+ * would lose. Null where no battle would be fought.
+ */
+export function battleForecast(state: GameState, systemId: string, fleetId: string, tactic: TacticId): { dealt: number; taken: number; weLose: Record<string, number>; theyLose: Record<string, number> } | null {
+  const sides = sidesAt(state, new Map([[fleetId, tactic]])).get(systemId);
+  const me = state.civ.id;
+  if (!sides?.has(me) || !foesAmong(state, sides).fights) return null;
   const hits = new Map<Ship, number>();
-  for (const { sys, sides } of sites) {
-    for (const [id, me] of sides) {
-      const foes = [...sides.keys()].filter((o) => o !== id && atWarWith(state, id, o));
-      const targets = foes.flatMap((o) => sides.get(o)!.ships);
-      const hp = targets.reduce((a, x) => a + x.s.hp, 0);
-      const fire = (me.ships.reduce((a, x) => a + strength(x.s.cls, 'ships') * (x.f.order === 'fortify' ? (SHIP_BY_ID[x.s.cls]?.dugIn ?? FORTIFY_BONUS) : 1), 0) + me.defence) * FIRE * luck(state, sys, id);
-      if (fire <= 0 || hp <= 0) continue;
-      fought.add(sys);
-      for (const x of targets) hits.set(x.s, (hits.get(x.s) ?? 0) + fire * (x.s.hp / hp));
+  const dealt = exchange(state, systemId, sides, () => 1, hits);
+  const weLose: Record<string, number> = {};
+  const theyLose: Record<string, number> = {};
+  let taken = 0;
+  for (const [id, x] of sides) {
+    for (const u of x.units) {
+      const h = hits.get(u.s) ?? 0;
+      if (id === me) taken += h;
+      if (h > 0 && u.s.hp - h <= 1e-9) {
+        const lose = id === me ? weLose : theyLose;
+        lose[u.s.cls] = (lose[u.s.cls] ?? 0) + 1;
+      }
     }
   }
-  // every hull takes what fell on it; the lost are gone, and their owners are told
+  return { dealt: dealt.get(me) ?? 0, taken, weLose, theyLose };
+}
+
+/** Every battle of the turn, settled at once. Returns the stars fought at. */
+function battles(state: GameState): Set<string> {
+  const at = sidesAt(state);
+  const fought = new Set<string>();
+  const hits = new Map<Ship, number>();
+  const reports: { sys: string; sides: Side[]; dealt: Map<string, number> }[] = [];
+  for (const [sys, sides] of [...at.entries()].sort((x, y) => (x[0] < y[0] ? -1 : 1))) {
+    // where two sides at war meet, and one of them can fire on the other's ships
+    const { ids, foesOf, fights } = foesAmong(state, sides);
+    if (!fights) continue;
+    const dealt = exchange(state, sys, sides, (id) => luck(state, sys, id), hits);
+    fought.add(sys);
+    reports.push({ sys, sides: ids.filter((id) => foesOf(id).length).map((id) => sides.get(id)!), dealt });
+  }
+  if (!fought.size) return fought;
+  // every hull takes what fell on it; the lost are gone
+  const lostIn = new Map<Fleet, Record<string, number>>();
   for (const f of allFleets(state)) {
     if (!f.ships.some((s) => hits.has(s))) continue;
-    const before = f.ships.length;
-    for (const s of f.ships) s.hp -= hits.get(s) ?? 0;
-    f.ships = f.ships.filter((s) => s.hp > 0);
-    const sys = state.systems[f.at ?? ''];
-    const owner = state.civs[f.owner];
-    if (!f.ships.length) {
-      delete state.fleets[f.id];
-      if (owner) logTo(state, owner, `${f.name} was destroyed in battle at ${sys?.name}.`, 'combat', sys?.id);
-    } else if (f.ships.length < before && owner) logTo(state, owner, `${f.name} lost ${before - f.ships.length} ship${before - f.ships.length > 1 ? 's' : ''} in battle at ${sys?.name}.`, 'combat', sys?.id);
+    const lost: Record<string, number> = {};
+    for (const s of f.ships) {
+      s.hp -= hits.get(s) ?? 0;
+      if (s.hp <= 1e-9) lost[s.cls] = (lost[s.cls] ?? 0) + 1;
+    }
+    f.ships = f.ships.filter((s) => s.hp > 1e-9);
+    lostIn.set(f, lost);
+    if (!f.ships.length) delete state.fleets[f.id];
   }
-  for (const sys of fought) state.battles.push({ systemId: sys, turn: state.turn, text: `Battle at ${state.systems[sys]?.name}.` });
+  // and each side hears of its battle: ours as a line with what each side did and lost
+  for (const { sys, sides, dealt } of reports) {
+    const star = state.systems[sys];
+    const record: BattleSide[] = sides.map((x) => {
+      const fleetsHere = [...new Set(x.units.map((u) => u.f))];
+      const lost: Record<string, number> = {};
+      for (const f of fleetsHere) for (const [k, n] of Object.entries(lostIn.get(f) ?? {})) lost[k] = (lost[k] ?? 0) + n;
+      const taken = x.units.reduce((a, u) => a + (hits.get(u.s) ?? 0), 0);
+      return { owner: x.owner, fleets: fleetsHere.map((f) => ({ name: f.name, tactic: f.tactic ?? 'line' })), ships: x.units.length, settlement: x.settlement, dealt: dealt.get(x.owner) ?? 0, taken, lost };
+    });
+    state.battles.push({ systemId: sys, turn: state.turn, text: `Battle at ${star?.name}.`, sides: record });
+    for (const me of record) {
+      const civ = state.civs[me.owner];
+      if (!civ) continue;
+      const them = record.filter((o) => o.owner !== me.owner && atWarWith(state, me.owner, o.owner));
+      const gone = sides.find((x) => x.owner === me.owner)!.units.map((u) => u.f).filter((f, i, xs) => xs.indexOf(f) === i && !state.fleets[f.id]);
+      if (me.owner !== state.player) {
+        for (const f of gone) logTo(state, civ, `${f.name} was destroyed in battle at ${star?.name}.`, 'combat', sys);
+        continue;
+      }
+      const theirs: Record<string, number> = {};
+      for (const o of them) for (const [k, n] of Object.entries(o.lost)) theirs[k] = (theirs[k] ?? 0) + n;
+      const theyLost = shipsInWords(theirs);
+      const weLost = shipsInWords(me.lost);
+      const who = them.map((o) => state.civs[o.owner]?.name ?? 'the enemy').join(' and ');
+      const losses = !weLost && !theyLost ? ' No ship was lost.' : `${weLost ? ` We lost ${weLost}${gone.length ? ` (${gone.map((f) => f.name).join(', ')} destroyed)` : ''}.` : ''}${theyLost ? ` They lost ${theyLost}.` : ''}`;
+      logTo(state, civ, `Battle at ${star?.name} with ${who}: we dealt ${me.dealt.toFixed(1)} and took ${me.taken.toFixed(1)}.${losses}`, 'combat', sys);
+    }
+  }
   return fought;
 }
 
@@ -334,33 +541,42 @@ export function walled(c: Colony): boolean {
   return Object.entries(c.structures).some(([id, n]) => n > 0 && (!!STRUCTURE_BY_ID[id]?.defense || id === 'bastion'));
 }
 
-/** The turns of siege `by` holds at a settlement's star, in the war it began (ours at their first star unless the war says where). */
+/** The turns of siege `by` holds at a settlement's star, in a war with its owner, whoever began it. */
 export function siegeAt(state: GameState, by: string, c: Colony): number {
-  const w = warOf(state, by, c.owner);
-  if (!w) return 0;
-  const declarer = w.by ?? state.player;
-  const at = w.at ?? (declarer === state.player ? state.survivors[c.owner]?.homeSystemId : undefined);
-  return declarer === by && at === c.systemId ? w.siege : 0;
+  return c.siege?.by === by && warOf(state, by, c.owner) ? c.siege.turns : 0;
+}
+
+/** `by`'s fleets at a settlement's star that can take part in its assault: warships holding the line, closing in or escorting (not standing off). */
+function stormers(state: GameState, by: string, c: Colony): Fleet[] {
+  return allFleets(state).filter((f) => f.owner === by && f.at === c.systemId && holdsSiege(f));
 }
 
 /** Why `by` cannot storm the settlement `c` now, or null. */
 export function assaultBlocked(state: GameState, by: string, c: Colony): string | null {
   const w = warOf(state, by, c.owner);
   if (!w) return 'Only in a war.';
-  if ((w.by ?? state.player) !== by) return 'They began this war: you fight where they come, and cannot storm theirs.';
-  const here = allFleets(state).filter((f) => f.owner === by && f.at === c.systemId);
+  const here = allFleets(state).filter((f) => f.owner === by && f.at === c.systemId && f.order !== 'strike');
   if (!here.some((f) => f.ships.some((s) => isWarship(s.cls)))) return 'You need warships at its star.';
+  const go = stormers(state, by, c);
+  if (!go.length) return 'Warships standing off cannot storm it: they must hold the line or close in.';
   if (allFleets(state).some((f) => f.owner === c.owner && f.at === c.systemId && f.ships.some((s) => isWarship(s.cls)))) return 'Its own warships still hold its star.';
   const siege = siegeAt(state, by, c);
   if (siege < SIEGE_TURNS) return `Hold the siege: ${SIEGE_TURNS - siege} more turn(s) of warships at its star.`;
-  if (walled(c) && !here.some((f) => f.ships.some((s) => SHIP_BY_ID[s.cls]?.breaches))) return 'It is behind a Defence Grid or a Bastion Shell: only a Breacher can break in.';
+  if (state.civs[by]?.flags[stormedKey(c.systemId)] === state.turn) return 'The warships here have stormed once this turn: one settlement at a star a turn.';
+  if (walled(c) && !go.some((f) => f.ships.some((s) => SHIP_BY_ID[s.cls]?.breaches))) return 'It is behind a Defence Grid or a Bastion Shell: only a Breacher can break in.';
   return null;
 }
 
-/** What `by`'s warships at a settlement's star bring against it in an assault, before the draw. */
+/** The turn a civilization's warships at a star last stormed a settlement there (civ.flags): one a star a turn. */
+const stormedKey = (systemId: string) => `stormed_${systemId}`;
+
+/** What `by`'s warships at a settlement's star bring against it in an assault, before the draw: their strength against settlements, by each fleet's tactic. */
 export function assaultForce(state: GameState, by: string, c: Colony): number {
   let a = 0;
-  for (const f of allFleets(state)) if (f.owner === by && f.at === c.systemId) for (const s of f.ships) if (isWarship(s.cls)) a += strength(s.cls, 'settlements');
+  for (const f of stormers(state, by, c)) {
+    const t = tacticOf(f);
+    for (const s of f.ships) if (isWarship(s.cls)) a += strength(s.cls, 'settlements') * t.dealt;
+  }
   return a;
 }
 
@@ -372,6 +588,13 @@ export function assaultOdds(state: GameState, by: string, c: Colony): number {
   const f = assaultForce(state, by, c);
   if (f <= 0) return 0;
   return Math.max(0, Math.min(1, (1.4 - holdOf(c) / f) / 0.8));
+}
+
+/** The settlement of `owner`'s where `by` holds the longest siege, if any. */
+export function besieged(state: GameState, by: string, owner: string): Colony | undefined {
+  return allColonies(state)
+    .filter((c) => c.owner === owner && c.siege?.by === by)
+    .sort((x, y) => y.siege!.turns - x.siege!.turns || (x.id < y.id ? -1 : 1))[0];
 }
 
 /** The settlement of theirs a war of ours with a civilization of its own is fought at, if it still stands. */
@@ -399,10 +622,11 @@ export function screensSeen(state: GameState, systemId: string, owner: string): 
 
 /**
  * `by` storms the settlement `c`, its siege held and its walls breached: its warships' strength
- * against settlements, on a draw (0.6 to 1.4), against what the settlement holds. Won, the
- * settlement is taken (or, `raze`, destroyed), and the galaxy's free energy pays for what it held;
- * the war goes on at the enemy's next settlement. Lost, the siege must begin again. Either way it
- * costs hulls, more for a failure. Returns why not, or whether it won.
+ * against settlements (by each fleet's tactic), on a draw (0.6 to 1.4), against what the
+ * settlement holds. Won, the settlement is taken (or, `raze`, destroyed), and the galaxy's free
+ * energy pays for what it held; the war goes on at the enemy's next settlement. Lost, the siege
+ * must begin again. Either way it costs hulls, more for a failure, and more for those closing in.
+ * Returns why not, or whether it won.
  */
 export function assault(state: GameState, by: string, colonyId: string, raze = false): { won: boolean } | string {
   const c = state.colonies[colonyId];
@@ -411,17 +635,19 @@ export function assault(state: GameState, by: string, colonyId: string, raze = f
   if (why) return why;
   const w = warOf(state, by, c.owner)!;
   const from = c.owner;
-  const here = allFleets(state).filter((f) => f.owner === by && f.at === c.systemId);
+  const here = stormers(state, by, c);
   const force = assaultForce(state, by, c) * luck(state, c.systemId, `${by}:assault`);
   const hold = holdOf(c);
   const won = force >= hold;
-  const ships = here.flatMap((f) => f.ships.filter((s) => isWarship(s.cls)));
-  for (const s of ships) s.hp -= (hold * (won ? 0.3 : 0.8)) / Math.max(1, ships.length);
+  const actorCiv = state.civs[by];
+  if (actorCiv) actorCiv.flags[stormedKey(c.systemId)] = state.turn;
+  const ships = here.flatMap((f) => f.ships.filter((s) => isWarship(s.cls)).map((s) => ({ s, taken: tacticOf(f).taken })));
+  for (const { s, taken } of ships) s.hp -= ((hold * (won ? 0.3 : 0.8)) / Math.max(1, ships.length)) * taken;
   for (const f of here) {
     f.ships = f.ships.filter((s) => s.hp > 0);
     if (!f.ships.length) delete state.fleets[f.id];
   }
-  w.siege = 0;
+  delete c.siege;
   const sys = state.systems[c.systemId];
   if (!won) {
     const actor = state.civs[by];
@@ -433,11 +659,14 @@ export function assault(state: GameState, by: string, colonyId: string, raze = f
     state.battles.push({ systemId: c.systemId, turn: state.turn, text: `An assault on ${c.name} thrown back.` });
     return { won: false };
   }
-  // (what the side that began it has taken: the desperate stop once they have what they came for)
-  if ((w.by ?? state.player) === by) w.took = (w.took ?? 0) + 1;
-  conquer(state, by, c, raze ? 'raze' : 'take', w.cause);
-  // on to the next of theirs, while the war goes on
-  if (warOf(state, by, from) === w) {
+  // (what the side that began it has taken: the desperate stop once they have what they came for;
+  // the side it fell on has a cause of its own: the war it did not begin)
+  const began = (w.by ?? state.player) === by;
+  if (began) w.took = (w.took ?? 0) + 1;
+  else w.lost = (w.lost ?? 0) + 1;
+  conquer(state, by, c, raze ? 'raze' : 'take', began ? w.cause : DEFENCE_CAUSE);
+  // on to the next of theirs, while the war goes on (for the side that began it)
+  if (warOf(state, by, from) === w && (w.by ?? state.player) === by) {
     const next = frontOf(state, from, by);
     if (next) w.at = next;
   }

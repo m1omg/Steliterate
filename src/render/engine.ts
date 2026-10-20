@@ -8,7 +8,7 @@ import { createPost, type PostChain } from './post';
 import { SystemView, type RevealStep } from './systemView';
 import { VIEW_MODE } from './shaders/bodies';
 import { calendarEra } from '../game/fate';
-import { colonies, ownColony } from '../game/sim/util';
+import { allColonies, colonies, ownColony } from '../game/sim/util';
 
 export type ViewKind = 'galaxy' | 'system';
 export type Quality = 'low' | 'medium' | 'high';
@@ -698,10 +698,23 @@ export class Engine {
         for (const p of this.galaxy.pickables) {
           if (p.kind === 'system' && others.has(p.id) && !cand.some((c) => c.p.id === p.id)) cand.push({ p, dd: 0 });
         }
+        // a star where we fought last turn, or where a siege of ours or of theirs on ours holds, is
+        // marked ✕ (the combat system)
+        const me = state.civ.id;
+        const war = new Set<string>();
+        for (const b of state.battles) if (b.turn === state.turn - 1 && b.sides?.some((x) => x.owner === me)) war.add(b.systemId);
+        for (const c of allColonies(state)) if (c.siege && (c.owner === me || c.siege.by === me)) war.add(c.systemId);
+        for (const p of this.galaxy.pickables) {
+          if (p.kind === 'system' && war.has(p.id) && !cand.some((c) => c.p.id === p.id)) cand.push({ p, dd: 0 });
+        }
         for (const { p } of cand) {
           const s = state.systems[p.id];
           const mine = colonized.has(p.id);
           const sv = others.get(p.id);
+          if (war.has(p.id)) {
+            items.push({ text: `✕ ${sv ? sv.name : s.name}`, pos: p.pos, cls: 'battle', w: 6, pick: p.id });
+            continue;
+          }
           if (sv) {
             items.push({ text: `◈ ${sv.name}`, pos: p.pos, cls: 'others', w: 4, color: sv.color, pick: p.id });
             continue;

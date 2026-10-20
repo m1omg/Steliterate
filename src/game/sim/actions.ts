@@ -5,7 +5,8 @@ import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, enabledAt, hasOnceEffect, i
 import { FORMS } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
 import { WORK_BY_ID } from '../data/works';
-import type { Colony, Focus, GameState, PactKind, SpareWork, ThreadId } from '../types';
+import type { Colony, Focus, GameState, PactKind, SpareWork, TacticId, ThreadId } from '../types';
+import { TACTIC_BY_ID } from '../data/tactics';
 import { endPact, proposePact } from './pacts';
 import { sanctuaryHeard } from './refuge';
 import { declareWar, makePeace } from './war';
@@ -547,9 +548,27 @@ export function shutHaloSiphons(state: GameState): ActionResult {
   return null;
 }
 
-/** Storm their star (a civilization of its own: the settlement the war is fought at), taking it, or with `raze` destroying it. */
+/** Storm their star (a civilization of its own: the settlement of theirs we hold the longest siege on, else the one the war is fought at), taking it, or with `raze` destroying it. */
 export function seize(state: GameState, survivorId: string, raze = false): ActionResult {
   return seizeSurvivor(state, survivorId, raze);
+}
+
+/** Storm one settlement of a civilization at war with us, its siege held long enough by our warships there: taking it, or with `raze` destroying it. */
+export function storm(state: GameState, colonyId: string, raze = false): ActionResult {
+  const c = state.colonies[colonyId];
+  if (!c || c.owner === state.civ.id || !state.survivors[c.owner]) return 'There is no settlement of theirs to storm.';
+  return seizeSurvivor(state, c.owner, raze, colonyId);
+}
+
+/** How a fleet of ours fights (the combat system, 20 Oct), in every fight it is in until told otherwise. */
+export function setTactic(state: GameState, fleetId: string, tactic: TacticId): ActionResult {
+  const f = ownFleet(state, fleetId);
+  if (!f) return 'No such fleet.';
+  if (!TACTIC_BY_ID[tactic]) return 'No such tactic.';
+  if (!f.ships.some((s) => isWarship(s.cls))) return 'Only warships fight by a tactic.';
+  if (tactic === 'line') delete f.tactic;
+  else f.tactic = tactic;
+  return null;
 }
 
 /** Strike one of the enemy's settlements with a Kinetic Lance from this fleet. */

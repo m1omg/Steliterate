@@ -219,12 +219,21 @@ export interface Colony {
   flags_rushed?: number; // turn of the last emergency shift
   flags_drifted?: number; // turn it last drifted to another black hole (horizon.ts)
   last?: YieldBreakdown;
+  /**
+   * Under siege (the combat system, 20 Oct): warships of a civilization at war with its owner hold
+   * its star, with none of its owner's there, and have for `turns` turns (conflict.ts, siegesTurn).
+   * Absent while no one holds it.
+   */
+  siege?: { by: string; turns: number };
 }
 
 export interface Ship {
   cls: string;
   hp: number;
 }
+
+/** How a fleet fights (data/tactics.ts): Hold the line, Close in, Stand off, Escort. */
+export type TacticId = 'line' | 'close' | 'standoff' | 'escort';
 
 // fortify: warships dug in to defend where they are; hold: parked on purpose (neither counts as idle)
 export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame' | 'fortify' | 'hold' | 'strike';
@@ -246,6 +255,8 @@ export interface Fleet {
   targetColony?: string;
   /** Standing orders the fleet carries out by itself (absent in older saves). */
   auto?: 'explore';
+  /** How it fights, in every fight it is in (absent: Hold the line, as every fleet fought before 20 Oct). */
+  tactic?: TacticId;
   /** The last system it made a long-baseline scan from (absent in older saves). */
   scanned?: string;
   /**
@@ -415,6 +426,8 @@ export interface War {
   motive?: 'hunger' | 'corrupted' | 'desperate';
   /** Settlements taken or destroyed in it by the side that began it. */
   took?: number;
+  /** Settlements the side that began it has lost in it to the other's counter-attack (the combat system, 20 Oct). */
+  lost?: number;
 }
 
 export interface Mind {
@@ -559,6 +572,23 @@ export interface Battle {
   systemId: string;
   turn: number;
   text: string;
+  /** A battle between civilizations (the combat system, 20 Oct): each side, as it fought this turn. */
+  sides?: BattleSide[];
+}
+
+/** One civilization's side of a turn of battle at a star. */
+export interface BattleSide {
+  owner: string;
+  /** Its fleets there, by name, and each one's tactic. */
+  fleets: { name: string; tactic: TacticId }[];
+  /** Its ships there as the battle began, and its settlements' fire. */
+  ships: number;
+  settlement: number;
+  /** The fire it put out, and what reached its own hulls. */
+  dealt: number;
+  taken: number;
+  /** The ships it lost, by class. */
+  lost: Record<string, number>;
 }
 
 export interface GameState {

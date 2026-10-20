@@ -41,7 +41,7 @@ import { IRON_ETA, ironAge, turnsToCollapse, turnsToEta } from './sim/deeptime';
 import { LEAVE_MARGIN, SPENT_SPIN, holeFailing } from './sim/crossing';
 import { beginHorizon, driftToAnotherHole, horizonCheck } from './sim/horizon';
 import { beginWeave, leaveWeave, positroniumComes, positroniumGone, positroniumHere, turnsToDecay, weaveCheck } from './sim/positronium';
-import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, ThreadId, War } from './types';
+import type { Body, Colony, Fate, Fleet, GameState, StarSystem, SurvivorWay, TacticId, ThreadId, War } from './types';
 import { THREADS } from './types';
 import { THREAD_DEFS } from './data/threads';
 import { accordCheck, accordCost, spendAccord, type AccordUse } from './sim/accord';
@@ -130,10 +130,12 @@ const GFE_SPARE = 0.2;
  *   once it has taken a settlement or its plight has eased.
  * For a cause it arms first (a Breacher against walls; Hunters against the Hunger, once it knows
  * them; Wardens otherwise), and goes when its warships are WAR_ODDS times what stands at the
- * front: the enemy's settlement nearest its capital. Attacked, it gathers its warships there, dug
- * in. It makes peace once a war it began has lasted WAR_TIRES turns, or its warships are gone. An
- * enemy that could strike with a Kinetic Lance makes it keep a Picket at its capital; far down the
- * Hunger's path, it strikes with one itself. (A fleet of Pickets keeps its watch where it is.)
+ * front: the enemy's settlement nearest its capital. At war, whoever began it, it fights as
+ * `fightWar` says (the combat system, 20 Oct: before, attacked, it only gathered what it had at the
+ * front, dug in). It makes peace once a war it began has lasted WAR_TIRES turns, its warships are
+ * gone, or it has lost a settlement in it or cannot break a siege of its own. An enemy that could
+ * strike with a Kinetic Lance makes it keep a Picket at its capital; far down the Hunger's path, it
+ * strikes with one itself. (A fleet of Pickets keeps its watch where it is.)
  */
 function planWarAI(state: GameState) {
   const civ = state.civ;
@@ -145,34 +147,31 @@ function planWarAI(state: GameState) {
   const line = lineOfBattle(state);
   const foes = enemiesOf(state, me);
   if (foes.some((o) => state.civs[o]?.techs.includes('relativistic_arks'))) keepWatch(state);
+  const force = line.reduce((a, f) => a + fleetFire(f), 0);
+  const fighting: string[] = [];
   for (const foe of foes) {
     const w = warOf(state, me, foe)!;
-    if (w.by !== me) {
-      // attacked: to the front, dug in (a war we began on them is fought at their first star)
-      const front = w.at ?? (foe === state.player ? state.survivors[me]?.homeSystemId : undefined);
-      for (const f of line) {
-        if (f.to) continue;
-        if (front && f.at !== front && colonies(state).some((c) => c.systemId === front)) orderFleet(state, f.id, front, 'move');
-        else if (f.at === front) f.order = 'fortify';
+    if (w.by === me) {
+      const done = w.motive === 'desperate' && ((w.took ?? 0) > 0 || plight(state, me) < EASED);
+      // losing it: a settlement lost in it, or a siege of ours it cannot break
+      const losing = (w.lost ?? 0) > 0 || colonies(state).some((c) => c.siege?.by === foe && force < guardAt(state, c.systemId, foe));
+      if (state.turn - w.since > WAR_TIRES || !line.length || done || losing) {
+        peaceBetween(state, me, foe);
+        continue;
       }
-      continue;
     }
-    const done = w.motive === 'desperate' && ((w.took ?? 0) > 0 || plight(state, me) < EASED);
-    if (state.turn - w.since > WAR_TIRES || !line.length || done) {
-      peaceBetween(state, me, foe);
-      continue;
-    }
-    for (const f of line) if (w.at && f.at && f.at !== w.at && !f.to) orderFleet(state, f.id, w.at, 'move');
-    // behind a Defence Grid or a Bastion Shell: only a Breacher breaks in
-    if (needsBreacher(state, foe, w.at, line)) arm(state, 'breacher', true);
-    if (civ.taint >= CORRUPT_AT) lanceAt(state, foe);
+    fighting.push(foe);
+  }
+  if (fighting.length) {
+    fightWar(state, fighting, line, true);
+    return;
   }
   if (foes.length) return;
+  comeHome(state, line);
   const target = warTarget(state, line);
   if (!target) return;
   const front = frontOf(state, target.id, me);
   if (!front) return;
-  const force = line.reduce((a, f) => a + fleetFire(f), 0);
   // (the desperate have weighed their own odds, against all they would meet: worthWar)
   const go = target.motive === 'desperate' ? !!target.ready : force >= WAR_ODDS * Math.max(1, guardAt(state, front, target.id));
   if (go && civ.accord >= WAR_ACCORD) {
@@ -183,6 +182,129 @@ function planWarAI(state: GameState) {
   // arm: a Breacher first if the front is walled, then Hunters against the Hunger, or Wardens
   if (needsBreacher(state, target.id, front, line)) arm(state, 'breacher', true);
   else if (line.length < 6) arm(state, target.cause === HUNGER_CAUSE && hasTech(state, 'hunger_studies') ? 'hunter' : 'warden');
+}
+
+/**
+ * The turn after a war of the active civilization's ends (`civ.flags.peace_at`, conflict.ts
+ * `warOver`): every fleet holds the line again, and its warships away from its own stars come home
+ * to its capital, once.
+ */
+function comeHome(state: GameState, line: Fleet[]) {
+  const civ = state.civ;
+  if (civ.flags.peace_at === undefined) return;
+  delete civ.flags.peace_at;
+  const cap = capital(state);
+  const mine = new Set(colonies(state).map((c) => c.systemId));
+  for (const f of fleets(state)) delete f.tactic;
+  if (cap) for (const f of line) if (f.at && !f.to && !mine.has(f.at)) orderFleet(state, f.id, cap.systemId, 'move');
+}
+
+/** The share of what has come to its star from which a civilization's warships go and hold out there (standing off, they keep a siege from holding); under it, they gather at the capital. */
+const HOLD_OUT = 0.5;
+/** Enemy fire this many times a fleet's own side's where it is (away from its capital): it withdraws. */
+const WITHDRAW_AT = 2;
+
+/** The stars of the active civilization's settlements where its enemies' ships are stopped, and what their warships fire there: its capital's first, then the most dangerous. */
+function threatened(state: GameState, foes: string[]): { systemId: string; fire: number }[] {
+  const mine = new Set(colonies(state).map((c) => c.systemId));
+  const cap = capital(state)?.systemId;
+  const out = new Map<string, number>();
+  for (const f of allFleets(state)) {
+    if (!f.at || f.order === 'strike' || !mine.has(f.at) || !foes.includes(f.owner)) continue;
+    out.set(f.at, (out.get(f.at) ?? 0) + fleetFire(f));
+  }
+  return [...out.entries()]
+    .map(([systemId, fire]) => ({ systemId, fire }))
+    .sort((a, b) => Number(b.systemId === cap) - Number(a.systemId === cap) || b.fire - a.fire || (a.systemId < b.systemId ? -1 : 1));
+}
+
+/**
+ * How a fleet of the active civilization fights at a star where its enemies are (none where they
+ * are not: it holds the line, as every fleet does outside a war). With unarmed ships aboard, it
+ * escorts them. Half again their fire there, or more (its own side's: its warships and settlements
+ * there, and it), it closes in; less, it holds the line where it must hold a siege or dug in at its
+ * own star, and stands off anywhere else.
+ */
+function tacticFor(state: GameState, f: Fleet, at: string, foes: string[]): TacticId | undefined {
+  if (!f.ships.some((s) => isWarship(s.cls))) return undefined;
+  const theirShips = allFleets(state).filter((x) => x.at === at && x.order !== 'strike' && foes.includes(x.owner) && x.ships.length > 0);
+  const theirs = allColonies(state).some((c) => c.systemId === at && foes.includes(c.owner));
+  if (!theirShips.length && !theirs) return undefined;
+  if (f.ships.some((s) => !isWarship(s.cls))) return 'escort';
+  const them = foes.reduce((a, o) => a + guardAt(state, at, o), 0);
+  const us = guardAt(state, at, f.owner) + (f.at === at ? 0 : fleetFire(f));
+  if (us >= WAR_ODDS * them) return 'close';
+  const siege = theirs && !theirShips.some((x) => x.ships.some((s) => isWarship(s.cls)));
+  const home = colonies(state).some((c) => c.systemId === at) && f.order === 'fortify';
+  return siege || home ? undefined : 'standoff';
+}
+
+/** A warship for the war, at the capital: an Aegis once it can build one and has the energy, a Warden otherwise. */
+function armWarship(state: GameState) {
+  arm(state, hasTech(state, 'aegis_lattices') && state.civ.energy > 250 ? 'aegis' : 'warden');
+}
+
+/**
+ * A war's turn for the active civilization (the combat system, 20 Oct), the others' and our
+ * autoplayer's alike, whoever began it:
+ * - it arms while its warships fall short of half again what threatens it: what has come to its
+ *   stars and is on its way to them, and what stands where it would carry the war;
+ * - it goes for what has come to its own stars, the most dangerous first (its capital's before any
+ *   other), with every warship it has, once they and what stands there with them are at least
+ *   HOLD_OUT of it, to win or to hold out (standing off, they keep a siege from holding); under
+ *   that, it gathers them at its capital; its capital itself it always defends;
+ * - with nothing at its stars, it carries the war to the enemy: to the front of a war it began, or,
+ *   `strikeBack`, to the enemy's settlement nearest it once its warships are WAR_ODDS times what
+ *   stands there (there it holds the siege, and storms it when it can: conflict.ts); else it waits,
+ *   at the settlement they are coming for or at its capital;
+ * - each fleet where it fights picks its tactic (`tacticFor`), dug in at its own stars, and one
+ *   outmatched WITHDRAW_AT to one away from its capital comes home.
+ */
+function fightWar(state: GameState, foes: string[], line: Fleet[], strikeBack: boolean) {
+  const civ = state.civ;
+  const me = civ.id;
+  const cap = capital(state);
+  const mine = new Set(colonies(state).map((c) => c.systemId));
+  const force = line.reduce((a, f) => a + fleetFire(f), 0);
+  const threats = threatened(state, foes);
+  const foe = foes[0];
+  const w = warOf(state, me, foe);
+  if (!w) return;
+  const target = w.by === me ? w.at : strikeBack ? frontOf(state, foe, me) : undefined;
+  const coming = allFleets(state)
+    .filter((f) => foes.includes(f.owner) && f.to && mine.has(f.to))
+    .reduce((a, f) => a + fleetFire(f), 0);
+  const need = Math.max(threats.reduce((a, t) => a + t.fire, 0) + coming, target ? guardAt(state, target, foe) : 0);
+  if (force < WAR_ODDS * need) armWarship(state);
+  if (target && needsBreacher(state, foe, target, line)) arm(state, 'breacher', true);
+  if (civ.taint >= CORRUPT_AT) lanceAt(state, foe);
+  const go = (f: Fleet, to: string) => {
+    if (!f.at || f.to || f.at === to) return;
+    if (orderFleet(state, f.id, to, 'move') === null) f.tactic = tacticFor(state, f, to, foes);
+  };
+  const t = threats.find((x) => x.fire > 0);
+  if (t) {
+    const ours = guardAt(state, t.systemId, me) + line.filter((f) => f.at !== t.systemId).reduce((a, f) => a + fleetFire(f), 0);
+    if (ours >= HOLD_OUT * t.fire || t.systemId === cap?.systemId) for (const f of line) go(f, t.systemId);
+    else if (cap) for (const f of line) go(f, cap.systemId);
+  } else if (target && (w.by === me || force >= (line.some((f) => f.at === target || f.to === target) ? HOLD_OUT : WAR_ODDS) * Math.max(1, guardAt(state, target, foe)))) {
+    // (once on its way it keeps on, while it is at least HOLD_OUT of what stands there)
+    for (const f of line) go(f, target);
+  } else {
+    // nothing to do but wait: at the settlement of its own they are coming for, else at its capital
+    const post = w.by !== me && w.at && mine.has(w.at) ? w.at : cap?.systemId;
+    if (post) for (const f of line) go(f, post);
+  }
+  for (const f of fleets(state)) {
+    if (!f.at || f.to) continue;
+    // dug in at its own stars (a fleet parked there, too)
+    if (line.includes(f) && mine.has(f.at) && (f.order === 'idle' || f.order === 'hold')) f.order = 'fortify';
+    f.tactic = tacticFor(state, f, f.at, foes);
+    // outmatched away from its capital: home, to mend
+    if (!line.includes(f) || !cap || f.at === cap.systemId) continue;
+    const them = foes.reduce((a, o) => a + guardAt(state, f.at!, o), 0);
+    if (them > 0 && them >= WITHDRAW_AT * guardAt(state, f.at, me)) go(f, cap.systemId);
+  }
 }
 
 /** A civilization's fleets that fight a war where it is fought: its warships, but not a fleet of Pickets alone, which keeps its watch where it is. */
@@ -409,9 +531,9 @@ function pickResearch(state: GameState) {
   for (let i = 0; i < 6 && !civ.researching; i++) {
     const avail = new Set(availableTechs(state).map((t) => t.id));
     // (another civilization never falls back on a deliberate choice, noAuto: Halo Siphons, say;
-    // with a swarm near, it learns to defend itself first)
+    // with a swarm near, or at war, it learns to defend itself first: warships need it)
     const mine = civ.id === state.player;
-    const guard = !mine && avail.has('orbital_defense') && colonies(state).some((c) => swarmThreat(state, c.systemId)) ? 'orbital_defense' : undefined;
+    const guard = !mine && avail.has('orbital_defense') && (colonies(state).some((c) => swarmThreat(state, c.systemId)) || enemiesOf(state, civ.id).length > 0) ? 'orbital_defense' : undefined;
     const way = wayOf(state);
     const dark = hungerSteps(state);
     const order = [...(dark ? HUNGER_FIRST : []), ...(way ? WAY_RESEARCH[way] : []), ...TECH_PRIORITY];
@@ -974,34 +1096,31 @@ function planPacts(state: GameState) {
 }
 
 /**
- * War, for the 'warlike' strategy only: against our own people who left us, or a neighbour who
- * keeps raiding us, with warships enough to outmatch them. Build Wardens, declare, bring them to
- * the siege, take the star when the siege allows; make peace if it drags on.
+ * A war another civilization began on us (part 2c-2), whatever our strategy: we fight it as the
+ * others fight theirs (`fightWar`, the combat system, 20 Oct): we arm against what threatens us, go
+ * for what comes to our stars, wait at the settlement they are coming for, dug in, and pick our
+ * tactics; warlike, we strike back at theirs nearest us, and storm what we hold long enough.
  */
-/**
- * A war another civilization began on us (part 2c-2), whatever our strategy: our warships to the
- * front, dug in, and more built while theirs outweigh what stands there.
- */
-function planDefence(state: GameState) {
+function planDefence(state: GameState, warlike: boolean) {
   const civ = state.civ;
   if (civ.id !== state.player) return;
-  const cap = civ.capitalId ? state.colonies[civ.capitalId] : colonies(state)[0];
-  const warships = lineOfBattle(state);
   // an enemy that could strike with a Kinetic Lance: a Picket kept at the capital (as the others do)
   if (Object.values(state.survivors).some((sv) => sv.alive && sv.war && state.civs[sv.id]?.techs.includes('relativistic_arks'))) keepWatch(state);
-  for (const sv of Object.values(state.survivors)) {
-    if (!sv.alive || !sv.war?.by || sv.war.by === civ.id || !sv.war.at) continue;
-    const front = sv.war.at;
-    for (const f of warships) {
-      if (f.to) continue;
-      if (f.at !== front) orderFleet(state, f.id, front, 'move');
-      else f.order = 'fortify';
-    }
-    const theirs = allFleets(state).filter((f) => f.owner === sv.id).reduce((a, f) => a + fleetFire(f), 0);
-    if (cap && guardAt(state, front, civ.id) < theirs && (cap.structures.shipyard ?? 0) > 0 && cap.queue.length < 3 && civ.energy > 80) queueBuild(state, cap.id, 'ship', 'warden');
-  }
+  // a war a civilization of its own began on us: we fight it as the others do (fightWar), striking
+  // back at theirs only when warlike (the competent defend, as they always have)
+  const theirs = Object.values(state.survivors).filter((sv) => sv.alive && sv.war?.by && sv.war.by !== civ.id && state.civs[sv.id]);
+  if (!Object.values(state.survivors).some((sv) => sv.alive && sv.war)) comeHome(state, lineOfBattle(state));
+  if (!theirs.length) return;
+  fightWar(state, theirs.map((sv) => sv.id), lineOfBattle(state), warlike);
+  if (warlike) for (const sv of theirs) if (seizeBlocked(state, sv) === null) seizeSurvivor(state, sv.id);
 }
 
+/**
+ * War, for the 'warlike' strategy only: against our own people who left us, or a neighbour who
+ * keeps raiding us, with warships enough to outmatch them. Build Wardens, declare, bring them to
+ * the siege (against a civilization of its own, as the others fight: `fightWar`), take the star
+ * when the siege allows; make peace if it drags on.
+ */
 function planWar(state: GameState) {
   const civ = state.civ;
   if (civ.id !== state.player) return;
@@ -1014,8 +1133,13 @@ function planWar(state: GameState) {
     // (a war they began on us is planDefence's)
     if (sv.war?.by && sv.war.by !== civ.id) continue;
     if (sv.war) {
+      // (losing it, as the others judge theirs: a settlement lost in it, or a siege of theirs we cannot break)
+      const real = !!state.civs[sv.id];
+      const losing = real && ((sv.war.lost ?? 0) > 0 || colonies(state).some((c) => c.siege?.by === sv.id && force < guardAt(state, c.systemId, sv.id)));
       if (seizeBlocked(state, sv) === null) seizeSurvivor(state, sv.id);
-      else if (state.turn - sv.war.since > 30) makePeace(state, sv.id);
+      else if (state.turn - sv.war.since > 30 || losing) makePeace(state, sv.id);
+      // a civilization of its own fights back: we fight as the others do, to the front
+      else if (real) fightWar(state, [sv.id], lineOfBattle(state), true);
       else if (raidStrength(state, sv.war.at ?? sv.homeSystemId) <= 0) for (const f of warships) if (f.at && f.at !== (sv.war.at ?? sv.homeSystemId)) orderFleet(state, f.id, sv.war.at ?? sv.homeSystemId, 'move');
       continue;
     }
@@ -1238,7 +1362,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planPace(state);
   planWorks(state);
   planDarkSleep(state);
-  planDefence(state);
+  planDefence(state, strategy === 'warlike');
   if (strategy === 'warlike') planWar(state);
 }
 

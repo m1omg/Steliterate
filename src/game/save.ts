@@ -7,7 +7,8 @@ import { surveyWhereStationed } from './sim/fleets';
 import { queueEvent } from './sim/events';
 import { relightTheLastStar } from './sim/minds';
 import { waitsForAnswer } from './sim/signals';
-import type { GameState } from './types';
+import type { GameState, War } from './types';
+import { BATTLE_MEMORY } from './sim/conflict';
 import { PLAYER_ID, assertPlayerView, linkCivs } from './civs';
 import { STORE } from '../keys';
 
@@ -26,7 +27,7 @@ function ls(): Storage | null {
 }
 
 /** The current save format. Bump it with a new step in migrate() whenever saved state changes shape. */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 /**
  * The new version's first save format (13 Oct). A save older than it is from the build before the
@@ -101,6 +102,26 @@ export function migrate(s: GameState): GameState {
     // v3: the fate of matter has three answers; a game from before keeps the one it had
     s.fate ??= s.protonsDecay ? 'decay' : 'stable';
   }
+  if (v < 5) {
+    // v5 (the combat system, 20 Oct): a siege is the settlement's, whoever holds it. A war with a
+    // civilization of its own kept the siege of the side that began it on the war, at its front.
+    const move = (w: War | undefined, by: string, on: string) => {
+      if (!w?.siege || !w.at) return;
+      const c = Object.values(s.colonies).find((x) => x.owner === on && x.systemId === w.at);
+      if (c) c.siege = { by, turns: w.siege };
+      w.siege = 0;
+    };
+    for (const sv of Object.values(s.survivors ?? {})) if (sv.war && s.civs[sv.id]) move(sv.war, sv.war.by ?? s.player, sv.war.by && sv.war.by !== s.player ? s.player : sv.id);
+    for (const [k, t] of Object.entries(s.ties ?? {})) {
+      if (!t.war) continue;
+      const [a, b] = k.split('|');
+      const by = t.war.by ?? a;
+      move(t.war, by, by === a ? b : a);
+    }
+  }
+  // a battle is kept on the record BATTLE_MEMORY turns (before 20 Oct, for ever): as a turn's
+  // battles leave it (conflict.ts, battlesTurn, before the turn ends)
+  s.battles = s.battles.filter((x) => s.turn - x.turn <= BATTLE_MEMORY);
   // a settlement keeps its system: one placed in the Deep of a hole that had evaporated while only
   // others lived there (taking back our own people who left) was left in a system marked gone,
   // with nothing on the map to click and no way for ships to reach it

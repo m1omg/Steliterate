@@ -818,11 +818,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `declareOn` (another's declaration, by our rules; `war_on_us` signal), `peaceBetween`;
     `battlesTurn` (after `updateHunger`, once a turn): every battle at once from what stood at the
     start, each side's `luck` hashed from seed, turn, star and side (never the dice, so no order
-    decides), then the sieges of wars the others began and their blockades (ours stay in
-    `warTurn`, which leaves a real civilization's fighting to the battles). `planWarAI` (the
-    others: the Hunger heard of in one, or the corrupted on the weakest; arm, go at `WAR_ODDS`,
-    tire at `WAR_TIRES`), `planDefence` (ours, any strategy: to the front, dug in). We cannot make
-    peace in a war they began (`makePeace`).
+    decides), then every settlement's siege, everyone's (`siegesTurn`, since the combat system; see
+    below). `planWarAI` (the others: the Hunger heard of in one, or the corrupted on the weakest;
+    arm, go at `WAR_ODDS`, tire at `WAR_TIRES`; at war, `fightWar`), `planDefence` (ours, any
+    strategy: `fightWar` too). We cannot make peace in a war they began (`makePeace`).
     Conquest (2c-3, the end of `conflict.ts`): `assaultBlocked` (a war; warships at its star and
     none of its owner's; `siegeAt` at least `SIEGE_TURNS`, in a war the stormer began; `walled`, a
     Defence Grid or a Bastion Shell, needs a `breaches` ship), `assault` (`assaultForce`, the
@@ -837,8 +836,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     civilization through the outbox (`endCiv`: 'Seized' by us, fate 'seized' or 'destroyed'; by
     another, 'Conquered', fate 'conquered', set at once on the record since `updateSurvivors`
     keeps a fate it finds) and ours sets `flags.conquered`, a defeat of its own (`checkEndings`).
-    Our `seizeSurvivor(state, id, raze)` on a civilization of its own is `assault` at `sv.war.at`
-    (the light neighbours' and forks' path is unchanged); our `declareWar` now keeps its cause on
+    Our `seizeSurvivor(state, id, raze, colonyId?)` on a civilization of its own is `assault` at
+    the settlement asked for, else `stormTarget` (the one of theirs we hold the longest siege on,
+    else the front; in a war they began, theirs nearest us) (the light neighbours' and forks' path
+    is unchanged); our `declareWar` now keeps its cause on
     the war. The others storm in `battlesTurn` when nothing blocks it, razing from `CORRUPT_AT`.
     `warOf` gives no war once either side's game is over. The Kinetic Lance: `strikeBlocked`,
     `launchStrike` (the Lance alone in a fleet of its own, `orderMove(..., 'strike')`,
@@ -848,10 +849,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     hashed draw; a world's settlement `conquer(..., 'lance')`, one in the Deep loses `LANCE_DEEP`.
     A Lance on its order is neither surveyed from (`surveyWhereStationed`) nor hunted by a swarm
     (`swarmsHunt`): it does not stop. The AI builds a Breacher (`needsBreacher`, `arm` in
-    `auto.ts`) when the front is walled; it does not use the Lance yet (2d). In a war the other
-    side began, the defender cannot storm (`siegeAt` counts only the declarer's siege;
-    `assaultBlocked` and `seizeBlocked` say so). A war whose settlement is gone (taken, razed,
-    abandoned) moves on to the enemy's next (`warTurn` for ours, `battlesTurn` for the others').
+    `auto.ts`) when the front is walled; it does not use the Lance yet (2d). Until the combat
+    system (20 Oct) the defender in a war the other side began could not storm (`siegeAt` counted
+    only the declarer's siege); now either side can. A war whose settlement is gone (taken, razed,
+    abandoned) moves on to the enemy's next (`battlesTurn`, for every war).
     The interface (2c-4): `assaultOdds` (the draw is uniform from 0.6 to 1.4), `warFront` (the
     settlement our war with a civilization of its own is fought at), `screensSeen` (their screens at
     a star as `fleetSeen` shows their ships). The card (`Signals.tsx`): the War row for one of its
@@ -885,6 +886,53 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     empty: 12 of 15 attackers could not pay their fleet's launch to the front, and those that came
     brought one warship against a defender that dug in at home; hence the reach, the launch, the
     odds against all the defender has, and the arming.
+  - **The combat system** (20 Oct, `docs/plans/2026-10-20-combat.md`, the new version only):
+    - `data/tactics.ts`: `TACTICS` (`line` ×1/×1, `close` ×1.5/×1.5, `standoff` ×0.5/×0.5 and
+      `holds: false`, `escort` ×0.75/×1 and `escorts`), `Fleet.tactic` (absent: `line`, as every
+      fleet before), `tacticOf` (a fleet without a warship holds the line), `shareHurt` (a fleet's
+      ships' hurt by its tactic, an Escort's unarmed ships' moved onto its warships, the same
+      draws whatever the tactic), `fleetDug` (fortified and not standing off). `setTactic` and
+      `storm(colonyId, raze)` in `actions.ts`.
+    - Battles (`conflict.ts`): `sidesAt` (every ship stopped at a star, armed or not, but a Lance
+      on its order; each settlement's `settlementFire`: `SETTLEMENT_FIRE` 0.5 + `SETTLEMENT_FIRE_PER`
+      0.075 a person, at most `SETTLEMENT_FIRE_MAX` 6, and its Defence Grids'), `foesAmong` (a battle
+      where one side can fire on another's ships), `exchange` (each side's `sideFire` × `FIRE` ×
+      luck, `allot`ted in `fireOrder`: an Escort's unarmed ships last, then the least hull left,
+      then a hashed draw; what destroys a ship goes on to the next, a ship taking its fleet's
+      `taken` share). Every list is sorted by id first, so no order decides. `battleForecast` is
+      the same at an even draw with one fleet's tactic swapped (the buttons' tips). Each battle
+      is a `Battle` with `sides` (`BattleSide`: fleets and tactics, ships, settlement fire, dealt,
+      taken, lost by class) and, for us, one log line; `state.battles` keeps `BATTLE_MEMORY` (20)
+      turns (it grew for ever; `migrate` trims it with `<=`, as a turn leaves it).
+    - Sieges: `Colony.siege` (`{ by, turns }`), counted for every settlement in `siegesTurn`
+      (`besieger`: at war with its owner, a fleet that `holdsSiege` there, none of the owner's
+      warships; the most fire, then the id). Its blockade (`plunder`) and the resolve, for everyone;
+      then the others storm at `STORM_ODDS` (0.5). `siegeAt`, `assaultBlocked` (`stormers`: not
+      standing off; any war, either side), `assaultForce` (by tactics), `assault` (hulls by
+      `taken`; `War.lost` counts the declarer's settlements lost to the other's counter-attack),
+      `besieged(by, owner)`. `warTurn` keeps only dissent and a light neighbour's siege
+      (`siegeStrength`, those holding); `warHeat` reads the sieges. Format 5 (`SAVE_VERSION`) moves
+      a war's `siege` onto its `at` settlement (`tools/saves/70c2d07-seed1000-turn43-siege-next.json.gz`,
+      a war of ours under way, made with the build before).
+    - The AI (`auto.ts`): `planWarAI` makes peace in a war it began also once `War.lost` or a siege
+      of ours it cannot break; at war, `fightWar(foes, line, strikeBack)`: `armWarship` while its
+      line is under `WAR_ODDS` times what threatens it (`threatened`: enemy fire stopped at its
+      stars, and on its way to them) or stands at its target; the line to the first threat
+      (capital first) once it and the guard there are `HOLD_OUT` (0.5) of it, else to the capital;
+      with none, to the front of its own war or, `strikeBack`, the enemy's settlement nearest it
+      (`frontOf(foe, me)`) at `WAR_ODDS`; else it waits at its settlement they come for, or at its
+      capital; dug in at its own stars (`idle` or `hold` to `fortify`); `tacticFor` each fleet
+      (escort with unarmed aboard; close at `WAR_ODDS`; else line where it must hold a siege or is
+      dug in at home, stand off elsewhere); a fleet outmatched `WITHDRAW_AT` (2) away from its
+      capital goes home. `pickResearch`: another civilization at war learns Orbital Defense first.
+      `planDefence` (ours): `fightWar` for a war on us, striking back only `warlike`, which also
+      storms; `planWar` (warlike) uses `fightWar` against a civilization of its own.
+    - The interface: `TacticRow` and `BattleSection` (Storm and Raze per settlement, asking
+      first) in the fleet panel, `WarHere` in a star's, the siege chip on a settlement, the
+      tactic chip and the Fleets list's word, the war card's sieges and `stormTarget`. Checks:
+      `unit/combat`, `browser/tactics`; `unit/civ-war`, `unit/conquest`, `browser/war` updated.
+      Harness: `--war=N` in `tools/sim.ts` (at turn N we go to war on our nearest neighbour that
+      plays a game of its own; `warlike` fights it).
   - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
     temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
     civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not
@@ -2039,6 +2087,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the same (20 Oct; today's game, `claude/promises-main` `b48562d`, PR m1omg/Steliterate#36, `981e0f0`) | 165 | 77 victories, Degenerate Age 70 turns (149 / 80 / 72 before); 36 of 300 the same. By fate decay 67 / 148, stable 63 / 81, curvature 35 / 71. Harsh, 300 games: 150 / 59 / 71 (154 / 58 / 68 before; 43 the same). Within the noise |
 | the pace: ten turns to a Tide turn, the Dark Era's own clock, no slow turn ending an age; the late ages an eighth richer (`LATE_YIELD` 1.125); the autoplayer sleeps through the dark (20 Oct; the new version) | 187 | 77 victories, Degenerate Age 103 turns (165 / 77 / 72 before). By fate decay 107 / 148, stable 39 / 81, curvature 41 / 71. Harsh, 300 games: 147 / 51 / 98 (136 / 38 / 68 before). The Fade 26 (50). On the way: the honest turns alone 113 / 49 / 99; the late yield ×1.13 138 / 84, ×1.2 150 / 91, ×1.4 180 / 122, without the dark sleep. The Degenerate Age is longer in turns as the autoplayer no longer takes slow turns there in trouble |
 | the same, the late ages two fifths richer (`LATE_YIELD` 1.4) (20 Oct; today's game, `claude/promises-main` `bd86639`, PR m1omg/Steliterate#37, `d2abd2a`) | 229 | 73 victories, Degenerate Age 112 turns (165 / 77 / 70 before). By fate decay 87 / 148, stable 79 / 81, curvature 63 / 71. Harsh, 300 games: 209 / 63 / 106 (150 / 59 / 71 before). The Fade 8 (38), The Will Fails 4 (31). Without the dark sleep ×1.2 gave 93 / 49 / 110, ×1.6 141 / 105 / 119. Survival rose with the sleep: the overpay had carried the autoplayer through the dark, and it never slept |
+| combat: battles fought out a round a turn, tactics, every settlement firing, sieges by either side, the others fighting back (20 Oct; the new version) | 187 | 77 victories, Degenerate Age 103 turns, as before: our outcome the same in all 300 games, 299 the same in every detail (in the other a neighbour no longer begins a war it could not win). Harsh, 300 games: 147 / 51 / 98, all 300 the same. Wars are rare here (a neighbour's in 4 of 300, ours never), so a forced war measures it: `tools/sim.ts 300 standard warlike --war=40` gives 160 / 56 / 97 (121 / 47 / 90 under the old rules, where 76 games died in the Dusk); we took 66 settlements in 40 games and lost 3 in 3 (4 and 2), none conquered. Its first run, before one blockade and one storm a star a turn, ended 4 games in 12 with every settlement of ours taken |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

@@ -52,7 +52,8 @@ where things stand, what to read in which order, the player, the open threads an
 **Its section 0 (19 and 20 Oct) comes first.** It covers what came after: the batches "the game
 keeps its word", "falling worlds", the list's items 7, 1 and 6, and items 3 to 5 (the pace), live
 in both versions since 20 Oct, which completes the approved plan,
-`docs/plans/2026-10-19-falling-worlds-and-the-list.md` (the player's list of 16 Oct).
+`docs/plans/2026-10-19-falling-worlds-and-the-list.md` (the player's list of 16 Oct); then the
+combat system (20 Oct, the new version only, `docs/plans/2026-10-20-combat.md`).
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 
@@ -139,4 +140,7 @@ Harsh 145 / 52 / 73; a control run with the new worlds and the old falls gives 1
 Finds only where they can be and one sea (20 Oct): 165 / 77 / 72; by fate decay 80 / 148, stable
 43 / 81, curvature 42 / 71; Harsh 136 / 38 / 68; nearly every game re-rolled, within the noise.
 The pace (20 Oct; the late ages ×1.125, the autoplayer sleeping through the dark): 187 / 77 / 103;
-by fate decay 107 / 148, stable 39 / 81, curvature 41 / 71; Harsh 147 / 51 / 98.
+by fate decay 107 / 148, stable 39 / 81, curvature 41 / 71; Harsh 147 / 51 / 98. Combat (20 Oct,
+battles fought out, tactics, neighbours who fight back): the same, our outcome the same in all 300
+games (Harsh in all 300); wars are rare there, so a forced war measures it (`tools/sim.ts 300
+standard warlike --war=40`): 160 / 56, where the old rules gave 121 / 47.

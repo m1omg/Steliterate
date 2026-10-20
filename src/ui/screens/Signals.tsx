@@ -5,9 +5,9 @@ import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { answerSignal, askForAid, breakPact, devour, goToWar, makeGesture, peace, proposeAPact, seize, sendAid, shutHaloSiphons } from '../../game/sim/actions';
 import { siphonsRunning } from '../../game/physics';
-import { HUNGER_CAUSE, SIEGE_TURNS, WAR_ACCORD, hungerCause, seizeBlocked, warBlocked, warCause, warDefence } from '../../game/sim/war';
+import { HUNGER_CAUSE, SIEGE_TURNS, WAR_ACCORD, hungerCause, seizeBlocked, stormTarget, warBlocked, warCause, warDefence } from '../../game/sim/war';
 import { HEARD_CEILING, JUST_CAUSE_AT, SANCTION_AT, shuns } from '../../game/sim/judge';
-import { assaultForce, assaultOdds, holdOf, walled, warFront } from '../../game/sim/conflict';
+import { assaultForce, assaultOdds, besieged, holdOf, walled, warFront } from '../../game/sim/conflict';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
 import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
 import { ASK_COOLDOWN, askBlocked, inStep, reachBy, talkSpan } from '../../game/sim/survivors';
@@ -290,9 +290,13 @@ export function SignalsModal({ s }: { s: GameState }) {
                           )}
                           {sv.war?.by && sv.war.by !== s.civ.id && (
                             <>
-                              <dt data-tip={`They declared war on us on turn ${sv.war.since}${sv.war.cause ? `: ${sv.war.cause}` : ''}. Their warships come for ${s.systems[sv.war.at ?? '']?.name ?? 'our settlement nearest them'}; held there with none of ours, they besiege it, and our stores and will run down. They make peace when it has gone on long enough, or their warships are lost.`}>War on us</dt>
+                              <dt data-tip={`They declared war on us on turn ${sv.war.since}${sv.war.cause ? `: ${sv.war.cause}` : ''}. Their warships come for ${s.systems[sv.war.at ?? '']?.name ?? 'our settlement nearest them'} first; held with none of ours there, a settlement of ours is besieged, and our stores and will run down. They make peace when it has gone on long enough, their warships are lost, or it has cost them a settlement. We can strike back: besiege and storm theirs, as they can ours.`}>War on us</dt>
                               <dd class="mono bad">
-                                since turn {sv.war.since} · at {s.systems[sv.war.at ?? '']?.name ?? '?'} · their siege {sv.war.siege} turn{sv.war.siege === 1 ? '' : 's'}
+                                since turn {sv.war.since} · at {s.systems[sv.war.at ?? '']?.name ?? '?'}
+                                {(() => {
+                                  const held = besieged(s, sv.id, s.civ.id);
+                                  return held ? ` · their siege of ${held.name} ${Math.min(held.siege!.turns, SIEGE_TURNS)}/${SIEGE_TURNS}` : ' · no siege';
+                                })()}
                               </dd>
                             </>
                           )}
@@ -307,11 +311,15 @@ export function SignalsModal({ s }: { s: GameState }) {
                           {sv.war && !(sv.war.by && sv.war.by !== s.civ.id) && s.civs[sv.id] && (() => {
                             const front = warFront(s, sv.id);
                             const star = s.systems[sv.war.at ?? '']?.name ?? '?';
+                            const held = besieged(s, s.civ.id, sv.id);
+                            const c = held ?? front;
                             return (
                               <>
-                                <dt data-tip={`At war since turn ${sv.war.since}. The war is fought at ${front ? `${front.name}, at ${star}` : star}: their settlement nearest our capital. A siege is warships held there turn after turn with none of theirs; after ${SIEGE_TURNS} turns we can storm it, and behind a Defence Grid or a Bastion Shell only with a Breacher. What it holds: 2, and 0.3 for each of its people, its Defence Grids, a Bastion Shell. Taken or razed, the war goes on at their next.`}>War</dt>
+                                <dt data-tip={`At war since turn ${sv.war.since}. It is fought first at ${front ? `${front.name}, at ${star}` : star}: their settlement nearest our capital. A siege is warships of ours held at any settlement of theirs turn after turn, holding the line or closing in, with none of their warships there; after ${SIEGE_TURNS} turns we can storm it, and behind a Defence Grid or a Bastion Shell only with a Breacher. What it holds: 2, and 0.3 for each of its people, its Defence Grids, a Bastion Shell. They strike back at ours as we strike at theirs.`}>War</dt>
                                 <dd class="mono bad">
-                                  since turn {sv.war.since} · at {star} · siege {sv.war.siege}/{SIEGE_TURNS}{front ? ` · it holds ${n1(holdOf(front))}${walled(front) ? ', walled' : ''}` : ''}
+                                  since turn {sv.war.since} · at {star}
+                                  {held ? ` · our siege of ${held.name} ${Math.min(held.siege!.turns, SIEGE_TURNS)}/${SIEGE_TURNS}` : ' · no siege'}
+                                  {c ? ` · it holds ${n1(holdOf(c))}${walled(c) ? ', walled' : ''}` : ''}
                                 </dd>
                               </>
                             );
@@ -379,15 +387,11 @@ export function SignalsModal({ s }: { s: GameState }) {
                                   </button>
                                 );
                               })()}
-                              {sv.war?.by && sv.war.by !== s.civ.id ? (
-                                <button class="btn small disabled" data-tip="They began this war, and it ends when they make peace: once it has gone on long enough, or their warships are lost.">
-                                  Make peace
-                                </button>
-                              ) : sv.war ? (
+                              {sv.war ? (
                                 <>
                                   {s.civs[sv.id] && (() => {
                                     const why = seizeBlocked(s, sv);
-                                    const c = warFront(s, sv.id);
+                                    const c = stormTarget(s, sv);
                                     const odds = c ? assaultOdds(s, s.civ.id, c) : 0;
                                     const terms = c ? `our warships there bring ${n1(assaultForce(s, s.civ.id, c))} against settlements, against the ${n1(holdOf(c))} it holds, on a draw: about ${pct(odds)} to win.` : '';
                                     const cause = warCause(s, sv);
@@ -422,9 +426,15 @@ export function SignalsModal({ s }: { s: GameState }) {
                                       </button>
                                     );
                                   })()}
-                                  <button class="btn small" data-tip="Stop the war. They hear of it when the light arrives; the ill will takes longer to fade." onClick={() => act((g) => peace(g, sv.id)) && sfx('good')}>
-                                    Make peace
-                                  </button>
+                                  {sv.war.by && sv.war.by !== s.civ.id ? (
+                                    <button class="btn small disabled" data-tip="They began this war, and it ends when they make peace: once it has gone on long enough, their warships are lost, or it has cost them a settlement.">
+                                      Make peace
+                                    </button>
+                                  ) : (
+                                    <button class="btn small" data-tip="Stop the war. They hear of it when the light arrives; the ill will takes longer to fade." onClick={() => act((g) => peace(g, sv.id)) && sfx('good')}>
+                                      Make peace
+                                    </button>
+                                  )}
                                 </>
                               ) : (
                                 (() => {
@@ -498,7 +508,7 @@ export function SignalsModal({ s }: { s: GameState }) {
                             <span class="warn" style={{ fontSize: '13.5px' }}>
                               {armed.startsWith('storm') || armed.startsWith('raze')
                                 ? (() => {
-                                    const c = warFront(s, sv.id);
+                                    const c = stormTarget(s, sv);
                                     const odds = pct(c ? assaultOdds(s, s.civ.id, c) : 0);
                                     return armed.startsWith('storm')
                                       ? `Storm ${c?.name ?? 'their settlement'}? About ${odds} to take it. Three tenths of its people would flee to their own; the rest would be ours, unwilling. Every civilization will hear of it.`

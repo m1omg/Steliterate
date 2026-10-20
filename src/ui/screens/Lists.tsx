@@ -7,6 +7,7 @@ import { habitabilityOf } from '../../game/sim/terraform';
 import { SiteStrip, bestOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
 import { YIELDS, yieldOf, yieldText, yieldTip } from '../yields';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
+import { tacticOf } from '../../game/data/tactics';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, formatYearsShort } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
@@ -119,7 +120,10 @@ export function FleetsModal({ s }: { s: GameState }) {
               <img class={`fleet-thumb${moving ? ' moving' : ''}`} src={`art/ships/${fleetLook(f.ships.map((x) => x.cls))}.png`} alt="" />
               <span class="grow">
                 {f.name}
-                <div class="faint" style={{ fontSize: '12.5px' }}>{shipSummary(f)}</div>
+                <div class="faint" style={{ fontSize: '12.5px' }}>
+                  {shipSummary(f)}
+                  {tacticOf(f).id !== 'line' ? ` · ${tacticOf(f).name.toLowerCase()}` : ''}
+                </div>
               </span>
               <span class="mono" style={{ fontSize: '12.5px', textAlign: 'right' }}>
                 {moving ? (

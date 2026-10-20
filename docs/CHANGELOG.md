@@ -3902,3 +3902,109 @@ in today's game).
   then merged into this branch, keeping this branch's code (`-s ours`, `95353de`). Live on 20
   Oct: the main address serves `index-huAXd3rX.js` and `/next/` `index-B8OkbgIN.js`, the builds
   validated here.
+
+## Combat: battles fought out, tactics, and neighbours who fight back (20 Oct, the new version)
+
+The player, 20 Oct: "right now I can literally be at war with a civilization, send spaceships into
+their system and they won't even attack. Let's make a combat system. For now it can be an auto
+resolve one, tho let's do custom tactics choosable as modifiers that would modify the damage
+inflicted and damage received." Asked, the player chose a set of tactics to pick from, per fleet;
+the new version only (today's game keeps its siege); "strike back" (in a war we begin, they come
+for our settlements too, and the same in the others' wars); and tactics in every fight, swarms
+too. The plan: `docs/plans/2026-10-20-combat.md`.
+
+- **Why they did not attack.** A civilization we went to war on never built a warship (it armed
+  only for a war of its own), and gathered what it had, dug in, at its one settlement nearest our
+  capital; a settlement without a Defence Grid could not fire at all; and only warships took part
+  in a battle, so a probe or a settler at an enemy's star was never fired on. A side's fire was
+  spread over the other's hulls by what each had left, so every ship lost the same share each turn
+  and all of them were lost in the same turn. And `state.battles` was written every turn, never
+  shown and never trimmed.
+- **Tactics** (`data/tactics.ts`, `Fleet.tactic`): every fleet with a warship fights by one, in
+  every fight it is in, until told otherwise (Tactic, on its panel). Hold the line ×1 dealt, ×1
+  taken (as every fleet fought before; a fleet from before holds it); Close in ×1.5, ×1.5; Stand off
+  ×0.5, ×0.5, holding no siege, unable to storm or raid, and not dug in; Escort ×0.75 dealt, its
+  warships taking the fire meant for its unarmed ships. A fleet without a warship holds the line.
+  Built, Stand off first took ×0.35 (as offered): it then won every fight, four Wardens standing
+  off beating five holding the line, so it takes ×0.5 like what it deals. Between two fleets Close
+  in and Stand off set how fast a fight goes, not who wins it (six Wardens beat four in 4 turns
+  closing in, 6 holding the line, 11 standing off); what makes them matter is what no battle
+  silences (a settlement's guns hit a fleet closing in half again as hard), a swarm's odds, a
+  siege, help on its way, and luck (fewer turns, fewer draws).
+- **A battle, a round a turn** (`battlesTurn`, as before, everyone at once and the luck from the
+  seed): every ship stopped at the star is a target, armed or not (a Lance in flight is not);
+  every settlement fires with what it has, its people's mining lasers and mass drivers (0.5 and
+  0.075 a person, at most 6) and its Defence Grids (8 each); a ship's fire is its strength against
+  ships, dug in if fortified, by its fleet's tactic, and what reaches it its own fleet's share; fire
+  falls on ships one at a time, the least hull left first (an Escort's unarmed ships last), so
+  ships are lost one by one and a side fires less as it loses them. Each battle we are in is a line
+  in the log ("Battle at X with Y: we dealt 7.3 and took 4.9. We lost a Survey Probe. They lost a
+  Warden."), on the record with both sides' fleets, tactics, fire and losses (`Battle.sides`), and
+  the map marks the star ✕. The record keeps 20 turns.
+- **Sieges at any settlement, by either side** (`Colony.siege`): warships of a civilization at war
+  with its owner holding its star (not standing off), with none of its owner's warships there,
+  besiege it, whoever began the war; three turns, and it can be stormed (behind a Defence Grid or a
+  Bastion Shell only with a Breacher), one settlement at a star a turn; the blockade drains its
+  owner 12 energy once a turn for the star, however many settlements are there. Until now only the
+  side that began a war besieged, and only at its front. Format 5 moves a war's siege onto the
+  settlement it was held at; `tools/saves/70c2d07-seed1000-turn43-siege-next.json.gz` (a war of ours
+  under way, made with the build before) is the save for it.
+- **They fight back** (`fightWar`, the others' and our autoplayer's): at war, whoever began it,
+  they arm (one that cannot build a warship learns Orbital Defense first) while their warships are
+  under half again what threatens them; go for our ships at their stars once they and what stands
+  there are at least half of them (holding out, standing off, keeps a siege from holding), else
+  gather at their capital; with nothing at their stars, carry the war to the front of a war they
+  began or strike back at our settlement nearest them once half again what stands there, and keep
+  on once under way; pick a tactic for each fleet where it fights (escort with settlers aboard,
+  close in at half again the enemy's fire, else hold the line where they must hold a siege or are
+  dug in at home, and stand off anywhere else); bring a fleet outmatched two to one home; and
+  storm at even odds or better. One that began a war makes peace once it has lost a settlement in
+  it or cannot break a siege of ours, as well as after 30 turns or with its warships gone. What the
+  side a war fell on takes is no Hunger act ("They began this war."). After a war both sides'
+  warships go home, holding the line again.
+- **Every other fight:** a swarm's (our attack × dealt, the hurt × taken, an Escort's warships taking
+  its unarmed ships' hurt; the same draws whatever the tactic), a raid and an assault (force ×
+  dealt, losses × taken, none standing off), and a siege of a neighbour without a civilization of
+  its own (an older game's: their fire × taken, Stand off holding none).
+- **What the player sees:** the fleet's panel has a Tactic row (each button's tip: what it does, in
+  figures, and with an enemy at the star what it would deal and take there this turn at an even
+  draw, `battleForecast`) and a Battle section (both sides' ships, tactics and guns, last turn's
+  exchange, our siege of a settlement of theirs there with Storm and Raze, asking first); a star's
+  panel has War here; a settlement under siege a chip; the fleet list a fleet's tactic; the war
+  card our siege and theirs, and Storm and Raze in a war they began too. The Manual's fleet, war
+  and raid paragraphs, and a new one on tactics.
+- **Fixed on the way, by a forced war** (`--war=N` in `tools/sim.ts`: at turn N we go to war on our
+  nearest neighbour; warlike fights it): the first run ended four games in twelve with every
+  settlement of ours taken within twenty turns. Early on they are all at one star: they were
+  besieged together, each drained 12 energy a turn, and all were stormed in one turn; the attacked
+  side's fleet flew home and back as its odds changed; and its takings were Hunger acts. Hence one
+  blockade and one storm a star a turn, a counter-attack that keeps on, the defender's cause, our
+  warlike autoplayer making peace when it is losing, and fleets coming home after a war.
+- **In games already under way** (the player: "make these changes apply to existing saves btw
+  pls, my last one is pretty young so it's just 1 build behind"): all of it does, none of it waits
+  for a new game. A fleet from before holds the line until given another tactic, the others take
+  up their wars as `fightWar` says from the next turn, and a siege under way moves onto its
+  settlement as the save loads (format 5); `tools/saves/70c2d07-seed1000-turn43-siege-next.json.gz`,
+  made with the build live at `/next/` before this one, loads that way and plays to the end.
+- **Checks:** new `unit/combat` (the tactics' figures; one ship at a time; every settlement fires,
+  at a probe too; Escort; how fast, not who; a settlement's guns and Stand off's siege; sieges in a
+  war either side began; one blockade and one storm a star; a format 4 save's siege; the others
+  arm, research, hunt, close in, come home outmatched, strike back, make peace and go home; our
+  competent and warlike autoplayers; swarms; the order of the fleets) and `browser/tactics`.
+  Updated: `unit/civ-war` and `unit/conquest` (the siege is the settlement's; in a war they began
+  we strike back), `browser/war` (the card's siege).
+- **Balance** (300 standard competent games): 187 of 300 survive, 77 victories, a Degenerate
+  Age of 103 turns, as before: our outcome is the same in all 300 games, and 299 are the same in
+  every detail (in the other a neighbour no longer begins a war it could not win, now that a
+  settlement fires back); Harsh 147 / 51 / 98, all 300 the same. Wars are rare in these games (a
+  neighbour's in 4 of 300, ours never), so a forced war shows the system: at turn 40, warlike, 300
+  games, 160 survive and 56 win, where under the old rules 121 and 47 did (76 of those died in the
+  Dusk, a war they could not end for 30 turns, against 11 now); we took 66 of their settlements in
+  40 games and lost 3 in 3 (4 and 2 under the old rules), and no game ends with us conquered (four
+  in the first twelve did, before the fixes above). Without a war 84 games of 300 end in Silence;
+  with one, 153 under the old rules and 101 now.
+- **Validated:** tsc and the build clean (`index-CNIblMZ3.js`); the playtest passes (30/144 Hz parity
+  2e-15); savecompat on its 9 saves; all 90 unit checks; all 64 browser checks in the real fonts;
+  and a game saved by the build live before, continued from the title screen as a player's browser
+  keeps it: its siege carried over, the Tactic row and the Battle section, and its next turn fought
+  by the new rules (a scratch script, not kept). Today's game does not change.

@@ -594,6 +594,7 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 /* collision stars in the Degenerate Age: always named on the map */
 .map-label.beacon { color: #ffe0a0; font-weight: 600; text-shadow: 0 0 4px #000, 0 0 10px rgba(255, 190, 90, 0.45); }
 .map-label.others { font-weight: 600; letter-spacing: 0.06em; }
+.map-label.battle { color: var(--bad); font-weight: 600; letter-spacing: 0.06em; text-shadow: 0 0 4px #000, 0 0 10px rgba(255, 90, 70, 0.45); }
 
 /* ------------------------------------------------------------------ phones (store.ts: isPhone)
    Narrow screens (portrait) and short touchscreens (held sideways). The map is what a phone shows: the

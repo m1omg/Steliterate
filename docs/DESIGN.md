@@ -411,10 +411,19 @@ the disagreement as real model uncertainty.
   * *War* between any two (part 2c), by our rules: the Threads' consent and what it costs, the
     pacts ended, infamy at light speed (none for a war on the Hunger in them), its heat drawing the
     Hunger. Battles once a turn, everyone at once, the luck drawn from the seed and never the dice,
-    so the order of the fleets decides nothing. Ships by role (Picket, Warden, Hunter, Aegis,
-    Breacher, Kinetic Lance), each with its upkeep; screens turn raids and strikes aside; a
+    so the order of the fleets decides nothing. Since the combat system (20 Oct, auto-resolved):
+    every ship at the star is a target, armed or not, the least hull left first, so ships are lost
+    one by one; every settlement fires with what it has; and each fleet fights by a tactic the
+    player picks, a modifier of the damage it deals and takes (Hold the line, Close in, Stand off,
+    Escort): between two fleets Close in and Stand off set how fast a fight goes, not who wins it
+    (strength does), and what makes them matter is what no battle silences (a settlement's guns),
+    a swarm's odds, a siege, help on its way, and luck. Ships by role (Picket, Warden, Hunter,
+    Aegis, Breacher, Kinetic Lance), each with its upkeep; screens turn raids and strikes aside; a
     Shipyard mends. Conquest a settlement at a time: a siege, then storming it (Breachers behind
-    Defence Grids or a Bastion Shell); taken, three tenths of its people flee, or razed. A taking
+    Defence Grids or a Bastion Shell), by either side of a war, one settlement at a star a turn;
+    taken, three tenths of its people flee, or razed. Attacked, the others fight back: they arm,
+    go for our ships at their stars, and strike back at our nearest settlement, a taking of
+    theirs then no Hunger act (we began it). A taking
     spends the galaxy's free energy, everyone's (Section 5), and so does a Kinetic Lance, one
     strike from anywhere at 99% of light. Conquering everyone is no victory: the game goes on.
     War rarely pays, and the others are mostly peaceable: they go to war only when desperate and

@@ -1,5 +1,6 @@
 // Browser check: war with a civilization of its own (parts 2c-3 and 2c-4). Declare war asks first;
-// the card then shows the war, where it is fought, the siege and what that settlement holds. Storm
+// the card then shows the war, where it is fought, the siege (the settlement's, since the combat
+// system) and what that settlement holds. Storm
 // waits for warships at its star and, behind a Defence Grid, for a Breacher; with the siege held it
 // shows the odds, asks, and with strength enough the settlement is ours, the war going on at their
 // next; Raze asks and destroys the next. A fleet with a Kinetic Lance lists the enemy's settlements
@@ -48,7 +49,7 @@ run(async () => {
       return dt ? dt.nextElementSibling.textContent.trim() : null;
     }, label);
   const war = await row('War');
-  check(/^since turn \d+ · at .+ · siege 0\/3 · it holds [\d.]+(, walled)?$/.test(war ?? ''), `at war: the card shows where it is fought and what that settlement holds (${war})`);
+  check(/^since turn \d+ · at .+ · no siege · it holds [\d.]+(, walled)?$/.test(war ?? ''), `at war: the card shows where it is fought and what that settlement holds (${war})`);
   const storm = card.locator('button', { hasText: /^Storm/ });
   const raze = card.locator('button', { hasText: /^Raze$/ });
   const state = async (b) => ({ off: (await b.getAttribute('class')).includes('disabled'), tip: (await b.getAttribute('data-tip')) ?? '', text: (await b.textContent()).trim() });
@@ -64,7 +65,8 @@ run(async () => {
     c.structures.defense_grid = 1;
     for (const f of Object.values(s.fleets)) if (f.owner === id && f.at === w.at) delete s.fleets[f.id];
     s.fleets.fwar = { id: 'fwar', owner: s.player, name: 'Spear', ships: Array(8).fill(0).map(() => ({ cls: 'warden', hp: 10 })), at: w.at, from: null, to: null, traveled: 0, distance: 0, order: 'idle' };
-    w.siege = 3;
+    // (the siege is the settlement's: the combat system)
+    c.siege = { by: s.player, turns: 3 };
     window.__stel.refresh();
     return { id: c.id, name: c.name };
   }, sv.id);
@@ -93,7 +95,7 @@ run(async () => {
   check(taken.owner === taken.me, `stormed: ${front.name} is ours`);
   check(taken.alive && !!taken.at && taken.at !== taken.from, 'and the war goes on at their next settlement');
   const war2 = await row('War');
-  check(/siege 0\/3/.test(war2 ?? '') && war2 !== war, `the card shows the new front (${war2})`);
+  check(/ · no siege · /.test(war2 ?? '') && war2 !== war, `the card shows the new front (${war2})`);
   await ck.shot('war-stormed.png');
 
   // Raze the next
@@ -105,7 +107,7 @@ run(async () => {
     const fw = s.fleets.fwar;
     for (const sh of fw.ships) sh.hp = sh.cls === 'breacher' ? 20 : 10;
     fw.at = w.at;
-    w.siege = 3;
+    c.siege = { by: s.player, turns: 3 };
     window.__stel.refresh();
     return { id: c.id, name: c.name };
   }, sv.id);

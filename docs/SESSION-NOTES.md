@@ -55,7 +55,8 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     turn; live script `index-huAXd3rX.js`), after PR m1omg/Steliterate#36 (`981e0f0`, finds only where they
     can be and one sea), PR m1omg/Steliterate#35 (`e4c77d7`, falling worlds) and PR
     m1omg/Steliterate#34 (`e827e2f`, the game keeps its word), and the new version at `/next/`
-    from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script `index-B8OkbgIN.js`). HANDOVER, section 0, has where things stand; CLAUDE.md lists
+    from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script `index-CNIblMZ3.js`, with the
+    combat system of 20 Oct, the new version only). HANDOVER, section 0, has where things stand; CLAUDE.md lists
     every PR. What follows is the history up to 13 Oct.
   - The game was as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
@@ -120,7 +121,14 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (20 Oct, the pace: ten turns to a Tide turn, both
+- **The baseline, from the last validation (20 Oct, combat, the new version only):** tsc and the
+  build clean; the playtest "ALL CHECKS PASSED"; savecompat on the 9 saves (the new
+  `70c2d07-seed1000-turn43-siege-next.json.gz`, a war of ours under way, among them); all 90 unit
+  checks; all 64 browser checks in the real fonts; the harness 187 / 77 / 103 of 300, our outcome
+  the same as before in all 300 games, Harsh 147 / 51 / 98 (all 300 the same); a forced war
+  (`--war=40`, warlike) 160 / 56 of 300 (121 / 47 under the old rules). Today's game did not
+  change.
+- **The baseline before it (20 Oct, the pace: ten turns to a Tide turn, both
   versions):**
   - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
     8 saves; all 89 unit checks; all 63 browser checks in the real fonts; the harness 187 / 77 /
@@ -1065,6 +1073,19 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   is), so the rule moves the harness (CHANGELOG, "Halo Siphons can be shut"). Same day: their other
   session's swarm batch had stopped mid-validation ("bit the dust mid-change"); I finished its
   browser checks and put it live before this one.
+
+- **20 Oct, combat:** "right now I can literally be at war with a civilization, send spaceships
+  into their system and they won't even attack. Let's make a combat system. For now it can be an
+  auto resolve one, tho let's do custom tactics choosable as modifiers that would modify the
+  damage inflicted and damage received." Asked, they chose all four recommended answers: "Pick
+  from a set" (four tactics per fleet), "New version only", "Yes, strike back" (in a war we
+  begin they come for our settlements too), "Yes, every fight" (swarms too). Built as the plan
+  `docs/plans/2026-10-20-combat.md` says, with two changes said to them: Stand off takes ×0.5,
+  not the ×0.35 offered (at ×0.35 it won every fight, four ships against five holding the line),
+  and one blockade and one storm a star a turn (the first forced wars took every settlement of
+  ours at one star in a single turn). Offered for later: a battle fought by hand, focus fire on a
+  chosen ship, a retreat threshold as part of a tactic, and the same in today's game, if they ask
+  before they switch to the new version.
 
 ## Found in the review of 28 Sep (verified)
 
