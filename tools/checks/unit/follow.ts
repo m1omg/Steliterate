@@ -14,20 +14,22 @@ s.pending = [];
 const c0 = starClock(s)!;
 check('a clock runs in the old save', !!c0, c0 ? `${c0.system}, turn ${c0.turn} of ${c0.of}, ${c0.left} left` : '');
 const f = s.civ.flags;
-// light a second collision star that outlasts the first by eight trillion years
+// light a second collision star that outlasts the first by three of our own turns then, too brief
+// for our own pace to see it burn (six would do: until 20 Oct it was eight trillion years, but a
+// Quick ×10 turn here is now the ladder's 0.06 of the Tide's, not a tenth, and outlasts that)
+const from = f.star_until;
+const next = stepTime(s.era, from, eta(from), s.civ.pace, s.settings.length).turnLength;
 const bd = Object.values(s.systems).find((x) => x.primary.kind === 'brown_dwarf' && !x.gone && !x.ejected)!;
 bd.primary.kind = 'collision_star';
 bd.primary.mass = 0.1;
 bd.primary.bornAt = s.years;
-bd.primary.diesAt = f.star_until + 8e12;
+bd.primary.diesAt = f.star_until + 3 * next;
 s.civ.known[bd.id] = 1;
 const d = { systemId: bd.id };
 const def = EVENT_BY_ID.new_star;
 console.log('TEXT:', def.text(s, d));
 def.choices.forEach((ch, i) => console.log(`  [${i}] ${ch.label}${ch.ok && !ch.ok(s, d) ? ' (shut)' : ''}: ${choiceHint(ch, s, d)}`));
 const t = starClockTerms(s, bd);
-const from = f.star_until;
-const next = stepTime(s.era, from, eta(from), s.civ.pace, s.settings.length).turnLength;
 const left = bd.primary.diesAt - from;
 const want = left >= next * STAR_TURNS ? -1 : Math.min(Math.floor(reserveCapacity(s, computeMods(s))), Math.max(STAR_FOLLOW_MIN, Math.ceil(STAR_ORDER_COST * Math.max(0, Math.log10(next / left) - STAR_FREE))));
 check('follow-on terms: after the running star', t.after === c0.system, `after ${t.after}, possible ${t.possible}, why ${t.why}`);
@@ -62,6 +64,6 @@ while (turns < 20) {
 }
 check('the first clock ran out on time', firstEnd === c0.left, `second clock from turn ${firstEnd} (first had ${c0.left} left)`);
 check('the second clock ran six turns', second === STAR_TURNS, `${second}`);
-check('it ended as the second star burned out', s.years === dies2 + (s.years - dies2) && Math.abs(s.years - dies2) < 2e12, `${s.years.toExponential(8)} vs ${dies2.toExponential(8)}`);
+check('it ended as the second star burned out', Math.abs(s.years - dies2) < next / 2, `${s.years.toExponential(8)} vs ${dies2.toExponential(8)}`);
 check('no flags left behind', !f.star_until && !f.star_step && !f.star_next, JSON.stringify({ u: f.star_until, s: f.star_step, n: f.star_next }));
 done('FOLLOW');

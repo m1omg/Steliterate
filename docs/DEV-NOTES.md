@@ -365,6 +365,42 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
+- **The pace: ten turns to a Tide turn** (20 Oct, the player's word, as in the new version;
+  CHANGELOG, "The pace: ten turns to a Tide turn"):
+  - `tideTurnsAt(era, years, eta, length)` (`eras.ts`): the Tide turns since the calendar's age
+    began, not a whole number between them. `stepTime` at pace p covers `paceShare(era, p)` of
+    them: `10^−p` (`Tide × (g^s − 1)/(g − 1)`; the Tide's own formula untouched at s = 1), but in
+    the Dark Era, which keeps its own clock (the player's word, 20 Oct), `clamp(10^−p, ½, 2)`,
+    its λ-clock `2·exp(a·(k + s)²)`.
+  - `turnStep` (`flare.ts`) = `stopAtTheEnd(clockedStep)`: `turnEndEta` (the age's end,
+    `ageEndEta`; η 39 under a fate other than decay on the Degenerate calendar; η 89.5 under
+    curvature until matter is gone), `turnEndWhy` in words for the greyed paces. A flare's clock
+    keeps its own sixths whatever the pace.
+  - No slow turn ends an age (the player's word, 20 Oct): `slowPastTheEnd(state, pace)` (a slow
+    pace whose `turnStep` reaches `ageEndEta`; never in the Dark Era) makes `paceMatters` false;
+    `effectivePace` then lights the nearest open pace toward the Tide, and the turn is lived at it:
+    `turnStep`, `livedShare`, `upkeepShare` and `project` take `effectivePace` by default, and
+    `endTurn` passes it. Multi-turn estimates (`stepTurns`) keep our stored pace and step each
+    simulated turn at `slowestAllowed` (our own comes back once a clock ends).
+  - `livedShare`: exactly `paceShare` when the step is the plain `stepTime`; `1/split` on a new
+    star's clock; otherwise the `tideTurnsAt` difference. `upkeepShare` (in `TurnContext`, read by
+    `upkeepOf(ctx)`): `max(1, share)` on a plain or star-clock turn, else the share.
+  - The declines take the share: `declineWorlds(state, share)` (exported for `unit/ladder`),
+    `seededVitality(…, share)`, `turnsToFreeze(…, share)`, `updateHunger(…, share)` (bite, gfe,
+    rust, a tamed swarm's matter and Taint) and `fadeRust`. The Dark Era's Continuity stays a
+    turn at a time (its own clock keeps the turns). `vitalityLoss`'s Dusk acceleration reads
+    `tideTurnsAt('dusk', …)`, not `eraTurn`.
+  - `LATE_YIELD` (`economy.ts`, `lateYield(state)`): after the Dusk's calendar every source gives
+    that much more energy and matter (structures, the Hearth), carrying what the old slow turns'
+    overpay had given the late game (the player, asked whether to bring the victories back: "Bring
+    them back"). 1.4 here, 1.125 in the new version, each tuned on the harness to about 77
+    victories of 300. `powerParts` and `matterAt` (`sites.ts`, where to settle) count it too.
+  - `effectivePace(state)`: the pace lit in the HUD; ours gets `.btn.stored` (dashed) while greyed.
+  - The autoplayer (`planPace`) weighs only the paces open now, from the lit one, each by its net
+    per Tide turn covered, and in trouble goes no slower than the Tide before the Dark Era.
+    `planDarkSleep` (new here, as in the new version) takes the Long Sleep in the dark where the
+    reserve would not last the age: until now it never slept, and the overpay carried it through
+    the dark. `unit/ladder` checks the rules and the dark sleep; `browser/pace-grey` the lit pace.
 - **One sea for the Water row and the picture; finds only where they can be** (20 Oct, both
   versions; CHANGELOG, "Finds where they can be, and one sea"):
   - `seaBand(climate)` (`physics.ts`): where a world's water is liquid by f, the sine of its
@@ -1402,6 +1438,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the game keeps its word: the Long Record's +1, what Hunger Studies shows, Communion, Harsh's crossings, falls into brown dwarfs and holes in new games, the unwritten rules, the Expansion Mandate, a hidden step (19 Oct) | 160 | 81 victories, Degenerate Age 72 turns; 900 games 476 / 244 / 71 (456 / 203 / 71 before): survival within the noise, the victories from the hidden step alone (without it the same 300 games give 160 / 72 / 72; `docs/spoilers/slow-ones.md`). By fate: decay 193 / 450 (19 wins), stable 165 / 239 (127), curvature 118 / 211 (98). Harsh, 300 games: 147 / 62 / 68 (140 / 52 / 70 before). 204 of 300 play out as without the step |
 | falling worlds break up and giants flash; more worlds at black holes; in new games (20 Oct) | 149 | 80 victories, Degenerate Age 72 turns (160 / 81 / 72 before). The new worlds re-roll every game (0 of 300 the same): within the noise. The new version's control runs (its new worlds with the old falls) put what the rules cost an autoplayer that builds no shelters at about 10 games in 300 at standard, and nothing at Harsh. By fate: decay 57 / 148, stable 51 / 81, curvature 41 / 71. Harsh, 300 games: 154 / 58 / 68 (147 / 62 / 68 before) |
 | finds only where they can be; one sea for the Water row and the picture (20 Oct) | 165 | 77 victories, Degenerate Age 70 turns (149 / 80 / 72 before); 36 of 300 the same, the finds' tests changing which find a survey turns up. By fate decay 67 / 148, stable 63 / 81, curvature 35 / 71. Harsh, 300 games: 150 / 59 / 71 (154 / 58 / 68 before; 43 the same). Within the noise |
+| the pace: ten turns to a Tide turn, the Dark Era's own clock, no slow turn ending an age; the late ages two fifths richer (`LATE_YIELD` 1.4); the autoplayer sleeps through the dark (20 Oct) | 229 | 73 victories, Degenerate Age 112 turns (165 / 77 / 70 before). By fate decay 87 / 148, stable 79 / 81, curvature 63 / 71. Harsh, 300 games: 209 / 63 / 106 (150 / 59 / 71 before). The Fade 8 (38), The Will Fails 4 (31). Without the dark sleep ×1.2 gave 93 / 49 / 110, ×1.6 141 / 105 / 119. Survival rose with the sleep (the overpay had carried the autoplayer through the dark, and it never slept); the Degenerate Age is longer in turns as it no longer takes slow turns there in trouble |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

@@ -11,7 +11,7 @@ import type { IconName } from '../icons';
 import { VIEW_MODES, act, busy, cycleViewMode, engine, following, hudPrefs, isPhone, modal, notify, openBuildFor, phoneMore, rev, selection, setHudPrefs, toggleOrbits, uiZoom, view } from '../store';
 import { goToColony, goToFleet } from '../screens/Lists';
 import { isIdleFleet } from '../../game/sim/fleets';
-import { flareClock, flareStop, paceMatters, starClock, turnsUntilYears } from '../../game/sim/flare';
+import { effectivePace, flareClock, flareStop, paceMatters, slowPastTheEnd, starClock, turnEndEta, turnEndWhy, turnStep, turnsUntilYears } from '../../game/sim/flare';
 import { thermalRGB } from '../../render/shaders/bodies';
 import { ShipPrompt, shipPrompt } from './ShipPrompt';
 import { doEndTurn } from '../turnflow';
@@ -242,6 +242,9 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
   const flare = flareClock(s);
   const flaring = flare ? null : flareStop(s);
   const star = starClock(s);
+  // the pace the turn is lived at (lit), and ours if it is greyed for now (outlined: it comes back)
+  const eff = effectivePace(s);
+  const paceClass = (x: number) => (eff === x ? 'primary' : civ.pace === x ? 'stored' : '');
   const paces: number[] = [];
   for (let x = mods.paceMax; x >= mods.paceMin; x--) paces.push(x);
   // why a pace would change nothing now (its button is greyed out)
@@ -249,22 +252,33 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
     if (star?.flash) return `Not now: we are catching the flash of ${star.system}, one turn whatever the pace. Our own pace returns when it is out.`;
     if (star) {
       if (x < 0) return `Not now: we keep time with ${star.system}, and its clock sets our turns. Our own pace returns when it burns out.`;
-      return hasTech(s, 'quickening') ? `Not now: Quick ×10 is as finely as the clock of ${star.system} can be split.` : `Not now: we keep time with ${star.system}, and its clock sets our turns. Quickening would let Quick ×10 split each into ten.`;
+      if (!hasTech(s, 'quickening')) return `Not now: we keep time with ${star.system}, and its clock sets our turns. Quickening would let Quick ×10 split each into ten.`;
+      return x > 1 ? `Not now: Quick ×10 is as finely as the clock of ${star.system} can be split.` : `Not now: the clock of ${star.system} cannot be split any finer.`;
     }
     if (flare) return `Not now: we keep time with ${flare.system}’s last flare, and it sets our turns.`;
     const stop = flareStop(s, x);
     if (stop && x < 0) return `Not now: the turn stops when ${stop.name} begins its last flare, whatever the pace.`;
-    if (calendarEra(s) === 'dark') return x > 0 ? 'Not in this age: a turn cannot be quickened further.' : 'Not in this age: a turn cannot be slowed further.';
+    // (no slow turn ends an age: flare.ts, slowPastTheEnd)
+    if (slowPastTheEnd(s, x)) return 'Not now: a turn this slow would run on to the end of the age, and no slow turn ends one: the Tide or a quicker pace carries us across.';
+    // (a turn never runs past the end of its age, the calendar’s turn at η 39 or the Great Evaporation)
+    if (turnStep(s, x).eta === turnEndEta(s)) return `Not now: the turn would stop at ${turnEndWhy(s)}, as at ${PACE_LABEL[x > 0 ? x - 1 : x + 1]}.`;
+    // (the Dark Era's clock only halves or doubles a turn: eras.ts, paceShare)
+    if (dark) return x > 0 ? 'Not in this age: a turn cannot be quickened further.' : 'Not in this age: a turn cannot be slowed further.';
     return `Not now: the turn would be the same as at ${PACE_LABEL[x > 0 ? x - 1 : x + 1]}.`;
   };
+  const dark = calendarEra(s) === 'dark';
   const paceTip = (x: number, open: boolean): string =>
     !open
       ? paceWhy(x)
-      : x > 0
-        ? `Quicken ×${Math.pow(10, x)}: shorter turns, more turns to act while a source lasts. Energy per turn drops ${Math.pow(10, x)}×; minds that cannot hurry idle.`
-        : x < 0
-          ? `Slow ×${Math.pow(10, -x)}: longer turns. ${Math.pow(10, -x)}× the energy per turn, but the universe moves on faster between your decisions.`
-          : 'The Tide: the natural pace of this age.';
+      : dark && x !== 0
+        ? x > 0
+          ? 'Quicken: in the Dark Era a turn can only be halved, half a turn at the Tide, gathering half as much while its machines and sleepers still cost a whole turn. Continuity is lost a turn at a time, so the dark costs twice as much of it; minds that cannot hurry idle.'
+          : 'Slow: in the Dark Era a turn can only be doubled, as long as two turns at the Tide, gathering twice as much, and its machines and sleepers cost twice as much. Continuity is lost a turn at a time, so the dark costs half as much of it; the universe moves on further between your decisions.'
+        : x > 0
+          ? `Quicken ×${Math.pow(10, x)}: ${Math.pow(10, x)} turns for each turn at the Tide, more turns to act while a source lasts. Each gathers and wears the worlds ${Math.pow(10, x)}× less, but its machines and sleepers still cost a whole turn’s upkeep; minds that cannot hurry idle.`
+          : x < 0
+            ? `Slow ×${Math.pow(10, -x)}: each turn as long as ${Math.pow(10, -x)} turns at the Tide, gathering and wearing the worlds ${Math.pow(10, -x)}× as much, and its machines and sleepers cost ${Math.pow(10, -x)}× as much; the universe moves on further between your decisions. No slow turn runs on to the end of an age.`
+            : 'The Tide: the natural pace of this age.';
   const todo = todoItems(s);
   const warnings = todo.map((t) => t.text);
   const eNet = p.energyIn - p.energyOut;
@@ -297,12 +311,12 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           </span>
         </div>
         {flare && (
-          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`We are keeping time with ${flare.system}'s last flare: each turn is a sixth of it, lived in full, and pays as one turn at the Tide whatever the pace. Your pace takes over again when the star collapses into a white dwarf.`}>
+          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`We are keeping time with ${flare.system}'s last flare: each turn is a sixth of it, whatever the pace, and pays for the time it covers. Your pace takes over again when the star collapses into a white dwarf.`}>
             Flare clock · turn {flare.turn} of {flare.of}
           </div>
         )}
         {flaring && (
-          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`${flaring.name} is about to leave the main sequence and begin its last flare. The turn stops the moment it does, whatever the pace (a slower one cannot take us past it, and the short turn pays as one turn at the Tide at most), so we can decide how to meet the flare.`}>
+          <div class="chip neon" style={{ margin: '4px 0 2px' }} data-tip={`${flaring.name} is about to leave the main sequence and begin its last flare. The turn stops the moment it does, whatever the pace (a slower one cannot take us past it, and the short turn pays for the time it covers), so we can decide how to meet the flare.`}>
             Turn stops · {flaring.name} begins to flare
           </div>
         )}
@@ -320,7 +334,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           {paces.map((x) => {
             const open = paceMatters(s, x);
             return (
-              <button key={x} class={`btn small pace-opt ${civ.pace === x ? 'primary' : ''} ${open ? '' : 'disabled'}`} aria-disabled={!open} data-tip={paceTip(x, open)} onClick={() => open && act((g) => setPace(g, x))}>
+              <button key={x} class={`btn small pace-opt ${paceClass(x)} ${open ? '' : 'disabled'}`} aria-disabled={!open} aria-pressed={eff === x} data-tip={paceTip(x, open)} onClick={() => open && act((g) => setPace(g, x))}>
                 {PACE_LABEL[x] ?? `${x}`}
               </button>
             );
@@ -336,7 +350,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
         {/* phones: the pace as one button, its choices (each explained) in a list over the map */}
         <div class="row pace-phone">
           <button class={`btn small pace-pick ${paceMenu ? 'on' : ''}`} aria-expanded={paceMenu} onClick={() => { sfx('click'); setPaceMenu(!paceMenu); }}>
-            <span class="faint">Pace</span> {PACE_LABEL[civ.pace] ?? civ.pace} <Icon name={paceMenu ? 'minus' : 'plus'} />
+            <span class="faint">Pace</span> {PACE_LABEL[eff] ?? eff} <Icon name={paceMenu ? 'minus' : 'plus'} />
           </button>
           {sleepBtn()}
           <span class={`mono grow pp-net ${eNet >= 0 ? 'good' : 'bad'}`} style={{ textAlign: 'right', fontSize: '13px', whiteSpace: 'nowrap' }}>
@@ -358,8 +372,9 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
             return (
               <button
                 key={x}
-                class={`btn small pm-opt ${civ.pace === x ? 'primary' : ''} ${open ? '' : 'disabled'}`}
+                class={`btn small pm-opt ${paceClass(x)} ${open ? '' : 'disabled'}`}
                 aria-disabled={!open}
+                aria-pressed={eff === x}
                 onClick={() => {
                   if (!open) return;
                   act((g) => setPace(g, x));

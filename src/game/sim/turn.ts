@@ -17,7 +17,7 @@ import { pruneFinds, queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, destroyColony, newFleet, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
-import { clearStarClock, flareData, livedShare, scorched, turnStep } from './flare';
+import { clearStarClock, effectivePace, flareData, livedShare, scorched, turnStep, upkeepShare } from './flare';
 import { firstSwarm, swarmsHunt, updateHunger } from './hunger';
 import { gatherTheLastStar, updateMinds } from './minds';
 import { computeMods, type Mods } from './mods';
@@ -91,17 +91,22 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
   return y;
 }
 
-/** After the Last Light a world's core heat keeps this share of itself each turn: half is gone in three turns, nearly all of it in eighteen. */
+/** After the Last Light a world's core heat keeps this share of itself each Tide turn: half is gone in three, nearly all of it in eighteen. */
 export const CORE_FADE = 0.8;
 
-function declineWorlds(state: GameState) {
+/**
+ * What the turn does to the worlds, by `share`, the Tide turns it covers (livedShare): each Tide
+ * turn of time wears them as much whatever the pace (since 20 Oct; until then each turn did, so a
+ * world died in as many turns at any pace: the player, 16 Oct).
+ */
+export function declineWorlds(state: GameState, share: number) {
   // after the Last Light the deep warmth of every world runs out too (really it went long before;
   // the game keeps it through the Dusk), and Geothermal Taps wind down with it
-  if (calendarEra(state) !== 'dusk') for (const b of Object.values(state.bodies)) if (b.coreHeat > 0) b.coreHeat = b.coreHeat < 0.02 ? 0 : b.coreHeat * CORE_FADE;
+  if (calendarEra(state) !== 'dusk') for (const b of Object.values(state.bodies)) if (b.coreHeat > 0) b.coreHeat = b.coreHeat < 0.02 ? 0 : b.coreHeat * Math.pow(CORE_FADE, share);
   // seeded life spreads over a terraformed world while its star burns (terraform.ts)
   for (const c of colonies(state)) {
     const b = state.bodies[c.bodyId];
-    if (b) b.vitality = seededVitality(state, b, c);
+    if (b) b.vitality = seededVitality(state, b, c, share);
   }
   const byBody = new Map(colonies(state).map((c) => [c.bodyId, c]));
   for (const b of Object.values(state.bodies)) {
@@ -115,14 +120,14 @@ function declineWorlds(state: GameState) {
       continue;
     }
     const loss = vitalityLoss(state, b, c);
-    b.vitality = Math.max(0, b.vitality - loss.decline);
-    if (c && b.traits.includes('homeworld') && calendarEra(state) === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
-    if (b.vitality > 0) b.vitality = Math.max(0, b.vitality - loss.freeze);
+    b.vitality = Math.max(0, b.vitality - loss.decline * share);
+    if (c && b.traits.includes('homeworld') && calendarEra(state) === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * share * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
+    if (b.vitality > 0) b.vitality = Math.max(0, b.vitality - loss.freeze * share);
     // one of ours begins to freeze, its dead star cooled at last: say so once (the Last Light
     // says it for every world)
     if (c && loss.freeze > 0 && b.vitality > 0 && calendarEra(state) === 'dusk' && !b.rogue && !state.civ.flags[`frz_${b.id}`]) {
       state.civ.flags[`frz_${b.id}`] = state.turn;
-      const n = turnsToFreeze(state, b, c);
+      const n = turnsToFreeze(state, b, c, share);
       if (seededLifeUnkept(state, b, c)) log(state, `The life seeded on ${b.name} has begun to freeze: nothing keeps the world warm now. It dies in about ${n} turn${n === 1 ? '' : 's'}.`, 'bad', b.systemId);
       else log(state, `${b.name} has begun to freeze: its dead star no longer warms it. It dies in about ${n} turn${n === 1 ? '' : 's'} unless Orbital Lamps keep it warm.`, 'bad', b.systemId);
     }
@@ -231,9 +236,11 @@ export function endTurn(state: GameState): TurnResult {
   }
 
   // (a turn stops when one of our stars begins its last flare; see flare.ts)
-  const step = turnStep(state);
+  // (at the pace that is lit: ours, or the nearest toward the Tide while ours is greyed)
+  const pace = effectivePace(state);
+  const step = turnStep(state, pace);
   const logL = logTurnLength(step);
-  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, civ.pace, step), mods };
+  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), upkeepShare: upkeepShare(state, pace, step), mods };
 
   // ------------------------------------------------ 1. economy
   let eIn = 0;
@@ -376,7 +383,7 @@ export function endTurn(state: GameState): TurnResult {
 
   // ------------------------------------------------ 4. growth, capacity, worlds
   scorchWorlds(state, state.years, step.years);
-  declineWorlds(state);
+  declineWorlds(state, ctx.paceFactor);
   // Echoes waiting in the archive move into any free substrate before anyone is counted
   wakeArchivedEchoes(state);
   for (const c of colonies(state)) {
@@ -431,7 +438,7 @@ export function endTurn(state: GameState): TurnResult {
   // swarms go for ships that have just stopped at their star, before exploring probes move on
   swarmsHunt(state, mods);
   autoExplore(state, mods);
-  updateHunger(state, step.turnLength, mods);
+  updateHunger(state, step.turnLength, mods, ctx.paceFactor);
   updateSurvivors(state, logL, mods, step.turnLength);
   pactsTurn(state);
   withRng(state, (rng) => warTurn(state, () => rng.next()));

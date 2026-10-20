@@ -153,7 +153,7 @@ export function updateForecasts(state: GameState) {
     const b = state.bodies[c.bodyId];
     const boil = b ? boilingAway(state, b) : null;
     if (!b || !boil) continue;
-    const L = turnStep(state, state.civ.pace).turnLength;
+    const L = turnStep(state).turnLength;
     add({
       kind: 'boil',
       title: boil === 'swallowed' ? `${b.name} will be swallowed by its star` : `${b.name} will boil away`,
@@ -202,7 +202,7 @@ export function updateForecasts(state: GameState) {
   // the Long Flow, if matter lasts that long: whatever no one is awake to mend flows away
   if (known && flowAhead(state)) add({ kind: 'flow', title: 'The Long Flow', text: 'From about 10⁶⁵ years even iron flows, its atoms tunnelling out of place: whatever no one is awake to mend runs into smooth lumps. A settlement with no one awake loses a structure a turn, Cryo Halls last, their sleepers with them; minds that think more slowly than the flow keep watchers awake, at half again their upkeep; ruins no one is digging are lost.', dueYears: Math.pow(10, FLOW_ETA), severity: 'warn' });
   if (flowing(state) || (known && flowAhead(state))) {
-    const step = turnStep(state, state.civ.pace);
+    const step = turnStep(state);
     const logL = logTurnLength(step);
     const mods = computeMods(state);
     const near = flowing(state) || tideTurnsTo(state, Math.pow(10, FLOW_ETA), 10) <= 10;
