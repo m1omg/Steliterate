@@ -26,7 +26,7 @@ run(async () => {
     page.evaluate((id) => {
       const e = window.__stel.engine();
       const p = e.system.planets.find((x) => x.body.id === id);
-      return { view: e.view, found: !!p, belt: !!p && !p.mat && (p.mesh.userData.belt ?? 0) > 0, planet: !!p?.mat };
+      return { view: e.view, found: !!p, belt: !!p && !p.mat && !!p.mesh.isInstancedMesh && p.mesh.count > 0, planet: !!p?.mat };
     }, id);
   let d = { view: 'galaxy' };
   for (let i = 0; i < 40 && d.view !== 'system'; i++) {
