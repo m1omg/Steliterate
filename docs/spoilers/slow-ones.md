@@ -25,3 +25,10 @@ who were awake with them through both ends. Check: `tools/checks/unit/slow-ones.
 
 Their painting (`public/art/slow.webp`: the Heart, its stars dimming and brightening in a
 pattern), unused since the first plates, is on their card in Signals.
+
+**In the harness** (today's game, 19 Oct): the autoplayer reaches the gift now. Of 300 standard
+competent games, 204 play out exactly as without the step; with it the Aeon Seed ends 57 (23
+without) and the Long Thought 24 (49): games that took the long way through the Dark now finish at
+the Heart; 10 games that ended in endurance now end in victory (2 the other way), and victories
+are 81 against 72. 900 games: the Aeon Seed 169 of 244 victories (about 71 of 203 before the
+batch). Survival is unchanged (160 of 300 either way).

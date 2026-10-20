@@ -118,7 +118,9 @@ run(async () => {
     await page.waitForTimeout(600);
     const pre = await playTo(boundary);
     console.log(`  ${fate} (seed ${seed}): played to η ${pre.eta.toFixed(2)}${pre.outcome ? `, where it ended: ${pre.outcome}` : ''}`);
-    if (pre.outcome) return null;
+    // (a game that ended short of the boundary has no crossing to show: said so, for a caller
+    // that would rather try another game)
+    if (pre.outcome) return { ended: pre.outcome };
     if (refuge) await keepRefuge();
     for (let i = 0; i < 6 && !(await page.locator('.crossing').count()); i++) if (!(await pressEndTurn(fate))) break;
     const r = await page.evaluate(() => {
@@ -153,8 +155,14 @@ run(async () => {
   await go(r);
 
   // a game that lives through the Great Decay, with a refuge kept at the capital (seed 48514 had one
-  // of its own until the others played the same game)
-  r = await crossing('decays', 39, 'decay-great-decay.png', 48514, true);
+  // of its own until the others played the same game). Since 19 Oct (the game keeps its word) that
+  // game dies out at η 38.3, just short of it: the first of the harness's seeds the autoplayer
+  // takes there alive is used instead. Only a game that ended moves on to the next; a living one
+  // with no crossing screen still fails.
+  for (const seed of [48514, 8919, 16838, 24757, 32676, 40595, 56433]) {
+    r = await crossing('decays', 39, 'decay-great-decay.png', seed, true);
+    if (!r?.ended) break;
+  }
   check(r?.from === 'The end of The Degenerate Age · The Great Decay' && r.h1 === 'The Black Hole Age', `decay: the Great Decay (${r?.from} / ${r?.h1})`);
   check(!!r && r.intro.startsWith('Ordinary matter has decayed away') && r.lines.some((l) => /has decayed\./.test(l)), 'matter has decayed, and it says so');
   await go(r);
