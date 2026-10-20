@@ -3563,10 +3563,11 @@ being told how.
   Survival is within the noise. The victories come from the hidden storyline's step alone:
   without it the same 300 games give 160 / 72 / 72, victories as before (details in
   `docs/spoilers`).
-- **In both versions:** today's game gets the same fixes through its own code, by a PR into
-  `main` from a branch of its own (`claude/promises-main`); `main` is then merged into this
-  branch, keeping this branch's code (`-s ours`), so that the PR from `next` into `main` merges
-  cleanly.
+- **In both versions:** today's game got the same fixes through its own code by PR
+  m1omg/Steliterate#34 (`e827e2f`), from a branch of its own (`claude/promises-main`), and `main`
+  was then merged into this branch, keeping this branch's code (`-s ours`, `11862d4`), so that the
+  PR from `next` into `main` merges cleanly. Live on 20 Oct: the main address serves
+  `index-B8kR8ow_.js` and `/next/` `index-BqvW8Zy9.js`, the builds validated here.
 - **Validated:** the new version: tsc and the build clean; the playtest passes; savecompat on the
   8 saves; all 84 unit checks; all 62 browser checks (in the game's real fonts). `browser/fates`
   takes the first of the harness's seeds whose game lives to the Great Decay: seed 48514's now dies

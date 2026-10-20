@@ -1,7 +1,8 @@
 # Steliterate: a full specification, for replication
 
 This document describes **Steliterate** as it plays at https://m1omg.github.io/Steliterate/,
-as of commit `4b92446` on `main` of `github.com/m1omg/Steliterate` (16 October 2026, PR #33).
+as of the merge of PR #34 (`e827e2f`) on `main` of `github.com/m1omg/Steliterate` (20 October
+2026; its code is commit `7d4c702` on top of `4b92446`).
 It was written for an AI agent asked to rebuild the game as closely as it can, in the player's
 words: "a comprehensive full summary of this game for an AI agent to replicate".
 
@@ -45,11 +46,12 @@ With the autoplayer playing 300 standard games at the "competent" level (section
 
 | | Today's game |
 |---|---|
-| Games surviving to the end | 154 of 300 |
-| Victories | 72 |
+| Games surviving to the end | 160 of 300 |
+| Victories | 81 |
 | Length of the Degenerate Age | 72 turns on average |
-| 900 games | 456 survive, 203 victories, a Degenerate Age of 71 turns |
-| By the fate of matter (900) | decay 189 of 450 survive, stable 168 of 239, curvature 99 of 211 |
+| 900 games | 476 survive, 244 victories, a Degenerate Age of 71 turns |
+| By the fate of matter (900) | decay 193 of 450 survive, stable 165 of 239, curvature 118 of 211 |
+| At harsh (300) | 147 survive, 62 victories |
 | Noise | about ±12 survivors in 300 games; two runs of 900 can differ by 30 |
 
 A faithful copy will not match game for game, since its random draws differ, but it should
@@ -227,7 +229,7 @@ Collections that need lookup by id are `Record<string, T>`; the iteration order 
 | `nextId` | number | Counter for `uid()` (starts at 1). |
 | `crossing` | `CrossingReport \| null` | The last crossing's report, until the player closes its screen. |
 | `outcome` | `Outcome \| null` | Set when the game ends: `{kind, ending, turn, eta}`. Kinds and conditions: sealed (S.4.1). |
-| `flags` | `Record<string, number>` | Global counters: `tut` (tutorial step), `hunger_woke`, `first_swarm`, `decay_lost` (people lost when matter dissolved), `gfe_prev`. |
+| `flags` | `Record<string, number>` | Global counters: `tut` (tutorial step), `hunger_woke`, `first_swarm`, `decay_lost` (people lost when matter dissolved), `gfe_prev`, and `all_fall` (1 in every game begun since 19 October 2026: brown dwarfs and black holes take their worlds in, B.5.7; absent in older saves). |
 | `fired` | `Record<string, number>` | Event id → turn it fired (once-only events), and `last_<id>` → turn a random event last fired. |
 | `saveVersion` | number | Save format version (A.7). Optional. |
 
@@ -451,14 +453,16 @@ light-speed delays always use `phys`. `randomInSphere(rng, r, flatten)`: draw x,
 16. The sleeper vault: in the last reach of the shuffled `otherReaches`, at
     `randomInSphere(rng, radius·0.6, 0.5)`, a white dwarf with special `sleeper`; the relic
     `{kind: 'sleepers', state: 'hidden'}` goes on its last body (the Deep itself if the dwarf has
-    no worlds); then the system is renamed `properName(rng, 3)`.
+    no worlds, and then its event reads "In orbit around <system>" instead of "Under <body>":
+    D.4.6); then the system is renamed `properName(rng, 3)`.
 17. `makeCiv` (A.2 start values).
 18. The fate of matter: `'decays'` → decay, `'stable'` → stable, `'curvature'` → curvature,
     else `drawFate(rng.next())`: `u < 0.5` decay, `u < 0.75` curvature, else stable. Only the
     Unknown setting draws.
 19. The state is assembled: `rng = hashSeed(seed·7 + 13)`, turn 1, era `dusk`, eraTurn 0,
     years 9 × 10¹³, `eta = log10(9e13) ≈ 13.954`, `turnLength` 40, `protonsDecay`, `fate`, `gfe`
-    1, the stranger minds' records (sealed), everything else empty, `nextId` 1.
+    1, the stranger minds' records (sealed), `flags = { all_fall: 1 }` (no draw; B.5.7),
+    everything else empty, `nextId` 1.
 20. Hunger nests (section D): candidates are the systems, in insertion order, whose region is a
     reach or a globular cluster other than the home reach and that have no `special`; shuffled.
     Count: gentle 1, standard 2, harsh 3. If any candidate lies in one of the two reaches
@@ -809,8 +813,9 @@ energy upkeep, matter in, matter upkeep, insight, accord; `net[c] = energy − u
 system's spin `−= t.spinDraw` (floor 0); depletion `richness −= d·0.0006` (floor 0.05) and
 `hydrogen −= d·0.0004` (floor 0); overdrive: `damage +0.04` (max 1) and `gfe −0.0002`, else
 `damage −0.02` (min 0); each structure with `gfeDrain` (not left behind by a rogue world): `gfe
-−= gfeDrain·n·paceFactor` (floor 0.05 throughout); then `applyIndustry` (below) adds its
-insight. After the loop: energy in `+= jointIncome·paceFactor`; energy out `+= researchDraw`
+−= gfeDrain·n·paceFactor` (floor 0.05 throughout); then `applyIndustry` (below) returns its
+spare work's yield, whose insight, energy and matter join the turn's insight, energy in and
+matter in. After the loop: energy in `+= jointIncome·paceFactor`; energy out `+= researchDraw`
 (0.02 per insight while researching or working on a Work); accord `−= latticeAlienation`;
 `civ.energy += in − out`; `feedBeacons(state, paceFactor)` pays the decoy beacons; `civ.matter
 += in − out`; `civ.accord = clamp(accord + Δ, 0, 999)`; `cap = reserveCapacity` (stored in
@@ -825,7 +830,9 @@ dismantled there before); a finished ship takes its `crew` from the settlement's
 an idle fleet at that star with no standing orders made only of its class, or starts a new
 fleet (settlers and survey ships always start their own). Industry left with an empty queue,
 while awake, becomes the settlement's spare work (`spareYield`: matter, energy, resolve or
-insight).
+insight). Its resolve is added at once (clamped 0..100); its matter, energy and insight are
+returned (a `SpareYield`) and counted in the turn's figures, so `last_energy_net` and
+`last_matter_net` include them.
 
 **2. Starvation.** If `civ.energy < 0`: it is set to 0; the (up to) three colonies with the
 most negative `net` each gain a starving turn and lose one Kin (into cold sleep under the Cold
@@ -848,9 +855,10 @@ freezing, `worldDies`: section B);
 `wakeArchivedEchoes`. Then for each colony with `capc = capacity(...)`, if awake and not
 starving: Kin growth `+= 0.12·(0.5 + 0.5·vitality)` (×0.4 under Child Quotas) when `0 < kin <
 cap`; Echoes `+= 0.22` when below cap (and either present or with capacity) and energy > 15;
-Lattice `+= 0.35` when below cap and matter ≥ 4. For each Thread, a full point of growth is
-spent (a Lattice costs 3 matter, an Echo 3 energy, paid even if there is no room) and adds one
-if there is room; over capacity, one is lost (Kin into cold sleep under the Lottery if there is
+Lattice `+= 0.35` when below cap and matter ≥ 4. For each Thread, a full point of growth
+becomes one person only where there is room (below capacity, or a Kin where there are none):
+the point is spent then, and paid then (a Lattice costs 3 matter, an Echo 3 energy); without
+room it waits, unspent and unpaid. Over capacity, one is lost (Kin into cold sleep under the Lottery if there is
 room). Cold sleepers above capacity wake as Kin. A colony with nobody and no structures is
 abandoned.
 
@@ -990,7 +998,7 @@ turns in. Its fixtures include the first published version's save (seed 24757, t
 | `homeName` | text, up to 24 | The homeworld's name. |
 | `survivors` | 0–4 | How many fellow survivors are generated (0 still makes both shuffles). |
 | `length` | brief, standard, vast | Only the Tide's growth factor per age (A.5): every turn length, so the number of turns. |
-| `difficulty` | gentle, standard, harsh | Hunger nests 1 / 2 / 3 at the start; the cap on swarms 4 / 6 / 8 (`hunger.ts: MAX_SWARMS`); research costs ×0.85 / 1 / 1.15 (rounded; `techCost`); Great Work costs ×0.8 / 1 / 1.2 (rounded; `workCost`). Nothing else: the setup tip's "crueller crossings" is not implemented. |
+| `difficulty` | gentle, standard, harsh | Hunger nests 1 / 2 / 3 at the start; the cap on swarms 4 / 6 / 8 (`hunger.ts: MAX_SWARMS`); research costs ×0.85 / 1 / 1.15 (rounded; `techCost`); Great Work costs ×0.8 / 1 / 1.2 (rounded; `workCost`); crossings take a quarter more at Harsh (B.9, the setup tip's "crueller crossings"). |
 | `protonFate` | unknown, decays, stable, curvature | The fate of matter; any choice but Unknown makes it known from the start, and skips the fate draw (A.3). Unknown: decay ½, curvature ¼, stable ¼. |
 | `seed` | non-negative integer | The galaxy and the simulation's RNG. |
 
@@ -1004,7 +1012,7 @@ mode), `lvSide`, `qualityChosen`. None of them touch the simulation.
 
 ## B. The physics
 
-Everything here was read from the code at `4b92446`. Most of it lives in `game/physics.ts`; the
+Everything here was read from the code at `e827e2f` (`4b92446` and the batch of 19 October 2026). Most of it lives in `game/physics.ts`; the
 last flare and the clocks of new stars in `game/sim/flare.ts`; the end-of-age storms in
 `game/sim/crossing.ts`; the astronomers' warnings in `game/sim/forecast.ts`; the Long Flow in
 `game/sim/flow.ts`; fixed dates in `game/fate.ts` and `game/eras.ts`; the stars' starting values
@@ -1534,18 +1542,34 @@ All in `evolveUniverse`, for each world that is not the Deep, dissolved, rogue o
 - **Falling in** (gravitational-wave inspiral, from the co-designer's unreviewed notes, kept as
   model uncertainty): `inspiralTime(a, m, M) = 3e19 × (a/0.1)⁴ / max(0.01, m) × (0.6 /
   max(0.05, M))²` years (an Earth at 0.02 AU of 0.6 M☉: 4.8×10^16; the homeworld about 10^19,
-  η 19.0). It happens only around a white dwarf, black dwarf or neutron star (`NEVER_FEED`, which
-  the site values read, names brown dwarfs, holes, `rogue` and `void` as never taking worlds in;
-  a burning star does not either), checked each turn once `to ≥ inspiralAt` (the star's change
-  is applied first, so a world whose date passed while its star still burned starts to fall in
-  the turn the star collapses, with `start = from`): `jupiter = massEarth > 50`; `model = rand() <
-  (jupiter ? 0.35 : 0.2) ? 'rekindle' : 'feed'`; `tau = jupiter ? 1e13 : 10^(14.2 + 1.2 rand())`;
-  `base = (jupiter ? 5 : 1) × clamp(m / (jupiter ? 318 : 1), 0.3, 3)`; `start = max(from,
-  inspiralAt)`; vitality 0 (event `world_falls`; the model is hidden until then).
+  η 19.0). Which stars take their worlds in: `takesWorldsIn(state, kind)` is true for a white
+  dwarf, black dwarf or neutron star, and, in a game with `flags.all_fall` (every game begun since
+  19 October 2026; A.2, A.4), for a brown dwarf or a black hole too. `NEVER_FEED` (brown dwarfs,
+  holes, the Heart's `smbh`, `rogue`, `void`) is the older rule, for saves without the flag; the
+  Heart, rogue worlds and the void never take worlds in; a burning star waits until it dies. The
+  date, `fallsInAt(state, b)`: ∞ for the Deep, a rogue, dissolved or orbitless world, or one with
+  no `inspiralAt`; at a brown dwarf or hole (with the flag) `9e13 + inspiralTime(a, m, M)` with
+  the star's true mass (generation floored it at 0.1 M☉); otherwise the stored `inspiralAt`.
+  Checked each turn once `to ≥` that date (the star's change is applied first, so a world whose
+  date passed while its star still burned starts to fall in the turn the star collapses, with
+  `start = from`):
+  - **a black hole's world** is torn apart far outside the horizon and gone within the turn:
+    `dissolved`, vitality 0, note `plunge` ("one flash, then nothing"; no draw);
+  - **a brown dwarf's world** is torn apart outside it (the Roche limit, some 0.003 AU) and rains
+    onto it: `feeding = {start: max(from, date), tau: 10^14.8, base: 0.008 × clamp(m, 0.3, 3),
+    model 'feed'}` (`BROWN_FEED_TAU`, `BROWN_FEED_SHARE`: GM/R at a brown dwarf is about a 120th of
+    a white dwarf's), vitality 0, note `feeding`; no draw, and a brown dwarf never rekindles. It
+    warms the dwarf through `rekindledK` at the dwarf's radius, and adds its power to the light
+    ("Brown dwarf, faintly warmed by a world raining onto it");
+  - **a dead star's world**: `jupiter = massEarth > 50`; `model = rand() < (jupiter ? 0.35 : 0.2)
+    ? 'rekindle' : 'feed'`; `tau = jupiter ? 1e13 : 10^(14.2 + 1.2 rand())`; `base = (jupiter ? 5
+    : 1) × clamp(m / (jupiter ? 318 : 1), 0.3, 3)`; `start = max(from, inspiralAt)`; vitality 0
+    (event `world_falls`; the model is hidden until then).
 - **Feeding**: each turn `power = base × (rekindle ? 8 : 1) × (1 + t/tau)^-2`, `t = to − start`,
   summed over the system's feeding worlds into `primary.rekindle` (kept only if > 0.001). When `t
   > 30 tau` the world is gone (note `plunge`, "one final flash": +20 energy if we live in the
-  system; its people evacuate).
+  system; its people evacuate). At a black hole the `plunge` comes the turn the world is torn apart,
+  and its log and evacuation say so ("torn apart by the black hole").
 - **Boiled or swallowed** by a new star (B.2.7). **Destroyed** by a supernova, or with its
   system falling into the Heart (B.6). **Dissolved** by proton decay or the end of matter (B.7).
   **Set loose** when its hole evaporates or its dwarf fades (B.2.6, B.7).
@@ -1664,7 +1688,10 @@ Dark calendar, hole evaporations; then curvature fading.
 
 Each age's protocols tech (`last_light_protocols`, `great_decay_protocols`,
 `last_horizon_protocols`) sets `crossingMult` (its `effects.crossing`, which halves losses; 1
-without). All draws inside `withRng`.
+without), times `harshness(state)`: 1.25 at Harsh (`HARSH_CROSSING`, the setup tip's "crueller
+crossings"), 1 otherwise; the same in `greatEvaporation`. So at Harsh each loss below is a quarter
+larger (×0.625 with the protocols), and the share the protocols carry over at the end of matter
+is `floor(pops × 0.35 / harshness)`. All draws inside `withRng`.
 
 - **The Last Light** (Dusk → Degenerate): every red and blue dwarf becomes a white dwarf, `halo
   = rng.chance(0.6)`, `whiteAt = years` (mass unchanged). Preparation `prep = 0.4 × min(1,
@@ -1713,7 +1740,7 @@ turnsUntilYears(dueYears, pace 0)`.
 | Kind | When shown | Due |
 |---|---|---|
 | `star` | a settled star's `nextStellarChange` (blue, white, burnout, evaporation; not holes in the Black Hole Age) within the horizon | the change |
-| `inspiral` | one of our worlds (not feeding, rogue or dissolved) around a white dwarf, black dwarf or neutron star, or any after the Dusk, with `inspiralAt` ahead, within the horizon ("the models disagree"). The code does not exclude `NEVER_FEED` primaries here, so after the Dusk a world of a brown dwarf or hole can be warned of and never fall | `inspiralAt` |
+| `inspiral` | one of our worlds (not feeding, rogue or dissolved) around a star that takes its worlds in (`takesWorldsIn`, B.5.7: a dead star of ordinary matter, and with `flags.all_fall` a brown dwarf or black hole; never one still burning), with `fallsInAt` ahead, within the horizon. Titles: "… will reach its dead star’s tidal limit" ("the models disagree"), "… its brown dwarf’s tidal limit" (the rubble rains onto it), "… will be torn apart by its black hole" (gone within the turn) | `fallsInAt` |
 | `boil` | one of our worlds `boilingAway` | this turn's end |
 | `crossing` | the Degenerate Age's end: unknown fate at η 30, the earliest it could be, naming all three; else by fate. Other ages: η 14, η 100 | as stated |
 | `evaporation_all`, `burst`, `fade` | curvature, known: η 89.5; each settled neutron star (η 68; "safe" if our settlements there are on rogue worlds) or dwarf (`dwarfFadeEta`, 87) | as stated |
@@ -1723,7 +1750,7 @@ turnsUntilYears(dueYears, pace 0)`.
 | `decay` | decay known, η < 37.5 | 10^37.5 |
 | `evaporate` | each settled hole in the Black Hole Age | `evaporateAt` |
 | `gfe` | gfe < 0.92, or falling more than 0.002 a turn | — |
-| `hunger` | a swarm heading for a settled system | — |
+| `hunger` | a swarm we see (`swarmSight`, D.1.15) heading for a settled system, untamed; keyed `hunger:<swarm id>`. Under the Communion Charter "A swarm is coming to join us at …" (severity info) | its arrival with Hunger Studies (`swarmArrives`), else — |
 
 The texts follow the rules above (for example, a red dwarf about to flare: "For a few billion
 years it will be over a hundred times brighter, hot enough to boil the seas of its worlds"; the
@@ -1735,7 +1762,7 @@ code's flare is 4 to 80 times). Severities: boon, info, warn, danger.
 the Tide (`turnStep(state, 0)`), by the rules of B.4 (`hawking` by `hawkingLight`, `spin` its
 full amount while any spin is left). `matterAt`: Σ `(matterYield × richness + hydrogenYield ×
 hydrogen + lift) × max`, × `(0.4 + 0.6 gfe)`. `lastsUntil(b)`: 0 dissolved, `feeding.start` if
-feeding, ∞ rogue, `evaporateAt` at a hole, ∞ at a `NEVER_FEED` primary, else `inspiralAt`.
+feeding, ∞ rogue, at a hole the sooner of `evaporateAt` and `fallsInAt`, else `fallsInAt` (B.5.7).
 `siteValue` scores a world per Thread: Kin by room × 10 + habitability × vitality; Echoes and
 Chorus by power; the Lattice by matter + 0.1 × power; Coldminds by `log10(years left)` (400 if
 never) − mean K / 10^4; −1 if it boils away this turn. `homes.ts: survivorWorld` (never stored):
@@ -1792,7 +1819,7 @@ Schwartz 2018; Dyson, Kleban & Susskind 2002.
 This part covers everything the player's civilization owns and does: its stocks and flows, its
 settlements, its five kinds of people (Threads), its society and laws, research, buildings,
 ships, Great Works, beacons, every player action, and how modifiers combine. Source of truth:
-commit `4b92446`, `src/game/sim/*` and `src/game/data/*`. Row-by-row data (structures, techs,
+commit `e827e2f`, `src/game/sim/*` and `src/game/data/*`. Row-by-row data (structures, techs,
 ships, works, charters, threads, demands) is in the appendix tables; this part explains every
 field and the formulas that read them.
 
@@ -1834,7 +1861,7 @@ nothing more. The `ending`, `path` and `epilogue` fields of `WORKS`, and `DARK_E
 | Matter | `civ.matter` | ≥ 0 (floor applied at the starvation step) | mines, skimmers, lifters, Recycle, salvage (swarm kills ×2), refunds, events, charters | construction (paid up front), fuel for fusion and accretion, Kin and Lattice upkeep, Lattice growth (3 each), rushes |
 | Industry | flow per settlement | — | Threads, Shipyard, Foundry | the settlement's own build queue; any left over goes to spare work |
 | Insight | flow, civ-wide | — | Threads, Archive Spires, Relic Excavations, Study | research, Great Works, the insight bank |
-| Accord | `civ.accord` | 0 … 999 | Threads, Commons, +0.25 per settlement with The Long Record | charters (enact and repeal), Rally/Calm/Hear, pacts, war (60) |
+| Accord | `civ.accord` | 0 … 999 | Threads, Commons, +1 per settlement with The Long Record | charters (enact and repeal), Rally/Calm/Hear, pacts, war (60) |
 | Resolve | `civ.resolve` | 0 … 100 | society drift, Commons, Morale spare work, Rally, events | starvation, deaths, unmet demands, taint, charters |
 | Dissent | `civ.dissent` | 0 … 100 | low standing, starvation, taint, charters, repeals (+3), rushes (+1.5) | natural decay, Calm, forks (−25) |
 | Standing (per Thread) | `civ.standing[t]` | 0 … 100 | met demands, charters, Hear | unmet demands, tempo strain, Lattice share, taint |
@@ -1993,8 +2020,10 @@ log10(pf))` (C.6.3):
 * industry `n × d.industry × o`, insight `n × d.insight × o`, accord `n × d.accord × o`.
 * energy upkeep `n × d.energyUpkeep × s.upkeepMul × mods.upkeep[t] × upkeepScale × watch`,
   ×0.5 for Coldminds under a dark sky.
-* matter upkeep `n × d.matterUpkeep × upkeepScale`. Strain and `pf` do not touch it, and it is
-  charged even after matter is gone.
+* matter upkeep `n × d.matterUpkeep × upkeepScale`. Strain and `pf` do not touch it. Once matter
+  is gone (`matterGone`) it is paid in energy instead: `energy upkeep += matter upkeep × 1.5`
+  (`MATTER_AS_ENERGY`, as construction is), matter upkeep 0, and the line says "(repairs in
+  energy: no matter is left)".
 
 **Cold Sleep:** energy `cryo × 0.08 × slowTime`, ×0.5 under the Cold Sleep Lottery. Dormancy does
 not reduce it.
@@ -2043,7 +2072,8 @@ salvage": a floor, never nothing.
 
 **Totals:** `industry ×= mods.industryMult × focusMul(industry)`,
 `insight ×= mods.insightMult × focusMul(insight)`, `accord ×= focusMul(accord)`. Then, with
-The Long Record's `charters` flag and not dormant, `accord += 0.25`. `matterUpkeep` includes
+The Long Record's `charters` flag and not dormant, `accord += 1` (`LONG_RECORD_ACCORD`, as its
+description says), with its own yield line "The Long Record". `matterUpkeep` includes
 `matterBurn`.
 
 ### C.5 Settlements
@@ -2332,8 +2362,8 @@ resolve 100 and dissent ≤ 40 it is 1.3. With resolve 0 it is 0.7. Dissent abov
 
 **Standing**, for each conscious Thread with people, in this order:
 1. Rotate the demand if due (C.6.4) and check it.
-2. Met: `standing = min(80, standing + 1.2)`. Note that this pulls a standing above 80 down to
-   80. Unmet: `standing −= 1.4 + 1.5 × share`.
+2. Met: `standing = max(standing, min(80, standing + 1.2))`: it rises toward 80, and one above 80
+   stays where it is. Unmet: `standing −= 1.4 + 1.5 × share`.
 3. Strain: if `m > 0.5`, `standing −= min(3, 0.35 m)`.
 4. Thread Parity: `+= (55 − standing) × 0.05`. Sanctity of Flesh: Kin `+0.4`. Assembly of
    Threads (the tech; the code also accepts a charter id that does not exist):
@@ -2497,7 +2527,7 @@ The table lists effects beyond unlocking structures, ships and charters.
 
 | Tech | Effect (where) |
 |---|---|
-| The Long Record | `charters` flag: +0.25 accord per settlement a turn, and the book of charters opens. (Its description says +1; the code gives 0.25.) |
+| The Long Record | `charters` flag: +1 accord per settlement a turn, as its description says, and the book of charters opens |
 | Assembly of Threads | standing drifts 2% toward 60; the book holds 9 |
 | Hardy Lineages | `hardy`: Kin room uses `vitality^0.6`; Kin upkeep ×0.9 |
 | Reversible Logic | Echo upkeep ×0.85, Chorus ×0.9 |
@@ -2517,10 +2547,11 @@ The table lists effects beyond unlocking structures, ships and charters.
 | Hunger Lures | beacons (C.11) |
 | Halo Dynamics, Gravitic Semaphore | story triggers (sealed) |
 
-Hunger Studies' description promises it "reveals swarms … and forecasts their paths". At this
-commit no rule checks for it except as a prerequisite and in the interface (it shows the dark
-charters). The effect flags `halo_siphons` and `proton_known` are unused; the code reads the tech
-ids instead.
+Hunger Studies does what its description says, "reveals swarms within detection range and
+forecasts their paths" (`readsSwarms`, D.1.15): sleeping swarms in range are seen, and each swarm
+seen under way has its path and arrival date. It is also a prerequisite (the dark charters, Decoy
+Beacons). No rule reads it, so it changes no game's course. The code reads tech ids directly;
+techs carry no `flags` for The Proton Question or Halo Siphons.
 
 ### C.9 Structures (`data/structures.ts`)
 
@@ -2591,8 +2622,8 @@ pulsar and Disk Arrays at a hole. Ids never change.
 
 #### C.9.3 Costs (`buildCost`)
 
-`industry = cost`, `matter = matter`. A Warden or Aegis under Wardens' Oath: both ×0.75. The code
-also applies ×0.8 industry for ships under a charter `expansion_mandate`, which does not exist.
+`industry = cost`, `matter = matter`. A Warden or Aegis under Wardens' Oath: both ×0.75. Any ship
+under the Expansion Mandate (`expansion_mandate`): industry ×0.8 (with the Oath, both apply).
 Once matter is gone the matter part becomes `energy = round(matter × 1.5)` and matter 0. The
 results are rounded. `queueBuild` refuses when matter or energy is short, or when the queue
 already holds 6. It pays the matter and energy at once, records them in `paid`, and queues
@@ -2743,8 +2774,9 @@ On success it creates the settlement with `settles.pops` of that Thread and 1 of
 * **Lattice:** `matterAt + 0.1 × powerAt`, with `matterAt = Σ (matterYield × richness +
   hydrogenYield × hydrogen + lift) × max × gfeMatter`.
 * **Coldminds:** `log10(years left until lastsUntil)` (400 if never), minus mean
-  temperature / 10,000. `lastsUntil` is a feeding world's start, ∞ for a rogue world, a hole's
-  evaporation, ∞ for a star that never takes its worlds in, otherwise `inspiralAt`.
+  temperature / 10,000. `lastsUntil` is a feeding world's start, ∞ for a rogue world, at a hole
+  the sooner of its evaporation and `fallsInAt`, otherwise `fallsInAt` (∞ for a star that never
+  takes its worlds in; B.5.7).
 
 ### C.11 Beacons and the action list
 
@@ -2859,17 +2891,17 @@ is stated.
   * attacks, when the player orders them.
 
   Keep the same order and count.
-* Things the code does that the texts do not say:
-  * a met demand caps standing at 80;
-  * matter upkeep goes on after matter is gone;
-  * a growth point is paid for even with no room;
-  * spare yields are not in the reported energy net;
-  * starvation strikes at most three settlements a turn;
+* Rules the Manual states, easy to miss in the code:
+  * starvation strikes at most three settlements a turn, those with the deepest deficit;
   * without Merge Consent, merges can be repeated within a turn.
+
+  (Until 19 October 2026 the code also capped a met demand's standing at 80, charged matter
+  upkeep after matter was gone, paid for a growth point with no room, and left spare yields out of
+  the reported energy net. Each was fixed: C.7, C.4, A.6.)
 
 ## D. The others and the end
 
-This part covers everything in the game that is not us: the Hunger, the fellow survivors (the "living neighbours"), signals and messages, narrative events and survey finds, the outside view of endings, and the autoplayer with its balance harness. Source of truth: commit `4b92446`. All code paths are under `src/game/`. Two stranger minds also exist; they are contacted through signals, and everything about them is in the sealed section (S.1). Endings are summarised here only from outside; their rules and texts are in the sealed section (S.4).
+This part covers everything in the game that is not us: the Hunger, the fellow survivors (the "living neighbours"), signals and messages, narrative events and survey finds, the outside view of endings, and the autoplayer with its balance harness. Source of truth: commit `e827e2f`. All code paths are under `src/game/`. Two stranger minds also exist; they are contacted through signals, and everything about them is in the sealed section (S.1). Endings are summarised here only from outside; their rules and texts are in the sealed section (S.4).
 
 Conventions used below: `U(a,b)` is one `rng.range(a,b)` draw; `chance(p)` is `rng.next() < p`. All randomness comes from the single game RNG (mulberry32 in `rng.ts`, state persisted in `GameState.rng` and wrapped by `withRng`). **The order of draws matters**: a replica that consumes draws in a different order will diverge from the original's seeds. Where a draw is conditional (short-circuit `&&`), this is called out. `distLy(a,b)` is the Euclidean distance between two systems' `phys` coordinates (light-years). Ids come from `uid(state, prefix)` = `prefix + (nextId++).toString(36)`.
 
@@ -3032,7 +3064,7 @@ Checks in order (each returns an error string): the fleet is stationed; `isWarFl
 
 #### D.1.12 Communion (dark charter `communion_charter`)
 
-Its text says swarms "merge into your Lattice"; the code does this: no settlement collisions, no `swarmsHunt`, no parts sent, `attackSwarm` refused; tamed swarms yield 0.8 × size and taint you; relapse 0.5%; the gfe drain of feeding swarms ×1.5. Untamed swarms keep eating and moving; absorption still needs taming. (A discrepancy between text and code; replicate the code.)
+Its text says swarms "merge into your Lattice instead of attacking you", and they do. An untamed swarm that arrives at a star where we have a settlement (in `updateHunger`, on arrival, after a part's `rejoin`/`loseTheScent`), or that sits at one when the charter is enacted (at the start of the stationary branch), merges into our first settlement there: `commune` → `foldIn`, as `absorbSwarm` does with no taming: `pops = max(1, round(size / 1.5))` Lattice, `lattice_foundry = max(current, ceil(pops / 6))`, the swarm deleted, Taint `+8` (`COMMUNION_TAINT`); log "A swarm came to <settlement> and merged into its Lattice: N Lattice, and something of its appetite with them." No draw. Besides: no settlement collisions, no `swarmsHunt`, no parts sent, `attackSwarm` refused; `firstSwarm` spares the ship ("It knew <fleet> for one of its own, and let it be", no draw); tamed swarms yield 0.8 × size and taint you; relapse 0.5%; the gfe drain of feeding swarms ×1.5. A swarm heading for us is forecast as "coming to join us" (info). Swarms elsewhere keep eating and moving.
 
 #### D.1.13 Taint (`civ.taint`, 0..100) and becoming the Hunger
 
@@ -3067,11 +3099,12 @@ Effects of Taint `T`, live every turn:
 
 #### D.1.15 What the player sees
 
-- Map (`render/galaxyView.ts`): awake or tamed swarms only; a stationary one only at a known star; a travelling one is drawn interpolated between `from` and `to` (always). Particle count `80 + 30 × size`, radius `2.5 + 1.6 √size`.
-- Forecast "A swarm is heading for X" (danger) for every untamed travelling swarm bound for one of our colony stars (no tech needed).
+- **What we see** (`sim/sight.ts: swarmSight(state)`, a test of one swarm with the eyes worked out once). The eyes are `watchEyes` (`fleets.ts`, the same that `updateDetection` charts stars with): our settlements and the stars our Shared Watch partners watch, at `mods.detect`, and our ships stopped at a star, at `mods.detect`, ×3 for a survey ship. A tamed swarm is always seen. An awake swarm at a star is seen if we know the star. An awake swarm under way is seen within an eye's range of where it is now (`swarmPlace`: interpolated along `from` → `to`). A sleeping swarm is seen only with Hunger Studies (`readsSwarms`) and within range. No draw and no rule reads any of this: `swarmSeenAt`, which the autoplayer and auto-explore read, is unchanged (an awake untamed swarm at a known star).
+- Map (`render/galaxyView.ts`, `syncSwarms`): the swarms seen. A sleeping one (`aSleep`) is drawn dim (colour ×0.3 at its flicker, opacity ×0.45) and drifts slowly near its star. With Hunger Studies, each swarm seen under way gets a dashed line (`swarmLines`, `#c0482c`, dash 2, gap 3, opacity 0.55) from where it is to its destination. Particle count `80 + 30 × size`, radius `2.5 + 1.6 √size`.
+- Panels: a star's panel lists the swarms seen there ("Hunger swarm, asleep" for a sleeping one); a settling site with a sleeping swarm seen gets the chip "nest asleep" (`nestSeenAt`). A swarm's own panel says "Moving toward <star>" when Hunger Studies reads it (or it is tamed, or the star is ours), else "Under way", and with Hunger Studies a row "Arrives: in <years>, ~N turns" (`swarmArrives = years + (distance − traveled) / swarmSpeed`, `swarmSpeed` 0.05 ly a year in the Dusk, 0.5 after: the speeds `updateHunger` moves them at).
+- Forecast `hunger` (B.10): for a swarm seen heading for one of our stars; dated with Hunger Studies, undated without it; keyed by the swarm.
 - Messages: log entries tagged with a fleet (parts coming for a ship, ships lost) are shown as up to two turn messages with a "Look" button (`ui/turnflow.ts`).
-- The destination chip "swarm here" / "swarm N ly" (danger within 25 ly) uses `nearestSwarmSeen`.
-- Hunger Studies' description claims it reveals swarms and forecasts their paths; in code it is only a prerequisite (the Blackout and Consume the Dead charters, Decoy Beacons) and shows the dark charters in the Society screen (no visibility or forecast rule reads it).
+- The destination chip "swarm here" / "swarm N ly" (danger within 25 ly) uses `nearestSwarmSeen` (the nearest awake, untamed swarm seen, by where it is now).
 
 ---
 
@@ -3448,7 +3481,7 @@ Effects not stated in the hints:
 - `derelict_ark` "Wake them": also Kin standing −1. `superflare` "underground" costs 4 instead of 12 with `civ.flags.flare_warning` (set by the Flare Glass find), and both choices cut vitality (−1% / −4%).
 - `new_star` "Study", `white_fire`/`helium_giant` "Watch": insight +25, resolve +2, the system charted. "Keep time": charts the system and keeps time with the star (flare domain); offered only while `starClockOffer` holds. `new_star` "Tell the others": every contacted survivor health +0.08 and regard +8.
 - `supernova`: every system within 20,000 ly becomes known.
-- `unmoored` "Evacuate": energy −20; half of each Thread (rounded down) moves to the capital (Echoes via `welcomeEchoes`), unless the colony is the capital. `world_falls` "Evacuate": everyone and their cryo to the capital; both choices reveal the feeding model.
+- `unmoored` "Evacuate": energy −20; half of each Thread (rounded down) moves to the capital (Echoes via `welcomeEchoes`), unless the colony is the capital. `world_falls` "Evacuate": everyone and their cryo to the capital; both choices reveal the feeding model. At a brown dwarf (in a game with `flags.all_fall`) its text reads: "<world> has spiralled in to the brown dwarf it circles. Its tides are tearing the world apart, and the rubble rains onto the dwarf: a faint warmth, a hundredth of what a white dwarf would make of it, for trillions of years." The sleeper vault's text (`relic_sleepers`) begins "In orbit around <system>" where the vault is in the Deep, else "Under <world>".
 - `forgetting` "Sleep deeper": pace `max(−2, pace − 1)`. Relic strip options pay ×2 under Salvage the Dead, ×3 (and Taint +2) under Consume the Dead.
 
 #### D.4.6 Relics (found by survey)
@@ -3525,21 +3558,22 @@ halo H[ wars W] fate F gfe G%[ [from->to pops a->b] ...] | Adj:alive|fate[+N][[a
 
 `halo` is a stage number of one of the stranger minds (sealed). Neighbours: `alive` or their fate, `+N` stars beyond the first, pacts in force (`a` aid, `r` archives, `w` watch). `tools/tally.sh` counts lines starting `seed `: survive = VICTORY + ENDURANCE, victories, and the mean Degenerate turns; the 900-game run is three slices of 300 (`--from=0,300,600`) and `grep "fate <f> "` splits by fate.
 
-#### D.6.3 Balance reference (today's game, `main`, 12–15 Oct, `tools/sim.ts 300 standard competent`)
+#### D.6.3 Balance reference (today's game, `main`, 19 Oct, `tools/sim.ts 300 standard competent`)
 
 | Run | Survive | Victories | Degenerate Age (mean turns) |
 |---|---|---|---|
-| 300 games | 154 | 72 | 72 |
-| 900 games | 456 | 203 | 71 |
-| 900, protons decay | 189 / 450 (42%) | | |
-| 900, stable | 168 / 239 (70%) | | |
-| 900, curvature radiation | 99 / 211 (47%) | | |
+| 300 games | 160 | 81 | 72 |
+| 900 games | 476 | 244 | 71 |
+| 900, protons decay | 193 / 450 (43%) | 19 | |
+| 900, stable | 165 / 239 (69%) | 127 | |
+| 900, curvature radiation | 118 / 211 (56%) | 98 | |
+| 300 games at Harsh (`--diff=harsh`) | 147 | 62 | 68 |
 
-Noise: about ±12 survivors in 300 games; two runs of 900 can differ by about 30. The project check of 15 Oct reproduced 300 games game for game. A replica playing the same seeds should land within this noise; exact line-for-line agreement requires identical RNG consumption order everywhere.
+Noise: about ±12 survivors in 300 games; two runs of 900 can differ by about 30. (Before the batch of 19 October 2026, 12–15 Oct: 154 / 72 / 72 in 300; 456 / 203 / 71 in 900; decay 189, stable 168, curvature 99; Harsh 140 / 52 / 70.) A replica playing the same seeds should land within this noise; exact line-for-line agreement requires identical RNG consumption order everywhere.
 
 ## E. What the player sees and hears, and how it is tested and shipped
 
-Source of truth: commit `4b92446` (`main`'s game, PR #33). Paths are relative to the repo root;
+Source of truth: commit `e827e2f` (`main`'s game, PR #34). Paths are relative to the repo root;
 `render/x.ts` means `src/render/x.ts`, `ui/x.tsx` means `src/ui/x.tsx`. Anything about the two
 stranger minds, the Lattice's story, endings (titles, conditions, texts) and the art and music tied
 to them by name is in the sealed section; where this file needs it, it says "(sealed)".
@@ -4029,7 +4063,9 @@ button: "Turn N · this turn X · next Y", a forecast count, plus/minus icon; it
 hangs the forecasts and Record under the top bar.
 
 **Resources** (`hud/Resources.tsx`, `.resources.panel.scan`): Energy (icon accent, value in
-phosphor mono, signed net green/red, a ticked gauge of reserve/cap, label), Matter (hidden once
+phosphor mono, signed net green/red, a ticked gauge of reserve/cap, label; with energy under 15%
+of the reserve's capacity and the net negative, the cell gets `.hazard-edge`, an amber edge along
+its foot: `box-shadow: inset 0 -3px 0 rgba(232, 182, 74, 0.85)`), Matter (hidden once
 matter is gone), Insight (per turn, the project name or a warning "no research", neon progress
 gauge; opens Research), Accord (opens Charters), Resolve and Dissent (mono with gauges; red below
 25 / above 45), Free energy %, Continuity (Dark Era only), Taint (when above 0). Every one has a
@@ -4530,7 +4566,7 @@ letters, no signatures.", with a graded plate attached as a style reference.
 | `survivor.webp` | 1600×893, 139 KB | NEUTRAL | through a scratched brass porthole and telescope, a far cluster of warm lights round a dim star | first contact; generic way plate |
 | `swarm.webp` | 1600×893, 155 KB | NEUTRAL | a murmuration of dark harvester motes wrapping a pocked, rust-scarred moon and a grey planet | swarm panel |
 | `swarm_tamed.webp` | 1600×893, 252 KB | COLD | drones in ordered rings on an icy surface around a lit hangar | tamed swarm panel |
-| `slow.webp` | 1600×900, 174 KB | VIOLET | (sealed) | not used by the code at this commit |
+| `slow.webp` | 1600×900, 174 KB | VIOLET | (sealed) | the Slow Ones' card in Signals (S.6) |
 
 Made: the eleven of `84a766a` (title, the four ages, flare, ruins, hunger, sleepers, survivor and
 one more) with Krea (Nano Banana Pro) and Codex image generation; the swarm plates with Nano Banana
@@ -4851,7 +4887,7 @@ identical). It is not part of `check`.
 
 ## Appendix: the data tables
 
-Generated from `src/game/data/*.ts` at `4b92446` (functions such as event texts and choice effects
+Generated from `src/game/data/*.ts` at `4b92446`, with the rows the batch of 19 October 2026 changed edited by hand (the Expansion Mandate; two tech flags removed) (functions such as event texts and choice effects
 left out; sections C and D give their rules). Rows that give the sealed stories away are in S.8.
 
 ### A.1 Structures (`src/game/data/structures.ts`)
@@ -4955,7 +4991,7 @@ left out; sections C and D give their rules). Rows that give the sealed stories 
 | assembly_of_threads | Assembly of Threads | dusk | continuity | 150 | the_long_record |  |  | Every Thread gets a voice. Thread standing recovers faster; more Charters. |
 | deep_listening | Deep Listening | dusk | continuity | 120 | survey_optics |  |  | Listen for other minds across light-years and ages. Opens the Signals panel to faint and slow messages. |
 | hibernation_protocols | Hibernation Protocols | dusk | continuity | 180 | cold_sleep | paceMin -2 |  | Sleep through lean ages safely. Unlocks the Long Sleep and slower paces. |
-| proton_question | The Proton Question | dusk | continuity | 200 | the_long_record | flags ["proton_known"] |  | Build the detector that settles it: will ordinary matter last? |
+| proton_question | The Proton Question | dusk | continuity | 200 | the_long_record |  |  | Build the detector that settles it: will ordinary matter last? |
 | halo_dynamics | Halo Dynamics | dusk | continuity | 220 | deep_listening |  |  | Map the invisible mass that holds the Coalescence together. Something in it is moving against the flow. |
 | last_light_protocols | Last Light Protocols | dusk | continuity | 340 | assembly_of_threads | crossing 0.5 |  | Plan for the end of starlight: losses in the Last Light are halved. |
 | ember_harvest | Ember Harvest | dusk | harvest | 240 | orbital_collectors |  |  | Cold radiators around white dwarfs warmed by annihilating dark matter, and close around brown dwarfs, whose weak gravity lets them in. Unlocks Ember Collectors and Infrared Shrouds. |
@@ -4979,7 +5015,7 @@ left out; sections C and D give their rules). Rows that give the sealed stories 
 | hunger_engines | Hunger Engines | degenerate | harvest | 460 | command_language | flags ["hunger_engines"] | taint 12 | Borrow the swarms’ way of eating. Matter yields +40%. The Hunger’s logic stays with you. |
 | communion | Communion | degenerate | mind | 600 | hunger_engines |  | taint 18 | Do not tame the swarms: join them. Unlocks the Communion charter. |
 | gravitic_semaphore | Gravitic Semaphore | degenerate | continuity | 380 |  |  |  | Speak with mass itself: move worlds a little, read the replies in orbits. Contact with what hides in the halo becomes possible. |
-| halo_siphons | Halo Siphons | degenerate | harvest | 560 | ember_harvest | flags ["halo_siphons"] | noAuto True | Drive dark matter into the embers faster. Ember yields double, and the halo empties sooner. They can be shut for good later, but not started again. |
+| halo_siphons | Halo Siphons | degenerate | harvest | 560 | ember_harvest |  | noAuto True | Drive dark matter into the embers faster. Ember yields double, and the halo empties sooner. They can be shut for good later, but not started again. |
 | great_decay_protocols | Great Decay Protocols | degenerate | continuity | 700 |  | crossing 0.5 |  | Prepare for the end of matter. Losses in the Great Decay (or, if space itself unmakes matter, the Great Evaporation) are halved. |
 | penrose_process | Penrose Process | degenerate | harvest | 700 | accretion_engines |  |  | Extract a black hole’s spin. Unlocks Penrose Harvesters. |
 | hawking_capture | Hawking Capture | degenerate | harvest | 750 | penrose_process |  |  | Collect the heat of evaporating holes. Unlocks Hawking Collectors. |
@@ -5039,6 +5075,7 @@ left out; sections C and D give their rules). Rows that give the sealed stories 
 | overdrive_protocols | Overdrive Protocols | dusk |  |  |  | 20 | coldminds -8; kin 2 |  |  |  |  | Settlements can overdrive their Hearth: +50% energy capture, with damage, faster decline and a drain on the galaxy’s free energy. | Hearths may run past their ratings when needed. |
 | thread_parity | Thread Parity | dusk | assembly_of_threads |  |  | 30 | kin -4; echoes 6; chorus 6; coldminds 6 |  | -6 |  |  | Thread standings drift toward the middle; forks become less likely. | Every kind of mind counts the same. |
 | lattice_compact | Lattice Compact | dusk | autonomous_replicators |  |  | 20 | kin -4; echoes -2 |  |  |  |  | The other Threads no longer resent the Lattice; Lattice output +15%; tamed swarms relapse less. | The machines work for us, and we will not resent them for it. |
+| expansion_mandate | Expansion Mandate | dusk | fusion_drives |  |  | 20 | kin 6; coldminds -6 | 2 |  |  |  | Ships cost 20% less industry. | Every settlement owes the dark a ship. The slips run first. |
 | wardens_oath | Wardens’ Oath | dusk | orbital_defense |  |  | 15 | kin 3 |  |  |  |  | Warships −25% cost; settlement defence +50%. | Someone will always stand watch. |
 | the_long_watch | The Long Watch | dusk | hibernation_protocols |  |  | 25 | coldminds 8; echoes 4; kin -4 |  |  |  |  | Dormant turns cost half as much; waking gives +30% output for two turns. | Sleep in shifts. There is always someone awake, and always someone rested. |
 | consume_the_dead | Consume the Dead | dusk | hunger_studies |  |  | 10 | kin -10; echoes -6; chorus -6; coldminds -6 |  |  | 15 | dark | At once: Matter +120. Every one of your own people who dies yields 4 Matter. Salvaging a ruin yields triple; a faded civilization’s dead worlds give Matter worth its whole archives. Drains free energy. Hunger Taint +15. | Feed on what the dead left: their worlds, their machines, their bodies. |
@@ -5246,8 +5283,8 @@ The Slow Ones' talk span is **2.5** tenfolds (`canConverse(my, slow.clock, 2.5)`
    - **Stage 1 → 2**: `canConverse(my, slow.clock, 2.5)`. Signal `slow_first`, distance = from our capital to the Heart: "The Slow Ones answer" — "Our clocks are finally close enough. What comes back is not words, but a proof, laid out across a hundred thousand years of flickers: that a finite store of energy can pay for an unlimited number of thoughts, if each thought is slower than the last. At the end of the proof there is a gap, as if waiting for us." Choices: `math` "Fill the gap with mathematics" (hint "Show them you can follow."), `history` "Answer with our history" ("Show them who we are."), `silence` "Wait" ("Say nothing yet.").
    - **Stage 3 → 4**: `understanding ≥ 45` and in step (2.5). `civ.flags.slow_gift = 1`; signal `slow_gift`, distance to the Heart: "The Slow Ones share the seam" — "They show us something they have been working on since before our star was born: a way to write on the boundary where one universe ends and another may begin. They cannot finish it alone. They ask us to keep a presence at the Heart until the very end. (Conformal Mathematics costs less; the Aeon Seed becomes possible.)"
 3. Answers (`resolveMindSignal`, `slow_first`): `math` understanding +22; `history` +15 and `civ.flags.insight_bank += 120`; any non-silence answer sets stage 3; `silence` sets stage back to 1 (so a new `slow_first` is sent the next turn we are in step).
-4. Other understanding: the Last Light crossing (Dusk → Degenerate) adds +15 if we are not dormant and `stage ≥ 2`, with the report line "We were awake to watch the last light go out, as the Slow Ones were. They noticed." (`crossing.ts`).
-5. **Finding (uncertain intent, exact code):** grep finds no other source of Slow Ones understanding. The most it can reach is 22 + 15 = 37 (the `math` answer, plus the crossing bonus if they had spoken before the Last Light: possible late in the Dusk, once our turns are long enough that 6.5 lies within 2.5 tenfolds of our range), below the 45 that stage 4 needs. Only one non-silence answer is ever possible, since the stage then stays at 3. As coded, the Slow Ones' gift appears unreachable in normal play, and the Aeon Seed is reached through the Unlit's gift instead (S.1.4). Replicate as coded unless told otherwise.
+4. Other understanding, "one thought per age": the Last Light crossing (Dusk → Degenerate) adds +15 if we are not dormant and `stage ≥ 2`, with the report line "We were awake to watch the last light go out, as the Slow Ones were. They noticed."; and the crossing that ends the Degenerate Age (the Great Decay, or the Last Warmth) adds +15 on the same terms, with "We were awake as the Degenerate Age ended, as the Slow Ones were. Another thought passed between us." (`crossing.ts`).
+5. **Reaching the gift.** A civilization that spoke with them before the Last Light reaches 22 + 15 + 15 = 52 (mathematics) or 45 (history) as the Black Hole Age opens, enough for stage 4; one that first spoke with them later reaches 37 at most. Only one non-silence answer is ever possible, since the stage then stays at 3. (Until 19 October 2026 the second crossing's +15 did not exist, so the most was 37 and the gift could never come; the Aeon Seed was reached only through the Unlit's gift, S.1.4. The player asked for the step to be reachable, without being told how: `docs/spoilers/slow-ones.md`.)
 6. `slow_gift` makes Conformal Mathematics cost ×0.6 (`research.ts: techCost`).
 7. Card text by stage (`Signals.tsx`, `SLOW_STAGE`): 0 "Unknown.", 1 "A pattern near the Heart: someone counting, very slowly.", 2 "They have spoken. They wait for an answer.", 3 "In conversation, one thought per age.", 4 "They have shared the seam: the Aeon Seed is possible." The card (eyebrow "Around the Heart") shows their clock (green when in step, with `stepHint` at span 2.5) and understanding; it appears once `stage > 0`.
 
@@ -5323,7 +5360,7 @@ Messages from `from: 'slow'` are signed "The Slow Ones" (`senderName`). Two card
 
 #### S.1.6 Where else they show
 
-- `crossing.ts`: the Last Light line in S.1.3.
+- `crossing.ts`: the Last Light line and the Degenerate Age's end line in S.1.3.
 - `research.ts`: Conformal Mathematics ×0.6 (`slow_gift`), ×0.5 (`unlit_gift`).
 - `economy.ts`: `ember_restraint`.
 - Codex (`ui/screens/Codex.tsx`): the Embers entry ends "In the game the Unlit, the dark-matter minds, have something to say about that."; the Dark stars entry describes the game's dark star at the end of time (burns until the universe is three times as old, never before η 25, kept time with free); the sources list Spolyar, Freese & Gondolo 2008.
@@ -5345,8 +5382,10 @@ Messages from `from: 'slow'` are signed "The Slow Ones" (`senderName`). Two card
   Slow Ones and stranger things remain."
 - **`slow.webp`** (`public/art/slow.webp`, 1600×900, 174 KB, VIOLET grade, one of the eleven plates
   of `84a766a`): a black hole with a bright thin photon ring and an edge-on disk, circled by two
-  ellipses of evenly spaced points of light (someone counting), in a dense starfield. The events'
-  `art` type allows `'slow'` and `ART_TINT.slow = '#161a28'`, but no event uses it at this commit.
+  ellipses of evenly spaced points of light (someone counting), in a dense starfield. Since 19
+  October 2026 it is the plate on the Slow Ones' card in Signals (a `drawer-plate`, aria-label "The
+  Heart, and the stars around it dimming and brightening in a pattern"). The events' `art` type
+  allows `'slow'` and `ART_TINT.slow = '#161a28'`, but no event uses it.
 - **The halo civilization's wrong answer** (unit check `quake`): a misread gesture to the Unlit can
   shake a world: a living world loses life; a lifeless one has its hearth cracked (+30% damage).
 - **The Aeon Seed** needs "A settlement at the Heart, and the Slow Ones’ trust. The seed is written
@@ -5557,7 +5596,7 @@ simply still exist when the calendar reaches 10^(10^122) years. The Hunger: beco
 
 - Event `last_star` (S.2) and every `slow_*` / `dark_*` signal (S.1.3, S.1.4), including the two astronomer messages.
 - Event `anyone_in_there` (S.3).
-- The Last Light crossing line about the Slow Ones (S.1.3).
+- The two crossing lines about the Slow Ones (S.1.3).
 - The Codex and Manual lines in S.1.6; the Signals "Other minds" tab and its stage texts.
 - All Work epilogues, ending titles and defeat texts (S.4).
 - Not spoilers: the Hunger, its makers' standing order in `hunger_mirror` ("PERSIST"), the neighbours and their six ways of life, the dark charters, Taint itself.

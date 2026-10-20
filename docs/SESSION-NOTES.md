@@ -51,10 +51,10 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (15 Oct): `main` as of PR m1omg/Steliterate#33 (live script `index-CZei1OFo.js`), and the new
-    version at `/next/` from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script
-    `index-ChAdSDIO.js`). HANDOVER, section 3, has where things stand; CLAUDE.md lists every PR. What
-    follows is the history up to 13 Oct.
+  - Now (20 Oct): `main` as of PR m1omg/Steliterate#34 (`e827e2f`, the game keeps its word;
+    live script `index-B8kR8ow_.js`), and the new version at `/next/` from `next`, a copy of
+    `claude/epic-wozniak-lyhulf` (live script `index-BqvW8Zy9.js`). HANDOVER, section 0, has where things
+    stand; CLAUDE.md lists every PR. What follows is the history up to 13 Oct.
   - The game was as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
     live script `index-BRmxB_Lf.js`), from `claude/affectionate-johnson-qqr7p2`, the plan's
@@ -118,8 +118,16 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (13 Oct, PR m1omg/Steliterate#27: who a burst reaches;
-  lighter on phones and tablets):**
+- **The baseline, from the last validation (20 Oct, the game keeps its word, both versions):**
+  - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
+    8 saves; all 84 unit checks; all 62 browser checks in the real fonts; the harness 156 / 65 / 71
+    of 300 (by fate decay 82 / 148, stable 44 / 81, curvature 30 / 71), Harsh 124 / 35 / 66;
+  - today's game (`main`): tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat
+    on its 6 saves; all 53 unit checks; all 54 browser checks in the real fonts; the harness 160 / 81 / 72 of 300, 900 games
+    476 / 244 / 71 (by fate decay 193 / 450, stable 165 / 239, curvature 118 / 211), Harsh
+    147 / 62 / 68.
+- **The baseline before it (13 Oct, PR m1omg/Steliterate#27: who a burst reaches; lighter on
+  phones and tablets):**
   - tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the 6 saves; all 49
     unit checks; all 51 browser checks in the real fonts (live script `index-B4EKBtSN.js`);
   - the harness: 154 of 300 survive, 72 victories, a Degenerate Age of 72 turns, all 300 as
@@ -787,6 +795,31 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     waves drain every orbit; only the game kept them apart), they chose "Yes, new games only" and
     "Make the charter"; and for the rules no text told of, "Fix the bugs, document the rest". The
     harder numbers for each are in CHANGELOG (19 Oct).
+  - 19 Oct, late: the player asked for falling worlds ("make the black hole flashes harvestable";
+    a world being eaten by its star "should then break up into asteroids and eventually be…
+    accreted"; "even something that seems like it's just a few years… can also be very
+    energetic… So it should present an opportunity for the civilization") and sent their list of
+    16 Oct about `/next/` (seven items, four with screenshots: "Please look at the pictures as
+    well in the document"). Asked, they chose rubble you can mine with an evacuation event and a
+    darker Hunger choice at high Taint, both versions in new games, and for the flashes "please
+    calculate the effects…", molten worlds staying molten, a Flash Shelter for a world whose night
+    side stays cool and Shadow Shields where the whole world melts; for the pace, "Ten per Tide
+    turn", in "Both versions". The plan (`docs/plans/2026-10-19-falling-worlds-and-the-list.md`)
+    was approved: "It sounds good, though not all black holes should have planets, just a lot of
+    them." Their usage ran out before anything of it was built ("93% of usage is gone right
+    now… I'll be back"), and the session wrote the handover.
+  - 20 Oct, a new session (the player: "wasn't on this account, if you're wondering"): "Continue
+    my game Steliterate … from where the previous session stopped", in this order: finish "the
+    game keeps its word" (validation in both versions, the harness for `main` standard and harsh,
+    the docs, `next`, the PR into `main` merged and checked live, merged back with `-s ours`),
+    then the list ("the .odt is attached. Look at its four screenshots before anything else"),
+    then the falling worlds. The `.odt` did not reach the session (not on the machine, not in
+    their Google Drive): asked for again. The batch went live as PR m1omg/Steliterate#34
+    (CHANGELOG, "The game keeps its word", with the figures). The harness of today's game showed
+    41 more victories in 900; measured by taking the hidden step out again, they are that step's
+    alone, survival within the noise either way (`docs/spoilers/slow-ones.md`). `browser/fates`
+    now takes the first of the harness's seeds whose decay game lives to the Great Decay (seed
+    48514's dies out at η 38.3 under the new rules).
   - Next: the player's word on Firefox now, the films' second cut and the open threads
     (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from

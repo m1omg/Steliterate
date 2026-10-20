@@ -1,3 +1,7 @@
+> **20 Oct: part A is done** (validated in both versions; live by PR m1omg/Steliterate#34,
+> `e827e2f`, and on `next`; `main` merged back with `-s ours`, `11862d4`). The CHANGELOG draft and
+> the REPLICATE patch beside this file are applied: don't apply them again. Parts C and B remain.
+
 > **Saved 19 Oct, about 22:50, at the handover** (the player: "please put this plan along with
 > updating the handover MD, because I will need to continue in another session"). It was written
 > and approved in that session ("It sounds good"). Paths under `$SP` (the scratchpad), the
