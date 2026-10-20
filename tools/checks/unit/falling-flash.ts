@@ -16,7 +16,9 @@
 //   melt line nothing is harmed; every Burst Catcher in reach banks it;
 // - "A World Falls" offers a third, dark choice, only at Taint 60 and more: its people taken
 //   apart with the rubble;
-// - the shelters are built only in such a game, the Flash Shelter only on a locked world;
+// - the shelters are built only in such a game, the Flash Shelter only on a locked world, both
+//   from the Dusk (a white dwarf's close giant can fall in before the Last Light): the Flash
+//   Shelter with the Deep Warrens research, the Shadow Shield with Orbital Industry;
 // - a game begun before keeps today's rule.
 import { newGame } from '../../../src/game/newGame';
 import { EVENT_BY_ID, choiceShown } from '../../../src/game/data/events';
@@ -219,7 +221,7 @@ const giantCase = (deepShield: boolean) => {
   const line = meltLineAU(f.lum);
   check(f.lum > 18000 && f.lum < 20000 && f.years > 50 && f.years < 100 && f.energy > 1.5e40 && f.energy < 2e40, `a Jupiter onto a 0.6-Sun white dwarf: ${f.energy.toExponential(2)} J, ${Math.round(f.lum)} Suns for ${Math.round(f.years)} years`);
   check(line > 3.5 && line < 4.5, `the ground melts out to ${line.toFixed(1)} AU`);
-  check(!!fc && /in a flash/.test(fc.title) && /Shadow Shield/.test(fc.text) && /Flash Shelter/.test(fc.text) && /boil away/.test(fc.text), `the forecast warns ahead: "${fc?.title}": ${fc?.text}`);
+  check(!!fc && /in a flash/.test(fc.title) && /Shadow Shield \(Orbital Industry\)/.test(fc.text) && /Flash Shelter or Deep Warrens \(both come with the Deep Warrens research\)/.test(fc.text) && /boil away/.test(fc.text), `the forecast warns ahead, naming the research each shelter comes with: "${fc?.title}": ${fc?.text}`);
   check(ws.giant.dissolved === true && !!r.notes.find((n) => n.kind === 'flash'), 'the giant falls in, in a flash');
   check(ws.tiny.dissolved === true && !s.colonies[cs.tiny.id], `a small world close in boils away, and the settlement on it with it, Shadow Shield and all`);
   check(!s.colonies[cs.turning.id] && ws.turning.traits.includes('flash_melted') && ws.turning.water === 0 && ws.turning.vitality === 0 && ws.turning.kind === 'barren', `on a turning world at 1 AU, without a Shadow Shield, the settlement is lost and the world melted to bare rock (${ws.turning.kind})`);
@@ -295,8 +297,8 @@ const giantCase = (deepShield: boolean) => {
 // ---------------------------------------------------------------- the shelters, and an older game
 {
   const s = fresh();
-  at(s, 1e19);
-  s.civ.techs.push('burst_capture');
+  // (in the Dusk: a giant can fall in before the Last Light)
+  s.civ.techs.push('subterranean_cities', 'orbital_industry');
   const sys = stage(s, freeSystems(s)[0], { kind: 'white_dwarf', mass: 0.6 }, 0);
   const turning = settle(s, world(s, sys, 'barren', 1, 1));
   const locked = settle(s, world(s, sys, 'barren', 0.05, 1, { traits: ['tidally_locked'] }));
@@ -306,10 +308,14 @@ const giantCase = (deepShield: boolean) => {
   check(structureCheck(s, locked, STRUCTURE_BY_ID.flash_shelter) === null, 'one on a locked world');
   check(structureCheck(s, turning, STRUCTURE_BY_ID.shadow_shield) === null && structureCheck(s, deep, STRUCTURE_BY_ID.shadow_shield) === null, 'a Shadow Shield anywhere, the Deep too');
   check(structureCheck(s, deep, STRUCTURE_BY_ID.flash_shelter) !== null, 'but no Flash Shelter in the Deep');
+  check(s.era === 'dusk', `all of it in the Dusk (${s.era})`);
+  const unread = fresh();
+  const uc = Object.values(unread.colonies).find((c) => c.systemId === unread.civ.homeSystemId)!;
+  check(structureCheck(unread, uc, STRUCTURE_BY_ID.shadow_shield) === 'Not yet researched.', 'without Orbital Industry, no Shadow Shield');
   const old = loadSave('b1fc6a7-seed1000-turn61-next.json.gz');
   check(!rubbleGame(old), 'a game begun before 20 Oct keeps today’s rule');
   const oc = Object.values(old.colonies).find((c) => c.owner === old.civ.id)!;
-  old.civ.techs.push('burst_capture');
+  old.civ.techs.push('subterranean_cities', 'orbital_industry');
   old.era = 'degenerate';
   check(structureCheck(old, oc, STRUCTURE_BY_ID.shadow_shield) === 'Not in this game.' && !buildableStructures(old, oc).some((x) => x.def.id === 'shadow_shield' || x.def.id === 'flash_shelter'), 'and has no shelters to build');
   // its giants feed their dead star as ever

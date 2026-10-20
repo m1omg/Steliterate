@@ -128,10 +128,14 @@ export function updateForecasts(state: GameState) {
             ours.push(`${c.name} falls in with it: three in four of its people will get off to the Deep, into the flash.`);
             danger = true;
           } else if (flashBoils(state, b, f)) {
-            ours.push(`${b.name} will boil away, and nothing on it can be saved: ${c.name} must be given up.`);
+            ours.push(`${b.name} will boil away${c.name !== b.name ? `, and ${c.name} with it` : ''}: nothing on it can be saved.`);
             danger = true;
           } else if (flashMelts(state, b, f)) {
-            const need = flashShelterFor(b) === 'flash_shelter' ? 'a Flash Shelter (or Deep Warrens)' : 'a Shadow Shield';
+            // (with the research it comes with, if we have not done it yet)
+            const locked = flashShelterFor(b) === 'flash_shelter';
+            const tech = locked ? 'subterranean_cities' : 'orbital_industry';
+            const learn = hasTech(state, tech) ? '' : locked ? ' (both come with the Deep Warrens research)' : ' (Orbital Industry)';
+            const need = locked ? `a Flash Shelter or Deep Warrens${learn}` : `a Shadow Shield${learn}`;
             const has = flashSheltered(c, b);
             ours.push(`${c.name} ${has ? 'is sheltered' : `needs ${need}, or is lost`}.`);
             if (!has) danger = true;
@@ -145,8 +149,6 @@ export function updateForecasts(state: GameState) {
           text: [
             `Gravitational waves are draining its orbit. Its gas will pour onto the ${sys.primary.kind === 'black_hole' ? 'hole' : sys.primary.kind === 'brown_dwarf' ? 'dwarf' : 'star'} faster than it can take it in, and the ${sys.primary.kind === 'black_hole' ? 'hole' : 'star'} will shine at its limit, some ${Number(f.lum.toPrecision(2)).toLocaleString('en-US')} Suns, for about ${formatYears(Math.max(1, Number(f.years.toPrecision(2))))}. The ground melts out to about ${line < 10 ? line.toFixed(1) : Math.round(line)} AU, and the nearest small worlds boil away.`,
             ...ours,
-            // (the shelters come with Burst Capture, which a flash early in the age may come before)
-            ours.length && !hasTech(state, 'burst_capture') ? 'Burst Capture gives the shelters.' : '',
             `Burst Catchers bank it out to about ${reach < 10 ? reach.toFixed(1) : Math.round(reach)} light-years.`,
           ]
             .filter(Boolean)
