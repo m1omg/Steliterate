@@ -168,10 +168,13 @@ export async function doEndTurn() {
   // entering one of them shows its worlds one by one (the survey reveal)
   if (surveyed.length) engine()?.markForReveal(s, surveyed);
   // the deep dark's flashes, where matter is stable: a black dwarf exploding, a system's matter
-  // tunnelling into black holes (a few at most: in a turn of the collapse there can be many); and
-  // a giant falling into its star in a flash (since 20 Oct: physics.ts, flashSystem)
-  const flashes = r.notes.filter((n) => (n.kind === 'blackdwarf_sn' || n.kind === 'collapse' || (n.kind === 'flash' && !!n.flash?.inside.length)) && s.civ.known[n.systemId]);
-  for (const n of flashes.slice(0, MAX_FLASH_PINGS)) engine()?.ping(n.systemId, n.kind === 'blackdwarf_sn' ? '#fff3dc' : n.kind === 'flash' ? '#ffd9a8' : '#cdbcff');
+  // tunnelling into black holes (a few at most: in a turn of the collapse there can be many)
+  const flashes = r.notes.filter((n) => (n.kind === 'blackdwarf_sn' || n.kind === 'collapse') && s.civ.known[n.systemId]);
+  for (const n of flashes.slice(0, MAX_FLASH_PINGS)) engine()?.ping(n.systemId, n.kind === 'blackdwarf_sn' ? '#fff3dc' : '#cdbcff');
+  // and giants falling into their stars in a flash (since 20 Oct: physics.ts, flashSystem), as many
+  // again at most, so that they never crowd those out
+  const giants = r.notes.filter((n) => n.kind === 'flash' && !!n.flash?.inside.length && s.civ.known[n.systemId]);
+  for (const n of giants.slice(0, MAX_FLASH_PINGS)) engine()?.ping(n.systemId, '#ffd9a8');
   const living = surveyed.flatMap((id) => livingWorlds(s, id));
   if (living.length) {
     const b = living.sort((x, y) => y.habitability * y.vitality - x.habitability * x.vitality)[0];
