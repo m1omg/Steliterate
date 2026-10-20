@@ -3891,3 +3891,14 @@ in today's game).
   there: it lives the age at the Tide (67 Tide turns of time where protons decay, 47 where matter
   is stable, 131 where space unmakes it) and keeps time with new stars; a player at the Tide lives
   the same turns as before.
+- **Validated, the new version:** tsc and the build clean; the playtest passes; savecompat on its
+  8 saves; all 89 unit checks; all 63 browser checks in the real fonts (`films` and `music-route`
+  failed once with two suites running at once and pass alone).
+- **Validated, today's game:** tsc and the build clean; the playtest passes; savecompat on its 6
+  saves; all 58 unit checks; all 55 browser checks in the real fonts (`a11y` failed once with two
+  suites running at once and passes alone).
+- **In both versions:** today's game got the same through its own code by PR
+  m1omg/Steliterate#37 (`d2abd2a`; code `bd86639`), from `claude/promises-main`, and `main` was
+  then merged into this branch, keeping this branch's code (`-s ours`, `95353de`). Live on 20
+  Oct: the main address serves `index-huAXd3rX.js` and `/next/` `index-B8OkbgIN.js`, the builds
+  validated here.

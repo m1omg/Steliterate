@@ -56,11 +56,25 @@ word", then the player's list of 16 Oct, then the falling worlds.
   can be, and one sea", has the figures (both versions within the noise; nearly every game
   re-rolled by the finds' tests).
 
-**What to do next** (the plan's part C, in both versions, validated, pushed to `next` and merged
-into `main`): **items 3 to 5**, the pace ("Ten per Tide turn"), with the harness. The plan has the
-design; the player chose it. A turn at pace p multiplies the age's ladder (years since the age
-began, plus l0/(g−1)) by g^(10^−p) and pays exactly 10^−p; a clock's or flare's turn pays
-log_g(1 + L·(g−1)/Tide); what declines per turn scales by the same share.
+- **Items 3 to 5, the pace** (both versions), live on 20 Oct: a turn's share is the Tide turns
+  of time it covers (Quick ×10 exactly 0.1, Slow ×10 exactly 10, on the age's ladder), and it
+  pays, costs and wears the worlds by it; flare clocks likewise; the pace lit is the one in use.
+  Building it showed two things the plan had not: one Slow ×100 turn could cross the whole Dark
+  Era, and the victories had leaned on the old slow turns' overpay. Asked, the player chose "Dark
+  keeps its clock" (a pace there only halves or doubles the turn, now paid for what it covers;
+  and no slow turn ends any age) and "Bring them back" (after the Last Light every source gives
+  more: ×1.4 in today's game, ×1.125 in the new version, each tuned on the harness to about 77
+  victories). The autoplayer now takes the Long Sleep in the dark when its reserve would not
+  last (the overpay had carried it, and it never slept), so survival rose: today's game 229 / 73
+  / 112 of 300 (165 / 77 / 70), Harsh 209 / 63 / 106; the new version 187 / 77 / 103 (165 / 77 /
+  72), Harsh 147 / 51 / 98. Tell the player plainly, if they ask: the rules made the dark no
+  cheaper; a player who sleeps through it always could. Today's game by PR
+  m1omg/Steliterate#37 (`d2abd2a`; code `bd86639`), merged back with `-s ours` (`95353de`).
+  CHANGELOG, "The pace: ten turns to a Tide turn", has the rest.
+
+**What to do next:** the approved plan is done. Ask the player what comes next; the open threads
+are in SESSION-NOTES ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the
+rest). `main` keeps today's game until the player says to switch to the new version.
 
 **The player's usage** ran out twice on 19 Oct (the weekly limit, then the five-hour one). They
 pause and come back. Work in batches that end validated and pushed, and keep messages short.
@@ -86,8 +100,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#36 (`981e0f0`) | `f08a951` and its notes |
-  | Live script | `index-Gsu1nkEh.js` | `index-CSak4cHM.js` |
+  | As of | PR m1omg/Steliterate#37 (`d2abd2a`) | `95353de` and its notes |
+  | Live script | `index-huAXd3rX.js` | `index-B8OkbgIN.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at

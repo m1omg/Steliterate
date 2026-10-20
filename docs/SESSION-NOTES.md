@@ -51,11 +51,11 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (20 Oct): `main` as of PR m1omg/Steliterate#36 (`981e0f0`, finds only where they can be
-    and one sea; live script `index-Gsu1nkEh.js`), after PR m1omg/Steliterate#35 (`e4c77d7`,
-    falling worlds) and PR m1omg/Steliterate#34 (`e827e2f`, the game keeps its word), and the new
-    version at `/next/` from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script
-    `index-CSak4cHM.js`). HANDOVER, section 0, has where things stand; CLAUDE.md lists
+  - Now (20 Oct): `main` as of PR m1omg/Steliterate#37 (`d2abd2a`, the pace: ten turns to a Tide
+    turn; live script `index-huAXd3rX.js`), after PR m1omg/Steliterate#36 (`981e0f0`, finds only where they
+    can be and one sea), PR m1omg/Steliterate#35 (`e4c77d7`, falling worlds) and PR
+    m1omg/Steliterate#34 (`e827e2f`, the game keeps its word), and the new version at `/next/`
+    from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script `index-B8OkbgIN.js`). HANDOVER, section 0, has where things stand; CLAUDE.md lists
     every PR. What follows is the history up to 13 Oct.
   - The game was as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
@@ -120,8 +120,17 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (20 Oct, finds only where they can be and one sea,
-  both versions):**
+- **The baseline, from the last validation (20 Oct, the pace: ten turns to a Tide turn, both
+  versions):**
+  - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
+    8 saves; all 89 unit checks; all 63 browser checks in the real fonts; the harness 187 / 77 /
+    103 of 300 (by fate decay 107 / 148, stable 39 / 81, curvature 41 / 71), Harsh 147 / 51 / 98;
+  - today's game (`main`): tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat
+    on its 6 saves; all 58 unit checks; all 55 browser checks in the real fonts; the harness
+    229 / 73 / 112 of 300 (by fate decay 87 / 148, stable 79 / 81, curvature 63 / 71), Harsh
+    209 / 63 / 106.
+  - The autoplayer's pace and its sleep in the dark changed with it: compare runs by their totals.
+- **The baseline before it (20 Oct, finds only where they can be and one sea, both versions):**
   - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
     8 saves; all 88 unit checks; all 63 browser checks in the real fonts (five passed only on a
     rerun alone, two of them after their fixes: CHANGELOG); the harness 165 / 77 / 72 of 300 (by
@@ -843,6 +852,15 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     alone, survival within the noise either way (`docs/spoilers/slow-ones.md`). `browser/fates`
     now takes the first of the harness's seeds whose decay game lives to the Great Decay (seed
     48514's dies out at η 38.3 under the new rules).
+  - Later on 20 Oct, items 3 to 5 of the list (the pace). Built as planned ("Ten per Tide
+    turn"), it showed that one Slow ×100 turn crossed the whole Dark Era, and that the victories
+    had leaned on the old slow turns' overpay. The player: "okay hold on so one slow x 100 turn
+    should not cross the entire dark era what what's going on". Asked again (a tapped option had
+    vanished: "Ask again pls"), they chose "Dark keeps its clock" and, for the victories, "Bring
+    them back": the late ages richer, tuned on the harness to about 77 victories in each version
+    (×1.4 in today's game, ×1.125 in the new version). The autoplayer now sleeps through the dark
+    when its reserve would not last, so survival in the harness rose (229 and 187 of 300). Live as
+    PR m1omg/Steliterate#37 (CHANGELOG, "The pace: ten turns to a Tide turn").
   - Next: the player's word on Firefox now, the films' second cut and the open threads
     (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
@@ -1082,7 +1100,9 @@ Still open:
   - Energy per turn scales with the share of a Tide turn lived.
   - A 4 Gyr flare is ~0.16% of a 2.5 Tyr late-Dusk turn. Even at 174× brightness it totals
     ≈28% of one ordinary turn's starlight.
-  - So flare-clock turns count as full turns lived at the flare's pace: a deliberate bend.
+  - So flare-clock turns counted as full turns lived at the flare's pace: a deliberate bend,
+    until 20 Oct. Since then each pays for the time it covers (the player's list, item 3: "Quick
+    10x is not Quick 10x here"); a new star's clock still lives each turn in full.
 - **Flare physics numbers:**
   - The game gives a 0.1 M☉ red dwarf 0.00115 L☉, and 0.2 L☉ as a blue dwarf (174×). The
     0.1 M☉ peak is probably lower in reality; treat it as an estimate.
