@@ -29,7 +29,8 @@ way; PR m1omg/Steliterate#33, `4b92446`, the project check's three fixes for tod
 that the switch merges cleanly; PR m1omg/Steliterate#34, `e827e2f`, the game keeps its word,
 PR m1omg/Steliterate#35, `e4c77d7`, falling worlds, PR m1omg/Steliterate#36, `981e0f0`, finds
 only where they can be and one sea for the Water row and the picture, and PR
-m1omg/Steliterate#37, `d2abd2a`, the pace: ten turns to a Tide turn, all from
+m1omg/Steliterate#37, `d2abd2a`, the pace: ten turns to a Tide turn (and PR
+m1omg/Steliterate#38, `a2fa3b4`, a line of its changelog), all from
 `claude/promises-main`, the same way, each then merged into the work branch with `-s ours`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push

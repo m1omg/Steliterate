@@ -100,7 +100,7 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#37 (`d2abd2a`) | `95353de` and its notes |
+  | As of | PR m1omg/Steliterate#38 (`a2fa3b4`, after #37's `d2abd2a`) | its notes, after `95353de` |
   | Live script | `index-huAXd3rX.js` | `index-B8OkbgIN.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
