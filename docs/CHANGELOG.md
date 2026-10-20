@@ -2270,16 +2270,16 @@ them back". The new version got the same, with a smaller late yield (×1.125).
   nearest pace toward the Tide that is not is lit, and the turn is lived at it; ours keeps a dashed
   outline and is lit again by itself when it can, and the phone's pace button names the one in
   use. Every greyed pace says why. "Sleep deeper" no longer slows past what research allows.
-- **The late ages richer** (the player: "Bring them back"). The autoplayer's victories had leaned
-  on the old slow turns' overpay: in trouble it took the pace that paid most a turn, the slowest.
-  With honest turns it won 49 of 300 at ×1.2 (77 before); and in the new version, where 62 games
-  no longer won, the gift of the Slow Ones was always there, but most lacked the 300 energy that
-  begins the Aeon Seed, a settlement at the Heart, or Conformal Mathematics in time. So after the
-  Last Light every source gives two fifths more energy and matter (`LATE_YIELD` 1.4: structures
-  and the Hearth, and where to settle counts it), at every pace. Tuned on the harness: ×1.2 gave
-  49 victories of 300, ×1.6 105, and ×1.4 73 with the autoplayer's sleep below. The new version,
-  which leaned on the overpay less, takes an eighth more (×1.125). A player at the Tide never had
-  the overpay, so for one the late ages are now that much richer than before.
+- **The late ages richer** (the player: "Bring them back"). The autoplayer's victories had leaned on
+  the old slow turns' overpay: in trouble it took the pace that paid most a turn, the slowest. With
+  honest turns it won 49 of 300 at ×1.2 (77 before); and in the new version, where 62 games no
+  longer won, it had the Slow Ones’ trust, but most lacked the 300 energy that begins the Aeon Seed,
+  a settlement at the Heart, or Conformal Mathematics in time. So after the Last Light every source
+  gives two fifths more energy and matter (`LATE_YIELD` 1.4: structures and the Hearth, and where to
+  settle counts it), at every pace. Tuned on the harness: ×1.2 gave 49 victories of 300, ×1.6 105,
+  and ×1.4 73 with the autoplayer's sleep below. The new version, which leaned on the overpay less,
+  takes an eighth more (×1.125). A player at the Tide never had the overpay, so for one the late
+  ages are now that much richer than before.
 - **The autoplayer sleeps through the dark.** A Slow ×100 turn in the dark had paid a hundred
   Tide turns' trickle (in seed 8919, 51 energy a turn from Halo Siphons giving 0.5), so the
   autoplayer never needed to sleep; on honest turns it faded: at ×1.2, 104 of 300 games faded,
