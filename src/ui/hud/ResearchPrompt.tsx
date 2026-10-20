@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals';
-import { TECH_BY_ID } from '../../game/data/techs';
+import { TECH_BY_ID, techDesc } from '../../game/data/techs';
 import { setResearch } from '../../game/sim/actions';
 import { project } from '../../game/sim/projection';
 import { IDLE_STUDY, RESEARCH_DRAW, availableTechs, techCost } from '../../game/sim/research';
@@ -55,7 +55,7 @@ export function ResearchPrompt({ s }: { s: GameState }) {
           <Icon name="close" />
         </button>
       </div>
-      {done && <div class="dim rp-desc">{done.desc}</div>}
+      {done && <div class="dim rp-desc">{techDesc(s, done)}</div>}
       <div class="eyebrow" style={{ marginTop: '8px' }}>
         Next{bank > 0 ? ` · ${n0(bank)} insight carried over` : ''}
       </div>
@@ -63,7 +63,7 @@ export function ResearchPrompt({ s }: { s: GameState }) {
         {options.map((t) => {
           const left = Math.max(0, techCost(s, t.id) - (s.civ.research[t.id] ?? 0) - bank);
           return (
-            <button key={t.id} class="btn small rp-option" data-tip={t.desc} onClick={() => pick(t.id)}>
+            <button key={t.id} class="btn small rp-option" data-tip={techDesc(s, t)} onClick={() => pick(t.id)}>
               <span class="grow">{t.name}</span>
               <span class="mono faint">{left <= 0 ? 'now' : `~${Math.max(1, Math.ceil(left / perTurn))}t`}</span>
             </button>

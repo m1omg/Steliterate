@@ -175,10 +175,24 @@ export const NEAR_BURST_LY = 10;
 /**
  * What one Burst Catcher banks from a neutron star bursting `ly` light-years away: all of
  * BURST_CATCH within NEAR_BURST_LY, and beyond it less with the square of the distance (about 63 at
- * 20 ly, 10 at 50). The player chose "By distance", 12 Oct.
+ * 20 ly, 10 at 50). The player chose "By distance", 12 Oct. A flash of another size fills it out
+ * to its own reach (`flashReach`).
  */
-export function burstShare(ly: number): number {
-  return Math.round(BURST_CATCH * Math.min(1, (NEAR_BURST_LY / Math.max(ly, 1e-9)) ** 2));
+export function burstShare(ly: number, reachLy = NEAR_BURST_LY): number {
+  return Math.round(BURST_CATCH * Math.min(1, (reachLy / Math.max(ly, 1e-9)) ** 2));
+}
+
+/** A neutron star's burst, the yardstick a Burst Catcher is built to (J): it fills one out to NEAR_BURST_LY. */
+export const BURST_JOULES = 1e42;
+
+/**
+ * How far a flash of `energy` joules fills a Burst Catcher (ly): as a neutron star's burst does
+ * within NEAR_BURST_LY, the flux falling with the square of the distance. A Jupiter falling into a
+ * black hole about 41 ly, an Earth torn apart by one 2.3 ly, a Jupiter falling onto a white dwarf
+ * 1.3 ly; anywhere in the flash's own system, whatever it is.
+ */
+export function flashReach(energy: number): number {
+  return NEAR_BURST_LY * Math.sqrt(Math.max(0, energy) / BURST_JOULES);
 }
 
 /**

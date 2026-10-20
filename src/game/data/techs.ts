@@ -32,6 +32,8 @@ export interface TechDef {
   cost: number;
   requires: string[];
   desc: string;
+  /** Its text in a game where falling worlds break up and giants flash (a game begun since 20 Oct: rubbleGame, physics.ts): see techDesc. */
+  rubbleDesc?: string;
   effects?: TechEffects;
   speculative?: boolean;
   taint?: number; // Hunger-derived knowledge
@@ -93,7 +95,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'brown_dwarf_mining', name: 'Brown Dwarf Mining', era: 'degenerate', field: 'harvest', cost: 280, requires: [], desc: 'The failed stars are full of hydrogen. Unlocks Hydrogen Siphons.' }),
   T({ id: 'accretion_modelling', name: 'Accretion Modelling', era: 'degenerate', field: 'harvest', cost: 320, requires: [], desc: 'Predict how falling worlds feed their dead stars, and harvest the stream. Unlocks Disk Skimmers; sharpens feeding forecasts.' }),
   T({ id: 'deep_storage', name: 'Deep Storage', era: 'degenerate', field: 'harvest', cost: 360, requires: [], desc: 'Batteries for ages. Unlocks Deep Storage Rings; reserve capacity +25%.', effects: { reserveMult: 1.25 } }),
-  T({ id: 'burst_capture', name: 'Burst Capture', era: 'degenerate', field: 'harvest', cost: 420, requires: ['deep_storage'], desc: 'Catch flashes too brief to use as they happen. Unlocks Burst Catchers.' }),
+  T({ id: 'burst_capture', name: 'Burst Capture', era: 'degenerate', field: 'harvest', cost: 420, requires: ['deep_storage'], desc: 'Catch flashes too brief to use as they happen. Unlocks Burst Catchers.', rubbleDesc: 'Catch flashes too brief to use as they happen, and live through them. Unlocks Burst Catchers, and the shelters against the flash of a giant falling into its star: Flash Shelters and Shadow Shields.' }),
   T({ id: 'horizon_storage', name: 'Horizon Storage', era: 'degenerate', field: 'harvest', cost: 650, requires: ['deep_storage'], desc: 'Bank energy as black-hole spin. Unlocks Horizon Vaults.' }),
   T({ id: 'baryon_decay_harvest', name: 'Decay Harvest', era: 'degenerate', field: 'harvest', cost: 820, requires: [], needsDecay: true, desc: 'The protons are going. Catch the heat as they do. Unlocks Decay Harvesters.' }),
   T({ id: 'curvature_harvest', name: 'Curvature Harvest', era: 'degenerate', field: 'harvest', cost: 820, requires: [], needsCurvature: true, desc: 'Space itself, curved tight around a neutron star, is turning its mass into particles. Catch them. Unlocks Curvature Collectors.' }),
@@ -135,5 +137,10 @@ export const TECHS: TechDef[] = [
 ];
 
 export const TECH_BY_ID: Record<string, TechDef> = Object.fromEntries(TECHS.map((t) => [t.id, t]));
+
+/** A technology's text as this game has it (`rubbleDesc` where falling worlds break up and giants flash). */
+export function techDesc(s: { flags: Record<string, number | undefined> }, t: TechDef): string {
+  return (s.flags.rubble && t.rubbleDesc) || t.desc;
+}
 
 export const ERA_COST_SCALE: Record<EraId, number> = { dusk: 1, degenerate: 1, blackhole: 1, dark: 1 };

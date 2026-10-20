@@ -63,6 +63,8 @@ export interface StructureDef {
   /** Industry turned into insight or accord where the Lattice runs it: up to `draw` points a turn each, at `rate` (economy.ts). */
   search?: { draw: number; rate: number; into: 'insight' | 'accord' };
   terraform?: 'mirrors' | 'works' | 'seeding'; // terraforming (sim/terraform.ts): its rules and effects live there
+  /** Only in a game where falling worlds break up and giants flash (a game begun since 20 Oct: rubbleGame, physics.ts). */
+  rubble?: boolean;
 }
 
 /** The worlds terraforming can work on: rock and ice, not gas giants, belts or the Deep. */
@@ -117,6 +119,9 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'garden_ark', name: 'Garden Ark', desc: 'A lit, warm, living garden in the dark, at a cost few can afford.', era: 'degenerate', tech: 'garden_arks', cost: 110, matter: 50, max: 3, cap: { kin: 4 }, upkeep: 3, signature: 3 }),
   S({ id: 'horizon_vault', name: 'Horizon Vault', desc: 'Stores energy as black-hole spin. Almost nothing leaks.', era: 'degenerate', tech: 'horizon_storage', cost: 110, matter: 60, max: 2, bodies: ['deep'], primaries: ['black_hole', 'smbh'], reserveCap: 400, keptAtHole: true, signature: 1, leptonic: {} }),
   S({ id: 'burst_catcher', name: 'Burst Catcher', desc: 'Buffers for flashes: brief stars, final bursts and flares too fast to use as they happen, even a neutron star bursting in a neighbouring system.', era: 'degenerate', tech: 'burst_capture', cost: 90, matter: 40, max: 2, burstCap: 300, signature: 1, leptonic: {} }),
+  // against a giant's flash as it falls into its star (physics.ts: flashShelterFor), in a game where giants flash
+  S({ id: 'flash_shelter', name: 'Flash Shelter', desc: 'Bunkers under a kilometre of rock on the night side of a tidally locked world, against the flash of a giant falling into its star: the world keeps its own face between them and the flash, and its night side stays cold while the day side melts. Deep Warrens serve as well. Only on a locked world: a turning one needs a Shadow Shield.', era: 'degenerate', tech: 'burst_capture', cost: 50, matter: 20, max: 1, notBodies: ['deep', 'gas_giant', 'ice_giant', 'asteroids'], signature: 0.3, rubble: true }),
+  S({ id: 'shadow_shield', name: 'Shadow Shield', desc: 'A hollowed rock a world wide, steered between a settlement and its star, against the flash of a giant falling in: it melts every face of a turning world, cooks a giant’s clouds and boils a belt away. Shades the Deep as well. Nothing shelters a world the flash boils away.', era: 'degenerate', tech: 'burst_capture', cost: 140, matter: 70, max: 1, signature: 1, rubble: true }),
   S({ id: 'decay_harvester', name: 'Decay Harvester', desc: 'Collects the faint heat of protons decaying inside dead stars.', era: 'degenerate', tech: 'baryon_decay_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['white_dwarf', 'black_dwarf', 'neutron_star', 'brown_dwarf'], energy: { mode: 'decay', amount: 4 }, signature: 1 }),
   S({ id: 'curvature_collector', name: 'Curvature Collector', desc: 'Catches the particles that space, curved tight around a neutron star, makes from its mass.', era: 'degenerate', tech: 'curvature_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['neutron_star'], energy: { mode: 'curvature', amount: 4 }, signature: 1 }),
   S({ id: 'lepton_substrate', name: 'Leptonic Substrate', desc: 'Speculative: minds re-encoded in electron–positron structures that will outlast ordinary matter.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 70, max: 3, decayProof: true, cap: { echoes: 4, coldminds: 4, lattice: 2 }, signature: 1 }),

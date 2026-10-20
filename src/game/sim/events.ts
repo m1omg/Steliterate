@@ -1,4 +1,4 @@
-import { EVENT_BY_ID, EVENTS } from '../data/events';
+import { EVENT_BY_ID, EVENTS, choiceShown } from '../data/events';
 import type { GameState } from '../types';
 import { log, uid, withRng } from './util';
 
@@ -49,7 +49,7 @@ export function resolveEvent(state: GameState, eventUid: string, choiceIndex: nu
     return { ok: true };
   }
   const choice = def.choices[choiceIndex];
-  if (!choice) return { ok: false, text: 'No such choice.' };
+  if (!choice || !choiceShown(choice, state, p.data)) return { ok: false, text: 'No such choice.' };
   if (choice.ok && !choice.ok(state, p.data)) return { ok: false, text: 'That is not possible now.' };
   const out = withRng(state, (rng) => choice.run(state, p.data, rng));
   state.civ.pending.splice(idx, 1);

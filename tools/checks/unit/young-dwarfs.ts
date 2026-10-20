@@ -8,7 +8,9 @@
 // - an old white dwarf gives collectors 0.02 in the Dusk, as before; a young one more, by the law a
 //   red dwarf's remnant follows (youngDwarfLight);
 // - generation draws exactly as before: what it makes for these seeds is byte for byte what main's
-//   made before the change (the fingerprints were taken from main at 75efadc).
+//   made before the change (the fingerprints were taken from main at 75efadc), but for the worlds
+//   black holes were given since 20 Oct and where a hole's worlds are drawn (unit/hole-worlds):
+//   since then they leave those out, taken again on 7c0c763, whose galaxies are 75efadc's.
 import { generateWorld } from '../../../src/game/gen';
 import { DEFAULT_SETTINGS, newGame } from '../../../src/game/newGame';
 import { ERA_BY_ID } from '../../../src/game/eras';
@@ -21,15 +23,21 @@ const crypto = process.getBuiltinModule('node:crypto') as { createHash(a: string
 const START = ERA_BY_ID.dusk.startYears;
 
 // generation, untouched
-const MAIN: Record<number, string> = { 1000: 'bb073ab58f065ed8', 8919: '7b14ac5f136c58aa', 16838: 'ca993924331b0f27', 24757: '0bc8f679935d5d37' };
+const MAIN: Record<number, string> = { 1000: 'b1241afc3737a944', 8919: '60aa34e126295c35', 16838: '0db23767b5dcf628', 24757: 'f525cf87242ae344' };
 for (const [seed, want] of Object.entries(MAIN)) {
   const s = generateWorld({ ...DEFAULT_SETTINGS, seed: Number(seed), survivors: 3 });
   const h = crypto.createHash('sha256');
+  // (the worlds a hole was given since 20 Oct left out, and where a hole's worlds are drawn)
+  const added = (id: string) => s.bodies[id].traits.includes('hole_world');
   for (const id of Object.keys(s.systems).sort()) {
     const y = s.systems[id];
-    h.update(JSON.stringify([id, y.name, y.primary, y.pos, y.phys, y.bodies, y.special ?? null]));
+    h.update(JSON.stringify([id, y.name, y.primary, y.pos, y.phys, y.bodies.filter((b) => !added(b)), y.special ?? null]));
   }
-  for (const id of Object.keys(s.bodies).sort()) h.update(JSON.stringify(s.bodies[id]));
+  for (const id of Object.keys(s.bodies).sort()) {
+    if (added(id)) continue;
+    const b = s.bodies[id];
+    h.update(JSON.stringify(s.systems[b.systemId]?.primary.kind === 'black_hole' ? { ...b, orbit: 0 } : b));
+  }
   h.update(JSON.stringify([s.rng, s.fate ?? null, Object.keys(s.survivors), Object.keys(s.swarms)]));
   const got = h.digest('hex').slice(0, 16);
   check(got === want, `seed ${seed}: generation makes what it made before (${got})`);

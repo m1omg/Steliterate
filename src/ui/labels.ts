@@ -76,6 +76,8 @@ export const TRAIT_NAME: Record<string, [string, string]> = {
   subsurface_ocean: ['Buried ocean', 'Liquid water under the ice, kept warm by the tides of its star.'],
   once_alive: ['Once alive', 'This world had seas, air and life. They are gone: frozen when its warmth failed, or boiled away by its star.'],
   water_rich: ['Water-rich', 'Water is a large share of this world, perhaps half its mass: more than its star’s bright youth could boil away. Past the runaway greenhouse its seas rise into a sky of steam; below it they rain out again.'],
+  rubble: ['Rubble ring', 'What is left of a world its star’s tides tore apart at the tidal limit: a ring of rubble, its core laid open, twice as rich to mine as the world was, thinning as it rains onto the star.'],
+  flash_melted: ['Flash-melted', 'A giant fell into its star in a flash that melted this world’s ground and boiled its air and water off into space (a water-rich world’s rained back). It froze again long since, and nothing lives on it.'],
 };
 
 export const FOCUS: { id: Focus; name: string; tip: string }[] = [
@@ -125,6 +127,7 @@ export const wayArt = (way: string) => WAY_ART[way] ?? 'survivor';
 export function bodyKindName(s: GameState, b: Body): string {
   const boil = boilingAway(s, b);
   if (boil) return boil === 'swallowed' ? 'Being swallowed' : b.kind === 'asteroids' ? 'Vaporising rubble' : 'Boiling away';
+  if (b.traits.includes('rubble')) return 'Rubble ring';
   const sea = thawed(s, b);
   // (locked, its night side still frozen and its day side boiled dry: a band of sea between)
   if (sea) return twilightSea(s, b) ? 'Twilight sea' : sea === 'warm' ? 'Thawed ocean' : 'Hot sea';
@@ -222,6 +225,9 @@ export function bodyKindNote(s: GameState, b: Body): string {
     const by = s.systems[b.systemId]?.primary.kind === 'helium_giant' ? 'Its star has swollen into a helium giant, a thousand times as bright as the Sun' : 'Its new star, a helium star burning at 42,000 K, pours out ultraviolet';
     return `${what}. ${by}: ${b.kind === 'asteroids' ? 'the rubble is evaporating' : 'its ground is past 3,000 K, and the rock vapour is stripped off into space'}. It is gone as this turn ends.`;
   }
+  // (since 20 Oct: physics.ts, breakUp and flashSystem)
+  if (b.traits.includes('rubble')) return `What is left of a world its star’s tides tore apart at the tidal limit: a ring of rubble with its core laid open, twice as rich to mine as the world was. It thins as it rains onto the star, and when the last of it has fallen in it is gone.`;
+  if (b.traits.includes('flash_melted') && b.kind === 'barren') return `Once ${b.traits.includes('once_alive') ? 'a living world' : 'a world of rock and ice'}. A giant fell into its star in a flash that melted its ground and boiled its air and water off into space; it froze again as bare rock.`;
   const sea = thawed(s, b);
   if (sea && twilightSea(s, b)) return `Once ${onceWas(b)}. Its star's last flare has boiled its day side dry, and its night side is still frozen: along the terminator, between the two, the ice has melted into a band of open sea${sea === 'warm' ? `, with room for ${THAW_ROOM} Kin by the water without domes for as long as the flare lasts` : ''}. When the star collapses it will freeze again.`;
   if (sea === 'warm') return `Once ${onceWas(b)}. Its star's last flare has melted it into open ocean under a thin, steamy sky: room for ${THAW_ROOM} Kin by the water without domes, for as long as the flare lasts. When the star collapses it will freeze again.`;

@@ -1,4 +1,4 @@
-import { EVENT_BY_ID, choiceHint } from './data/events';
+import { EVENT_BY_ID, choiceHint, choiceShown } from './data/events';
 import { STRUCTURE_BY_ID, type EnergyMode } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
@@ -1069,12 +1069,17 @@ function planEvents(state: GameState) {
     let done = false;
     for (let i = 0; i < def.choices.length && !done; i++) {
       const ch = def.choices[i];
-      if (ch.ok && !ch.ok(state, p.data)) continue;
+      if (!choiceShown(ch, state, p.data) || (ch.ok && !ch.ok(state, p.data))) continue;
       if (!hungerSteps(state) && /Taint|Devour|Strip/.test(ch.label + choiceHint(ch, state, p.data))) continue;
       if (clockTooDear(state, p.defId, i, String(p.data.systemId))) continue;
       done = answerEvent(state, p.uid, i).ok;
     }
-    if (!done) answerEvent(state, p.uid, def.choices.length - 1);
+    // (else the last choice it is offered)
+    if (!done) {
+      let last = def.choices.length - 1;
+      while (last > 0 && !choiceShown(def.choices[last], state, p.data)) last--;
+      answerEvent(state, p.uid, last);
+    }
   }
 }
 

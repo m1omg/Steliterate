@@ -1,13 +1,13 @@
 import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
-import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, fallsInAt, takesWorldsIn, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
+import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, fallsInAt, flashBoils, flashMelts, flashShelterFor, flashSheltered, giantFlash, giantWorld, meltLineAU, rubbleGame, takesWorldsIn, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
-import { colonies, formOf, hasCharter, inItsSystem, protonFateKnown } from './util';
+import { colonies, formOf, hasCharter, hasTech, inItsSystem, protonFateKnown } from './util';
 import { readsSwarms, swarmArrives, swarmSight } from './sight';
 import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
 import { computeMods } from './mods';
 import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf, matterGone } from '../fate';
-import { decayProof } from './crossing';
+import { decayProof, flashReach } from './crossing';
 import { thinShare, thinning, thinningFrom } from './thinning';
 import { POSITRONIUM_DECAY, positroniumHere } from './positronium';
 import { COLLAPSE_FROM, IRON_ETA, collapsing, darkTurnsAtTide, ironAge, supernovaEta, willExplode } from './deeptime';
@@ -74,11 +74,15 @@ export function updateForecasts(state: GameState) {
   // star of ordinary matter; in a game begun since 19 Oct a brown dwarf or a black hole too), not
   // one still burning, and never one that keeps them (until 19 Oct every star after the Dusk was
   // taken for dead here, a brown dwarf's or a hole's worlds warned of and never falling)
+  // (in a game begun since 20 Oct a world comes apart by what it is made of: physics.ts, rubbleGame)
+  const rubble = rubbleGame(state);
   for (const c of colonies(state)) {
     const b = state.bodies[c.bodyId];
     if (!b || b.feeding || b.rogue || b.dissolved) continue;
     const sys = state.systems[b.systemId];
     if (!takesWorldsIn(state, sys.primary.kind)) continue;
+    // (a giant's fall, where it flashes, has its own warning below)
+    if (rubble && giantWorld(b)) continue;
     const at = fallsInAt(state, b);
     if (!isFinite(at) || at < years) continue;
     if (tideTurnsTo(state, at, horizon) > horizon) continue;
@@ -87,16 +91,73 @@ export function updateForecasts(state: GameState) {
     add({
       kind: 'inspiral',
       title: hole ? `${b.name} will be torn apart by its black hole` : brown ? `${b.name} will reach its brown dwarf’s tidal limit` : `${b.name} will reach its dead star’s tidal limit`,
-      text: hole
-        ? 'Gravitational waves are draining its orbit. Far outside the horizon the hole’s tides will tear it apart, and it will be gone within the turn.'
-        : brown
-          ? 'Gravitational waves are draining its orbit. The dwarf’s tides will tear it apart, and the rubble will rain onto it, a faint warmth for trillions of years.'
-          : 'Gravitational waves are draining its orbit. The models disagree about what happens next.',
+      text: rubble
+        ? hole
+          ? 'Gravitational waves are draining its orbit. Far outside the horizon the hole’s tides will tear it into rubble, and the hole will take all of it within the turn: a faint flash that harms nothing, and Burst Catchers bank it. Three in four of the people there will get off to the Deep.'
+          : `Gravitational waves are draining its orbit. The ${brown ? 'dwarf' : 'star'}’s tides will tear it into a ring of rubble, its core laid open, richer to mine than the world was, which will rain onto the ${brown ? 'dwarf, a faint warmth' : 'star'} for trillions of years.${brown ? '' : ' The models disagree about how fast.'}`
+        : hole
+          ? 'Gravitational waves are draining its orbit. Far outside the horizon the hole’s tides will tear it apart, and it will be gone within the turn.'
+          : brown
+            ? 'Gravitational waves are draining its orbit. The dwarf’s tides will tear it apart, and the rubble will rain onto it, a faint warmth for trillions of years.'
+            : 'Gravitational waves are draining its orbit. The models disagree about what happens next.',
       dueYears: at,
       bodyId: b.id,
       systemId: b.systemId,
       severity: 'warn',
     });
+  }
+
+  // giants that will fall in a flash where we live (since 20 Oct): its date, how far it melts the
+  // ground, and what each of our settlements there needs to live through it
+  if (rubble) {
+    for (const sid of colonized) {
+      const sys = state.systems[sid];
+      if (!sys || !takesWorldsIn(state, sys.primary.kind)) continue;
+      for (const gid of sys.bodies) {
+        const g = state.bodies[gid];
+        if (!g || !giantWorld(g) || g.dissolved || g.rogue) continue;
+        const at = fallsInAt(state, g);
+        if (!isFinite(at) || at < years || tideTurnsTo(state, at, horizon) > horizon) continue;
+        const f = giantFlash(sys.primary, g);
+        const ours: string[] = [];
+        let danger = false;
+        for (const c of colonies(state)) {
+          const b = state.bodies[c.bodyId];
+          if (c.systemId !== sid || !b || b.dissolved || formOf(c) === 'horizon' || !inItsSystem(state, c)) continue;
+          if (b.id === g.id) {
+            ours.push(`${c.name} falls in with it: three in four of its people will get off to the Deep, into the flash.`);
+            danger = true;
+          } else if (flashBoils(state, b, f)) {
+            ours.push(`${b.name} will boil away, and nothing on it can be saved: ${c.name} must be given up.`);
+            danger = true;
+          } else if (flashMelts(state, b, f)) {
+            const need = flashShelterFor(b) === 'flash_shelter' ? 'a Flash Shelter (or Deep Warrens)' : 'a Shadow Shield';
+            const has = flashSheltered(c, b);
+            ours.push(`${c.name} ${has ? 'is sheltered' : `needs ${need}, or is lost`}.`);
+            if (!has) danger = true;
+          }
+        }
+        const line = meltLineAU(f.lum);
+        const reach = flashReach(f.energy);
+        add({
+          kind: 'flash',
+          title: `${g.name} will fall into its ${sys.primary.kind === 'black_hole' ? 'black hole' : sys.primary.kind === 'brown_dwarf' ? 'brown dwarf' : 'star'} in a flash`,
+          text: [
+            `Gravitational waves are draining its orbit. Its gas will pour onto the ${sys.primary.kind === 'black_hole' ? 'hole' : sys.primary.kind === 'brown_dwarf' ? 'dwarf' : 'star'} faster than it can take it in, and the ${sys.primary.kind === 'black_hole' ? 'hole' : 'star'} will shine at its limit, some ${Number(f.lum.toPrecision(2)).toLocaleString('en-US')} Suns, for about ${formatYears(Math.max(1, Number(f.years.toPrecision(2))))}. The ground melts out to about ${line < 10 ? line.toFixed(1) : Math.round(line)} AU, and the nearest small worlds boil away.`,
+            ...ours,
+            // (the shelters come with Burst Capture, which a flash early in the age may come before)
+            ours.length && !hasTech(state, 'burst_capture') ? 'Burst Capture gives the shelters.' : '',
+            `Burst Catchers bank it out to about ${reach < 10 ? reach.toFixed(1) : Math.round(reach)} light-years.`,
+          ]
+            .filter(Boolean)
+            .join(' '),
+          dueYears: at,
+          bodyId: g.id,
+          systemId: sid,
+          severity: danger ? 'danger' : 'warn',
+        });
+      }
+    }
   }
 
   // worlds of ours a new star will boil away (or its giant swallow) as this turn ends

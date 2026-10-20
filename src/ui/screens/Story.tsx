@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { SHIP_BY_ID } from '../../game/data/ships';
-import { EVENT_BY_ID, choiceHint } from '../../game/data/events';
+import { EVENT_BY_ID, choiceHint, choiceShown } from '../../game/data/events';
 import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
 import { ageIntro, ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
@@ -190,6 +190,8 @@ export function EventModal({ s }: { s: GameState }) {
           <p class="event-text">{text}</p>
           <div class="col" style={{ gap: '6px', marginTop: '12px' }}>
             {def.choices.map((c, i) => {
+              // (one not offered is not there at all: the dark choice at a falling world, say)
+              if (!choiceShown(c, s, p.data)) return null;
               let ok = true;
               let hint = '';
               try {

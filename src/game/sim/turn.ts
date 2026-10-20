@@ -3,11 +3,11 @@ import { asCiv, flushOutbox } from '../civs';
 import { tiesTurn } from './ties';
 import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
-import { ERA_BY_ID, POSITRONIUM_ETA, logTurnLength, tideLength } from '../eras';
-import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
+import { ERA_BY_ID, POSITRONIUM_ETA, formatYears, logTurnLength, tideLength } from '../eras';
+import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, flashSheltered, giantWorld, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal, StarSystem } from '../types';
 import { THREADS } from '../types';
-import { burstShare, decayProof, finalBurstCatch, goLeptonic, goOnAlone, greatEvaporation, moveToHole, protocolsMult, runCrossing } from './crossing';
+import { NEAR_BURST_LY, burstShare, decayProof, finalBurstCatch, flashReach, goLeptonic, goOnAlone, greatEvaporation, moveToHole, protocolsMult, runCrossing } from './crossing';
 import { completePassage } from './passage';
 import { flowComes, theLongFlow } from './flow';
 import { theThinning } from './thinning';
@@ -771,8 +771,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const known = state.civ.known;
   // (each civilization sees to its own settlements, in its own part of the turn)
   const own = (id: string | null | undefined) => (id && state.colonies[id]?.owner === state.civ.id ? state.colonies[id] : undefined);
-  // the deep dark's flashes this turn, for the Burst Catchers (catchFlashes)
-  const flashes: StarSystem[] = [];
+  // the deep dark's flashes this turn, and falling worlds', for the Burst Catchers (catchFlashes)
+  const flashes: Flashed[] = [];
   for (const n of notes) {
     const sys = state.systems[n.systemId];
     if (!sys) continue;
@@ -827,11 +827,56 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
           const c = own(b?.colonyId);
           // (into a black hole all at once: its tides tore the world apart, physics.ts)
           const hole = sys.primary.kind === 'black_hole';
-          if (c) evacuate(state, c, hole ? 'its world was torn apart by the black hole' : 'its world finished falling into its star');
+          const giant = !!b && giantWorld(b) && !!n.inFlash;
+          if (c) evacuate(state, c, giant ? `its world fell into its ${hole ? 'black hole' : 'star'} in a flash` : hole ? 'its world was torn apart by the black hole' : 'its world finished falling into its star');
+          // (gone in a flash, since 20 Oct: the note after this one tells of it)
+          if (n.inFlash) break;
           if (seen) log(state, hole ? `${b?.name} was torn apart by the black hole at ${sys.name} and fell in: one flash, then nothing.` : `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
           state.civ.energy += colonized.has(sys.id) ? 20 : 0;
         }
         break;
+      case 'flash': {
+        // a world falling in, in a game begun since 20 Oct (physics.ts, flashSystem): the Burst
+        // Catchers bank it out to its reach; a giant's melts what is near, and of our settlements
+        // there only what is sheltered lives (in the Deep, any, however it came to be there)
+        const f = n.flash;
+        const src = state.bodies[n.bodyId ?? ''];
+        if (!f || !src) break;
+        flashes.push({ sys, reach: flashReach(f.energy), own: true });
+        if (!giantWorld(src)) {
+          if (seen) log(state, `${src.name} was torn apart by the black hole at ${sys.name}, and the hole took all of its rubble within the turn: a faint flash, harming nothing.`, 'info', sys.id);
+          break;
+        }
+        const inside = (b: Body) => b.kind === 'deep' || f.inside.includes(b.id);
+        const lost: string[] = [];
+        const lived: string[] = [];
+        let people = 0;
+        for (const c of colonies(state)) {
+          const b = state.bodies[c.bodyId];
+          if (c.systemId !== sys.id || !b || formOf(c) === 'horizon' || !inside(b)) continue;
+          const boiled = f.boiled.includes(b.id);
+          if (!boiled && flashSheltered(c, b)) {
+            lived.push(c.name);
+            continue;
+          }
+          people += popsOf(c) + c.cryo;
+          lost.push(c.name);
+          destroyColony(state, c, boiled ? 'its world boiled away in a flash' : 'a flash melted its world');
+        }
+        if (!mine && !seen) break;
+        const names = (xs: string[]) => (xs.length > 3 ? `${xs.slice(0, 3).join(', ')} and ${xs.length - 3} more` : xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0]);
+        const boiledNames = f.boiled.map((id) => state.bodies[id]?.name).filter((x): x is string => !!x);
+        const melted = f.inside.map((id) => state.bodies[id]).filter((b): b is Body => !!b && !b.dissolved && b.traits.includes('flash_melted')).map((b) => b.name);
+        const said = [
+          `${src.name} fell into the ${STAR_WORD[sys.primary.kind] ?? 'star'} at ${sys.name} in a flash: some ${suns(f.lum)} Suns for ${f.years < 2 ? 'about a year' : `about ${formatYears(Number(f.years.toPrecision(2)))}`}.`,
+          boiledNames.length ? `${names(boiledNames)} boiled away.` : '',
+          melted.length ? `The ground melted on ${names(melted)}.` : '',
+          lost.length ? `${people ? `${people} of our people were lost` : 'We lost'} with ${names(lost)}.` : '',
+          lived.length ? `${names(lived)} lived through it in shelter.` : '',
+        ];
+        log(state, said.filter(Boolean).join(' '), lost.length ? 'bad' : 'info', sys.id);
+        break;
+      }
       case 'boiled':
         if (n.bodyId) {
           const b = state.bodies[n.bodyId];
@@ -874,7 +919,7 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
           lost += popsOf(c) + c.cryo;
           destroyColony(state, c, 'its dead star exploded');
         }
-        flashes.push(sys);
+        flashes.push({ sys, reach: NEAR_BURST_LY });
         if (!state.civ.fired.black_dwarf_supernova) queueEvent(state, 'black_dwarf_supernova', { systemId: sys.id });
         else if (mine || seen) log(state, `The black dwarf at ${sys.name} has exploded, its core turned to iron.${lost ? ` ${lost} of our people were lost with it.` : ''}`, lost ? 'bad' : 'info', sys.id);
         break;
@@ -899,7 +944,7 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
           }
           if (state.bodies[c.bodyId]?.kind !== 'deep') moveToHole(state, c, sys);
         }
-        flashes.push(sys);
+        flashes.push({ sys, reach: NEAR_BURST_LY });
         if (!state.civ.fired.tunnelling_collapse && (mine || seen || colonies(state).length)) queueEvent(state, 'tunnelling_collapse', { systemId: sys.id });
         else if (mine) log(state, `The matter at ${sys.name} has tunnelled into black holes and gone in a flash.${lost ? ` ${lost} of our people, still made of it, went with it.` : ''}`, lost ? 'bad' : 'info', sys.id);
         break;
@@ -921,20 +966,39 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   if (flashes.length) catchFlashes(state, flashes);
 }
 
+/** A flash this turn, and how far it fills a Burst Catcher (ly). */
+interface Flashed {
+  sys: StarSystem;
+  reach: number;
+  /** a world falling in: its own system's catchers bank it, even in a system cast out of the galaxy */
+  own?: boolean;
+}
+
+/** A dead star's kind, as a falling world's flash names it. */
+const STAR_WORD: Partial<Record<string, string>> = { white_dwarf: 'white dwarf', black_dwarf: 'black dwarf', neutron_star: 'neutron star', brown_dwarf: 'brown dwarf', black_hole: 'black hole' };
+
+/** A brightness in Suns, to two figures (19,000; 320,000). */
+function suns(lum: number): string {
+  return Number(lum.toPrecision(2)).toLocaleString('en-US');
+}
+
 /**
- * The turn's flashes in the deep dark (black dwarf supernovae, matter tunnelling into black holes):
- * each of our Burst Catchers banks from the nearest, once, by its distance (`burstShare`: all of it
- * in its own system or within 10 ly), as from a neutron star bursting.
+ * The turn's flashes: in the deep dark (black dwarf supernovae, matter tunnelling into black holes,
+ * a neutron star's reach each), and since 20 Oct worlds falling in (by their energy: flashReach).
+ * Each of our Burst Catchers banks from the best of them, once, by its distance (`burstShare`: all
+ * of it in its own system or within the flash's reach), as from a neutron star bursting. In a
+ * system cast out of the galaxy only a world falling into its own star reaches them.
  */
-function catchFlashes(state: GameState, systems: StarSystem[]) {
+function catchFlashes(state: GameState, flashes: Flashed[]) {
   let got = 0;
   const where: string[] = [];
   for (const c of colonies(state)) {
     const n = c.structures.burst_catcher ?? 0;
     const home = state.systems[c.systemId];
-    if (!n || !home || home.ejected || !inItsSystem(state, c)) continue;
+    if (!n || !home || !inItsSystem(state, c)) continue;
     let share = 0;
-    for (const s of systems) share = Math.max(share, burstShare(distLy(home, s)));
+    // (nothing reaches a system cast out of the galaxy, but a world falling into its own star)
+    for (const f of flashes) if (!home.ejected || (f.own && f.sys.id === home.id)) share = Math.max(share, burstShare(distLy(home, f.sys), f.reach));
     if (share > 0) {
       got += share * n;
       where.push(c.name);
