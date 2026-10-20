@@ -27,8 +27,9 @@ let sun = 0;
 for (const seed of [1000, 2000, 3000, 4000, 5000, 6000]) {
   const s = game(seed);
   const ids = Object.keys(s.bodies);
+  // (after everything else but the worlds black holes were given since 20 Oct, which come last of all: unit/hole-worlds)
   const firstOuter = ids.findIndex((id) => s.bodies[id].traits.includes('outer'));
-  if (firstOuter >= 0 && ids.slice(firstOuter).some((id) => !s.bodies[id].traits.includes('outer'))) order++;
+  if (firstOuter >= 0 && ids.slice(firstOuter).some((id) => !s.bodies[id].traits.includes('outer') && !s.bodies[id].traits.includes('hole_world'))) order++;
   for (const sys of Object.values(s.systems)) {
     const k = sys.primary.kind;
     const outer = sys.bodies.map((id) => s.bodies[id]).filter((b) => b.traits.includes('outer'));

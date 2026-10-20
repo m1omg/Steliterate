@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, ICE_MELTS_K, WATER_RICH, fallsInAt, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, ICE_MELTS_K, WATER_RICH, fallsInAt, giantWorld, rubbleGame, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, lightUnitSuns, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -367,6 +367,15 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           ) : (
             <dd class="mono" data-tip="How much a light collector here gathers compared with its rating.">{src.light > 0 ? `×${mult(src.light)}` : 'none'}</dd>
           )}
+          {(sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh') && (
+            // the disk's light in Suns, from what its collectors gather, so the two agree (the player, 16 Oct: "find a way to quantify black hole accretion disk brightness")
+            <>
+              <dt data-tip={DISK_TIP}>Disk luminosity</dt>
+              <dd class="mono" data-tip={`${DISK_TIP}${src.light > 0 ? `\nAs collectors here gather it, ×${mult(src.light)} their rating: in this age one unit of light is ${mult(lightUnitSuns(calendarEra(s)))} L☉.` : ''}`}>
+                {src.light > 0 ? `${mult(src.light * lightUnitSuns(calendarEra(s)))} L☉` : 'dark'}
+              </dd>
+            </>
+          )}
           {T > 0 && (
             <>
               <dt data-tip={tempTip(s, sys)}>{sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh' ? 'Hawking temperature' : 'Temperature'}</dt>
@@ -462,6 +471,9 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
 }
 
 /** What a dead star's temperature means, and what it would be if protons decay, while we do not know. */
+/** What a black hole's disk luminosity is. */
+const DISK_TIP = 'The light of its accretion disk: gas falling into the hole glows as it goes in. A lone stellar hole has only a faint trickle of gas, and in the dark of the later ages next to none. The Heart’s crowded core feeds it far more while its stars last, then less as they die. A world falling in gives a flash, within the turn, that only a Burst Catcher holds on to.';
+
 function tempTip(s: GameState, sys: StarSystem): string {
   const k = sys.primary.kind;
   if (k === 'black_hole' || k === 'smbh') return 'A black hole glows at its Hawking temperature, colder the heavier it is: a few hundredths of a microkelvin for one of a few Suns. It gives almost nothing, but it gives it until it is gone.';
@@ -596,6 +608,7 @@ function shownTraits(s: GameState, b: Body): string[] {
       case 'resonance':
         return alone;
       case 'outer':
+      case 'hole_world':
         return true; // (a mark for the rules, not a find)
       default:
         return false;
@@ -638,12 +651,20 @@ function FallsInwardRow({ s, b }: { s: GameState; b: Body }) {
     );
   }
   const kind = s.systems[b.systemId]?.primary.kind;
+  // what then becomes of it, in a game begun since 20 Oct (physics.ts: rubbleGame)
+  const then = !rubbleGame(s)
+    ? ''
+    : giantWorld(b)
+      ? ' Its gas then pours in, in a flash that melts what is near: the forecasts say how far, and what our settlements there need.'
+      : kind === 'black_hole'
+        ? ' The hole takes all of its rubble within the turn: a faint flash, harming nothing, that Burst Catchers bank.'
+        : ' It is torn into a ring of rubble, richer to mine than the world was, which rains onto the star.';
   const tip =
-    kind === 'black_hole'
+    (kind === 'black_hole'
       ? 'When gravitational-wave orbital decay brings it close enough for the black hole’s tides to tear it apart.'
       : kind === 'brown_dwarf'
         ? 'When gravitational-wave orbital decay brings it to the brown dwarf’s tidal limit.'
-        : "When gravitational-wave orbital decay brings it to its dead star's tidal limit.";
+        : "When gravitational-wave orbital decay brings it to its dead star's tidal limit.") + then;
   return (
     <>
       <dt data-tip={tip}>Falls inward</dt>

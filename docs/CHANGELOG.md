@@ -2052,3 +2052,91 @@ reached made reachable, without being told how.
   same 300 games give 160 / 72 / 72, victories as before (details in `docs/spoilers`).
 - **Validated:** tsc and the build clean; the playtest passes; savecompat on the 6 saves; all 53
   unit checks; all 54 browser checks (in the game's real fonts).
+
+## Falling worlds: rubble, flashes, shelters, and more worlds at black holes (20 Oct, the player's word)
+
+The player, 19 Oct: "make the black hole flashes harvestable"; a world falling into its star
+"should then break up into asteroids and eventually be… accreted"; "even something that seems
+like it's just a few years… can also be very energetic… So it should present an opportunity for
+the civilization." And on what a giant's flash would do: "please calculate the effects because
+I'm pretty sure that this would destroy the planets around the objects", with "molten planets
+still stay molten" and "perhaps some measures may need to be taken to shelter from the big
+injection of energy". From the list of 16 Oct: "Please, add more black hole planets and find a
+way to quantify black hole accretion disk brightness." In both versions, new games only, as the
+player answered (the plan is on the new version's branch,
+`docs/plans/2026-10-19-falling-worlds-and-the-list.md`, part B).
+
+- **A world of rock or ice breaks up.** At its dead star's or brown dwarf's tidal limit it
+  becomes a ring of rubble (as the fragments around WD 1145+017 are today): an asteroid belt,
+  drawn as one, named as it was, its core laid open (richness ×2), thinning as it rains in
+  (1/(1 + t/τ) of it left: half at t = τ). It feeds its star exactly as before (the same draws,
+  the same warmth for Disk Skimmers), and at 30τ the last of it falls in. Its panel calls it a
+  rubble ring.
+- **A World Falls** tells of the rubble. A third choice, **Take them apart**, is offered only to a
+  civilization far down the Hunger's path, at Taint 60 and more (where the others will no longer
+  bind themselves to it): its people are not taken off; Matter +5 for each, Lattice +1 for every
+  3 at the capital (as it has room), Taint +8, Resolve −6, Kin standing −10. Not for the capital.
+  (A choice can now be not offered at all, rather than greyed: the story screen leaves it out,
+  the turn refuses it, the autoplayer skips it.)
+- **A rocky world torn apart by a black hole** feeds the hole within the turn, a tenth of its
+  mass-energy (5 × 10^40 J for an Earth), far too faintly to harm anything; Burst Catchers bank
+  it: 250 each in its own system and out to about 2 light-years, less with the square of the
+  distance beyond (`flashReach`: 10 ly × √(E / 10^42 J), a neutron star's burst being the
+  yardstick).
+- **A giant falls in a flash.** Its gas pours onto the star at the star's limit, the Eddington
+  luminosity (32,000 Suns for each Sun of mass), until it is gone: a Jupiter onto a 0.6-Sun white
+  dwarf 1.7 × 10^40 J, 19,000 Suns for 75 years; into a 10-Sun hole 1.7 × 10^43 J, 320,000 Suns
+  for 4,400 years.
+  - Worlds where a tenth of the energy they take in could drive off their whole mass boil away
+    (an Earth within 1.9 AU of that hole's flash, 0.06 AU of the white dwarf's; rubble anywhere
+    inside the melt line). The rest inside the melt line (where the ground passes 1,500 K under
+    the flash, as `boilsUnder` judges a new star's light: about 4 AU at the white dwarf, 16 at
+    the hole) melt: their air and seas boil off (a water-rich world's rain back), nothing lives on
+    them after, and they freeze again as bare rock ("Flash-melted").
+  - Settlements inside the melt line live only if sheltered. A tidally locked world shades its own
+    night side: a **Flash Shelter** (50 industry, 20 matter; Deep Warrens or Night-side Shelters
+    do as well). A turning world, a giant's clouds, a belt or the Deep: a **Shadow Shield** (140,
+    70), a hollowed rock between it and the star, which also spares the world it stands over.
+    Nothing on a world the flash boils away lives. One per settlement, no upkeep, only in such a
+    game. They come from the Dusk, the Flash Shelter with the Deep Warrens research, the Shadow
+    Shield with Orbital Industry: the plan had them with Burst Capture, in the Degenerate Age, but
+    a white dwarf's close giant can fall in before the Last Light, when that cannot be researched
+    yet. The giant's own settlement gets off to the Deep, three in four, into the flash.
+  - Beyond the melt line nothing is harmed. Burst Catchers bank the flash: 250 each in its system,
+    others out to its reach (a white dwarf's Jupiter about 1.3 ly, a hole's 41).
+  - The forecast warns ahead: the date, how far out the ground melts, and what each settlement of
+    ours there needs (with the research it comes with, if not yet done). A giant's flash pings
+    the map.
+- **More worlds at black holes.** In a new galaxy two holes in three get one to three more
+  worlds, after everything else is generated, each hole from a draw of its own: every seed's
+  galaxy is as it was with these added (10 seeds compared, 0 differences). Two in three close in
+  (0.05 to 1 AU, as the pulsar PSR B1257+12's), the rest at 1 to 40 AU, widened by √(M/10) around
+  a heavier hole; rock and ice, now and then a super-Earth (frozen from the start), a giant in
+  four. With the world in three holes had before, about three holes in four have worlds. The
+  Heart gets none (its crowded core flings worlds loose, and it would swallow one whole), the
+  Wanderer keeps its own. A hole's worlds are drawn out by distance.
+- **Disk luminosity**: a black hole's panel gives its disk's light in Suns, from what its
+  collectors gather (a stellar hole about 6 × 10^-5 L☉ in the Dusk, 2 × 10^-13 after).
+- **Texts:** the Codex on how a world comes apart, what a flash does, what lights a disk, and the
+  bend: a neutron star's slow stream warms it only as a white dwarf's would (physics gives some
+  1,700 times more). The Manual; the descriptions of the Deep Warrens research and Orbital
+  Industry in such a game; the falling row of a world's panel says what becomes of it.
+- **Checks:** `unit/falling-flash` (rubble, half at t = τ; a hole's rocky flash banked by
+  distance; a giant's flash at a white dwarf: the boiled, the melted, every shelter and its lack,
+  the Deep, the catchers near and far; a hole's giant's figures; the dark choice only at Taint
+  60; the shelters' build rules; an older save keeps today's rule), `unit/hole-worlds` (two holes
+  in three, one to three each, two in three close, a giant in four, generated last, named on,
+  drawn by distance, the old world's sunlight kept, none at the Heart or the Wanderer, none in an
+  older save), `browser/rubble` (a world torn apart is drawn as a belt; its panel; a hole's Disk
+  luminosity). `unit/outer` lets the hole worlds come last; `unit/dealings` keeps the raiders'
+  clock in step, as the check's first game now plays out differently.
+- **Balance:** 149 of 300 survive (160 before), 80 victories (81), a Degenerate Age of 72 turns
+  (72). The new worlds re-roll every game from its first turn (0 of 300 the same): within the
+  noise. In the new version a control run (the same new worlds, the old falls) puts what the
+  rules cost an autoplayer that builds no shelters at about 10 games in 300 at standard, and
+  nothing at Harsh. By fate: decay 57 / 148, stable 51 / 81, curvature 41 / 71. At Harsh, 300
+  games: 154 / 58 / 68 (147 / 62 / 68 before). The shelters were moved to Dusk research after the
+  run; 12 games replayed after it: all the same (the autoplayer does not build them).
+- **Validated:** tsc and the build clean; the playtest passes; savecompat on the 6 saves; all 55
+  unit checks; all 55 browser checks, in the game's real fonts (`browser/rubble` counts the belt's
+  rocks: this game has no survey reveal to keep the count for it).

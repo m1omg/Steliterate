@@ -1,5 +1,5 @@
 import { Fragment } from 'preact';
-import { FIELDS, TECH_BY_ID, TECHS, type TechDef } from '../../game/data/techs';
+import { FIELDS, TECH_BY_ID, TECHS, techDesc, type TechDef } from '../../game/data/techs';
 import { WORKS } from '../../game/data/works';
 import { ERAS } from '../../game/eras';
 import { setResearch, startWork } from '../../game/sim/actions';
@@ -19,7 +19,7 @@ function techTip(s: GameState, t: TechDef): string {
   const req = t.requires.map((r) => TECH_BY_ID[r]?.name ?? r);
   return [
     t.name,
-    t.desc,
+    techDesc(s, t),
     req.length ? `Requires: ${req.join(', ')}` : '',
     t.speculative ? 'Speculative physics: the science here is uncertain.' : '',
     t.taint ? `Hunger-derived knowledge: +${t.taint} Taint.` : '',

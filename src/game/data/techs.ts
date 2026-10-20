@@ -32,6 +32,8 @@ export interface TechDef {
   cost: number;
   requires: string[];
   desc: string;
+  /** Its text in a game where falling worlds break up and giants flash (a game begun since 20 Oct: rubbleGame, physics.ts): see techDesc. */
+  rubbleDesc?: string;
   effects?: TechEffects;
   speculative?: boolean;
   taint?: number; // Hunger-derived knowledge
@@ -47,7 +49,7 @@ export const TECHS: TechDef[] = [
   // ============================================================ I. Dusk
   // stewardship
   T({ id: 'magnetospherics', name: 'Magnetospheric Engineering', era: 'dusk', field: 'stewardship', cost: 40, requires: [], desc: 'A superconducting loop at the inner Lagrange point can stand in for the dying dynamo. Unlocks the Magnetic Shield.' }),
-  T({ id: 'subterranean_cities', name: 'Deep Warrens', era: 'dusk', field: 'stewardship', cost: 60, requires: [], desc: 'Live below the frost line, where vitality matters less. Unlocks Deep Warrens.' }),
+  T({ id: 'subterranean_cities', name: 'Deep Warrens', era: 'dusk', field: 'stewardship', cost: 60, requires: [], desc: 'Live below the frost line, where vitality matters less. Unlocks Deep Warrens.', rubbleDesc: 'Live below the frost line, where vitality matters less. Unlocks Deep Warrens, and Flash Shelters against the flash of a giant falling into its star.' }),
   T({ id: 'hardy_lineages', name: 'Hardy Lineages', era: 'dusk', field: 'stewardship', cost: 70, requires: [], desc: 'Kin bred for thin air and cold. Kin capacity suffers less as worlds die; Kin upkeep −10%.', effects: { upkeep: { kin: 0.9 }, flags: ['hardy'] } }),
   T({ id: 'comet_shepherding', name: 'Volatile Shepherding', era: 'dusk', field: 'stewardship', cost: 95, requires: ['magnetospherics'], desc: 'Replace stripped air and water with shepherded ice. Unlocks Volatile Shepherding.' }),
   T({ id: 'terraforming', name: 'Terraforming', era: 'dusk', field: 'stewardship', cost: 130, requires: ['comet_shepherding'], desc: 'Mirrors, an air and seeded life for a dead world by a red dwarf that still burns, as was once proposed for Mars. Unlocks Orbital Mirrors, Atmosphere Works and Biosphere Seeding.' }),
@@ -64,7 +66,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'survey_optics', name: 'Deep Survey Optics', era: 'dusk', field: 'reach', cost: 30, requires: [], desc: 'Chart farther and see the dead more clearly. Detection range grows.', effects: { detect: 150 } }),
   T({ id: 'fusion_drives', name: 'Fusion Drives', era: 'dusk', field: 'reach', cost: 60, requires: ['survey_optics'], desc: 'Ships at six percent of light. Unlocks the Kin Ark.', effects: { speed: 0.06 } }),
   T({ id: 'orbital_defense', name: 'Orbital Defence', era: 'dusk', field: 'reach', cost: 70, requires: [], desc: 'Defence Grids and Warden escorts.' }),
-  T({ id: 'orbital_industry', name: 'Orbital Industry', era: 'dusk', field: 'reach', cost: 55, requires: [], desc: 'Foundries in orbit. Unlocks the Orbital Foundry.' }),
+  T({ id: 'orbital_industry', name: 'Orbital Industry', era: 'dusk', field: 'reach', cost: 55, requires: [], desc: 'Foundries in orbit. Unlocks the Orbital Foundry.', rubbleDesc: 'Foundries in orbit. Unlocks the Orbital Foundry, and Shadow Shields against the flash of a giant falling into its star.' }),
   T({ id: 'magnetic_sails', name: 'Magsail Braking', era: 'dusk', field: 'reach', cost: 130, requires: ['fusion_drives'], desc: 'Brake against the thin interstellar medium. Ships at 15% of light; launches cost less.', effects: { speed: 0.15, flags: ['cheap_launch'] } }),
   T({ id: 'catalyzed_drives', name: 'Catalysed Drives', era: 'dusk', field: 'reach', cost: 280, requires: ['magnetic_sails'], desc: 'Ships at 40% of light. Other provinces come within reach.', effects: { speed: 0.4, detect: 2000 } }),
   T({ id: 'hunger_studies', name: 'Hunger Studies', era: 'dusk', field: 'reach', cost: 90, requires: ['orbital_defense'], desc: 'Learn what the swarms are and how they move. Reveals swarms within detection range and forecasts their paths.' }),
@@ -132,5 +134,10 @@ export const TECHS: TechDef[] = [
 ];
 
 export const TECH_BY_ID: Record<string, TechDef> = Object.fromEntries(TECHS.map((t) => [t.id, t]));
+
+/** A technology's text as this game has it (`rubbleDesc` where falling worlds break up and giants flash). */
+export function techDesc(s: { flags: Record<string, number | undefined> }, t: TechDef): string {
+  return (s.flags.rubble && t.rubbleDesc) || t.desc;
+}
 
 export const ERA_COST_SCALE: Record<EraId, number> = { dusk: 1, degenerate: 1, blackhole: 1, dark: 1 };

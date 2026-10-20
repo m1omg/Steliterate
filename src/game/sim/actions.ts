@@ -18,7 +18,7 @@ import { BEACON_COST } from './beacons';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
-import { siphonsRunning, sourceLight } from '../physics';
+import { flashShelterFor, rubbleGame, siphonsRunning, sourceLight } from '../physics';
 import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
@@ -32,7 +32,11 @@ export function matterIsEnergy(state: GameState): boolean {
   return matterGone(state);
 }
 
+/** What structureCheck says of a structure this game has no use for (`rubble`, data/structures.ts): left out of the build list. */
+const NOT_IN_THIS_GAME = 'Not in this game.';
+
 export function structureCheck(state: GameState, c: Colony, d: StructureDef): string | null {
+  if (d.rubble && !rubbleGame(state)) return NOT_IN_THIS_GAME;
   if (d.tech && !hasTech(state, d.tech)) return 'Not yet researched.';
   if (!ageReached(state, d.era)) return 'Not in this age.';
   const b = state.bodies[c.bodyId];
@@ -54,6 +58,7 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.id === 'relic_dig' && !(b.relic && b.relic.state !== 'hidden')) return 'Needs ruins.';
   if (d.id === 'relic_dig' && b.relic?.flowed) return 'Its ruins have flowed into smooth lumps.';
   if (d.id === 'disk_skimmer' && !(sys.primary.rekindle && sys.primary.rekindle > 0)) return 'Needs a world feeding its dead star.';
+  if (d.id === 'flash_shelter' && flashShelterFor(b) !== 'flash_shelter') return 'Only on a tidally locked world, whose night side stays cold: a turning world melts all over, and needs a Shadow Shield.';
   // a collector of light needs light to collect: a cold dwarf, a quiet black hole or the dark has none
   if (d.energy?.mode === 'light') {
     if (b.rogue) return 'Nothing to gather: a rogue world has no sun.';
@@ -87,7 +92,7 @@ export function buildCost(state: GameState, d: StructureDef | ShipDef, isShip: b
 export function buildableStructures(state: GameState, c: Colony): { def: StructureDef; error: string | null }[] {
   return STRUCTURES.filter((d) => !d.tech || hasTech(state, d.tech) || ageReached(state, d.era))
     .map((def) => ({ def, error: structureCheck(state, c, def) }))
-    .filter((x) => x.error !== 'Not yet researched.' && x.error !== 'Not in this age.');
+    .filter((x) => x.error !== 'Not yet researched.' && x.error !== 'Not in this age.' && x.error !== NOT_IN_THIS_GAME);
 }
 
 export function buildableShips(state: GameState, c: Colony): { def: ShipDef; error: string | null }[] {

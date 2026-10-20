@@ -1,6 +1,6 @@
 import type { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
-import { capital, colonies, hasCharter, hasTech, log, threadTotals, uid } from '../sim/util';
+import { capital, colonies, hasCharter, hasTech, log, popsOf, threadTotals, uid } from '../sim/util';
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime, sup } from '../eras';
@@ -8,6 +8,9 @@ import { SURFACE_LIFE, boilingAway, embersOutEta, haloEta, haloMoved, siphonsRun
 import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
+import { destroyColony } from '../sim/fleets';
+import { capacity } from '../sim/economy';
+import { computeMods } from '../sim/mods';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -19,7 +22,14 @@ export interface EventChoice {
   /** What it does; computed when it depends on the moment (a price, say). See choiceHint. */
   hint?: string | ((s: GameState, d: EventData) => string);
   ok?: (s: GameState, d: EventData) => boolean;
+  /** Whether it is offered at all (absent: always). One not offered is not shown greyed out, as one that is not `ok` is: it is not there, and cannot be chosen (choiceShown). */
+  shown?: (s: GameState, d: EventData) => boolean;
   run: (s: GameState, d: EventData, rng: Rng) => string | void;
+}
+
+/** Is this choice offered now? */
+export function choiceShown(c: EventChoice, s: GameState, d: EventData): boolean {
+  return !c.shown || c.shown(s, d);
 }
 
 export interface EventDef {
@@ -215,6 +225,23 @@ function colonyById(s: GameState, d: EventData): Colony | undefined {
 }
 function bodyById(s: GameState, d: EventData): Body | undefined {
   return s.bodies[String(d.bodyId)];
+}
+/**
+ * The dark choice at a falling world ("Take them apart", world_falls): its people and sleepers, and
+ * a Lattice for every three of them at the capital, as far as the capital has room. Only for a
+ * settlement of ours that is not the capital.
+ */
+/** Taint enough that the others will no longer bind themselves to us (pacts.ts): a civilization gone over to the Hunger's ways. */
+const HUNGER_WAYS = 60;
+
+function takenApart(s: GameState, d: EventData): { people: number; lattice: number } {
+  const b = bodyById(s, d);
+  const c = b?.colonyId ? s.colonies[b.colonyId] : undefined;
+  const cap = capital(s);
+  if (!c || !cap || c.id === cap.id) return { people: 0, lattice: 0 };
+  const people = popsOf(c) + c.cryo;
+  const room = Math.max(0, capacity(s, cap, computeMods(s)).lattice - cap.pops.lattice);
+  return { people, lattice: Math.min(Math.floor(people / 3), Math.floor(room)) };
 }
 function anyColonyWith(s: GameState, t: ThreadId): Colony | undefined {
   return colonies(s).find((c) => c.pops[t] > 0);
@@ -666,21 +693,53 @@ export const EVENTS: EventDef[] = [
     text: (s, d) => {
       const b = bodyById(s, d);
       const hw = b?.traits.includes('homeworld');
+      // in a game begun since 20 Oct the world has come apart into a ring of rubble (physics.ts: breakUp)
+      const rubble = !!b?.traits.includes('rubble');
       const models = hasTech(s, 'accretion_modelling')
         ? b?.feeding?.model === 'rekindle'
-          ? 'Our models are confident: it will break up quickly and the dead star will rekindle, briefly and brilliantly.'
-          : 'Our models are confident: it will be peeled away slowly, a stream feeding the dead star for trillions of years.'
-        : 'Our astronomers disagree. Some models say the planet will be peeled away slowly over trillions of years. Others say it will break up fast and the dead star will blaze again, briefly.';
+          ? `Our models are confident: ${rubble ? 'the rubble will crowd in fast' : 'it will break up quickly'} and the dead star will rekindle, briefly and brilliantly.`
+          : `Our models are confident: it will be ${rubble ? 'ground down' : 'peeled away'} slowly, a stream feeding the dead star for trillions of years.`
+        : rubble
+          ? 'Our astronomers disagree. Some models say the rubble will be ground down slowly, over trillions of years. Others say it will crowd in fast and the dead star will blaze again, briefly.'
+          : 'Our astronomers disagree. Some models say the planet will be peeled away slowly over trillions of years. Others say it will break up fast and the dead star will blaze again, briefly.';
+      const torn = rubble ? ' Its tides have torn the world apart into a ring of rubble at the limit, its core laid open.' : '';
       // a brown dwarf's world (in a game where they fall in: physics.ts, fallsInAt)
       if (b && s.systems[b.systemId]?.primary.kind === 'brown_dwarf')
-        return `${b.name} has spiralled in to the brown dwarf it circles. Its tides are tearing the world apart, and the rubble rains onto the dwarf: a faint warmth, a hundredth of what a white dwarf would make of it, for trillions of years.`;
+        return rubble
+          ? `${b.name} has spiralled in to the brown dwarf it circles. Its tides have torn the world apart into a ring of rubble, its core laid open, and the rubble rains onto the dwarf: a faint warmth, a hundredth of what a white dwarf would make of it, for trillions of years.`
+          : `${b.name} has spiralled in to the brown dwarf it circles. Its tides are tearing the world apart, and the rubble rains onto the dwarf: a faint warmth, a hundredth of what a white dwarf would make of it, for trillions of years.`;
       return hw
-        ? `Gravitational waves have finally drained the orbit of ${b?.name}, the world we were born on. It has reached its dead sun’s tidal limit. ${models} Either way, our birthworld is becoming the fuel that keeps its own dead sun faintly warm.`
-        : `${b?.name} has spiralled in to the tidal limit of its dead star. ${models}`;
+        ? `Gravitational waves have finally drained the orbit of ${b?.name}, the world we were born on. It has reached its dead sun’s tidal limit.${torn} ${models} Either way, our birthworld is becoming the fuel that keeps its own dead sun faintly warm.`
+        : `${b?.name} has spiralled in to the tidal limit of its dead star.${torn} ${models}`;
     },
     choices: [
       { label: 'Evacuate the world and harvest the stream', hint: 'Its people move to the capital. Disk Skimmers can harvest the dead star.', run: (s, d) => { const b = bodyById(s, d); const c = b?.colonyId ? s.colonies[b.colonyId] : undefined; const cap = capital(s); if (b?.feeding) b.feeding.revealed = true; if (c && cap && c.id !== cap.id) { for (const t of ['kin', 'echoes', 'chorus', 'lattice', 'coldminds'] as ThreadId[]) { const n = c.pops[t]; c.pops[t] = 0; if (t === 'echoes') welcomeEchoes(s, n); else cap.pops[t] += n; } cap.cryo += c.cryo; c.cryo = 0; } } },
-      { label: 'Stay and mine our own world as it falls', hint: 'Matter +80. Resolve −3.', run: (s, d) => { matter(s, 80); res(s, -3); const b = bodyById(s, d); if (b?.feeding) b.feeding.revealed = true; } },
+      { label: 'Stay and mine our own world as it falls', hint: (s, d) => (bodyById(s, d)?.traits.includes('rubble') ? 'Matter +80. Resolve −3. The rubble is richer than the world was, and thins as it falls in; when the last of it goes, three in four of those still there get off to the Deep.' : 'Matter +80. Resolve −3.'), run: (s, d) => { matter(s, 80); res(s, -3); const b = bodyById(s, d); if (b?.feeding) b.feeding.revealed = true; } },
+      // the Hunger's way (the player, 19 Oct: "should be darker… Let them be consumed or somehow
+      // utilized"), only for a civilization gone over to it, and only in a game where the world
+      // breaks up: its people are not taken off but taken apart, with it
+      {
+        label: 'Take them apart',
+        hint: (s, d) => {
+          const t = takenApart(s, d);
+          return `Its ${t.people} people are not taken off: we take them apart with the rubble. Matter +${5 * t.people}.${t.lattice ? ` Lattice +${t.lattice} at the capital.` : ''} Taint +8. Resolve −6. Kin standing −10.`;
+        },
+        shown: (s, d) => !!bodyById(s, d)?.traits.includes('rubble') && s.civ.taint >= HUNGER_WAYS && takenApart(s, d).people > 0,
+        run: (s, d) => {
+          const b = bodyById(s, d);
+          const c = b?.colonyId ? s.colonies[b.colonyId] : undefined;
+          const cap = capital(s);
+          const t = takenApart(s, d);
+          if (!b || !c || !cap) return;
+          matter(s, 5 * t.people);
+          cap.pops.lattice += t.lattice;
+          res(s, -6);
+          stand(s, 'kin', -10);
+          taint(s, 8);
+          destroyColony(s, c, 'its people were taken apart with their world');
+          return `What was left of ${c.name} is matter now, and some of it thinks again, as Lattice at ${cap.name}. No one speaks of it at the capital, and everyone knows.`;
+        },
+      },
     ],
   },
   {
