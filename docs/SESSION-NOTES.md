@@ -51,10 +51,11 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (20 Oct): `main` as of PR m1omg/Steliterate#35 (`e4c77d7`, falling worlds; live script
-    `index-CnbCeqhO.js`), after PR m1omg/Steliterate#34 (`e827e2f`, the game keeps its word),
-    and the new version at `/next/` from `next`, a copy of `claude/epic-wozniak-lyhulf` (live
-    script `index-BForJQDi.js`). HANDOVER, section 0, has where things stand; CLAUDE.md lists
+  - Now (20 Oct): `main` as of PR m1omg/Steliterate#36 (`981e0f0`, finds only where they can be
+    and one sea; live script `index-Gsu1nkEh.js`), after PR m1omg/Steliterate#35 (`e4c77d7`,
+    falling worlds) and PR m1omg/Steliterate#34 (`e827e2f`, the game keeps its word), and the new
+    version at `/next/` from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script
+    `index-CSak4cHM.js`). HANDOVER, section 0, has where things stand; CLAUDE.md lists
     every PR. What follows is the history up to 13 Oct.
   - The game was as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
@@ -119,8 +120,18 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (20 Oct, falling worlds, both versions; new games
-  only):**
+- **The baseline, from the last validation (20 Oct, finds only where they can be and one sea,
+  both versions):**
+  - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
+    8 saves; all 88 unit checks; all 63 browser checks in the real fonts (five passed only on a
+    rerun alone, two of them after their fixes: CHANGELOG); the harness 165 / 77 / 72 of 300 (by
+    fate decay 80 / 148, stable 43 / 81, curvature 42 / 71), Harsh 136 / 38 / 68;
+  - today's game (`main`): tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat
+    on its 6 saves; all 57 unit checks; all 55 browser checks in the real fonts; the harness
+    165 / 77 / 70 of 300 (by fate decay 67 / 148, stable 63 / 81, curvature 35 / 71), Harsh
+    150 / 59 / 71.
+  - Nearly every game re-rolls with the finds' tests: compare runs by their totals.
+- **The baseline before it (20 Oct, falling worlds, both versions; new games only):**
   - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
     8 saves; all 86 unit checks; all 63 browser checks in the real fonts; the harness 147 / 63 / 68
     of 300 (by fate decay 74 / 148, stable 39 / 81, curvature 34 / 71), Harsh 145 / 52 / 73;

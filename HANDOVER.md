@@ -19,7 +19,7 @@ word", then the player's list of 16 Oct, then the falling worlds.
 
 **Done since 16 Oct:**
 - `docs/REPLICATE.md`: a full spec of today's game, written 16 to 17 Oct, kept up with `main`
-  since (now at PR m1omg/Steliterate#35, `e4c77d7`), its notes of where text and code disagreed
+  since (now at PR m1omg/Steliterate#36, `981e0f0`), its notes of where text and code disagreed
   now the rules.
 - **"The game keeps its word"** (19 Oct, in both versions at the player's word), live on 20 Oct:
   REPLICATE found places where the game's text promised one thing and the code did another, and
@@ -45,14 +45,22 @@ word", then the player's list of 16 Oct, then the falling worlds.
 - **The list of 16 Oct** arrived on 20 Oct (the `.odt` attached again). Its four pictures are
   described in the plan (part C, "20 Oct: the pictures, seen"), so the file is not needed again.
   Item 2 is done, with the falling worlds.
+- **Items 7, 1 and 6** (one batch, both versions), live on 20 Oct: no "Life Under the Ice"
+  without a star (none in the starless Drifts, where it fitted 178 worlds in forty galaxies), Kept
+  Warm by Its Neighbours not counting the Deep, no find about a world that is falling, flung loose
+  or gone (`pruneFinds`); and one sea for the Water row and the picture (`seaBand`: the band of the
+  day side where water is liquid; the super-Earth of the player's picture shows its sea, the
+  frozen eyeball is all ice). Today's game by PR m1omg/Steliterate#36 (`981e0f0`; code `b48562d`),
+  merged back with `-s ours` (`f08a951`). One change from the plan: worlds flung loose stay among
+  the survey's candidates, as Warm in the Dark is found only on them. CHANGELOG, "Finds where they
+  can be, and one sea", has the figures (both versions within the noise; nearly every game
+  re-rolled by the finds' tests).
 
-**What to do, in order** (the plan's part C, each batch in both versions, validated, pushed to
-`next` and merged into `main`):
-1. **Items 7, 1 and 6**, one batch (bugs; no rule changes but the finds' tests):
-   - item 7: no "Life Under the Ice" without a star, and no find about a world that is falling,
-     flung loose or gone;
-   - items 1 and 6: one sea for the Water row and the picture (`seaBand`).
-2. **Items 3 to 5**, the pace ("Ten per Tide turn"), with the harness.
+**What to do next** (the plan's part C, in both versions, validated, pushed to `next` and merged
+into `main`): **items 3 to 5**, the pace ("Ten per Tide turn"), with the harness. The plan has the
+design; the player chose it. A turn at pace p multiplies the age's ladder (years since the age
+began, plus l0/(g−1)) by g^(10^−p) and pays exactly 10^−p; a clock's or flare's turn pays
+log_g(1 + L·(g−1)/Tide); what declines per turn scales by the same share.
 
 **The player's usage** ran out twice on 19 Oct (the weekly limit, then the five-hour one). They
 pause and come back. Work in batches that end validated and pushed, and keep messages short.
@@ -78,8 +86,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#35 (`e4c77d7`) | `179e4ab` and its notes |
-  | Live script | `index-CnbCeqhO.js` | `index-BForJQDi.js` |
+  | As of | PR m1omg/Steliterate#36 (`981e0f0`) | `f08a951` and its notes |
+  | Live script | `index-Gsu1nkEh.js` | `index-CSak4cHM.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at

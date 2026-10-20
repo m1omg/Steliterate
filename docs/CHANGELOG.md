@@ -3764,3 +3764,8 @@ Both versions, the same code.
 - **Validated, today's game:** tsc and the build clean; the playtest passes; savecompat on its 6
   saves; all 57 unit checks; all 55 browser checks in the real fonts (`a11y` failed once with two
   suites running at once and passes alone; `browser/fates` as the new version's).
+- **In both versions:** today's game got the same through its own code by PR
+  m1omg/Steliterate#36 (`981e0f0`; code `b48562d`), from `claude/promises-main`, and `main` was
+  then merged into this branch, keeping this branch's code (`-s ours`, `f08a951`). Live on 20
+  Oct: the main address serves `index-Gsu1nkEh.js` and `/next/` `index-CSak4cHM.js`, the builds
+  validated here.
