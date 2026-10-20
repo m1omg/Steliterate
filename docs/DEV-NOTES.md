@@ -115,7 +115,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form, positronium, continuity, stable-dark, promises, fall-in, unwritten, slow-ones), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form, positronium, continuity, stable-dark, promises, fall-in, unwritten, slow-ones, falling-flash, hole-worlds), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -420,6 +420,45 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
+- **Falling worlds break up, giants fall in a flash** (20 Oct, both versions, new games;
+  CHANGELOG, "Falling worlds"): `state.flags.rubble` (set by `generateWorld`, no draw), read
+  through `rubbleGame` (`physics.ts`).
+  - In `evolveUniverse`, at a world's date, by what it is made of: `breakUp(b, to)` (rock and ice:
+    kind `asteroids`, trait `rubble`, richness ×2 times the share left by `to`; it feeds as
+    before, with the same draws), thinned each turn in the feeding loop by
+    (1 + t₀/τ)/(1 + t₁/τ); `flashSystem` for a giant (`giantWorld`) at a dead star, brown dwarf
+    or hole (`giantFlash`: `fallEfficiency` × m c² at `EDDINGTON_SUNS` × M) and for a rocky world
+    at a hole (`rubbleFlash`, harmless). A giant's flash boils away what `flashBoils` says (gone,
+    `dissolved`) and melts what `flashMelts` says (`starClimate` under the flash at `LAVA_K`):
+    water 0 (not a `water_rich` world's), vitality 0, kind `barren`, trait `flash_melted`; a
+    Shadow Shield over a world (`shadowShielded`) spares it, and a belt behind one. A degenerate
+    star's giant still makes both draws (rekindle, τ) before it flashes, so later draws stay put.
+  - Notes: `plunge` with `inFlash` (the turn evacuates, no log, no +20), then `flash` with a
+    `FlashNote` (`energy`, `lum`, `years`, `inside`, `boiled`). `handleNotes` (`turn.ts`): each
+    civilization's settlements inside the melt line live only if `flashSheltered`
+    (`flashShelterFor`: a locked rock or ice world takes a Flash Shelter, Deep Warrens or
+    Night-side Shelters; anything else a Shadow Shield; nothing on a boiled world), and every
+    flash goes to `catchFlashes` with `flashReach(E)` (`crossing.ts`: 10 ly × √(E/10^42 J)),
+    through `burstShare(ly, reach)`; in the new version a falling world's flash (`own`) reaches
+    its own system's catchers even when the system is cast out.
+  - `flash_shelter` and `shadow_shield` (`structures.ts`, `rubble: true`: `structureCheck` says
+    "Not in this game." elsewhere, and `buildableStructures` leaves them out); the Flash Shelter
+    only on a locked world; from the Dusk, with `subterranean_cities` and `orbital_industry`
+    (whose texts say so in such a game: `rubbleDesc`, through `techDesc`), as a white dwarf's
+    close giant can fall in before the Last Light.
+  - "A World Falls": the rubble text, and "Take them apart" (`shown` only at Taint 60:
+    `CORRUPT_AT` in the new version, `HUNGER_WAYS` in today's game; `takenApart`). `EventChoice`
+    gained `shown` (`choiceShown`): the story screen leaves such a choice out, `resolveEvent`
+    refuses it, the autoplayer skips it.
+  - `addHoleWorlds` (`gen.ts`, after `addOuterWorlds`, stream `:hole`), trait `hole_world` (a
+    mark, hidden like `outer`; `insolationByDistance` leaves them out of the standard orbit for
+    the world a hole had). The forecast's `flash` row; `FallsInwardRow` says what becomes of a
+    world; the Drawer's Disk luminosity (`sourceLight` × `lightUnitSuns`); `TRAIT_NAME` rubble
+    and flash_melted, "Rubble ring" (`bodyKindName`); a giant's flash pings the map.
+  - Checks: `unit/falling-flash`, `unit/hole-worlds`, `browser/rubble` (new version);
+    `unit/young-dwarfs` leaves the hole worlds and the holes' display orbits out of its
+    fingerprint (taken again on `7c0c763`, whose galaxies are `75efadc`'s); `unit/outer` lets
+    the hole worlds come last; `unit/dealings` keeps the raiders' clock in step.
 - **The game keeps its word** (19 Oct, both versions; CHANGELOG, "The game keeps its word"):
   where a text promised what the code did not do, the code now does it.
   - The Long Record: `LONG_RECORD_ACCORD` (`economy.ts`, `colonyTurn`, its own yield line).
@@ -1919,6 +1958,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the stable fate, a little softer: substrate outlasts the collapse, earlier warnings, the autoplayer's Long Sleep; a Work finished as Continuity runs out stands (14 Oct; `d92849a`) | 153 | 63 victories, Degenerate Age 72 turns; 900 games 444 / 160 / 70 (420 / 164 / 70 before): stable 110 / 239 (86; 74 wins, 78), decay and curvature identical game for game. With the neighbours reshuffled: 440 / 177 / 69 (decay 237, stable 105, curvature 98; 313 of 900 as with the usual streams). Survival over two runs each: 445 before the sight under way, 442 now |
 | the game keeps its word (19 Oct; the new version, `ea5ec7b`) | 156 | 65 victories, Degenerate Age 71 turns (153 / 63 / 70 before), within the noise; by fate decay 82 / 148, stable 44 / 81, curvature 30 / 71. Harsh, 300 games: 124 / 35 / 66 (114 / 29 / 66 before). Run again on 19 Oct at `3073232` (no code changed since `ea5ec7b`): the same figures, standard, Harsh and by fate |
 | the game keeps its word (19 Oct; today's game, `claude/promises-main` `7d4c702`, PR m1omg/Steliterate#34, `e827e2f`) | 160 | 81 victories, Degenerate Age 72 turns; 900 games 476 / 244 / 71 (456 / 203 / 71 before): survival within the noise, the victories from the hidden step alone (without it the same 300 games give 160 / 72 / 72; `docs/spoilers/slow-ones.md`). By fate: decay 193 / 450 (19 wins), stable 165 / 239 (127), curvature 118 / 211 (98). Harsh, 300 games: 147 / 62 / 68 (140 / 52 / 70 before). 204 of 300 play out as without the step |
+| falling worlds break up and giants flash; more worlds at black holes; in new games (20 Oct; the new version) | 147 | 63 victories, Degenerate Age 68 turns (156 / 65 / 71 before). The new worlds re-roll every game (0 of 300 the same), so a control with the new worlds and the old falls measures the rules: 157 / 65 / 69, against which they cost 10 games (44 lost, 34 won; the autoplayer builds no shelters), within the noise. By fate decay 74 / 148, stable 39 / 81, curvature 34 / 71. Harsh, 300 games: 145 / 52 / 73 (124 / 35 / 66 before; the control 135 / 56 / 71, so there the rules gave 10). Moving the shelters to Dusk research afterwards changed no game: 10 replayed, all the same |
+| falling worlds, the same (20 Oct; today's game) | 149 | 80 victories, Degenerate Age 72 turns (160 / 81 / 72 before), every game re-rolled, within the noise. By fate decay 57 / 148, stable 51 / 81, curvature 41 / 71. Harsh, 300 games: 154 / 58 / 68 (147 / 62 / 68 before). 12 replayed after the shelters moved: all the same |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

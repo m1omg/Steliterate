@@ -337,11 +337,27 @@ present."
 |---|---|---|
 | 1 | "Should show open terminator seas." | `Pictures/1000000100000A0000000555CEBD5B93.png` |
 | 2 | "Please, add more black hole planets and find a way to quantify black hole accretion disk brightness." | none |
-| 3 | "Quick 10x is not Quick 10x here:" | `Pictures/10000001000009E700000474B46628E6.png` |
-| 4 | "Worlds die in same amount of turns regardless of pace." | `Pictures/10000001000009E7000004743ED1572A.png` |
+| 3 | "Quick 10x is not Quick 10x here:" | `Pictures/10000001000009E700000474B46628E6.png` and `Pictures/10000001000009E7000004743ED1572A.png` |
+| 4 | "Worlds die in same amount of turns regardless of pace." | none |
 | 5 | "If a given pace becomes unavailable the UI still stays with that pace highlighted instead of switching to the next possible one." | none |
-| 6 | "„All frozen“ water and cold but with visible seas?" | none |
-| 7 | "I think I got a sub-ice geothermally driven life event...about a planetless system, once, unsure." | `Pictures/10000001000009E70000047411F5A29B.png` |
+| 6 | "„All frozen“ water and cold but with visible seas?" | `Pictures/10000001000009E70000047411F5A29B.png` |
+| 7 | "I think I got a sub-ice geothermally driven life event...about a planetless system, once, unsure." | none |
+
+> **20 Oct: the pictures, seen** (the player uploaded the file again; extracted with `python3 -I`
+> and looked at one by one). The table above is corrected from the document's own order: the
+> earlier session guessed pictures for items 4 and 7, which have none, and none for item 6, which
+> has one.
+> - **Item 1:** Nuceishaen I, a tidally locked super-Earth at 0.017 AU (6.1 M⊕), 178 to 480 K; its
+>   Water row reads "36%: ice on the night side, open water along the terminator, the day side
+>   boiled dry", and it is drawn as plain brown rock, no sea anywhere (finding 4 below).
+> - **Item 3, two pictures of the same moment** (turn 37 of the Dusk, a red dwarf in its last
+>   flare, "Flare clock · turn 1 of 6"): at Quick ×10 the next turn is 425.2 million years and
+>   the energy +35.3; at the Tide 527.2 million years and +34.9. So Quick ×10 is only a fifth
+>   shorter here and pays about as much (case 3, the flare clock). Its forecasts: the Last Light
+>   ~244 turns at Quick, ~33 at the Tide (case 1).
+> - **Item 6:** Yoaleieses III, an eyeball world locked to a star just dead (vitality 41%), 95 to
+>   224 K; its Water row reads "31%: all frozen", and it is drawn with open blue seas over half its
+>   face (finding 1 below: the day side at 224 K draws a full sea).
 
 - **Step 0, after approval:** extract the four PNGs (`python3 -I`, zipfile, into a new folder
   `$SP/odt-pics/`) and look at each with Read before changing anything. Plan mode does not allow
