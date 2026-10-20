@@ -124,11 +124,14 @@ export const PLANET_FRAG = /* glsl */ `
   ${NOISE_GLSL}
   ${THERMAL_GLSL}
   uniform int uViewMode;
-  uniform float uEye;         // sea-and-land worlds: how much their star still keeps a sea liquid (0 once frozen over)
-  uniform float uTempDay;     // K (the same as uTempNight unless tidally locked)
+  uniform float uTempDay;     // K: its warmest ground, under its star (the same as uTempNight unless tidally locked)
   uniform float uTempNight;
-  uniform float uWater;       // the share of the surface its water would cover (an ice world's melt fills its low ground)
-  uniform float uLocked;      // 1: one face to its star for ever (tidally locked, or an eyeball); 0: turning, warmed all round
+  uniform float uSeaFrom;     // where its water is liquid (seaBand, physics.ts), by the sine of its star's height in
+  uniform float uSeaTo;       // its sky (facing): from here up to there; past ±1 all or nothing (too cold, too hot)
+  uniform float uSteam;       // its water boiled into a sky of steam all round (0..1, by how much water it has)
+  uniform float uAir;         // 1: it has air (not bare rock or rubble): lit a little past the terminator
+  uniform float uWater;       // the share of the surface its water would cover (it fills the low ground)
+  uniform float uLocked;      // 1: one face to its star for ever (tidally locked, or an eyeball): its cities ring the terminator
   uniform float uTime;
   uniform float uSeed;
   uniform int uKind;
@@ -181,10 +184,14 @@ export const PLANET_FRAG = /* glsl */ `
     // toward one smooth level, leaving the faint marks of what they were made of
     h = mix(h, h * 0.25, uFlow);
     detail = mix(detail, detail * 0.35, uFlow);
-    // where the star is (for a locked world, for ever), and how warm the ground is here: the day
-    // side's temperature facing it, the night side's beyond the terminator
+    // where the star is (for a locked world, for ever), and how warm the ground is here: under the
+    // star its warmest, and away from it as warm as the starlight falling there keeps it (T_day·f^¼),
+    // never colder than the night side (seaBand, physics.ts; a world that turns is one temperature)
     float facing = dot(p, normalize(uSubstellar));
-    float T = mix(uTempNight, uTempDay, smoothstep(-0.25, 0.6, facing));
+    float T = max(uTempNight, uTempDay * pow(max(facing, 1e-6), 0.25));
+    // where its water is liquid: colder than that (below the band) it is ice, hotter (above it) boiled off
+    float liquid = smoothstep(uSeaFrom - 0.02, uSeaFrom + 0.02, facing);
+    float boiled = smoothstep(uSeaTo - 0.02, uSeaTo + 0.02, facing);
     vec3 albedo;
     float spec = 0.0;
     float clouds = 0.0;
@@ -200,50 +207,53 @@ export const PLANET_FRAG = /* glsl */ `
       albedo *= 0.85 + 0.15 * detail;
       if (uKind == 5) albedo = mix(albedo, vec3(0.42, 0.52, 0.6), smoothstep(0.1, 0.5, detail) * 0.4);
       spec = 0.25;
-      if (uTempDay > 263.0) {
-        // warmed past freezing, the ice melts into open sea: everywhere on an ice-shelled ocean,
-        // and on an ice world in its low ground, as far as its water reaches (bare rock above);
-        // past boiling it goes up as a veil of steam
-        float melt = smoothstep(263.0, 283.0, T);
-        float level = -0.6 + 1.2 * uWater;
-        float wet = uKind == 5 ? 1.0 : 1.0 - smoothstep(level - 0.05, level + 0.05, h);
-        vec3 sea = mix(vec3(0.035, 0.09, 0.13), vec3(0.05, 0.12, 0.16), smoothstep(-0.6, 0.6, h));
-        albedo = mix(albedo, mix(rockPalette(h, detail) * 0.8, sea, wet), melt);
-        spec = mix(spec, 0.7 * wet, melt);
-        steam = smoothstep(363.0, 383.0, T);
-      }
+      // where its water is liquid the ice is open sea: everywhere on an ice-shelled ocean, and on an
+      // ice world in its low ground, as far as its water reaches (bare rock above); hotter still it
+      // has boiled off, leaving a pale crust of salt where the sea was
+      float level = -0.6 + 1.2 * uWater;
+      float wet = uKind == 5 ? 1.0 : 1.0 - smoothstep(level - 0.05, level + 0.05, h);
+      vec3 sea = mix(vec3(0.035, 0.09, 0.13), vec3(0.05, 0.12, 0.16), smoothstep(-0.6, 0.6, h));
+      vec3 rock = rockPalette(h, detail) * 0.8;
+      albedo = mix(albedo, mix(rock, sea, wet), liquid);
+      spec = mix(spec, 0.7 * wet, liquid);
+      albedo = mix(albedo, mix(rock, vec3(0.6, 0.58, 0.52) * (0.85 + 0.15 * detail), wet), boiled);
+      spec *= 1.0 - boiled;
     } else {
       albedo = rockPalette(h, detail);
       if (uKind == 1) {
-        // a sea and green-brown land where the star keeps it warm: on an eyeball (or any locked
-        // world) only the face toward it, ice everywhere else; on a turning world, all round. The
-        // sea is its star's doing (uEye): once the star is dead the sea freezes over and the world
-        // is one ice shell, the old sea only a smoother, darker plain under it
-        float land = smoothstep(0.02, 0.12, h + 0.05);
-        vec3 living = mix(vec3(0.05, 0.12, 0.16), mix(vec3(0.16, 0.2, 0.1), vec3(0.3, 0.26, 0.18), detail * 0.5 + 0.5), land);
+        // a sea and land where its water is liquid: on an eyeball (or any locked world) the face
+        // toward its star, out to where the starlight no longer keeps the sea from freezing, and on
+        // a world that turns, all round. Colder, ice over everything, the old sea a smoother, darker
+        // plain under it where it froze over on the day side; hotter, past boiling, the sea is gone,
+        // leaving pale, salt-crusted sea floor and dry land. Its life colours the land only:
+        // green-brown while it lives, grey and dust-dry once it is dead
+        float land = uWater > 0.005 ? smoothstep(0.02, 0.12, h + 0.05) : 1.0;
+        vec3 ground = mix(rockPalette(h, detail) * 0.8, mix(vec3(0.16, 0.2, 0.1), vec3(0.3, 0.26, 0.18), detail * 0.5 + 0.5), smoothstep(0.02, 0.35, uVitality));
+        vec3 open = mix(vec3(0.05, 0.12, 0.16), ground, land);
         vec3 frozen = mix(vec3(0.6, 0.64, 0.7), vec3(0.82, 0.85, 0.9), smoothstep(-0.2, 0.3, detail));
-        float warmZone = uLocked > 0.5 ? smoothstep(0.25 - 0.55 * uVitality, 0.75 - 0.35 * uVitality, facing) : 1.0;
-        float alive = warmZone * smoothstep(0.02, 0.35, uVitality) * uEye;
-        albedo = mix(frozen, living, alive);
-        // dried out while the star still burns: grey, dust-dry land where it is warm
-        albedo = mix(albedo, rockPalette(h, detail) * 0.8, (1.0 - smoothstep(0.0, 0.4, uVitality)) * warmZone * 0.7 * uEye);
-        // the star gone: ice everywhere, a little darker and smoother over the old sea
         float oldSea = (uLocked > 0.5 ? smoothstep(0.3, 0.7, facing) : 1.0) * (1.0 - land);
-        albedo = mix(albedo, mix(frozen * (0.92 + 0.08 * detail), vec3(0.48, 0.53, 0.6), oldSea * 0.55), 1.0 - uEye);
-        spec = (1.0 - land) * alive * 0.7;
-        clouds = smoothstep(0.1, 0.55, fbm(p * 3.0 + vec3(uTime * 0.02, uSeed, 0.0))) * alive * 0.8;
-        if (uTempDay > 363.0) {
-          // too hot for a sea: past boiling it is gone, leaving pale, salt-crusted sea floor and
-          // dry land under a veil of steam
-          float boil = smoothstep(363.0, 383.0, T);
-          vec3 dry = mix(vec3(0.6, 0.58, 0.52) * (0.85 + 0.15 * detail), rockPalette(h, detail) * 0.85, land);
-          albedo = mix(albedo, dry, boil);
-          spec *= 1.0 - boil;
-          clouds *= 1.0 - boil;
-          steam = boil;
-        }
+        vec3 iced = mix(frozen, vec3(0.48, 0.53, 0.6), oldSea * 0.55);
+        vec3 dry = mix(vec3(0.6, 0.58, 0.52) * (0.85 + 0.15 * detail), rockPalette(h, detail) * 0.85, land);
+        albedo = mix(mix(iced, open, liquid), dry, boiled);
+        float sea = liquid * (1.0 - boiled);
+        spec = (1.0 - land) * sea * 0.7;
+        clouds = smoothstep(0.1, 0.55, fbm(p * 3.0 + vec3(uTime * 0.02, uSeed, 0.0))) * sea * smoothstep(0.02, 0.35, uVitality) * 0.8;
+      } else if (uAir > 0.5 && uWater > 0.005) {
+        // rock with air (a super-Earth, or bare rock given an atmosphere) keeps its water in its low
+        // ground, as far as it reaches: open sea where it is liquid, ice where colder, and where
+        // hotter a pale crust of salt
+        float level = -0.6 + 1.2 * uWater;
+        float low = 1.0 - smoothstep(level - 0.05, level + 0.05, h);
+        vec3 ice = mix(vec3(0.6, 0.64, 0.7), vec3(0.82, 0.85, 0.9), smoothstep(-0.2, 0.3, detail));
+        vec3 sea = mix(vec3(0.035, 0.09, 0.13), vec3(0.05, 0.12, 0.16), smoothstep(-0.6, 0.6, h));
+        albedo = mix(albedo, mix(mix(ice, sea, liquid), vec3(0.6, 0.58, 0.52) * (0.85 + 0.15 * detail), boiled), low);
+        spec = 0.7 * low * liquid * (1.0 - boiled);
       }
     }
+    // its water boiled into a sky of steam all round (its seas; a water-rich world's past the runaway
+    // greenhouse): a veil over the world. Where only part of it is past boiling, the water has gone
+    // to the cooler ground, which keeps it, and the hot ground lies bare
+    if (uKind != 3 && uKind != 4) steam = uSteam;
     // the Hunger's rust: patches that spread the longer a swarm has fed here (it fades once the swarms are gone),
     // dull oxide pitted where the harvesters bored in; on a giant, a thinner brown haze
     float rustN = fbm3(p * 5.0 + uSeed * 3.0) + 0.3 * snoise(p * 16.0 + uSeed);
@@ -275,13 +285,16 @@ export const PLANET_FRAG = /* glsl */ `
 
     vec3 n = normalize(vWorldN);
     float ndl = dot(n, normalize(uSunDir));
-    float diff = max(0.0, ndl);
+    float direct = max(0.0, ndl);
+    // a world with air is lit a little past the terminator, its air scattering the light round, so
+    // the seas of its twilight are not black
+    float diff = direct + uAir * 0.05 * smoothstep(-0.2, 0.0, ndl) * (1.0 - smoothstep(0.0, 0.3, ndl));
     vec3 light = uSunColor * uSunPower;
     vec3 col = albedo * light * diff;
     col = mix(col, vec3(0.95, 0.96, 1.0) * light * diff, clouds);
     // specular glint on water / ice
     vec3 hvec = normalize(normalize(uSunDir) + normalize(vView));
-    col += light * spec * pow(max(0.0, dot(normalize(vNormal), hvec)), 40.0) * diff;
+    col += light * spec * pow(max(0.0, dot(normalize(vNormal), hvec)), 40.0) * direct;
     // a bright sun would clip the day side to flat white: roll off only the highlights,
     // leaving everything below the knee exactly as it was
     vec3 over = max(col - 0.55, 0.0);
