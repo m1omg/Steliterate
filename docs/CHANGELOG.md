@@ -3832,18 +3832,18 @@ in today's game).
   nearest pace toward the Tide that is not is lit, and the turn is lived at it; ours keeps a dashed
   outline and is lit again by itself when it can, and the phone's pace button names the one in
   use. Every greyed pace says why. "Sleep deeper" no longer slows past what research allows.
-- **The late ages richer** (the player: "Bring them back"). The autoplayer's victories had leaned
-  on the old slow turns' overpay: in trouble it took the pace that paid most a turn, the slowest,
-  and in the stable Degenerate Age of seed 1000 it was paid 1,383 Tide turns' income for about 20
-  of time. With honest turns it won 49 of 300 (77 before); held to the Tide, the old rules and the
-  new win alike (21 of 113 games, 22 of 118), and in 62 games it no longer won, the gift of the
-  Slow Ones was always there, but most lacked the 300 energy that begins the Aeon Seed, a
-  settlement at the Heart, or Conformal Mathematics in time. So after the Last Light every source
-  gives an eighth more energy and matter (`LATE_YIELD` 1.125: structures and the Hearth, and where
-  to settle counts it), at every pace. Tuned on the harness: ×1.13 gave 84 victories of 300, ×1.2
-  91, ×1.4 122; a line through them puts 77 at ×1.13. Today's game had leaned on the overpay
-  harder (49 victories at ×1.2, 105 at ×1.6): there two fifths more, ×1.4. A player at the Tide
-  never had the overpay, so for one the late ages are now that much richer than before.
+- **The late ages richer** (the player: "Bring them back"). The autoplayer's victories had leaned on
+  the old slow turns' overpay: in trouble it took the pace that paid most a turn, the slowest, and
+  in the stable Degenerate Age of seed 1000 it was paid 1,383 Tide turns' income for about 20 of
+  time. With honest turns it won 49 of 300 (77 before); held to the Tide, the old rules and the new
+  win alike (21 of 113 games, 22 of 118), and in 62 games it no longer won, it had the Slow Ones’
+  trust, but most lacked the 300 energy that begins the Aeon Seed, a settlement at the Heart, or
+  Conformal Mathematics in time. So after the Last Light every source gives an eighth more energy
+  and matter (`LATE_YIELD` 1.125: structures and the Hearth, and where to settle counts it), at
+  every pace. Tuned on the harness: ×1.13 gave 84 victories of 300, ×1.2 91, ×1.4 122; a line
+  through them puts 77 at ×1.13. Today's game had leaned on the overpay harder (49 victories at
+  ×1.2, 105 at ×1.6): there two fifths more, ×1.4. A player at the Tide never had the overpay, so
+  for one the late ages are now that much richer than before.
 - **The autoplayer sleeps through the dark.** Where matter decays or space unmakes it, the stores
   built of matter are gone by the Dark Era: in 8 of 10 such games that faded (of 16 faded games
   looked at) the reserve could hold only 125, what the stores not built of matter hold, against 6
