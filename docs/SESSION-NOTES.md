@@ -51,10 +51,11 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (20 Oct): `main` as of PR m1omg/Steliterate#34 (`e827e2f`, the game keeps its word;
-    live script `index-B8kR8ow_.js`), and the new version at `/next/` from `next`, a copy of
-    `claude/epic-wozniak-lyhulf` (live script `index-BqvW8Zy9.js`). HANDOVER, section 0, has where things
-    stand; CLAUDE.md lists every PR. What follows is the history up to 13 Oct.
+  - Now (20 Oct): `main` as of PR m1omg/Steliterate#35 (`e4c77d7`, falling worlds; live script
+    `index-CnbCeqhO.js`), after PR m1omg/Steliterate#34 (`e827e2f`, the game keeps its word),
+    and the new version at `/next/` from `next`, a copy of `claude/epic-wozniak-lyhulf` (live
+    script `index-BForJQDi.js`). HANDOVER, section 0, has where things stand; CLAUDE.md lists
+    every PR. What follows is the history up to 13 Oct.
   - The game was as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
     live script `index-BRmxB_Lf.js`), from `claude/affectionate-johnson-qqr7p2`, the plan's
@@ -118,7 +119,18 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (20 Oct, the game keeps its word, both versions):**
+- **The baseline, from the last validation (20 Oct, falling worlds, both versions; new games
+  only):**
+  - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
+    8 saves; all 86 unit checks; all 63 browser checks in the real fonts; the harness 147 / 63 / 68
+    of 300 (by fate decay 74 / 148, stable 39 / 81, curvature 34 / 71), Harsh 145 / 52 / 73;
+  - today's game (`main`): tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat
+    on its 6 saves; all 55 unit checks; all 55 browser checks in the real fonts; the harness
+    149 / 80 / 72 of 300 (by fate decay 57 / 148, stable 51 / 81, curvature 41 / 71), Harsh
+    154 / 58 / 68.
+  - Every game re-rolls from its first turn (the new worlds), so compare runs by their totals, or
+    against a control (CHANGELOG, "Falling worlds").
+- **The baseline before it (20 Oct, the game keeps its word, both versions):**
   - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
     8 saves; all 84 unit checks; all 62 browser checks in the real fonts; the harness 156 / 65 / 71
     of 300 (by fate decay 82 / 148, stable 44 / 81, curvature 30 / 71), Harsh 124 / 35 / 66;

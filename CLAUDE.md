@@ -27,7 +27,8 @@ m1omg/Steliterate#32, `4435f3f`, sound that does not stutter, from `claude/sound
 way; PR m1omg/Steliterate#33, `4b92446`, the project check's three fixes for today's game, from
 `claude/check-main`, the same way, then merged into the work branch with `-s ours`, `9e5907b`, so
 that the switch merges cleanly; PR m1omg/Steliterate#34, `e827e2f`, the game keeps its word,
-from `claude/promises-main`, the same way, then merged into the work branch with `-s ours`).
+and PR m1omg/Steliterate#35, `e4c77d7`, falling worlds, both from `claude/promises-main`, the same
+way, each then merged into the work branch with `-s ours`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -45,10 +46,10 @@ saves, which `savecompat` plays. `public/archive/` holds frozen builds: never ed
 A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (rewritten
 16 Oct):
 where things stand, what to read in which order, the player, the open threads and the traps.
-**Its section 0 (19 and 20 Oct) comes first.** It covers what came after: the batch "the game
-keeps its word", live in both versions since 20 Oct; and the approved plan for what follows,
-`docs/plans/2026-10-19-falling-worlds-and-the-list.md` (the player's list of 16 Oct, then the
-falling worlds).
+**Its section 0 (19 and 20 Oct) comes first.** It covers what came after: the batches "the game
+keeps its word" and "falling worlds", live in both versions since 20 Oct; and what is left of the
+approved plan, `docs/plans/2026-10-19-falling-worlds-and-the-list.md` (the player's list of 16
+Oct: items 7, 1 and 6, then the pace).
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 
@@ -95,9 +96,11 @@ npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; cou
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
 
-Balance reference (20 Oct, the game keeps its word): 160 of 300 standard competent games survive,
-81 victories, a Degenerate Age of 72 turns; 900 games: 476 survive, 244 victories; 300 at Harsh
-(`--diff=harsh`): 147 / 62 / 68; noise ±12 in 300 (two runs of 900 can differ by 30). By fate in
+Balance reference (20 Oct, falling worlds, new games only): 149 of 300 standard competent games
+survive, 80 victories, a Degenerate Age of 72 turns; 300 at Harsh (`--diff=harsh`): 154 / 58 / 68;
+every game re-rolled by the new worlds, so within the noise of the game keeps its word's 160 / 81 /
+72; 900 games then: 476 survive, 244 victories; noise ±12 in 300 (two runs of 900 can differ by
+30). By fate in
 the 900: decay 43%, stable 69%, curvature 56% (`--fate=` runs one). The victories beside 12 Oct's
 (154 / 72, 900 games 456 / 203) are a hidden step's (`docs/spoilers/slow-ones.md`). The full history is
 in DEV-NOTES (Balance reference). That is `main`'s game. The new version (on
@@ -124,4 +127,6 @@ with only the neighbours' dice reshuffled give 440 / 177 / 69, and two such runs
 by 32 survivors and 37 victories. The project check (15 Oct, no rule changed): 300 games on each
 version game for game as before (153 / 63 / 70 here, 154 / 72 / 72 in `main`). The game keeps
 its word (20 Oct): 156 of 300, 65 victories, a Degenerate Age of 71 turns; by fate decay 82 / 148,
-stable 44 / 81, curvature 30 / 71; Harsh 124 / 35 / 66 (114 / 29 / 66 before).
+stable 44 / 81, curvature 30 / 71; Harsh 124 / 35 / 66 (114 / 29 / 66 before). Falling worlds
+(20 Oct, new games): 147 / 63 / 68; by fate decay 74 / 148, stable 39 / 81, curvature 34 / 71;
+Harsh 145 / 52 / 73; a control run with the new worlds and the old falls gives 157 / 65 / 69.

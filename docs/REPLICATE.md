@@ -1,8 +1,8 @@
 # Steliterate: a full specification, for replication
 
 This document describes **Steliterate** as it plays at https://m1omg.github.io/Steliterate/,
-as of the merge of PR #34 (`e827e2f`) on `main` of `github.com/m1omg/Steliterate` (20 October
-2026; its code is commit `7d4c702` on top of `4b92446`).
+as of the merge of PR #35 (`e4c77d7`) on `main` of `github.com/m1omg/Steliterate` (20 October
+2026; its code is commit `8133d7f` on top of `e827e2f`).
 It was written for an AI agent asked to rebuild the game as closely as it can, in the player's
 words: "a comprehensive full summary of this game for an AI agent to replicate".
 
@@ -229,7 +229,7 @@ Collections that need lookup by id are `Record<string, T>`; the iteration order 
 | `nextId` | number | Counter for `uid()` (starts at 1). |
 | `crossing` | `CrossingReport \| null` | The last crossing's report, until the player closes its screen. |
 | `outcome` | `Outcome \| null` | Set when the game ends: `{kind, ending, turn, eta}`. Kinds and conditions: sealed (S.4.1). |
-| `flags` | `Record<string, number>` | Global counters: `tut` (tutorial step), `hunger_woke`, `first_swarm`, `decay_lost` (people lost when matter dissolved), `gfe_prev`, and `all_fall` (1 in every game begun since 19 October 2026: brown dwarfs and black holes take their worlds in, B.5.7; absent in older saves). |
+| `flags` | `Record<string, number>` | Global counters: `tut` (tutorial step), `hunger_woke`, `first_swarm`, `decay_lost` (people lost when matter dissolved), `gfe_prev`, `all_fall` (1 in every game begun since 19 October 2026: brown dwarfs and black holes take their worlds in, B.5.7; absent in older saves) and `rubble` (1 in every game begun since 20 October 2026: falling worlds break up, giants fall in a flash, B.5.7; absent in older saves). |
 | `fired` | `Record<string, number>` | Event id → turn it fired (once-only events), and `last_<id>` → turn a random event last fired. |
 | `saveVersion` | number | Save format version (A.7). Optional. |
 
@@ -359,6 +359,7 @@ code unit `h ^= c; h = Math.imul(h, 16777619)`; return `h >>> 0`.
 |---|---|---|
 | Generation | `new Rng(settings.seed)` (the `Builder`'s) | Everything in `generateWorld`, in one fixed order (A.4). |
 | Outer worlds | `new Rng(hashSeed(\`${seed}:${systemId}:outer\`))`, one per system | The cold outer worlds added after generation. |
+| Hole worlds | `new Rng(hashSeed(\`${seed}:${systemId}:hole\`))`, one per black hole | The worlds black holes were given after that (since 20 Oct 2026). |
 | Simulation | `state.rng = hashSeed(settings.seed · 7 + 13)`, kept in the state | Every random draw of play. |
 | Hashes, no stream | `hashSeed` of a string | A body's water (`(body.seed % 1000) / 1000`), when a dead star formed (`formedAt`, section B). |
 | Rendering only | e.g. `hashSeed(seed · 3 + 1)` for the sky, per-object hashes in the system view | Decoration; never touches the state. |
@@ -461,15 +462,16 @@ light-speed delays always use `phys`. `randomInSphere(rng, r, flatten)`: draw x,
     Unknown setting draws.
 19. The state is assembled: `rng = hashSeed(seed·7 + 13)`, turn 1, era `dusk`, eraTurn 0,
     years 9 × 10¹³, `eta = log10(9e13) ≈ 13.954`, `turnLength` 40, `protonsDecay`, `fate`, `gfe`
-    1, the stranger minds' records (sealed), `flags = { all_fall: 1 }` (no draw; B.5.7),
-    everything else empty, `nextId` 1.
+    1, the stranger minds' records (sealed), `flags = { all_fall: 1, rubble: 1 }` (no draw;
+    B.5.7), everything else empty, `nextId` 1.
 20. Hunger nests (section D): candidates are the systems, in insertion order, whose region is a
     reach or a globular cluster other than the home reach and that have no `special`; shuffled.
     Count: gentle 1, standard 2, harsh 3. If any candidate lies in one of the two reaches
     nearest home, the first such is moved to the front. Nest i is swarm `hg<i>` at that system,
     size 2 + i, asleep, untamed, appetite 1, and the system's `rust` is 0.15.
 21. `addOuterWorlds` (own streams; below).
-22. Knowledge: every system in the home reach is known at 1, the home system at 2, the Heart at 1.
+22. `addHoleWorlds` (own streams; below).
+23. Knowledge: every system in the home reach is known at 1, the home system at 2, the Heart at 1.
 
 **`fillRegion(region, count, weights, flatten)`**: up to `count × 40` tries; each tries
 `local = randomInSphere(rng, radiusLy, flatten)`, rejects it if within `0.22 × radiusLy` (3D) of
@@ -600,6 +602,20 @@ ice_giant, < 0.9 asteroids, else gas_giant); mass (ice `range(0.3, 5)`, ice gian
 counter; index continues after the system's worlds); then `orbit += (i = 0 ? 16 :
 range(9, 12))`, display orbit `orbit + (gas giant ? 4 : 0)`, trait `outer`; `a *= range(1.7,
 3.2)`.
+
+**Hole worlds** (`addHoleWorlds`, after the outer worlds, since 20 Oct 2026): for each system in
+insertion order that has no `special` and is a `black_hole` (so the stellar holes and the Wells,
+not the Heart or the Wanderer), with its own stream: skip unless `chance(0.65)`; `n = int(1,
+3)`; `widen = max(1, √(M/10))`; the worlds it has (not the Deep) keep their orbits. For each of
+`n`: `r = next()`; kind r < 0.3 barren, < 0.55 ice, < 0.75 super_earth, < 0.875 ice_giant, else
+gas_giant; mass barren `range(0.1, 3)`, ice `range(0.3, 5)`, super-Earth `range(2, 7)`, ice giant
+`range(10, 20)`, gas giant `range(60, 300)`; `a = widen × exp(chance(2/3) ? range(ln 0.05, 0) :
+range(0, ln 40))`; while (at most 4 times) it lies within a factor 1.4 of a world already there,
+`a = that world's a × 1.4`, and if it still does, the world is skipped; else `addBody(…, index,
+thisRng)` (index continuing after the system's worlds) with the trait `hole_world`. Then all the
+system's worlds (not the Deep) are sorted by `a` and given display orbits 16, then `+=
+range(8, 11)` each (from the same stream), `+4` for a gas giant: the world the hole had moves
+among them. A super-Earth there is frozen from the start (`frozenFromTheStart`) like any.
 
 **The start of play** (`newGame`, after generation): the homeworld's colony (`createColony`,
 8 Kin, named after the world, structures `solar_array 1, geothermal_tap 1, mine 2,
@@ -884,13 +900,22 @@ warning for our worlds that no Orbital Lamps keep warm), `collision`, `merger`, 
 New Star, White Fire, A Helium Giant, and mark the system known), `supernova` (destroy our
 colonies there, queue the event), `burnout` (log), `rogue` (queue Unmoored if a colony's world),
 `feeding`/`rekindle` (queue A World Falls for our world or the homeworld, else log), `plunge`
-(evacuate, +20 energy if we live in the system), `boiled` (log, evacuate), `ejected` (queue Cast
+(evacuate, +20 energy if we live in the system; with `inFlash` only the evacuation), `flash`
+(B.5.7: a rocky world's, at a hole, is logged; for a giant's, each colony of ours in the system
+on a world in `inside` (any Deep counts) is destroyed if its world is in `boiled` or it is not
+`flashSheltered`, and the flash is logged with what boiled, what melted, who was lost and who
+lived; either way the flash goes to `catchFlashes` with `flashReach(energy)`), `boiled` (log,
+evacuate), `ejected` (queue Cast
 Out if ours), `swallowed` (our colonies there that are not on rogue worlds are destroyed),
 `evaporated` (Burst Catchers bank part of the burst; queue The Last Burst if ours), `faded`
 (log), `dissolved` (colonies without a decay-proof structure are destroyed; their people are
 counted in `flags.decay_lost`). `evacuate` moves 75% (floored) of each Thread and of the
 sleepers to the system's Deep, creating a colony there if needed, and carries over its orbital
-structures (and a Substrate Core for Echoes).
+structures (and a Substrate Core for Echoes). `catchFlashes(flashes)`, after all the notes: each
+of our colonies with Burst Catchers, in its system (`inItsSystem`), banks `n × max over the
+flashes of burstShare(distLy, reach)` (`burstShare(ly, reach) = round(250 × min(1, (reach /
+ly)²))`; `flashReach(E) = 10 × √(E / 10^42)` ly), but in a system cast out of the galaxy only
+from a flash in its own system; logged "Burst Catchers at … caught the flash: +N energy."
 
 **8. Signals, forecasts, events.** `deliverSignals`: messages whose `arriveYears ≤ years` (all,
 once years are infinite) arrive (`arrivedTurn` = this turn) and are logged with their age;
@@ -1256,7 +1281,9 @@ build) read about 0.35 from a stellar hole at once.
 calendar; 0.08 in the Black Hole calendar; 0 in the Dark. A stellar hole 0.05 in the Dusk and
 Degenerate calendars, else 0. Light factor `diskLight × (0.35 + 0.65 gfe)`; its luminosity
 `diskLight × lightUnitSuns(era)` (0.05 × 1.15×10^-3 ≈ 6×10^-5 L☉, within Bondi accretion from
-thin gas). The drop at the Last Light is a step.
+thin gas). The drop at the Last Light is a step. A hole's panel shows it as **Disk luminosity**,
+`light factor × lightUnitSuns(calendarEra)` in L☉ (formatted as `mult`), or "dark" (since 20 Oct
+2026, all games).
 
 **The Heart grows** (`growHeart(p, dm)`): `mass = min(4.6e10, mass + dm)`, `evaporateAt =
 hawkingTime(mass)`, `spinMax = max(spinMax, 40000 + mass / 2e6)` (spin itself unchanged). During
@@ -1407,6 +1434,8 @@ A `Body` has `kind` (`eyeball`, `terran`, `super_earth`, `barren`, `ice`, `ocean
 buried ocean), `traits`, `inspiralAt`, `feeding`, `rogue`, `dissolved`. Generation (section A)
 gives each world `inspiralAt = 9e13 + inspiralTime(a, m, max(0.1, M_host))`, and the trait
 `tidally_locked` if `orbitAU < 0.08` and not a gas giant; `ocean_ice` gets `subsurface_ocean`;
+the hole worlds (A.4) carry `hole_world`, a mark never shown (as `outer`), and since 20 Oct 2026
+a world may gain `rubble` or `flash_melted` (B.5.7);
 `water = defaultWater(kind, (seed mod 1000)/1000)`. The homeworld is fixed: eyeball, 0.031 AU,
 1 M⊕, habitability 0.85, vitality 1, decline 0.012, coreHeat 0.8, water 0.42, traits
 `homeworld`, `tidally_locked`, `failing_dynamo`.
@@ -1416,7 +1445,11 @@ gives each world `inspiralAt = 9e13 + inspiralTime(a, m, max(0.1, M_host))`, and
 dwarf in eight one, starting at `exp(U(ln 0.3, ln 2 or 3))` AU and spaced `× U(1.7, 3.2)` while
 ≤ 8 AU; kinds (red: ice < 0.45, ice giant < 0.8, belt < 0.9, else gas giant; brown: ice < 0.65,
 ice giant < 0.85, else gas giant), trait `outer` (microlensing: Cassan et al. 2012; Suzuki et al.
-2016; Han et al. 2013).
+2016; Han et al. 2013). **Hole worlds** (A.4, since 20 Oct 2026): two black holes in three get 1
+to 3 more, two in three of them at 0.05 to 1 AU (×√(M/10) for a hole heavier than 10 M☉, as the
+pulsar planets of PSR B1257+12), trait `hole_world`. In `insolationByDistance` the standard orbit
+of a world the hole had leaves the hole worlds out (its sunlight is as before); a hole world's
+counts them all.
 
 #### B.5.2 Climate: `starClimate(state, b, lum?, tf?)`
 
@@ -1565,6 +1598,38 @@ All in `evolveUniverse`, for each world that is not the Deep, dissolved, rogue o
     ? 'rekindle' : 'feed'`; `tau = jupiter ? 1e13 : 10^(14.2 + 1.2 rand())`; `base = (jupiter ? 5
     : 1) × clamp(m / (jupiter ? 318 : 1), 0.3, 3)`; `start = max(from, inspiralAt)`; vitality 0
     (event `world_falls`; the model is hidden until then).
+  - **In a game with `flags.rubble`** (every game begun since 20 October 2026, `rubbleGame`), what
+    the world is made of decides how it comes apart:
+    - rock or ice (not `giantWorld`) at a dead star or brown dwarf, after the feeding above,
+      breaks up (`breakUp(b, to)`): kind `asteroids`, `rubble` added and `tidally_locked`,
+      `failing_dynamo`, `subsurface_ocean`, `water_rich` dropped, `richness × 2 / (1 + (to −
+      start)/tau)`, size 0.6, coreHeat 0, habitability 0. Each later turn the feeding loop
+      multiplies its richness by `(1 + t₀/tau) / (1 + t/tau)` (`t₀ = max(0, from − start)`), the
+      share left; at 30 tau it plunges as any;
+    - rock or ice at a black hole: as above, the `plunge` note marked `inFlash`, then a `flash`
+      note from `rubbleFlash`: energy `0.1 × m × 5.972e24 × c²` J (`COMPACT_EFFICIENCY`), over
+      10^14 years, harming nothing (`inside` and `boiled` empty);
+    - a giant (gas or ice) at a dead star (after both draws above, so later draws stay put), a
+      brown dwarf or a hole: `dissolved`, vitality 0, `plunge` marked `inFlash`, and
+      `flashSystem` with `giantFlash(p, b)`: energy `fallEfficiency(p) × m × 5.972e24 × c²` J
+      (0.1 at a hole or neutron star; `GM/(R c²)` onto a white or black dwarf, R =
+      `dwarfRadius`, or a brown dwarf, R = 0.1 R☉), luminosity `EDDINGTON_SUNS × max(0.01, M)`
+      L☉ (`3.2e4`), lasting `E / (L × 3.828e26 W) / 3.156e7` years. Each other world of the system
+      is **inside** if `flashMelts` (the Deep always; not dissolved or rogue; else
+      `starClimate(state, b, L, no terraforming)`'s day, or mean, ≥ `LAVA_K` 1500 K), and of
+      those not the Deep: **boiled** (`dissolved`) if `flashBoils` (not a giant; a belt always;
+      else `0.1 E πr² / (4πd²) ≥ 0.6 G m² / r`, r = 6.371e6 × max(0.01, m)^0.27 m, d = max(0.003,
+      a) AU), unless a belt under a Shadow Shield; else, if no Shadow Shield shades it
+      (`shadowShielded`: its settlement has one) and it is no giant or belt: `once_alive` if it
+      had vitality, vitality 0, and unless `water_rich`: water 0, kind `barren`, habitability 0,
+      `subsurface_ocean` dropped; trait `flash_melted`. The note `flash` carries `{energy, lum,
+      years, inside, boiled}`.
+    - What shelters a settlement inside (`flashSheltered`): a Shadow Shield anywhere; on a
+      tidally locked world that is not a giant, a belt or the Deep (`flashShelterFor`), also a
+      Flash Shelter, Deep Warrens or Night-side Shelters. Nothing on a boiled world. A Jupiter
+      onto a 0.6 M☉ white dwarf: 1.7×10^40 J, 19,200 L☉, 75 years, melt line about 4 AU
+      (`meltLineAU(L) = (278 × 0.7^¼ / 1500)² × √L`, for a turning world); into a 10 M☉ hole
+      1.7×10^43 J, 320,000 L☉, 4,400 years, 16 AU, an Earth boiled within 1.9 AU.
 - **Feeding**: each turn `power = base × (rekindle ? 8 : 1) × (1 + t/tau)^-2`, `t = to − start`,
   summed over the system's feeding worlds into `primary.rekindle` (kept only if > 0.001). When `t
   > 30 tau` the world is gone (note `plunge`, "one final flash": +20 energy if we live in the
@@ -1740,7 +1805,8 @@ turnsUntilYears(dueYears, pace 0)`.
 | Kind | When shown | Due |
 |---|---|---|
 | `star` | a settled star's `nextStellarChange` (blue, white, burnout, evaporation; not holes in the Black Hole Age) within the horizon | the change |
-| `inspiral` | one of our worlds (not feeding, rogue or dissolved) around a star that takes its worlds in (`takesWorldsIn`, B.5.7: a dead star of ordinary matter, and with `flags.all_fall` a brown dwarf or black hole; never one still burning), with `fallsInAt` ahead, within the horizon. Titles: "… will reach its dead star’s tidal limit" ("the models disagree"), "… its brown dwarf’s tidal limit" (the rubble rains onto it), "… will be torn apart by its black hole" (gone within the turn) | `fallsInAt` |
+| `inspiral` | one of our worlds (not feeding, rogue or dissolved) around a star that takes its worlds in (`takesWorldsIn`, B.5.7: a dead star of ordinary matter, and with `flags.all_fall` a brown dwarf or black hole; never one still burning), with `fallsInAt` ahead, within the horizon; with `flags.rubble` not a giant (the `flash` row has it). Titles: "… will reach its dead star’s tidal limit" ("the models disagree"), "… its brown dwarf’s tidal limit" (the rubble rains onto it), "… will be torn apart by its black hole" (gone within the turn); with `flags.rubble` the texts tell of the ring of rubble, and at a hole of its faint flash | `fallsInAt` |
+| `flash` | with `flags.rubble`, a giant, not dissolved or rogue, in a system where we live, around a star that takes its worlds in, with `fallsInAt` ahead within the horizon: "<giant> will fall into its star (black hole, brown dwarf) in a flash", its brightness (`giantFlash`), how long, how far the ground melts (`meltLineAU`), then for each colony of ours there: on the giant ("falls in with it"), on a world `flashBoils` ("will boil away … nothing on it can be saved"), inside the melt line ("is sheltered", or "needs a Flash Shelter or Deep Warrens" or "a Shadow Shield", with the research it comes with if not done, "or is lost"); and the catchers' reach (`flashReach`). Severity `danger` when one of ours is unsheltered, else `warn` | `fallsInAt` |
 | `boil` | one of our worlds `boilingAway` | this turn's end |
 | `crossing` | the Degenerate Age's end: unknown fate at η 30, the earliest it could be, naming all three; else by fate. Other ages: η 14, η 100 | as stated |
 | `evaporation_all`, `burst`, `fade` | curvature, known: η 89.5; each settled neutron star (η 68; "safe" if our settlements there are on rogue worlds) or dwarf (`dwarfFadeEta`, 87) | as stated |
@@ -1797,6 +1863,8 @@ world), rocky worlds first, never one of ours.
 | The neutron-star burst's share to catchers, and its sparing of neighbours | its light content unknown | Codex |
 | Terraforming: volatiles brought in, done in a few turns | Mars lacks the CO₂ | DESIGN §7 |
 | Inspiral and accretion figures from unreviewed notes, kept as model uncertainty | | Codex |
+| A neutron star's slow stream warms it as a white dwarf's would | some 1,700 times brighter (GM/R) | Codex |
+| A giant's flash melts and boils by its equilibrium warmth and its whole energy; what shelters a settlement is the game's reckoning | a few decades to millennia of heating, a thin molten skin for a short flash | Codex, `flashMelts`, `flashBoils` |
 
 ### B.13 Sources cited
 
@@ -3473,7 +3541,7 @@ The data tables (titles, choices and hints) are in the appendix (`data.json`); t
 
 #### D.4.5 Resolving a choice: `resolveEvent(uid, index)`
 
-The choice's `ok` must pass ("That is not possible now."). `run` executes inside `withRng`; the event is removed; a log `"<title> (<star>): <label>."` (kind `event`) is written; for `relic_*` and `anom_*` events the label is stored in `body.lore[defId]` so the survey report can be reopened from the world ("We chose: …"). A string returned by `run` is shown as a result modal ("Continue") before the next event. Event helpers floor energy and matter at 0, so a cost larger than our store is simply taken to 0 (only a few choices have an `ok` check). The UI shows `pending[0]` as a modal (one at a time); the HUD is inert while one is pending; the view can swing to the event's star (a preference).
+The choice's `ok` must pass ("That is not possible now."), and a choice with `shown` (since 20 Oct 2026: the dark one of A World Falls) must be offered (`choiceShown`; else "No such choice."). `run` executes inside `withRng`; the event is removed; a log `"<title> (<star>): <label>."` (kind `event`) is written; for `relic_*` and `anom_*` events the label is stored in `body.lore[defId]` so the survey report can be reopened from the world ("We chose: …"). A string returned by `run` is shown as a result modal ("Continue") before the next event. Event helpers floor energy and matter at 0, so a cost larger than our store is simply taken to 0 (only a few choices have an `ok` check). The UI shows `pending[0]` as a modal (one at a time); the HUD is inert while one is pending; the view can swing to the event's star (a preference).
 
 Effects not stated in the hints:
 
@@ -3535,7 +3603,7 @@ Effects beyond the hints: Flare Glass "Read the record" sets `flare_warning`; Le
 
 `Strategy = 'competent' | 'passive' | 'warlike'`. **Passive**: research the cheapest available tech when idle; answer every pending event with choice 0 and every arrived open signal with its last choice. **Warlike** = competent plus `planWar`. **Competent**, each turn before `endTurn`, in this order:
 
-1. `planEvents`: for each pending event, the first choice whose `ok` passes, whose label + hint does not match `/Taint|Devour|Strip/`, and (for choice 0 of `new_star`, `white_fire`, `helium_giant`) whose star clock costs nothing or would leave at least half the reserve capacity; else the last choice.
+1. `planEvents`: for each pending event, the first choice that is offered (`choiceShown`), whose `ok` passes, whose label + hint does not match `/Taint|Devour|Strip/`, and (for choice 0 of `new_star`, `white_fire`, `helium_giant`) whose star clock costs nothing or would leave at least half the reserve capacity; else the last choice offered.
 2. `pickResearch`: pause research (`auto_paused`) when net energy < 0 and energy < 12% of capacity; resume once energy ≥ 35%. Up to 6 picks a turn (a pick already covered by banked insight completes at once, so it picks again): the first available tech in `TECH_PRIORITY`, else the cheapest non-taint available tech (this fallback ignores `noAuto`, so it does research Halo Siphons). `TECH_PRIORITY`, verbatim: Dusk `energy_storage, magnetospherics, the_long_record, orbital_collectors, survey_optics, mind_substrate, fusion_drives, hardy_lineages, subterranean_cities, orbital_industry, fusion, upload, cold_sleep, slow_instancing, ember_harvest, orbital_defense, dyson_swarms, last_light_protocols, reversible_logic, hibernation_protocols, deep_listening, hunger_studies, magnetic_sails, comet_shepherding, assembly_of_threads, horizon_physics, accretion_engines, proton_question, deep_mantle, catalyzed_drives, mind_merging, halo_dynamics, pulsar_braking, hunger_lures, terraforming`; Degenerate `cold_computation, glacial_cognition, relativistic_arks, deep_time_protocols, baryon_decay_harvest, curvature_harvest, leptonic_computation, penrose_process, great_decay_protocols, hawking_capture, deep_storage, brown_dwarf_mining, accretion_modelling, burst_capture, horizon_storage, abyssal_thought, gravitic_semaphore, quickening, garden_arks, aegis_lattices, command_language`; Black Hole `bastion_architecture, horizon_cognition, error_correction, hawking_patience, last_horizon_protocols, conformal_mathematics, archive_theory, total_confluence, ultimate_slowness`; Dark `asymptotic_mind, horizon_siphon, garden_of_embers`.
 3. `planCharters`: enact any available of Open Archives, Right to Stop, Thread Parity, Merge Consent, Sanctuary, The Long Watch, Lattice Compact (in that order). Never a dark charter; never repeals.
 4. `planPacts`: for each survivor, the first pact in `PACT_KINDS` order not held whose need ≤ their regard; propose if not blocked and accord ≥ cost + 30; at most one a turn.
@@ -4124,8 +4192,9 @@ scrolls whole when the body would have under 150 UI px, back above 190: `useWhol
 - **System:** eyebrow province (and "cast out into the void"); chips: star kind with icon, "not
   surveyed"/"unknown", rust %, decoy beacon with Put out, gone; "Look inside" in the galaxy view; a
   world strip (a button for the star and each world, ours neon, living blue, current accent); a
-  key-value list (Light for collectors, Temperature or Hawking temperature, Mass, Spin reservoir,
-  Burns until / Burnt out at, Distance); Forecast, Others (their way's plate, 138px high), In orbit.
+  key-value list (Light for collectors, Disk luminosity at a hole (B.2.6), Temperature or Hawking
+  temperature, Mass, Spin reservoir, Burns until / Burnt out at, Distance); Forecast, Others
+  (their way's plate, 138px high), In orbit.
 - **World (unsettled):** kind, habitability, vitality, room for Kin, mineral richness, core heat,
   hydrogen, orbit, mass, ruins and finds (chips that reopen the survey report), climate rows
   (temperature day/night, sunlight, freezing, boiling, falls inward, evaporates), Settle.
@@ -4208,7 +4277,8 @@ scrolling body, optional foot. Escape closes. Letter keys switch between screens
   `art/events/<plate>.webp` over its art `art/<art>.webp` over a radial gradient of the art's tint;
   a bottom fade to the panel colour), the body pulled up 60px over the plate, eyebrow "Age · turn
   N", `h1.event-title` (display 800, 32px), Spectral text (17px, 300, line-height 1.6, max 64ch),
-  choice buttons (label plus a dim hint line; disabled when not allowed), and for an event about a
+  choice buttons (label plus a dim hint line; disabled when not allowed; a choice whose `shown`
+  says no is left out altogether), and for an event about a
   star a remembered checkbox "Show Star (now and after choosing)" (the view swings to the star as
   the event opens and after a choice). Its result shows next in a plain ModalFrame with Continue
   (no close). Focus goes to the title, never a choice. Art tints: dusk `#3a1a10`, degenerate
@@ -4238,7 +4308,8 @@ has arrived." / "N signals have arrived." + `signal`; first contact → a ping i
 `signal`; up to two Record entries about our fleets → toasts with Look; wasted energy over 5 →
 "N energy was lost: the reserve is full."; a finished project → the research prompt + `good`;
 newly idle ships → the ship prompt queue; surplus research → "With insight to spare: …"; pings for
-new stars `#bfe9ff` and surveys `#9ff5e6`; a living world → "Living world found: World in Star, N%
+new stars `#bfe9ff` and surveys `#9ff5e6`, and (since 20 Oct 2026) for up to three giants' flashes
+at stars we know `#ffd9a8`; a living world → "Living world found: World in Star, N%
 habitable, room for K Kin" with Look + green pings + `good`; a survey → "Survey complete: Star, N
 worlds" with Look (opens the system) + `signal`, else "N new stars on the map."; a new settler →
 "X is ready at Y. Open Fleets to choose a world."; a Long Sleep with no pending events ends the
@@ -4775,6 +4846,8 @@ checks (`mobile`, `a11y`) are meant to run with it (`mobile` says when the fonts
 | neighbours | living neighbours: beams travel, news travels at light speed, refugees as far as room allows |
 | old-saves | two saves from `9eea773` boil and convert as they should |
 | outer | cold outer worlds at red and brown dwarfs; rust fades |
+| falling-flash | rubble (richness ×2, half at t = τ); a hole's rocky flash banked by distance; a giant's flash at a white dwarf: boiled, melted, every shelter and its lack, the Deep, the catchers; the dark choice at Taint 60; the shelters' rules; an older save keeps the old rule |
+| hole-worlds | two holes in three get 1 to 3 worlds, two in three close, a giant in four; generated last, named on, drawn by distance; the old world's sunlight kept; none at the Heart or the Wanderer |
 | pace | which paces change the coming turn, situation by situation |
 | quake | a misread answer can shake a world (context sealed) |
 | quick | Quickening splits a new star's clock turns into ten |
@@ -4887,7 +4960,7 @@ identical). It is not part of `check`.
 
 ## Appendix: the data tables
 
-Generated from `src/game/data/*.ts` at `4b92446`, with the rows the batch of 19 October 2026 changed edited by hand (the Expansion Mandate; two tech flags removed) (functions such as event texts and choice effects
+Generated from `src/game/data/*.ts` at `4b92446`, with the rows the batches of 19 and 20 October 2026 changed edited by hand (the Expansion Mandate; two tech flags removed; the two shelters, two research texts and A World Falls) (functions such as event texts and choice effects
 left out; sections C and D give their rules). Rows that give the sealed stories away are in S.8.
 
 ### A.1 Structures (`src/game/data/structures.ts`)
@@ -4934,6 +5007,8 @@ left out; sections C and D give their rules). Rows that give the sealed stories 
 | garden_ark | Garden Ark | degenerate | garden_arks | 110 | 50 | 3 |  | cap {"kin": 4} | 3 | 3 |  | A lit, warm, living garden in the dark, at a cost few can afford. |
 | horizon_vault | Horizon Vault | degenerate | horizon_storage | 110 | 60 | 2 | bodies ["deep"]; primaries ["black_hole", "smbh"] | reserveCap 400 |  | 1 |  | Stores energy as black-hole spin. Almost nothing leaks. |
 | burst_catcher | Burst Catcher | degenerate | burst_capture | 90 | 40 | 2 |  | burstCap 300 |  | 1 |  | Buffers for flashes: brief stars, final bursts and flares too fast to use as they happen, even a neutron star bursting in a neighbouring system. |
+| flash_shelter | Flash Shelter | dusk | subterranean_cities | 50 | 20 | 1 | notBodies ["deep", "gas_giant", "ice_giant", "asteroids"]; `rubble` (only with `flags.rubble`); only on a `tidally_locked` world |  |  | 0.3 |  | Bunkers under a kilometre of rock on the night side of a tidally locked world, against the flash of a giant falling into its star: the world keeps its own face between them and the flash, and its night side stays cold while the day side melts. Deep Warrens serve as well. Only on a locked world: a turning one needs a Shadow Shield. |
+| shadow_shield | Shadow Shield | dusk | orbital_industry | 140 | 70 | 1 | `rubble` (only with `flags.rubble`) |  |  | 1 |  | A hollowed rock a world wide, steered between a settlement and its star, against the flash of a giant falling in: it melts every face of a turning world, cooks a giant’s clouds and boils a belt away. Shades the Deep as well. Nothing shelters a world the flash boils away. |
 | decay_harvester | Decay Harvester | degenerate | baryon_decay_harvest | 80 | 30 | 2 | bodies ["deep"]; primaries ["white_dwarf", "black_dwarf", "neutron_star", "brown_dwarf"] | energy decay 4 |  | 1 |  | Collects the faint heat of protons decaying inside dead stars. |
 | curvature_collector | Curvature Collector | degenerate | curvature_harvest | 80 | 30 | 2 | bodies ["deep"]; primaries ["neutron_star"] | energy curvature 4 |  | 1 |  | Catches the particles that space, curved tight around a neutron star, makes from its mass. |
 | lepton_substrate | Leptonic Substrate | degenerate | leptonic_computation | 110 | 70 | 3 |  | cap {"echoes": 4, "coldminds": 4, "lattice": 2} |  | 1 | decayProof True | Speculative: minds re-encoded in electron–positron structures that will outlast ordinary matter. |
@@ -4959,7 +5034,7 @@ left out; sections C and D give their rules). Rows that give the sealed stories 
 | id | name | age | field | cost (insight) | requires | effects | flags | description |
 |---|---|---|---|---|---|---|---|---|
 | magnetospherics | Magnetospheric Engineering | dusk | stewardship | 40 |  |  |  | A superconducting loop at the inner Lagrange point can stand in for the dying dynamo. Unlocks the Magnetic Shield. |
-| subterranean_cities | Deep Warrens | dusk | stewardship | 60 |  |  |  | Live below the frost line, where vitality matters less. Unlocks Deep Warrens. |
+| subterranean_cities | Deep Warrens | dusk | stewardship | 60 |  |  |  | Live below the frost line, where vitality matters less. Unlocks Deep Warrens. (With `flags.rubble`: "…, and Flash Shelters against the flash of a giant falling into its star.") |
 | hardy_lineages | Hardy Lineages | dusk | stewardship | 70 |  | upkeep {"kin": 0.9}; flags ["hardy"] |  | Kin bred for thin air and cold. Kin capacity suffers less as worlds die; Kin upkeep −10%. |
 | comet_shepherding | Volatile Shepherding | dusk | stewardship | 95 | magnetospherics |  |  | Replace stripped air and water with shepherded ice. Unlocks Volatile Shepherding. |
 | terraforming | Terraforming | dusk | stewardship | 130 | comet_shepherding |  |  | Mirrors, an air and seeded life for a dead world by a red dwarf that still burns, as was once proposed for Mars. Unlocks Orbital Mirrors, Atmosphere Works and Biosphere Seeding. |
@@ -4974,7 +5049,7 @@ left out; sections C and D give their rules). Rows that give the sealed stories 
 | survey_optics | Deep Survey Optics | dusk | reach | 30 |  | detect 150 |  | Chart farther and see the dead more clearly. Detection range grows. |
 | fusion_drives | Fusion Drives | dusk | reach | 60 | survey_optics | speed 0.06 |  | Ships at six percent of light. Unlocks the Kin Ark. |
 | orbital_defense | Orbital Defence | dusk | reach | 70 |  |  |  | Defence Grids and Warden escorts. |
-| orbital_industry | Orbital Industry | dusk | reach | 55 |  |  |  | Foundries in orbit. Unlocks the Orbital Foundry. |
+| orbital_industry | Orbital Industry | dusk | reach | 55 |  |  |  | Foundries in orbit. Unlocks the Orbital Foundry. (With `flags.rubble`: "…, and Shadow Shields against the flash of a giant falling into its star.") |
 | magnetic_sails | Magsail Braking | dusk | reach | 130 | fusion_drives | speed 0.15; flags ["cheap_launch"] |  | Brake against the thin interstellar medium. Ships at 15% of light; launches cost less. |
 | catalyzed_drives | Catalysed Drives | dusk | reach | 280 | magnetic_sails | speed 0.4; detect 2000 |  | Ships at 40% of light. Other provinces come within reach. |
 | hunger_studies | Hunger Studies | dusk | reach | 90 | orbital_defense |  |  | Learn what the swarms are and how they move. Reveals swarms within detection range and forecasts their paths. |
@@ -5135,7 +5210,7 @@ left out; sections C and D give their rules). Rows that give the sealed stories 
 | supernova | Supernova | any | scripted |  | supernova | Chart everything it showed us: Insight +80; nearby systems revealed. |
 | cast_out | Cast Out | any | scripted |  | cast_out | Send them everything they need: Energy −30, Matter −30. Resolve +3. / They are on their own now: Resolve −4. |
 | unmoored | Unmoored | any | scripted |  | unmoored | Evacuate what we can: Energy −20. Half its people move to the capital. / They will live on their Hearth: Resolve −2. |
-| world_falls | A World Falls | any | scripted |  | world_falls | Evacuate the world and harvest the stream: Its people move to the capital. Disk Skimmers can harvest the dead star. / Stay and mine our own world as it falls: Matter +80. Resolve −3. |
+| world_falls | A World Falls | any | scripted |  | world_falls | Evacuate the world and harvest the stream: Its people move to the capital. Disk Skimmers can harvest the dead star. / Stay and mine our own world as it falls: Matter +80. Resolve −3. (On rubble, the hint adds that it is richer, thins, and three in four get off at the end.) / Take them apart (offered only on rubble, at Taint ≥ 60, for a settlement of ours not the capital): Matter +5 a person, Lattice +⌊people/3⌋ at the capital up to its room, Taint +8, Resolve −6, Kin standing −10; the colony is destroyed. |
 | embers_dim | The Embers Dim | degenerate | 20 | once | degenerate | Understood: (computed) |
 | proton_answer | The Proton Question | any | scripted | once | degenerate | Tell everyone the truth: Resolve ±5 depending on the answer. / Tell the councils only: Dissent +3. |
 | decay_shown | Not for Ever | any | scripted | once | degenerate | Tell everyone the truth: Resolve −5. / Tell the councils only: Dissent +3. |

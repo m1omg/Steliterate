@@ -3676,3 +3676,11 @@ the player answered; every answer is in the plan of 19 Oct
   unmarked (`browser/leptonic-look`): each kind now has its own few.
 - **Validated, the new version:** tsc and the build clean; the playtest passes; savecompat on the
   8 saves; all 86 unit checks; all 63 browser checks (in the game's real fonts).
+- **Validated, today's game:** tsc and the build clean; the playtest passes; savecompat on its 6
+  saves; all 55 unit checks; all 55 browser checks (in the real fonts). Its `browser/rubble`
+  counts the belt's rocks itself: this game has no survey reveal to keep the count.
+- **In both versions:** today's game got the same through its own code by PR
+  m1omg/Steliterate#35 (`e4c77d7`; code `8133d7f`), from `claude/promises-main`, and `main` was
+  then merged into this branch, keeping this branch's code (`-s ours`, `179e4ab`). Live on 20
+  Oct: the main address serves `index-CnbCeqhO.js` and `/next/` `index-BForJQDi.js`, the builds
+  validated here.

@@ -18,48 +18,41 @@ where the previous session stopped", with three steps in this order: finish "the
 word", then the player's list of 16 Oct, then the falling worlds.
 
 **Done since 16 Oct:**
-- `docs/REPLICATE.md`: a full spec of today's game, written 16 to 17 Oct; on 20 Oct moved to
-  `main` at `e827e2f` (the batch below), its notes of where text and code disagreed now the rules.
-- **"The game keeps its word"** (19 Oct, in both versions at the player's word), validated and
-  live on 20 Oct. REPLICATE found places where the game's text promised one thing and the code
-  did another; each was made to keep its promise:
-  - the Long Record, Hunger Studies, the Communion Charter, Harsh's "crueller crossings";
-  - worlds now fall into brown dwarfs and black holes, in new games (`flags.all_fall`);
-  - the Expansion Mandate, a charter the code named and the book lacked;
-  - rules no text told of, fixed or written into the Manual;
-  - a hidden step made reachable. Its details are in `docs/spoilers/slow-ones.md`; never tell
-    the player.
+- `docs/REPLICATE.md`: a full spec of today's game, written 16 to 17 Oct, kept up with `main`
+  since (now at PR m1omg/Steliterate#35, `e4c77d7`), its notes of where text and code disagreed
+  now the rules.
+- **"The game keeps its word"** (19 Oct, in both versions at the player's word), live on 20 Oct:
+  REPLICATE found places where the game's text promised one thing and the code did another, and
+  each was made to keep its promise (the Long Record, Hunger Studies, the Communion Charter,
+  Harsh's "crueller crossings", falls into brown dwarfs and black holes in new games, the
+  Expansion Mandate, rules no text told of, and a hidden step made reachable: its details are in
+  `docs/spoilers/slow-ones.md`, never tell the player). Today's game by PR m1omg/Steliterate#34
+  (`e827e2f`). The figures are in the CHANGELOG.
+- **Falling worlds** (the plan's part B, with item 2 of the list), in both versions, new games
+  only, live on 20 Oct: worlds of rock and ice break into rubble rings at the tidal limit, giants
+  fall in a flash (melting or boiling worlds inside its melt line, banked by Burst Catchers), the
+  Flash Shelter and the Shadow Shield, the dark choice in A World Falls, more worlds at black
+  holes, a hole's Disk luminosity in Suns. Today's game by PR m1omg/Steliterate#35 (`e4c77d7`;
+  code `8133d7f`, from `claude/promises-main`), then `main` merged into the work branch with
+  `-s ours` (`179e4ab`). One change from the plan, to be told plainly: both shelters come with
+  Dusk research (the Flash Shelter with Deep Warrens, the Shadow Shield with Orbital Industry),
+  not Burst Capture, since a white dwarf's close giant can fall in before the Last Light.
+  CHANGELOG, "Falling worlds", has the figures:
+  - the new version: 147 / 63 / 68 of 300 (156 / 65 / 71 before); a control run with the new
+    worlds and the old falls puts what the rules cost at 10 games, within the noise; Harsh 145 /
+    52 / 73 (124 / 35 / 66);
+  - today's game: 149 / 80 / 72 of 300 (160 / 81 / 72), Harsh 154 / 58 / 68 (147 / 62 / 68).
+- **The list of 16 Oct** arrived on 20 Oct (the `.odt` attached again). Its four pictures are
+  described in the plan (part C, "20 Oct: the pictures, seen"), so the file is not needed again.
+  Item 2 is done, with the falling worlds.
 
-  Where it is: the new version at `/next/` (work branch and `next` at `11862d4`); today's game by
-  PR m1omg/Steliterate#34 (`e827e2f`, from `claude/promises-main`), then `main` merged into the
-  work branch with `-s ours` (`11862d4`). CHANGELOG, "The game keeps its word", has the figures:
-  - the new version: 156 / 65 / 71 of 300 (153 / 63 / 70 before), Harsh 124 / 35 / 66 (114 /
-    29 / 66);
-  - today's game: 160 / 81 / 72 of 300 (154 / 72 / 72), 900 games 476 / 244 / 71 (456 / 203 /
-    71), Harsh 147 / 62 / 68 (140 / 52 / 70). Survival within the noise; the extra victories
-    are the hidden step's alone (spoilers file).
-- **Planned and approved, not built** ("It sounds good"):
-  `docs/plans/2026-10-19-falling-worlds-and-the-list.md`. It covers:
-  - the player's request for falling worlds: rubble you can mine, an evacuation event with a dark
-    choice, giants' flashes, Flash Shelters and Shadow Shields, more black-hole worlds;
-  - the player's list of 16 Oct: seven items about `/next/`.
-
-  The physics, the code findings with file:line, and every choice the player made are in the
-  plan. Don't ask them again.
-
-**What to do, in order:**
-1. **The list** (the plan's part C).
-   - Its file,
-     `Questions_issues_requests_for_Claude_regarding_Steliterate_next_16_october_2026_0056.odt`,
-     was in the 19 Oct container only. On 20 Oct the player attached it again, but it did not
-     reach that session (not on the machine, not in their Google Drive): it was asked for once
-     more. The items' text is in the plan.
-   - Look at its four screenshots before anything else. The player: "Please look at the pictures
-     as well in the document". To get them out: `python3 -I` with `zipfile`, into a folder of
-     their own; they are in `Pictures/`.
-   - Then items 7, 1 and 6 (bugs), then 3 to 5 (the pace: "Ten per Tide turn"), then 2 together
-     with part B.
-2. **Falling worlds** (the plan's part B), with item 2.
+**What to do, in order** (the plan's part C, each batch in both versions, validated, pushed to
+`next` and merged into `main`):
+1. **Items 7, 1 and 6**, one batch (bugs; no rule changes but the finds' tests):
+   - item 7: no "Life Under the Ice" without a star, and no find about a world that is falling,
+     flung loose or gone;
+   - items 1 and 6: one sea for the Water row and the picture (`seaBand`).
+2. **Items 3 to 5**, the pace ("Ten per Tide turn"), with the harness.
 
 **The player's usage** ran out twice on 19 Oct (the weekly limit, then the five-hour one). They
 pause and come back. Work in batches that end validated and pushed, and keep messages short.
@@ -85,8 +78,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#34 (`e827e2f`) | `11862d4` and its notes |
-  | Live script | `index-B8kR8ow_.js` | `index-BqvW8Zy9.js` |
+  | As of | PR m1omg/Steliterate#35 (`e4c77d7`) | `179e4ab` and its notes |
+  | Live script | `index-CnbCeqhO.js` | `index-BForJQDi.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at
