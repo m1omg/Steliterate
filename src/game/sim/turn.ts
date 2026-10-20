@@ -23,7 +23,7 @@ import { spareYield, type SpareYield } from './spare';
 import { coolAccord } from './accord';
 import { MATTER_AS_ENERGY, capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
-import { queueEvent, rollRandomEvent } from './events';
+import { pruneFinds, queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, deepFor, destroyColony, fleetUpkeep, newFleet, repairFleets, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
@@ -721,6 +721,8 @@ function continuity(state: GameState, t: CivTurn) {
 function signalsAndEvents(state: GameState): Signal[] {
   const civ = state.civ;
   const mine = civ.id === state.player;
+  // a find about a world the universe has just changed is dropped (events.ts)
+  pruneFinds(state);
   const arrived = deliverSignals(state);
   for (const s of arrived) {
     // a pact's answer: sealed, or our accord back

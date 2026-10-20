@@ -1699,6 +1699,34 @@ export function buriedOcean(state: GameState, b: Body, climate: BodyClimate = bo
 /** After the Last Light a buried ocean stays liquid while its core heat is at least this. */
 export const BURIED_HEAT = 0.05;
 
+/** Water on open ground boils from here (K): the top of the band it is liquid in, from ICE_MELTS_K. */
+export const WATER_BOILS_K = 373;
+
+/**
+ * Where a world's water is liquid on its ground, as the Water row says and the system view draws
+ * it (one band for both since 20 Oct; the player, 16 Oct: "Should show open terminator seas", and
+ * "'All frozen' water and cold but with visible seas?"). It is given by f, the sine of the star's
+ * height in the sky: 1 under the star, 0 on the terminator, below 0 the night side. Liquid from
+ * `from` up to `to`; past ±1 it is all or nothing: `from` above 1 where it is too cold everywhere,
+ * `to` below −1 where it is too hot everywhere. A locked world's warmest ground, its day side's
+ * figure, is under its star. Away from that point the ground is as warm as the starlight falling
+ * there keeps it (local radiative balance: T_day·f^¼), and never colder than its night side, which
+ * its air and seas keep warm. A world that turns is one temperature all round. On bare rock, with
+ * no air, nothing stays liquid.
+ */
+export function seaBand(c: BodyClimate): { from: number; to: number } {
+  const day = c.day ?? c.mean;
+  const night = c.night ?? c.mean;
+  if (c.airless || day < ICE_MELTS_K) return { from: 2, to: 2 };
+  if (night >= WATER_BOILS_K) return { from: -2, to: -2 };
+  // (a world that turns is liquid all round here: its day and night are one)
+  const at = (k: number) => Math.pow(k / day, 4);
+  return { from: night >= ICE_MELTS_K ? -2 : at(ICE_MELTS_K), to: day < WATER_BOILS_K ? 2 : at(WATER_BOILS_K) };
+}
+
+/** A sea under its star covering less than half of its day side (`seaBand`) is a small one. */
+export const SMALL_SEA_FROM = 0.5;
+
 /**
  * A plain description of a world's water at its current temperature. `ocean`: whether an
  * ice-shelled ocean is still liquid under its ice (buriedOcean); if not, it is frozen through.
@@ -1719,20 +1747,17 @@ export function waterState(b: Body, climate: BodyClimate, ocean = true): string 
   }
   if (b.kind === 'ocean_ice' && warmest < 273) return ocean ? `${share}: ${w >= 0.9 ? 'a global ocean' : 'an ocean'} under the ice` : `${share}: frozen through`;
   if (b.kind === 'asteroids') return warmest < 273 ? `${share}: ice in the rubble` : `${share}: boiling off the rubble`;
-  const liquidAt = (k: number) => k >= 273 && k < 373;
+  const { from, to } = seaBand(climate);
   if (climate.day !== undefined && climate.night !== undefined) {
-    if (liquidAt(climate.day) && !liquidAt(climate.night)) return `${share}: open sea on the day side, ice beyond the terminator`;
-    if (liquidAt(climate.day)) return `${share}: open water`;
-    if (climate.day >= 373) {
-      if (climate.night >= 373) return `${share}: steam, even on the night side`;
-      if (liquidAt(climate.night)) return `${share}: boiled off the day side, open sea on the night side`;
-      // between the two, along the terminator, the ground passes through 273 to 373 K: a band of sea
-      return `${share}: ice on the night side, open water along the terminator, the day side boiled dry`;
-    }
-    return `${share}: all frozen`;
+    if (from > 1) return `${share}: all frozen`;
+    if (to < -1) return `${share}: steam, even on the night side`;
+    if (from < -1) return to > 1 ? `${share}: open water` : `${share}: boiled off the day side, open sea on the night side`;
+    if (to > 1) return from > SMALL_SEA_FROM ? `${share}: a small open sea under its star, ice all round it` : `${share}: open sea on the day side, ice beyond the terminator`;
+    // between the two, toward the terminator, the ground passes through 273 to 373 K: a band of sea
+    return `${share}: ice on the night side, open water along the terminator, the day side boiled dry`;
   }
-  if (liquidAt(climate.mean)) return `${share}: open water`;
-  if (climate.mean >= 373) return `${share}: steam`;
+  if (from < -1 && to > 1) return `${share}: open water`;
+  if (to < -1) return `${share}: steam`;
   return `${share}: frozen`;
 }
 

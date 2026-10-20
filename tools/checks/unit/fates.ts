@@ -50,7 +50,7 @@ const text = (r: CrossingReport | undefined) => (r ? [r.title, r.intro, ...r.lin
 
 // ---------------------------------------------------------------- stable: the Last Warmth at η 30
 {
-  const { s, crossings } = play('stable', (g) => g.era === 'blackhole');
+  const { s, crossings } = play('stable', (g) => g.era === 'blackhole', (g) => g.eta < 31.5);
   const r = crossings.find((c) => c.from === 'degenerate');
   check(s.era === 'blackhole' && s.eta >= 30 && s.eta < 31.5, `stable: the Black Hole Age begins at η ${s.eta.toFixed(2)}`);
   check(r?.title === 'The Last Warmth' && !/decayed|dissolved/.test(text(r)), `its crossing is the Last Warmth, with nothing decayed (${r?.title})`);

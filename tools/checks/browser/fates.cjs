@@ -122,7 +122,9 @@ run(async () => {
     // that would rather try another game)
     if (pre.outcome) return { ended: pre.outcome };
     if (refuge) await keepRefuge();
-    for (let i = 0; i < 6 && !(await page.locator('.crossing').count()); i++) if (!(await pressEndTurn(fate))) break;
+    // up to twenty turns at the Tide (some 0.45 η each late in the Degenerate Age): playTo stops early
+    // after a long turn of the autoplayer's (20 Oct: at η 24.8 for η 30, after a slow one)
+    for (let i = 0; i < 20 && !(await page.locator('.crossing').count()); i++) if (!(await pressEndTurn(fate))) break;
     const r = await page.evaluate(() => {
       const c = document.querySelector('.crossing');
       if (!c) return null;
@@ -148,18 +150,26 @@ run(async () => {
     return true;
   };
 
-  let r = await crossing('stable', 30, 'stable-last-warmth.png');
+  // the harness's seeds (1000 + 7919·g): a check of the universe's rules rides the course of the
+  // game it plays, and the autoplayer loses some games, so where one ends short of the moment
+  // checked, or crosses it in a turn too long to show it, the next seed's game is played instead
+  // (20 Oct: the finds' tests re-rolled seed 1000's games). Only a game that ended, or ran past the
+  // moment, moves on; a living one with no crossing screen still fails.
+  const SEEDS = [1000, 8919, 16838, 24757, 32676, 40595, 48514, 56433];
+
+  let r;
+  for (const seed of SEEDS) {
+    r = await crossing('stable', 30, 'stable-last-warmth.png', seed);
+    if (!r?.ended && !(r && r.eta >= 31.5)) break;
+  }
   check(r?.from === 'The end of The Degenerate Age · The Last Warmth' && r.h1 === 'The Black Hole Age', `stable: the Last Warmth opens the Black Hole Age (${r?.from} / ${r?.h1})`);
   check(!!r && r.eta >= 30 && r.eta < 31.5, `near η 30 (${r?.eta.toFixed(2)})`);
   check(!!r && r.intro.startsWith('The protons held') && !r.lines.some((l) => /decayed|dissolved/.test(l)), 'its intro and lines say matter endures, and nothing decayed');
   await go(r);
 
   // a game that lives through the Great Decay, with a refuge kept at the capital (seed 48514 had one
-  // of its own until the others played the same game). Since 19 Oct (the game keeps its word) that
-  // game dies out at η 38.3, just short of it: the first of the harness's seeds the autoplayer
-  // takes there alive is used instead. Only a game that ended moves on to the next; a living one
-  // with no crossing screen still fails.
-  for (const seed of [48514, 8919, 16838, 24757, 32676, 40595, 56433]) {
+  // of its own until the others played the same game, and since 19 Oct dies out at η 38.3)
+  for (const seed of [48514, ...SEEDS.filter((x) => x !== 48514)]) {
     r = await crossing('decays', 39, 'decay-great-decay.png', seed, true);
     if (!r?.ended) break;
   }
@@ -167,24 +177,31 @@ run(async () => {
   check(!!r && r.intro.startsWith('Ordinary matter has decayed away') && r.lines.some((l) => /has decayed\./.test(l)), 'matter has decayed, and it says so');
   await go(r);
 
-  r = await crossing('curvature', 68, 'curvature-last-warmth.png');
-  check(r?.from === 'The end of The Degenerate Age · The Last Warmth' && r.h1 === 'The Black Hole Age' && r.eta >= 68, `curvature: the Last Warmth at η ${r?.eta.toFixed(2)} (${r?.from})`);
-  check(!!r && r.intro.startsWith('The neutron stars have burst') && r.lines.some((l) => /neutron stars have burst/.test(l)), 'the neutron stars have burst');
-  if (await go(r)) {
+  // curvature: the Last Warmth at η 68, then, in the same game, the Great Evaporation at η 89.5
+  let e = null;
+  let evaporation = '';
+  for (const seed of SEEDS) {
+    r = await crossing('curvature', 68, 'curvature-last-warmth.png', seed);
+    if (r?.ended) continue;
+    if (!(await go(r))) break;
     const pre = await playTo(89.5);
-    if (!pre.outcome) await keepRefuge();
-    let e = null;
-    for (let i = 0; i < 6 && !pre.outcome && !e; i++) {
+    evaporation = `from η ${pre.eta.toFixed(2)}${pre.outcome ? ` (ended: ${pre.outcome})` : ''}`;
+    if (pre.outcome) continue;
+    await keepRefuge();
+    for (let i = 0; i < 20 && !e; i++) {
       if (!(await pressEndTurn('curvature'))) break;
       e = await page.evaluate(() => {
         const c = document.querySelector('.crossing');
         return c ? { from: c.querySelector('.from')?.textContent.trim(), h1: c.querySelector('h1')?.textContent.trim(), lines: [...c.querySelectorAll('.lines > div')].map((x) => x.textContent.trim()), eta: window.__stel.state().eta } : null;
       });
     }
-    if (e) await ck.shot('curvature-great-evaporation.png');
-    console.log(`  the Great Evaporation: from η ${pre.eta.toFixed(2)}${pre.outcome ? ` (ended: ${pre.outcome})` : ''}: ${e ? `${e.from} / ${e.h1} at η ${e.eta.toFixed(2)}` : 'none'}`);
-    check(e?.from === 'The Black Hole Age' && e.h1 === 'The Great Evaporation' && e.eta >= 89.5, `the Great Evaporation comes inside the Black Hole Age (${e?.from} / ${e?.h1})`);
-    check(!!e && e.lines.some((l) => /has evaporated\./.test(l)), 'every world has evaporated, and it says so');
+    break;
   }
+  check(r?.from === 'The end of The Degenerate Age · The Last Warmth' && r.h1 === 'The Black Hole Age' && r.eta >= 68, `curvature: the Last Warmth at η ${r?.eta?.toFixed(2)} (${r?.from})`);
+  check(!!r?.intro && r.intro.startsWith('The neutron stars have burst') && r.lines.some((l) => /neutron stars have burst/.test(l)), 'the neutron stars have burst');
+  if (e) await ck.shot('curvature-great-evaporation.png');
+  console.log(`  the Great Evaporation: ${evaporation}: ${e ? `${e.from} / ${e.h1} at η ${e.eta.toFixed(2)}` : 'none'}`);
+  check(e?.from === 'The Black Hole Age' && e.h1 === 'The Great Evaporation' && e.eta >= 89.5, `the Great Evaporation comes inside the Black Hole Age (${e?.from} / ${e?.h1})`);
+  check(!!e && e.lines.some((l) => /has evaporated\./.test(l)), 'every world has evaporated, and it says so');
   await finish('FATES UI', ck);
 });

@@ -281,6 +281,19 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   the synth's lookahead timer runs every 40 ms. End Turn's breaths wait for the timers at least
   every `TIMER_MS` (40 ms, `turnflow.ts`); the timers' longest wait is bounded by the longest
   slice that cannot be split (a civilization's part of a step), some 100 ms at a sixfold slowdown.
+- A screenshot of a world close up (20 Oct, the sea pictures): `engine().showSystem(sys, bodyId)`
+  fades out, rebuilds the system and then flies to the world, which takes several seconds in the
+  software renderer the checks run on. Set `engine().orbitsPaused = true` right after the new game
+  (the world then stands at its `phase`), call `engine().unfollow()` before each `showSystem` (or a
+  wait for `followed` returns at once, still following the last one), and wait until
+  `rig.distance` is near `rig.goalDistance` and `rig.target` at `rig.goalTarget`. With the system
+  view's default camera, `phase` 0 shows a world's terminator side on, 2.4 and 3.9 its day side
+  three-quarters on.
+- Frames a check steps by hand (`engine().frame(dt)`, as the frame-rate checks do) are drawn later
+  by the browser's GPU process, in software here, and no animation frame comes until they are: a
+  few hundred held the next one up for 8 s to over 20 s on 20 Oct (`browser/survey-reveal`, on the
+  build before as well). Wait for a few `requestAnimationFrame` callbacks before timing anything
+  that runs on the engine's own loop.
 - `pkill -f 'tools/sim.ts'` (or `pgrep -f 'node.*tools/sim.ts'` fed to `kill`) run from a shell
   whose own command line holds that pattern kills the shell too (exit 144, three times on 13 Oct).
   The bracket trick (`'[n]ode.*tools/sim[.]ts'`) fails as soon as the same command also holds the
@@ -420,6 +433,20 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
+- **One sea for the Water row and the picture; finds only where they can be** (20 Oct, both
+  versions; CHANGELOG, "Finds where they can be, and one sea"):
+  - `seaBand(climate)` (`physics.ts`): where a world's water is liquid by f, the sine of its
+    star's height (`T(f) = max(night, day·f^¼)`; `{from, to}`, ±2 meaning all or none). The Water
+    row (`waterState`) and the planet shader (`uSeaFrom`, `uSeaTo` in `systemView.ts`; the
+    shader's `T` is the same profile) both read it, and `unit/seas` checks the two agree. No
+    vitality in the sea any more (`eyeStrength` is gone): life colours the land only. `uSteam` is
+    a veil only where all of a world's water has boiled; `uAir` lights a world with air a little
+    past the terminator.
+  - Finds: `vent_life` asks `buriedOcean` and not `feeding`; `resonance` counts the worlds bound
+    to a star (`boundWorlds`, not the Deep); the survey skips worlds that are `feeding` (but not
+    rogue ones: `warm_rogue` needs them). `pruneFinds` (`sim/events.ts`), at the start of the
+    turn's step 8, drops a waiting find whose world no longer `fits` (trait off, `fired` down by
+    one). `unit/finds` checks each wrong path.
 - **Falling worlds break up, giants fall in a flash** (20 Oct, both versions, new games;
   CHANGELOG, "Falling worlds"): `state.flags.rubble` (set by `generateWorld`, no draw), read
   through `rubbleGame` (`physics.ts`).
@@ -1960,6 +1987,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the game keeps its word (19 Oct; today's game, `claude/promises-main` `7d4c702`, PR m1omg/Steliterate#34, `e827e2f`) | 160 | 81 victories, Degenerate Age 72 turns; 900 games 476 / 244 / 71 (456 / 203 / 71 before): survival within the noise, the victories from the hidden step alone (without it the same 300 games give 160 / 72 / 72; `docs/spoilers/slow-ones.md`). By fate: decay 193 / 450 (19 wins), stable 165 / 239 (127), curvature 118 / 211 (98). Harsh, 300 games: 147 / 62 / 68 (140 / 52 / 70 before). 204 of 300 play out as without the step |
 | falling worlds break up and giants flash; more worlds at black holes; in new games (20 Oct; the new version) | 147 | 63 victories, Degenerate Age 68 turns (156 / 65 / 71 before). The new worlds re-roll every game (0 of 300 the same), so a control with the new worlds and the old falls measures the rules: 157 / 65 / 69, against which they cost 10 games (44 lost, 34 won; the autoplayer builds no shelters), within the noise. By fate decay 74 / 148, stable 39 / 81, curvature 34 / 71. Harsh, 300 games: 145 / 52 / 73 (124 / 35 / 66 before; the control 135 / 56 / 71, so there the rules gave 10). Moving the shelters to Dusk research afterwards changed no game: 10 replayed, all the same |
 | falling worlds, the same (20 Oct; today's game, `claude/promises-main` `8133d7f`, PR m1omg/Steliterate#35, `e4c77d7`) | 149 | 80 victories, Degenerate Age 72 turns (160 / 81 / 72 before), every game re-rolled, within the noise. By fate decay 57 / 148, stable 51 / 81, curvature 41 / 71. Harsh, 300 games: 154 / 58 / 68 (147 / 62 / 68 before). 12 replayed after the shelters moved: all the same |
+| finds only where they can be; one sea for the Water row and the picture (20 Oct; the new version) | 165 | 77 victories, Degenerate Age 72 turns (147 / 63 / 68 before); 30 of 300 the same, the finds' tests changing which find a survey turns up. By fate decay 80 / 148, stable 43 / 81, curvature 42 / 71. Harsh, 300 games: 136 / 38 / 68 (145 / 52 / 73 before; 32 the same). Within the noise |
+| the same (20 Oct; today's game) | 165 | 77 victories, Degenerate Age 70 turns (149 / 80 / 72 before); 36 of 300 the same. By fate decay 67 / 148, stable 63 / 81, curvature 35 / 71. Harsh, 300 games: 150 / 59 / 71 (154 / 58 / 68 before; 43 the same). Within the noise |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

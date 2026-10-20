@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { bodyClimate, brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, shownKind } from '../game/physics';
+import { bodyClimate, brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, seaBand, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
 import { seenThere } from '../game/sim/claims';
@@ -481,6 +481,7 @@ export class SystemView {
     }
     const col = b.colonyId ? ownColony(state, b.colonyId) : undefined;
     const climate = bodyClimate(state, b);
+    const band = seaBand(climate);
     const eating = feedingSwarm(state, sys);
     const pops = col ? col.pops.kin + col.pops.echoes + col.pops.chorus + col.pops.lattice + col.pops.coldminds : 0;
     // a settlement of ours that made the Passage is its fields now, round the world: no cities on it
@@ -511,10 +512,15 @@ export class SystemView {
         // the Long Flow: the ground has run smooth
         uFlow: { value: flowing(state) ? 1 : 0 },
         uViewMode: VIEW_MODE,
-        // a sea and land stay so only while the star keeps the sea liquid (on the day side if locked)
-        uEye: { value: eyeStrength(b, climate) },
         uTempDay: { value: climate.day ?? climate.mean },
         uTempNight: { value: climate.night ?? climate.mean },
+        // its sea where the Water row puts it (one band for both, physics.ts)
+        uSeaFrom: { value: band.from },
+        uSeaTo: { value: band.to },
+        // its water boiled into a sky of steam all round: thick on a water-rich world past the
+        // runaway greenhouse, thinner the less water there was
+        uSteam: { value: climate.steam ? 1 : band.to < -1 && !climate.airless ? Math.min(1, (b.water ?? 0) / 0.3) : 0 },
+        uAir: { value: climate.airless ? 0 : 1 },
         uWater: { value: b.water ?? 0 },
         // an eyeball is one face to its star by definition; any other world only if it is locked
         uLocked: { value: b.kind === 'eyeball' || b.traits.includes('tidally_locked') ? 1 : 0 },
@@ -1197,16 +1203,6 @@ export class SystemView {
     }
     this.onReveal?.(null);
   }
-}
-
-/**
- * How much a sea-and-land world (an eyeball, or a terrestrial world) still has its sea: 1 while
- * its star keeps the (day side's) ground warm, 0 frozen over.
- */
-export function eyeStrength(b: Body, climate: { mean: number; day?: number }): number {
-  if (b.kind !== 'eyeball' && b.kind !== 'terran') return 0;
-  const t = Math.min(1, Math.max(0, ((climate.day ?? climate.mean) - 150) / 90));
-  return t * t * (3 - 2 * t);
 }
 
 const smooth = (a: number, b: number, x: number) => {

@@ -127,6 +127,15 @@ run(async () => {
     return { a, b };
   }, target.id);
   check(rate.a === rate.b, `2 s into it, the same at 30 and at 144 frames a second (${rate.a} / ${rate.b})`);
+  // the browser drawing again: the hundreds of frames stepped by hand are still being drawn in
+  // software, and no animation frame comes until they are (20 Oct: from 8 s to well over 20 s
+  // here, on the build before as well), so the switch below is timed from the fifth one after
+  await page.evaluate(() => {
+    window.__frames = 0;
+    const f = () => ++window.__frames < 5 && requestAnimationFrame(f);
+    requestAnimationFrame(f);
+  });
+  await page.waitForFunction(() => window.__frames >= 5, null, { timeout: 300000, polling: 500 });
   // Escape skips one too; Skip all skips the others charted with it
   const other = await page.evaluate((id) => {
     const s = window.__stel.state();

@@ -917,7 +917,8 @@ flashes of burstShare(distLy, reach)` (`burstShare(ly, reach) = round(250 × min
 ly)²))`; `flashReach(E) = 10 × √(E / 10^42)` ly), but in a system cast out of the galaxy only
 from a flash in its own system; logged "Burst Catchers at … caught the flash: +N energy."
 
-**8. Signals, forecasts, events.** `deliverSignals`: messages whose `arriveYears ≤ years` (all,
+**8. Signals, forecasts, events.** First `pruneFinds` drops the survey's finds about worlds the
+universe has just changed (D.4.7). `deliverSignals`: messages whose `arriveYears ≤ years` (all,
 once years are infinite) arrive (`arrivedTurn` = this turn) and are logged with their age;
 an unanswered one lapses (`resolved = 'lapsed'`) once more than 8 turns have passed since it
 arrived; beyond 160 the oldest are dropped (one kind excepted from both: sealed). Arrivals
@@ -1502,12 +1503,24 @@ the homeworld's high `decline` (0.012): the event `dynamo_fails` on turn 3, the 
 
 #### B.5.4 Water
 
-- `ICE_MELTS_K` 273; liquid between 273 and 373 K. `waterState(b, climate, ocean)` describes it:
-  airless worlds hold no liquid, bare ice lasts only below `AIRLESS_ICE_K` 110 K (Vasavada, Paige
-  & Wood 1999: frost, frost cold-trapped on the night side, or "boiling off into space"); an
-  `ocean_ice` world below 273 K has its ocean under the ice (or frozen through); a locked world
-  can have open sea on the day side and ice beyond the terminator, a boiled day side and a sea on
-  the night side, or a band of sea along the terminator.
+- `ICE_MELTS_K` 273; liquid from 273 to `WATER_BOILS_K` 373 K. `seaBand(climate)` gives where:
+  by f, the sine of the star's height in the sky (1 under it, 0 on the terminator, below 0 the
+  night side), the ground is at `T(f) = max(night, day·f^¼)` (the day figure is the warmest ground,
+  under the star; away from it local radiative balance; never colder than the night side). It
+  returns `{from, to}`, liquid for `from ≤ f < to`: airless or `day` < 273 → `{2, 2}` (none, too
+  cold); `night` ≥ 373 → `{−2, −2}` (none, too hot); else `from` = −2 if `night` ≥ 273, else
+  `(273/day)^4`; `to` = 2 if `day` < 373, else `(373/day)^4`. A world that turns (no day/night) is
+  all one: `{−2, 2}` when its mean is liquid. The Water row and the planet shader both read it.
+- `waterState(b, climate, ocean)` describes it: airless worlds hold no liquid, bare ice lasts only
+  below `AIRLESS_ICE_K` 110 K (Vasavada, Paige & Wood 1999: frost, frost cold-trapped on the night
+  side, or "boiling off into space"); an `ocean_ice` world below 273 K has its ocean under the ice
+  (or frozen through). Otherwise by the band: a locked world reads "all frozen" (`from` > 1),
+  "steam, even on the night side" (`to` < −1), "open water" (`from` < −1, `to` > 1), "boiled off
+  the day side, open sea on the night side" (`from` < −1), a sea under its star (`to` > 1: "a
+  small open sea under its star, ice all round it" when `from` > `SMALL_SEA_FROM` 0.5, so less than
+  half of the day side, else "open sea on the day side, ice beyond the terminator"), or "ice on
+  the night side, open water along the terminator, the day side boiled dry"; a world that turns
+  "open water", "steam" or "frozen".
 - `buriedOcean`: an ice-shelled ocean stays liquid while ice covers it (night or mean < 273,
   not steam), it is bound to a real primary (not rogue, `rogue` or `void`), and it is the Dusk
   or `coreHeat ≥ BURIED_HEAT` 0.05 (display).
@@ -2982,7 +2995,7 @@ Conventions used below: `U(a,b)` is one `rng.range(a,b)` draw; `chance(p)` is `r
 | 1. economy | `jointIncome(state) × paceFactor` is added to energy income |
 | 6. fleets, hazards, other minds | `advanceFleets` → `surveyWhereStationed` → `updateDetection` → `firstSwarm` → `swarmsHunt` → `autoExplore` → `updateHunger` → `updateSurvivors` → `pactsTurn` → `warTurn` (inside `withRng`) → stranger minds (sealed) |
 | 7. universe moves on | years/turn advance; `state.turn++`, `state.eraTurn++` |
-| 8. signals, events | `deliverSignals`; for each arrived signal: `pact_answer` → `answerArrived`; `aid_answer` with energy > 0 → energy credited and logged; `last` with `data.insight` → added to `civ.flags.insight_bank` (plus matter = insight under Consume the Dead, or ½ insight under Salvage the Dead). Then scripted events (`turn === 3` → `dynamo_fails`, `turn === 7` → `first_night`), the `rust_in_the_belt` fallback, `rollRandomEvent`, `positronium_forms`, `updateForecasts` |
+| 8. signals, events | `pruneFinds` (D.4.7); `deliverSignals`; for each arrived signal: `pact_answer` → `answerArrived`; `aid_answer` with energy > 0 → energy credited and logged; `last` with `data.insight` → added to `civ.flags.insight_bank` (plus matter = insight under Consume the Dead, or ½ insight under Salvage the Dead). Then scripted events (`turn === 3` → `dynamo_fails`, `turn === 7` → `first_night`), the `rust_in_the_belt` fallback, `rollRandomEvent`, `positronium_forms`, `updateForecasts` |
 | 9. crossings | ending check before the last crossing (see D.5) |
 | 10. endings | `checkEndings(state)` |
 
@@ -3562,11 +3575,13 @@ Generation gives 11% of non-Deep, non-gas-giant bodies a hidden relic, kind weig
 
 #### D.4.7 Anomalies ("finds")
 
-`ANOMALIES` are appended to the event list as `anom_<id>` with `art: 'finds/<id>'` (never rolled at random). In `survey`, one draw `chance(0.3)`; if it passes, every pair (world, anomaly) is listed for non-dissolved worlds of the system that carry no anomaly trait yet, for anomalies found fewer than 2 times this game (`fired['anom_<id>'] < 2`) whose `fits` holds; `rng.pick` one; the world gains the trait `<id>` (shown as `name`, with `tip`), `fired['anom_<id>']++`, and the event is pushed with `{ bodyId, systemId }`.
+`ANOMALIES` are appended to the event list as `anom_<id>` with `art: 'finds/<id>'` (never rolled at random). In `survey`, one draw `chance(0.3)`; if it passes, every pair (world, anomaly) is listed for worlds of the system that are not dissolved, not falling into their star (`feeding`) and carry no anomaly trait yet, for anomalies found fewer than 2 times this game (`fired['anom_<id>'] < 2`) whose `fits` holds; `rng.pick` one; the world gains the trait `<id>` (shown as `name`, with `tip`), `fired['anom_<id>']++`, and the event is pushed with `{ bodyId, systemId }`.
+
+The survey runs as ships arrive, before the universe moves on in the same turn, which can tear the world apart, swallow it, fling it loose, boil it or dissolve it. So each turn, at the start of step 8 (`sim/events.ts: pruneFinds`), every waiting find whose world is gone or dissolved, or no longer `fits`, is dropped: the world loses the trait and `fired['anom_<id>']` goes down by one (not below 0), so it can still be found elsewhere. Every other waiting event stays, in order.
 
 | Find | Fits |
 |---|---|
-| `vent_life` | ocean-ice or subsurface-ocean world, not ours, not a steam world |
+| `vent_life` | a buried ocean the Water row calls liquid (`buriedOcean`: around a star, not in a starless Drift, not flung loose, not frozen through); not falling into its star, not ours, not a steam world |
 | `fossil_reactor` | rocky (barren, super-Earth, terran, eyeball, ice), not ocean ice |
 | `diamond_mantle` | super-Earth or barren, mass > 1.5 Earth |
 | `primordial_hole` | asteroid belt |
@@ -3576,7 +3591,7 @@ Generation gives 11% of non-Deep, non-gas-giant bodies a hidden relic, kind weig
 | `clathrates` | ice, ocean ice or ice giant; not a steam world |
 | `lens` | any |
 | `sail_graveyard` | belt or Deep |
-| `resonance` | ice, ocean ice, eyeball, terran or super-Earth in a system of ≥ 4 bodies |
+| `resonance` | ice, ocean ice, eyeball, terran or super-Earth, not flung loose or falling, with at least 4 worlds bound to a star in its system, itself among them (not the Deep, nor any flung loose or dissolved; none in a starless Drift) |
 | `magnetar_print` | rocky at a neutron star |
 | `warm_rogue` | rocky rogue world |
 
@@ -3946,20 +3961,33 @@ stands still while paused (P); stars keep animating on `time`. One gas giant in 
 0.45), except sleepers, whose lights only breathe (`uLights = 0.2 + 0.12·sin(0.35t)`).
 
 `PLANET_FRAG` (kinds: 0 rocky/super-Earth/barren, 1 sea-and-land (eyeball, terran), 2 ice, 3 gas
-giant, 4 ice giant, 5 ice-shelled ocean). Uniforms from the game: temperatures (day/night),
-water, locked, vitality, the eye (the sea still kept liquid by its star, `smoothstep(150, 240 K)`
-of the day side), lights and development, neon and city colour, sun direction/colour/power,
-substellar point, rust, feeding, eaten, flow.
+giant, 4 ice giant, 5 ice-shelled ocean). Uniforms from the game: temperatures (day/night), the
+sea band (`seaBand`, B.5.4: `uSeaFrom`, `uSeaTo`), steam (`uSteam`: 1 on a water-rich world past
+the runaway greenhouse; `min(1, water/0.3)` where all of a world with air's water is past
+boiling, `to` < −1; else 0), air (`uAir`, 0 on airless rock), water, locked (an eyeball or the
+trait: where its cities ring the terminator), vitality, lights and development, neon and city
+colour, sun direction/colour/power, substellar point, rust, feeding, eaten, flow.
 
-- Temperature field: `T = mix(night, day, smoothstep(−0.25, 0.6, facing))`.
+- Temperature field: `T = max(night, day·max(facing, 0)^¼)`, the profile `seaBand` reads.
+- Water: `liquid = smoothstep(from − 0.02, from + 0.02, facing)` and `boiled` the same at `to`:
+  colder than the band it is ice, hotter it has boiled off.
 - Rocky: rock palette `(0.23,0.19,0.17) → (0.42,0.34,0.28) → (0.58,0.52,0.46)` by height fbm.
-- Sea and land: green-brown land and dark sea `(0.05,0.12,0.16)` where warm (on a locked world only
-  the star-facing face, the warm zone shrinking as vitality falls); ice `(0.6,0.64,0.7)–(0.82,0.85,
-  0.9)` elsewhere; dried grey land as vitality drops; once the star is dead the whole world is an
-  ice shell, the old sea a darker smoother plain; clouds over living ground; specular on water.
-- Ice / ocean-ice: pale ice; warmed past 263 K it melts into open sea (ocean-ice everywhere, an ice
-  world in its low ground as far as `uWater` reaches); past 363 K a veil of steam.
-- Sea worlds past 363 K: the sea boils off to pale salt-crusted floor under steam.
+  With air and water (a super-Earth, or rock under Atmosphere Works) its low ground, below
+  `−0.6 + 1.2·water` in height, holds open sea `(0.035,0.09,0.13)–(0.05,0.12,0.16)` where liquid,
+  ice where colder, pale salt `(0.6,0.58,0.52)` where boiled.
+- Sea and land (eyeball, terran): dark sea `(0.05,0.12,0.16)` and land where liquid, the land
+  green-brown by vitality (grey and dust-dry when dead; the sea does not depend on life); ice
+  `(0.6,0.64,0.7)–(0.82,0.85,0.9)` where colder, the old sea a darker smoother plain under it on
+  the day side (`smoothstep(0.3, 0.7, facing)` on a locked world, everywhere on one that turns);
+  where boiled, salt-crusted sea floor and dry land; clouds over open water on a living world;
+  specular on open water.
+- Ice / ocean-ice: pale ice; open sea where liquid (ocean-ice everywhere, an ice world in its low
+  ground as far as `uWater` reaches, rock above); where boiled, a salt crust where the sea was.
+- Steam: a veil `uSteam·(0.55 + 0.4·fbm)` over the solid kinds (only where all the water has
+  boiled: where part of a world is cooler, its water has gone there).
+- Lighting: direct `max(0, n·l)`, plus on a world with air a twilight `0.05·smoothstep(−0.2, 0,
+  n·l)·(1 − smoothstep(0, 0.3, n·l))`, so the seas of its twilight are not black; specular by the
+  direct light only.
 - Gas / ice giants: latitude bands (22 / 12 per radian) in browns `(0.55,0.42,0.33)/(0.32,0.24,
   0.21)` or blue-greys `(0.35,0.45,0.52)/(0.22,0.3,0.38)`.
 - Hot ground: from 1,400–1,700 K a dark basalt crust; glow added after lighting (so night sides

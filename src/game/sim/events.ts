@@ -1,4 +1,4 @@
-import { EVENT_BY_ID, EVENTS, choiceShown } from '../data/events';
+import { ANOMALY_BY_ID, EVENT_BY_ID, EVENTS, choiceShown } from '../data/events';
 import type { GameState } from '../types';
 import { log, uid, withRng } from './util';
 
@@ -35,6 +35,23 @@ export function rollRandomEvent(state: GameState) {
     const pick = rng.weighted(pool, (p) => p.w);
     state.civ.fired[`last_${pick.id}`] = state.turn;
     queueEvent(state, pick.id, pick.data);
+  });
+}
+
+/**
+ * A survey's find is queued as it charts a system, before the universe moves on in the same turn,
+ * which can boil, swallow, fling loose, tear apart or dissolve the world it is about. Each turn,
+ * once the universe has moved, a find that no longer fits its world is dropped, and the world loses
+ * its mark, as if it had not been found (it can still be found elsewhere).
+ */
+export function pruneFinds(state: GameState) {
+  state.civ.pending = state.civ.pending.filter((p) => {
+    const a = p.defId.startsWith('anom_') ? ANOMALY_BY_ID[p.defId.slice(5)] : undefined;
+    const b = a ? state.bodies[String(p.data.bodyId)] : undefined;
+    if (!a || (b && !b.dissolved && a.fits(state, b))) return true;
+    if (b) b.traits = b.traits.filter((t) => t !== a.id);
+    state.civ.fired[p.defId] = Math.max(0, (state.civ.fired[p.defId] ?? 1) - 1);
+    return false;
   });
 }
 
