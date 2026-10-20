@@ -2,7 +2,7 @@
 // habitability as far as its warmest ground becomes livable (the mirrors by up to 20 points, the
 // works by up to 25), never past 55%, so a world already that habitable gains nothing. Biosphere
 // Seeding needs 30% and some water, not on a world with life of its own, and spreads life 4% a
-// turn up to 80% exactly; room for Kin follows. The works bring water with the air. All of it only
+// turn at the Tide up to 80% exactly (a tenth of it a turn at Quick ×10); room for Kin follows. The works bring water with the air. All of it only
 // by a red dwarf in the Dusk: by a flaring or dead star, or after the Dusk, nothing, and seeded
 // life freezes. A new star boils its worlds as before. Old saves are unchanged.
 import { autoPlay } from '../../../src/game/auto';
@@ -88,6 +88,14 @@ const room = (s: GameState, c: Colony) => kinBaseCapacity(s, c, computeMods(s));
     steps.push(b.vitality);
   }
   check(Math.abs(steps[0] - SEED_RATE) < 1e-12 && steps[19] === SEED_CAP && steps[29] === SEED_CAP, `vitality ${v} → ${steps[0]} → … ${steps[18]}, ${steps[19]} (20 turns), and no further`);
+  // by the Tide turns a turn covers (since 20 Oct): at Quick ×10 a tenth as much a turn, the same in a year
+  b.vitality = v;
+  let quick = 0;
+  while (b.vitality < SEED_CAP && quick < 1000) {
+    b.vitality = seededVitality(s, b, c, 0.1);
+    quick++;
+  }
+  check(quick === 200 && b.vitality === SEED_CAP, `at Quick ×10, 0.4% a turn: ${quick} turns to ${b.vitality}`);
   const want = Math.floor(Math.round(12 * 0.45) * SEED_CAP);
   check(room(s, c) === want && naturalKinRoom(b, s) === want && want === 4, `room for Kin at 80% vitality: ${room(s, c)} (want ${want})`);
   // a whole turn: the seeded life spreads, and nothing else moves its vitality

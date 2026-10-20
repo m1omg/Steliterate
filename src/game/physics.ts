@@ -2,7 +2,7 @@ import { STRUCTURE_BY_ID } from './data/structures';
 import { defaultWater, hawkingTime, inspiralTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
 import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from './fate';
-import { ERA_BY_ID } from './eras';
+import { ERA_BY_ID, tideTurnsAt } from './eras';
 import { hashSeed } from './rng';
 import { allColonies, protonFateKnown } from './sim/util';
 
@@ -1352,8 +1352,9 @@ export function sunGone(state: GameState, b: Body): boolean {
 }
 
 /**
- * Vitality a living world loses this turn. `decline`: a settled world's slow dying, sooner as
- * the Dusk wears on (Magnetic Shields and Orbital Lamps slow it, overdrive hastens it).
+ * Vitality a living world loses in a turn at the Tide (declineWorlds, turn.ts, takes it by the Tide
+ * turns the turn covers). `decline`: a settled world's slow dying, sooner as the Dusk wears on
+ * (Magnetic Shields and Orbital Lamps slow it, overdrive hastens it).
  * `freeze`: without a sun a living world freezes within a few turns, 5% a turn (half that with
  * a Core Stimulator), unless Orbital Lamps keep it warm: after the Last Light, on a world cast
  * out of its system, or, for life on the surface, once even its warmest ground is below FROZEN_K:
@@ -1374,7 +1375,8 @@ export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = 
     }
     if (c.overdrive) mult *= 1.3;
   }
-  const accel = calendarEra(state) === 'dusk' ? Math.min(3, 1 + state.eraTurn * 0.02) : 3;
+  // (the Dusk wears worlds out faster as it goes on: by its Tide turns, so whatever the pace, since 20 Oct)
+  const accel = calendarEra(state) === 'dusk' ? Math.min(3, 1 + tideTurnsAt('dusk', state.years, state.eta, state.settings.length) * 0.02) : 3;
   const decline = c && b.decline > 0 ? b.decline * mult * accel : 0;
   const cold = () => {
     const cl = bodyClimate(state, b);
@@ -1527,15 +1529,16 @@ export function frozenFromTheStart(state: GameState): number {
 
 /**
  * Turns until a freezing world dies, stepped as declineWorlds takes them (decline, then cold,
- * in floating point), at this turn's losses; Infinity if it is not freezing.
+ * in floating point), at this turn's losses; Infinity if it is not freezing. `share`: the Tide
+ * turns each turn covers (livedShare), as each loses that much: ten times the turns at Quick ×10.
  */
-export function turnsToFreeze(state: GameState, b: Body, c?: Colony): number {
+export function turnsToFreeze(state: GameState, b: Body, c?: Colony, share = 1): number {
   const loss = vitalityLoss(state, b, c);
-  if (loss.freeze <= 0) return Infinity;
+  if (loss.freeze <= 0 || share <= 0) return Infinity;
   let v = b.vitality;
-  for (let n = 1; n <= 1000; n++) {
-    v = Math.max(0, v - loss.decline);
-    if (v > 0) v = Math.max(0, v - loss.freeze);
+  for (let n = 1; n <= 100000; n++) {
+    v = Math.max(0, v - loss.decline * share);
+    if (v > 0) v = Math.max(0, v - loss.freeze * share);
     if (v <= 0) return n;
   }
   return Infinity;

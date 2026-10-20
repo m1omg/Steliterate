@@ -480,7 +480,7 @@ function rangeLy(state: GameState): number {
  * and move on toward warmth. A civilization under Communion is spared, and a swarm it tamed
  * works for it; a Blackout hides its warmth and its ships.
  */
-export function updateHunger(state: GameState, L: number, mods: ModsBy) {
+export function updateHunger(state: GameState, L: number, mods: ModsBy, share = 1) {
   const modsOf = byCiv(mods);
   const swarms = Object.values(state.swarms);
   const maxSwarms = MAX_SWARMS[state.settings.difficulty];
@@ -531,15 +531,16 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
         continue;
       }
 
-      // tamed swarms work for whoever tamed them, and may relapse
+      // tamed swarms work for whoever tamed them, and may relapse (what they bring, and the Taint
+      // of feeding them, by the Tide turns the turn covers, as the bites below)
       if (sw.tamed) {
         const tamer = state.civs[sw.tamedBy ?? state.player];
         const its = !!tamer && communes(state, tamer.id);
         if (tamer) {
-          tamer.matter += sw.size * (its ? 0.8 : 0.4);
+          tamer.matter += sw.size * (its ? 0.8 : 0.4) * share;
           // communing with them is a Hunger act, heard of a point of Taint at a time (judge.ts)
           if (its) {
-            const fed = (tamer.flags.taint_fed ?? 0) + 0.12 * sw.size;
+            const fed = (tamer.flags.taint_fed ?? 0) + 0.12 * sw.size * share;
             const whole = Math.floor(fed);
             tamer.flags.taint_fed = fed - whole;
             if (whole > 0) hungerAct(state, tamer.id, whole, sys.id, 'communed with the swarms');
@@ -561,15 +562,17 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
 
       // eat
       const matter = systemMatter(state, sys);
-      const bite = Math.min(matter, 0.05 * sw.size);
+      // (what a swarm eats and how it rusts a system, by the Tide turns the turn covers: the same
+      // in a year whatever the pace, since 20 Oct)
+      const bite = Math.min(matter, 0.05 * sw.size * share);
       for (const bid of sys.bodies) {
         const b = state.bodies[bid];
         if (!b || b.dissolved || b.kind === 'deep') continue;
         b.richness = Math.max(0, b.richness - bite * 0.3);
         b.hydrogen = Math.max(0, b.hydrogen - bite * 0.15);
       }
-      state.gfe = Math.max(0.05, state.gfe - 0.00006 * sw.size * (communion ? 1.5 : 1));
-      sys.rust = Math.min(1, (sys.rust ?? 0) + 0.04 + sw.size * 0.004);
+      state.gfe = Math.max(0.05, state.gfe - 0.00006 * sw.size * share * (communion ? 1.5 : 1));
+      sys.rust = Math.min(1, (sys.rust ?? 0) + (0.04 + sw.size * 0.004) * share);
       // logistic growth limited by what is left here; starvation shrinks it
       const cap = 3 + matter * 2.2;
       sw.size += 0.1 * sw.size * (1 - sw.size / Math.max(1, cap));
@@ -648,21 +651,22 @@ export function updateHunger(state: GameState, L: number, mods: ModsBy) {
       if (!sw.prey && (matter < 1.2 || rng.chance(0.08))) moveSwarm(state, sw, () => rng.next(), blackout);
     }
   });
-  fadeRust(state);
+  fadeRust(state, share);
 }
 
 /** Rust fades by this share a turn where no swarm of the Hunger is. */
 export const RUST_FADE = 0.1;
 
 /**
- * Where no untamed swarm is (feeding, or asleep in its nest), rust fades, a tenth a turn, and is
- * gone below 1%: about 45 turns after a swarm fed its fill. Takes no random draw.
+ * Where no untamed swarm is (feeding, or asleep in its nest), rust fades, a tenth a turn at the
+ * Tide (by the Tide turns the turn covers, as it builds), and is gone below 1%: about 45 Tide
+ * turns after a swarm fed its fill. Takes no random draw.
  */
-function fadeRust(state: GameState) {
+function fadeRust(state: GameState, share: number) {
   const held = new Set(Object.values(state.swarms).filter((w) => !w.tamed && w.systemId).map((w) => w.systemId!));
   for (const sys of Object.values(state.systems)) {
     if (!sys.rust || held.has(sys.id)) continue;
-    sys.rust *= 1 - RUST_FADE;
+    sys.rust *= share === 1 ? 1 - RUST_FADE : Math.pow(1 - RUST_FADE, share);
     if (sys.rust < 0.01) delete sys.rust;
   }
 }

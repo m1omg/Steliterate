@@ -18,9 +18,13 @@ export interface TurnContext {
   years: number; // start of the coming turn
   L: number; // its length in years (Infinity in deep time)
   logL: number;
-  paceFactor: number; // share of the Tide turn actually lived: 10^-pace
+  paceFactor: number; // share of the Tide turn actually lived: 10^-pace, or what a clock's turn covers (livedShare)
+  upkeepShare?: number; // what its machines, sleepers and fleets cost, in Tide turns (upkeepShare, flare.ts; else max(1, paceFactor))
   mods: Mods;
 }
+
+/** What a turn's machines, sleepers and fleets cost, in Tide turns (TurnContext.upkeepShare). */
+export const upkeepOf = (ctx: TurnContext): number => ctx.upkeepShare ?? Math.max(1, ctx.paceFactor);
 
 export type Capacity = Record<ThreadId, number> & { cryo: number };
 
@@ -32,6 +36,20 @@ export const MATTER_AS_ENERGY = 1.5;
 
 /** What a settlement makes while the Passage rewrites it (passage.ts): its energy, matter, insight and accord. */
 export const PASSAGE_OUTPUT = 0.7;
+
+/**
+ * After the Last Light every source gives this much more energy and matter (20 Oct, the player's
+ * word: "Bring them back"). Until then the late ages' slow turns paid for more time than they
+ * covered (Slow ×10 ten Tide turns' income for under three), and the game's late economy, and how
+ * often it was won, leaned on that; the pace's ladder made them honest, so the late ages' yields
+ * carry the difference instead, at every pace.
+ */
+export const LATE_YIELD = 1.125;
+
+/** LATE_YIELD after the Dusk's calendar, 1 in it. */
+export function lateYield(state: GameState): number {
+  return calendarEra(state) === 'dusk' ? 1 : LATE_YIELD;
+}
 
 /** The Long Record's accord, at each settlement awake, a turn (its description: "+1 Accord per settlement"). */
 export const LONG_RECORD_ACCORD = 1;
@@ -113,6 +131,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   const taintBoost = 1 + civ.taint / 200;
   const overdrive = c.overdrive ? 1.5 : 1;
   const pf = ctx.paceFactor;
+  // (after the Last Light every source gives more: LATE_YIELD)
+  const late = lateYield(state);
   // (the share of ordinary matter gone at the turn's start, in the Thinning)
   const thin = thinShare(state, Math.log10(Math.max(1, ctx.years)));
 
@@ -142,7 +162,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   // minds that all think slower than the flow keep watchers awake between their thoughts
   const watch = flowNow && keeping(c, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor)) === 'watched' ? FLOW_WATCH : 1;
   // machines and sleepers run for the whole of a slowed turn; only minds can slow themselves down
-  const slowTime = Math.max(1, pf);
+  // (a turn a clock, a flare or the age's end cuts short costs for the time it covers: upkeepShare)
+  const slowTime = upkeepOf(ctx);
   // after matter, what the Lattice mended with matter it mends with energy
   const noMatter = matterGone(state);
   // written into a hole's horizon, minds live in its time: a tenth of their upkeep, a quarter of
@@ -266,7 +287,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
           e = pf > 0 ? (a * netYield(state, ctx.years, ctx.L)) / pf : 0;
           break;
       }
-      e *= pf * overdrive * focusMul(c, 'energy') * taintBoost;
+      e *= pf * late * overdrive * focusMul(c, 'energy') * taintBoost;
     }
     let mt = 0;
     if (d.matterYield) mt += d.matterYield * n * body.richness * gfeMatter;
@@ -275,7 +296,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     if (mt) {
       // only its own focus touches matter: the others leave it as it was; in the Thinning there
       // is that much less of it to bring in (thinning.ts)
-      mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1) * (1 - thin);
+      mt *= pf * late * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1) * (1 - thin);
       depletion += (d.matterYield || d.hydrogenYield ? mt : 0);
       if (!matterGone(state)) matter += mt;
     }
@@ -307,7 +328,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     // (once all of it is iron there is no fuel left in it to burn, nor anything to salvage)
     const iron = ironAge(state);
     const local = iron ? fed : Math.max(0.25, fed);
-    const hearth = 2 * local * (1 - c.damage) * pf * overdrive * focusMul(c, 'energy') * taintBoost;
+    const hearth = 2 * local * (1 - c.damage) * pf * late * overdrive * focusMul(c, 'energy') * taintBoost;
     energy += hearth;
     lines.push({ label: `Hearth${c.overdrive ? ' (overdriven)' : ''}${fed < 0.25 ? (iron ? ': nothing left to burn, all of it iron' : ': stored fuel and salvage') : ''}`, energy: hearth });
   }

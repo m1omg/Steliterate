@@ -12,13 +12,17 @@ s.civ.techs.push('quickening');
 expect('star clock, Quickening', s, '-oo--');
 // the same moment without the clock
 delete s.civ.flags.star_until; delete s.civ.flags.star_step;
-expect('Degenerate Age, no clock', s, 'ooooo');
-// a Dusk flare clock: slower paces than the flare's sixth change nothing
+// (Slow ×100, a hundred Tide turns, would run on to the end of the age: since 20 Oct no slow turn ends one)
+expect('Degenerate Age, no clock', s, 'oooo-');
+// a Dusk flare clock: since 20 Oct it keeps its own turns, a sixth of the flare whatever the pace
+// (until then a quicker pace cut them shorter, each still paid in full)
 const d = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard' });
 const tide = 40;
 d.civ.flags.flare_until = d.years + 6 * tide * 3; d.civ.flags.flare_step = tide * 3;
-expect('Dusk, keeping time with a flare (its sixth three Tide turns long): Slow ×10 reaches it, ×100 no further', d, 'oooo-');
-// the Dark Era: its calendar will not stretch or shrink a turn more than twofold
+expect('Dusk, keeping time with a flare (its sixth three Tide turns long): its sixths set the turns', d, '--o--');
+// the Dark Era: its calendar will not stretch or shrink a turn more than twofold (its own clock,
+// kept on 20 Oct at the player's word when the other ages took the ladder; it now pays the half or
+// the two Tide turns a turn covers)
 const k = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard' });
 k.era = 'dark'; k.eta = 1e5; k.years = Infinity;
 expect('Dark Era', k, '-ooo-');

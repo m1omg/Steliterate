@@ -72,14 +72,15 @@ export function seedingBlocked(state: GameState, b: Body, c: Colony | undefined 
 
 /**
  * The world's vitality once its seeded life has spread this turn (as it is, if none is seeded or
- * it cannot spread). Kept to six places, so it comes to SEED_CAP exactly.
+ * it cannot spread), by `share`, the Tide turns the turn covers (livedShare). Kept to six places,
+ * so it comes to SEED_CAP exactly.
  */
-export function seededVitality(state: GameState, b: Body, c: Colony): number {
+export function seededVitality(state: GameState, b: Body, c: Colony, share = 1): number {
   if (!((c.structures.biosphere_seeding ?? 0) > 0) || b.dissolved || b.vitality >= SEED_CAP || !terraformLit(state, b) || seedingBlocked(state, b, c)) return b.vitality;
-  return Math.min(SEED_CAP, Math.round((b.vitality + SEED_RATE) * 1e6) / 1e6);
+  return Math.min(SEED_CAP, Math.round((b.vitality + SEED_RATE * share) * 1e6) / 1e6);
 }
 
-/** Vitality the seeded life on this world adds this turn (0 if none is seeded, or it cannot spread). */
+/** Vitality the seeded life on this world adds in a Tide turn (0 if none is seeded, or it cannot spread). */
 export function seedingGrowth(state: GameState, b: Body, c: Colony): number {
   return seededVitality(state, b, c) - b.vitality;
 }

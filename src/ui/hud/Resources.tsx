@@ -10,6 +10,7 @@ import { matterGone } from '../../game/fate';
 import { DARK_STARVE, continuityLoss } from '../../game/sim/continuity';
 import { beaconUpkeep, litBeacons } from '../../game/sim/beacons';
 import { fleetUpkeep, warshipCount } from '../../game/sim/fleets';
+import { upkeepOf } from '../../game/sim/economy';
 
 function Gauge({ v, max, cls }: { v: number; max: number; cls?: string }) {
   return (
@@ -32,7 +33,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
     `Next turn: +${n1(p.energyIn)} captured, −${n1(p.energyOut)} upkeep`,
     ...Object.entries(p.perColony).map(([id, t]) => `${s.colonies[id]?.name}: ${signed(t.y.energy - t.y.energyUpkeep)}`),
     litBeacons(s).length ? `Decoy beacons (${litBeacons(s).length}): ${signed(-beaconUpkeep(s) * p.ctx.paceFactor)}` : '',
-    warshipCount(s) ? `Warships (${warshipCount(s)}): ${signed(-fleetUpkeep(s, p.ctx.paceFactor))}` : '',
+    warshipCount(s) ? `Warships (${warshipCount(s)}): ${signed(-fleetUpkeep(s, upkeepOf(p.ctx)))}` : '',
     civ.dormant ? 'Dormant: upkeep is a fraction, nothing else gets done.' : '',
   ]
     .filter(Boolean)

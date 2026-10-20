@@ -46,12 +46,11 @@ With the autoplayer playing 300 standard games at the "competent" level (section
 
 | | Today's game |
 |---|---|
-| Games surviving to the end | 160 of 300 |
-| Victories | 81 |
-| Length of the Degenerate Age | 72 turns on average |
-| 900 games | 476 survive, 244 victories, a Degenerate Age of 71 turns |
-| By the fate of matter (900) | decay 193 of 450 survive, stable 165 of 239, curvature 118 of 211 |
-| At harsh (300) | 147 survive, 62 victories |
+| Games surviving to the end | 229 of 300 |
+| Victories | 73 |
+| Length of the Degenerate Age | 112 turns on average |
+| By the fate of matter (300) | decay 87 of 148 survive, stable 79 of 81, curvature 63 of 71 |
+| At harsh (300) | 209 survive, 63 victories |
 | Noise | about ±12 survivors in 300 games; two runs of 900 can differ by 30 |
 
 A faithful copy will not match game for game, since its random draws differ, but it should
@@ -677,32 +676,57 @@ turns and climbs only in the last twenty (the last turn is about 2.5 × 10¹² y
 run longer in the Degenerate Age (the harness averages 72 turns) because of new-star clocks.
 
 **The Dark Era's calendar** steps the exponent of the exponent. With `λ = log10(max(η, 100))`
-and `a` the age's growth for the length: `k = √(ln(max(λ, 2)/2) / a)`, `g = exp(a·(2k + 1))`,
-`λ' = min(122.5, λ · g^clamp(10^−pace, 0.5, 2))`, `η' = 10^λ'`, `years' = η' < 300 ? 10^η' :
-Infinity`. At the Tide this makes `λ = 2·exp(a·n²)` after n turns from λ = 2 (η 100), so the Dark
-Era ends (λ 122) after about 38 standard turns. Its turn length is `years' − years` while both
-are finite, else Infinity; `logTurnLength` returns `log10(max(1, L))`, or η' when L is infinite.
+and `a` the age's growth for the length: `k = √(ln(max(λ, 2)/2) / a)` (the Tide turns since
+λ 2, `tideTurnsAt`), and at the Tide `λ' = min(122.5, λ · exp(a·(2k + 1)))`; at another pace
+`λ' = min(122.5, 2·exp(a·(k + s)²))` with `s = clamp(10^−pace, 0.5, 2)` (`paceShare`): the Dark
+Era keeps a clock of its own, a pace only halving or doubling its turn (until 20 Oct `λ ·
+g^s`, near enough the same, which paid `10^−pace`; on the ladder the other ages took, one Slow
+×100 turn would cross the whole era). `η' = 10^λ'`, `years' = η' < 300 ? 10^η' : Infinity`. At the
+Tide this makes `λ = 2·exp(a·n²)` after n turns from λ = 2 (η 100), so the Dark Era ends (λ 122)
+after about 38 standard turns (37.65 Tide turns: the last turn stops at λ 122, below). Its turn
+length is `years' − years` while both are finite, else Infinity; `logTurnLength` returns
+`log10(max(1, L))`, or η' when L is infinite.
 
 **Pace** (`civ.pace`, `actions.ts: setPace`, `sim/flare.ts`). An integer, the log10 factor
-against the Tide: the coming turn is `Tide × 10^−pace`, so +1 is "Quick ×10" (a tenth as long)
-and −1 "Slow ×10". Labels: Quick ×1000 (+3, granted by nothing), Quick ×100, Quick ×10, Tide,
+against the Tide: a turn at pace p covers `s = 10^−pace` of the Tide's turns as they would fall
+from here, `Tide × (g^s − 1)/(g − 1)` years (the Tide itself, exactly, when s = 1; until 20 Oct
+`Tide × 10^−pace`). So +1, "Quick ×10", is a tenth of a Tide turn of time (about 0.06 of the
+Tide's length in the Degenerate Age, 0.025 in the Black Hole Age), ten of them one Tide turn in
+years; −1, "Slow ×10", is ten Tide turns in one. `tideTurnsAt(era, years, η, length)` counts the
+Tide turns since the age began, `log_g((years − startYears + l0/(g−1)) / (l0/(g−1)))` (the Dark
+Era: k above), so a turn's share of the Tide is how much it grows over the turn. In the Dark Era
+the share is `clamp(10^−pace, 0.5, 2)` (its own clock, above). Labels: Quick ×1000 (+3, granted by nothing), Quick ×100, Quick ×10, Tide,
 Slow ×10, Slow ×100, Slow ×1000. Limits (`mods.ts: computeMods`): −1..+1 by default; the tech
 Hibernation Protocols sets the floor to −2 (and allows the Long Sleep), Quickening the ceiling
 to +2; the event choice that sets `civ.flags.stillness` lowers the floor one more step, never
 below −3. `endTurn` clamps the pace into the limits before anything else. A crossing resets it
-to 0. In the Dark Era pace only bends the exponent, between `g^0.5` and `g^2`, so paces beyond
-±1 change nothing there.
+to 0. The event choice "Sleep deeper" slows it one step, no further than the floor.
 
-**What a turn is worth** (`livedShare`, passed to the economy as `paceFactor`). Yields and
-upkeep scale by the share of a Tide turn that the turn lives: `10^−pace`, except (in this order)
-`1/split` on a new-star clock's turn (below); `10^−pace` outside the Dusk's calendar or for an
-infinite turn; 1 on a flare clock's turn; and `min(10^−pace, 1)` for a turn cut short by a
-flare's start. Tempo strain (section C) reads `log10(paceFactor)` as the orders of magnitude we
-slowed below the Tide.
+**What a turn is worth** (`livedShare`, passed to the economy as `paceFactor`). Yields scale by
+the Tide turns the turn covers: `1/split` on a new-star clock's turn (below, bought: lived in
+full); exactly `paceShare` (`10^−pace`, in the Dark Era clamped to ½ … 2) when the turn is the
+plain `stepTime` at its pace; otherwise (a flare
+clock's turn, a turn cut short as a star begins its last flare, or one stopped at the end of the
+age) `tideTurnsAt(end) − tideTurnsAt(start)` on its calendar, what it really covers (until 20 Oct
+1 on a flare clock's turn and `min(10^−pace, 1)` on a turn cut short by a flare). **Upkeep**
+(`upkeepShare`, `TurnContext.upkeepShare`, read through `economy.ts: upkeepOf`): the machines
+and sleepers of a plain turn or a new-star clock's cost `max(1, share)` (a quicker pace
+no cheaper, a slower one as much more as it is longer); any other turn's cost its share. Tempo
+strain (section C) reads `log10(paceFactor)` as the orders of magnitude we slowed below the
+Tide. Over a whole age the shares add up to the Tide turns it holds, at any pace.
 
 **Greyed paces** (`paceMatters`): a pace other than the Tide is offered only if its coming turn
 (length and η, as `turnStep` gives it) differs from that of the next pace toward the Tide, by
-more than a relative 10⁻⁹. `setPace` itself allows any pace in range.
+more than a relative 10⁻⁹; and a slow pace is not offered when its turn would reach the end of
+the age (`slowPastTheEnd`: `turnStep(pace).eta ≥ ageEndEta`, outside the Dark Era; since 20 Oct,
+the player's word: no single slow turn ends an age). `setPace` itself allows any pace in range.
+The pace lit, and the pace the turn is lived at, is `effectivePace`: ours, or while ours is
+greyed the nearest toward the Tide that is not (since 20 Oct; `turnStep`, `livedShare`,
+`upkeepShare` and the projection take it by default, `endTurn` with it); ours keeps a dashed
+outline (`.btn.stored`) and is lit again by itself when it can. A greyed pace says why: a new
+star's clock or flash, a flare's clock or its start, a slow turn reaching the end of the age, the
+turn stopping at the end of the age either way (`turnEndWhy`), the Dark Era's clock, or the same
+turn as the next pace.
 
 **Dormancy and the Long Sleep.** `setDormant(true/false)` (waking also clears `sleepTurns`).
 `longSleep(n)` needs Hibernation Protocols and sets `sleepTurns = clamp(round(n), 1, 20)` and
@@ -753,19 +777,30 @@ years, eta, pace, length)`. Then:
    `left = starTurnsLeft ≥ 1`: the turn ends at `star_until` if `left = 1`, else at `star_until −
    (star_step/split)·(left − 1)`, whatever the pace.
 2. Otherwise outside the Dusk's calendar, or for an infinite step: the plain step.
-3. In the Dusk: while a flare clock runs, the end is `min(step end, years + flare_step)`, and
-   exactly `flare_until` on the last of its turns (within a millionth of a step). Then, if any
-   settled red dwarf's `blueAt` falls in `(years, end]`, the turn stops at the earliest such
-   `blueAt`: a slower pace cannot carry past a settled star's last flare.
+3. In the Dusk: while a flare clock runs, the end is `years + flare_step` whatever the pace (until
+   20 Oct the shorter of that and the pace's step), and exactly `flare_until` on the last of its
+   turns (within a millionth of a step). Then, if any settled red dwarf's `blueAt` falls in
+   `(years, end]`, the turn stops at the earliest such `blueAt`: a slower pace cannot carry past a
+   settled star's last flare.
+4. Last (`stopAtTheEnd`), a turn never runs past `turnEndEta`: the end of the age the player sees
+   (`ageEndEta`: `DEGENERATE_END[fate]` in the Degenerate Age, `10^122` as η in the Dark Era, else
+   the age's `endEta`), or sooner η 39 under a fate other than decay while the calendar is the
+   Degenerate's, or η 89.5 (the Great Evaporation) under curvature until matter is gone. A turn
+   that would pass it ends exactly there: years `10^end` (Infinity past η 300), η `end`. (Since 20
+   Oct: on the ladder Slow ×100 is 100 Tide turns, more than an age after the Dusk holds; a slow
+   pace that would reach the age's end is not offered, so this stops the Tide's own last turn, a
+   quicker one, or a slow one at the calendar's turn or the Great Evaporation.)
 
-`stepTurns`, `turnsUntilYears` and `turnsUntilAll` simulate turns this way on a copy of the
+`stepTurns`, `turnsUntilYears` and `turnsUntilAll` simulate turns this way (each at our pace, or the
+nearest toward the Tide whose turn would not reach the end of the age: `slowestAllowed`) on a copy of the
 flags (assuming a flare is let pass), for forecasts and travel estimates; `eras.ts: turnsUntil`
 counts at the plain Tide (400 turns at most).
 
 **The flare clock** (`FLARE_TURNS` 6). When a settled star's turn stops at its `blueAt`, the
 event "The Last Flare" offers to keep time with it only when the flare would last fewer than
 three turns at our pace (`span < next × 3`). `keepTimeWithFlare`: `flare_until = whiteAt`,
-`flare_step = (whiteAt − years)/6`; six turns, each lived in full (`livedShare` 1). The flags
+`flare_step = (whiteAt − years)/6`; six turns, each a sixth of it whatever the pace, each lived
+and charged for the Tide turns it covers (until 20 Oct each lived in full). The flags
 are deleted once `years ≥ flare_until`. The home star flares at 9.94 × 10¹³ years for 4 × 10⁹
 years, very near the end of the Dusk.
 
@@ -821,7 +856,8 @@ stable, a once-only event is queued (A.6, step 8).
 
 **0. Set-up.** `mods = computeMods(state)`; clamp `civ.pace`; `siphoning = siphonsRunning(state)`
 (fixed for the turn). Long Sleep (A.5). `step = turnStep(state)`; `logL = logTurnLength(step)`;
-`ctx = {years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), mods}`.
+`ctx = {years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), upkeepShare:
+upkeepShare(state, pace, step), mods}`.
 
 **1. Economy.** `matterAvail = civ.matter`. For each colony in order: `t = colonyTurn(state, c,
 ctx, matterAvail)` (section C); `matterAvail −= t.matterBurn`; `c.last = t.y`; sum energy in,
@@ -864,10 +900,10 @@ banked and `completeTech` runs. With no project, `insight_bank += research·0.5`
 Then `discoverFromSurplus` (up to three cheapest projects from surplus insight; section C).
 
 **4. Worlds and growth.** `scorchWorlds(years, step.years)` (flaring stars boil their worlds,
-by the share of the flare this turn covers: section B); `declineWorlds` (outside the Dusk's
-calendar every world's core heat ×0.8 a turn, 0 below 0.02; in the Dusk the settled homeworld's
-−0.007 a turn, ×0.4 with a Core Stimulator; then seeded life, steam worlds, decline and
-freezing, `worldDies`: section B);
+by the share of the flare this turn covers: section B); `declineWorlds(state, paceFactor)`, each
+by the turn's share (outside the Dusk's calendar every world's core heat ×0.8^share, 0 below
+0.02; in the Dusk the settled homeworld's −0.007×share, ×0.4 with a Core Stimulator; then seeded
+life, steam worlds, decline and freezing, `worldDies`: section B);
 `wakeArchivedEchoes`. Then for each colony with `capc = capacity(...)`, if awake and not
 starving: Kin growth `+= 0.12·(0.5 + 0.5·vitality)` (×0.4 under Child Quotas) when `0 < kin <
 cap`; Echoes `+= 0.22` when below cap (and either present or with capacity) and energy > 15;
@@ -891,7 +927,7 @@ evolveUniverse(state, from, step.years, rng)` (section B), then `handleNotes` (b
 mind's step that may light a star as the turn ends (sealed). `theLongFlow(step.eta, logL, mods,
 log10 paceFactor)`. In the Dark calendar, Continuity: `decay = 2.2 × Π continuityMult^count`
 over every structure, ×0.35 if dormant, +5 if starving; `continuity = max(0, continuity −
-decay)`. Then the clock moves: `years`, `eta`, `turnLength` from the step; `turn++`;
+decay)`, a turn at a time whatever the pace (the Dark Era's own clock keeps its turns). Then the clock moves: `years`, `eta`, `turnLength` from the step; `turn++`;
 `eraTurn++`. For each settled system whose primary is now a blue dwarf with `blueAt ===
 years`, queue `last_flare`. Clear the flare flags if `years ≥ flare_until`; `clearStarClock`.
 
@@ -1157,10 +1193,10 @@ whose `blueAt` falls in (from, to], and `turnStep` ends the turn exactly at that
 whatever the pace. At the start of the next turn the event `last_flare` offers to **keep time
 with the flare**: `keepTimeWithFlare` sets `civ.flags.flare_until = whiteAt` and `flare_step =
 (whiteAt − years) / FLARE_TURNS` (6). While `keepingTime` (years below `flare_until −
-flare_step × 1e-6`), each turn ends at `min(Tide end, years + flare_step)`, snapped to
+flare_step × 1e-6`), each turn ends at `years + flare_step` whatever the pace, snapped to
 `flare_until` when within a millionth of a step. `livedShare` (the factor all yields scale by)
-is 1 on a flare-clock turn, `min(10^-pace, 1)` on a turn cut short by a flare's start, otherwise
-`10^-pace`. The flags are cleared once `years ≥ flare_until`. The offer to keep time appears
+is the Tide turns such a turn covers, as for a turn cut short by a flare's start; otherwise
+`10^-pace` (until 20 Oct 1 on a flare-clock turn and `min(10^-pace, 1)` on one cut short). The flags are cleared once `years ≥ flare_until`. The offer to keep time appears
 (`flareData.clock`) only when the flare is shorter than three turns at our pace.
 
 **Heat.** `flareHeat(state, b)` evaluates `bodyClimate` with the primary set to `red_dwarf` and
@@ -1395,8 +1431,9 @@ section; a sealed story choice can also cut ember yields by a quarter.
 ### B.4 Energy: what each source gives
 
 `EnergyMode` (`data/structures.ts`) and the rule in `economy.ts: colonyTurn` (per structure,
-`a = amount × count`; afterwards every `e` is multiplied by `pf × overdrive (1.5) × focus ×
-(1 + taint/200)`, `pf` = `livedShare`):
+`a = amount × count`; afterwards every `e` is multiplied by `pf × late × overdrive (1.5) × focus ×
+(1 + taint/200)`, `pf` = `livedShare`, `late` = `lateYield(state)`: 1 in the Dusk's calendar,
+`LATE_YIELD` = 1.4 after it, at every pace; matter likewise):
 
 | Mode | Gives | Rule |
 |---|---|---|
@@ -1417,8 +1454,8 @@ for any other primary the median orbit of its bound, non-`outer` worlds (the wor
 included). Orbital collectors ignore it.
 
 **The Hearth** of every settlement: `fed = max(min(1.5, rogue ? 0 : light), 0.8 × coreHeat, (at a
-hole, not rogue, after the Dusk) 1)`, and `2 × max(0.25, fed) × (1 − damage) × pf × overdrive ×
-focus × taint`. Where nothing local gives a quarter (`fed < 0.25`) it burns stored fuel and
+hole, not rogue, after the Dusk) 1)`, and `2 × max(0.25, fed) × (1 − damage) × pf × late ×
+overdrive × focus × taint`. Where nothing local gives a quarter (`fed < 0.25`) it burns stored fuel and
 salvage, at the floor of 0.5 before those factors.
 
 A structure "around the star" (its `bodies` include `deep`) on a world flung loose (`leftBehind`)
@@ -1538,19 +1575,23 @@ the homeworld's high `decline` (0.012): the event `dynamo_fails` on turn 3, the 
 #### B.5.5 Life, freezing and death
 
 `SURFACE_LIFE` = eyeball, terran, super_earth. `FROZEN_K` = 195 K; `frozenHard` (warmest ground
-below it) leaves no room for Kin. `vitalityLoss(state, b, c)` per turn:
+below it) leaves no room for Kin. `vitalityLoss(state, b, c)` per Tide turn (`declineWorlds`
+takes it by the turn's share, `livedShare`):
 
 - `decline` (settled worlds only): `b.decline × Π declineMult × (overdrive ? 1.3 : 1) × accel`,
-  `accel = min(3, 1 + 0.02 × eraTurn)` in the Dusk, 3 after.
+  `accel = min(3, 1 + 0.02 × tideTurnsAt('dusk', years))` in the Dusk (the Tide turns since it
+  began, whatever the pace; until 20 Oct `eraTurn`, the turns), 3 after.
 - `freeze` = `0.05` (×0.5 with a Core Stimulator) when *sunless* and no Orbital Lamps: sunless
   means after the Dusk, or rogue, or a `rogue`/`void`/missing primary, or surface life whose
   warmest ground is below 195 K, or seeded life no longer kept (`seededLifeUnkept`). Life under an
   ice shell lasts until the Last Light.
 
-`declineWorlds` (turn step 4): after the Dusk core heat fades; seeded life spreads; for each
-living world: a steam world loses all life at once; else `vitality −= decline`, (homeworld core
-cooling), then `vitality −= freeze` if still alive; the first freeze of one of ours is logged
-once with `turnsToFreeze`. At 0, `worldDies`: a surface-life world becomes `ice` (water ≥ 0.1,
+`declineWorlds(state, share)` (turn step 4): after the Dusk core heat fades (`× 0.8^share`);
+seeded life spreads (`SEED_RATE × share`); for each living world: a steam world loses all life at
+once; else `vitality −= decline × share`, (homeworld core cooling, `0.007 × share`), then
+`vitality −= freeze × share` if still alive; the first freeze of one of ours is logged once with
+`turnsToFreeze(state, b, c, share)`, in turns at our pace. So a world dies in ten times the turns
+at Quick ×10, the same years (until 20 Oct in the same turns whatever the pace). At 0, `worldDies`: a surface-life world becomes `ice` (water ≥ 0.1,
 not scorched) or `barren`, with trait `once_alive`. `sunGone` marks surface life whose primary
 is no longer star-like (`isStarLike`: red, blue, collision, helium, giant, Last Star). A white
 dwarf just collapsed is still hot, so a close world can keep warm for many short turns.
@@ -1839,8 +1880,9 @@ code's flare is 4 to 80 times). Severities: boon, info, warn, danger.
 
 `powerParts(state, b)`: the Hearth plus every buildable energy structure at its `max` count, at
 the Tide (`turnStep(state, 0)`), by the rules of B.4 (`hawking` by `hawkingLight`, `spin` its
-full amount while any spin is left). `matterAt`: Σ `(matterYield × richness + hydrogenYield ×
-hydrogen + lift) × max`, × `(0.4 + 0.6 gfe)`. `lastsUntil(b)`: 0 dissolved, `feeding.start` if
+full amount while any spin is left), each part × `lateYield` (since 20 Oct). `matterAt`: Σ
+`(matterYield × richness + hydrogenYield × hydrogen + lift) × max`, × `(0.4 + 0.6 gfe)` ×
+`lateYield`. `lastsUntil(b)`: 0 dissolved, `feeding.start` if
 feeding, ∞ rogue, at a hole the sooner of `evaporateAt` and `fallsInAt`, else `fallsInAt` (B.5.7).
 `siteValue` scores a world per Thread: Kin by room × 10 + habitability × vitality; Echoes and
 Chorus by power; the Lattice by matter + 0.1 × power; Coldminds by `log10(years left)` (400 if
@@ -1921,12 +1963,14 @@ nothing more. The `ending`, `path` and `epilogue` fields of `WORKS`, and `DARK_E
   (`civ.research`), Work progress (`civ.works`) and the stored insight bank
   (`civ.flags.insight_bank`).
 * **The lived share `pf`.** Each turn has a context `TurnContext { years, L, logL, paceFactor,
-  mods }` (`sim/economy.ts`). `L` is the turn's length in years; `logL = log10(max(1, L))` (in
+  upkeepShare?, mods }` (`sim/economy.ts`). `L` is the turn's length in years; `logL = log10(max(1, L))` (in
   deep time, where `L` is Infinity, `logL` is the end η: `eras.ts: logTurnLength`).
   `paceFactor` (written `pf` below) is `flare.ts: livedShare`. It is the share of a Tide turn
   that this turn lives, normally `10^-pace`: 0.1 when quickened ×10, 10 when slowed ×10. There
-  are special cases: 1 on a turn that keeps time with a flare, `1/split` while keeping time with
-  a new star, and at most 1 on a turn cut short by the start of a flare (see the time section).
+  are special cases: `1/split` while keeping time with a new star, and on a turn that keeps time
+  with a flare, is cut short by the start of one or stops at the end of the age, the Tide turns
+  it covers (see the time section). Upkeep reads `upkeepOf(ctx)`: `ctx.upkeepShare`, else
+  `max(1, pf)`.
   **Energy and matter scale with `pf`. Industry, insight and accord do not:** they count per
   decision, not per year. The Tide's own growth in turn length never multiplies yields directly,
   because light is given era-normalised (physics section, `sourceLight`).
@@ -2123,11 +2167,13 @@ not reduce it.
 | `curvature` | fate is curvature, the primary is a neutron star and η > 30: same ramp; else 0 |
 | `siphon` | `a` in the Dark calendar age; else 0 |
 
-Common factor, when `energy` is set and not `away`: `e ×= pf × overdrive × focusMul(energy) ×
-taintBoost`. η here is that of the turn's start.
+Common factor, when `energy` is set and not `away`: `e ×= pf × late × overdrive × focusMul(energy) ×
+taintBoost`, `late = lateYield(state)` (1 in the Dusk's calendar, `LATE_YIELD` = 1.4 after it:
+since 20 Oct, carrying what the old slow turns' overpay gave the late game). η here is that of the
+turn's start.
 
 Matter: `mt = (matterYield × n × richness + hydrogenYield × n × hydrogen) × gfeMatter`, plus
-`lift × n × gfeMatter` if not away. Then `mt ×= pf × taintBoost × (1.4 with Hunger Engines) ×
+`lift × n × gfeMatter` if not away. Then `mt ×= pf × late × taintBoost × (1.4 with Hunger Engines) ×
 (1.25 with Matter focus)`. Mines and skimmers count toward `depletion` (the lift does not). `mt`
 is added to matter only while matter is not gone.
 
@@ -2147,7 +2193,7 @@ than fusion or accretion and made nothing ("nothing to gather").
 **The Hearth** (every settlement, unless its body is dissolved):
 `fed = max(min(1.5, light), coreHeat × 0.8, hole ? 1 : 0)`. On a rogue world `light` counts as 0.
 `hole` means the primary is a black hole or the supermassive one, the world is not rogue, and the
-calendar age is Degenerate or later. Then `hearth = 2 × max(0.25, fed) × (1 − damage) × pf ×
+calendar age is Degenerate or later. Then `hearth = 2 × max(0.25, fed) × (1 − damage) × pf × late ×
 overdrive × focusMul(energy) × taintBoost`. Below `fed` 0.25 it runs on "stored fuel and
 salvage": a floor, never nothing.
 
@@ -2281,10 +2327,10 @@ and drain nothing.
 ≥ 0.1, else `barren` (habitability 0). Its vitality becomes 0 and it gets the trait `once_alive`.
 Its natural Kin room is then 0, so Kin above dome or warren room are lost one a turn (C.5.3).
 `declineWorlds` handles the slow decline (`vitalityLoss`: decline × the structures'
-`declineMult`s × 1.3 if overdriven × Dusk acceleration; freezing at 5% a turn without a sun
-unless Orbital Lamps are over it), seeded life, the homeworld's core heat (−0.007 a turn in the
-Dusk, ×0.4 with a Core Stimulator), and after the Dusk every world's core heat (×0.8 a turn,
-0 below 0.02). Details are in the physics section.
+`declineMult`s × 1.3 if overdriven × Dusk acceleration; freezing at 5% a Tide turn without a sun
+unless Orbital Lamps are over it), seeded life, the homeworld's core heat (−0.007 a Tide turn in
+the Dusk, ×0.4 with a Core Stimulator), and after the Dusk every world's core heat (×0.8 a Tide
+turn, 0 below 0.02), each by the turn's share. Details are in the physics section.
 
 **Settlements are lost** by these means:
 * **Abandoned:** no people, no sleepers and no structures (step 4).
@@ -3042,9 +3088,9 @@ Constants for the call: `communion = hasCharter('communion_charter')`; `blackout
 3. Stationary at a missing or `gone` system → delete the swarm, `continue`.
 4. **Tamed** → D.1.10, `continue`.
 5. `loseTheScent(sw)` (a part whose ship left) → `continue` if it set off.
-6. **Eat.** `matter = systemMatter(sys)` = Σ over non-dissolved bodies of `richness + 0.5 × hydrogen`, plus 2 if the primary is a brown dwarf. `bite = min(matter, 0.05 × size)`. For each non-dissolved body that is not `deep`: `richness = max(0, richness − 0.3 × bite)`, `hydrogen = max(0, hydrogen − 0.15 × bite)` (the Deep is counted but not eaten).
-7. **Drain:** `gfe = max(0.05, gfe − 0.00006 × size × (communion ? 1.5 : 1))`.
-8. **Rust:** `sys.rust = min(1, (rust ?? 0) + 0.04 + 0.004 × size)`.
+6. **Eat.** `matter = systemMatter(sys)` = Σ over non-dissolved bodies of `richness + 0.5 × hydrogen`, plus 2 if the primary is a brown dwarf. `bite = min(matter, 0.05 × size × share)` (`share`: the turn's `livedShare`, passed to `updateHunger`). For each non-dissolved body that is not `deep`: `richness = max(0, richness − 0.3 × bite)`, `hydrogen = max(0, hydrogen − 0.15 × bite)` (the Deep is counted but not eaten).
+7. **Drain:** `gfe = max(0.05, gfe − 0.00006 × size × share × (communion ? 1.5 : 1))`.
+8. **Rust:** `sys.rust = min(1, (rust ?? 0) + (0.04 + 0.004 × size) × share)`.
 9. **Growth** (logistic, using `matter` from before the bite): `cap = 3 + 2.2 × matter`; `size += 0.1 × size × (1 − size / max(1, cap))`; if `matter < 0.6`, `size −= 0.25`. If `size ≤ 0.4`: log "The swarm at X has starved and gone still." (good), delete, `continue`.
 10. **Collide with our settlements** — if any colony of ours is at this star and not `communion`:
     - `def = defenseAt(sys)` (D.1.6), `power = 1.2 × size`. Defenders win if `def >= power × U(0.6, 1.1)`.
@@ -3055,7 +3101,7 @@ Constants for the call: `communion = hasCharter('communion_charter')`; `blackout
 13. **Bud:** if `size > 9` and the number of swarms in the game (all, tamed and parts included) `< MAX_SWARMS[difficulty]`: `size /= 2`; a child `{ id: uid('hg'), stationary here, size: same, awake, untamed, appetite 1 }` is added and immediately `moveSwarm`d.
 14. **Move on:** if no `prey` and (`matter < 1.2` **or** `chance(0.08)`) → `moveSwarm` (the 8% draw happens only when `matter ≥ 1.2`).
 
-After the loop: `fadeRust` — for every system with rust and **no untamed stationary swarm** (asleep or awake), `rust *= 1 − RUST_FADE` (0.1); deleted below 0.01. No draw. Rust is cosmetic plus a tooltip; the harm is the richness and hydrogen eaten, which never regrow.
+After the loop: `fadeRust` — for every system with rust and **no untamed stationary swarm** (asleep or awake), `rust *= (1 − RUST_FADE)^share` (0.1 a Tide turn); deleted below 0.01. No draw. Rust is cosmetic plus a tooltip; the harm is the richness and hydrogen eaten, which never regrow.
 
 #### D.1.5 Choosing a destination: `moveSwarm(sw, rand, blackout)`
 
@@ -3140,7 +3186,7 @@ Checks in order (each returns an error string): the fleet is stationed; `isWarFl
 #### D.1.11 Taming, tamed swarms and absorption
 
 - Tech Command Language (`command_language`, Degenerate Age) unlocks the Swarm Tender ship (`tames: true`, attack 0, hp 8, cost 70 / 20 matter). Action `tame(swarmId)` requires the tech, then `tameSwarm`: the swarm must be stationary ("The swarm is moving; wait until it settles."); a fleet with a tender must be at its star; cost `round(15 + 6 × size)` energy. Result: `tamed = true`, `awake = true`, `prey`/`nest` deleted, `civ.flags.tamed++`. (No check against Communion or an already-tamed swarm.)
-- Each turn a tamed stationary swarm: `matter += size × (Communion ? 0.8 : 0.4)`; under Communion `taint = min(100, taint + 0.12 × size)`; relapse with `chance(Lattice Compact or Communion ? 0.005 : 0.02)` → `tamed = false`, log "…has slipped its commands. It is hungry again." A tamed swarm never eats, grows, rusts, drains, hunts, buds or moves, and does not block rust fading.
+- Each turn a tamed stationary swarm: `matter += size × (Communion ? 0.8 : 0.4) × share`; under Communion `taint = min(100, taint + 0.12 × size × share)`; relapse with `chance(Lattice Compact or Communion ? 0.005 : 0.02)` → `tamed = false`, log "…has slipped its commands. It is hungry again." A tamed swarm never eats, grows, rusts, drains, hunts, buds or moves, and does not block rust fading.
 - `absorbSwarm(swarmId, colonyId)`: the swarm must be tamed and at that colony's star. `pops = max(1, round(size / 1.5))`; `lattice += pops`; `lattice_foundry = max(current, ceil(pops / 6))`; swarm deleted; `taint += 3` (8 under Communion).
 
 #### D.1.12 Communion (dark charter `communion_charter`)
@@ -3563,7 +3609,7 @@ Effects not stated in the hints:
 - `new_star` "Study", `white_fire`/`helium_giant` "Watch": insight +25, resolve +2, the system charted. "Keep time": charts the system and keeps time with the star (flare domain); offered only while `starClockOffer` holds. `new_star` "Tell the others": every contacted survivor health +0.08 and regard +8.
 - `supernova`: every system within 20,000 ly becomes known.
 - `unmoored` "Evacuate": energy −20; half of each Thread (rounded down) moves to the capital (Echoes via `welcomeEchoes`), unless the colony is the capital. `world_falls` "Evacuate": everyone and their cryo to the capital; both choices reveal the feeding model. At a brown dwarf (in a game with `flags.all_fall`) its text reads: "<world> has spiralled in to the brown dwarf it circles. Its tides are tearing the world apart, and the rubble rains onto the dwarf: a faint warmth, a hundredth of what a white dwarf would make of it, for trillions of years." The sleeper vault's text (`relic_sleepers`) begins "In orbit around <system>" where the vault is in the Deep, else "Under <world>".
-- `forgetting` "Sleep deeper": pace `max(−2, pace − 1)`. Relic strip options pay ×2 under Salvage the Dead, ×3 (and Taint +2) under Consume the Dead.
+- `forgetting` "Sleep deeper": pace `max(paceMin, pace − 1)` (until 20 Oct `max(−2, …)`, which could pass the floor). Relic strip options pay ×2 under Salvage the Dead, ×3 (and Taint +2) under Consume the Dead.
 
 #### D.4.6 Relics (found by survey)
 
@@ -3624,7 +3670,7 @@ Effects beyond the hints: Flare Glass "Read the record" sets `flare_warning`; Le
 4. `planPacts`: for each survivor, the first pact in `PACT_KINDS` order not held whose need ≤ their regard; propose if not blocked and accord ≥ cost + 30; at most one a turn.
 5. `planAccord` (keep 30): Rally if resolve < 40; Calm if dissent > 40; Hear the lowest conscious Thread with standing < 35.
 6. `planThreads`: per colony, twice: if Kin strain > 2 orders and Kin > 1, upload one (else freeze); if Echo strain > 0.5, cool one; late Dusk (η > 13.995) freeze Kin.
-7. `planFlow`, 8. `planDismantle` (take apart collectors whose source is gone for good when matter < 40), 9. `planBuilds` (a priority list per colony by age, energy first when net < 3 or the reserve < 25%; Defense Grids while any untamed awake swarm exists; Leptonic Substrate rushed before the end of matter), 10. `planFleets` (settlers to the best `settleScore`; probes to the nearest known uncharted star with no swarm seen when energy > 20; settler ships while affordable; a probe every 25 turns if fewer than 2), 11. `planSignals`, 12. `planPace` (moves pace only for energy), 13. `planWorks` (starts the first Great Work, in a fixed order, whose tech, age and requirement allow).
+7. `planFlow`, 8. `planDismantle` (take apart collectors whose source is gone for good when matter < 40), 9. `planBuilds` (a priority list per colony by age, energy first when net < 3 or the reserve < 25%; Defense Grids while any untamed awake swarm exists; Leptonic Substrate rushed before the end of matter), 10. `planFleets` (settlers to the best `settleScore`; probes to the nearest known uncharted star with no swarm seen when energy > 20; settler ships while affordable; a probe every 25 turns if fewer than 2), 11. `planSignals`, 12. `planPace` (moves pace only for energy: in trouble, the neighbouring pace that nets most for the Tide turns it covers, never slower than the Tide before the Dark Era; full, a step quicker if it still nets energy; since 20 Oct, when it took the one that netted most a turn, which the old slow turns' overpay made the slowest), 13. `planWorks` (starts the first Great Work, in a fixed order, whose tech, age and requirement allow), 14. `planDarkSleep` (since 20 Oct: in the Dark Era, with Hibernation Protocols, awake, and the projected drain `energyOut − energyIn` positive, if `energy / drain` is fewer turns than the dark has left at our pace, and no Great Work in progress would be done first, `need / (last_insight × (researching ? 0.5 : 1)) ≤ holds − 1` with `holds` the turns Continuity lasts, 2.2 a turn (×0.6 for each Error-Correction Array) and 5 more once the reserve is empty: the Long Sleep for 20 turns. Before, it never slept: a slow turn in the dark paid a hundred Tide turns' trickle).
 
 `planSignals` answers every arrived open signal: aid → give if energy > 3 × ask; refugees accept; exodus take; Choir let; pact offer accept if accord ≥ cost + 30; joint join if matter > 120; trade if what they want > 3 × ask; swarm pleas refused (last choice); the stranger minds' messages by fixed choices (sealed, S.1.7); if the answer fails it falls back to the last choice.
 
@@ -3641,18 +3687,21 @@ halo H[ wars W] fate F gfe G%[ [from->to pops a->b] ...] | Adj:alive|fate[+N][[a
 
 `halo` is a stage number of one of the stranger minds (sealed). Neighbours: `alive` or their fate, `+N` stars beyond the first, pacts in force (`a` aid, `r` archives, `w` watch). `tools/tally.sh` counts lines starting `seed `: survive = VICTORY + ENDURANCE, victories, and the mean Degenerate turns; the 900-game run is three slices of 300 (`--from=0,300,600`) and `grep "fate <f> "` splits by fate.
 
-#### D.6.3 Balance reference (today's game, `main`, 19 Oct, `tools/sim.ts 300 standard competent`)
+#### D.6.3 Balance reference (today's game, `main`, 20 Oct, `tools/sim.ts 300 standard competent`)
 
 | Run | Survive | Victories | Degenerate Age (mean turns) |
 |---|---|---|---|
-| 300 games | 160 | 81 | 72 |
-| 900 games | 476 | 244 | 71 |
-| 900, protons decay | 193 / 450 (43%) | 19 | |
-| 900, stable | 165 / 239 (69%) | 127 | |
-| 900, curvature radiation | 118 / 211 (56%) | 98 | |
-| 300 games at Harsh (`--diff=harsh`) | 147 | 62 | 68 |
+| 300 games | 229 | 73 | 112 |
+| 300, protons decay | 87 / 148 | 2 | |
+| 300, stable | 79 / 81 | 51 | |
+| 300, curvature radiation | 63 / 71 | 20 | |
+| 300 games at Harsh (`--diff=harsh`) | 209 | 63 | 106 |
 
-Noise: about ±12 survivors in 300 games; two runs of 900 can differ by about 30. (Before the batch of 19 October 2026, 12–15 Oct: 154 / 72 / 72 in 300; 456 / 203 / 71 in 900; decay 189, stable 168, curvature 99; Harsh 140 / 52 / 70.) A replica playing the same seeds should land within this noise; exact line-for-line agreement requires identical RNG consumption order everywhere.
+Noise: about ±12 survivors in 300 games; two runs of 900 can differ by about 30. Before the pace
+batch of 20 October (the ladder, `LATE_YIELD` and `planDarkSleep`): 165 / 77 / 70 in 300; decay
+67, stable 63, curvature 35; Harsh 150 / 59 / 71; 19 Oct, 900 games, 476 / 244 / 71. A replica
+playing the same seeds should land within this noise; exact line-for-line agreement requires
+identical RNG consumption order everywhere.
 
 ## E. What the player sees and hears, and how it is tested and shipped
 

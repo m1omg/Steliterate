@@ -2,7 +2,7 @@ import type { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
 import { capital, colonies, formOf, hasCharter, hasTech, log, popsOf, threadTotals, uid } from '../sim/util';
 import { welcomeEchoes } from '../sim/archive';
-import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
+import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, effectivePace, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime, sup } from '../eras';
 import { SURFACE_LIFE, boilingAway, buriedOcean, embersOutEta, haloEta, haloMoved, siphonsRunning, steamWorld } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
@@ -127,7 +127,7 @@ function newStarTimingCore(s: GameState, d: EventData): string {
     return `${lead} At our own pace the turn after that would span ${then}, ${timesOver(t.orders)} what will be left of its life. To follow it on, ${STAR_TURNS} more turns of its light, our minds must stay quickened: ${t.cost} energy, once (${purse}).`;
   }
   if (t.flash) {
-    const next = formatYears(stepTime(calendarEra(s), s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
+    const next = formatYears(stepTime(calendarEra(s), s.years, s.eta, effectivePace(s), s.settings.length).turnLength);
     const have = Math.floor(s.civ.energy);
     const purse = have >= t.cost ? `we have ${have}` : `more than the ${have} we have`;
     const end = t.flashUntil === p.diesAt ? 'that ends as it burns out' : 'as short as our calendar can count, though it outlasts the star';
@@ -135,7 +135,7 @@ function newStarTimingCore(s: GameState, d: EventData): string {
   }
   if (t.brief) return ` It will burn for about ${left}: so brief, this late in the age, that no clock of ours could count its turns.`;
   if (!t.possible) return ` It will burn for about ${left}: at our pace, ${about}.`;
-  const next = formatYears(stepTime(calendarEra(s), s.years, s.eta, s.civ.pace, s.settings.length).turnLength);
+  const next = formatYears(stepTime(calendarEra(s), s.years, s.eta, effectivePace(s), s.settings.length).turnLength);
   if (gift) return ` It will burn for about ${left}, and at our pace the next turn alone would span ${next}: ${turns <= 1 ? 'it would come and go inside it' : `it would last only ${about}`}. To keep time with it, ${STAR_TURNS} turns of its light, costs nothing, whatever our pace.`;
   if (t.cost === 0) return ` It will burn for about ${left}, and at our pace the next turn alone would span ${next}: ${turns <= 1 ? 'it would come and go inside it' : `it would last only ${about}`}. We are close enough to its pace to keep time with it, ${STAR_TURNS} turns of its light, at no cost.`;
   const have = Math.floor(s.civ.energy);
@@ -961,7 +961,8 @@ export const EVENTS: EventDef[] = [
     text: () => 'Error correction cannot keep up. Across the vaults, small things are going: names, faces, the colour of the old sun. Someone proposes pruning everything non-essential so the essential can be kept perfectly.',
     choices: [
       { label: 'Prune', hint: 'Continuity +12. Resolve −6.', run: (s) => { s.civ.continuity = Math.min(100, s.civ.continuity + 12); res(s, -6); } },
-      { label: 'Sleep deeper', hint: 'Continuity +5. Pace slows.', run: (s) => { s.civ.continuity = Math.min(100, s.civ.continuity + 5); s.civ.pace = Math.max(-2, s.civ.pace - 1); } },
+      // (no slower than our research allows: until 20 Oct it could pass it, lighting no pace)
+      { label: 'Sleep deeper', hint: 'Continuity +5. Pace slows, as far as research allows.', run: (s) => { s.civ.continuity = Math.min(100, s.civ.continuity + 5); s.civ.pace = Math.max(computeMods(s).paceMin, s.civ.pace - 1); } },
       { label: 'Keep everything, imperfectly', hint: 'Resolve +3.', run: (s) => { res(s, 3); } },
     ],
   },

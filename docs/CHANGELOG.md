@@ -3769,3 +3769,125 @@ Both versions, the same code.
   then merged into this branch, keeping this branch's code (`-s ours`, `f08a951`). Live on 20
   Oct: the main address serves `index-Gsu1nkEh.js` and `/next/` `index-CSak4cHM.js`, the builds
   validated here.
+
+## The pace: ten turns to a Tide turn (20 Oct, both versions)
+
+From the player's list of 16 Oct, items 3 to 5: "Quick 10x is not Quick 10x here:" (two
+screenshots of a flare clock, where Quick ×10's turn was a fifth shorter than the Tide's and paid
+as much), "Worlds die in same amount of turns regardless of pace.", and "If a given pace becomes
+unavailable the UI still stays with that pace highlighted instead of switching to the next possible
+one." The plan of 19 Oct (part C) had the causes, and the player chose "Ten per Tide turn". Built
+so, it showed what the plan had not: one Slow ×100 turn could cross the whole Dark Era, and the
+victories had leaned on the old slow turns' overpay. Asked, the player chose "Dark keeps its
+clock" ("one slow x 100 turn should not cross the entire dark era") and, for the victories, "Bring
+them back". Both versions, the same code but for the size of the late yield (×1.125 here, ×1.4
+in today's game).
+
+- **One rule: a turn's share is the Tide turns of time it covers.**
+  - The Tide's turn is 1, Quick ×10's exactly 0.1, Slow ×10's exactly 10 (`stepTime`,
+    `tideTurnsAt`, `paceShare`). Each Tide turn is g times the one before (1.27 in the Dusk, 2.82
+    in the Degenerate Age, 12.6 in the Black Hole Age), so a Quick ×10 turn splits the Tide's
+    ladder in ten, `Tide × (g^0.1 − 1)/(g − 1)` (0.09 of the Tide's length in the Dusk, 0.06 in
+    the Degenerate Age, 0.025 in the Black Hole Age), ten of them one Tide turn in years; and a
+    Slow ×10 turn is ten Tide turns (in the Degenerate Age some 17,500 times the current one).
+  - Until now a Quick turn was a tenth of the Tide at its date and a Slow one ten times, so the
+    paces were never ten to one over any stretch: over the Degenerate Age Quick ×10 gave 6.1 times
+    the turns, and Slow ×10 paid 10 for a turn covering 2.9 Tide turns of time (Slow ×100 paid 100
+    for 5, Slow ×1000 1,000 for 7).
+  - Over a whole age the shares add up to the Tide turns it holds, at every pace: 104.3 in the
+    Dusk (105 turns at the Tide, 1,044 at Quick ×10, 15 at Slow ×10), 67.2 in the Degenerate Age
+    when protons decay, 56.1 in the Black Hole Age, 37.7 in the Dark Era.
+- **The Dark Era keeps its own clock** (the player's word). There a pace only halves or doubles
+  the turn, as it always did, so the dark takes 76 turns at Quick, 38 at the Tide, 19 at Slow; but
+  a turn now pays and costs the half or the two Tide turns it covers, where Slow ×10 paid ten and
+  Slow ×100 a hundred (item 3's mismatch in the dark). Continuity is lost a turn at a time, as
+  before.
+- **No slow turn ends an age** (the player's word). On the ladder Slow ×100 is a hundred Tide
+  turns, more than any age after the Dusk holds, so one turn could have ended it. A slow pace whose
+  turn would reach the end of the age is now greyed out, and our turn is lived at the nearest pace
+  toward the Tide that would not: Slow ×100 at most early in the Dusk, Slow ×10 until ten Tide
+  turns are left. The forecasts count the turns the same way.
+- **No turn runs past the end of its age** (the Dusk at η 14, the Degenerate Age where its fate
+  ends it, the Black Hole Age at η 100, the Dark Era where its ruler reads 122), the calendar's
+  turn at η 39 under a fate other than decay, or the Great Evaporation: it stops there, paid for
+  the Tide turns it covered. So the Tide's own last turn of an age is a short one now.
+- **Clocks and flares pay for the time they cover.** A flare's clock keeps its own sixths whatever
+  the pace, each paying and costing the Tide turns it covers (a quicker pace cut them shorter,
+  "turn n of 6" came round again, and each was paid as a whole Tide turn: the player's
+  screenshots). So does a turn cut short as one of our stars begins its last flare (it paid 0.1
+  with Quick ×10 chosen, 1 at the Tide). A new star's clock stays as it was, each turn lived in
+  full, or a tenth of one when Quickening splits it: that clock is bought.
+- **Upkeep:** a turn at our pace costs its machines and sleepers (and, in the new version, its
+  warships) a whole Tide turn at least, and a slower one as much more as it is longer, as before;
+  a turn a clock, a flare or the age's end sets costs the Tide turns it covers, as it pays.
+- **The worlds wear by time (item 4).** Decline, freezing, core heat (the homeworld's in the Dusk,
+  every world's after), seeded life, a swarm's bite, its rust and the rust's fading, the galaxy's
+  free energy it drains, and what a tamed swarm brings (and its Taint under Communion) are each
+  taken by the turn's share. So a world dies in ten times the turns at Quick ×10, in the same
+  years; until now in the same turns at any pace. The Dusk wears worlds faster by its Tide turns,
+  not its turns (at Quick ×10 that counted ten times as fast), and the freezing forecast counts
+  turns at our pace.
+- **The pace lit is the one the turn is lived at (item 5).** While ours is greyed (a clock, a
+  flare or the end of the age sets the turn, or a slow turn would reach the end of the age) the
+  nearest pace toward the Tide that is not is lit, and the turn is lived at it; ours keeps a dashed
+  outline and is lit again by itself when it can, and the phone's pace button names the one in
+  use. Every greyed pace says why. "Sleep deeper" no longer slows past what research allows.
+- **The late ages richer** (the player: "Bring them back"). The autoplayer's victories had leaned
+  on the old slow turns' overpay: in trouble it took the pace that paid most a turn, the slowest,
+  and in the stable Degenerate Age of seed 1000 it was paid 1,383 Tide turns' income for about 20
+  of time. With honest turns it won 49 of 300 (77 before); held to the Tide, the old rules and the
+  new win alike (21 of 113 games, 22 of 118), and in 62 games it no longer won, the gift of the
+  Slow Ones was always there, but most lacked the 300 energy that begins the Aeon Seed, a
+  settlement at the Heart, or Conformal Mathematics in time. So after the Last Light every source
+  gives an eighth more energy and matter (`LATE_YIELD` 1.125: structures and the Hearth, and where
+  to settle counts it), at every pace. Tuned on the harness: ×1.13 gave 84 victories of 300, ×1.2
+  91, ×1.4 122; a line through them puts 77 at ×1.13. Today's game had leaned on the overpay
+  harder (49 victories at ×1.2, 105 at ×1.6): there two fifths more, ×1.4. A player at the Tide
+  never had the overpay, so for one the late ages are now that much richer than before.
+- **The autoplayer sleeps through the dark.** Where matter decays or space unmakes it, the stores
+  built of matter are gone by the Dark Era: in 8 of 10 such games that faded (of 16 faded games
+  looked at) the reserve could hold only 125, what the stores not built of matter hold, against 6
+  to 95 energy of upkeep a Tide turn over the dark's 38. A Slow ×100 turn there had paid a hundred
+  Tide turns' trickle (in seed 8919 of today's game 51 energy a turn from Halo Siphons giving
+  0.5), so it never needed to sleep; on honest turns it faded (83 of 300 games at ×1.13, where 50
+  had; 26 now). Now, where the reserve would not last the age and no Great Work would be done
+  first, it takes the Long Sleep (a tenth of the upkeep, about a third of the Continuity lost)
+  under every fate (`planDarkSleep`; until now only with matter stable once all of it was iron,
+  and never in today's game). Of those 16 games, 11 now last or win. An autoplayer change, not a
+  rule: the Long Sleep was always there for a player, and slept through, the dark costs a reserve
+  a tenth as much.
+- **Texts:** the pace tips ("10 turns for each turn at the Tide … each gathers and wears the worlds
+  10× less, but its machines and sleepers still cost a whole turn’s upkeep"; in the Dark Era "a turn
+  can only be halved … doubled"), the Manual's pace, flare and positronium paragraphs and the late
+  yield in its Income paragraph, the flare chips, and every "a turn" of decline, freezing, seeded
+  life, core heat and rust that means a Tide turn now says so.
+- **The autoplayer.** In trouble it now weighs only the paces open, by what each nets for the Tide
+  turns it covers, and goes no slower than the Tide before the Dark Era (in the new version, unless
+  nothing pays at all once matter is gone): a slow turn now covers ten Tide turns with one turn's
+  research and industry, and the first harness run of the batch, before this, had 139 of 300
+  surviving and not one victory.
+- **Checks:** `unit/ladder` (the ladder in every age and length; the Dark Era's own clock; shares
+  and their upkeep; every age's shares adding up to its Tide turns at five paces, no slow turn
+  ending one; the stops and the greyed paces at the end of each age, the calendar's turn and the
+  Great Evaporation; the Tide's last turn; the forecasts' turns; the flare clock and the flare stop;
+  the declines, the Dusk's acceleration, the Hunger; the dark's 76, 38 and 19 turns with Continuity
+  a turn at a time; the late yield, and where to settle counting it; the autoplayer's Long Sleep in
+  the dark under decay and curvature, and none with a reserve that lasts; Sleep deeper);
+  `browser/pace-grey` (the lit pace, the dashed outline, ours coming back, and Slow ×100 greyed
+  where its turn would end the age, the check now setting the fate of matter so that it knows).
+  Updated: `unit/pace` (a flare clock now `--o--`; in the Degenerate Age Slow ×100 greyed, `oooo-`),
+  `unit/clocks` (Slow ×10's first turn is 10^3.17 years), `unit/follow` (the follow-on star sized by
+  our own turn), `unit/terraform` (seeded life at Quick ×10, 200 turns to 80%), `browser/terraform`
+  (its tip now "+4% a turn at the Tide"), and in the new version `unit/battle-roles` (fleet upkeep
+  by the share charged) and `unit/positronium` (a Net's share of the window with the late yield).
+  `unit/fates` failed until a turn stopped at the Great Evaporation.
+- **Balance** (300 standard competent games): 187 of 300 survive, 77 victories, a Degenerate Age
+  of 103 turns (165 / 77 / 72 before); by fate decay 107 / 148 (42 victories), stable 39 / 81
+  (29), curvature 41 / 71 (6), where 80, 43 and 42 survived, with 28, 32 and 17 victories; Harsh
+  147 / 51 / 98 (136 / 38 / 68). The Fade ends 26 games (50 before), The Will Fails 3 (6). On the
+  way: the honest turns with the Dark Era's own clock and no late yield gave 113 / 49 / 99; the
+  late yield at ×1.13 138 / 84, ×1.2 150 / 91, ×1.4 180 / 122, all without the dark sleep. The
+  Degenerate Age is longer in turns because the autoplayer no longer takes slow turns in trouble
+  there: it lives the age at the Tide (67 Tide turns of time where protons decay, 47 where matter
+  is stable, 131 where space unmakes it) and keeps time with new stars; a player at the Tide lives
+  the same turns as before.

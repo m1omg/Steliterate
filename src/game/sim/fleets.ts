@@ -413,14 +413,15 @@ export function updateDetection(state: GameState, mods: Mods, flown: Flown[] = [
 }
 
 /**
- * What the active civilization's warships cost it a turn (part 2c): each class its own upkeep;
- * like a structure's, a turn slower than the Tide costs as much more as it is longer, and asleep
- * it is a tenth.
+ * What the active civilization's warships cost it a turn (part 2c): each class its own upkeep, by
+ * `upkeepShare`, the Tide turns the turn is charged for (upkeepShare, flare.ts: like a structure's,
+ * a turn slower than the Tide costs as much more as it is longer, a quicker one a whole turn's),
+ * and asleep a tenth.
  */
-export function fleetUpkeep(state: GameState, paceFactor: number): number {
+export function fleetUpkeep(state: GameState, upkeepShare: number): number {
   let u = 0;
   for (const f of fleets(state)) for (const s of f.ships) u += SHIP_BY_ID[s.cls]?.upkeep ?? 0;
-  return u * Math.max(1, paceFactor) * (state.civ.dormant ? 0.1 : 1);
+  return u * upkeepShare * (state.civ.dormant ? 0.1 : 1);
 }
 
 /** How many warships the active civilization keeps, for the upkeep's line. */

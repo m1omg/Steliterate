@@ -23,7 +23,7 @@ import { stepTime } from '../../../src/game/eras';
 import { newGame } from '../../../src/game/newGame';
 import { structureCheck } from '../../../src/game/sim/actions';
 import { LEAVE_SPIN, runCrossing } from '../../../src/game/sim/crossing';
-import { PASSAGE_OUTPUT, capacity } from '../../../src/game/sim/economy';
+import { PASSAGE_OUTPUT, capacity, lateYield } from '../../../src/game/sim/economy';
 import { createColony, deepFor } from '../../../src/game/sim/fleets';
 import { driftCheck } from '../../../src/game/sim/horizon';
 import { updateForecasts } from '../../../src/game/sim/forecast';
@@ -245,7 +245,8 @@ function threadLines(s: GameState, c: Colony) {
   w.v.structures.positronium_net = 0;
   const with0 = project(w.s).perColony[w.v.id].y.energy;
   const ctx = project(w.s).ctx;
-  check(Math.abs(with1 - with0 - netYield(w.s, ctx.years, ctx.L)) < 1e-6, `and gathers its share this turn (${(with1 - with0).toFixed(3)} energy)`);
+  // (with the late ages' yield, as every source after the Last Light: LATE_YIELD, economy.ts)
+  check(Math.abs(with1 - with0 - netYield(w.s, ctx.years, ctx.L) * lateYield(w.s)) < 1e-6, `and gathers its share this turn (${(with1 - with0).toFixed(3)} energy, ×${lateYield(w.s)} after the Last Light)`);
   check(/No positronium has formed yet/.test(structureCheck(after(80).s, after(80).v, net) ?? '') && /decayed/.test(structureCheck(after(150).s, after(150).v, net) ?? ''), 'not before the atoms form, nor after they decay');
   const m = newGame({ seed: 1000, survivors: 3, protonFate: 'decays', civsAsleep: true });
   m.civ.techs.push('positronium_weaving');

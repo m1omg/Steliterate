@@ -1,12 +1,12 @@
 import { pointAt } from '../civs';
 import { STRUCTURE_BY_ID } from '../data/structures';
-import { eta, formatYears, stepTime, type TimeStep } from '../eras';
+import { ERA_BY_ID, eta, formatYears, paceShare, stepTime, tideTurnsAt, type TimeStep } from '../eras';
 import { bodyClimate, primaryLuminosity } from '../physics';
 import type { Body, Colony, GameState, StarSystem } from '../types';
 import { computeMods } from './mods';
 import { reserveCapacity } from './storage';
 import { allColonies, colonies } from './util';
-import { calendarEra } from '../fate';
+import { DEGENERATE_END, MATTER_END, calendarEra, fateOf } from '../fate';
 import type { Civ } from '../types';
 
 /**
@@ -24,7 +24,8 @@ export function clockCiv(state: GameState): Civ {
 // 1997; Adams, Laughlin & Graves 2004). Late in the
 // Dusk a turn lasts far longer than the whole flare, so without help it would come and go
 // between two turns. So the turn stops the moment one of our stars leaves the main sequence,
-// and we may choose to keep time with the flare: turns pinned to a sixth of it, lived in full.
+// and we may choose to keep time with the flare: turns pinned to a sixth of it, each paid for the
+// time it covers (livedShare; until 20 Oct each was lived in full, so a quick pace bought more).
 
 /** Turns a flare lasts when we keep time with it. */
 export const FLARE_TURNS = 6;
@@ -101,7 +102,7 @@ export function flareClock(state: GameState): { turn: number; of: number; system
  * The settled star whose last flare cuts the coming turn short at this pace, if any: the turn
  * stops the moment it leaves the main sequence, so a slower pace cannot take us past it.
  */
-export function flareStop(state: GameState, pace = clockCiv(state).pace): StarSystem | null {
+export function flareStop(state: GameState, pace = effectivePace(state)): StarSystem | null {
   const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
   if (calendarEra(state) !== 'dusk' || !isFinite(step.years) || keepingTime(state)) return null;
   return flareDue(state, state.years, step.years);
@@ -373,7 +374,69 @@ export function starClock(state: GameState): { turn: number; of: number; split: 
  * what was left of its life, whatever the pace, the last ending as it burns out; with Quickening
  * at a quick pace each of those splits into STAR_SPLIT.
  */
-export function turnStep(state: GameState, pace = clockCiv(state).pace): TimeStep {
+export function turnStep(state: GameState, pace = effectivePace(state)): TimeStep {
+  return stopAtTheEnd(state, clockedStep(state, pace));
+}
+
+/**
+ * Where the coming turn must stop, as η: the end of the age (the Degenerate Age's by the fate of
+ * matter) or, sooner, the calendar's own turn at η 39 under a fate other than decay, or the Great
+ * Evaporation (η 89.5) if space unmakes matter, a storm of its own inside the age. A turn never runs
+ * past any of them (since 20 Oct: on the pace's ladder a slow turn can cover more than an age, and
+ * one late in the Black Hole Age would carry the Great Evaporation past the age's end with it).
+ */
+export function turnEndEta(state: GameState): number {
+  const ends = [ageEndEta(state)];
+  if (fateOf(state) !== 'decay' && (state.era === 'degenerate' || state.era === 'blackhole') && state.years < ERA_BY_ID.blackhole.startYears) ends.push(ERA_BY_ID.degenerate.endEta);
+  if (fateOf(state) === 'curvature' && state.era !== 'dark' && state.flags.matter_gone === undefined) ends.push(MATTER_END.curvature);
+  return Math.min(...ends.filter((e) => e > state.eta), Infinity);
+}
+
+/** Where the coming turn stops, if not where the pace would take it (turnEndEta), in words. */
+export function turnEndWhy(state: GameState): string {
+  const end = turnEndEta(state);
+  if (end === ageEndEta(state)) return 'the end of the age';
+  if (end === MATTER_END.curvature) return 'the Great Evaporation';
+  return 'the calendar’s turn at η 39';
+}
+
+/**
+ * Would a turn at this slow pace reach the end of the age? Then it is not offered (greyed), and the
+ * turn is lived at the nearest pace toward the Tide that would not (slowestAllowed): no single slow
+ * turn ends an age (20 Oct, the player: "one slow x 100 turn should not cross the entire dark era";
+ * on the ladder Slow ×100 is a hundred Tide turns, more than any age after the Dusk holds). The
+ * Tide's own last turn, or a quicker one, still stops there. Not in the Dark Era, whose clock only
+ * halves or doubles a turn (eras.ts, paceShare).
+ */
+export function slowPastTheEnd(state: GameState, pace: number): boolean {
+  if (pace >= 0 || calendarEra(state) === 'dark') return false;
+  return turnStep(state, pace).eta >= ageEndEta(state);
+}
+
+/** This pace, or if it is a slow one that would reach the end of the age, the nearest toward the Tide that would not. */
+export function slowestAllowed(state: GameState, pace: number): number {
+  let p = pace;
+  while (p < 0 && slowPastTheEnd(state, p)) p++;
+  return p;
+}
+
+/**
+ * Where the age the player sees ends, as η (ageOver, fate.ts): the Degenerate Age's by the fate of
+ * matter, the Dark Era's where its ruler (log10 η) reads 122.
+ */
+export function ageEndEta(state: GameState): number {
+  if (state.era === 'dark') return Math.pow(10, ERA_BY_ID.dark.endEta);
+  return state.era === 'degenerate' ? DEGENERATE_END[fateOf(state)] : ERA_BY_ID[state.era].endEta;
+}
+
+function stopAtTheEnd(state: GameState, step: TimeStep): TimeStep {
+  const end = turnEndEta(state);
+  if (!(step.eta > end)) return step;
+  const y = end < 300 ? Math.pow(10, end) : Infinity;
+  return { years: y, eta: end, turnLength: isFinite(y) && isFinite(state.years) ? y - state.years : Infinity };
+}
+
+function clockedStep(state: GameState, pace: number): TimeStep {
   const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
   const left = starClockEra(state) && isFinite(step.years) ? starTurnsLeft(state, pace) : 0;
   if (left >= 1) {
@@ -385,9 +448,11 @@ export function turnStep(state: GameState, pace = clockCiv(state).pace): TimeSte
   let end = step.years;
   const f = clockCiv(state).flags;
   if (keepingTime(state)) {
-    // the last of its turns ends exactly when the flare does, not an ulp or two short of it
+    // a flare's clock keeps its own turns, a sixth of it whatever the pace (since 20 Oct: until then
+    // a quicker pace cut them shorter, each still lived in full, and "turn n of 6" came round again);
+    // the last of them ends exactly when the flare does, not an ulp or two short of it
     const next = state.years + f.flare_step;
-    end = Math.min(end, next >= f.flare_until - f.flare_step * 1e-6 ? f.flare_until : next);
+    end = next >= f.flare_until - f.flare_step * 1e-6 ? f.flare_until : next;
   }
   const due = flareDue(state, state.years, end);
   if (due) end = due.primary.blueAt!;
@@ -404,6 +469,7 @@ export function turnStep(state: GameState, pace = clockCiv(state).pace): TimeSte
  */
 export function paceMatters(state: GameState, pace: number): boolean {
   if (pace === 0) return true;
+  if (slowPastTheEnd(state, pace)) return false;
   const a = turnStep(state, pace);
   const b = turnStep(state, pace > 0 ? pace - 1 : pace + 1);
   const close = (x: number, y: number) => x === y || Math.abs(x - y) <= 1e-9 * Math.max(Math.abs(x), Math.abs(y));
@@ -411,21 +477,47 @@ export function paceMatters(state: GameState, pace: number): boolean {
 }
 
 /**
- * The share of a Tide turn the coming turn lives, which its yields scale by: 10^-pace, as the
- * calendar has it, except at a flare, which sets the length of the turn whatever the pace (so a
- * slower pace would buy more without more time passing). While we keep time with a flare each of
- * its turns is lived in full: one Tide turn. A turn cut short when a star begins to flare pays as
- * one Tide turn at most. (Paying it only for the time it covers would still charge a whole turn's
- * upkeep, which does not shrink with a short turn, for a fraction of its income.) A turn kept
- * with a new star is lived in full in the same way, or as a tenth of one when Quickening splits it.
+ * The share of a Tide turn the coming turn lives, which its yields and upkeep scale by: the Tide
+ * turns of time it covers (tideTurnsAt). A turn at our pace covers exactly 10^-pace of them; one
+ * that a flare's clock sets, that stops as a star begins its last flare, or that stops at the end
+ * of the age, what it really covers (since 20 Oct: until then a flare's clock lived each of its
+ * turns in full whatever their length, so a quick pace bought more of them, and a turn cut short
+ * as a star flared paid as our pace said). A turn kept with a new star is lived in full, or as a
+ * tenth of one when Quickening splits it: the keeping is bought for it (keepTimeWithStar).
  */
-export function livedShare(state: GameState, pace = clockCiv(state).pace, step: TimeStep = turnStep(state, pace)): number {
-  const share = Math.pow(10, -pace);
+export function livedShare(state: GameState, pace = effectivePace(state), step: TimeStep = turnStep(state, pace)): number {
   if (starClockEra(state) && keepingStarTime(state)) return 1 / starSplit(state, pace);
-  if (calendarEra(state) !== 'dusk' || !isFinite(step.turnLength)) return share;
-  if (keepingTime(state)) return 1;
-  const planned = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length).turnLength;
-  return planned > 0 && step.turnLength < planned ? Math.min(share, 1) : share;
+  const era = calendarEra(state);
+  const plain = stepTime(era, state.years, state.eta, pace, state.settings.length);
+  if (step.years === plain.years && step.eta === plain.eta) return paceShare(era, pace);
+  const L = state.settings.length;
+  return Math.max(0, tideTurnsAt(era, step.years, step.eta, L) - tideTurnsAt(era, state.years, state.eta, L));
+}
+
+/**
+ * What the coming turn's machines, sleepers and fleets cost, in turns at the Tide (economy.ts): a
+ * turn at our pace a whole one at least, a slower one as much more as it is longer, and so a turn
+ * kept with a new star; one that a flare's clock sets, that stops as a star begins its last flare,
+ * or that stops at the end of the age, for the time it covers, as it pays (since 20 Oct: so such
+ * a short turn does not cost a whole turn for a fraction of one's income).
+ */
+export function upkeepShare(state: GameState, pace = effectivePace(state), step: TimeStep = turnStep(state, pace)): number {
+  const share = livedShare(state, pace, step);
+  if (starClockEra(state) && keepingStarTime(state)) return Math.max(1, share);
+  const plain = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);
+  return step.years === plain.years && step.eta === plain.eta ? Math.max(1, share) : share;
+}
+
+/**
+ * The pace the coming turn is lived at: ours, or, while ours is greyed (a clock, a flare or the end
+ * of the age sets the turn, or a slow turn would reach the end of the age), the nearest toward the
+ * Tide that is not. This one is lit, and turnStep and the shares take it by default; ours keeps a
+ * dashed outline and comes back by itself when it can.
+ */
+export function effectivePace(state: GameState): number {
+  let p = clockCiv(state).pace;
+  while (p !== 0 && !paceMatters(state, p)) p += p > 0 ? -1 : 1;
+  return p;
 }
 
 /**
@@ -440,7 +532,8 @@ export function stepTurns(state: GameState, pace: number, maxTurns: number, each
   const copy: Civ = { ...real, flags: { ...real.flags } };
   const sim = pointAt({ ...state, civs: { ...state.civs, [real.id]: copy } }, copy);
   for (let n = 1; n <= maxTurns; n++) {
-    const step = turnStep(sim, pace);
+    // (as the turns will be lived: no slow one carried to the end of the age)
+    const step = turnStep(sim, slowestAllowed(sim, pace));
     if (each(step.turnLength, step.years)) return n;
     if (!isFinite(step.years)) return Infinity;
     sim.years = step.years;
@@ -551,7 +644,7 @@ export function flareData(state: GameState, sys: StarSystem): Record<string, str
     mine.map((c) => state.bodies[c.bodyId]).filter((b) => b && living.includes(b.kind)).sort((a, b) => b.vitality - a.vitality)[0] ??
     state.bodies[mine.sort((a, b) => b.pops.kin - a.pops.kin)[0]?.bodyId ?? ''];
   const span = (p.whiteAt ?? state.years) - state.years;
-  const next = stepTime(calendarEra(state), state.years, state.eta, clockCiv(state).pace, state.settings.length).turnLength;
+  const next = stepTime(calendarEra(state), state.years, state.eta, effectivePace(state), state.settings.length).turnLength;
   const d: Record<string, string | number> = {
     systemId: sys.id,
     star: sys.name,

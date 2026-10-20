@@ -57,7 +57,8 @@ const fresh = () => {
   newFleet(s, cap.systemId, ['warden', 'picket']);
   newFleet(s, cap.systemId, ['probe']);
   check(eq(fleetUpkeep(s, 1), 0.4), `a Warden and a Picket: 0.4 energy a turn at the Tide (${fleetUpkeep(s, 1)}); a probe costs nothing`);
-  check(eq(fleetUpkeep(s, 0.1), 0.4) && eq(fleetUpkeep(s, 10), 4), `a quicker pace no cheaper (${fleetUpkeep(s, 0.1)}), a tenfold slower one ten times dearer (${fleetUpkeep(s, 10)})`);
+  // (a quicker pace no cheaper: its turn is charged a whole Tide turn, upkeepShare in flare.ts and unit/ladder)
+  check(eq(fleetUpkeep(s, 10), 4) && eq(fleetUpkeep(s, 0.05), 0.02), `a tenfold slower turn ten times dearer (${fleetUpkeep(s, 10)}); one a flare or the age’s end cuts to a twentieth of a Tide turn, a twentieth (${fleetUpkeep(s, 0.05)})`);
   s.civ.dormant = true;
   check(eq(fleetUpkeep(s, 1), 0.04), `asleep, a tenth (${fleetUpkeep(s, 1)})`);
 }

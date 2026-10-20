@@ -1,9 +1,9 @@
 import { logTurnLength } from '../eras';
-import { clockCiv, livedShare, turnStep } from './flare';
+import { effectivePace, livedShare, turnStep, upkeepShare } from './flare';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
-import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type ColonyTurn, type TurnContext } from './economy';
+import { capacity, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type ColonyTurn, type TurnContext } from './economy';
 import { computeMods, strainFor, type Strain } from './mods';
 import { researchDraw } from './research';
 import { jointIncome } from './survivors';
@@ -42,10 +42,10 @@ export function spareLeft(c: Colony, industry: number): number {
 export function project(state: GameState, paceOverride?: number): Projection {
   const mods = computeMods(state);
   // (time is the player's: another civilization lives at our pace)
-  const pace = paceOverride ?? clockCiv(state).pace;
+  const pace = paceOverride ?? effectivePace(state);
   const step = turnStep(state, pace);
   const logL = logTurnLength(step);
-  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), mods };
+  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), upkeepShare: upkeepShare(state, pace, step), mods };
   const p: Projection = {
     ctx,
     turnYears: step.turnLength,
@@ -83,7 +83,7 @@ export function project(state: GameState, paceOverride?: number): Projection {
   }
   p.energyIn += jointIncome(state) * ctx.paceFactor;
   p.energyOut += beaconUpkeep(state) * ctx.paceFactor;
-  p.energyOut += fleetUpkeep(state, ctx.paceFactor);
+  p.energyOut += fleetUpkeep(state, upkeepOf(ctx));
   p.accord -= latticeAlienation(state, mods);
   p.researchDraw = researchDraw(state, p.insight);
   p.energyOut += p.researchDraw;
@@ -136,7 +136,7 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
   if (d.gfeDrain) notes.push('Drains the galaxy’s free energy');
   const w = state.bodies[c.bodyId];
   if (d.terraform && w) {
-    if (d.terraform === 'seeding') notes.push(`Life spreads: vitality +${Math.round(SEED_RATE * 100)}% a turn, up to ${Math.round(SEED_CAP * 100)}%`);
+    if (d.terraform === 'seeding') notes.push(`Life spreads: vitality +${Math.round(SEED_RATE * 100)}% a turn at the Tide, up to ${Math.round(SEED_CAP * 100)}%`);
     else {
       const h0 = habitabilityOf(state, w, c);
       const h1 = habitabilityOf(state, w, more);

@@ -2,7 +2,7 @@ import { CHARTERS, type CharterDef } from '../../game/data/charters';
 import { DEMANDS, THREAD_DEFS } from '../../game/data/threads';
 import { TECH_BY_ID } from '../../game/data/techs';
 import { logTurnLength } from '../../game/eras';
-import { turnStep } from '../../game/sim/flare';
+import { livedShare, turnStep } from '../../game/sim/flare';
 import { archivedEchoes } from '../../game/sim/archive';
 import { useState } from 'preact/hooks';
 import { charterAvailable, enactCharter, REPEAL_DISSENT, repealAvailable, repealCharter } from '../../game/sim/actions';
@@ -176,7 +176,8 @@ export function ThreadsModal({ s }: { s: GameState }) {
         {THREADS.map((t) => {
           const d = THREAD_DEFS[t];
           const [lo, hi] = clockRange(t, mods);
-          const st = strainFor(t, logL, mods, -s.civ.pace);
+          // (as the turn reckons it: the share of the Tide the coming turn really lives, society.ts)
+          const st = strainFor(t, logL, mods, Math.log10(livedShare(s)));
           const dem = s.civ.demands[t];
           const demDef = dem ? DEMANDS.find((x) => x.id === dem) : null;
           const met = dem ? demandMet(s, dem, mods, logL) : true;

@@ -3,7 +3,7 @@ import { STRUCTURE_BY_ID, type EnergyMode } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
 import { ERA_BY_ID, logTurnLength, stepTime } from './eras';
-import { clockCiv, livedShare, starClockTerms, turnStep, turnsUntilYears } from './sim/flare';
+import { clockCiv, effectivePace, livedShare, paceMatters, starClockTerms, turnStep, turnsUntilYears, upkeepShare } from './sim/flare';
 import { emberShare, haloDrawn, sourceLight, vitalityLoss } from './physics';
 import {
   answerEvent,
@@ -312,8 +312,7 @@ function planStandDown(state: GameState) {
   const war = civ.id === state.player ? anyWar(state) : enemiesOf(state, civ.id).length > 0;
   // (nor while it arms for a war of its own: planWarAI)
   if (war || state.turn - (civ.flags.arming ?? -99) < 10 || colonies(state).some((c) => swarmThreat(state, c.systemId))) return;
-  const pace = clockCiv(state).pace;
-  const up = fleetUpkeep(state, livedShare(state, pace, turnStep(state, pace)));
+  const up = fleetUpkeep(state, upkeepShare(state));
   if (up <= 0 || up <= STAND_DOWN_SHARE * Math.max(1, (civ.flags.last_energy_net ?? 0) + up)) return;
   for (const f of fleets(state)) if (f.at && !f.to && f.ships.length && f.ships.every((s) => isWarship(s.cls))) disbandFleet(state, f.id);
 }
@@ -1114,51 +1113,67 @@ function planPace(state: GameState) {
     const pr = project(state, p);
     return pr.energyIn - pr.energyOut;
   };
-  const here = netAt(civ.pace);
+  // the pace the coming turn is lived at (ours, unless it is greyed now), and the paces open now
+  const cur = effectivePace(state);
+  const open = (p: number) => p >= mods.paceMin && p <= mods.paceMax && paceMatters(state, p);
+  const here = netAt(cur);
+  // what a turn at a pace nets for each turn of the Tide's time it covers: since 20 Oct a turn pays
+  // and costs by the time it covers, so a slower turn's larger net is only its longer time (until
+  // then a slower turn paid more than its time, and this took the slowest that paid)
+  const perTide = (p: number, n: number) => n / Math.max(1e-12, livedShare(state, p));
+  // until the Dark Era turns are worth having (what they make grows), and a slower one now buys
+  // nothing for its time but the upkeep of minds that slow their clocks, for ten times fewer turns:
+  // no slower than the Tide in trouble, unless nothing pays at all once matter is gone (below)
+  const dark = calendarEra(state) === 'dark';
   if (here < 0 || civ.energy < cap * 0.2) {
-    // in trouble: take whichever neighbouring pace pays best right now
-    let best = civ.pace;
-    let bestNet = here;
-    const nets = new Map<number, number>([[civ.pace, here]]);
-    for (const p of [civ.pace - 1, civ.pace + 1]) {
-      if (p < mods.paceMin || p > mods.paceMax) continue;
+    // in trouble: take whichever neighbouring pace pays best for the time it covers
+    let best = cur;
+    let bestNet = perTide(cur, here);
+    const nets = new Map<number, number>([[cur, here]]);
+    for (const p of [cur - 1, cur + 1]) {
+      if (!open(p)) continue;
       const n = netAt(p);
       nets.set(p, n);
-      if (n > bestNet + 0.5) {
+      if (p < 0 && p < cur && !dark) continue;
+      if (perTide(p, n) > bestNet + 0.5) {
         best = p;
-        bestNet = n;
+        bestNet = perTide(p, n);
       }
     }
     // and if none pays after matter, or in the Dark Era, when all that is left is to last,
     // whichever drains the reserve least for the ground it covers: a quicker turn costs about as
     // much once nothing comes in, and there are that many more of them, each starving as surely
     // (until then turns are worth having: what they make grows)
-    if (bestNet < 0 && (matterGone(state) || calendarEra(state) === 'dark')) {
+    if (bestNet < 0 && (matterGone(state) || dark)) {
       const drain = (p: number) => -nets.get(p)! / Math.max(1e-12, turnReach(state, p));
-      best = civ.pace;
+      best = cur;
       for (const p of nets.keys()) if (drain(p) < drain(best) * 0.9) best = p;
     }
-    if (best !== civ.pace) setPace(state, best);
+    if (best !== cur) setPace(state, best);
     return;
   }
   // comfortable and full: quicken for more turns out of the age, if it still pays
-  if (civ.energy >= cap * 0.9 && civ.pace < mods.paceMax && netAt(civ.pace + 1) > 0) setPace(state, civ.pace + 1);
-  else if (civ.pace < 0 && civ.energy > cap * 0.5 && netAt(civ.pace + 1) > 0) setPace(state, civ.pace + 1);
+  if (civ.energy >= cap * 0.9 && open(cur + 1) && netAt(cur + 1) > 0) setPace(state, cur + 1);
+  else if (cur < 0 && civ.energy > cap * 0.5 && open(cur + 1) && netAt(cur + 1) > 0) setPace(state, cur + 1);
 }
 
 /** The Long Sleep in the dark, as long as it can be taken at once (actions.ts). */
 const DARK_SLEEP_FOR = 20;
 
 /**
- * Matter stable, once everything is iron: nothing will come in again (deeptime.ts). Where the
+ * In the Dark Era little comes in: Halo Siphons, the positronium's nets, and with matter stable,
+ * until everything is iron, what it still gives (deeptime.ts; until then this waits). Where the
  * reserve would not last to the end of the age at the rate it is going, and no Great Work would
  * be done while Continuity holds, the Long Sleep, Dyson's hibernation: a tenth of the upkeep (three
  * tenths while matter flows) and about a third of what a turn takes from Continuity. Awake again,
- * it looks again. (Our own play: another civilization keeps to its way.)
+ * it looks again. (Our own play: another civilization keeps to its way.) Since 20 Oct under every
+ * fate: until then a slow turn in the dark paid a hundred Tide turns' trickle, and slowing down
+ * was enough to last.
  */
 function planDarkSleep(state: GameState) {
   const civ = state.civ;
-  if (civ.id !== state.player || civ.dormant || plannedFate(state) !== 'stable' || state.era !== 'dark' || !ironAge(state)) return;
+  if (civ.id !== state.player || civ.dormant || state.era !== 'dark') return;
+  if (plannedFate(state) === 'stable' && !ironAge(state)) return;
   if (!hasTech(state, 'hibernation_protocols')) return;
   const pr = project(state);
   const drain = pr.energyOut - pr.energyIn;

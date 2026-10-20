@@ -5,7 +5,7 @@ import type { Colony, GameState } from '../types';
 import type { ActionResult } from './actions';
 import { dismantleTerms } from './actions';
 import { protocolsMult } from './crossing';
-import { clockCiv, turnStep } from './flare';
+import { effectivePace, turnStep } from './flare';
 import { formOf, hasTech, log, ownColony, uid } from './util';
 
 // The Passage (the new version, part 3-2): a settlement rewritten, over several turns, into
@@ -146,7 +146,7 @@ export function etaToEndOfMatter(state: GameState): number {
  * length), each as long as the calendar's turn at this pace (`pace`, the player's by default: time
  * is the player's; no star's clock).
  */
-export function passageEta(state: GameState, c: Colony, industry: number, pace = clockCiv(state).pace): number {
+export function passageEta(state: GameState, c: Colony, industry: number, pace = effectivePace(state)): number {
   const per = c.last?.industry ?? 0;
   if (per <= 0) return Infinity;
   const step = stepTime(calendarEra(state), state.years, state.eta, pace, state.settings.length);

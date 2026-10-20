@@ -76,7 +76,7 @@ import { sfx } from '../../audio/sfx';
 import { focusTitle, lowVision, pressable, useWholeScroll } from '../a11y';
 import { MATTER_DISSOLVES, calendarEra, fateOf } from '../../game/fate';
 import { flowing, keeping, nextToFlow } from '../../game/sim/flow';
-import { turnStep, turnsUntilYears } from '../../game/sim/flare';
+import { livedShare, turnStep, turnsUntilYears } from '../../game/sim/flare';
 
 export function Drawer({ s }: { s: GameState }) {
   void rev.value;
@@ -532,7 +532,7 @@ function SwarmNear({ s, systemId }: { s: GameState; systemId: string }) {
 /** What a star's rust means, and whether the Hunger is still at it. */
 function rustTip(s: GameState, sys: StarSystem): string {
   const feeding = Object.values(s.swarms).some((w) => w.systemId === sys.id && w.awake && !w.tamed);
-  return `The Hunger's rust: how much a swarm has fed here. It builds while one eats (4% a turn, more for a bigger swarm), and fades by a tenth each turn once no swarm is there. The rust itself does no harm; the harm is what was eaten, the worlds' mineral richness and hydrogen, which never grow back. ${feeding ? 'A swarm is feeding here now.' : 'No swarm is feeding here now.'}`;
+  return `The Hunger's rust: how much a swarm has fed here. It builds while one eats (4% a turn at the Tide, more for a bigger swarm), and fades by a tenth a turn at the Tide once no swarm is there: as much in a year at any pace. The rust itself does no harm; the harm is what was eaten, the worlds' mineral richness and hydrogen, which never grow back. ${feeding ? 'A swarm is feeding here now.' : 'No swarm is feeding here now.'}`;
 }
 
 /** A living world without a sun: cooling as its dead star fades, or freezing, and how long it has. */
@@ -563,7 +563,7 @@ function seededTip(s: GameState, b: Body): string | undefined {
   const c = b.colonyId ? ownColony(s, b.colonyId) : undefined;
   if (!c || !((c.structures.biosphere_seeding ?? 0) > 0)) return undefined;
   return seedingGrowth(s, b, c) > 0
-    ? `Seeded life is spreading: +${Math.round(SEED_RATE * 100)}% a turn, up to ${Math.round(SEED_CAP * 100)}%.`
+    ? `Seeded life is spreading: +${Math.round(SEED_RATE * 100)}% a turn at the Tide, up to ${Math.round(SEED_CAP * 100)}%.`
     : b.vitality >= SEED_CAP - 1e-9
       ? `Seeded life has spread as far as it can (${Math.round(SEED_CAP * 100)}%).`
       : seededLifeUnkept(s, b, c) || !terraformLit(s, b)
@@ -573,9 +573,10 @@ function seededTip(s: GameState, b: Body): string | undefined {
 
 function FreezingRow({ s, b, c }: { s: GameState; b: Body; c?: Colony }) {
   const tip = seededLifeUnkept(s, b, c)
-    ? 'Life seeded on a dead world lives on the warmth the terraforming gives it. With its star flaring or dead, or its Orbital Mirrors and Atmosphere Works both gone, it freezes: 5% of its vitality a turn (half that with a Core Stimulator).'
-    : `A living world whose star has died cools as the light fades. Once even its warmest ground is below ${FROZEN_K} K it freezes: 5% of its vitality a turn (half that with a Core Stimulator), and when none is left it is an ice world or bare rock. After the Last Light every living world freezes so, as does one cast out of its system. Orbital Lamps keep one warm and alive.`;
-  const n = turnsToFreeze(s, b, c);
+    ? 'Life seeded on a dead world lives on the warmth the terraforming gives it. With its star flaring or dead, or its Orbital Mirrors and Atmosphere Works both gone, it freezes: 5% of its vitality a turn at the Tide (half that with a Core Stimulator; a tenth of it a turn at Quick ×10).'
+    : `A living world whose star has died cools as the light fades. Once even its warmest ground is below ${FROZEN_K} K it freezes: 5% of its vitality a turn at the Tide (half that with a Core Stimulator; a tenth of it a turn at Quick ×10), and when none is left it is an ice world or bare rock. After the Last Light every living world freezes so, as does one cast out of its system. Orbital Lamps keep one warm and alive.`;
+  // (in turns at our pace)
+  const n = turnsToFreeze(s, b, c, livedShare(s));
   if (isFinite(n)) {
     return (
       <>
@@ -1160,7 +1161,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   const isCap = s.civ.capitalId === c.id;
   const eNet = y ? y.energy - y.energyUpkeep : 0;
   // after the Long Flow: who keeps this place whole
-  const keep = flowing(s) ? keeping(c, logTurnLength(turnStep(s, s.civ.pace)), mods) : 'kept';
+  const keep = flowing(s) ? keeping(c, logTurnLength(turnStep(s)), mods) : 'kept';
   return (
     <>
       <div class="drawer-head">

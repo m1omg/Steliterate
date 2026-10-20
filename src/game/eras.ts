@@ -133,23 +133,60 @@ function darkLambdaFactor(lambda: number, length: EpochLength): number {
   return Math.exp(a * (2 * n + 1));
 }
 
+/**
+ * How many Tide turns of its calendar's age have passed at a date (not a whole number between
+ * them). Each Tide turn multiplies the time since the age began, plus l0/(g−1), by g: so this is
+ * log_g of how far that has grown, 0 when the age begins. In the Dark Era's deep time, log10 η
+ * after n Tide turns is 2·e^(a·n²). A turn's share of the Tide (what it pays, how far the worlds
+ * decline in it) is how much this grows over it: 1 for a Tide turn, exactly 0.1 at Quick ×10 and
+ * 10 at Slow ×10 (since 20 Oct; the player, 16 Oct: "Quick 10x is not Quick 10x").
+ */
+export function tideTurnsAt(era: EraId, years: number, etaNow: number, length: EpochLength): number {
+  const d = ERA_BY_ID[era];
+  if (era === 'dark') return Math.sqrt(Math.max(0, Math.log(Math.max(Math.log10(Math.max(etaNow, 100)), 2) / 2)) / d.growth[length]);
+  const g = d.growth[length];
+  const u0 = d.l0 / (g - 1);
+  return Math.log((Math.max(0, years - d.startYears) + u0) / u0) / Math.log(g);
+}
+
 export interface TimeStep {
   years: number;
   eta: number;
   turnLength: number;
 }
 
-/** Advance the clock by one turn at the given pace (log10 factor, + = quicker, shorter turns). */
+/**
+ * The Tide turns a plain turn at this pace covers: 10^−pace (Quick ×10 a tenth, Slow ×10 ten), but
+ * in the Dark Era, whose clock is its own, a pace only halves or doubles the turn, as it always did
+ * (20 Oct, the player's word: on the ladder one Slow ×100 turn crossed the whole era).
+ */
+export function paceShare(era: EraId, pace: number): number {
+  const s = Math.pow(10, -pace);
+  return era === 'dark' ? Math.min(2, Math.max(0.5, s)) : s;
+}
+
+/**
+ * Advance the clock by one turn at the given pace (log10 factor, + = quicker, shorter turns). A turn
+ * covers paceShare Tide turns of the age, as they would fall from here (tideTurnsAt): ten Quick ×10
+ * turns are one Tide turn in years, and a Slow ×10 turn is ten of them, the Tide growing by g from
+ * each to the next (until 20 Oct a turn was the Tide's length × 10^−p, so over any stretch the
+ * paces were never ten to one). The Dark Era's are half, one or two of its Tide turns (until 20 Oct
+ * near enough, λ·g^(½ or 2), and paid 10^−p). A turn that would pass the end of its age stops
+ * there: turnStep (sim/flare.ts) knows where that is, and offers no slow pace that would.
+ */
 export function stepTime(era: EraId, years: number, etaNow: number, pace: number, length: EpochLength): TimeStep {
-  const factor = Math.pow(10, -pace);
+  const share = paceShare(era, pace);
   if (era !== 'dark') {
-    const L = tideLength(era, years, length) * factor;
+    const g = ERA_BY_ID[era].growth[length];
+    // (the Tide itself exactly as it always was)
+    const L = tideLength(era, years, length) * (share === 1 ? 1 : (Math.pow(g, share) - 1) / (g - 1));
     const y = years + L;
     return { years: y, eta: eta(y), turnLength: L };
   }
   const lambda = Math.log10(Math.max(etaNow, 100));
-  const g = darkLambdaFactor(lambda, length);
-  const nextLambda = Math.min(122.5, lambda * Math.pow(g, Math.min(2, Math.max(0.5, factor))));
+  const a = ERA_BY_ID.dark.growth[length];
+  const n = tideTurnsAt('dark', years, etaNow, length);
+  const nextLambda = Math.min(122.5, share === 1 ? lambda * darkLambdaFactor(lambda, length) : 2 * Math.exp(a * (n + share) * (n + share)));
   const nextEta = Math.pow(10, nextLambda);
   const y = nextEta < 300 ? Math.pow(10, nextEta) : Infinity;
   const L = isFinite(y) && isFinite(years) ? y - years : Infinity;
