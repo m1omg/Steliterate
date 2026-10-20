@@ -79,6 +79,10 @@ years, with no faster-than-light travel.
   more energy per turn, but the universe moves on faster between decisions). Neither is
   always right: a merger star that burns for 100 million years is a long summer to a mind at
   human speed and a flash of lightning to a Coldmind. Energy storage lets you bank a flash.
+  Since 20 Oct ×10 means ×10: a turn covers exactly ten turns of the Tide (or a tenth of one) on
+  the age's ladder, and pays and wears the worlds by that, while machines and sleepers cost a
+  whole Tide turn at least; no slow turn ends an age, and the Dark Era keeps its own clock, a
+  pace there only halving or doubling the turn.
 * **Travel is sublight.** A fleet advances `speed × turnLength` light-years per turn and pays
   a launch cost in energy. Early on a 10 ly hop takes several turns; later a province fits
   in one.

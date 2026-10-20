@@ -2,8 +2,8 @@ import { EVENT_BY_ID, choiceHint, choiceShown } from './data/events';
 import { STRUCTURE_BY_ID, type EnergyMode } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
-import { logTurnLength } from './eras';
-import { starClockTerms, turnStep } from './sim/flare';
+import { ERA_BY_ID, logTurnLength, stepTime } from './eras';
+import { effectivePace, livedShare, paceMatters, starClockTerms, turnStep } from './sim/flare';
 import { emberShare, haloDrawn, sourceLight, vitalityLoss } from './physics';
 import {
   answerEvent,
@@ -14,6 +14,7 @@ import {
   dismantle,
   dismantleTerms,
   enactCharter,
+  longSleep,
   makeGesture,
   orderFleet,
   queueBuild,
@@ -25,7 +26,7 @@ import {
   structureCheck,
 } from './sim/actions';
 import { capacity, reserveCapacity } from './sim/economy';
-import { workRequirementMet } from './sim/endings';
+import { workCost, workRequirementMet } from './sim/endings';
 import { computeMods, strainFor } from './sim/mods';
 import { patternAnswer } from './sim/minds';
 import { project } from './sim/projection';
@@ -453,25 +454,86 @@ function planPace(state: GameState) {
     const pr = project(state, p);
     return pr.energyIn - pr.energyOut;
   };
-  const here = netAt(civ.pace);
+  // the pace the coming turn is lived at (ours, unless it is greyed now), and the paces open now
+  const cur = effectivePace(state);
+  const open = (p: number) => p >= mods.paceMin && p <= mods.paceMax && paceMatters(state, p);
+  const here = netAt(cur);
+  // what a turn at a pace nets for each turn of the Tide's time it covers: since 20 Oct a turn pays
+  // and costs by the time it covers, so a slower turn's larger net is only its longer time (until
+  // then a slower turn paid more than its time, and this took the slowest that paid)
+  const perTide = (p: number, n: number) => n / Math.max(1e-12, livedShare(state, p));
+  // until the Dark Era, when all that is left is to last, turns are worth having (what they make
+  // grows), and a slower one now buys nothing for its time but the upkeep of minds that slow their
+  // clocks, for ten times fewer turns: no slower than the Tide in trouble
+  const dark = calendarEra(state) === 'dark';
   if (here < 0 || civ.energy < cap * 0.2) {
-    // in trouble: take whichever neighbouring pace pays best right now
-    let best = civ.pace;
-    let bestNet = here;
-    for (const p of [civ.pace - 1, civ.pace + 1]) {
-      if (p < mods.paceMin || p > mods.paceMax) continue;
+    // in trouble: take whichever neighbouring pace pays best for the time it covers
+    let best = cur;
+    let bestNet = perTide(cur, here);
+    for (const p of [cur - 1, cur + 1]) {
+      if (!open(p) || (p < 0 && p < cur && !dark)) continue;
       const n = netAt(p);
-      if (n > bestNet + 0.5) {
+      if (perTide(p, n) > bestNet + 0.5) {
         best = p;
-        bestNet = n;
+        bestNet = perTide(p, n);
       }
     }
-    if (best !== civ.pace) setPace(state, best);
+    if (best !== cur) setPace(state, best);
     return;
   }
   // comfortable and full: quicken for more turns out of the age, if it still pays
-  if (civ.energy >= cap * 0.9 && civ.pace < mods.paceMax && netAt(civ.pace + 1) > 0) setPace(state, civ.pace + 1);
-  else if (civ.pace < 0 && civ.energy > cap * 0.5 && netAt(civ.pace + 1) > 0) setPace(state, civ.pace + 1);
+  if (civ.energy >= cap * 0.9 && open(cur + 1) && netAt(cur + 1) > 0) setPace(state, cur + 1);
+  else if (cur < 0 && civ.energy > cap * 0.5 && open(cur + 1) && netAt(cur + 1) > 0) setPace(state, cur + 1);
+}
+
+/** Turns left in the Dark Era at our pace, to its ruler's end (log η 122), as far as 300. */
+function darkTurnsLeft(state: GameState, pace = state.civ.pace): number {
+  let years = state.years;
+  let e = state.eta;
+  for (let n = 0; n < 300; n++) {
+    if (Math.log10(Math.max(e, 1)) >= ERA_BY_ID.dark.endEta || !isFinite(e)) return n;
+    const step = stepTime('dark', years, e, pace, state.settings.length);
+    years = step.years;
+    e = step.eta;
+  }
+  return 300;
+}
+
+/** The Long Sleep in the dark, as long as it can be taken at once (actions.ts). */
+const DARK_SLEEP_FOR = 20;
+
+/**
+ * In the Dark Era little comes in but what Halo Siphons draw. Where the reserve would not last to
+ * the end of the age at the rate it is going, and no Great Work would be done while Continuity
+ * holds, the Long Sleep, Dyson's hibernation: a tenth of the upkeep and about a third of what a
+ * turn takes from Continuity (turn.ts). Awake again, it looks again. (Since 20 Oct: until then a
+ * slow turn in the dark paid a hundred Tide turns' trickle, and slowing down was enough to last.)
+ */
+function planDarkSleep(state: GameState) {
+  const civ = state.civ;
+  if (civ.dormant || state.era !== 'dark' || !hasTech(state, 'hibernation_protocols')) return;
+  const pr = project(state);
+  const drain = pr.energyOut - pr.energyIn;
+  if (!(drain > 0)) return;
+  const lasts = civ.energy / drain;
+  if (lasts >= darkTurnsLeft(state)) return;
+  // (a Great Work done while Continuity holds is worth staying awake for, even with the reserve
+  // run dry for its last turns: then each turn costs it 5 more, as turn.ts takes it; a turn's margin)
+  if (civ.work) {
+    const need = workCost(state, civ.work) - (civ.works[civ.work] ?? 0);
+    const per = (civ.flags.last_insight ?? 0) * (civ.researching ? 0.5 : 1);
+    let loss = 2.2;
+    for (const c of colonies(state)) {
+      for (const [id, n] of Object.entries(c.structures)) {
+        const d = STRUCTURE_BY_ID[id];
+        if (d?.continuityMult && n) loss *= Math.pow(d.continuityMult, n);
+      }
+    }
+    const after = civ.continuity - lasts * loss;
+    const holds = after > 0 ? lasts + after / (loss + 5) : civ.continuity / Math.max(0.01, loss);
+    if (per > 0 && need / per <= holds - 1) return;
+  }
+  longSleep(state, DARK_SLEEP_FOR);
 }
 
 function planWorks(state: GameState) {
@@ -508,6 +570,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planSignals(state);
   planPace(state);
   planWorks(state);
+  planDarkSleep(state);
   if (strategy === 'warlike') planWar(state);
 }
 

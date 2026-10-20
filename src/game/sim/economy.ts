@@ -14,14 +14,32 @@ export interface TurnContext {
   years: number; // start of the coming turn
   L: number; // its length in years (Infinity in deep time)
   logL: number;
-  paceFactor: number; // share of the Tide turn actually lived: 10^-pace
+  paceFactor: number; // share of the Tide turn actually lived: 10^-pace, or what a clock's turn covers (livedShare)
+  upkeepShare?: number; // what its machines and sleepers cost, in Tide turns (upkeepShare, flare.ts; else max(1, paceFactor))
   mods: Mods;
 }
+
+/** What a turn's machines and sleepers cost, in Tide turns (TurnContext.upkeepShare). */
+export const upkeepOf = (ctx: TurnContext): number => ctx.upkeepShare ?? Math.max(1, ctx.paceFactor);
 
 export type Capacity = Record<ThreadId, number> & { cryo: number };
 
 /** What was paid in matter is paid in energy once no ordinary matter is left, at this many energy a unit (as construction is: actions.ts). */
 export const MATTER_AS_ENERGY = 1.5;
+
+/**
+ * After the Last Light every source gives this much more energy and matter (20 Oct, the player's
+ * word: "Bring them back"). Until then the late ages' slow turns paid for more time than they
+ * covered (Slow ×10 ten Tide turns' income for under three), and the game's late economy, and how
+ * often it was won, leaned on that; the pace's ladder made them honest, so the late ages' yields
+ * carry the difference instead, at every pace.
+ */
+export const LATE_YIELD = 1.4;
+
+/** LATE_YIELD after the Dusk's calendar, 1 in it. */
+export function lateYield(state: GameState): number {
+  return calendarEra(state) === 'dusk' ? 1 : LATE_YIELD;
+}
 
 /** The Long Record's accord, at each settlement awake, a turn (its description: "+1 Accord per settlement"). */
 export const LONG_RECORD_ACCORD = 1;
@@ -93,6 +111,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   const taintBoost = 1 + civ.taint / 200;
   const overdrive = c.overdrive ? 1.5 : 1;
   const pf = ctx.paceFactor;
+  // (after the Last Light every source gives more: LATE_YIELD)
+  const late = lateYield(state);
 
   let energy = 0;
   let energyUpkeep = 0;
@@ -120,7 +140,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   // minds that all think slower than the flow keep watchers awake between their thoughts
   const watch = flowNow && keeping(c, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor)) === 'watched' ? FLOW_WATCH : 1;
   // machines and sleepers run for the whole of a slowed turn; only minds can slow themselves down
-  const slowTime = Math.max(1, pf);
+  // (a turn a clock, a flare or the age's end cuts short costs for the time it covers: upkeepShare)
+  const slowTime = upkeepOf(ctx);
   const noMatter = matterGone(state);
   for (const t of THREADS) {
     const n = c.pops[t];
@@ -230,7 +251,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
           e = calendarEra(state) === 'dark' ? a : 0;
           break;
       }
-      e *= pf * overdrive * focusMul(c, 'energy') * taintBoost;
+      e *= pf * late * overdrive * focusMul(c, 'energy') * taintBoost;
     }
     let mt = 0;
     if (d.matterYield) mt += d.matterYield * n * body.richness * gfeMatter;
@@ -238,7 +259,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     if (d.lift && !away) mt += d.lift * n * gfeMatter;
     if (mt) {
       // only its own focus touches matter: the others leave it as it was
-      mt *= pf * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1);
+      mt *= pf * late * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1);
       depletion += (d.matterYield || d.hydrogenYield ? mt : 0);
       if (!matterGone(state)) matter += mt;
     }
@@ -265,7 +286,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const fed = Math.max(Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
     // where nothing local is left to draw on, it burns what was stored and salvaged, a little
     const local = Math.max(0.25, fed);
-    const hearth = 2 * local * (1 - c.damage) * pf * overdrive * focusMul(c, 'energy') * taintBoost;
+    const hearth = 2 * local * (1 - c.damage) * pf * late * overdrive * focusMul(c, 'energy') * taintBoost;
     energy += hearth;
     lines.push({ label: `Hearth${c.overdrive ? ' (overdriven)' : ''}${fed < 0.25 ? ': stored fuel and salvage' : ''}`, energy: hearth });
   }

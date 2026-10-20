@@ -41,11 +41,12 @@ const far = reachBy(s, L0 + 5.5);
 check(far.pace === null && Math.ceil(far.tenfolds) === 3, `5.5 tenfolds slower: beyond any pace we can choose now; the turns would have to be ${far.tenfolds.toFixed(1)} tenfolds longer`);
 
 // a mind too fast for Kin: quickening reaches it only once our turns are shorter than Kin think
-s.civ.pace = -1; // turns of 10^2.6 years, Kin at 10^1.6
+s.civ.pace = -1; // turns of 10^3.2 years (ten Tide turns, from 40 years each growing by 1.27), Kin at 10^1.6
 const fastHint = reachBy(s, -1.6);
-const outNow = !canConverse(voiceRange(s, logTurnLength(turnStep(s))), -1.6);
+const slowL = logTurnLength(turnStep(s));
+const outNow = !canConverse(voiceRange(s, slowL), -1.6);
 s.civ.pace = 0;
-check(outNow && fastHint.pace === 1 && fastHint.tenfolds < -1.1 && fastHint.tenfolds > -1.3, `at Slow ×10 a mind at 10^-1.6 years is too fast for us; Quick ×10 reaches it, two steps on, as the turn must first come down to Kin's 40 years (${fastHint.tenfolds.toFixed(2)} tenfolds)`);
+check(outNow && fastHint.pace === 1 && Math.abs(slowL - Math.log10((40 * (Math.pow(1.27, 10) - 1)) / 0.27)) < 1e-9 && Math.abs(fastHint.tenfolds - -(1.6 + slowL - 3)) < 1e-9, `at Slow ×10 (turns of 10^${slowL.toFixed(2)} years) a mind at 10^-1.6 years is too fast for us; Quick ×10 reaches it, two steps on, as the turn must first come down to Kin's 40 years (${fastHint.tenfolds.toFixed(2)} tenfolds)`);
 
 // other voices: Coldminds reach slower minds at any pace, Echoes do not; Kin and Echoes reach faster ones
 const cap = capital(s)!;

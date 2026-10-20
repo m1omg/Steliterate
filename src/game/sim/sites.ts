@@ -7,6 +7,7 @@ import { naturalKinRoom } from './fleets';
 import { habitabilityOf } from './terraform';
 import { eraIndex, hasTech } from './util';
 import { ageReached, calendarEra } from '../fate';
+import { lateYield } from './economy';
 
 // What a world is worth to each kind of mind, for choosing where to settle. Kin need livable
 // ground; Echoes (and the Chorus) need power for their substrate; the Lattice needs matter to
@@ -34,7 +35,8 @@ function buildableAt(state: GameState, b: Body, d: StructureDef): boolean {
 /**
  * Energy a settlement here could collect in a turn at the Tide, part by part: its Hearth plus
  * every collector we can build. Surface Solar Arrays get the light where the world is (inverse
- * square of its orbit); orbital collectors catch it anywhere in the system.
+ * square of its orbit); orbital collectors catch it anywhere in the system. After the Dusk, with
+ * the late ages' yield (LATE_YIELD, economy.ts), as the settlement would make it.
  */
 export function powerParts(state: GameState, b: Body): { label: string; e: number }[] {
   if (b.dissolved) return [];
@@ -44,7 +46,8 @@ export function powerParts(state: GameState, b: Body): { label: string; e: numbe
   const light = b.rogue ? 0 : sourceLight(state, sys, state.years, isFinite(L) ? L : 0).light;
   const hole = (p.kind === 'black_hole' || p.kind === 'smbh') && !b.rogue;
   const fed = Math.max(Math.min(1.5, light), b.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
-  const parts = [{ label: fed < 0.25 ? 'Hearth: stored fuel and salvage' : 'Hearth', e: 2 * Math.max(0.25, fed) }];
+  const late = lateYield(state);
+  const parts = [{ label: fed < 0.25 ? 'Hearth: stored fuel and salvage' : 'Hearth', e: 2 * Math.max(0.25, fed) * late }];
   for (const d of STRUCTURES) {
     if (!d.energy || !buildableAt(state, b, d)) continue;
     const a = d.energy.amount * d.max;
@@ -68,6 +71,7 @@ export function powerParts(state: GameState, b: Body): { label: string; e: numbe
       default:
         break; // fuel burners and the late-age harvesters work the same anywhere
     }
+    e *= late;
     if (e > 0.05) parts.push({ label: `${d.max > 1 ? `${d.max}× ` : ''}${structureLabel(d.id, sys).name}`, e });
   }
   return parts;
@@ -86,7 +90,7 @@ export function matterAt(state: GameState, b: Body): number {
     if (!(d.matterYield || d.hydrogenYield || d.lift) || !buildableAt(state, b, d)) continue;
     m += ((d.matterYield ?? 0) * b.richness + (d.hydrogenYield ?? 0) * b.hydrogen + (d.lift ?? 0)) * d.max;
   }
-  return m * gfe;
+  return m * gfe * lateYield(state);
 }
 
 /**

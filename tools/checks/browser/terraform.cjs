@@ -107,7 +107,7 @@ run(async () => {
   check(/^\d+%, terraformed$/.test(hab.text) && hab.cls.includes('good'), `the settlement’s World shows its habitability terraformed (${hab.text})`);
   check(/^0% of its own, raised by Orbital Mirrors and Atmosphere Works: its warmest ground is \d+ K\./.test(hab.tip), 'its tooltip gives its own, what raised it and the warmth');
   const vit = kv.Vitality ?? {};
-  check(vit.text === '40%' && /Seeded life is spreading: \+4% a turn, up to 80%/.test(vit.tip), `Vitality: ${vit.text}, ${vit.tip}`);
+  check(vit.text === '40%' && /Seeded life is spreading: \+4% a turn at the Tide, up to 80%/.test(vit.tip), `Vitality: ${vit.text}, ${vit.tip}`);
   const after = await kinRow();
   const cap = (t) => Number((t.split('/')[1] ?? '').replace(/[^0-9]/g, '') || 0);
   check(cap(after) > cap(before), `room for Kin: ${before} before, ${after} now`);

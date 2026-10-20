@@ -1,5 +1,5 @@
 import { logTurnLength } from '../eras';
-import { livedShare, turnStep } from './flare';
+import { effectivePace, livedShare, turnStep, upkeepShare } from './flare';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
@@ -40,10 +40,10 @@ export function spareLeft(c: Colony, industry: number): number {
 /** What the coming turn will look like at the current pace, without changing anything. */
 export function project(state: GameState, paceOverride?: number): Projection {
   const mods = computeMods(state);
-  const pace = paceOverride ?? state.civ.pace;
+  const pace = paceOverride ?? effectivePace(state);
   const step = turnStep(state, pace);
   const logL = logTurnLength(step);
-  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), mods };
+  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), upkeepShare: upkeepShare(state, pace, step), mods };
   const p: Projection = {
     ctx,
     turnYears: step.turnLength,
@@ -133,7 +133,7 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
   if (d.gfeDrain) notes.push('Drains the galaxy’s free energy');
   const w = state.bodies[c.bodyId];
   if (d.terraform && w) {
-    if (d.terraform === 'seeding') notes.push(`Life spreads: vitality +${Math.round(SEED_RATE * 100)}% a turn, up to ${Math.round(SEED_CAP * 100)}%`);
+    if (d.terraform === 'seeding') notes.push(`Life spreads: vitality +${Math.round(SEED_RATE * 100)}% a turn at the Tide, up to ${Math.round(SEED_CAP * 100)}%`);
     else {
       const h0 = habitabilityOf(state, w, c);
       const h1 = habitabilityOf(state, w, more);
