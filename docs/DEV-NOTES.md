@@ -94,7 +94,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, promises, fall-in, unwritten, slow-ones), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
@@ -352,6 +352,45 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
+- **The game keeps its word** (19 Oct, in both versions; CHANGELOG, "The game keeps its word"):
+  where a text promised what the code did not do, the code now does it.
+  - The Long Record: `LONG_RECORD_ACCORD` (`economy.ts`, `colonyTurn`, its own yield line).
+  - What we see of the Hunger: `src/game/sim/sight.ts`. `swarmSight(state)` (a test for one
+    swarm, the eyes worked out once): an awake swarm at a star we know; one under way within
+    `watchEyes` (`fleets.ts`: settlements, Shared Watch stars, ships stopped, as
+    `updateDetection` charts with); with Hunger Studies (`readsSwarms`) a sleeping one in range;
+    always one under our command. `swarmArrives` (years: the rest of its leg at `swarmSpeed`,
+    0.05 c in the Dusk, 0.5 c after, the same `updateHunger` steps with); `nearestSwarmSeen`
+    (moved here from `util.ts`) and `nestSeenAt` (the "nest asleep" chip). The map
+    (`galaxyView.ts`, `syncSwarms`): `aSleep` dims and slows a sleeping swarm's motes;
+    `swarmLines` (public, for the checks) the ways, with the tech. The `hunger` forecast is keyed
+    `hunger:<swarm id>`, dated with the tech. `swarmSeenAt`, which the autoplayer reads, is as it
+    was: nothing here moves a game.
+  - Communion: `commune` in `updateHunger` (on arrival, and for one already sitting there), and
+    `foldIn` (shared with `absorbSwarm`); `COMMUNION_TAINT` 8; `firstSwarm` spares a ship under
+    it. No draw: only games under the charter change, and the autoplayer never takes it.
+  - Harsh: `HARSH_CROSSING` 1.25, `harshness(state)` (`crossing.ts`) in `runCrossing`'s and
+    `greatEvaporation`'s `crossingMult`, and the share the protocols carry over divided by it.
+  - Falls into brown dwarfs and black holes: `state.flags.all_fall` (set by `generateWorld`, no
+    draw), `allFall`, `takesWorldsIn`, `fallsInAt` (`physics.ts`), read by `evolveUniverse`, the
+    `inspiral` forecast, `lastsUntil` and `FallsInwardRow`. A brown dwarf's world feeds it
+    (`BROWN_FEED_SHARE` 0.008 of a white dwarf's warmth, `BROWN_FEED_TAU` 10^14.8 years, model
+    `feed`, no draw; `rekindledK` at `BROWN_R` in its temperature, `rek` in its light); a black
+    hole's is `dissolved` at once with a `plunge` note (the turn evacuates it). `NEVER_FEED` is
+    the old rule, for games without the flag.
+  - Spare work in the figures: `applyIndustry` (`turn.ts`) returns the `SpareYield`, counted into
+    the turn's `eIn`/`mIn`; `spareLeft(c, industry)` (`projection.ts`) for the coming turn.
+  - Growth paid only with room (inline in `endTurn`); a met demand never lowers a standing above
+    80 (`society.ts`).
+  - Once matter is gone, matter upkeep is paid in energy (`MATTER_AS_ENERGY` 1.5, `economy.ts`),
+    as building is (the new version did so since its part 3).
+  - The Expansion Mandate (`charters.ts`; its effect was always in `buildCost`). The energy
+    reading's `.hazard-edge` (`styles.css`). The vault's text in a Deep. The hidden step:
+    `docs/spoilers/slow-ones.md` (spoilers).
+  - Checks: `unit/promises`, `unit/fall-in`, `unit/unwritten`, `unit/slow-ones`,
+    `browser/hunger-sight`; `unit/late-sky` and `unit/evap` for both fall-in rules; `unit/evap`
+    finds the first of a few seeds the autoplayer takes to the Black Hole Age, as the rules move
+    which one does.
 - **Lighter on phones** (13 Oct; CHANGELOG, "Lighter on phones and tablets"):
   - The synth's continuous sounds: `voice(layer, t)` and `hush(layer)` in `src/audio/music.ts`.
     `apply` builds a layer without them when a recording is due; `wakeSynth` and the slow-recording
@@ -1297,6 +1336,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the Last Star shines when it lights; its clock free (12 Oct) | 150 | 67 victories, Degenerate Age 72 turns; 900 games 445 / 199 / 70 (442 / 195 / 70 on `main`), within the noise: 721 of 900 play out as on `main`, and all 179 that changed light the Last Star, outcomes moving both ways. By fate: decay 177 / 450, stable 166 / 239, curvature 102 / 211. In the first 300, 75 games light it (η 15.0 to 2,370, median 23.1; 40 before η 24.5; 19 in the Black Hole Age's calendar, 1 in the Dark Era); the autoplayer keeps time with it in 32 |
 | The Embers Dim only while the halo thins (12 Oct) | 157 | 69 victories, Degenerate Age 72 turns; 900 games 449 / 202 / 70 (445 / 199 / 70 with the Last Star), within the noise: 534 of 900 play out as before, the rest moved by the changed pool of chance events, both ways (35 defeat → endurance, 31 back). By fate: decay 181 / 450, stable 169 / 239, curvature 99 / 211 |
 | rogue worlds leave their star behind; a finished Work not resumed; positronium (12 Oct) | 154 | 72 victories, Degenerate Age 72 turns; 900 games 456 / 203 / 71 (449 / 202 / 70 before), within the noise: 406 of 900 play out as before, the outcomes that moved going both ways (43 defeat → endurance, 38 back; 8 defeat → victory, 6 back). By fate: decay 189 / 450, stable 168 / 239, curvature 99 / 211; Aeon Seed victories 67 → 71 |
+| the game keeps its word: the Long Record's +1, what Hunger Studies shows, Communion, Harsh's crossings, falls into brown dwarfs and holes in new games, the unwritten rules, the Expansion Mandate, a hidden step (19 Oct) | 160 | 81 victories, Degenerate Age 72 turns; 900 games 476 / 244 / 71 (456 / 203 / 71 before): survival within the noise, the victories from the hidden step alone (without it the same 300 games give 160 / 72 / 72; `docs/spoilers/slow-ones.md`). By fate: decay 193 / 450 (19 wins), stable 165 / 239 (127), curvature 118 / 211 (98). Harsh, 300 games: 147 / 62 / 68 (140 / 52 / 70 before). 204 of 300 play out as without the step |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

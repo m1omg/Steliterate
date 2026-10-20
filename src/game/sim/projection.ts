@@ -9,6 +9,7 @@ import { researchDraw } from './research';
 import { jointIncome } from './survivors';
 import { beaconUpkeep } from './beacons';
 import { colonies } from './util';
+import { spareYield } from './spare';
 import { terraformingOf } from '../physics';
 import { SEED_CAP, SEED_RATE, WORKS_WATER, habitabilityOf, terraformedWarmth } from './terraform';
 
@@ -26,6 +27,14 @@ export interface Projection {
   researchDraw: number;
   perColony: Record<string, ColonyTurn>;
   strain: Record<ThreadId, Strain>;
+}
+
+/** What a settlement's industry leaves over for its spare work this turn: all of it with nothing queued, else what finishing its queue does not take (as the turn spends it, eight items at most). */
+export function spareLeft(c: Colony, industry: number): number {
+  if (c.queue.length > 8) return 0;
+  let left = industry;
+  for (const q of c.queue) left -= Math.max(0, q.cost - q.progress);
+  return Math.max(0, left);
 }
 
 /** What the coming turn will look like at the current pace, without changing anything. */
@@ -62,6 +71,13 @@ export function project(state: GameState, paceOverride?: number): Projection {
     p.industry += t.y.industry;
     p.insight += t.y.insight;
     p.accord += t.y.accord;
+    // and what its spare work will make of the industry its queue leaves over (turn.ts: applyIndustry)
+    if (!state.civ.dormant) {
+      const sp = spareYield(state, c, spareLeft(c, t.y.industry), t.y.energy);
+      p.energyIn += sp.energy;
+      p.matterIn += sp.matter;
+      p.insight += sp.insight;
+    }
   }
   p.energyIn += jointIncome(state) * ctx.paceFactor;
   p.energyOut += beaconUpkeep(state) * ctx.paceFactor;

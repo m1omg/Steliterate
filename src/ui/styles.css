@@ -218,6 +218,8 @@ html.kbd [tabindex='-1']:focus-visible { outline: none; }
 }
 .res { display: flex; align-items: center; gap: 5px; padding: 6px 8px; border-right: 1px solid var(--line); min-width: 0; cursor: default; }
 .res:last-child { border-right: none; }
+/* the energy reading while the reserve runs low and falls (Resources.tsx): an amber edge */
+.res.hazard-edge { box-shadow: inset 0 -3px 0 rgba(232, 182, 74, 0.85); }
 .res .v { font-size: 15px; }
 .res .d { font-size: 12.5px; }
 .res .l { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }

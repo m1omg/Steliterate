@@ -1,6 +1,6 @@
 import { STRUCTURES, aroundTheStar, structureLabel, type StructureDef } from '../data/structures';
 import { formatYears } from '../eras';
-import { NEVER_FEED, bodyClimate, boilingAway, hawkingLight, insolation, lampsOver, sourceLight, sunGone, turnsToFreeze } from '../physics';
+import { bodyClimate, fallsInAt, boilingAway, hawkingLight, insolation, lampsOver, sourceLight, sunGone, turnsToFreeze } from '../physics';
 import type { Body, GameState, ThreadId } from '../types';
 import { turnStep } from './flare';
 import { naturalKinRoom } from './fleets';
@@ -100,9 +100,9 @@ export function lastsUntil(state: GameState, b: Body): number {
   if (b.feeding) return b.feeding.start;
   if (b.rogue) return Infinity;
   const p = state.systems[b.systemId]?.primary;
-  if (p && (p.kind === 'black_hole' || p.kind === 'smbh')) return p.evaporateAt ?? Infinity;
-  if (!p || NEVER_FEED.has(p.kind)) return Infinity;
-  return b.inspiralAt ?? Infinity;
+  // (its world falls in first, in a game where a hole's and a brown dwarf's do: physics.ts)
+  if (p && (p.kind === 'black_hole' || p.kind === 'smbh')) return Math.min(p.evaporateAt ?? Infinity, fallsInAt(state, b));
+  return fallsInAt(state, b);
 }
 
 export interface SiteValue {

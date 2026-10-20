@@ -77,6 +77,14 @@ export const NEAR_BURST_LY = 10;
  * BURST_CATCH within NEAR_BURST_LY, and beyond it less with the square of the distance (about 63 at
  * 20 ly, 10 at 50). The player chose "By distance", 12 Oct.
  */
+/** How much more a crossing takes at Harsh ("crueller crossings", its setup tip): a quarter more. */
+export const HARSH_CROSSING = 1.25;
+
+/** A quarter more at Harsh, as it says; the same at the other difficulties. */
+export function harshness(state: GameState): number {
+  return state.settings.difficulty === 'harsh' ? HARSH_CROSSING : 1;
+}
+
 export function burstShare(ly: number): number {
   return Math.round(BURST_CATCH * Math.min(1, (NEAR_BURST_LY / Math.max(ly, 1e-9)) ** 2));
 }
@@ -191,7 +199,8 @@ function endOfMatter(state: GameState, mods: Mods, lines: CrossingReport['lines'
     // migration through the protocols
     if (cap && crossingMult < 1) {
       for (const t of ['echoes', 'coldminds', 'chorus'] as const) {
-        const m = Math.floor(c.pops[t] * 0.35);
+        // (at Harsh fewer are carried over, as the losses are a quarter more)
+        const m = Math.floor((c.pops[t] * 0.35) / harshness(state));
         cap.pops[t] += m;
         saved += m;
       }
@@ -240,7 +249,8 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
   const coloniesBefore = colonies(state).length;
   const civ = state.civ;
   const protocols = PROTOCOLS[from];
-  const crossingMult = protocols && civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1;
+  // its protocols halve what it takes, and at Harsh it takes a quarter more ("crueller crossings")
+  const crossingMult = (protocols && civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1) * harshness(state);
 
   withRng(state, (rng) => {
     if (from === 'dusk') {
@@ -319,6 +329,11 @@ export function runCrossing(state: GameState, mods: Mods): CrossingReport {
       }
       // the crossing's cost falls on what we had saved; what the catchers caught comes after it
       civ.energy = civ.energy * 0.6 + caught;
+      // one thought an age: awake through this one too, as at the Last Light
+      if (!civ.dormant && state.minds.slow.stage >= 2) {
+        state.minds.slow.understanding += 15;
+        lines.push({ text: 'We were awake as the Degenerate Age ended, as the Slow Ones were. Another thought passed between us.', kind: 'good' });
+      }
     } else if (from === 'blackhole') {
       // ---------------------------------------------------------------- The Last Horizon
       // every hole left goes as one would on its own (physics.ts): its worlds drift loose, what we built stays
@@ -379,7 +394,7 @@ export function greatEvaporation(state: GameState, mods: Mods): CrossingReport {
   const coloniesBefore = colonies(state).length;
   const civ = state.civ;
   const protocols = PROTOCOLS.degenerate!;
-  const crossingMult = civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1;
+  const crossingMult = (civ.techs.includes(protocols) ? (TECH_BY_ID[protocols]?.effects?.crossing ?? 1) : 1) * harshness(state);
   withRng(state, (rng) => endOfMatter(state, mods, lines, crossingMult, rng, 'evaporated'));
   civ.energy *= 0.6;
   for (const c of colonies(state)) if (popsOf(c) + c.cryo <= 0) destroyColony(state, c, 'no one is left there');

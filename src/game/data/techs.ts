@@ -83,7 +83,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'assembly_of_threads', name: 'Assembly of Threads', era: 'dusk', field: 'continuity', cost: 150, requires: ['the_long_record'], desc: 'Every Thread gets a voice. Thread standing recovers faster; more Charters.' }),
   T({ id: 'deep_listening', name: 'Deep Listening', era: 'dusk', field: 'continuity', cost: 120, requires: ['survey_optics'], desc: 'Listen for other minds across light-years and ages. Opens the Signals panel to faint and slow messages.' }),
   T({ id: 'hibernation_protocols', name: 'Hibernation Protocols', era: 'dusk', field: 'continuity', cost: 180, requires: ['cold_sleep'], desc: 'Sleep through lean ages safely. Unlocks the Long Sleep and slower paces.', effects: { paceMin: -2 } }),
-  T({ id: 'proton_question', name: 'The Proton Question', era: 'dusk', field: 'continuity', cost: 200, requires: ['the_long_record'], desc: 'Build the detector that settles it: will ordinary matter last?', effects: { flags: ['proton_known'] } }),
+  T({ id: 'proton_question', name: 'The Proton Question', era: 'dusk', field: 'continuity', cost: 200, requires: ['the_long_record'], desc: 'Build the detector that settles it: will ordinary matter last?' }),
   T({ id: 'halo_dynamics', name: 'Halo Dynamics', era: 'dusk', field: 'continuity', cost: 220, requires: ['deep_listening'], desc: 'Map the invisible mass that holds the Coalescence together. Something in it is moving against the flow.' }),
   T({ id: 'last_light_protocols', name: 'Last Light Protocols', era: 'dusk', field: 'continuity', cost: 340, requires: ['assembly_of_threads'], desc: 'Plan for the end of starlight: losses in the Last Light are halved.', effects: { crossing: 0.5 } }),
 
@@ -109,7 +109,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'hunger_engines', name: 'Hunger Engines', era: 'degenerate', field: 'harvest', cost: 460, requires: ['command_language'], taint: 12, desc: 'Borrow the swarms’ way of eating. Matter yields +40%. The Hunger’s logic stays with you.', effects: { flags: ['hunger_engines'] } }),
   T({ id: 'communion', name: 'Communion', era: 'degenerate', field: 'mind', cost: 600, requires: ['hunger_engines'], taint: 18, desc: 'Do not tame the swarms: join them. Unlocks the Communion charter.' }),
   T({ id: 'gravitic_semaphore', name: 'Gravitic Semaphore', era: 'degenerate', field: 'continuity', cost: 380, requires: [], desc: 'Speak with mass itself: move worlds a little, read the replies in orbits. Contact with what hides in the halo becomes possible.' }),
-  T({ id: 'halo_siphons', name: 'Halo Siphons', era: 'degenerate', field: 'harvest', cost: 560, requires: ['ember_harvest'], desc: 'Drive dark matter into the embers faster. Ember yields double, and the halo empties sooner. They can be shut for good later, but not started again.', effects: { flags: ['halo_siphons'] } , noAuto: true }),
+  T({ id: 'halo_siphons', name: 'Halo Siphons', era: 'degenerate', field: 'harvest', cost: 560, requires: ['ember_harvest'], desc: 'Drive dark matter into the embers faster. Ember yields double, and the halo empties sooner. They can be shut for good later, but not started again.', noAuto: true }),
   T({ id: 'great_decay_protocols', name: 'Great Decay Protocols', era: 'degenerate', field: 'continuity', cost: 700, requires: [], desc: 'Prepare for the end of matter. Losses in the Great Decay (or, if space itself unmakes matter, the Great Evaporation) are halved.', effects: { crossing: 0.5 } }),
 
   // ============================================================ III. Black Hole

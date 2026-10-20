@@ -8,6 +8,7 @@ import { Rng, hashSeed } from '../game/rng';
 import type { GameState, StarSystem } from '../game/types';
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
+import { asleep, readsSwarms, swarmSight } from '../game/sim/sight';
 
 // The Coalescence seen from outside: layered star populations of the ancestral galaxies,
 // dimming era by era, with every known system as a node you can pick.
@@ -146,10 +147,12 @@ const SWARM_VERT = /* glsl */ `
   attribute vec3 aCenter;
   attribute vec4 aParams; // x: phase, y: radius, z: speed, w: size of swarm
   attribute float aTamed; // 1 for a swarm that answers to us
+  attribute float aSleep; // 1 for a sleeping swarm (seen with Hunger Studies)
   uniform float uTime;
   uniform float uPixel;
   varying float vFlick;
   varying float vTamed;
+  varying float vSleep;
   // murmuration: every mote follows the same few slow waves, so the flock moves as one
   void main() {
     float t = uTime * aParams.z;
@@ -166,6 +169,7 @@ const SWARM_VERT = /* glsl */ `
     gl_PointSize = clamp(2.2 * uPixel * (1.0 + 30.0 / max(6.0, -mv.z)), 1.0, 6.0 * uPixel);
     vFlick = 0.5 + 0.5 * sin(uTime * 5.0 + p * 31.0);
     vTamed = aTamed;
+    vSleep = aSleep;
   }
 `;
 
@@ -175,12 +179,14 @@ const SWARM_FRAG = /* glsl */ `
   uniform float uOpacity;
   varying float vFlick;
   varying float vTamed;
+  varying float vSleep;
   void main() {
     vec2 c = gl_PointCoord - 0.5;
     if (length(c) > 0.5) discard;
-    // dark motes, catching dull red light now and then (a tamed swarm's, the system view's teal)
-    vec3 col = mix(vec3(0.05, 0.03, 0.03), mix(uColor, uTamedColor, vTamed), step(0.82, vFlick));
-    gl_FragColor = vec4(col, uOpacity * (0.55 + 0.45 * vFlick));
+    // dark motes, catching dull red light now and then (a tamed swarm's, the system view's teal);
+    // a sleeping one barely catches it, and shows faint
+    vec3 col = mix(vec3(0.05, 0.03, 0.03), mix(uColor, uTamedColor, vTamed), step(0.82, vFlick) * (1.0 - 0.7 * vSleep));
+    gl_FragColor = vec4(col, uOpacity * (0.55 + 0.45 * vFlick) * (1.0 - 0.55 * vSleep));
   }
 `;
 
@@ -202,6 +208,8 @@ export class GalaxyView {
   private swarmMat: THREE.ShaderMaterial;
   private fleetGroup = new THREE.Group();
   private lines: THREE.LineSegments | null = null;
+  /** The ways of the swarms we see under way (Hunger Studies). */
+  swarmLines: THREE.LineSegments | null = null;
   private selRing: THREE.Mesh;
   private thinRing = new THREE.RingGeometry(1, 1.08, 64);
   private thickRing = new THREE.RingGeometry(1, 1.2, 64);
@@ -597,34 +605,55 @@ export class GalaxyView {
       this.swarmPts.geometry.dispose();
       this.swarmPts = null;
     }
+    if (this.swarmLines) {
+      this.group.remove(this.swarmLines);
+      this.swarmLines.geometry.dispose();
+      (this.swarmLines.material as THREE.Material).dispose();
+      this.swarmLines = null;
+    }
     const centers: number[] = [];
     const params: number[] = [];
     const tamed: number[] = [];
+    const sleep: number[] = [];
     const pos: number[] = [];
+    // the ways of the swarms we see under way, with Hunger Studies (sight.ts)
+    const ways: number[] = [];
+    const seen = swarmSight(state);
+    const reads = readsSwarms(state);
     for (const sw of Object.values(state.swarms)) {
-      if (!sw.awake && !sw.tamed) continue;
+      if (!seen(sw)) continue;
       let c: THREE.Vector3 | null = null;
       if (sw.systemId) {
         const s = state.systems[sw.systemId];
-        if (!state.civ.known[s.id]) continue;
         c = new THREE.Vector3(s.pos.x, s.pos.y + 1.5, s.pos.z);
       } else if (sw.from && sw.to) {
         const a = state.systems[sw.from];
         const b = state.systems[sw.to];
         const u = sw.distance > 0 ? Math.min(1, sw.traveled / sw.distance) : 0;
         c = new THREE.Vector3(a.pos.x + (b.pos.x - a.pos.x) * u, a.pos.y + (b.pos.y - a.pos.y) * u, a.pos.z + (b.pos.z - a.pos.z) * u);
+        if (reads || sw.tamed) ways.push(c.x, c.y, c.z, b.pos.x, b.pos.y + 1.5, b.pos.z);
       }
       if (!c) continue;
       const n = Math.round(80 + sw.size * 30);
       const rad = 2.5 + Math.sqrt(sw.size) * 1.6;
+      const dozing = asleep(sw);
       // a click anywhere on its cloud picks it (the star it hangs over still wins right on the star)
       this.pickables.push({ kind: 'swarm', id: sw.id, pos: c.clone(), radius: rad * 1.2 });
       for (let i = 0; i < n; i++) {
         centers.push(c.x, c.y, c.z);
         pos.push(c.x, c.y, c.z);
-        params.push(Math.random() * 100, rad * (0.4 + Math.random() * 0.8), 0.4 + Math.random() * 0.25, sw.size);
+        // a sleeping swarm hangs close and drifts slowly
+        params.push(Math.random() * 100, rad * (0.4 + Math.random() * 0.8) * (dozing ? 0.6 : 1), (0.4 + Math.random() * 0.25) * (dozing ? 0.25 : 1), sw.size);
         tamed.push(sw.tamed ? 1 : 0);
+        sleep.push(dozing ? 1 : 0);
       }
+    }
+    if (ways.length) {
+      const lg = new THREE.BufferGeometry();
+      lg.setAttribute('position', new THREE.Float32BufferAttribute(ways, 3));
+      this.swarmLines = new THREE.LineSegments(lg, new THREE.LineDashedMaterial({ color: '#c0482c', dashSize: 2, gapSize: 3, transparent: true, opacity: 0.55 }));
+      this.swarmLines.computeLineDistances();
+      this.group.add(this.swarmLines);
     }
     if (!centers.length) return;
     const g = new THREE.BufferGeometry();
@@ -632,6 +661,7 @@ export class GalaxyView {
     g.setAttribute('aCenter', new THREE.Float32BufferAttribute(centers, 3));
     g.setAttribute('aParams', new THREE.Float32BufferAttribute(params, 4));
     g.setAttribute('aTamed', new THREE.Float32BufferAttribute(tamed, 1));
+    g.setAttribute('aSleep', new THREE.Float32BufferAttribute(sleep, 1));
     this.swarmPts = new THREE.Points(g, this.swarmMat);
     this.swarmPts.frustumCulled = false;
     this.group.add(this.swarmPts);

@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, ICE_MELTS_K, NEVER_FEED, WATER_RICH, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, ICE_MELTS_K, WATER_RICH, fallsInAt, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -41,7 +41,8 @@ import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, distLy, hasCharter, hasTech, leftBehind, nearestSwarmSeen, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { capital, distLy, hasCharter, hasTech, leftBehind, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { nearestSwarmSeen, nestSeenAt, readsSwarms, swarmArrives, swarmSight } from '../../game/sim/sight';
 import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
 import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
@@ -49,7 +50,7 @@ import { THREADS } from '../../game/types';
 import { kelvin, mult, n0, n1, pct, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, SWARM_TIP } from '../labels';
+import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
 import { act, engine, following, hudPrefs, isPhone, notify, openBuildFor, rev, selection, setHudPrefs, sheetHint, sheetSize, targeting, view } from '../store';
 import { uiFactor } from '../Tip';
 import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
@@ -283,7 +284,9 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const T = primaryTemperature(sys.primary, s.years, calendarEra(s), decayWarmth(s), curvatureWarmth(s), haloDrawn(s));
   const province = s.provinces.find((x) => x.id === sys.provinceId);
   const fleets = Object.values(s.fleets).filter((f) => f.at === sys.id);
-  const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id);
+  // the swarms we see here (a sleeping one only with Hunger Studies: sight.ts)
+  const seenSwarm = swarmSight(s);
+  const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id && seenSwarm(w));
   // another civilization here: at its first star, or where the light of its arrival has reached us
   const survivor = Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id) && (v.homeSystemId === sys.id || seenThere(s, v, sys.id)));
   const outpost = !!survivor && survivor.homeSystemId !== sys.id;
@@ -447,7 +450,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
               ))}
               {swarms.map((w) => (
                 <div key={w.id} class="list-item" {...pressable(() => { selection.value = { kind: 'swarm', id: w.id }; engine()?.select(w.id); })}>
-                  <Icon name="warning" cls={w.tamed ? 'neon' : 'bad'} /> <span class="grow">{w.tamed ? 'Tamed swarm' : 'Hunger swarm'}</span> <span class="mono faint">size {n1(w.size)}</span>
+                  <Icon name="warning" cls={w.tamed ? 'neon' : w.awake ? 'bad' : 'faint'} /> <span class="grow">{w.tamed ? 'Tamed swarm' : w.awake ? 'Hunger swarm' : 'Hunger swarm, asleep'}</span> <span class="mono faint">size {n1(w.size)}</span>
                 </div>
               ))}
             </div>
@@ -621,8 +624,10 @@ function EvaporatesRow({ s, at }: { s: GameState; at: number }) {
 /** When a world reaches its dead star's tidal limit: never for a rogue world, which has no star to fall into. */
 function FallsInwardRow({ s, b }: { s: GameState; b: Body }) {
   if (!b.inspiralAt || !isFinite(b.inspiralAt) || b.feeding) return null;
-  // around a star that never takes its worlds in, or once the date has passed without it, say nothing
-  if (!b.rogue && (NEVER_FEED.has(s.systems[b.systemId]?.primary.kind ?? 'void') || b.inspiralAt <= s.years)) return null;
+  // around a star that never takes its worlds in (in a game begun before 19 Oct, a brown dwarf or
+  // a black hole: physics.ts, NEVER_FEED), or once the date has passed without it, say nothing
+  const at = fallsInAt(s, b);
+  if (!b.rogue && (!isFinite(at) || at <= s.years)) return null;
   if (b.rogue) {
     const tip = 'Flung loose from its star, it drifts on its own: it has no star to fall into.';
     return (
@@ -632,11 +637,17 @@ function FallsInwardRow({ s, b }: { s: GameState; b: Body }) {
       </>
     );
   }
-  const tip = "When gravitational-wave orbital decay brings it to its dead star's tidal limit.";
+  const kind = s.systems[b.systemId]?.primary.kind;
+  const tip =
+    kind === 'black_hole'
+      ? 'When gravitational-wave orbital decay brings it close enough for the black hole’s tides to tear it apart.'
+      : kind === 'brown_dwarf'
+        ? 'When gravitational-wave orbital decay brings it to the brown dwarf’s tidal limit.'
+        : "When gravitational-wave orbital decay brings it to its dead star's tidal limit.";
   return (
     <>
       <dt data-tip={tip}>Falls inward</dt>
-      <dd class="mono">{formatYears(b.inspiralAt)}</dd>
+      <dd class="mono">{formatYears(at)}</dd>
     </>
   );
 }
@@ -1629,6 +1640,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                       {sys.name}
                       {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                       {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip={SWARM_TIP}>swarm</span>}
+                      {nestSeenAt(s, sys.id) && <span class="chip" style={{ marginLeft: '6px' }} data-tip={NEST_TIP}>nest asleep</span>}
                       {s.civ.known[sys.id] !== 2 && <span class="faint" style={{ fontSize: '12.5px' }}> unsurveyed</span>}
                     </span>
                     <span class={`mark mono faint${byMeasure && settleSort === 'near' ? ' sorted' : ''}`} style={{ fontSize: '12.5px' }} data-tip={`Distance · turns at this pace · years of flight · launch energy\n${TRIP_TIP}`}>
@@ -1691,10 +1703,17 @@ function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
   const at = sw.systemId ? s.systems[sw.systemId] : null;
   const col = at ? Object.values(s.colonies).find((c) => c.systemId === at.id) : null;
   const tenderHere = at && Object.values(s.fleets).some((f) => f.at === at.id && f.ships.some((x) => SHIP_BY_ID[x.cls]?.tames));
+  // where it is going, and when it gets there: Hunger Studies reads its way (sight.ts); without
+  // it we see where only when it comes for a settlement of ours
+  const dest = sw.to ? s.systems[sw.to] : null;
+  const toUs = !!dest && Object.values(s.colonies).some((c) => c.systemId === dest.id);
+  const reads = readsSwarms(s) || sw.tamed;
+  const due = swarmArrives(s, sw);
+  const dueTurns = turnsUntilYears(s, due);
   return (
     <>
       <div class="drawer-head">
-        <div class="eyebrow">{at ? `At ${at.name}` : sw.to ? `Moving toward ${s.systems[sw.to]?.name}` : 'Drifting'}</div>
+        <div class="eyebrow">{at ? `At ${at.name}` : dest && (reads || toUs) ? `Moving toward ${dest.name}` : sw.to ? 'Under way' : 'Drifting'}</div>
         <h2>{sw.tamed ? 'Tamed Swarm' : 'The Hunger'}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
           <span class={`chip ${sw.tamed ? 'neon' : 'danger'}`}>{sw.tamed ? 'answers to us' : sw.awake ? 'awake' : 'dormant'}</span>
@@ -1717,6 +1736,14 @@ function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
           <dd class="mono">{n1(sw.size)}</dd>
           <dt>Appetite</dt>
           <dd class="mono">{n1(sw.appetite)}</dd>
+          {dest && reads && isFinite(due) && (
+            <>
+              <dt>Arrives</dt>
+              <dd class="mono" data-tip="Hunger Studies reads its way: at the speed it crosses at now (a twentieth of light in the Dusk, half of it after).">
+                {`in ${formatYears(due - s.years)}${isFinite(dueTurns) ? `, ~${dueTurns} turn${dueTurns === 1 ? '' : 's'}` : ''}`}
+              </dd>
+            </>
+          )}
         </dl>
         <div class="row wrap" style={{ gap: '4px', marginTop: '10px' }}>
           {!sw.tamed && hasTech(s, 'command_language') && (

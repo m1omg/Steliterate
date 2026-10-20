@@ -637,7 +637,8 @@ export function generateWorld(settings: GameSettings): GameState {
     nextId: 1,
     crossing: null,
     outcome: null,
-    flags: {},
+    // brown dwarfs and black holes take their worlds in, in a game begun since 19 Oct (physics.ts: fallsInAt)
+    flags: { all_fall: 1 },
     fired: {},
   };
   void coreSystems;

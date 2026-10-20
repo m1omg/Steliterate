@@ -285,6 +285,7 @@ export function isBeacon(s: GameState, sys: StarSystem): boolean {
 
 export const BEACON_TIP = 'A collision star: two brown dwarfs, each too small to burn hydrogen, collided, and the merged body is heavy enough to burn it. In the Degenerate Age nothing else nearby shines like it.';
 
+export const NEST_TIP = 'A swarm sleeps there, seen with Hunger Studies. Asleep it neither eats nor hunts; any turn it may wake, more readily after the Dusk.';
 export const SWARM_TIP = 'A swarm is feeding there. It goes for most ships that stop at its star, where we have no settlement to fight beside them: a probe rarely comes back, and warships beat off only small swarms (or go for one, from their panel, by the same odds).';
 
 /** A pace's name, as the Pace panel's buttons give it. */

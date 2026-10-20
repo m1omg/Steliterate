@@ -1,7 +1,7 @@
 import { SHIP_BY_ID } from '../data/ships';
 import { residentsOf } from './homes';
 import { STRUCTURE_BY_ID } from '../data/structures';
-import type { Body, Colony, Fleet, GameState, ThreadId } from '../types';
+import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../types';
 import { THREADS } from '../types';
 import { formatDistance } from '../eras';
 import { boilingAway, frozenHard } from '../physics';
@@ -248,8 +248,12 @@ const SCAN_LOCAL = 2000;
  * exploring can always go on, even across the gulfs between clusters. The far outliers in the
  * void stay hidden.
  */
-export function updateDetection(state: GameState, mods: Mods) {
-  const eyes = [
+/**
+ * The eyes we chart stars with (updateDetection) and watch the Hunger with (sight.ts): our
+ * settlements, the stars our Shared Watch partners watch, and our ships stopped at a star.
+ */
+export function watchEyes(state: GameState, mods: Mods): { sys: StarSystem; range: number }[] {
+  return [
     ...colonies(state).map((c) => ({ sys: state.systems[c.systemId], range: mods.detect })),
     // Shared Watch: the stars our partners watch, we see too
     ...Object.values(state.survivors)
@@ -260,6 +264,10 @@ export function updateDetection(state: GameState, mods: Mods) {
       .filter((f) => f.at)
       .map((f) => ({ sys: state.systems[f.at!], range: mods.detect * (canSurvey(f) ? 3 : 1) })),
   ];
+}
+
+export function updateDetection(state: GameState, mods: Mods) {
+  const eyes = watchEyes(state, mods);
   for (const s of Object.values(state.systems)) {
     if (state.civ.known[s.id]) continue;
     if (eyes.some((e) => distLy(e.sys, s) <= e.range)) state.civ.known[s.id] = 1;
