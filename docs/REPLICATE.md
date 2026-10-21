@@ -1,9 +1,9 @@
 # Steliterate: a full specification, for replication
 
 This document describes **Steliterate** as it plays at https://m1omg.github.io/Steliterate/,
-as of the merge of PR #37 (`d2abd2a`) on `main` of `github.com/m1omg/Steliterate` (20 October
-2026; its code is commit `bd86639` on top of `981e0f0`), with the survey reveal of 21 October 2026
-(E.1.7, E.2.4), which comes to `main` by the PR after #38.
+as of the merge of PR #39 (`2d345e4`) on `main` of `github.com/m1omg/Steliterate` (21 October
+2026, the survey reveal, E.1.7 and E.2.4; its code is commits `2c8ab8e` and `aa55440` on top of
+`a2fa3b4`, PR #38's merge, whose game is PR #37's: `bd86639` on top of `981e0f0`).
 It was written for an AI agent asked to rebuild the game as closely as it can, in the player's
 words: "a comprehensive full summary of this game for an AI agent to replicate".
 

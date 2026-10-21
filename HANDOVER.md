@@ -86,14 +86,19 @@ word", then the player's list of 16 Oct, then the falling worlds.
   takes ×0.5, not the ×0.35 they were offered (at ×0.35 it won every fight, four ships against
   five); and the first forced wars wiped out our settlements at one star in a single turn, so the
   blockade and the storming are once a star a turn now. CHANGELOG, "Combat", has the figures.
-- **The survey reveal as a flight of the camera** (21 Oct, the new version only, display only;
-  live at `/next/`): the player sent a clip of Endless Space 2 showing a new system world by world
-  ("this is how i imagine the reveal planetary system sequence...not ur version"). Now the camera
-  flies to each world in turn, close and half lit, while a caption types in its facts and four
-  bars for the four kinds of settler, dust streaking between worlds, the star rising over the last
-  world's edge, then back out to the whole system; Space or a click goes on, Skip as before, a
-  drag takes the camera. No rule changed. CHANGELOG, "The survey reveal as a flight of the
-  camera".
+- **The survey reveal as a flight of the camera** (21 Oct, display only; live in both versions):
+  the player sent a clip of Endless Space 2 showing a new system world by world ("this is how i
+  imagine the reveal planetary system sequence...not ur version"). Now the camera flies to each
+  world in turn, close and half lit, while a caption types in its facts and four bars for the four
+  kinds of settler, dust streaking between worlds, the star rising over the last world's edge,
+  then back out to the whole system; Space or a click goes on, Skip as before, a drag takes the
+  camera. No rule changed. The new version first (`5890f97`); asked, the player wanted it in
+  today's game too ("yes"), which had had no survey reveal at all: PR m1omg/Steliterate#39
+  (`2d345e4`; code `2c8ab8e`, and `aa55440`, the new version's 14 Oct fix to `browser/a11y`,
+  which failed on `main` as it stood), merged back with `-s ours` (`db6c7ce`). Today's game turns
+  reveals off for its checks with `?noreveals` (the new version's `?nofilms` does it there).
+  CHANGELOG, "The survey reveal as a flight of the camera" (and in `main`'s, "The survey reveal, a
+  flight of the camera").
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
@@ -124,8 +129,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#38 (`a2fa3b4`, after #37's `d2abd2a`) | `5890f97` (21 Oct, the survey reveal's flight), and its notes |
-  | Live script | `index-huAXd3rX.js` | `index-C9puCHR0.js` |
+  | As of | PR m1omg/Steliterate#39 (`2d345e4`, the survey reveal, 21 Oct) | `5890f97` (21 Oct, the survey reveal's flight), and its notes |
+  | Live script | `index-Zc5orquV.js` | `index-C9puCHR0.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at

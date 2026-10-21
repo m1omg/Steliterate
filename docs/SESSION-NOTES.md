@@ -51,14 +51,15 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (20 Oct): `main` as of PR m1omg/Steliterate#37 (`d2abd2a`, the pace: ten turns to a Tide
-    turn; live script `index-huAXd3rX.js`), after PR m1omg/Steliterate#36 (`981e0f0`, finds only where they
+  - Now (21 Oct): `main` as of PR m1omg/Steliterate#39 (`2d345e4`, the survey reveal as a flight
+    of the camera; live script `index-Zc5orquV.js`), after PR m1omg/Steliterate#37 (`d2abd2a`, the
+    pace: ten turns to a Tide turn), PR m1omg/Steliterate#36 (`981e0f0`, finds only where they
     can be and one sea), PR m1omg/Steliterate#35 (`e4c77d7`, falling worlds) and PR
     m1omg/Steliterate#34 (`e827e2f`, the game keeps its word), and the new version at `/next/`
     from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script `index-C9puCHR0.js` since 21
-    Oct, `5890f97`: the combat system of 20 Oct and the survey reveal as a flight of the camera of
-    21 Oct, both the new version only). HANDOVER, section 0, has where things stand; CLAUDE.md
-    lists every PR. What follows is the history up to 13 Oct.
+    Oct, `5890f97`: the combat system of 20 Oct, the new version only, and the survey reveal as a
+    flight of the camera of 21 Oct). HANDOVER, section 0, has where things stand; CLAUDE.md lists
+    every PR. What follows is the history up to 13 Oct.
   - The game was as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
     live script `index-BRmxB_Lf.js`), from `claude/affectionate-johnson-qqr7p2`, the plan's
@@ -122,8 +123,13 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
+- **Today's game, from its last validation (21 Oct, PR m1omg/Steliterate#39, the survey reveal,
+  display only):** tsc and the build clean (`index-Zc5orquV.js`); the playtest "ALL CHECKS PASSED"
+  (30/144 Hz parity 2e-15); savecompat on its 6 saves; all 58 unit checks; all 56 browser checks
+  in the real fonts (`survey-reveal` new; `a11y` waiting for the focus, as the new version's has
+  since 14 Oct: with the fixed 400 ms it failed on `main` as it stood). No rule changed.
 - **The baseline, from the last validation (21 Oct, the survey reveal as a flight of the camera,
-  the new version only, display only):** tsc and the build clean (`index-C9puCHR0.js`); the
+  the new version, display only):** tsc and the build clean (`index-C9puCHR0.js`); the
   playtest "ALL CHECKS PASSED" (30/144 Hz parity 2e-15); savecompat on the 9 saves; all 90 unit
   checks; all 64 browser checks in the real fonts (`survey-reveal` rewritten). No rule changed, so
   the harness was not run: the combat batch's figures below stand.
@@ -1100,8 +1106,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   the star, a flight to each world (close, three parts lit, its star off to the left), a caption
   typed in at the top left with four bars, dust streaking between worlds, the star rising over
   the last world's edge, then back out. Kept from ours: the scan line, Skip and Skip all, the
-  Settings switch. Their clip went no further than the scratchpad. Offered for later, if they
-  ask: the same in today's game.
+  Settings switch. Their clip went no further than the scratchpad. Asked whether they wanted it in
+  today's game too: "yes" (PR m1omg/Steliterate#39, `2d345e4`; today's game had had no survey
+  reveal at all).
 
 ## Found in the review of 28 Sep (verified)
 

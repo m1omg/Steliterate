@@ -30,8 +30,9 @@ that the switch merges cleanly; PR m1omg/Steliterate#34, `e827e2f`, the game kee
 PR m1omg/Steliterate#35, `e4c77d7`, falling worlds, PR m1omg/Steliterate#36, `981e0f0`, finds
 only where they can be and one sea for the Water row and the picture, and PR
 m1omg/Steliterate#37, `d2abd2a`, the pace: ten turns to a Tide turn (and PR
-m1omg/Steliterate#38, `a2fa3b4`, a line of its changelog), all from
-`claude/promises-main`, the same way, each then merged into the work branch with `-s ours`).
+m1omg/Steliterate#38, `a2fa3b4`, a line of its changelog), and PR m1omg/Steliterate#39,
+`2d345e4`, the survey reveal as a flight of the camera (21 Oct), all from `claude/promises-main`,
+the same way, each then merged into the work branch with `-s ours`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -54,8 +55,8 @@ keeps its word", "falling worlds", the list's items 7, 1 and 6, and items 3 to 5
 in both versions since 20 Oct, which completes the approved plan,
 `docs/plans/2026-10-19-falling-worlds-and-the-list.md` (the player's list of 16 Oct); then the
 combat system (20 Oct, the new version only, `docs/plans/2026-10-20-combat.md`), and the survey
-reveal as a flight of the camera, as in Endless Space 2 (21 Oct, the new version only, display
-only).
+reveal as a flight of the camera, as in Endless Space 2 (21 Oct, display only; in today's game too
+since PR m1omg/Steliterate#39).
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 
