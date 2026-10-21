@@ -2,7 +2,8 @@
 
 This document describes **Steliterate** as it plays at https://m1omg.github.io/Steliterate/,
 as of the merge of PR #37 (`d2abd2a`) on `main` of `github.com/m1omg/Steliterate` (20 October
-2026; its code is commit `bd86639` on top of `981e0f0`).
+2026; its code is commit `bd86639` on top of `981e0f0`), with the survey reveal of 21 October 2026
+(E.1.7, E.2.4), which comes to `main` by the PR after #38.
 It was written for an AI agent asked to rebuild the game as closely as it can, in the player's
 words: "a comprehensive full summary of this game for an AI agent to replicate".
 
@@ -184,7 +185,8 @@ that flag loads the autosave straight into the game. It also installs the keyboa
 "competent" if `auto`, then `endTurn`, then clears `state.crossing`, and clears pending events
 unless `keep`), `autoPlay()`, `orderFleet(fleetId, systemId, order)`, `select(kind, id)`,
 `refresh()`, `notify(text, kind)`, `state()`, `engine()`, `music()`, `audio()`,
-`setVolumes(m, s)` and `sfx(name)`. Headless checks import `newGame`, `endTurn` and `autoPlay`
+`setVolumes(m, s)`, `sfx(name)` and `reveals(on)` (the survey reveals on, off, or `null` as the
+settings say; the address's `?noreveals` turns them off for the page). Headless checks import `newGame`, `endTurn` and `autoPlay`
 directly; `tools/sim.ts` is the balance harness (section D) and `tools/savecompat.ts` replays
 old saves (A.7).
 
@@ -1070,7 +1072,8 @@ opens the age's intro.
 **Interface settings** (`ui/store.ts: Settings`, key `steliterate.settings`; section E):
 `music` and `sfx` volumes (default 0.7), `quality` (`low | medium | high`, medium on touch
 devices unless chosen by hand), `uiScale`, `playlist`, `overture`, `lowVision` (the magnifier
-mode), `lvSide`, `qualityChosen`. None of them touch the simulation.
+mode), `lvSide`, `qualityChosen`, `reveals` (the survey reveal, E.1.7; unset, on unless the system
+asks for reduced motion). None of them touch the simulation.
 
 ## B. The physics
 
@@ -1920,6 +1923,7 @@ world), rocky worlds first, never one of ours.
 | Inspiral and accretion figures from unreviewed notes, kept as model uncertainty | | Codex |
 | A neutron star's slow stream warms it as a white dwarf's would | some 1,700 times brighter (GM/R) | Codex |
 | A giant's flash melts and boils by its equilibrium warmth and its whole energy; what shelters a settlement is the game's reckoning | a few decades to millennia of heating, a thin molten skin for a short flash | Codex, `flashMelts`, `flashBoils` |
+| The survey reveal's dust streaking past, and its camera crossing a system in a second (display only) | interplanetary dust far too thin to see | CHANGELOG |
 
 ### B.13 Sources cited
 
@@ -4054,7 +4058,13 @@ colour, sun direction/colour/power, substellar point, rust, feeding, eaten, flow
   a sodium haze, a neon transit thread; round a dead star the lamps burn at half. Another
   civilization's surface cities use their own colour (mixed 25% with sodium).
 - Faint sky ambient `albedo·0.015`; ice night sides `albedo·(0.012,0.016,0.024)`; an atmosphere rim
-  thinning with vitality.
+  thinning with vitality. Seen from the night side with the star behind (since 21 Oct 2026), air
+  scatters the light forward: `atmo·sunColour·rim·b·air·(0.25 + 0.75·vitality)·sunPower·1.3`, with
+  `b = max(0, dot(normalize(fragWorld − cameraPos), sunDir))^6`; none on airless worlds.
+- The survey reveal's scan (`uReveal` < 1): with `v = 0.5 − 0.5·obj.y` and `edge = uReveal·1.16 −
+  0.08`, the world above the line shows (`1 − smoothstep(edge ± 0.012, v)`), below it a silhouette
+  `0.004 + scan·(1 − toViewer)³·0.3`, and the line itself adds `scan·(1 − smoothstep(0, 0.028,
+  |v − edge|))·1.3` (scan colour: the age's neon).
 - The Long Flow: heights flattened to a quarter, detail to a third; belts' stones turn round
   (icosahedron detail 1).
 
@@ -4089,6 +4099,59 @@ their lights are `#d9cdb8`.
 scale `1.9·size`; opacity eases from 0.8 down to a floor of 0.35 (marked) or 0.12 (unmarked) as the
 camera comes close (`k = distance/r`, fade over 3..12).
 
+**The survey reveal** (since 21 Oct 2026, as the player pictured it from Endless Space 2). Turn
+flow marks the systems a survey charted this turn (E.2.8); entering one of them, by any way in and
+once, while reveals are on, plays a flight of the camera, on the view's clock (seconds of real time
+at any frame rate), its order the bodies by orbit radius with the one the view was entered for
+first, and the outermost world that is not a belt, the Deep or flung loose moved last, where the
+star rises over it if the primary's light power is at least 0.2.
+- **Timing:** a look at the star, 1.5 s (a neon ring `RingGeometry(0.97, 1)` grows over 1.4 s from
+  `1.2·R★` to `1.15·max(orbit radii, 3·R★)`, easing out, opacity `0.5·(1 − k)`); then each world:
+  a flight (the first 1.35 s; then 1.0 s, or 0.8 s with more than six) and a while there of
+  `clamp(10/n, 1.6, 2.3)` s, 1.1 s more where the survey found something (a relic shown or a
+  find's trait), 1.8 s more for the sunrise; then 1.7 s back out. Next (a click or tap on the view,
+  Space, its button) cuts the look at the star or the current while to now; pressed in a flight,
+  it cuts the coming while to 1.1 s.
+- **What shows:** a world from the start of its flight on, as a silhouette; its scan `uReveal`
+  from 0.25 s before its arrival to 0.7 s after (clamped 0..1); what is round it (rings, its
+  shield, habitats, motes) once scanned; a belt's stones by the scan's share; the Deep's ring
+  fading in over 0.6 s from its flight; orbit lines hidden until the way out, then each fading in
+  over 0.6 s, 0.1 s apart from the star outward; names, the selection circle and picking only for
+  worlds whose scan is over, and no names at all before the way out.
+- **The camera** (a pure function of the time into the reveal and the orbits' clock, put
+  exactly on the rig every frame; vertical field of view 50°): a pose places a point `W` at
+  `(x, y)` on the screen, seen from `d` away at `turn` round from the direction to the star (0
+  between them, π/2 half lit with the star on the left, past π from the night side) and `rise`
+  above the orbit's plane. A world's place (`x`, `y`): (0.3, −0.04) on a wide screen, (0, −0.22) on
+  one held upright (aspect < 0.9), (0, 0) in the magnifier mode; for the sunrise (−0.12, −0.04),
+  (−0.3, −0.2), (−0.2, 0). Its size: the world fills `f` of the screen's height, `f = clamp(0.12 +
+  0.17·size, 0.3, 0.85)` (sunrise `clamp(0.45 + 0.17·size, 0.65, 1.15)`), its angular radius never
+  more than 0.8 (sunrise upright or magnified 0.5) of the screen's half-width, so `d = size/sin ρ`.
+  At a world, `u` its while's planned share: `d·(1.05 − 0.08·smoothstep(u))`, `turn = 1.15 +
+  0.12u`, `rise = 0.14 + 0.05u`. The sunrise: `turn = −π + σ·(L + d)/L` (`L` the world's distance
+  from the star), `σ` easing from `max(0, ρ − 1.2ρ★)` to `ρ + 2.5ρ★` (`ρ★ = atan(R★/(L + d))`),
+  `rise = 0.06`. A belt: a point of the ring at the belt's phase, turning with it, gliding 1.1
+  units a second along it, `d = max(9, 0.45·R)`, `turn = 2.6 + 0.08u`, `rise = 0.3 + 0.03u`. The
+  Deep: the star itself, `d = max(12, 2·R_deep)`, `turn = yaw₀ − 0.3 + 0.12u`, `rise = 0.42 +
+  0.03u`, at (0.22, −0.05). The look at the star: target the star, distance `frameDistance·(0.5 +
+  0.22e)`, yaw `yaw₀ − 0.45 + 0.2e`, pitch `0.12 + 0.13e`, `e` easing out over 1.5 s. The end: the
+  whole system as the view opens without one (distance `frameDistance`, pitch 0.5, `yaw₀`), or the
+  world the view was entered for at `max(9, 7·size)`, which it then follows.
+- **A flight** blends two poses with a cubic ease in and out: the target goes round the star (its
+  radius and azimuth interpolated, the shorter way), the yaw kept relative to the target's
+  azimuth, the distance interpolated in log and raised by `1 + hop·sin(πe)` with `hop = min(1,
+  0.12·chord/(d₁ + d₂))`, the pitch raised by `0.1·hop·sin(πe)`; midway the camera is pushed out
+  to at least `2.6·R★ + 2` from the star's centre (by `sin(πe)`, so neither end moves).
+- **Dust:** 180 motes fixed in space in a pattern repeating every cell (`clamp(0.18·frameDistance,
+  10, 30)`, seeds `Rng(4129)`), each the copy nearest the camera, drawn as an additive line back
+  along the camera's velocity (from the poses 1/30 s apart) for 0.012 s of it, at most a third of a
+  cell, colour `(0.36, 0.4, 0.46)` × `(1 − (dist/half cell)²)` × `smoothstep(0.06, 0.2 cells, dist)`
+  × `smoothstep(1.5, 6 cells a second, speed)`; none in the magnifier mode.
+- **Ends:** played out, the camera stays; skipped (Skip, Enter, Escape, Settings off), it flies
+  back out over 1 s (or to the world entered for); a drag, a pinch, the wheel, a world picked from
+  a list, another system or game end it where the camera is. A click in the flight is Next and a
+  double-click nothing.
+
 #### E.1.8 Picking (`Engine.pickAt`)
 
 Projects every pickable; reach 16 px (galaxy) / 26 px (system), 28 / 36 px for touch, × 1.5 in the
@@ -4096,7 +4159,8 @@ magnifier mode; fleets get 4 px of bonus. A pickable with a radius counts anywhe
 screen; inside a disc the nearer wins; a swarm cloud scores 0.5 so a star or ship right under the
 pointer still wins. On touch, a map label's box (±6 px) picks what it names unless the finger is
 right on something. While choosing a destination (`pickFilter`), only stars other than the fleet's
-own can be picked; the canvas shows a crosshair (`html.picking`).
+own can be picked; the canvas shows a crosshair (`html.picking`). In a survey reveal's flight a
+world not yet scanned cannot be picked, and a click on the view is Next (E.1.7).
 
 ---
 
@@ -4187,6 +4251,25 @@ Desktop positions (in UI pixels, `env(safe-area-inset-*)` added at the edges):
 | Research / ship prompt | top 132, centred, width ≤ 460 |
 | Guide `.tutorial` | left 70 (150 on wide screens), top 128, width ≤ 340 |
 | Target banner `.targeting` | top 140, centred, neon border |
+| Survey reveal's caption `.reveal-card` | top 14, left 18, width ≤ 440, no box (E.1.7) |
+
+**The survey reveal's caption** (`hud/RevealCard.tsx`, since 21 Oct 2026): over the view like a
+film's titles (text shadow, a dark radial wash behind it), only its buttons and bars taking the
+pointer; while it shows, `html.cine` hides every other part of the HUD, the toasts and the map's
+hover card (not in the magnifier mode, where it is a panel in the column with the prompts). A line
+"Survey · Star · k of n" with Next (not on the way out), Skip and Skip all (Skip all also clears the
+other systems waiting). At the star: its name (display, 30px, uppercase) and "Kind · N worlds to
+chart". At a world (from its scan's start; on the way to the next it fades out): its name, then
+lines typed in left to right one after another (0.45 s each, 0.17 s apart from 0.18 s): its kind;
+indented, "Room for K Kin without domes" (green), "Kin would need domes", "No ground to stand on"
+(giants) or "Open space round the star" (the Deep); "Temperature" (night to day if they differ); the
+Water row (not giants); "Found here: title" (neon) for a find; then four bars of five segments
+(Livable, Power, Matter, Lasting, their icons and colours good, warn, accent, boon) filling in turn,
+each with the site measure's label: Livable `2 + round(3·hab)` with room (hab = habitability ×
+vitality), else 1 if hab ≥ 0.3; Power and Matter `round(5·x/best)` (at least 1 if any) against the
+best of every charted world; Lasting 5 if it never falls in, else `clamp(round(log10(left/years) +
+3), 0, 5)`; none for a world boiling away; and a find's plate (84 px). On the way out: "N worlds
+charted". Sounds: `whoosh` for each flight and the way out, `scan` as a world's scan begins.
 
 Short screens: at ≤ 950 px tall the feed is 78 px and only two forecasts show; ≤ 790 px, one
 forecast and a 58 px feed.
@@ -4339,7 +4422,8 @@ scrolling body, optional foot. Escape closes. Letter keys switch between screens
 - **Menu / Settings** (`SettingsModal`, title "Menu" in a game): Quick save, Save slots, load,
   export…, Codex, Main menu; Music % slider; Music track select ("Automatic: whatever fits the age
   and the moment" or a track; "Now: X"); Playlist (E.5.4); Sound effects % slider (clicks on
-  change); Graphics low/medium/high; Magnifier mode On/Off with its description and, when on,
+  change); Graphics low/medium/high; Survey reveals On/Off with its description (Off also skips the
+  one playing and the ones waiting); Magnifier mode On/Off with its description and, when on,
   Column on the left/right; Interface size (with "This screen has room for ×z at most"); Guide
   (Start the guide again, Open the manual); the refresh-rate note.
 - **Save and load** (`SaveModal`): Main menu; Save slots (name field, Save to a new slot, rows with
@@ -4388,7 +4472,8 @@ newly idle ships → the ship prompt queue; surplus research → "With insight t
 new stars `#bfe9ff` and surveys `#9ff5e6`, and (since 20 Oct 2026) for up to three giants' flashes
 at stars we know `#ffd9a8`; a living world → "Living world found: World in Star, N%
 habitable, room for K Kin" with Look + green pings + `good`; a survey → "Survey complete: Star, N
-worlds" with Look (opens the system) + `signal`, else "N new stars on the map."; a new settler →
+worlds" with Look (opens the system) + `signal`, else "N new stars on the map."; the systems a
+survey charted this turn are marked for the survey reveal (E.1.7); a new settler →
 "X is ready at Y. Open Fleets to choose a world."; a Long Sleep with no pending events ends the
 next turn after 420 ms.
 
@@ -4401,7 +4486,9 @@ mode; H home (the capital's system: in the galaxy at distance 150, in a system i
 Escape (outside story dialogs) closes the survey report, else cancels targeting and clears the
 selection; Enter ends the turn unless a button, link, `[role=button]` or summary has focus, or an
 event is open. Magnifier mode: N next thing needing attention, B the selected settlement's Build
-tab, M fold the column. Modals close on Escape themselves.
+tab, M fold the column. Modals close on Escape themselves. Over a survey reveal (with no window or
+story open), Enter and Escape skip it and Space goes on to its next world (a capture listener, so
+the turn never ends underneath it).
 
 #### E.2.10 Tooltips, numbers and icons
 
@@ -4680,6 +4767,8 @@ bursts of the shared buffer. A send bus made once routes some to the reverb at 0
 | `good`, `build` | triangle 523 Hz then 784 Hz (+90 ms) |
 | `bad` | two saws 220 → 150 and 233 → 156 Hz, 0.28 s (a sour beat) |
 | `warn` | two square beeps at 740 Hz, 0.18 s apart |
+| `whoosh` | a survey reveal's flight (and its way out): 0.95 s of noise band-passed 260 → 1900 Hz (Q 1.2) at 0.07, and from +0.25 s 0.7 s low-passed 1600 → 220 Hz at 0.04, through the reverb |
+| `scan` | a world charted in a survey reveal: sine 1046 → 1568 Hz (0.16 s, 0.035), then 1568 → 2093 Hz at +0.12 s (0.22 s, 0.025), through the reverb |
 
 Volume sliders: Music and Sound effects, 0–100% in steps of 5, squared.
 
@@ -4876,8 +4965,9 @@ unit checks run with `tsx`, `cpus − 1` at a time; browser checks one at a time
 per check with seconds and its last OK/FAILED line, then the failures' BAD lines, then "ALL CHECKS
 PASSED (n)". Unit checks import `check`, `near`, `done`, `loadSave`, `args` from `lib.ts`; each ends
 `TAG OK` / `TAG FAILED (n)`. `tsc` type-checks them (the Pages build runs `tsc`). Browser checks use
-`lib.cjs`: `start(name, { width 1400, height 900, seed })` (waits for the server, Chromium with the
-SwiftShader flags, a page with console errors collected — any one fails the check),
+`lib.cjs`: `start(name, { width 1400, height 900, seed, reveals })` (waits for the server, Chromium
+with the SwiftShader flags, a page with console errors collected — any one fails the check; every
+page opens with `?noreveals` unless `reveals: true`, and the playtest's too),
 `ck.shot`, `ck.another(w, h)`, `ck.phone(w, h, query)` (isMobile, hasTouch), `ck.freshPhone`,
 `finish(tag, ck)`, `run(body)`; screenshots in `playtest-shots/checks/<name>/`.
 
@@ -4990,6 +5080,7 @@ checks (`mobile`, `a11y`) are meant to run with it (`mobile` says when the fonts
 | star-price | the clock's price shown, taken once, disabled when unaffordable; Study and Watch rewards |
 | startype | the Type sort: holes, neutron stars, dwarfs, nearest first within each |
 | survey-look | a survey via the real End Turn; the toast's Look opens the system |
+| survey-reveal | (reveals on) a survey via the real End Turn; Look plays the reveal: the worlds and their names wait, the interface steps aside, the camera close to the world being charted (< 30% of the system's distance), the caption's lines and four bars; Space and a click go on; Enter skips without ending the turn; 30 against 144 frames a second the same at 2 s and 6 s, the camera's place too; Escape, Skip all, reveals off; a drag keeps the camera where it is; in the magnifier mode the caption in the column |
 | swarm-click | a click on a swarm's cloud selects it, on its star the star |
 | swarm-colour | tamed motes teal, wild ones red |
 | systems-tab | the Systems window's tabs and keys; Collision stars burning and out; ✦ labels |
@@ -5007,7 +5098,7 @@ checks (`mobile`, `a11y`) are meant to run with it (`mobile` says when the fonts
 auto = true, keep = false)` (autoplays and clears pending events unless `keep`), `autoPlay()`,
 `orderFleet(fleetId, systemId, order)`, `select(kind, id)`, `refresh()`, `notify(text, kind)`,
 `state()`, `engine()`, `music()` (its `layer`: `bus`, `silenced`, `persistent`, `track.el`),
-`audio()`, `setVolumes(m, s)`, `sfx(name)`. Tests freeze a page with `engine.stop()` and drive
+`audio()`, `setVolumes(m, s)`, `sfx(name)`, `reveals(on)`. Tests freeze a page with `engine.stop()` and drive
 `engine.frame(dt)`; pixel reads use `gl.readPixels` straight after `frame(0)`.
 
 #### E.7.5 The balance harness's place
