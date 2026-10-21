@@ -9,6 +9,7 @@ import { DISK_FRAG, DISK_VERT, GLOW_FRAG, GLOW_VERT, PLANET_FRAG, PLANET_VERT, S
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
 import { flowing } from '../game/sim/flow';
+import { ANOMALIES } from '../game/data/events';
 
 // One system up close. Planets orbit on elapsed time (never on frame count), the star
 // granulates and flares, the dying world freezes as its vitality falls.
@@ -26,6 +27,98 @@ interface PlanetRig {
 
 /** The selection circle on a world no one lives on (on a lived-on world it takes its ring's colour). */
 const SELECT = new THREE.Color('#ffd9b0');
+
+/**
+ * The survey reveal (21 Oct, as the player pictures it, from Endless Space 2; the new version's
+ * since 14 Oct, a flight of the camera there too since 21 Oct): a look at the star while a ring of light leaves it (`intro`; the ring takes
+ * `pulse`); then a flight to each world in its turn (`dive` the first, down from the whole system;
+ * `fly` each other, `flyMany` with more than six), dust streaking past, and a while at it (`hold`:
+ * `holdAll` shared among them, within `holdMin` and `holdMax`; `find` more where the survey found
+ * something), close and half in its star's light, its scan sweeping it in as the camera arrives
+ * (from `scanA` to `scanB`, counted from the arrival); at the last world, where the star shines,
+ * the camera comes round its night side until the star rises over its edge (`sunrise` more); then
+ * back out to the whole system (`out`), the orbits drawn in from the star outward (each over
+ * `orbit`, `stagger` apart). Seconds of the view's clock; Next (a click, Space) cuts a while short.
+ */
+const REVEAL = { intro: 1.5, pulse: 1.4, dive: 1.35, fly: 1.0, flyMany: 0.8, holdAll: 10, holdMin: 1.6, holdMax: 2.3, find: 1.1, sunrise: 1.8, out: 1.7, scanA: -0.25, scanB: 0.7, orbit: 0.6, stagger: 0.1 };
+/** How fast the camera glides along an asteroid belt while it is there (world units a second). */
+const BELT_GLIDE = 1.1;
+/** The dust that streaks past in a flight: how many motes, and how long a streak is (the way the camera goes in this long, at most a third of the dust's cell). */
+const DUST = 180;
+const STREAK = 0.012;
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** Where the reveal has come to, for its caption (UI): the world (null at the star and on the way out), its place, how many, and where the flight is. */
+export interface RevealStep {
+  systemId: string;
+  bodyId: string | null;
+  index: number;
+  total: number;
+  /** At the star, on the way to the world, at it, or back out to the whole system. */
+  phase: 'intro' | 'fly' | 'hold' | 'outro';
+}
+
+/** Where the camera is, in OrbitRig's terms: what it looks at, from how far, from which way and how high. */
+export interface CinePose {
+  target: THREE.Vector3;
+  distance: number;
+  yaw: number;
+  pitch: number;
+}
+
+/** How a reveal ended: played out, skipped (back to the whole system), or let go of where it was (a hand on the view, another system, another game). */
+export type RevealEnd = 'done' | 'skip' | 'drop';
+
+/** One world's part in the reveal. */
+interface Shot {
+  id: string;
+  kind: 'world' | 'belt' | 'deep';
+  /** The flight to it. */
+  fly: number;
+  /** Its while there as planned (what the camera does there is timed by it), and as it is (Next cuts it short). */
+  plan: number;
+  hold: number;
+  /** The last world, its star rising over its edge. */
+  sunrise: boolean;
+}
+
+interface Reveal {
+  systemId: string;
+  /** The view's time it began at. */
+  start: number;
+  /** The look at the star (Next cuts it short). */
+  intro: number;
+  /** The worlds in the order they come. */
+  shots: Shot[];
+  /** Each world's place from the star outward: its orbit is drawn in in that order on the way out. */
+  rank: Map<string, number>;
+  /** How far the star's pulse goes: past the last orbit. */
+  reach: number;
+  /** Which way the view faced as it began: the whole system is seen from there again at the end. */
+  yaw0: number;
+  /** A world the view was entered to look at: the flight ends on it, not on the whole system. */
+  focus: string | null;
+  /** The dust's cell (world units): as many motes in every cube this wide. */
+  cell: number;
+}
+
+/** When each part of a reveal begins (seconds from its start): each flight, each arrival, the way out, the end. */
+interface Schedule {
+  fly: number[];
+  at: number[];
+  out: number;
+  end: number;
+}
+
+const FIND_IDS = new Set(ANOMALIES.map((a) => a.id));
+
+/** A survey found something here: ruins (a relic) or a remarkable find (Story.tsx worldFinds). */
+function hasFind(b: Body | undefined): boolean {
+  return !!b && ((!!b.relic && b.relic.state !== 'hidden') || b.traits.some((t) => FIND_IDS.has(t)));
+}
+
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
 
 const KIND_INDEX: Record<string, number> = { eyeball: 1, terran: 1, super_earth: 0, barren: 0, ice: 2, ocean_ice: 5, gas_giant: 3, ice_giant: 4 };
 
@@ -62,6 +155,26 @@ export class SystemView {
   }
   neon = new THREE.Color('#4fe3d1');
   selectedBody: string | null = null;
+  /** The survey reveal playing, if one is (kept across a rebuild of the same system; applied in update). */
+  private reveal: Reveal | null = null;
+  private revealAt = '';
+  /** Where its flight is (null with none playing). */
+  private cinePhase: RevealStep['phase'] | null = null;
+  /** Told where the reveal has come to, and null once it is over (Engine: the caption). */
+  onReveal: ((r: RevealStep | null) => void) | null = null;
+  /** Told how it ended, with the world the view was entered for and which way it faced at first (Engine: the camera after it). */
+  onRevealEnd: ((how: RevealEnd, focus: string | null, yaw0: number) => void) | null = null;
+  /** Where the reveal puts the camera this frame (Engine: the rig), null when none is flying. */
+  cinema: CinePose | null = null;
+  /** The magnifier mode (Engine): worlds in the middle of what its column leaves, and no dust. */
+  lowVision = false;
+  /** How strongly the star lights its worlds (primaryLightColor): one that shines rises over the last world of a reveal. */
+  private sunPower = 1;
+  /** The reveal's first moment: a ring of light leaving the star. */
+  private pulse: THREE.Mesh;
+  /** Dust streaking past in the reveal's flights: lines from each mote back along the camera's way. */
+  private dust: THREE.LineSegments;
+  private dustSeed = new Float32Array(DUST * 3);
 
   /** Where a body is right now, and how big: for the camera to fly to and follow. */
   /** Where a fleet in this system is drawn right now. */
@@ -82,6 +195,17 @@ export class SystemView {
     this.stars = backgroundStars();
     this.selRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 96), new THREE.MeshBasicMaterial({ color: SELECT.clone(), transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
     this.selRing.visible = false;
+    this.pulse = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 160), new THREE.MeshBasicMaterial({ color: this.neon.clone(), transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.pulse.rotation.x = -Math.PI / 2;
+    this.pulse.visible = false;
+    const rng = new Rng(4129);
+    for (let i = 0; i < this.dustSeed.length; i++) this.dustSeed[i] = rng.next();
+    const dg = new THREE.BufferGeometry();
+    dg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(DUST * 6), 3).setUsage(THREE.DynamicDrawUsage));
+    dg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(DUST * 6), 3).setUsage(THREE.DynamicDrawUsage));
+    this.dust = new THREE.LineSegments(dg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.dust.frustumCulled = false;
+    this.dust.visible = false;
   }
 
   private clear() {
@@ -89,7 +213,7 @@ export class SystemView {
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();
       const mat = m.material as THREE.Material | THREE.Material[] | undefined;
-      if (mat && !Array.isArray(mat) && mat !== this.selRing.material) mat.dispose();
+      if (mat && !Array.isArray(mat) && mat !== this.selRing.material && mat !== this.pulse.material && mat !== this.dust.material) mat.dispose();
     });
     this.group.clear();
     this.planets = [];
@@ -109,14 +233,19 @@ export class SystemView {
   }
 
   build(state: GameState, systemId: string) {
+    // (a reveal belongs to its system: another one built ends it)
+    if (this.reveal && this.reveal.systemId !== systemId) this.endReveal('drop');
     this.clear();
     this.systemId = systemId;
     const sys = state.systems[systemId];
     this.group.add(this.stars);
     (this.stars.material as THREE.PointsMaterial).opacity = state.era === 'dusk' ? 0.8 : state.era === 'degenerate' ? 0.35 : state.era === 'blackhole' ? 0.12 : 0.03;
     this.group.add(this.selRing);
+    this.group.add(this.pulse);
+    this.group.add(this.dust);
     this.buildPrimary(state, sys);
     const light = primaryLightColor(state, sys);
+    this.sunPower = light.power;
     const colonized = new Set(Object.values(state.colonies).filter((c) => c.systemId === sys.id).map((c) => c.bodyId));
     // until a probe has surveyed it, a system is only its star: the worlds are not charted yet
     const surveyed = state.civ.known[sys.id] === 2 || colonized.size > 0;
@@ -132,11 +261,11 @@ export class SystemView {
     for (const bid of surveyed ? sys.bodies : []) {
       const b = state.bodies[bid];
       if (!b || b.dissolved) continue;
-      if (b.kind === 'deep') {
-        this.buildDeep(state, sys, b, colonized.has(b.id), residents.get(b.id));
-        continue;
-      }
-      this.buildBody(state, sys, b, light, colonized.has(b.id), residents.get(b.id));
+      const from = this.group.children.length;
+      if (b.kind === 'deep') this.buildDeep(state, sys, b, colonized.has(b.id), residents.get(b.id));
+      else this.buildBody(state, sys, b, light, colonized.has(b.id), residents.get(b.id));
+      // whatever was drawn for it waits for its turn in a survey reveal
+      for (let i = from; i < this.group.children.length; i++) this.group.children[i].userData.reveal = b.id;
     }
     if (surveyed) this.buildStructures(state, sys);
     this.buildSwarm(state, sys);
@@ -276,6 +405,8 @@ export class SystemView {
     const other = sv ? othersColor(sv) : null;
     const ring = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.12, 128), new THREE.MeshBasicMaterial({ color: settled ? this.neon : (other ?? '#6b6f7a'), transparent: true, opacity: settled ? 0.55 : other ? 0.4 : 0.18, side: THREE.DoubleSide, depthWrite: false }));
     ring.rotation.x = -Math.PI / 2;
+    // (the Deep is its ring: in a survey reveal it comes with its turn, not with the orbits)
+    ring.userData.deep = (ring.material as THREE.MeshBasicMaterial).opacity;
     this.group.add(ring);
     const pos = new THREE.Vector3(r, 0, 0);
     this.pickables.push({ kind: 'system', id: `body:${b.id}`, pos });
@@ -301,6 +432,7 @@ export class SystemView {
     let mat: THREE.ShaderMaterial | null = null;
     if (b.kind === 'asteroids') {
       mesh = asteroidBelt(orbitR, hashSeed(b.id), b.richness, flowing(state));
+      mesh.userData.belt = (mesh as unknown as THREE.InstancedMesh).count;
       this.rockMats.push({ mat: mesh.material as THREE.MeshBasicMaterial, tempK: bodyClimate(state, b).mean, rust: sys.rust ?? 0 });
       this.applyViewMode();
       this.group.add(mesh);
@@ -351,6 +483,9 @@ export class SystemView {
         uWater: { value: b.water ?? 0 },
         // an eyeball is one face to its star by definition; any other world only if it is locked
         uLocked: { value: b.kind === 'eyeball' || b.traits.includes('tidally_locked') ? 1 : 0 },
+        // the survey reveal sweeps it in (update)
+        uReveal: { value: 1 },
+        uScan: { value: this.neon },
       },
     });
     mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 64, 48), mat);
@@ -395,7 +530,9 @@ export class SystemView {
     // orbit line
     const orbit = new THREE.Mesh(new THREE.RingGeometry(orbitR - 0.04, orbitR + 0.04, 180), new THREE.MeshBasicMaterial({ color: b.rogue ? '#4a4a52' : '#8a8f9c', transparent: true, opacity: b.rogue ? 0.08 : 0.16, side: THREE.DoubleSide, depthWrite: false }));
     orbit.rotation.x = -Math.PI / 2;
+    orbit.userData.orbit = (orbit.material as THREE.MeshBasicMaterial).opacity;
     this.group.add(orbit);
+    pivot.userData.world = true;
     this.group.add(pivot);
     const speed = b.rogue ? 0.004 : 0.25 / Math.pow(orbitR / 12, 1.5);
     this.planets.push({ body: b, pivot, mesh, mat, speed, phase: b.phase, radius: orbitR, extra });
@@ -667,7 +804,7 @@ export class SystemView {
     }
   }
 
-  update(dt: number, camera: THREE.Camera, viewDistance = 100) {
+  update(dt: number, camera: THREE.PerspectiveCamera, viewDistance = 100) {
     // rocks and collectors that drift right in front of the camera fade out instead of
     // blotting out the world being looked at
     NEAR_FADE.value = viewDistance * 0.3;
@@ -751,10 +888,14 @@ export class SystemView {
       const f = this.fleets.children[i];
       if (f) p.pos.copy(f.position);
     });
+    // the survey reveal: what it has not yet charted on screen waits (and its name and the pointer:
+    // hidden), and the camera flies (`cinema`, for the engine to put the rig there)
+    const waiting = this.applyReveal(camera);
     // a world wears one ring: selected, the selection circle takes the place and colour of the
     // ring that says whose it is (ours, or a neighbour's); a world no one lives on gets the pale one
+    // (none in a reveal's flight)
     let marked: THREE.Mesh | undefined;
-    if (this.selectedBody) {
+    if (this.selectedBody && !waiting?.has(this.selectedBody) && !this.labelsHeld) {
       const p = pick(`body:${this.selectedBody}`) ?? pick(this.selectedBody);
       if (p) {
         const rig = this.planets.find((x) => x.body.id === this.selectedBody);
@@ -774,9 +915,411 @@ export class SystemView {
         mat.opacity = floor + (0.8 - floor) * fade * fade * (3 - 2 * fade);
       } else this.selRing.visible = false;
     } else this.selRing.visible = false;
-    for (const pr of this.planets) for (const e of pr.extra) if (e.userData.mark) e.visible = e !== marked;
+    for (const pr of this.planets) for (const e of pr.extra) if (e.userData.mark) e.visible = e !== marked && !waiting?.has(pr.body.id);
+  }
+
+  /**
+   * Begin the survey reveal of the system just built: a flight to each of its worlds in orbit order
+   * (or `first` first, a world the view was entered to look at, which the flight ends on), after a
+   * look at the star; `yaw`, which way the view faces as it begins (the whole system is seen from
+   * there again at the end).
+   */
+  startReveal(state: GameState, first?: string | null, yaw = 0) {
+    const id = this.systemId;
+    if (!id) return;
+    const dist = new Map<string, number>();
+    for (const p of this.pickables) {
+      if (!p.id.startsWith('body:')) continue;
+      const b = p.id.slice(5);
+      dist.set(b, this.planets.find((x) => x.body.id === b)?.radius ?? p.pos.length());
+    }
+    const order = state.systems[id].bodies.filter((b) => dist.has(b)).sort((a, b) => (a === first ? -1 : b === first ? 1 : dist.get(a)! - dist.get(b)!));
+    if (!order.length) return;
+    // the star rises over the last world (not a belt or the Deep): the outermost world comes last
+    const rises = (bid: string) => {
+      const b = state.bodies[bid];
+      return !!b && b.kind !== 'asteroids' && b.kind !== 'deep' && !b.rogue && this.sunPower >= 0.2;
+    };
+    const last = [...order].reverse().find(rises);
+    if (last && last !== first && order[order.length - 1] !== last) order.push(...order.splice(order.indexOf(last), 1));
+    const n = order.length;
+    const hold = Math.min(REVEAL.holdMax, Math.max(REVEAL.holdMin, REVEAL.holdAll / n));
+    const shots: Shot[] = order.map((bid, i) => {
+      const b = state.bodies[bid];
+      const kind = b?.kind === 'asteroids' ? 'belt' : b?.kind === 'deep' ? 'deep' : 'world';
+      // (a world flung loose has no star to rise over it)
+      const sunrise = i === n - 1 && rises(bid);
+      const plan = hold + (hasFind(b) ? REVEAL.find : 0) + (sunrise ? REVEAL.sunrise : 0);
+      return { id: bid, kind, fly: i === 0 ? REVEAL.dive : n > 6 ? REVEAL.flyMany : REVEAL.fly, plan, hold: plan, sunrise };
+    });
+    const rank = new Map([...order].sort((a, b) => dist.get(a)! - dist.get(b)!).map((b, i) => [b, i] as const));
+    const reach = this.planets.reduce((m, p) => (p.body.rogue ? m : Math.max(m, p.radius)), this.primaryRadius * 3) * 1.15;
+    const cell = Math.min(30, Math.max(10, this.frameDistance() * 0.18));
+    this.reveal = { systemId: id, start: this.time, intro: REVEAL.intro, shots, rank, reach, yaw0: yaw, focus: first && dist.has(first) ? first : null, cell };
+    this.revealAt = '';
+  }
+
+  /** Skip the reveal: every world at once (`how`: skipped, or let go of where the camera is). */
+  stopReveal(how: RevealEnd = 'skip') {
+    this.endReveal(how);
+  }
+
+  get revealing(): boolean {
+    return !!this.reveal;
+  }
+
+  /** While a reveal flies, the worlds' names wait (on the way back out they come). */
+  get labelsHeld(): boolean {
+    return !!this.reveal && this.cinePhase !== 'outro';
+  }
+
+  /**
+   * Next (a click on the view, Space): on to the next world now, the while here cut short; in a
+   * flight, the world it is flying to is left as soon as it is scanned.
+   */
+  nextShot() {
+    const r = this.reveal;
+    if (!r) return;
+    const t = this.time - r.start;
+    const sch = this.schedule(r);
+    if (t < sch.fly[0]) {
+      r.intro = Math.max(0, t);
+      return;
+    }
+    for (let i = 0; i < r.shots.length; i++) {
+      const s = r.shots[i];
+      if (t < sch.at[i]) {
+        s.hold = Math.min(s.hold, REVEAL.scanB + 0.4);
+        return;
+      }
+      if (t < sch.at[i] + s.hold) {
+        s.hold = t - sch.at[i];
+        return;
+      }
+    }
+  }
+
+  /** Whether a pickable waits for the reveal (a world not yet charted on screen): its name and the pointer wait with it. */
+  hidden(id: string): boolean {
+    const r = this.reveal;
+    if (!r || !id.startsWith('body:')) return false;
+    const i = r.shots.findIndex((s) => s.id === id.slice(5));
+    return i >= 0 && this.time - r.start < this.schedule(r).at[i] + REVEAL.scanB;
+  }
+
+  private schedule(r: Reveal): Schedule {
+    const fly: number[] = [];
+    const at: number[] = [];
+    let t = r.intro;
+    for (const s of r.shots) {
+      fly.push(t);
+      t += s.fly;
+      at.push(t);
+      t += s.hold;
+    }
+    return { fly, at, out: t, end: t + REVEAL.out };
+  }
+
+  /**
+   * The reveal applied to what is drawn, every frame it plays (after a rebuild too): the worlds
+   * still to come hidden, each coming in as the camera flies to it and scanned in as it arrives,
+   * the orbits drawn in on the way out; and where the camera is (`cinema`), with the dust of a
+   * flight. Returns the worlds not yet wholly there.
+   */
+  private applyReveal(camera: THREE.PerspectiveCamera): Set<string> | null {
+    const r = this.reveal;
+    this.cinema = null;
+    this.dust.visible = false;
+    if (!r) return null;
+    const t = this.time - r.start;
+    const sch = this.schedule(r);
+    if (t >= sch.end) {
+      this.endReveal('done');
+      return null;
+    }
+    const waiting = new Set<string>();
+    r.shots.forEach((s, i) => {
+      if (t < sch.at[i] + REVEAL.scanB) waiting.add(s.id);
+    });
+    // first a ring of light leaves the star, out past the last orbit
+    const k = clamp01(t / REVEAL.pulse);
+    const r0 = this.primaryRadius * 1.2;
+    this.pulse.visible = k < 1;
+    this.pulse.scale.setScalar(r0 + (r.reach - r0) * (1 - (1 - k) * (1 - k)));
+    const pm = this.pulse.material as THREE.MeshBasicMaterial;
+    pm.color.copy(this.neon);
+    pm.opacity = 0.5 * (1 - k);
+    const index = new Map(r.shots.map((s, i) => [s.id, i] as const));
+    // a world's scan, from just before the camera arrives
+    const sweep = (i: number) => clamp01((t - sch.at[i] - REVEAL.scanA) / (REVEAL.scanB - REVEAL.scanA));
+    for (const o of this.group.children) {
+      const id = o.userData.reveal as string | undefined;
+      const i = id === undefined ? undefined : index.get(id);
+      if (i === undefined) continue;
+      const since = t - sch.fly[i];
+      if (o.userData.deep !== undefined) {
+        // the Deep's ring comes in with the flight to it
+        o.visible = since >= 0;
+        ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = (o.userData.deep as number) * clamp01(since / REVEAL.orbit);
+      } else if (o.userData.orbit !== undefined) {
+        // orbits are drawn in on the way back out, from the star outward
+        const drawn = clamp01((t - sch.out - r.rank.get(id!)! * REVEAL.stagger) / REVEAL.orbit);
+        o.visible = drawn > 0;
+        ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = (o.userData.orbit as number) * drawn;
+      } else if (o.userData.belt !== undefined) {
+        // a belt's rubble comes in as the scan passes
+        const inst = o as unknown as THREE.InstancedMesh;
+        inst.count = Math.round((o.userData.belt as number) * sweep(i));
+        o.visible = inst.count > 0;
+      } else if (o.userData.world) o.visible = since >= 0;
+      // (what is round it, habitats, fields and motes, once it is charted)
+      else o.visible = sweep(i) >= 1;
+    }
+    for (const pr of this.planets) {
+      const i = index.get(pr.body.id);
+      if (i === undefined || !pr.mat) continue;
+      // the world itself, a silhouette as the camera comes, then the scan
+      const scan = sweep(i);
+      pr.mat.uniforms.uReveal.value = scan;
+      // its rings, its fields and its shield come with its look
+      for (const ch of pr.mesh.children) ch.visible = scan >= 1;
+      for (const ch of pr.pivot.children) if (ch !== pr.mesh) ch.visible = scan >= 1;
+    }
+    // where the flight is, for the caption: a world's from the moment its scan begins
+    let phase: RevealStep['phase'] = 'intro';
+    let cur = -1;
+    if (t >= sch.out) phase = 'outro';
+    else {
+      for (let i = 0; i < r.shots.length && t >= sch.fly[i]; i++) {
+        cur = i;
+        phase = t >= sch.at[i] + REVEAL.scanA ? 'hold' : 'fly';
+      }
+    }
+    this.cinePhase = phase;
+    const key = `${phase}:${cur}`;
+    if (key !== this.revealAt) {
+      this.revealAt = key;
+      const out = phase === 'outro';
+      this.onReveal?.({ systemId: r.systemId, bodyId: out || cur < 0 ? null : r.shots[cur].id, index: out ? r.shots.length : cur, total: r.shots.length, phase });
+    }
+    // the camera: where the flight is now, and (for the dust) a thirtieth of a second before
+    const ot = this.orbitTime;
+    this.cinema = this.cinePose(r, sch, t, ot, camera);
+    if (!this.lowVision) {
+      const h = 1 / 30;
+      this.flightDust(r, this.cinema, this.cinePose(r, sch, t - h, this.orbitsPaused ? ot : ot - h, camera), h);
+    }
+    return waiting;
+  }
+
+  /** Where the camera is at `t` into the reveal (orbits at `ot`): a pure function of the two, so the same at any frame rate. */
+  private cinePose(r: Reveal, sch: Schedule, t: number, ot: number, cam: THREE.PerspectiveCamera): CinePose {
+    if (t < sch.fly[0]) return this.introPose(r, t);
+    // (a flight keeps out of the star's glare midway)
+    const keep = this.primaryRadius * 2.6 + 2;
+    for (let i = 0; i < r.shots.length; i++) {
+      if (t < sch.at[i]) {
+        const from = i === 0 ? this.introPose(r, r.intro) : this.shotPose(r.shots[i - 1], r.shots[i - 1].hold, ot, cam);
+        return blendPose(from, this.shotPose(r.shots[i], 0, ot, cam), (t - sch.fly[i]) / r.shots[i].fly, keep);
+      }
+      if (t < sch.at[i] + r.shots[i].hold) return this.shotPose(r.shots[i], t - sch.at[i], ot, cam);
+    }
+    const last = r.shots[r.shots.length - 1];
+    return blendPose(this.shotPose(last, last.hold, ot, cam), this.endPose(r, ot), (t - sch.out) / REVEAL.out, keep);
+  }
+
+  /** The look at the star: low over its plane, drawing back and up as its ring of light goes out. */
+  private introPose(r: Reveal, tau: number): CinePose {
+    const p = clamp01(tau / REVEAL.intro);
+    const e = 1 - (1 - p) * (1 - p);
+    return { target: new THREE.Vector3(), distance: this.frameDistance() * (0.5 + 0.22 * e), yaw: r.yaw0 - 0.45 + 0.2 * e, pitch: 0.12 + 0.13 * e };
+  }
+
+  /** Where the flight ends: the whole system, as the view opens without a reveal, or the world it was entered to look at, as focusBody flies to it. */
+  private endPose(r: Reveal, ot: number): CinePose {
+    const f = r.focus ? this.planets.find((x) => x.body.id === r.focus) : undefined;
+    if (r.focus) {
+      const at = f && f.body.kind !== 'asteroids' ? orbitPos(f, ot) : (this.pickables.find((p) => p.id === `body:${r.focus}`)?.pos.clone() ?? new THREE.Vector3());
+      const radius = f ? (f.body.kind === 'asteroids' ? 4 : f.body.size) : 3;
+      return { target: at, distance: Math.max(9, radius * 7), yaw: r.yaw0, pitch: 0.5 };
+    }
+    return { target: new THREE.Vector3(), distance: this.frameDistance(), yaw: r.yaw0, pitch: 0.5 };
+  }
+
+  /**
+   * The camera at one world, `local` seconds into its while there. A world: close, as big on the
+   * screen as it is big, three parts lit with its star off to the left, beside the caption (low in
+   * the middle on a screen held upright; in the middle of what the magnifier mode's column leaves),
+   * turning and closing in a little; the last one, where its star shines, seen from its night side
+   * as the camera comes round until the star rises over its right edge. A belt: along it, low,
+   * gliding through its rubble. The Deep: from outside its ring, the star beyond it.
+   */
+  private shotPose(s: Shot, local: number, ot: number, cam: THREE.PerspectiveCamera): CinePose {
+    const u = clamp01(local / s.plan);
+    const aspect = cam.aspect;
+    const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+    const upright = aspect < 0.9;
+    // (the last world left of the middle, for its star to rise on the screen beyond its right edge)
+    const place = this.lowVision ? { x: s.sunrise ? -0.2 : 0, y: 0 } : upright ? { x: s.sunrise ? -0.3 : 0, y: -0.2 } : { x: s.sunrise ? -0.12 : 0.3, y: -0.04 };
+    const pr = this.planets.find((x) => x.body.id === s.id);
+    if (s.kind === 'deep' || !pr) {
+      // the star with the Deep's ring round it, from above, turning a little
+      const R = this.pickables.find((p) => p.id === `body:${s.id}`)?.pos.length() ?? this.primaryRadius * 3;
+      return framed(new THREE.Vector3(), Math.max(12, R * 2), (this.reveal?.yaw0 ?? 0) - 0.3 + 0.12 * u, 0.42 + 0.03 * u, this.lowVision ? 0 : upright ? 0 : 0.22, upright ? -0.12 : -0.05, tanV, aspect);
+    }
+    if (s.kind === 'belt') {
+      // a point of the belt, turning with it (update: its rocks turn by a third of its angle), seen
+      // from outside the ring, its arc of rubble going round to the star beyond (its rocks are drawn
+      // unlit: specks, not close up)
+      const R = pr.radius;
+      const phi = pr.body.phase + (local * BELT_GLIDE) / R;
+      const W = new THREE.Vector3(Math.cos(phi) * R, 0, Math.sin(phi) * R).applyAxisAngle(UP, (pr.phase + ot * pr.speed) * 0.3);
+      return framed(W, Math.max(9, R * 0.45), 2.6 + 0.08 * u, 0.3 + 0.03 * u, place.x, place.y, tanV, aspect);
+    }
+    const W = orbitPos(pr, ot);
+    const R = pr.body.size;
+    // its share of the screen's height, as big as it is (never wider than the screen)
+    const f = s.sunrise ? Math.min(1.15, Math.max(0.65, 0.45 + 0.17 * R)) : Math.min(0.85, Math.max(0.3, 0.12 + 0.17 * R));
+    const rho = Math.atan(Math.min(f * tanV, (s.sunrise && (upright || this.lowVision) ? 0.5 : 0.8) * tanV * aspect));
+    const dist = R / Math.sin(rho);
+    if (!s.sunrise) return framed(W, dist * (1.05 - 0.08 * smooth(0, 1, u)), 1.15 + 0.12 * u, 0.14 + 0.05 * u, place.x, place.y, tanV, aspect);
+    // seen from its night side: the star, behind it, comes out from its middle to past its edge
+    const L = Math.max(1, W.length());
+    const star = Math.atan(this.primaryRadius / (L + dist));
+    const sep = Math.max(0, rho - 1.2 * star) + (rho + 2.5 * star - Math.max(0, rho - 1.2 * star)) * smooth(0, 1, u);
+    return framed(W, dist, -Math.PI + (sep * (L + dist)) / L, 0.06, place.x, place.y, tanV, aspect);
+  }
+
+  /**
+   * Dust in a flight: motes fixed in space (each the copy nearest the camera of a pattern repeating
+   * every `cell`), drawn as lines back along the camera's way, brighter the faster it goes and fading
+   * toward the edge of their cell. From two poses a fixed time apart, so the same at any frame rate.
+   */
+  private flightDust(r: Reveal, now: CinePose, before: CinePose, h: number) {
+    const a = camAt(now);
+    const v = a.clone().sub(camAt(before)).divideScalar(h);
+    const cell = r.cell;
+    const k = smooth(cell * 1.5, cell * 6, v.length());
+    if (k <= 0.002) return;
+    // (a streak at most a third of the cell long)
+    const tail = v.clone().multiplyScalar(STREAK);
+    if (tail.length() > cell / 3) tail.setLength(cell / 3);
+    const pos = this.dust.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const col = this.dust.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const P = pos.array as Float32Array;
+    const C = col.array as Float32Array;
+    const half = cell / 2;
+    for (let i = 0; i < DUST; i++) {
+      const sx = this.dustSeed[i * 3] * cell;
+      const sy = this.dustSeed[i * 3 + 1] * cell;
+      const sz = this.dustSeed[i * 3 + 2] * cell;
+      const x = sx + cell * Math.round((a.x - sx) / cell);
+      const y = sy + cell * Math.round((a.y - sy) / cell);
+      const z = sz + cell * Math.round((a.z - sz) / cell);
+      const d = Math.hypot(x - a.x, y - a.y, z - a.z);
+      // (none right at the camera, where a streak would cross the whole screen)
+      const fade = clamp01(1 - (d / half) ** 2) * smooth(cell * 0.06, cell * 0.2, d) * k;
+      P.set([x, y, z, x - tail.x, y - tail.y, z - tail.z], i * 6);
+      C.set([0.36 * fade, 0.4 * fade, 0.46 * fade, 0, 0, 0], i * 6);
+    }
+    pos.needsUpdate = true;
+    col.needsUpdate = true;
+    this.dust.visible = true;
+  }
+
+  /** The reveal over (or skipped, or let go of): everything as it is drawn without one. */
+  private endReveal(how: RevealEnd) {
+    const r = this.reveal;
+    if (!r) return;
+    this.reveal = null;
+    this.revealAt = '';
+    this.cinePhase = null;
+    this.cinema = null;
+    this.pulse.visible = false;
+    this.dust.visible = false;
+    for (const o of this.group.children) {
+      if (o.userData.reveal === undefined) continue;
+      o.visible = true;
+      if (o.userData.orbit !== undefined) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = o.userData.orbit as number;
+      if (o.userData.deep !== undefined) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = o.userData.deep as number;
+      if (o.userData.belt !== undefined) (o as unknown as THREE.InstancedMesh).count = o.userData.belt as number;
+    }
+    for (const pr of this.planets) {
+      if (pr.mat) pr.mat.uniforms.uReveal.value = 1;
+      for (const ch of pr.mesh.children) ch.visible = true;
+      for (const ch of pr.pivot.children) ch.visible = true;
+    }
+    this.onReveal?.(null);
+    this.onRevealEnd?.(how, r.focus, r.yaw0);
   }
 }
+
+/** A world's place on its orbit at orbit time `ot` (update turns its pivot by its angle about the star's axis). */
+function orbitPos(pr: PlanetRig, ot: number): THREE.Vector3 {
+  const a = pr.phase + ot * pr.speed;
+  return new THREE.Vector3(Math.cos(a) * pr.radius, 0, -Math.sin(a) * pr.radius);
+}
+
+/** Where the rig puts the camera for a pose. */
+function camAt(p: CinePose): THREE.Vector3 {
+  const c = Math.cos(p.pitch);
+  return new THREE.Vector3(Math.sin(p.yaw) * c, Math.sin(p.pitch), Math.cos(p.yaw) * c).multiplyScalar(p.distance).add(p.target);
+}
+
+const wrap = (x: number) => x - 2 * Math.PI * Math.round(x / (2 * Math.PI));
+
+/**
+ * A pose that has `W` at (`x`, `y`) on the screen (from -1 to 1 each way), seen from `dist` away,
+ * from `turn` round from the way to its star (0: from between them; π/2: half lit, the star to the
+ * left; past π: from its night side, the star to the right) and `rise` above its orbit's plane.
+ */
+function framed(W: THREE.Vector3, dist: number, turn: number, rise: number, x: number, y: number, tanV: number, aspect: number): CinePose {
+  const yaw = (W.x === 0 && W.z === 0 ? 0 : Math.atan2(-W.x, -W.z)) + turn;
+  const C = new THREE.Vector3(Math.sin(yaw) * Math.cos(rise), Math.sin(rise), Math.cos(yaw) * Math.cos(rise)).multiplyScalar(dist).add(W);
+  const w = W.clone().sub(C).normalize();
+  const right = new THREE.Vector3().crossVectors(w, UP).normalize();
+  const up = new THREE.Vector3().crossVectors(right, w);
+  // look off it by as much as puts it there
+  const v = w.addScaledVector(right, -x * tanV * aspect).addScaledVector(up, -y * tanV).normalize();
+  return { target: C.clone().addScaledVector(v, dist), distance: dist, yaw: Math.atan2(-v.x, -v.z), pitch: Math.asin(Math.max(-1, Math.min(1, -v.y))) };
+}
+
+/**
+ * On the way from one pose to the next, eased in and out: what the camera looks at goes round the
+ * star (never through it), the view turning with the way it goes, the camera further out midway
+ * the further it flies, and midway no nearer the star's middle than `keep` (pushed straight out,
+ * still looking where it was; at neither end, so the flight leaves and lands where it should).
+ */
+function blendPose(a: CinePose, b: CinePose, u: number, keep = 0): CinePose {
+  const k = clamp01(u);
+  const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  const ra = Math.hypot(a.target.x, a.target.z);
+  const rb = Math.hypot(b.target.x, b.target.z);
+  const azA = ra > 1e-6 ? Math.atan2(a.target.x, a.target.z) : rb > 1e-6 ? Math.atan2(b.target.x, b.target.z) : 0;
+  const azB = rb > 1e-6 ? Math.atan2(b.target.x, b.target.z) : azA;
+  const az = azA + wrap(azB - azA) * e;
+  const rr = ra + (rb - ra) * e;
+  const qa = wrap(a.yaw - azA);
+  const qb = wrap(b.yaw - azB);
+  const hop = Math.min(1, (a.target.distanceTo(b.target) / (a.distance + b.distance)) * 0.12);
+  const bump = Math.sin(Math.PI * e);
+  const p: CinePose = {
+    target: new THREE.Vector3(Math.sin(az) * rr, a.target.y + (b.target.y - a.target.y) * e, Math.cos(az) * rr),
+    distance: Math.exp(Math.log(a.distance) + (Math.log(b.distance) - Math.log(a.distance)) * e) * (1 + hop * bump),
+    yaw: az + qa + wrap(qb - qa) * e,
+    pitch: a.pitch + (b.pitch - a.pitch) * e + 0.1 * hop * bump,
+  };
+  const C = camAt(p);
+  const r = C.length();
+  const push = (keep - r) * bump;
+  if (push <= 1e-6) return p;
+  if (r < 1e-6) C.set(0, push, 0);
+  else C.multiplyScalar((r + push) / r);
+  const d = C.sub(p.target);
+  const dist = d.length();
+  return { target: p.target, distance: dist, yaw: Math.atan2(d.x, d.z), pitch: Math.asin(Math.max(-1, Math.min(1, d.y / dist))) };
+}
+
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));

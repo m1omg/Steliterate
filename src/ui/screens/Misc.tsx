@@ -6,7 +6,7 @@ import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
-import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, bump, engine, game, modal, notify, rev, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
+import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, bump, engine, game, modal, notify, rev, revealsOn, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
 import { Icon } from '../Icon';
 import { CODEX } from './Codex';
 import { MANUAL } from './Manual';
@@ -152,6 +152,27 @@ export function SettingsModal() {
                 {q}
               </button>
             ))}
+          </div>
+        </div>
+        <div class="field">
+          <label>Survey reveals</label>
+          <div class="seg">
+            <button class={`btn small ${revealsOn() ? 'primary' : ''}`} aria-pressed={revealsOn()} onClick={() => set({ reveals: true })}>
+              On
+            </button>
+            <button
+              class={`btn small ${!revealsOn() ? 'primary' : ''}`}
+              aria-pressed={!revealsOn()}
+              onClick={() => {
+                set({ reveals: false });
+                engine()?.skipReveal(true);
+              }}
+            >
+              Off
+            </button>
+          </div>
+          <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
+            Looking into a system your ships have just charted, the camera flies to each of its worlds in turn, a caption naming each with what the survey found there, then pulls back to the whole system. Next, Space or a click goes on to the next world; Skip, Enter or Escape shows them all at once. Off to begin with where the system asks for less motion.
           </div>
         </div>
         <div class="field">

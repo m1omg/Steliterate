@@ -78,7 +78,7 @@ run(async () => {
   await ck.shot('siphons-shut.png');
   // the magnifier mode
   const lv = await ck.another(1280, 720);
-  await lv.goto(`${process.argv[2] || 'http://localhost:4173/'}?lowvision`, { timeout: 90000, waitUntil: 'domcontentloaded' });
+  await lv.goto(`${process.argv[2] || 'http://localhost:4173/'}?lowvision&noreveals`, { timeout: 90000, waitUntil: 'domcontentloaded' });
   await lv.waitForFunction(() => !!window.__stel, null, { timeout: 90000 });
   await lv.evaluate(() => window.__stel.newGame({ seed: 1000 }));
   await lv.waitForTimeout(1500);

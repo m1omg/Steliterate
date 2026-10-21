@@ -84,6 +84,21 @@ export class OrbitRig {
     this.centred = true;
   }
 
+  /**
+   * Put the camera exactly here, its goals with it so nothing eases after: a survey reveal's flight
+   * does, every frame (systemView.ts), from the time into it alone.
+   */
+  setPose(target: THREE.Vector3, distance: number, yaw: number, pitch: number) {
+    this.target.copy(target);
+    this.goalTarget.copy(target);
+    this.distance = this.goalDistance = distance;
+    this.yaw = this.goalYaw = yaw;
+    this.pitch = this.goalPitch = pitch;
+    this.flight = null;
+    this.follow = null;
+    this.centred = true;
+  }
+
   flyTo(target: THREE.Vector3, distance: number, duration = 1.1) {
     this.follow = null;
     this.centred = true;

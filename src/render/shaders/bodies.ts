@@ -109,10 +109,12 @@ export const PLANET_VERT = /* glsl */ `
   varying vec3 vObj;
   varying vec3 vWorldN;
   varying vec3 vView;
+  varying vec3 vWorldPos;
   void main() {
     vObj = normalize(position);
     vNormal = normalize(normalMatrix * normal);
     vWorldN = normalize(mat3(modelMatrix) * normal);
+    vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     vView = normalize(-mv.xyz);
     gl_Position = projectionMatrix * mv;
@@ -148,10 +150,13 @@ export const PLANET_FRAG = /* glsl */ `
   uniform float uFeeding;     // being torn into a stream
   uniform float uEaten;       // a swarm of the Hunger feeding on it now, by its size (0..1)
   uniform float uFlow;        // the Long Flow has come: the ground has run smooth (0 or 1)
+  uniform float uReveal;      // the survey reveal: 1 shown; below it a scan line sweeps down the world, its look above the line, a silhouette below
+  uniform vec3 uScan;         // the scan line's colour (the age's neon)
   varying vec3 vNormal;
   varying vec3 vObj;
   varying vec3 vWorldN;
   varying vec3 vView;
+  varying vec3 vWorldPos;
 
   vec3 rockPalette(float h, float s) {
     vec3 a = vec3(0.23, 0.19, 0.17);
@@ -366,6 +371,10 @@ export const PLANET_FRAG = /* glsl */ `
     float rim = pow(1.0 - max(0.0, dot(normalize(vNormal), normalize(vView))), 4.0);
     vec3 atmo = uKind == 1 ? mix(vec3(0.45, 0.62, 0.9), vec3(0.9, 0.55, 0.35), 0.4) : vec3(0.5, 0.55, 0.65);
     col += atmo * rim * (0.08 + 0.55 * uVitality) * (0.03 + 0.97 * smoothstep(-0.3, 0.35, ndl)) * uSunPower;
+    // seen from its night side with its star behind it, its air scatters the light forward: a
+    // bright ring round its edge (as Titan's and Pluto's hazes from behind), none where there is no air
+    float behind = pow(max(0.0, dot(normalize(vWorldPos - cameraPosition), normalize(uSunDir))), 6.0);
+    col += atmo * uSunColor * rim * behind * uAir * (0.25 + 0.75 * uVitality) * uSunPower * 1.3;
     // being torn apart: glowing streaks
     col += vec3(1.0, 0.55, 0.3) * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))) * 0.8;
     if (uEaten > 0.0) col += vec3(1.0, 0.36, 0.12) * uEaten * cut * (0.75 + 0.25 * sin(uTime * 9.0 + rustN * 31.0)) * 1.3;
@@ -380,6 +389,16 @@ export const PLANET_FRAG = /* glsl */ `
       tv = max(tv, 900.0 * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))));
       tv = max(tv, 700.0 * uEaten * cut);
       col = thermal(tv) * (0.5 + 0.5 * toViewer) * (0.9 + 0.2 * detail);
+    }
+    if (uReveal < 1.0) {
+      // the survey reveal: a line of light sweeps down the world, leaving its look behind it; below
+      // the line it is still a silhouette, only its edge catching the light
+      float v = 0.5 - 0.5 * vObj.y;
+      float edge = uReveal * 1.16 - 0.08;
+      float shown = 1.0 - smoothstep(edge - 0.012, edge + 0.012, v);
+      vec3 sil = vec3(0.004) + uScan * pow(1.0 - toViewer, 3.0) * 0.3;
+      col = mix(sil, col, shown);
+      col += uScan * (1.0 - smoothstep(0.0, 0.028, abs(v - edge))) * 1.3 * step(0.001, uReveal);
     }
     gl_FragColor = vec4(col, 1.0);
   }

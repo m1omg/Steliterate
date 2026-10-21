@@ -56,7 +56,10 @@ async function routeFonts(ctx) {
 }
 
 /** A page with console errors collected (they fail the check), opened on the game. */
-async function newPage(browser, errors, width = 1400, height = 900, touch = false, query = '') {
+// The survey reveals (21 Oct) are off in every check unless it asks for them (`reveals: true`): a
+// system entered after a survey would otherwise fly the camera and hide the interface.
+async function newPage(browser, errors, width = 1400, height = 900, touch = false, query = '', reveals = false) {
+  if (!reveals) query = query ? `${query}&noreveals` : '?noreveals';
   const ctx = await browser.newContext({ viewport: { width, height }, ...(touch ? { isMobile: true, hasTouch: true } : {}) });
   await routeFonts(ctx);
   const page = await ctx.newPage();
@@ -80,13 +83,13 @@ async function newPage(browser, errors, width = 1400, height = 900, touch = fals
  * Starts a check: the browser, a page on the game (with a new game of `seed` if given), and the
  * folder its screenshots go to.
  */
-async function start(name, { width = 1400, height = 900, seed } = {}) {
+async function start(name, { width = 1400, height = 900, seed, reveals = false } = {}) {
   await waitForServer();
   const out = path.join(outRoot, name);
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch(LAUNCH);
   const errors = [];
-  const page = await newPage(browser, errors, width, height);
+  const page = await newPage(browser, errors, width, height, false, '', reveals);
   if (seed !== undefined) {
     await page.evaluate((sd) => window.__stel.newGame({ seed: sd }), seed);
     await page.waitForTimeout(1000);

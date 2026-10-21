@@ -14,7 +14,7 @@ import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import type { Pickable } from './render/galaxyView';
 import { App } from './ui/App';
-import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, saveSettings, screen, selection, setEngine, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
+import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, revealsOn, saveSettings, screen, selection, setEngine, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
 import { PRIMARY_NAME, bodyKindName } from './ui/labels';
 import { doEndTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
@@ -23,6 +23,7 @@ import { guardTranslation } from './ui/translateGuard';
 import { applyLowVision, trackKeyboard } from './ui/a11y';
 import { buildSelected, nextTodo } from './ui/hud/Hud';
 import { eventResult, loreView } from './ui/screens/Story';
+import { revealing } from './ui/hud/RevealCard';
 import './ui/styles.css';
 
 const stage = document.getElementById('stage')!;
@@ -139,6 +140,16 @@ const eng = new Engine(stage, {
     view.value = 'galaxy';
     eng.showGalaxy();
   },
+  // the survey reveal: its caption follows it, and its sounds (a flight, a world charted, the way out)
+  onReveal(r) {
+    const was = revealing.value;
+    revealing.value = r;
+    if (r && r.phase !== was?.phase) {
+      if (r.phase === 'fly' || r.phase === 'outro') sfx('whoosh');
+      else if (r.phase === 'hold') sfx('scan');
+    }
+  },
+  revealsOn: () => revealsOn(),
 });
 setEngine(eng);
 eng.setQuality(settings.value.quality);
@@ -402,4 +413,6 @@ window.__stel = {
   setVolumes: (m: number, s: number) => setVolumes(m, s),
   /** Play one of the interface's sounds. */
   sfx: (name: Parameters<typeof sfx>[0]) => sfx(name),
+  /** The survey reveals on or off for this page (null: as the settings say), for the checks. */
+  reveals: (on: boolean | null) => setRevealOverride(on),
 };
