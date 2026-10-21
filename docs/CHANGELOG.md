@@ -2383,6 +2383,11 @@ showed its worlds at once. Display only: no rule changed, and nothing saved chan
   and at 144 frames a second the same 2 s and 6 s in, the camera's place too; Escape, Skip all,
   reveals off; a drag takes the camera where it is; in the magnifier mode the caption in the
   column and the interface staying.
-- **Validated:** tsc and the build clean (`index-Zc5orquV.js`); savecompat on its 6 saves; all 58
-  unit checks; `browser/survey-reveal` passes in full; the playtest and the other browser checks
-  are recorded with the PR that puts it live.
+- **A check made sure of what it measures** (the new version's of 14 Oct, brought here):
+  `browser/a11y` gave a window a fixed 400 ms to give focus back to the button that opened it; focus
+  comes back a frame after it closes, and a frame drawn in software here can take over half a
+  second, so it failed on `main` as it stood (and with this batch). It now waits for the focus,
+  three seconds at most.
+- **Validated:** tsc and the build clean (`index-Zc5orquV.js`); the playtest passes (30/144 Hz
+  parity 2e-15); savecompat on its 6 saves; all 58 unit checks; all 56 browser checks in the real
+  fonts (`survey-reveal` new; `a11y` with the wait above).

@@ -80,16 +80,18 @@ run(async () => {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(250);
   }
-  // a window takes focus on its title and gives it back to the button that opened it
+  // a window takes focus on its title and gives it back to the button that opened it. Each waits
+  // for a frame (a11y.ts), and a frame drawn in software here can take over half a second (14 Oct:
+  // focus came back 606 ms after the window closed, after a fixed wait of 400 had looked)
   const research = page.locator('.rail button').first();
   await research.focus();
   await page.keyboard.press('Enter');
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => document.activeElement?.tagName === 'H1', null, { timeout: 3000 }).catch(() => {});
   const inWin = await page.evaluate(() => ({ tag: document.activeElement?.tagName, inModal: !!document.activeElement?.closest('.modal'), hudInert: document.querySelector('.hud')?.inert === true }));
   check(inWin.tag === 'H1' && inWin.inModal, `a window opened takes focus on its title (${inWin.tag})`);
   check(inWin.hudInert, 'the HUD behind it is out of reach of Tab');
   await page.keyboard.press('Escape');
-  await page.waitForTimeout(400);
+  await page.waitForFunction(() => /^Research/.test(document.activeElement?.getAttribute('aria-label') ?? ''), null, { timeout: 3000 }).catch(() => {});
   const back = await page.evaluate(() => ({ label: document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName, hudInert: document.querySelector('.hud')?.inert === true }));
   check(/^Research/.test(back.label ?? '') && !back.hudInert, `closing it gives focus back to the button that opened it (${back.label})`);
   // Enter under an event leaves the turn as it is; the event takes focus on its title, not a choice
