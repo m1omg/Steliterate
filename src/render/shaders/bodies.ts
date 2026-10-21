@@ -109,10 +109,12 @@ export const PLANET_VERT = /* glsl */ `
   varying vec3 vObj;
   varying vec3 vWorldN;
   varying vec3 vView;
+  varying vec3 vWorldPos;
   void main() {
     vObj = normalize(position);
     vNormal = normalize(normalMatrix * normal);
     vWorldN = normalize(mat3(modelMatrix) * normal);
+    vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     vView = normalize(-mv.xyz);
     gl_Position = projectionMatrix * mv;
@@ -155,6 +157,7 @@ export const PLANET_FRAG = /* glsl */ `
   varying vec3 vObj;
   varying vec3 vWorldN;
   varying vec3 vView;
+  varying vec3 vWorldPos;
 
   vec3 rockPalette(float h, float s) {
     vec3 a = vec3(0.23, 0.19, 0.17);
@@ -374,6 +377,10 @@ export const PLANET_FRAG = /* glsl */ `
     float rim = pow(1.0 - max(0.0, dot(normalize(vNormal), normalize(vView))), 4.0);
     vec3 atmo = uKind == 1 ? mix(vec3(0.45, 0.62, 0.9), vec3(0.9, 0.55, 0.35), 0.4) : vec3(0.5, 0.55, 0.65);
     col += atmo * rim * (0.08 + 0.55 * uVitality) * (0.03 + 0.97 * smoothstep(-0.3, 0.35, ndl)) * uSunPower;
+    // seen from its night side with its star behind it, its air scatters the light forward: a
+    // bright ring round its edge (as Titan's and Pluto's hazes from behind), none where there is no air
+    float behind = pow(max(0.0, dot(normalize(vWorldPos - cameraPosition), normalize(uSunDir))), 6.0);
+    col += atmo * uSunColor * rim * behind * uAir * (0.25 + 0.75 * uVitality) * uSunPower * 1.3;
     // being torn apart: glowing streaks
     col += vec3(1.0, 0.55, 0.3) * uFeeding * smoothstep(0.3, 0.8, snoise(p * 6.0 + vec3(uTime * 0.2))) * 0.8;
     if (uEaten > 0.0) col += vec3(1.0, 0.36, 0.12) * uEaten * cut * (0.75 + 0.25 * sin(uTime * 9.0 + rustN * 31.0)) * 1.3;

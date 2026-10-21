@@ -1087,6 +1087,16 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   chosen ship, a retreat threshold as part of a tactic, and the same in today's game, if they ask
   before they switch to the new version.
 
+- **21 Oct, the survey reveal:** the player uploaded a clip of Endless Space 2 (16m14s to
+  16m47s of a gameplay video) with "dude prolongs the sequence by yapping but this is how i
+  imagine the reveal planetary system sequence...not ur version". Rebuilt as a flight of the
+  camera in the new version (CHANGELOG, "The survey reveal as a flight of the camera"): a look at
+  the star, a flight to each world (close, three parts lit, its star off to the left), a caption
+  typed in at the top left with four bars, dust streaking between worlds, the star rising over
+  the last world's edge, then back out. Kept from ours: the scan line, Skip and Skip all, the
+  Settings switch. Their clip went no further than the scratchpad. Offered for later, if they
+  ask: the same in today's game.
+
 ## Found in the review of 28 Sep (verified)
 
 Decided (29 Sep): a fading civilization's last transmission always reaches us, as an archive that

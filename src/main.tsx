@@ -147,9 +147,14 @@ const eng = new Engine(stage, {
     view.value = 'galaxy';
     eng.showGalaxy();
   },
-  // the survey reveal: its card follows it
+  // the survey reveal: its caption follows it, and its sounds (a flight, a world charted, the way out)
   onReveal(r) {
+    const was = revealing.value;
     revealing.value = r;
+    if (r && r.phase !== was?.phase) {
+      if (r.phase === 'fly' || r.phase === 'outro') sfx('whoosh');
+      else if (r.phase === 'hold') sfx('scan');
+    }
   },
   revealsOn: () => revealsOn(),
 });

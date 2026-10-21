@@ -4008,3 +4008,65 @@ too. The plan: `docs/plans/2026-10-20-combat.md`.
   and a game saved by the build live before, continued from the title screen as a player's browser
   keeps it: its siege carried over, the Tactic row and the Battle section, and its next turn fought
   by the new rules (a scratch script, not kept). Today's game does not change.
+
+## The survey reveal as a flight of the camera (21 Oct, the new version)
+
+The player, 21 Oct, with a clip of Endless Space 2 showing a newly explored system world by
+world: "this is how i imagine the reveal planetary system sequence...not ur version". Ours kept
+the whole system in view while each world was scanned in, a card naming it. Now the camera flies.
+Display only: no rule changed, and nothing saved changes.
+
+- **The flight** (`SystemView.startReveal`, `REVEAL`): a look at the star while its ring of light
+  goes out (1.5 s); a flight down to the first world (1.35 s), then from world to world (1 s,
+  0.8 s with more than six), dust streaking past; and a while at each (10 s shared among them, 1.6
+  to 2.3 s each, 1.1 s more where the survey found something). There the world is close and three
+  parts lit, its star off to the left, as big on the screen as it is big, beside the caption (low
+  in the middle on a phone held upright; in the middle of what the magnifier mode's column
+  leaves), the camera turning and closing in a little while its scan sweeps it in. At the last
+  world, where the star shines, the camera comes round its night side until the star rises over
+  its right edge (1.8 s more; where a belt or the Deep is outermost, the outermost world comes
+  last). Then back out to the whole system (1.7 s), its orbits drawn in from the star outward, the
+  worlds' names back. The Deep is the star with its ring, seen from above; a belt a stretch of its
+  ring with the star beyond (its rocks are drawn unlit: specks, not to be seen close up). About
+  12 s for two worlds, 19 for four, 25 for eight.
+- **Grounded, and where it bends:** each world is lit as it would be by its star (the sunrise from
+  its night side is how it would look). The dust streaking past is for the sense of speed: real
+  interplanetary dust is far too thin to see. The camera crosses a system in a second; it is a
+  camera, not a ship.
+- **The same at any frame rate:** where the camera is comes from the time into the reveal and the
+  worlds' places alone (`cinePose`), and the rig is put exactly there every frame
+  (`OrbitRig.setPose`). A flight goes round the star, never through it, and midway keeps out of
+  its glare. The dust is motes fixed in space, each drawn back along the camera's way between two
+  poses a thirtieth of a second apart.
+- **The caption** (`RevealCard.tsx`): top left over the view, like a film's titles, the rest of the
+  interface stepping aside until the flight is over (in the magnifier mode it stays, and the
+  caption has its place in the column). At the star its name, its kind and how many worlds; at
+  each world its name, then its kind, how it is to live on (room for Kin, or domes), its
+  temperature, its water and what the survey found there, typed in line by line, then four bars
+  filling for what each kind of settler would make of it (Livable, Power, Matter, Lasting, the
+  lists' measures: Power and Matter against the best world charted, Lasting against the
+  universe's age now), and a find's picture; on the way out how many were charted. A whoosh for
+  each flight and for the way out, two soft tones as a world is charted.
+- **Controls:** Next (the caption's button, Space, or a click or tap on the view) goes on to the
+  next world (in a flight, the world it flies to is left as soon as it is scanned). Skip, Enter or
+  Escape shows every world at once, the camera flying back out to the whole system (or to the
+  world the view was entered for); Skip all, the other systems just charted too. A drag, a pinch
+  or the wheel takes the camera from it where it is; picking a world from a list goes to it.
+  Settings, Survey reveals, still turns it off (off to begin with where the system asks for less
+  motion).
+- **A backlit world's air** (`PLANET_FRAG`): seen from its night side with its star behind it, a
+  world with air shows a bright ring round its edge, its air scattering the light forward (as
+  Titan's and Pluto's hazes did, seen from behind by Cassini and New Horizons); none on airless
+  rock. It shows in the sunrise, and wherever the view is turned toward the star past a world.
+- **Checks:** `browser/survey-reveal` rewritten for the flight: the camera is the reveal's and the
+  interface steps aside; the camera close to the world being charted (under 30% of the whole
+  system's distance); the caption's lines and four bars; Space and a click go on to the next
+  world; Enter skips, ending no turn, the interface back; at 30 and at 144 frames a second the same
+  2 s and 6 s in, the camera's place too (the worlds where they were at the start in both runs:
+  the switch into the view comes a frame sooner or later at one rate); Escape, Skip all, reveals
+  off; a drag takes the camera where it is; in the magnifier mode the caption in the column and
+  the interface staying.
+- **Validated:** tsc and the build clean (`index-C9puCHR0.js`); the playtest passes (30/144 Hz
+  parity 2e-15); savecompat on its 9 saves; all 90 unit checks; `browser/survey-reveal` passes in
+  full; the rest of the browser checks are recorded with the step that puts it live. Today's game
+  does not change.

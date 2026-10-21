@@ -86,6 +86,14 @@ word", then the player's list of 16 Oct, then the falling worlds.
   takes ×0.5, not the ×0.35 they were offered (at ×0.35 it won every fight, four ships against
   five); and the first forced wars wiped out our settlements at one star in a single turn, so the
   blockade and the storming are once a star a turn now. CHANGELOG, "Combat", has the figures.
+- **The survey reveal as a flight of the camera** (21 Oct, the new version only, display only;
+  live at `/next/`): the player sent a clip of Endless Space 2 showing a new system world by world
+  ("this is how i imagine the reveal planetary system sequence...not ur version"). Now the camera
+  flies to each world in turn, close and half lit, while a caption types in its facts and four
+  bars for the four kinds of settler, dust streaking between worlds, the star rising over the last
+  world's edge, then back out to the whole system; Space or a click goes on, Skip as before, a
+  drag takes the camera. No rule changed. CHANGELOG, "The survey reveal as a flight of the
+  camera".
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps

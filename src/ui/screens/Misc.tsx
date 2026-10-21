@@ -222,7 +222,7 @@ export function SettingsModal() {
             </button>
           </div>
           <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
-            Looking into a system your ships have just charted, its worlds come in one by one, each named on a card with what the survey found there. Skip, Enter or Escape shows them all at once. Off to begin with where the system asks for less motion.
+            Looking into a system your ships have just charted, the camera flies to each of its worlds in turn, a caption naming each with what the survey found there, then pulls back to the whole system. Next, Space or a click goes on to the next world; Skip, Enter or Escape shows them all at once. Off to begin with where the system asks for less motion.
           </div>
         </div>
         <div class="field">

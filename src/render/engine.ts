@@ -5,7 +5,7 @@ import type { GameState } from '../game/types';
 import { OrbitRig } from './camera';
 import { GalaxyView, type Pickable } from './galaxyView';
 import { createPost, type PostChain } from './post';
-import { SystemView, type RevealStep } from './systemView';
+import { SystemView, type RevealEnd, type RevealStep } from './systemView';
 import { VIEW_MODE } from './shaders/bodies';
 import { calendarEra } from '../game/fate';
 import { allColonies, colonies, ownColony } from '../game/sim/util';
@@ -123,8 +123,13 @@ export class Engine {
     this.rig.zoomAnchor = (x, y) => (this.view === 'galaxy' ? this.zoomAnchorAt(x, y) : null);
     this.rig.onZoomIntent = (requested) => this.zoomIntent(requested);
     this.rig.onHover = (x, y) => this.events.onHover(this.pickAt(x, y), x, y);
-    this.rig.onGesture = () => this.events.onGesture?.();
+    this.rig.onGesture = () => {
+      // a hand on the view in a survey reveal's flight takes the camera from it, where it is
+      if (this.revealing) this.system.stopReveal('drop');
+      this.events.onGesture?.();
+    };
     this.system.onReveal = (r) => this.events.onReveal?.(r);
+    this.system.onRevealEnd = (how, focus, yaw) => this.revealEnded(how, focus, yaw);
     window.addEventListener('resize', this.resize);
     // Phones drop the GPU context when the page goes to the background. three.js asks for it
     // back; hide the dead canvas meanwhile (some browsers paint it white), rebuild on return,
@@ -151,6 +156,8 @@ export class Engine {
       if (this.contextLost) this.watchLost();
     });
     this.renderer.domElement.addEventListener('dblclick', (e) => {
+      // (in a survey reveal's flight a click is Next, and two are two)
+      if (this.revealing) return;
       const p = this.pickAt(e.clientX, e.clientY);
       if (p?.kind === 'fleet') return this.focusFleet(p.id);
       if (!p || p.kind !== 'system') return;
@@ -255,6 +262,9 @@ export class Engine {
     u.uTint.value.copy(this.tint);
     if (this.view === 'galaxy') this.galaxy.update(dt, this.now, this.camera, this.rig.distance);
     else this.system.update(dt, this.camera, this.rig.distance);
+    // a survey reveal's flight puts the camera where it is at this moment of it (systemView.ts)
+    const pose = this.view === 'system' ? this.system.cinema : null;
+    if (pose) this.rig.setPose(pose.target, pose.distance, pose.yaw, pose.pitch);
     // the rig moves after the scene so a followed planet is centred on this frame's position
     this.rig.update(dt);
     if (this.followed && !this.rig.follow) this.setFollowed(null);
@@ -265,7 +275,7 @@ export class Engine {
   /** Feed a fresh game state. Rebuilds what changed. */
   setState(state: GameState) {
     // (another game, or one loaded: a survey reveal belongs to the game it began in)
-    if (this.state && state !== this.state) this.system.stopReveal();
+    if (this.state && state !== this.state) this.system.stopReveal('drop');
     this.state = state;
     this.labelsDirty = true;
     const era = ERA_BY_ID[state.era];
@@ -316,8 +326,9 @@ export class Engine {
         this.system.selectedBody = focusBodyId;
         this.focusBody(focusBodyId);
       }
-      // charted since we last looked: its worlds come in one by one (the one we came to see first)
-      if (this.toReveal.delete(systemId) && this.state === this.revealGame && (this.events.revealsOn?.() ?? true)) this.system.startReveal(this.state!, focusBodyId);
+      // charted since we last looked: the camera flies to each of its worlds in turn (the one we came
+      // to see first, and last again), facing as the view would have
+      if (this.toReveal.delete(systemId) && this.state === this.revealGame && (this.events.revealsOn?.() ?? true)) this.system.startReveal(this.state!, focusBodyId, this.rig.goalYaw);
     };
     this.fadeTarget = 1;
     this.pendingSwitch = go;
@@ -339,13 +350,33 @@ export class Engine {
 
   /** Skip the survey reveal playing now (every world at once); `all`, and the ones still waiting too. */
   skipReveal(all = false) {
-    this.system.stopReveal();
+    this.system.stopReveal('skip');
     if (all) this.toReveal.clear();
+  }
+
+  /** The survey reveal's Next: on to its next world now. */
+  nextReveal() {
+    if (this.revealing) this.system.nextShot();
   }
 
   /** A survey reveal is playing. */
   get revealing(): boolean {
     return this.view === 'system' && this.system.revealing;
+  }
+
+  /**
+   * After a survey reveal: played out, the camera is where it ends, on the whole system or on the
+   * world the view was entered for (followed from now); skipped, it flies there; let go of (a hand
+   * on the view, another system or game), it stays.
+   */
+  private revealEnded(how: RevealEnd, focus: string | null, yaw: number) {
+    if (how === 'drop' || this.view !== 'system') return;
+    if (focus) return this.focusBody(focus);
+    if (how !== 'skip') return;
+    this.rig.flyTo(new THREE.Vector3(0, 0, 0), this.system.frameDistance(), 1.0);
+    // (the nearest way round to the yaw it began with)
+    this.rig.goalYaw = this.rig.yaw + Math.atan2(Math.sin(yaw - this.rig.yaw), Math.cos(yaw - this.rig.yaw));
+    this.rig.goalPitch = 0.5;
   }
 
   /**
@@ -355,7 +386,7 @@ export class Engine {
   showGalaxy(focusId?: string, distance?: number, instant = false) {
     const go = () => {
       const from = this.system.systemId;
-      this.system.stopReveal();
+      this.system.stopReveal('drop');
       this.view = 'galaxy';
       this.post.setScene(this.galaxyScene, this.camera);
       this.rig.minDistance = 6;
@@ -377,8 +408,8 @@ export class Engine {
 
   /** Mark what is selected. `fly` (the default) also brings a picked world into focus in the system view. */
   select(id: string | null, fly = true) {
-    // (a world picked from a list before the reveal reached it: everything at once)
-    if (id && this.system.hidden(id)) this.system.stopReveal();
+    // (a world picked from a list in a survey reveal's flight: every world at once, and the camera goes to it)
+    if (id?.startsWith('body:') && this.revealing) this.system.stopReveal('drop');
     this.galaxy.selected = id && !id.startsWith('body:') ? id : null;
     const was = this.system.selectedBody;
     this.system.selectedBody = id?.startsWith('body:') ? id.slice(5) : id;
@@ -412,6 +443,7 @@ export class Engine {
   /** The magnifier mode on or off (a11y.ts). */
   setLowVision(on: boolean) {
     this.lv = on;
+    this.system.lowVision = on;
     this.galaxy.setMarkScale(on ? 1.5 : 1);
     const u = this.post.finish.uniforms;
     u.uVignette.value = on ? 0 : 0.55;
@@ -499,6 +531,8 @@ export class Engine {
   }
 
   private click(x: number, y: number, pointerType?: string) {
+    // in a survey reveal's flight a click (a tap) on the view is Next
+    if (this.revealing) return this.system.nextShot();
     const p = this.pickAt(x, y, pointerType);
     this.events.onPick(p, this.view, pointerType);
   }
@@ -727,7 +761,8 @@ export class Engine {
         }
       }
     } else if (this.system.systemId) {
-      for (const p of this.system.pickables) {
+      // (in a survey reveal's flight the worlds' names wait: its caption names each)
+      for (const p of this.system.labelsHeld ? [] : this.system.pickables) {
         if (!p.id.startsWith('body:') || this.system.hidden(p.id)) continue;
         const b = state.bodies[p.id.slice(5)];
         if (!b) continue;

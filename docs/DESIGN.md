@@ -498,9 +498,14 @@ stop them from talking.
   game ends, every frame drawn by code on one canvas from its moment alone. Each is a few composed
   scenes cut on the beat: painted stars, worlds and holes, diagrams that ink themselves in, slow
   camera moves, what is too cold to see by its faint heat, and the physics labelled with whose it
-  is; the game's own words as text over it, and a cue made as it plays. A system just charted shows its worlds one by one (**the survey reveal**):
-  a ring of light leaves the star, then a line of light sweeps each world from a silhouette to its
-  look, with a card naming it.
+  is; the game's own words as text over it, and a cue made as it plays. A system just charted is
+  shown by a flight of the camera (**the survey reveal**; since 21 Oct as the player pictured it,
+  from Endless Space 2): a ring of light leaves the star, then the camera flies to each world in
+  turn, close and half in its star's light, while a line of light sweeps it from a silhouette to
+  its look and a caption types in what it is, with four bars for what each kind of settler would
+  make of it; dust streaks past between them (for the sense of speed: real interplanetary dust is
+  far too thin to see); the star rises over the last world's edge, and the camera pulls back to
+  the whole system.
 * **What is not matter** (3-7): a leptonic settlement is drawn as its fields (a dipole's lines, a
   standing wave in whose colour it is, motes trapped in its belts), horizon minds as writing riding
   the photon ring, the positronium as vast faint ellipses; matter dissolves in the Thinning, and

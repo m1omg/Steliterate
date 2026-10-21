@@ -53,7 +53,9 @@ where things stand, what to read in which order, the player, the open threads an
 keeps its word", "falling worlds", the list's items 7, 1 and 6, and items 3 to 5 (the pace), live
 in both versions since 20 Oct, which completes the approved plan,
 `docs/plans/2026-10-19-falling-worlds-and-the-list.md` (the player's list of 16 Oct); then the
-combat system (20 Oct, the new version only, `docs/plans/2026-10-20-combat.md`).
+combat system (20 Oct, the new version only, `docs/plans/2026-10-20-combat.md`), and the survey
+reveal as a flight of the camera, as in Endless Space 2 (21 Oct, the new version only, display
+only).
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 

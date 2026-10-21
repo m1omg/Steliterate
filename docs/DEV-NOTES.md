@@ -1723,21 +1723,37 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   is relocatable (`base: './'`), so the new version runs under `/next/` unchanged, and its storage
   keys (`steliterate2.`) keep its saves apart from today's game on the same origin. A push runs
   the workflow file of the branch pushed: `main`'s still builds `main` alone (HANDOVER, Traps).
-- **The survey reveal (part 4):** `SystemView` keeps it (`reveal`: its system, its start, the
-  worlds' order and times; `REVEAL` is the pace) outside `build()`, which reruns on every
-  `bump()`. `build()` tags whatever it draws for each body (`userData.reveal`; `orbit` holds an
-  orbit line's opacity, `belt` a belt's instance count, `world` marks a world's pivot), and
-  `applyReveal()`, every frame in `update()`, sets their visibility, the orbit's fade, the belt's
-  count and the planet's `uReveal` (`PLANET_FRAG`: a silhouette, then a scan line) from the
-  reveal's time alone; `endReveal()` puts them back. `hidden(id)` is a world whose scan is not
-  over: `Engine.pickAt` and the labels leave it out, the selection ring waits, and
-  `Engine.select` of one ends the reveal. `Engine.markForReveal(state, ids)` (turnflow: the
-  systems charted this turn, kept for that `GameState` only), `showSystem` starts it on entering
-  one (`focusBodyId` first), `skipReveal(all)`. `EngineEvents.onReveal` feeds `revealing`
-  (`ui/hud/RevealCard.tsx`); `revealsOn` asks `store.ts` (Settings, reduced motion, `?nofilms`,
-  `__stel.reveals(on)`). The card's Enter and Escape are a capture listener on `window`, as the
-  films' keys are, so main.tsx's handler never sees them (it would end the turn or clear the
-  selection); it sets `--reveal-h`, from which the messages stack on.
+- **The survey reveal (part 4; a flight of the camera since 21 Oct):** `SystemView` keeps it
+  (`reveal`: its system, its start, its look at the star (`intro`, Next cuts it), its `shots` (each
+  world's flight, its while there as planned and as it is (`plan`, `hold`: Next cuts `hold`, and
+  what the camera does there is timed by `plan`), whether its star rises over it), the orbits'
+  order out from the star, the yaw it began at, the world the view was entered for, the dust's
+  cell; `REVEAL` is the pace) outside `build()`, which reruns on every `bump()`. `schedule()` gives
+  each flight's start, each arrival, the way out and the end. `build()` tags whatever it draws for
+  each body (`userData.reveal`; `orbit` holds an orbit line's opacity, `deep` the Deep's ring's,
+  `belt` a belt's instance count, `world` marks a world's pivot), and `applyReveal()`, every frame
+  in `update()`, sets what shows (a world from its flight on, its scan `uReveal` from 0.25 s
+  before its arrival to 0.7 s after, what is round it once scanned, the orbits on the way out),
+  tells the caption where it has come to (`RevealStep.phase`: intro, fly, hold, outro), and sets
+  `cinema`, the camera's pose, from `cinePose(r, schedule, t, orbitTime)` alone: `introPose`,
+  `shotPose` (a world, the Deep, a belt; `framed()` puts a point at a place on the screen, seen
+  from a distance at an angle round from its star), `blendPose` (round the star, midway keeping
+  out of its glare), `endPose`. `Engine.frame` puts the rig there (`OrbitRig.setPose`) after
+  `system.update` and before `rig.update`. `flightDust` draws the streaks from two poses 1/30 s
+  apart (not in the magnifier mode). `endReveal(how)` puts everything back and tells the engine
+  (`onRevealEnd`): played out, the camera stays (on the world the view was entered for, followed);
+  skipped, it flies back out; let go of (`drop`: a gesture, `select` of a world, another system or
+  game), it stays. `hidden(id)` is a world whose scan is not over (`Engine.pickAt` leaves it out);
+  `labelsHeld` holds every world's name and the selection ring until the way out.
+  `Engine.markForReveal(state, ids)` (turnflow: the systems charted this turn, kept for that
+  `GameState` only), `showSystem` starts it on entering one (`focusBodyId` first, and the flight
+  ends on it), `skipReveal(all)`, `nextReveal()`; in the flight a click is Next (`Engine.click`)
+  and a double-click nothing. `EngineEvents.onReveal` feeds `revealing` (`ui/hud/RevealCard.tsx`,
+  which sets `html.cine`: styles.css hides the rest of the HUD, the messages and the map's hover
+  card, not in the magnifier mode); main.tsx plays its sounds (`whoosh`, `scan`). `revealsOn` asks
+  `store.ts` (Settings, reduced motion, `?nofilms`, `__stel.reveals(on)`). The caption's Enter,
+  Escape and Space are a capture listener on `window`, as the films' keys are, so main.tsx's
+  handler never sees them (it would end the turn or clear the selection).
 - **What is not matter, drawn (part 3-7, `src/render/fields.ts`):** `fieldLattice` (a dipole's
   lines r = L sin²θ, a standing-wave torus whose `userData.markColor` the selection circle takes,
   motes bouncing between the mirror points in `MOTE_VERT`, loops for Field Stores, a

@@ -2,7 +2,7 @@ import { audio } from './core';
 
 // Interface sounds, all synthesised: relays, radio, old machinery.
 
-export type Sfx = 'click' | 'select' | 'open' | 'endturn' | 'signal' | 'crossing' | 'good' | 'bad' | 'build' | 'warn';
+export type Sfx = 'click' | 'select' | 'open' | 'endturn' | 'signal' | 'crossing' | 'good' | 'bad' | 'build' | 'warn' | 'whoosh' | 'scan';
 
 function tone(freq: number, start: number, dur: number, type: OscillatorType, vol: number, dest: AudioNode, glideTo?: number) {
   const a = audio()!;
@@ -103,6 +103,16 @@ export function sfx(name: Sfx) {
     case 'warn':
       tone(740, t, 0.12, 'square', 0.03, out);
       tone(740, t + 0.18, 0.12, 'square', 0.03, out);
+      break;
+    case 'whoosh':
+      // a survey reveal's flight between worlds: air that is not there, rising and falling past
+      noise(t, 0.95, 0.07, send, 'bandpass', 260, 1.2, 1900);
+      noise(t + 0.25, 0.7, 0.04, send, 'lowpass', 1600, 0.7, 220);
+      break;
+    case 'scan':
+      // a world being charted as the camera arrives: two soft rising tones
+      tone(1046, t, 0.16, 'sine', 0.035, send, 1568);
+      tone(1568, t + 0.12, 0.22, 'sine', 0.025, send, 2093);
       break;
   }
 }
