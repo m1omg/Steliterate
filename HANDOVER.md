@@ -124,8 +124,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#38 (`a2fa3b4`, after #37's `d2abd2a`) | its notes, after `95353de` |
-  | Live script | `index-huAXd3rX.js` | `index-B8OkbgIN.js` |
+  | As of | PR m1omg/Steliterate#38 (`a2fa3b4`, after #37's `d2abd2a`) | `5890f97` (21 Oct, the survey reveal's flight), and its notes |
+  | Live script | `index-huAXd3rX.js` | `index-C9puCHR0.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at

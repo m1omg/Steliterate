@@ -4067,6 +4067,6 @@ Display only: no rule changed, and nothing saved changes.
   off; a drag takes the camera where it is; in the magnifier mode the caption in the column and
   the interface staying.
 - **Validated:** tsc and the build clean (`index-C9puCHR0.js`); the playtest passes (30/144 Hz
-  parity 2e-15); savecompat on its 9 saves; all 90 unit checks; `browser/survey-reveal` passes in
-  full; the rest of the browser checks are recorded with the step that puts it live. Today's game
-  does not change.
+  parity 2e-15); savecompat on its 9 saves; all 90 unit checks; all 64 browser checks in the real
+  fonts. Live at `/next/` since 21 Oct (`5890f97`, `index-C9puCHR0.js`). Today's game does not
+  change.
