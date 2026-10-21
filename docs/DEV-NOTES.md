@@ -104,7 +104,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `start()` in `tools/checks/lib.cjs` (which waits for the server; any console error fails the
     check) and ending with `finish()`. Screenshots go to `playtest-shots/checks/<name>/`, or the
     folder given as the second argument. `ck.phone(w, h, query)` opens a page with a touchscreen
-    (`mobile` uses it; CDP `Input.dispatchTouchEvent` for long presses and drags).
+    (`mobile` uses it; CDP `Input.dispatchTouchEvent` for long presses and drags). Every page opens
+    with `?noreveals` (no survey reveals, 21 Oct) unless the check asks for them
+    (`start(name, { reveals: true })`); a check that opens a page itself adds it, as the playtest
+    does.
   - **The game's fonts in this container:** the headless browser cannot reach Google Fonts
     (the proxy's certificate), so text is measured in fallback faces, which are wider. With
     `STEL_FONTS=<dir>`, `lib.cjs` serves them from a local copy. Make one with curl, which checks
@@ -1136,6 +1139,38 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   (`selRing`) takes its colour, with an opacity floor of 0.35 (0.12 and the pale `SELECT` on a
   world no one lives on). It holds still: since 7 Oct neither it nor the galaxy map's selected
   star ring (`galaxyView.ts`) pulses.
+- **The survey reveal (21 Oct, a flight of the camera):** `SystemView` keeps it (`reveal`: its
+  system, its start, its look at the star (`intro`, Next cuts it), its `shots` (each world's
+  flight, its while there as planned and as it is (`plan`, `hold`: Next cuts `hold`, and what the
+  camera does there is timed by `plan`), whether its star rises over it), the orbits' order out
+  from the star, the yaw it began at, the world the view was entered for, the dust's cell;
+  `REVEAL` is the pace) outside `build()`, which reruns on every `bump()`. `schedule()` gives each
+  flight's start, each arrival, the way out and the end. `build()` tags whatever it draws for each
+  body (`userData.reveal`; `orbit` holds an orbit line's opacity, `deep` the Deep's ring's, `belt`
+  a belt's instance count, `world` marks a world's pivot), and `applyReveal()`, every frame in
+  `update()`, sets what shows (a world from its flight on, its scan `uReveal` (`PLANET_FRAG`: a
+  silhouette, then a scan line) from 0.25 s before its arrival to 0.7 s after, what is round it
+  once scanned, the orbits on the way out), tells the caption where it has come to
+  (`RevealStep.phase`: intro, fly, hold, outro), and sets `cinema`, the camera's pose, from
+  `cinePose(r, schedule, t, orbitTime)` alone: `introPose`, `shotPose` (a world, the Deep, a belt;
+  `framed()` puts a point at a place on the screen, seen from a distance at an angle round from
+  its star), `blendPose` (round the star, midway keeping out of its glare), `endPose`.
+  `Engine.frame` puts the rig there (`OrbitRig.setPose`) after `system.update` and before
+  `rig.update`. `flightDust` draws the streaks from two poses 1/30 s apart (not in the magnifier
+  mode). `endReveal(how)` puts everything back and tells the engine (`onRevealEnd`): played out,
+  the camera stays (on the world the view was entered for, followed); skipped, it flies back out;
+  let go of (`drop`: a gesture, `select` of a world, another system or game), it stays.
+  `hidden(id)` is a world whose scan is not over (`Engine.pickAt` leaves it out); `labelsHeld`
+  holds every world's name and the selection ring until the way out.
+  `Engine.markForReveal(state, ids)` (turnflow: the systems charted this turn, kept for that
+  `GameState` only), `showSystem` starts it on entering one (`focusBodyId` first, and the flight
+  ends on it), `skipReveal(all)`, `nextReveal()`; in the flight a click is Next (`Engine.click`)
+  and a double-click nothing. `EngineEvents.onReveal` feeds `revealing` (`ui/hud/RevealCard.tsx`,
+  which sets `html.cine`: styles.css hides the rest of the HUD, the messages and the map's hover
+  card, not in the magnifier mode); main.tsx plays its sounds (`whoosh`, `scan`). `revealsOn`
+  asks `store.ts` (Settings, reduced motion, `?noreveals`, `__stel.reveals(on)`). The caption's
+  Enter, Escape and Space are a capture listener on `window`, so main.tsx's handler never sees
+  them (it would end the turn or clear the selection).
 - **UI:**
   - `Story.tsx`: `LoreModal`, `loreView`, `worldFinds`.
   - `Drawer.tsx`: Raid button, settler list sorts, Sunlight row, resident lines, Ruins "Read

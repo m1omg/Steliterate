@@ -427,6 +427,13 @@ stop them from talking.
   murmurations) and a restrained post chain: a faint, tight bloom only on what is brighter
   than white (light sources carry their own coronae, as in ra-system-alpha), fine midtone
   grain, vignette, edge chromatic aberration. No full-screen haze and no lens dirt.
+* **The survey reveal** (21 Oct, as the player pictured it, from Endless Space 2): a system just
+  charted is shown by a flight of the camera. A ring of light leaves the star, then the camera
+  flies to each world in turn, close and half in its star's light, while a line of light sweeps it
+  from a silhouette to its look and a caption types in what it is, with four bars for what each
+  kind of settler would make of it; dust streaks past between them (for the sense of speed: real
+  interplanetary dust is far too thin to see); the star rises over the last world's edge, and the
+  camera pulls back to the whole system.
 * **Plates:** eleven painterly images for the ages and events and thirteen for the survey
   discoveries (Krea and Codex image generation), one grade for all (`tools/process-art.mjs`);
   four painted ship sprites (Higgsfield, `tools/process-sprites.mjs`).

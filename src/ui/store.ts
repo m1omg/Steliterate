@@ -48,6 +48,8 @@ export interface Settings {
   lvSide?: 'left' | 'right';
   /** The graphics were picked by hand in Settings (else a touch device starts at medium). */
   qualityChosen?: boolean;
+  /** The survey reveal (21 Oct): looking into a system just charted, the camera flies to each of its worlds. Unset, on unless the system asks for less motion. */
+  reveals?: boolean;
 }
 
 export const game = signal<GameState | null>(null);
@@ -258,6 +260,20 @@ export const phoneMore = signal(false);
 export const touchInput = signal(false);
 /** The magnifier mode: what is under the pointer on the map, named in large type beside it. */
 export const mapHover = signal<{ text: string; x: number; y: number } | null>(null);
+
+/** Survey reveals off for this page (`?noreveals`, for the checks), or forced on or off (`__stel.reveals`). */
+let revealOverride: boolean | null = typeof location !== 'undefined' && new URLSearchParams(location.search).has('noreveals') ? false : null;
+export function setRevealOverride(on: boolean | null) {
+  revealOverride = on;
+}
+
+/** Whether a system just charted is shown by a flight of the camera: as set in Settings; unset, on unless the system asks for reduced motion. */
+export function revealsOn(): boolean {
+  if (revealOverride !== null) return revealOverride;
+  const s = settings.value.reveals;
+  if (s !== undefined) return s;
+  return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
 
 export function toggleOrbits() {
   const paused = !hudPrefs.value.orbitsPaused;

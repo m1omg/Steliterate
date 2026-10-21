@@ -29,7 +29,8 @@ async function page(browser, w, h) {
     if (m.type() === 'error' && !IGNORE.test(m.text())) p.errors.push(m.text());
   });
   p.on('pageerror', (e) => p.errors.push(String(e)));
-  await p.goto(url);
+  // (no survey reveals: a system entered after a survey would fly the camera, 21 Oct)
+  await p.goto(`${url}${url.includes('?') ? '&' : '?'}noreveals`);
   await p.waitForTimeout(1500);
   return p;
 }

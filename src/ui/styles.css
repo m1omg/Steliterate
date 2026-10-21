@@ -464,6 +464,45 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .rp-options { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 .rp-option { justify-content: flex-start; text-align: left; }
 @media (max-width: 760px) { .research-prompt { top: calc(150px + env(safe-area-inset-top, 0px)); } .toasts { bottom: calc(230px + env(safe-area-inset-bottom, 0px)); } }
+/* the survey reveal's caption (21 Oct, over a flight of the camera, as in Endless Space 2): top
+   left over the view, with no box, like a film's titles; only its buttons and bars take the
+   pointer, so a click on it is a click on the view (Next). In the magnifier mode a panel in its
+   column. Its lines are typed in one after another (--i), then its bars fill (--j, --k). */
+.reveal-card { z-index: 7; }
+.reveal-card.cine-caption { position: absolute; left: calc(18px + env(safe-area-inset-left, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); width: min(440px, calc(calc(100vw / var(--z, 1)) - 36px)); pointer-events: none; text-shadow: 0 1px 3px #000, 0 0 14px rgba(0, 0, 0, 0.8); }
+.reveal-card.cine-caption::before { content: ''; position: absolute; inset: -40px -140px -60px -60px; background: radial-gradient(ellipse at 25% 35%, rgba(2, 2, 6, 0.6), rgba(2, 2, 6, 0) 70%); z-index: -1; pointer-events: none; }
+.reveal-card.panel { padding: 10px 12px; border-color: color-mix(in srgb, var(--neon) 50%, var(--line-2)); }
+.rc-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rc-top .eyebrow { flex: 1; min-width: 0; }
+.rc-btns { display: flex; gap: 6px; pointer-events: auto; text-shadow: none; }
+.rc-name { font-family: var(--f-display); font-weight: 600; font-size: 30px; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.05; margin-top: 4px; animation: rc-in 0.35s ease both; }
+.rc-lines { margin-top: 3px; display: flex; flex-direction: column; gap: 1px; }
+/* (shown as they are, hidden only by the animation's first moment: where motion is reduced and there is none, they are there at once) */
+.rc-line { font-size: 15px; line-height: 1.35; animation: rc-type 0.45s linear both; animation-delay: calc(0.18s + var(--i) * 0.17s); }
+.rc-line.rc-kind { font-size: 16px; }
+.rc-line.rc-sub { padding-left: 14px; font-size: 13.5px; color: var(--ink-dim); }
+.rc-line.rc-sub.good { color: var(--good); }
+.rc-line.rc-found { color: var(--neon); }
+.rc-bars { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.rc-bar { display: flex; align-items: center; gap: 8px; font-size: 13px; pointer-events: auto; animation: rc-in 0.3s ease both; animation-delay: calc(0.18s + var(--i) * 0.17s + var(--j) * 0.1s); }
+.rc-bar.need-kin { --bar: var(--good); }
+.rc-bar.need-echoes { --bar: var(--warn); }
+.rc-bar.need-lattice { --bar: var(--accent); }
+.rc-bar.need-coldminds { --bar: var(--boon); }
+.rc-bar .icon { color: var(--bar); }
+.rc-segs { display: inline-flex; gap: 3px; flex: none; }
+.rc-segs i { width: 18px; height: 5px; border-radius: 1px; background: rgba(233, 223, 207, 0.14); box-shadow: 0 0 3px rgba(0, 0, 0, 0.8); }
+.rc-segs i.on { background: var(--bar); transform-origin: left; animation: rc-seg 0.2s ease-out both; animation-delay: calc(0.3s + var(--i) * 0.17s + var(--j) * 0.1s + var(--k) * 0.07s); }
+.rc-val { color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rc-plate { margin-top: 8px; width: min(280px, 100%); border-radius: 3px; overflow: hidden; animation: rc-in 0.5s ease both; animation-delay: calc(0.2s + var(--i) * 0.17s); }
+.rc-world.leaving { animation: rc-out 0.3s ease forwards; }
+@keyframes rc-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes rc-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rc-seg { from { transform: scaleX(0); opacity: 0.3; } to { transform: scaleX(1); opacity: 1; } }
+@keyframes rc-out { to { opacity: 0; transform: translateY(-4px); } }
+/* while its camera flies, the rest of the interface steps aside (RevealCard), back once it is over */
+html.cine:not(.lv) .hud > :not(.reveal-card), html.cine:not(.lv) .toasts, html.cine:not(.lv) .map-hover { visibility: hidden; opacity: 0; pointer-events: none; animation: cine-hide 0.45s ease; }
+@keyframes cine-hide { from { visibility: visible; opacity: 1; } to { visibility: visible; opacity: 0; } }
 
 .bl-head { display: flex; gap: 2px; padding: 3px; align-self: flex-start; }
 .bl-head .btn { min-height: 24px; }
@@ -806,7 +845,7 @@ html.lv .hud > :not(.tut-ring) { position: relative; inset: auto; width: auto; m
 html.lv .lv-bar { order: 0; display: flex; justify-content: flex-end; }
 html.lv .chrono { order: 1; }
 html.lv .resources { order: 2; }
-html.lv .research-prompt, html.lv .tutorial, html.lv .targeting { order: 3; }
+html.lv .research-prompt, html.lv .tutorial, html.lv .targeting, html.lv .reveal-card { order: 3; }
 html.lv .turnbox { order: 4; }
 html.lv .rail { order: 5; }
 html.lv .bottom-left { order: 6; }

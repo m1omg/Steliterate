@@ -79,6 +79,8 @@ export function doEndTurn() {
   const surveyed = Object.keys(s.civ.known).filter((id) => s.civ.known[id] === 2 && knownBefore[id] !== 2 && !Object.values(s.colonies).some((c) => c.systemId === id));
   for (const id of detected) engine()?.ping(id, '#bfe9ff');
   for (const id of surveyed) engine()?.ping(id, '#9ff5e6');
+  // entering one of them shows its worlds by a flight of the camera (the survey reveal)
+  if (surveyed.length) engine()?.markForReveal(s, surveyed);
   // a giant falling into its star in a flash (since 20 Oct: physics.ts, flashSystem), a few at most
   const flashes = r.notes.filter((n) => n.kind === 'flash' && !!n.flash?.inside.length && s.civ.known[n.systemId]);
   for (const n of flashes.slice(0, 3)) engine()?.ping(n.systemId, '#ffd9a8');
