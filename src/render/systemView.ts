@@ -1644,14 +1644,15 @@ function asteroidBelt(r: number, seed: number, richness: number, round = false):
   return inst as unknown as THREE.Mesh;
 }
 
-/** A ship in orbit: its hull and its drive's glow (another civilization's in its own colour). */
+/** A ship in orbit: its hull and its drive's glow, ours in our teal and another civilization's in its own colour. */
 function shipMesh(war: boolean, colour?: string): THREE.Object3D {
   const g = new THREE.Group();
   const hull = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.1, 5), new THREE.MeshBasicMaterial({ color: war ? '#3a2e28' : '#2a2e33' }));
   hull.rotation.x = Math.PI / 2;
-  const glow = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: colour ?? (war ? '#ffb070' : '#8fe8ff') }));
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: colour ?? '#4fe3d1' }));
   glow.position.z = -0.55;
   g.add(hull, glow);
+  g.userData.color = colour ?? '#4fe3d1';
   return g;
 }
 

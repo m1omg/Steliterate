@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { fleetLook, lookRole, type FleetLook } from '../game/data/ships';
+import { fleetLook, type FleetLook } from '../game/data/ships';
 import { brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, shownKind } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
@@ -590,12 +590,13 @@ export class GalaxyView {
       }
       let anim = this.fleetAnim.get(f.id);
       const kind = fleetLook(f.ships.map((s) => s.cls));
-      const role = lookRole(kind);
       const star = f.at ? new THREE.Vector3(state.systems[f.at].pos.x, state.systems[f.at].pos.y, state.systems[f.at].pos.z) : null;
       const dest = f.to ? new THREE.Vector3(state.systems[f.to].pos.x, state.systems[f.to].pos.y, state.systems[f.to].pos.z) : null;
       if (!anim || anim.kind !== kind) {
         if (anim) this.fleetGroup.remove(anim.mesh);
-        const mesh = fleetGlyph(kind, role === 'war' ? '#ffc98f' : role === 'settler' ? '#9ff5e6' : '#bfe9ff');
+        // ours in our own colour, the teal of our systems, whatever the ship: what kind it is shows in
+        // its hull (an amber rim on warships read as a neighbour's colour, 24 Oct)
+        const mesh = fleetGlyph(kind, OUR_FLEET);
         this.fleetGroup.add(mesh);
         mesh.position.copy(p);
         anim = { from: p.clone(), to: p.clone(), t0: now, mesh, kind, star, dest, phase: (hashId(f.id) % 628) / 100, pick: null };
@@ -942,6 +943,9 @@ const _fleetTex = new Map<string, THREE.CanvasTexture>();
  * colour so it reads against black space. The halo shows at once; the hull fills in once the
  * image has loaded.
  */
+/** Our fleets' colour on the map: the teal our systems are marked in (uOwned). */
+const OUR_FLEET = '#4fe3d1';
+
 function fleetTexture(kind: FleetKind, color: string): THREE.CanvasTexture {
   const key = `${kind}:${color}`;
   const hit = _fleetTex.get(key);
@@ -983,6 +987,8 @@ function hexA(hex: string, a: number): string {
 function fleetGlyph(kind: FleetKind, color: string): THREE.Sprite {
   const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: fleetTexture(kind, color), transparent: true, depthWrite: false, depthTest: false }));
   m.renderOrder = 3;
+  // (its colour, for the checks: browser/fleet-colour)
+  m.userData.color = color;
   return m;
 }
 

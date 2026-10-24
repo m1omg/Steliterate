@@ -150,6 +150,7 @@ check(/under way/.test(passageCheck(s, c) ?? ''), 'and not begun twice');
   const rich = at(3, 0, 2000);
   check(!!rich.q && rich.q.progress < rich.q.cost - 1 && rich.a.civ.matter > 1000, `on time, it is not rushed, though there is matter to rush it (${rich.q ? Math.round(rich.q.progress) : '-'} of ${rich.q?.cost})`);
   const late = at(2.4, -1, 2000, 36.5);
-  check(!!late.q && late.q.progress >= late.q.cost - 0.01, 'in the last decades, at a pace that would not finish it in time, it is rushed with matter that will soon be gone');
+  // (a rush finishes it at once since 24 Oct: the settlement is leptonic before the turn ends)
+  check(!late.q && late.ac.form === 'leptonic', 'in the last decades, at a pace that would not finish it in time, it is rushed with matter that will soon be gone, and done at once');
 }
 done('PASSAGE');

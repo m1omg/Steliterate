@@ -28,6 +28,7 @@ import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
 import { allColonies, capital, colonies, formOf, hasCharter, hasTech, leftBehind, log, ownColony, ownFleet, savableName, uid } from './util';
 import { hungerAct } from './judge';
+import { finishQueued } from './queue';
 import { launchStrike } from './conflict';
 import { ageReached, inAge, matterGone } from '../fate';
 
@@ -197,7 +198,7 @@ export function dismantle(state: GameState, colonyId: string, id: string): Actio
   return null;
 }
 
-/** Emergency shifts: finish the first project in a queue now, paying for the remaining work. */
+/** Emergency shifts: finish the first project in a queue now (not at the turn's end), paying for the remaining work. */
 export function rushCost(state: GameState, colonyId: string): { matter: number; energy: number } | null {
   const c = ownColony(state, colonyId);
   const q = c?.queue[0];
@@ -215,7 +216,12 @@ export function rushBuild(state: GameState, colonyId: string): ActionResult {
   if (c.flags_rushed === state.turn) return 'Only one rush per settlement per turn.';
   state.civ.matter -= cost.matter;
   state.civ.energy -= cost.energy;
-  c.queue[0].progress = c.queue[0].cost - 0.001;
+  // done at once, as the button says (24 Oct; it used to be left a breath short of done, and so
+  // finished at the turn's end like any other, which made a rush of a project due this turn
+  // pointless): it stands now, and this turn's industry goes on to the next in the queue
+  const item = c.queue.shift()!;
+  item.progress = item.cost;
+  finishQueued(state, c, item);
   c.flags_rushed = state.turn;
   state.civ.dissent = Math.min(100, state.civ.dissent + 1.5);
   return null;

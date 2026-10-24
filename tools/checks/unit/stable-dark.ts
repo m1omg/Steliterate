@@ -231,7 +231,8 @@ function settleAt(s: GameState, sys: StarSystem, form: Colony['form'] = 'baryoni
   late.civ.energy = 5000;
   lc.last = { ...(lc.last ?? ({} as NonNullable<Colony['last']>)), industry: 40 } as Colony['last'];
   autoPlay(late, 'competent');
-  check(lc.queue.some((q) => q.kind === 'passage'), `with the collapse ${turnsToCollapse(late, late.civ.pace)} turns off, the autoplayer begins the Passage`);
+  // (begun, or begun and rushed: a rush finishes it at once since 24 Oct)
+  check(lc.queue.some((q) => q.kind === 'passage') || lc.form === 'leptonic', `with the collapse ${turnsToCollapse(late, late.civ.pace)} turns off, the autoplayer begins the Passage`);
   const early = dark(150);
   const ec = early.colonies[early.civ.capitalId!];
   early.civ.techs.push('leptonic_computation');

@@ -1,4 +1,3 @@
-import { signal } from '@preact/signals';
 import { useEffect, useMemo, useRef } from 'preact/hooks';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { bodyClimate, buriedOcean, waterState } from '../../game/physics';
@@ -6,17 +5,16 @@ import { naturalKinRoom } from '../../game/sim/fleets';
 import { lastsUntil, matterAt, powerAt, siteValue } from '../../game/sim/sites';
 import { habitabilityOf } from '../../game/sim/terraform';
 import type { Body, GameState } from '../../game/types';
-import type { RevealStep } from '../../render/systemView';
 import { sfx } from '../../audio/sfx';
 import { kelvin } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, bodyKindName } from '../labels';
 import { NEEDS, type Need } from '../siteStrip';
-import { engine, modal, rev, settings } from '../store';
+import { engine, modal, rev, revealing, settings } from '../store';
 import { Plate, eventResult, loreView, worldFinds } from '../screens/Story';
 
-/** Where the survey reveal has come to (Engine onReveal), and null when none is playing. */
-export const revealing = signal<RevealStep | null>(null);
+// where the survey reveal has come to: in the store, as the event cards wait for it (Story.tsx)
+export { revealing };
 
 /** Skip the reveal: this system's worlds at once; `all`, and the other systems charted, which open without one. */
 export function skipReveal(all = false) {
@@ -61,8 +59,8 @@ export function RevealCard({ s }: { s: GameState }) {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       // (a button in focus answers Space itself; held down, Space goes no further than once)
       if (next && (tag === 'BUTTON' || e.repeat)) return;
-      // (a window or a story over it answers its own keys)
-      if (modal.value || eventResult.value || loreView.value || s.civ.pending.length > 0) return;
+      // (a window over it answers its own keys; an event waits for the flight to end: Story.tsx)
+      if (modal.value || eventResult.value || loreView.value) return;
       e.preventDefault();
       e.stopPropagation();
       if (next) nextReveal();

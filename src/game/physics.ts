@@ -1336,6 +1336,20 @@ export function frozenHard(state: GameState, b: Body, c: BodyClimate = bodyClima
   return !b.dissolved && b.kind !== 'deep' && (c.day ?? c.mean) < FROZEN_K;
 }
 
+/**
+ * Kin live in the open, without domes, only where even the warmest ground averages at least this:
+ * −14.9 °C, the yearly mean of Oymyakon and Verkhoyansk, the coldest towns people live in the
+ * year round (24 Oct, the player). Colder, nothing grows outside and every sea is ice: people live
+ * there only under domes, or below ground (Abandon the Surface). Orbital Lamps and the warming
+ * works lift a world over it as they warm it.
+ */
+export const OPEN_AIR_K = 258.25;
+
+/** Too cold for Kin to live in the open: its warmest ground below OPEN_AIR_K (frozen hard included). */
+export function tooColdForOpenAir(state: GameState, b: Body, c: BodyClimate = bodyClimate(state, b)): boolean {
+  return !b.dissolved && b.kind !== 'deep' && (c.day ?? c.mean) < OPEN_AIR_K;
+}
+
 /** Nothing on a world's surface survives past this, even on its night side: the limit of known life (122 °C: Takai et al. 2008). */
 export const LIFE_LIMIT_K = 395;
 
