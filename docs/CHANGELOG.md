@@ -4121,3 +4121,9 @@ shape, so every change is in saved games the moment they load.
   teal on the map and in the home system); `browser/survey-reveal` (a find's card waits while the
   camera flies, Enter still skips, the card then). `unit/passage` and `unit/stable-dark` expect
   the rushed Passage done at once (the settlement leptonic before the turn ends).
+- **Balance** (300 standard competent games, and 300 at Harsh): 184 survive, 79 victories, a
+  Degenerate Age of 104 turns (187 / 77 / 103 before); by fate decay 108 / 148, stable 33 / 81,
+  curvature 43 / 71; Harsh 141 / 51 / 97 (147 / 51 / 98). Within the noise: the autoplayer
+  settles warm worlds first, and builds domes.
+- **Validated:** tsc and the build clean (`index-vY0YBpb0.js`); the playtest passes; savecompat on
+  its 9 saves; all 91 unit checks; all 65 browser checks in the real fonts.
