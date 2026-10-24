@@ -2,6 +2,7 @@ import { signal } from '@preact/signals';
 import type { Engine, Quality } from '../render/engine';
 import { saveGame } from '../game/save';
 import type { GameState } from '../game/types';
+import type { RevealStep } from '../render/systemView';
 
 // UI state around the simulation. The game state is mutated in place by the simulation;
 // `rev` bumps after every change so components re-render.
@@ -69,6 +70,8 @@ export interface Toast {
 export const toasts = signal<Toast[]>([]);
 let toastId = 0;
 export const busy = signal(false);
+/** Where the survey reveal has come to (Engine onReveal), and null when none is playing (RevealCard). */
+export const revealing = signal<RevealStep | null>(null);
 /** A fleet waiting for the player to pick its destination on the map. */
 /** Open this settlement's Build tab when its panel next shows (from the idle-settlements reminder). */
 export const openBuildFor = signal<string | null>(null);

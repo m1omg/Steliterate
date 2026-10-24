@@ -1415,9 +1415,11 @@ function shipMesh(war: boolean): THREE.Object3D {
   const g = new THREE.Group();
   const hull = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.1, 5), new THREE.MeshBasicMaterial({ color: war ? '#3a2e28' : '#2a2e33' }));
   hull.rotation.x = Math.PI / 2;
-  const glow = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: war ? '#ffb070' : '#8fe8ff' }));
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: '#4fe3d1' }));
   glow.position.z = -0.55;
   g.add(hull, glow);
+  // ours in our teal, whatever the ship (24 Oct); (its colour, for the checks: browser/fleet-colour)
+  g.userData.color = '#4fe3d1';
   return g;
 }
 

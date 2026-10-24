@@ -1,6 +1,6 @@
 import { STRUCTURE_BY_ID, type StructureDef } from '../data/structures';
 import { THREAD_DEFS } from '../data/threads';
-import { frozenHard, hawkingLight, insolation, siphonsRunning, sourceLight } from '../physics';
+import { frozenHard, hawkingLight, insolation, siphonsRunning, sourceLight, tooColdForOpenAir } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
 import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
@@ -51,10 +51,14 @@ export function kinBaseCapacity(state: GameState, c: Colony, mods: Mods): number
   // frozen hard (its star dead and cooled, or the Last Light), whatever life is left in it
   if (scorched(state, b) || frozenHard(state, b)) return 0;
   const base = Math.round(12 * habitabilityOf(state, b, c));
+  const below = mods.flags.has('charter:abandon_the_surface');
+  // too cold to live in the open (OPEN_AIR_K): only those gone below ground have room, unless the
+  // world is warmed into a sea (a flaring star's thaw, below)
+  const open = !tooColdForOpenAir(state, b);
   let vit = b.vitality;
   if (mods.flags.has('hardy')) vit = Math.pow(vit, 0.6);
-  let cap = Math.floor(base * vit);
-  if (mods.flags.has('charter:abandon_the_surface')) cap = Math.max(cap, Math.floor(base * 0.6));
+  let cap = open ? Math.floor(base * vit) : 0;
+  if (below) cap = Math.max(cap, Math.floor(base * 0.6));
   if (b.rogue || b.feeding) cap = Math.floor(cap * 0.3);
   // a frozen world melted into warm sea by a flaring star: room to live by the water, for now
   if (thawed(state, b) === 'warm') cap = Math.max(cap, THAW_ROOM);
