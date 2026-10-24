@@ -2441,3 +2441,8 @@ shape, so every change is in saved games the moment they load.
   lamps over it; a rush done at once, one a turn); `browser/fleet-colour` (every fleet of ours
   teal on the map and in the home system); `browser/survey-reveal` (a find's card waits while the
   camera flies, Enter still skips, the card then).
+- **Balance** (300 standard competent games, and 300 at Harsh): 227 survive, 79 victories, a
+  Degenerate Age of 113 turns (229 / 73 / 112 before); by fate decay 87 / 148, stable 79 / 81,
+  curvature 61 / 71; Harsh 204 / 57 / 105 (209 / 63 / 106). Within the noise.
+- **Validated:** tsc and the build clean (`index-yrDLdqsE.js`); the playtest passes; savecompat on
+  its 6 saves; all 59 unit checks; all 57 browser checks in the real fonts.
