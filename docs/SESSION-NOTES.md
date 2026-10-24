@@ -51,7 +51,10 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (21 Oct): `main` as of PR m1omg/Steliterate#39 (`2d345e4`, the survey reveal as a flight
+  - Now (24 Oct): `main` as of PR m1omg/Steliterate#40 (`0da09b3`, four fixes from the player's
+    screenshots and a rush that finishes at once; live script `index-yrDLdqsE.js`), and `/next/`
+    at the same fixes (`8783e38`, live script `index-vY0YBpb0.js`). Before them (21 Oct): `main`
+    as of PR m1omg/Steliterate#39 (`2d345e4`, the survey reveal as a flight
     of the camera; live script `index-Zc5orquV.js`), after PR m1omg/Steliterate#37 (`d2abd2a`, the
     pace: ten turns to a Tide turn), PR m1omg/Steliterate#36 (`981e0f0`, finds only where they
     can be and one sea), PR m1omg/Steliterate#35 (`e4c77d7`, falling worlds) and PR
@@ -285,6 +288,16 @@ clone, with none of this session's scratch files, uploads or memory: everything 
 
 ## Open threads and pending decisions
 
+- **24 Oct, three screenshots** (the player named each file as its question): "why is my warship
+  yellow?"; "the planet exploration popup occurs while it's showing all the planets"; "The world
+  looks barren, but it says two without domes even though its max temperature is less than
+  freezing". Their choices: all our ships in our teal; the open-air line at the coldest towns on
+  Earth ("Oymyakon and Verkhoyansk … yearly average temperatures around -14.9°C … So that should
+  be the limit"); the ice worlds' look kept true to their light. Then: "Why is there even an
+  option to rush a building which will complete in one turn? … I would like this fixed even for
+  existing saves without breaking them. Actually all of the changes we discussed today should
+  apply to existing saves". Done in both versions, no save-shape change (PR
+  m1omg/Steliterate#40; CHANGELOG, "Four fixes from the player's screenshots").
 - **7 Oct, after Part C went live:** "can you instead make the beacons temporary? … more realistic
   than having them last literally trillions and trillions of years" (instead of the earlier offer
   to undo them). Chosen: a beacon burns "while we keep feeding it", and lighting one turns the

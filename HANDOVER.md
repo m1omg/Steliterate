@@ -99,6 +99,14 @@ word", then the player's list of 16 Oct, then the falling worlds.
   reveals off for its checks with `?noreveals` (the new version's `?nofilms` does it there).
   CHANGELOG, "The survey reveal as a flight of the camera" (and in `main`'s, "The survey reveal, a
   flight of the camera").
+- **Four fixes from the player's screenshots, and a rush that finishes at once** (24 Oct, both
+  versions, in saved games at once with no change of shape): all our ships in our teal (a
+  warship was tinted the yellow of a neighbour's); a find's card waits while the camera flies
+  through a survey; open air only above −14.9 °C, the coldest towns on Earth (the player's line),
+  so a cold world needs domes, warrens or lamps; the ice worlds' look kept; and a rush finishes
+  the first project now, not at the turn's end (`src/game/sim/queue.ts`, `finishQueued`). PR
+  m1omg/Steliterate#40 (`0da09b3`; `claude/promises-main` `dd60b5f`), merged back with `-s ours`;
+  the new version `8783e38`. CHANGELOG, "Four fixes from the player's screenshots".
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
@@ -129,8 +137,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#39 (`2d345e4`, the survey reveal, 21 Oct) | `5890f97` (21 Oct, the survey reveal's flight), and its notes |
-  | Live script | `index-Zc5orquV.js` | `index-C9puCHR0.js` |
+  | As of | PR m1omg/Steliterate#40 (`0da09b3`, four fixes from the screenshots, 24 Oct) | `8783e38` (24 Oct, the same fixes), and its notes |
+  | Live script | `index-yrDLdqsE.js` | `index-vY0YBpb0.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at

@@ -31,7 +31,9 @@ PR m1omg/Steliterate#35, `e4c77d7`, falling worlds, PR m1omg/Steliterate#36, `98
 only where they can be and one sea for the Water row and the picture, and PR
 m1omg/Steliterate#37, `d2abd2a`, the pace: ten turns to a Tide turn (and PR
 m1omg/Steliterate#38, `a2fa3b4`, a line of its changelog), and PR m1omg/Steliterate#39,
-`2d345e4`, the survey reveal as a flight of the camera (21 Oct), all from `claude/promises-main`,
+`2d345e4`, the survey reveal as a flight of the camera (21 Oct), and PR m1omg/Steliterate#40,
+`0da09b3`, four fixes from the player's screenshots and a rush that finishes at once (24 Oct), all
+from `claude/promises-main`,
 the same way, each then merged into the work branch with `-s ours`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
@@ -56,7 +58,8 @@ in both versions since 20 Oct, which completes the approved plan,
 `docs/plans/2026-10-19-falling-worlds-and-the-list.md` (the player's list of 16 Oct); then the
 combat system (20 Oct, the new version only, `docs/plans/2026-10-20-combat.md`), and the survey
 reveal as a flight of the camera, as in Endless Space 2 (21 Oct, display only; in today's game too
-since PR m1omg/Steliterate#39).
+since PR m1omg/Steliterate#39); then four fixes from the player's screenshots and a rush that
+finishes at once (24 Oct, both versions, PR m1omg/Steliterate#40).
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 
@@ -103,13 +106,15 @@ npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; cou
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
 
-Balance reference (20 Oct, the pace: ten turns to a Tide turn, the late ages ×1.4, the
-autoplayer sleeping through the dark): 229 of 300 standard competent games survive, 73
-victories, a Degenerate Age of 112 turns; 300 at Harsh (`--diff=harsh`): 209 / 63 / 106; by fate
-decay 87 / 148, stable 79 / 81, curvature 63 / 71 (`--fate=` runs one). Survival rose with the
+Balance reference (24 Oct, open air only above −14.9 °C and a rush that finishes at once): 227
+of 300 standard competent games survive, 79 victories, a Degenerate Age of 113 turns; 300 at Harsh
+(`--diff=harsh`): 204 / 57 / 105; by fate decay 87 / 148, stable 79 / 81, curvature 61 / 71
+(`--fate=` runs one). Before it, the pace (20 Oct: ten turns to a Tide turn, the late ages ×1.4,
+the autoplayer sleeping through the dark): 229 / 73 / 112, Harsh 209 / 63 / 106; by fate decay
+87 / 148, stable 79 / 81, curvature 63 / 71. Survival rose with the
 autoplayer's sleep in the dark (the old slow turns' overpay had carried it through, and it never
 slept), the Degenerate Age's turns because it no longer takes slow turns there (CHANGELOG, "The
-pace"). Before it, finds only where they can be and one sea: 165 / 77 / 70, Harsh 150 / 59 / 71;
+pace"). Before the pace, finds only where they can be and one sea: 165 / 77 / 70, Harsh 150 / 59 / 71;
 900 games on 19 Oct: 476 survive, 244 victories, by fate decay 43%, stable 69%, curvature 56%;
 noise ±12 in 300 (two runs of 900 can differ by 30). The victories beside 12 Oct's
 (154 / 72, 900 games 456 / 203) are a hidden step's (`docs/spoilers/slow-ones.md`). The full history is
@@ -146,4 +151,6 @@ The pace (20 Oct; the late ages ×1.125, the autoplayer sleeping through the dar
 by fate decay 107 / 148, stable 39 / 81, curvature 41 / 71; Harsh 147 / 51 / 98. Combat (20 Oct,
 battles fought out, tactics, neighbours who fight back): the same, our outcome the same in all 300
 games (Harsh in all 300); wars are rare there, so a forced war measures it (`tools/sim.ts 300
-standard warlike --war=40`): 160 / 56, where the old rules gave 121 / 47.
+standard warlike --war=40`): 160 / 56, where the old rules gave 121 / 47. Open air only above
+−14.9 °C and a rush that finishes at once (24 Oct): 184 / 79 / 104; by fate decay 108 / 148,
+stable 33 / 81, curvature 43 / 71; Harsh 141 / 51 / 97, within the noise.
