@@ -4070,3 +4070,54 @@ Display only: no rule changed, and nothing saved changes.
   parity 2e-15); savecompat on its 9 saves; all 90 unit checks; all 64 browser checks in the real
   fonts. Live at `/next/` since 21 Oct (`5890f97`, `index-C9puCHR0.js`). Today's game does not
   change.
+
+## Four fixes from the player's screenshots, and a rush that finishes at once (24 Oct, both versions)
+
+The player sent three screenshots named for what was wrong ("why is my warship yellow?", "the
+planet exploration popup occurs while it's showing all the planets", "The world looks barren, but
+it says two without domes even though its max temperature is less than freezing"), then a fourth
+("Why is there even an option to rush a building which will complete in one turn?"), and asked
+for all of it "to apply to existing saves without breaking them". It does: nothing saved changes
+shape, so every change is in saved games the moment they load.
+
+- **Our ships in our own teal** (`galaxyView.ts`, `systemView.ts`): on the galaxy map and in a
+  system's view every ship of ours is drawn in the teal our systems are marked in, whatever its
+  kind; what kind it is shows in its hull. Warships had an amber rim and an amber drive (settlers
+  teal, the rest pale blue), and amber is a neighbour's colour (the Vaelun Hold's). The player:
+  "All ours in our teal".
+- **A find's card waits for the flight** (`Story.tsx`, the reveal signal now in `store.ts`): while
+  a survey reveal flies through a system, an event's card does not open over it, nor swing the
+  view away; it comes as the flight ends or is skipped. The flight's caption already names what
+  was found on each world. (The card's own "Show <system>" had been opening the system and so
+  starting the flight under it.) Space, Enter and Escape now always reach the flight while it
+  plays.
+- **Room for Kin without domes needs warmth** (`OPEN_AIR_K`, `tooColdForOpenAir`, physics.ts):
+  only where even the warmest ground (the day side of a locked world, the mean of one that turns)
+  averages at least −14.9 °C, 258.25 K, the yearly mean of Oymyakon and Verkhoyansk, the coldest
+  towns people live in the year round. The player: "Oymyakon and Verkhoyansk … with yearly
+  average temperatures around -14.9°C … So that should be the limit." It was 195 K, the line
+  where a world is frozen hard, so a world of 97 to 235 K, every sea ice, offered "2 without
+  domes".
+  - Colder, nothing grows outside: Kin live there under domes, in the Warrens (Abandon the
+    Surface keeps its six tenths of the world's room below ground), or under Orbital Lamps and the
+    warming works, which lift a world over the line as they warm it.
+  - The panel says "none: too cold outside, domes needed", its tip and the Manual give the line
+    and where it comes from.
+  - In a saved game a settlement whose room this takes loses Kin as from any shrinking of room,
+    one at a time, or into cold sleep under the Lottery; no homeworld is under the line (60
+    galaxies: the warmest ground of every one 356 K). At the start about one living world in five
+    is (401 of 1,915 in 60 galaxies).
+  - The look: the player's world is ice all over, lit by a 2,820 K red dwarf, so its ice is the
+    colour of rock; "Keep the true light", so the ice now glints a little (a third of open
+    water's), to read as ice.
+- **A rush finishes at once** (`finishQueued`, `sim/queue.ts`, used by the turn's industry and by
+  `rushBuild`): Emergency shifts said they "finish the first project now", but left it a breath
+  short of done, to finish at the turn's end like anything else, so rushing a project due that
+  turn bought only the industry it freed for the next. Now the building stands, or the ship
+  leaves the slips, the moment it is rushed, and this turn's industry goes on to the next in the
+  queue. The price is the same (the work left, in matter and a little energy).
+- **Checks:** `unit/open-air` (no room in the open at 236 K, room at 307 K; the warrens' share;
+  lamps over it; a rush done at once, one a turn); `browser/fleet-colour` (every fleet of ours
+  teal on the map and in the home system); `browser/survey-reveal` (a find's card waits while the
+  camera flies, Enter still skips, the card then). `unit/passage` and `unit/stable-dark` expect
+  the rushed Passage done at once (the settlement leptonic before the turn ends).
