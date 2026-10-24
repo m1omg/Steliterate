@@ -14,7 +14,7 @@ import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import type { Pickable } from './render/galaxyView';
 import { App } from './ui/App';
-import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, revealsOn, saveSettings, screen, selection, setEngine, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
+import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, revealing, revealsOn, saveSettings, screen, selection, setEngine, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
 import { PRIMARY_NAME, bodyKindName } from './ui/labels';
 import { doEndTurn } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
@@ -23,7 +23,6 @@ import { guardTranslation } from './ui/translateGuard';
 import { applyLowVision, trackKeyboard } from './ui/a11y';
 import { buildSelected, nextTodo } from './ui/hud/Hud';
 import { eventResult, loreView } from './ui/screens/Story';
-import { revealing } from './ui/hud/RevealCard';
 import './ui/styles.css';
 
 const stage = document.getElementById('stage')!;

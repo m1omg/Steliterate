@@ -4,7 +4,7 @@ import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../types';
 import { THREADS } from '../types';
 import { formatDistance } from '../eras';
-import { boilingAway, frozenHard } from '../physics';
+import { boilingAway, frozenHard, tooColdForOpenAir } from '../physics';
 import { habitabilityOf } from './terraform';
 import { THAW_ROOM, scorched, stepTurns, thawed } from './flare';
 import { computeMods, type Mods } from './mods';
@@ -357,7 +357,8 @@ export function naturalKinRoom(b: Body, state: GameState): number {
   // as kinBaseCapacity: a flaring star leaves nowhere on the surface livable, nor does a world
   // frozen hard; a frozen world melted into warm sea has room by the water
   if (scorched(state, b) || frozenHard(state, b)) return 0;
-  let cap = Math.floor(Math.round(12 * habitabilityOf(state, b)) * b.vitality);
+  // too cold to live in the open (OPEN_AIR_K): domes needed, unless warmed into a sea (below)
+  let cap = tooColdForOpenAir(state, b) ? 0 : Math.floor(Math.round(12 * habitabilityOf(state, b)) * b.vitality);
   if (b.rogue || b.feeding) cap = Math.floor(cap * 0.3);
   if (thawed(state, b) === 'warm') cap = Math.max(cap, THAW_ROOM);
   return cap;

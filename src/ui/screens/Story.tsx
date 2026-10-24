@@ -12,7 +12,7 @@ import { THREAD_DEFS } from '../../game/data/threads';
 import { music } from '../../audio/music';
 import { sfx } from '../../audio/sfx';
 import { n0 } from '../fmt';
-import { bump, engine, hudPrefs, modal, rev, screen, selection, setHudPrefs } from '../store';
+import { bump, engine, hudPrefs, modal, rev, revealing, screen, selection, setHudPrefs } from '../store';
 import { pivotToSystem } from './Lists';
 import { Icon } from '../Icon';
 import { ModalFrame } from './Frame';
@@ -148,17 +148,23 @@ export function EventModal({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const result = eventResult.value;
   const top = s.pending[0];
+  // an event waits while a survey reveal flies through a system (24 Oct, the player: "the planet
+  // exploration popup occurs while it's showing all the planets"): the flight's caption already
+  // names what was found on each world, and the cards come after it, or once it is skipped
+  const flying = !!revealing.value;
   // each event takes focus on its title (never a choice: a stray Enter must not choose)
   const head = useRef<HTMLHeadingElement>(null);
   const box = useRef<HTMLDivElement>(null);
-  useFocusOnOpen(head, result ? 'result' : top?.uid);
+  useFocusOnOpen(head, flying ? 'reveal' : result ? 'result' : top?.uid);
   const whole = useWholeScroll(box, '.event-art', '.modal-body');
-  // as an event about a star opens, the view swings there behind it
+  // as an event about a star opens, the view swings there behind it (not during a flight, which
+  // has the camera: once it is over the view is in that system already)
   useEffect(() => {
-    if (!top || eventResult.value || !hudPrefs.value.eventPivot) return;
+    if (!top || eventResult.value || !hudPrefs.value.eventPivot || revealing.peek()) return;
     const id = eventSystem(s, top);
     if (id) showEventStar(s, id);
   }, [top?.uid]);
+  if (flying && !result) return null;
   if (result) {
     return (
       <ModalFrame title={result.title} narrow closable={false} foot={<button class="btn primary" onClick={() => (eventResult.value = null)}>Continue</button>}>

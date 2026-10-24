@@ -221,6 +221,27 @@ run(async () => {
   await page.waitForTimeout(300);
   const esc1 = await page.evaluate(() => window.__stel.engine().revealing);
   check(esc0 && !esc1, 'Escape skips it as well');
+  // a find's card waits while the camera flies, and comes once the flight is over (24 Oct, the
+  // player: "the planet exploration popup occurs while it's showing all the planets")
+  await page.evaluate((id) => {
+    const s = window.__stel.state();
+    const b = s.systems[id].bodies.find((x) => s.bodies[x].kind !== 'deep');
+    s.pending.push({ uid: 'ev-waits', defId: 'relic_archive', data: { systemId: id, bodyId: b } });
+    window.__stel.engine().markForReveal(s, [id]);
+    window.__stel.refresh();
+  }, target.id);
+  await enter(target.id);
+  const during = await page.evaluate(() => ({ revealing: window.__stel.engine().revealing, card: !!document.querySelector('.modal.event') }));
+  check(during.revealing && !during.card, `a find's card waits while the camera flies (flying ${during.revealing}, card ${during.card})`);
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => ({ revealing: window.__stel.engine().revealing, card: !!document.querySelector('.modal.event') }));
+  check(!after.revealing && after.card, `Enter still skips the flight, and the card comes then (flying ${after.revealing}, card ${after.card})`);
+  await page.evaluate(() => {
+    window.__stel.state().pending.length = 0;
+    window.__stel.refresh();
+  });
+  await page.waitForTimeout(200);
   if (other) {
     await page.evaluate(([a, b]) => window.__stel.engine().markForReveal(window.__stel.state(), [a, b]), [target.id, other]);
     await enter(target.id);

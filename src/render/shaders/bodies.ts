@@ -241,7 +241,9 @@ export const PLANET_FRAG = /* glsl */ `
         vec3 dry = mix(vec3(0.6, 0.58, 0.52) * (0.85 + 0.15 * detail), rockPalette(h, detail) * 0.85, land);
         albedo = mix(mix(iced, open, liquid), dry, boiled);
         float sea = liquid * (1.0 - boiled);
-        spec = (1.0 - land) * sea * 0.7;
+        // open water glints; ice too, a little less, so a frozen world reads as ice even in a red
+        // dwarf's orange light, which tints it the colour of bare rock (24 Oct)
+        spec = (1.0 - land) * sea * 0.7 + (1.0 - liquid) * (1.0 - boiled) * 0.3;
         clouds = smoothstep(0.1, 0.55, fbm(p * 3.0 + vec3(uTime * 0.02, uSeed, 0.0))) * sea * smoothstep(0.02, 0.35, uVitality) * 0.8;
       } else if (uAir > 0.5 && uWater > 0.005) {
         // rock with air (a super-Earth, or bare rock given an atmosphere) keeps its water in its low

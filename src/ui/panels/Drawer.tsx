@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type S
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, ICE_MELTS_K, WATER_RICH, fallsInAt, giantWorld, rubbleGame, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, lightUnitSuns, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, ICE_MELTS_K, frozenHard, tooColdForOpenAir, WATER_RICH, fallsInAt, giantWorld, rubbleGame, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, lightUnitSuns, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -805,9 +805,9 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
             <BoilingRow s={s} b={b} />
             {b.kind !== 'deep' && b.kind !== 'gas_giant' && b.kind !== 'ice_giant' && (
               <>
-                <dt data-tip="Kin the world holds by itself: about 12 × habitability × vitality, rounded down (a third of that on a rogue or feeding world). Below about 8% habitability × vitality there is no room, and Kin can live here only in domes, warrens or a Garden Ark.">Room for Kin</dt>
+                <dt data-tip="Kin the world holds by itself: about 12 × habitability × vitality, rounded down (a third of that on a rogue or feeding world). Below about 8% habitability × vitality there is no room, nor where even its warmest ground averages under −14.9 °C (the yearly mean of Oymyakon, the coldest town people live in the year round): there Kin can live only in domes, warrens or a Garden Ark.">Room for Kin</dt>
                 <dd class={naturalKinRoom(b, s) > 0 ? 'mono good' : ''} style={naturalKinRoom(b, s) > 0 ? undefined : { fontSize: '13.5px' }}>
-                  {naturalKinRoom(b, s) > 0 ? `${naturalKinRoom(b, s)} without domes` : 'none: domes needed'}
+                  {naturalKinRoom(b, s) > 0 ? `${naturalKinRoom(b, s)} without domes` : tooColdForOpenAir(s, b) && !frozenHard(s, b) && b.vitality > 0 ? 'none: too cold outside, domes needed' : 'none: domes needed'}
                 </dd>
               </>
             )}
@@ -1228,7 +1228,7 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
           );
         })}
         {rc && c.flags_rushed !== s.turn && (
-          <button class="btn small" style={{ marginTop: '6px' }} data-tip="Emergency shifts finish the first project now. People resent it." onClick={() => act((g) => rushBuild(g, c.id)) && sfx('build')}>
+          <button class="btn small" style={{ marginTop: '6px' }} data-tip="Emergency shifts finish the first project now, not at the turn’s end: it stands at once, and this turn’s industry goes on to the next. People resent it." onClick={() => act((g) => rushBuild(g, c.id)) && sfx('build')}>
             Rush first: {rc.matter ? `${rc.matter} matter, ` : ''}{rc.energy} energy
           </button>
         )}
