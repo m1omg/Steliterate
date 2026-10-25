@@ -4127,3 +4127,31 @@ shape, so every change is in saved games the moment they load.
   settles warm worlds first, and builds domes.
 - **Validated:** tsc and the build clean (`index-vY0YBpb0.js`); the playtest passes; savecompat on
   its 9 saves; all 91 unit checks; all 65 browser checks in the real fonts.
+
+## Warships: a list to send them from, and their attack against both (25 Oct, both versions)
+
+The player, 25 Oct: "pls add the ability to choose systems from a list to military craft too and
+a description of the damage vs both other civs and swarms as rn i have to choose stars to go to
+for military craft on the map + the ship descriptions only describe the damage theyre better at,
+dont be too verbose". No rule changes and nothing saved changes.
+
+- **Choose from list** on a warship's panel (and From Systems… on its idle card) opens the Systems
+  window on a new tab, **Swarms and civilizations**: every star on our map with a swarm we can see
+  (its size; asleep or awake) or a civilization we know (its name, at war, their first star), the
+  nearest first, each with Send. Above the list, the fleet's attack against swarms, other
+  civilizations' ships and their settlements. Without one on the map, the window opens as before.
+- **Every ship's figures** (the build list, and the tip of each ship on a fleet's panel) now begin
+  with its attack against both: "Attack 3 against swarms and other civilizations" (Warden, Aegis
+  8); "Attack 6 against swarms, 3 against other civilizations" (Hunter); "Attack 1 against swarms,
+  2 against other civilizations' ships, 10 against their settlements" (Breacher; the Picket 1, 1,
+  0.5). The others say Unarmed; the Lattice Spore hits back at 1 if a swarm comes for it; the
+  Kinetic Lance is one strike at a settlement, in a war. In today's game, where a war is a siege
+  and every warship strikes all three alike: "Attack 3 against swarms and other civilizations".
+- **Checks:** `browser/warship-list` (the tips; Choose from list opens the tab with the swarm's
+  star, its size and the fleet's attack; Send gives the order).
+- **Validated (the new version):** tsc and the build clean (`index-CfvQcZvC.js`); savecompat on
+  its 9 saves; all 91 unit checks; the browser checks `warship-list`, `prompt-systems`,
+  `systems-tab`, `attack`, `follow-send`, `a11y`, `lowvision`, `translate`, `build-kinds`, `war`
+  and `tactics` pass in the real fonts. `mobile` fails at 390 and 360 px wide on "Research" on the
+  rail, cut by a pixel, the same on the build before this change (`index-vY0YBpb0.js`), here.
+  No harness run: no rule changed.

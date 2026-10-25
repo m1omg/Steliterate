@@ -2,11 +2,11 @@ import { useState } from 'preact/hooks';
 import { siteValue } from '../../game/sim/sites';
 import { ANOMALIES } from '../../game/data/events';
 import { bodyClimate, hawkingLight, sourceLight } from '../../game/physics';
-import { LANCE_SPEED, LIVING_WORLD, isLance, naturalKinRoom } from '../../game/sim/fleets';
+import { LANCE_SPEED, LIVING_WORLD, isLance, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { habitabilityOf } from '../../game/sim/terraform';
 import { SiteStrip, bestOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
 import { YIELDS, yieldOf, yieldText, yieldTip } from '../yields';
-import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
+import { SHIP_BY_ID, fleetLook, isWarship, strength } from '../../game/data/ships';
 import { tacticOf } from '../../game/data/tactics';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, formatYearsShort } from '../../game/eras';
@@ -17,7 +17,8 @@ import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
 import { colonies, distLy, fleets, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
-import { nestSeenAt } from '../../game/sim/sight';
+import { nestSeenAt, swarmSight } from '../../game/sim/sight';
+import { atWar } from '../../game/sim/war';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, solarMass } from '../fmt';
@@ -163,12 +164,16 @@ export function FleetsModal({ s }: { s: GameState }) {
 }
 
 /**
- * Open the Systems window to choose where a stationed ship goes: collision stars first while any
- * burn; in the magnifier mode a probe's list is the stars not yet surveyed; in the Black Hole Age,
- * the black holes.
+ * Open the Systems window to choose where a stationed ship goes: a warship's list is the swarms and
+ * other civilizations on our map; then collision stars first while any burn; in the magnifier mode
+ * a probe's list is the stars not yet surveyed; in the Black Hole Age, the black holes.
  */
 export function sendFromSystems(s: GameState, f: Fleet) {
   sfx('click');
+  if (isWarFleet(f) && foeStars(s).length) {
+    modal.value = { kind: 'settlements', tab: 'foes', send: f.id };
+    return;
+  }
   const burning = calendarEra(s) === 'degenerate' && Object.values(s.systems).some((x) => isBeacon(s, x));
   const afar = !!settings.value.lowVision && f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey) && Object.values(s.systems).some((x) => s.civ.known[x.id] === 1 && !x.gone);
   const holes = inAge(s, ['blackhole']) && holesOnMap(s).length > 0;
@@ -209,7 +214,8 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
   void rev.value;
   const degenerate = calendarEra(s) === 'degenerate';
   const lv = !!settings.value.lowVision;
-  const which = (tab === 'beacons' && !degenerate) || (tab === 'afar' && !lv) || (tab === 'holes' && !(inAge(s, ['blackhole']) && holesOnMap(s).length)) ? undefined : tab;
+  const foes = foeStars(s).length;
+  const which = (tab === 'beacons' && !degenerate) || (tab === 'afar' && !lv) || (tab === 'holes' && !(inAge(s, ['blackhole']) && holesOnMap(s).length)) || (tab === 'foes' && !foes) ? undefined : tab;
   const f = send ? s.fleets[send] : undefined;
   const sending = f?.at ? f : undefined;
   const show = (t?: SystemsTab) => (modal.value = { kind: 'settlements', tab: t, send: sending?.id });
@@ -228,6 +234,11 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       {holes > 0 && (
         <button class={`btn small ${which === 'holes' ? 'primary' : ''}`} onClick={() => show('holes')} data-tip="Every black hole on our map, the longest-lasting first: how long each has before it evaporates.">
           ● Black holes <span class="mono faint">{holes}</span>
+        </button>
+      )}
+      {foes > 0 && (
+        <button class={`btn small ${which === 'foes' ? 'primary' : ''}`} onClick={() => show('foes')} data-tip="Every swarm and other civilization on our map, the nearest first: where warships can fight.">
+          Swarms and civilizations <span class="mono faint">{foes}</span>
         </button>
       )}
       {lv && (
@@ -250,6 +261,13 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       <ModalFrame title="Systems" eyebrow="Surveyed worlds: every world a probe has charted" icon="planet" narrow>
         {tabs}
         <WorldsList s={s} send={sending} />
+      </ModalFrame>
+    );
+  if (which === 'foes')
+    return (
+      <ModalFrame title="Systems" eyebrow="Swarms and civilizations: the nearest first" icon="attack" narrow>
+        {tabs}
+        <FoesList s={s} send={sending} />
       </ModalFrame>
     );
   if (which === 'afar')
@@ -405,6 +423,68 @@ function AfarList({ s, send }: { s: GameState; send?: Fleet }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/** Every star on our map with a swarm we can see, awake or asleep, or a civilization we know. */
+export function foeStars(s: GameState): StarSystem[] {
+  const seen = swarmSight(s);
+  return Object.values(s.systems).filter(
+    (x) =>
+      !x.gone &&
+      !!s.civ.known[x.id] &&
+      (Object.values(s.swarms).some((w) => w.systemId === x.id && !w.tamed && seen(w)) || Object.values(s.survivors).some((v) => v.alive && v.contact && v.systems.includes(x.id))),
+  );
+}
+
+/** The swarms and other civilizations on our map, the nearest first, with what a warship sent from the list would hit them with. */
+function FoesList({ s, send }: { s: GameState; send?: Fleet }) {
+  const cap = s.civ.capitalId ? s.colonies[s.civ.capitalId] : null;
+  const from = s.systems[send?.at ?? cap?.systemId ?? s.civ.homeSystemId];
+  const seen = swarmSight(s);
+  const rows = foeStars(s)
+    .map((sys) => ({ sys, ly: distLy(from, sys) }))
+    .sort((a, b) => a.ly - b.ly);
+  const chipGap = { marginLeft: '6px' };
+  const sum = (against: 'swarms' | 'ships' | 'settlements') => (send ? send.ships.reduce((a, x) => a + (isWarship(x.cls) ? strength(x.cls, against) : 0), 0) : 0);
+  return (
+    <>
+      {send && isWarFleet(send) && (
+        <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
+          {send.name}: attack {n1(sum('swarms'))} against swarms, {n1(sum('ships'))} against other civilizations’ ships, {n1(sum('settlements'))} against their settlements.
+        </p>
+      )}
+      <div class="list">
+        {rows.map(({ sys, ly }) => {
+          const sw = Object.values(s.swarms).find((w) => w.systemId === sys.id && !w.tamed && seen(w));
+          const v = Object.values(s.survivors).find((x) => x.alive && x.contact && x.systems.includes(sys.id));
+          return (
+            <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
+              <Icon name={primaryIcon(sys.primary.kind)} />
+              <span class="grow">
+                {sys.name}
+                {sw && (
+                  <span class={`chip ${sw.awake ? 'danger' : ''}`} style={chipGap} data-tip={sw.awake ? SWARM_TIP : NEST_TIP}>
+                    {sw.awake ? 'swarm' : 'nest asleep'}, size {n1(sw.size)}
+                  </span>
+                )}
+                {v && (
+                  <span class="chip" style={{ ...chipGap, color: v.color, borderColor: v.color }}>
+                    {v.name}
+                  </span>
+                )}
+                {v && atWar(v) && <span class="chip danger" style={chipGap}>at war</span>}
+                <div class="faint" style={{ fontSize: '12.5px' }}>
+                  {formatDistance(ly)} from {from.name}
+                  {v?.homeSystemId === sys.id ? ' · their first star' : ''}
+                </div>
+              </span>
+              {send && <SendButton s={s} f={send} sys={sys} />}
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

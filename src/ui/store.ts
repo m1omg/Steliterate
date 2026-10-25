@@ -12,7 +12,7 @@ import type { RevealStep } from '../render/systemView';
 
 export type Screen = 'menu' | 'setup' | 'game';
 /** The Systems window's tabs past the first (our settlements): surveyed worlds, collision stars. */
-export type SystemsTab = 'worlds' | 'beacons' | 'holes' | 'afar';
+export type SystemsTab = 'worlds' | 'beacons' | 'holes' | 'afar' | 'foes';
 export type Modal =
   | { kind: 'research' }
   | { kind: 'fleets' }

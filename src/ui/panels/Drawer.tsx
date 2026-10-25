@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { SHIP_BY_ID, fleetLook, isWarship, shipNote } from '../../game/data/ships';
+import { SHIP_BY_ID, attackNote, fleetLook, isWarship, shipNote } from '../../game/data/ships';
 import { STRUCTURE_BY_ID, STRUCTURE_KINDS, enabledAt, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
@@ -1762,7 +1762,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         <h2>{f.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
           {f.ships.map((x, i) => (
-            <span key={i} class="chip" data-tip={`${SHIP_BY_ID[x.cls]?.desc}\nHull ${x.hp}/${SHIP_BY_ID[x.cls]?.hp}`}>
+            <span key={i} class="chip" data-tip={SHIP_BY_ID[x.cls] ? `${SHIP_BY_ID[x.cls].desc}\n${attackNote(SHIP_BY_ID[x.cls])}.\nHull ${x.hp}/${SHIP_BY_ID[x.cls].hp}` : x.cls}>
               {SHIP_BY_ID[x.cls]?.name ?? x.cls}
             </span>
           ))}
@@ -1823,6 +1823,11 @@ ${tacticNote(tacticOf(f))}`}>{tacticOf(f).name.toLowerCase()}</span>}
               <button class={`btn small ${tgt ? 'on' : ''}`} onClick={() => (tgt ? (targeting.value = null) : pickOnMap(f))} data-tip="Click, then click any star on the map to send it there (or pick one from the list below).">
                 <Icon name="move" /> {tgt ? 'Click a star… (Esc cancels)' : 'Choose on map'}
               </button>
+              {isWarFleet(f) && (
+                <button class="btn small" onClick={() => sendFromSystems(s, f)} data-tip="Pick its destination from a list: every swarm and other civilization on our map, the nearest first, and the Systems window’s other lists.">
+                  <Icon name="attack" /> Choose from list
+                </button>
+              )}
               {hasTech(s, 'hunger_lures') && !here.beacon && (
                 <button
                   class="btn small"

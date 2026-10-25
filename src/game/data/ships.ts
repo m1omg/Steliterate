@@ -60,18 +60,31 @@ export function strength(cls: string, against: Against): number {
 
 /** A ship's figures, for the build list: what it fights with, its hull, its upkeep and its gifts. */
 export function shipNote(d: ShipDef): string {
-  const vs = (Object.entries(d.vs ?? {}) as [Against, number][]).filter(([, v]) => v !== d.attack);
   const parts = [
-    d.attack || vs.length ? `Attack ${d.attack}${vs.map(([k, v]) => `, ${v} against ${k}`).join('')}` : '',
+    attackNote(d),
     `hull ${d.hp}`,
     d.upkeep ? `upkeep ${d.upkeep} energy a turn` : '',
     d.screen ? `turns ${Math.round(d.screen * 100)}% of raids away from its star` : '',
     d.eyes ? `sees ${d.eyes}× as far` : '',
     d.dugIn ? `${d.dugIn}× as strong fortified` : '',
     d.breaches ? 'breaks a settlement’s defences' : '',
-    d.lance ? 'one strike at a settlement' : '',
   ].filter(Boolean);
   return `${parts.join('; ')}.`;
+}
+
+/**
+ * What a ship can hit, in words: its attack against swarms and against other civilizations (their
+ * ships in a battle, their settlements in a raid, a siege or a storming), or that it is unarmed. A
+ * settler's guns only answer a swarm that comes for it (hunger.ts).
+ */
+export function attackNote(d: ShipDef): string {
+  if (d.lance) return 'One strike at a settlement, in a war';
+  if (!isWarship(d.id)) return d.attack > 0 ? `Unarmed, but hits back at ${d.attack} if a swarm comes for it` : 'Unarmed';
+  const swarms = strength(d.id, 'swarms');
+  const ships = strength(d.id, 'ships');
+  const settlements = strength(d.id, 'settlements');
+  if (ships !== settlements) return `Attack ${swarms} against swarms, ${ships} against other civilizations’ ships, ${settlements} against their settlements`;
+  return swarms === ships ? `Attack ${swarms} against swarms and other civilizations` : `Attack ${swarms} against swarms, ${ships} against other civilizations`;
 }
 
 /** Whether a ship is a warship: it can fight something, and it carries no settlers. */
