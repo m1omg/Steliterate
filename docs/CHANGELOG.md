@@ -2446,3 +2446,31 @@ shape, so every change is in saved games the moment they load.
   curvature 61 / 71; Harsh 204 / 57 / 105 (209 / 63 / 106). Within the noise.
 - **Validated:** tsc and the build clean (`index-yrDLdqsE.js`); the playtest passes; savecompat on
   its 6 saves; all 59 unit checks; all 57 browser checks in the real fonts.
+
+## Warships: a list to send them from, and their attack against both (25 Oct, both versions)
+
+The player, 25 Oct: "pls add the ability to choose systems from a list to military craft too and
+a description of the damage vs both other civs and swarms as rn i have to choose stars to go to
+for military craft on the map + the ship descriptions only describe the damage theyre better at,
+dont be too verbose"; then: "for military ships also include a list of stars where friendly other
+civs requested help". No rule changes and nothing saved changes.
+
+- **Choose from list** on a warship's panel (and From Systems… on its idle card) opens the Systems
+  window on a new tab, **Swarms and civilizations**: every star on our map with a swarm we can see
+  (its size; asleep or awake) or a civilization we know (its name, at war, their first star), the
+  nearest first, each with Send, and the fleet's attack above it. Without one, the window opens as
+  before.
+- **Asked for help** heads that tab: every star where a civilization at peace with us asked for
+  warships against a swarm (their plea still unanswered: "asks for help"), or where we promised
+  them and have not yet fought ("help promised · 7 turns left"). Listed even off our map, as their
+  message names it.
+- **Every ship's description** (the build list, and the tip of each ship on a fleet's panel) ends
+  with what it can hit: "Attack 3 against swarms and other civilizations" (the Warden; the Aegis
+  8: here a warship strikes a swarm, a siege and a raid alike); the others are Unarmed, the
+  Lattice Spore hitting back at 1 if a swarm comes for it.
+- **Checks:** `browser/warship-list` (the tips; the tab with the swarm's star, its size and the
+  fleet's attack; a plea's star under Asked for help, then promised; Send gives the order).
+- **Validated:** tsc and the build clean (`index-DT9GC-Za.js`); savecompat on its 6 saves; all 59
+  unit checks; the browser checks `warship-list`, `prompt-systems`, `systems-tab`, `attack`,
+  `follow-send`, `a11y`, `lowvision`, `translate` and `war` pass in the real fonts. No harness
+  run: no rule changed.

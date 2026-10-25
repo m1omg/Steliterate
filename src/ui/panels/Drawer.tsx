@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
+import { SHIP_BY_ID, attackNote, fleetLook } from '../../game/data/ships';
 import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
@@ -1184,7 +1184,7 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
   const list: Item[] =
     kind === 'structure'
       ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId]), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx), sk: structureKind(x.def) }))
-      : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: x.def.desc, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
+      : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: `${x.def.desc} ${attackNote(x.def)}.`, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
   // structures come grouped by kind, and can be narrowed to one kind
   const present = STRUCTURE_KINDS.filter((k) => list.some((x) => x.sk === k.id));
   const only = kind === 'structure' && buildKind.value !== 'all' && present.some((k) => k.id === buildKind.value) ? buildKind.value : null;
@@ -1499,7 +1499,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         <h2>{f.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
           {f.ships.map((x, i) => (
-            <span key={i} class="chip" data-tip={`${SHIP_BY_ID[x.cls]?.desc}\nHull ${x.hp}/${SHIP_BY_ID[x.cls]?.hp}`}>
+            <span key={i} class="chip" data-tip={SHIP_BY_ID[x.cls] ? `${SHIP_BY_ID[x.cls].desc}\n${attackNote(SHIP_BY_ID[x.cls])}.\nHull ${x.hp}/${SHIP_BY_ID[x.cls].hp}` : x.cls}>
               {SHIP_BY_ID[x.cls]?.name ?? x.cls}
             </span>
           ))}
@@ -1555,6 +1555,11 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               <button class={`btn small ${tgt ? 'on' : ''}`} onClick={() => (tgt ? (targeting.value = null) : pickOnMap(f))} data-tip="Click, then click any star on the map to send it there (or pick one from the list below).">
                 <Icon name="move" /> {tgt ? 'Click a star… (Esc cancels)' : 'Choose on map'}
               </button>
+              {isWarFleet(f) && (
+                <button class="btn small" onClick={() => sendFromSystems(s, f)} data-tip="Pick its destination from a list: the stars where a civilization asked us for help, then every swarm and other civilization on our map, the nearest first, and the Systems window’s other lists.">
+                  <Icon name="attack" /> Choose from list
+                </button>
+              )}
               {hasTech(s, 'hunger_lures') && !here.beacon && (
                 <button
                   class="btn small"

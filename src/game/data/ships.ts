@@ -31,6 +31,15 @@ export const SHIPS: ShipDef[] = [
 
 export const SHIP_BY_ID: Record<string, ShipDef> = Object.fromEntries(SHIPS.map((s) => [s.id, s]));
 
+/**
+ * What a ship can hit, in words: a warship strikes swarms and other civilizations (a siege, a raid)
+ * alike; the rest are unarmed. A settler's guns only answer a swarm that comes for it (hunger.ts).
+ */
+export function attackNote(d: ShipDef): string {
+  if (d.attack <= 0) return 'Unarmed';
+  return d.settles ? `Unarmed, but hits back at ${d.attack} if a swarm comes for it` : `Attack ${d.attack} against swarms and other civilizations`;
+}
+
 /** A painted hull in public/art/ships/<look>.png (the Ark is 'settler', the Warden 'war'). */
 export type FleetLook = 'settler' | 'probe' | 'war' | 'other' | 'lighter' | 'seedcore' | 'spore' | 'vaultship' | 'aegis' | 'tender';
 
