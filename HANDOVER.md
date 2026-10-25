@@ -107,6 +107,13 @@ word", then the player's list of 16 Oct, then the falling worlds.
   the first project now, not at the turn's end (`src/game/sim/queue.ts`, `finishQueued`). PR
   m1omg/Steliterate#40 (`0da09b3`; `claude/promises-main` `dd60b5f`), merged back with `-s ours`;
   the new version `8783e38`. CHANGELOG, "Four fixes from the player's screenshots".
+- **Warships: a list to send them from, and their attack against both** (25 Oct, both versions,
+  display only): Choose from list on a warship's panel opens the Systems window's new Swarms and
+  civilizations tab, Asked for help first (an unanswered plea, or a promise not yet kept); every
+  ship's description says its attack against swarms and other civilizations, or Unarmed
+  (`attackNote`, `src/game/data/ships.ts`; `FoesList`, `pleaStars`, `src/ui/screens/Lists.tsx`;
+  `browser/warship-list`). PR m1omg/Steliterate#41 (`ff8440a`), merged back with `-s ours`; the
+  new version `84bbd02`. CHANGELOG, "Warships: a list to send them from".
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
@@ -137,8 +144,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#40 (`0da09b3`, four fixes from the screenshots, 24 Oct) | `8783e38` (24 Oct, the same fixes), and its notes |
-  | Live script | `index-yrDLdqsE.js` | `index-vY0YBpb0.js` |
+  | As of | PR m1omg/Steliterate#41 (`ff8440a`, warships' list and attack, 25 Oct) | `84bbd02` (25 Oct, the same), and its notes |
+  | Live script | `index-DT9GC-Za.js` | `index-D5FJQU1r.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at

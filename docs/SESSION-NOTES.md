@@ -51,9 +51,12 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (24 Oct): `main` as of PR m1omg/Steliterate#40 (`0da09b3`, four fixes from the player's
-    screenshots and a rush that finishes at once; live script `index-yrDLdqsE.js`), and `/next/`
-    at the same fixes (`8783e38`, live script `index-vY0YBpb0.js`). Before them (21 Oct): `main`
+  - Now (25 Oct): `main` as of PR m1omg/Steliterate#41 (`ff8440a`, a list to send warships from,
+    Asked for help first, and every ship's attack against both; live script `index-DT9GC-Za.js`),
+    and `/next/` at the same (`84bbd02`, live script `index-D5FJQU1r.js`). Before them (24 Oct):
+    `main` as of PR m1omg/Steliterate#40 (`0da09b3`, four fixes from the player's screenshots and
+    a rush that finishes at once; live script `index-yrDLdqsE.js`), and `/next/` at the same
+    fixes (`8783e38`, live script `index-vY0YBpb0.js`). Before them (21 Oct): `main`
     as of PR m1omg/Steliterate#39 (`2d345e4`, the survey reveal as a flight
     of the camera; live script `index-Zc5orquV.js`), after PR m1omg/Steliterate#37 (`d2abd2a`, the
     pace: ten turns to a Tide turn), PR m1omg/Steliterate#36 (`981e0f0`, finds only where they
@@ -298,6 +301,15 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   existing saves without breaking them. Actually all of the changes we discussed today should
   apply to existing saves". Done in both versions, no save-shape change (PR
   m1omg/Steliterate#40; CHANGELOG, "Four fixes from the player's screenshots").
+- **25 Oct, warships:** "Can all ships attack both aliens AND swarms?" (answered: only warships,
+  each with its own figures). Then: "pls add the ability to choose systems from a list to military
+  craft too and a description of the damage vs both other civs and swarms … dont be too verbose,
+  dont run the whole game, dont break saves, its just a minor edit, do it in both next and
+  normal", and "for military ships also include a list of stars where friendly other civs
+  requested help". Done in both versions, display only; validated without the playtest or the
+  harness, as asked (PR m1omg/Steliterate#41; CHANGELOG, "Warships: a list to send them from").
+  The `mobile` check fails at 390 and 360 px wide on "Research" on the rail, cut by a pixel, in
+  the real fonts here, the same on the build before (`index-vY0YBpb0.js`): an open thread.
 - **7 Oct, after Part C went live:** "can you instead make the beacons temporary? … more realistic
   than having them last literally trillions and trillions of years" (instead of the earlier offer
   to undo them). Chosen: a beacon burns "while we keep feeding it", and lighting one turns the
