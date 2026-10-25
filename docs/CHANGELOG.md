@@ -4133,13 +4133,18 @@ shape, so every change is in saved games the moment they load.
 The player, 25 Oct: "pls add the ability to choose systems from a list to military craft too and
 a description of the damage vs both other civs and swarms as rn i have to choose stars to go to
 for military craft on the map + the ship descriptions only describe the damage theyre better at,
-dont be too verbose". No rule changes and nothing saved changes.
+dont be too verbose"; then: "for military ships also include a list of stars where friendly other
+civs requested help". No rule changes and nothing saved changes.
 
 - **Choose from list** on a warship's panel (and From Systems… on its idle card) opens the Systems
   window on a new tab, **Swarms and civilizations**: every star on our map with a swarm we can see
   (its size; asleep or awake) or a civilization we know (its name, at war, their first star), the
   nearest first, each with Send. Above the list, the fleet's attack against swarms, other
   civilizations' ships and their settlements. Without one on the map, the window opens as before.
+- **Asked for help** heads that tab: every star where a civilization at peace with us asked for
+  warships against a swarm (their plea, `swarm_plea`, still unanswered: "asks for help"), or
+  where we promised them and have not yet fought ("help promised · 7 turns left"), with their name.
+  Such a star is listed even off our map, as their message names it.
 - **Every ship's figures** (the build list, and the tip of each ship on a fleet's panel) now begin
   with its attack against both: "Attack 3 against swarms and other civilizations" (Warden, Aegis
   8); "Attack 6 against swarms, 3 against other civilizations" (Hunter); "Attack 1 against swarms,
@@ -4148,8 +4153,11 @@ dont be too verbose". No rule changes and nothing saved changes.
   Kinetic Lance is one strike at a settlement, in a war. In today's game, where a war is a siege
   and every warship strikes all three alike: "Attack 3 against swarms and other civilizations".
 - **Checks:** `browser/warship-list` (the tips; Choose from list opens the tab with the swarm's
-  star, its size and the fleet's attack; Send gives the order).
-- **Validated (the new version):** tsc and the build clean (`index-CfvQcZvC.js`); savecompat on
+  star, its size and the fleet's attack; a plea's star under Asked for help, then promised with
+  the turns left; Send gives the order).
+- **Validated (the new version):** tsc and the build clean (`index-CfvQcZvC.js`; with Asked for
+  help `index-D5FJQU1r.js`: `warship-list`, `systems-tab`, `prompt-systems`, `a11y` and
+  `translate` again); savecompat on
   its 9 saves; all 91 unit checks; the browser checks `warship-list`, `prompt-systems`,
   `systems-tab`, `attack`, `follow-send`, `a11y`, `lowvision`, `translate`, `build-kinds`, `war`
   and `tactics` pass in the real fonts. `mobile` fails at 390 and 360 px wide on "Research" on the

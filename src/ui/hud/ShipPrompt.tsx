@@ -134,7 +134,7 @@ function ShipCard({ s, f }: { s: GameState; f: Fleet }) {
         </button>
         <button
           class="btn small"
-          data-tip={war ? 'Choose from the Systems window: every swarm and other civilization on our map, our settlements and every surveyed world' : 'Choose from the Systems window: our settlements, every surveyed world and the collision stars, near or far'}
+          data-tip={war ? 'Choose from the Systems window: where a civilization asked us for help, every swarm and other civilization on our map, our settlements and every surveyed world' : 'Choose from the Systems window: our settlements, every surveyed world and the collision stars, near or far'}
           onClick={() => sendFromSystems(s, f)}
         >
           <Icon name="system" /> From Systems…

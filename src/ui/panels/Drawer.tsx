@@ -1824,7 +1824,7 @@ ${tacticNote(tacticOf(f))}`}>{tacticOf(f).name.toLowerCase()}</span>}
                 <Icon name="move" /> {tgt ? 'Click a star… (Esc cancels)' : 'Choose on map'}
               </button>
               {isWarFleet(f) && (
-                <button class="btn small" onClick={() => sendFromSystems(s, f)} data-tip="Pick its destination from a list: every swarm and other civilization on our map, the nearest first, and the Systems window’s other lists.">
+                <button class="btn small" onClick={() => sendFromSystems(s, f)} data-tip="Pick its destination from a list: the stars where a civilization asked us for help, then every swarm and other civilization on our map, the nearest first, and the Systems window’s other lists.">
                   <Icon name="attack" /> Choose from list
                 </button>
               )}
