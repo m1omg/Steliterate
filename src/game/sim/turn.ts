@@ -551,6 +551,9 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const known = state.civ.known;
   // falling worlds' flashes this turn, for the Burst Catchers (catchFlashes)
   const flashes: Flashed[] = [];
+  // a new star whose clock we kept was lived in full in its light: no flash to bank from it (the
+  // clock is cleared only after the notes: clearStarClock)
+  const keptTimeWith = (dies: number | undefined) => dies !== undefined && (state.civ.flags.star_flash ?? state.civ.flags.star_until) === dies;
   for (const n of notes) {
     const sys = state.systems[n.systemId];
     if (!sys) continue;
@@ -583,6 +586,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         // blindingly bright and very brief: as with any new star, we may keep time with it (a flash)
         queueEvent(state, 'helium_giant', { systemId: sys.id });
         known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
+        // the helium star it swelled from, if it lit and went out within this turn
+        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ) });
         break;
       case 'supernova':
         for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'a supernova');
@@ -590,6 +595,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         break;
       case 'burnout':
         if (seen) log(state, `The star at ${sys.name} has burned out.`, mine ? 'bad' : 'info', sys.id);
+        // a new star that lit and went out within this turn: a flash for the Burst Catchers (26 Oct)
+        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ) });
         break;
       case 'rogue':
         if (n.bodyId && state.bodies[n.bodyId]?.colonyId) queueEvent(state, 'unmoored', { systemId: sys.id, bodyId: n.bodyId });
@@ -719,10 +726,11 @@ function suns(lum: number): string {
 }
 
 /**
- * The turn's flashes of worlds falling in (since 20 Oct), each by its energy (flashReach). Each of
- * our Burst Catchers banks from the best of them, once, by its distance (`burstShare`: all of it in
- * its own system or within the flash's reach), as from a neutron star bursting. In a system cast
- * out of the galaxy only a world falling into its own star reaches them.
+ * The turn's flashes: worlds falling in (since 20 Oct) and new stars that lit and went out within
+ * the turn (since 26 Oct), each by its energy (flashReach). Each of our Burst Catchers banks from
+ * the best of them, once, by its distance (`burstShare`: all of it in its own system or within the
+ * flash's reach), as from a neutron star bursting. In a system cast out of the galaxy only a flash
+ * in its own system reaches them.
  */
 function catchFlashes(state: GameState, flashes: Flashed[]) {
   let got = 0;
@@ -732,7 +740,7 @@ function catchFlashes(state: GameState, flashes: Flashed[]) {
     const home = state.systems[c.systemId];
     if (!n || !home || !inItsSystem(state, c)) continue;
     let share = 0;
-    // (nothing reaches a system cast out of the galaxy, but a world falling into its own star)
+    // (nothing reaches a system cast out of the galaxy, but a flash at its own star)
     for (const f of flashes) if (!home.ejected || f.sys.id === home.id) share = Math.max(share, burstShare(distLy(home, f.sys), f.reach));
     if (share > 0) {
       got += share * n;

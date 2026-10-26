@@ -390,6 +390,8 @@ export interface LogEntry {
   systemId?: string;
   /** One of our fleets this is about (a swarm going for it): the turn's messages show it. */
   fleet?: string;
+  /** (combat) how a fight went for us: such a line opens the turn's combat report (since 26 Oct) */
+  tone?: 'good' | 'bad';
 }
 
 export interface PendingEvent {

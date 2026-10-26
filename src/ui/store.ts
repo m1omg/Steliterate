@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
 import type { Engine, Quality } from '../render/engine';
 import { saveGame } from '../game/save';
-import type { GameState } from '../game/types';
+import type { GameState, LogEntry } from '../game/types';
 import type { RevealStep } from '../render/systemView';
 
 // UI state around the simulation. The game state is mutated in place by the simulation;
@@ -24,6 +24,8 @@ export type Modal =
   | { kind: 'crossing' }
   | { kind: 'outcome' }
   | { kind: 'era_intro' }
+  /** The fights of the turn just played (or of a Long Sleep), as they went for us (CombatReport.tsx). */
+  | { kind: 'combat'; entries: LogEntry[] }
   | null;
 
 export interface Selection {
