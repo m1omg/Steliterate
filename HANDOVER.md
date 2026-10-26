@@ -122,6 +122,14 @@ word", then the player's list of 16 Oct, then the falling worlds.
   list says why a collector gathers nothing by a star too brief for the turn (`noLight`,
   `projection.ts`). PR m1omg/Steliterate#42 (`398f1a5`), merged back with `-s ours`; the new
   version `db0ffe8`. CHANGELOG, "Two Wells of one name".
+- **Our settlements sorted by a yield, Star types by measures** (26 Oct, both versions, display
+  only): the yield icons over Our settlements are buttons (`yieldSort`, `Lists.tsx`: most first,
+  least, as founded; each system's total beside its name; on a phone too); Star types shows each
+  surveyed star's Livable, Power, Matter and Lasting (`SiteStrip`) and sorts by any. PR
+  m1omg/Steliterate#43 (`f685a36`), merged back with `-s ours`; the new version `27e603c`.
+  CHANGELOG, "Our settlements sorted by a yield". From now on wait for `main`'s Pages run before
+  pushing `next`: the workflow cancels a run in progress (`cancel-in-progress`), which left a red
+  cross on PR #42's merge though the next run built both.
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
@@ -152,8 +160,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#42 (`398f1a5`, star types and names, 26 Oct) | `db0ffe8` (26 Oct, the same), and its notes |
-  | Live script | `index-DXvWTunJ.js` | `index-FBAlnT2P.js` |
+  | As of | PR m1omg/Steliterate#43 (`f685a36`, sorting, 26 Oct) | `27e603c` (26 Oct, the same), and its notes |
+  | Live script | `index-UG-o6OAt.js` | `index-BuZ4epBX.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at

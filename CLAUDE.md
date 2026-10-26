@@ -36,7 +36,9 @@ m1omg/Steliterate#38, `a2fa3b4`, a line of its changelog), and PR m1omg/Steliter
 PR m1omg/Steliterate#41, `ff8440a`, a list to send warships from, with Asked for help, and every
 ship's attack against swarms and other civilizations (25 Oct), and PR m1omg/Steliterate#42,
 `398f1a5`, star types in the Systems window, helium stars in its Collision stars tab, every star
-its own name, and why a brief star gives no light (26 Oct), all from `claude/promises-main`,
+its own name, and why a brief star gives no light (26 Oct), and PR m1omg/Steliterate#43,
+`f685a36`, Our settlements sorted by the yield clicked and Star types by each star's measures
+(26 Oct), all from `claude/promises-main`,
 the same way, each then merged into the work branch with `-s ours`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
@@ -64,7 +66,9 @@ reveal as a flight of the camera, as in Endless Space 2 (21 Oct, display only; i
 since PR m1omg/Steliterate#39); then four fixes from the player's screenshots and a rush that
 finishes at once (24 Oct, both versions, PR m1omg/Steliterate#40); then warships' list and attack
 (25 Oct, both versions, PR m1omg/Steliterate#41); then star types, helium stars listed, two Wells
-of one name and a brief star's light (26 Oct, both versions, PR m1omg/Steliterate#42).
+of one name and a brief star's light (26 Oct, both versions, PR m1omg/Steliterate#42); then Our
+settlements sorted by a yield and Star types by measures (26 Oct, both versions, PR
+m1omg/Steliterate#43).
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 
