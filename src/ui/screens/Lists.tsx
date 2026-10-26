@@ -222,7 +222,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
   const sending = f?.at ? f : undefined;
   const show = (t?: SystemsTab) => (modal.value = { kind: 'settlements', tab: t, send: sending?.id });
   const surveyedCount = Object.values(s.bodies).filter((b) => s.civ.known[b.systemId] === 2 && !b.dissolved && b.kind !== 'deep').length;
-  const burning = degenerate ? Object.values(s.systems).filter((x) => isBeacon(s, x)).length : 0;
+  const burning = degenerate ? newStarsOnMap(s).filter((x) => newStarLit(s, x)).length : 0;
   const holes = holesOnMap(s).length;
   const starCount = starsOnMap(s).length;
   const tabs = (
@@ -230,7 +230,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       <button class={`btn small ${!which ? 'primary' : ''}`} onClick={() => show()}>Our settlements</button>
       <button class={`btn small ${which === 'worlds' ? 'primary' : ''}`} onClick={() => show('worlds')}>Surveyed worlds <span class="mono faint">{surveyedCount}</span></button>
       {degenerate && (
-        <button class={`btn small ${which === 'beacons' ? 'primary' : ''}`} onClick={() => show('beacons')} data-tip={`${BEACON_TIP} Every one on our map, and how long each will burn.`}>
+        <button class={`btn small ${which === 'beacons' ? 'primary' : ''}`} onClick={() => show('beacons')} data-tip={`${BEACON_TIP} Every one on our map, and the helium stars of merging white dwarfs, how long each will burn, and those that lit and went out within the last turn.`}>
           ✦ Collision stars <span class={`mono ${burning ? 'boon' : 'faint'}`}>{burning}</span>
         </button>
       )}
@@ -855,22 +855,41 @@ function HolesList({ s, send }: { s: GameState; send?: Fleet }) {
  * collision star's whole life, so many light and go out within one; those keep the name until the
  * turn ends and are listed apart, without light.
  */
+/** The new stars of the Degenerate Age: collision stars (brown dwarfs merging), helium stars and helium giants (white dwarfs merging). */
+const NEW_STARS = new Set<PrimaryKind>(['collision_star', 'helium_star', 'helium_giant']);
+
+/** Every new star on our map, alight or gone out within the last turn (it settles into a dwarf as the turn ends). */
+function newStarsOnMap(s: GameState): StarSystem[] {
+  return Object.values(s.systems).filter((x) => NEW_STARS.has(x.primary.kind) && !x.gone && (s.civ.known[x.id] ?? 0) > 0);
+}
+
+/** A new star still alight (a collision star alight is a beacon: isBeacon). */
+function newStarLit(s: GameState, sys: StarSystem): boolean {
+  return calendarEra(s) === 'degenerate' && (sys.primary.diesAt ?? 0) > s.years;
+}
+
+/**
+ * The Collision stars tab: every new star on our map, the collision stars and (26 Oct, the player:
+ * "collision stars should show in the list even if theyre one turn helium burnouts") the helium
+ * stars and giants of merging white dwarfs, alight or gone out within the last turn.
+ */
 function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
   void rev.value;
   const cap = colonies(s).find((c) => c.id === s.civ.capitalId);
   const home = s.systems[cap?.systemId ?? s.civ.homeSystemId];
   const ours = new Set(colonies(s).map((c) => c.systemId));
   const L = turnStep(s).turnLength;
-  const stars = Object.values(s.systems).filter((x) => x.primary.kind === 'collision_star' && !x.gone && (s.civ.known[x.id] ?? 0) > 0);
+  const stars = newStarsOnMap(s);
+  const kindOf = (sys: StarSystem) => (sys.primary.kind === 'collision_star' ? null : <span class="faint"> · {PRIMARY_NAME[sys.primary.kind]}</span>);
   const burning = stars
-    .filter((x) => isBeacon(s, x))
+    .filter((x) => newStarLit(s, x))
     .map((sys) => {
       const dies = sys.primary.diesAt ?? s.years;
       return { sys, left: dies - s.years, turns: turnsUntilYears(s, dies), light: sourceLight(s, sys, s.years, isFinite(L) ? L : 0).light, ly: distLy(home, sys) };
     })
     .sort((a, b) => b.left - a.left || a.ly - b.ly);
   const out = stars
-    .filter((x) => !isBeacon(s, x))
+    .filter((x) => !newStarLit(s, x))
     .map((sys) => ({ sys, life: (sys.primary.diesAt ?? 0) - (sys.primary.bornAt ?? Infinity), ly: distLy(home, sys) }))
     .sort((a, b) => a.ly - b.ly);
   const kept = starClock(s);
@@ -887,7 +906,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
         </p>
       ) : (
         <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
-          Small red stars lit by colliding brown dwarfs: in this age nothing else nearby shines like them, and none lasts. The longest-burning first.
+          Small red stars lit by colliding brown dwarfs, and helium stars lit by merging white dwarfs: in this age nothing else nearby shines like them, and none lasts. The longest-burning first.
         </p>
       )}
       <div class="list">
@@ -899,6 +918,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
             <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
               <span class="grow">
                 <span class="boon">✦</span> {sys.name} <span class="faint">{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
+                {kindOf(sys)}
                 {kept?.systemId === sys.id && (
                   <span class="chip neon" style={chipGap} data-tip={`We are keeping time with it: turn ${kept.turn} of ${kept.of}, each a sixth of what was left of its life, whatever the pace.`}>
                     keeping time
@@ -956,6 +976,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
               <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
                 <span class="grow faint">
                   {sys.name} <span>{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
+                  {kindOf(sys)}
                   <div style={{ fontSize: '12.5px' }}>
                     {life > 0 ? `burned for ${formatYears(life)} · ` : ''}{formatDistance(ly)}
                   </div>

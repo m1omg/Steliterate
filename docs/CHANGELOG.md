@@ -4178,6 +4178,14 @@ no rule changes, nothing saved changes, so every save has it at once.
   capital's kind, and keeps the kind picked while the game runs.
 - **Black holes**, the tab with each hole's lifetime, mass, spin and Hawking light, is there in
   every age once a black hole is on our map, not only in the Black Hole Age.
+- **Helium stars in the Collision stars tab** (the player: "collision stars should show in the
+  list even if theyre one turn helium burnouts or am im missing something?"): it listed only the
+  collision stars of brown dwarfs merging, never the helium stars and helium giants of white dwarfs
+  merging, though the game keeps time with them the same way, so one that lit and went out within
+  a turn was in no list. Now every new star is there, alight (counted on the tab) or under Already
+  out, its kind named where it is not a collision star. The map's ✦ and the lists of destinations
+  still mark only the collision stars, as before.
 - **Checks:** `browser/star-types` (the tab, its kinds, black holes too; Black hole lists the one
-  on our map; the Black holes tab in the Dusk). Validated as asked, not the whole suite: tsc and
-  the build clean (`index-Cu7bRdwQ.js`); `star-types`, `holes` and `systems-tab` pass.
+  on our map; the Black holes tab in the Dusk); `browser/systems-tab` adds a helium star gone out
+  within the turn, under Already out. Validated as asked, not the whole suite: tsc and the build
+  clean (`index-CBZr0ri8.js`); `star-types`, `holes` and `systems-tab` pass.

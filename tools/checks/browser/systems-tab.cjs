@@ -85,9 +85,15 @@ run(async () => {
     s.civ.known[a.id] = 2;
     set(b, s.years - 1e11, s.years + 0.3 * L);
     set(c, s.years - 0.6 * L, s.years - 0.1 * L); // lit and went out within the last turn, as they do
+    // a helium star, of two white dwarfs merging, that lit and went out within the last turn: listed too (26 Oct)
+    const d = Object.values(s.systems).find((x) => x.primary.kind === 'white_dwarf' && !x.gone && s.civ.known[x.id]);
+    Object.assign(d.primary, { kind: 'helium_star', mass: 1.2, bornAt: s.years - 0.5 * L, diesAt: s.years - 0.2 * L });
     window.__stel.refresh();
-    const natural = Object.values(s.systems).filter((x) => x.primary.kind === 'collision_star' && ![a.id, b.id, c.id].includes(x.id) && !x.gone && s.civ.known[x.id] && x.primary.diesAt > s.years).length;
-    return { long: a.name, short: b.name, gone: c.name, natural, L, years: s.years, pace: s.civ.pace };
+    const NEW = ['collision_star', 'helium_star', 'helium_giant'];
+    const others = Object.values(s.systems).filter((x) => NEW.includes(x.primary.kind) && ![a.id, b.id, c.id, d.id].includes(x.id) && !x.gone && s.civ.known[x.id]);
+    const natural = others.filter((x) => x.primary.diesAt > s.years).length;
+    const naturalOut = others.length - natural;
+    return { long: a.name, short: b.name, gone: c.name, helium: d.name, natural, naturalOut, L, years: s.years, pace: s.civ.pace };
   });
   console.log('made', JSON.stringify(made));
   await page.waitForTimeout(800);
@@ -116,7 +122,8 @@ run(async () => {
   check(/goes out this turn/.test(shortRow?.text ?? ''), `the short one goes out this turn (${shortRow?.text})`);
   check(/worlds? · /.test(longRow?.text ?? '') && /of light left/.test(longRow?.text ?? ''), 'the long one, surveyed, shows its worlds and light left');
   check(/worlds not charted/.test(shortRow?.text ?? '') || /world/.test(shortRow?.text ?? ''), 'the short one says whether its worlds are charted');
-  check(outRows.length === 1 && outRows[0].text.includes(made.gone) && /burned for/.test(outRows[0].text), `the out one is listed apart (${outRows.map((r) => r.text).join(' | ')})`);
+  check(outRows.length === 2 + made.naturalOut && outRows.some((r) => r.text.includes(made.gone) && /burned for/.test(r.text)), `the out one is listed apart (${outRows.map((r) => r.text).join(' | ')})`);
+  check(outRows.some((r) => r.text.includes(made.helium) && r.text.includes('Helium star')), `so is a helium star that went out within the turn (${made.helium})`);
   check(m?.text.includes('Already out'), 'under Already out');
   await ck.shot('systems-beacons.png');
   // the map marks the burning ones with ✦, not the out one
