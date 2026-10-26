@@ -51,9 +51,13 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (25 Oct): `main` as of PR m1omg/Steliterate#41 (`ff8440a`, a list to send warships from,
-    Asked for help first, and every ship's attack against both; live script `index-DT9GC-Za.js`),
-    and `/next/` at the same (`84bbd02`, live script `index-D5FJQU1r.js`). Before them (24 Oct):
+  - Now (26 Oct): `main` as of PR m1omg/Steliterate#42 (`398f1a5`, star types in the Systems
+    window, helium stars in its Collision stars tab, every star its own name, a brief star's
+    light; live script `index-DXvWTunJ.js`), and `/next/` at the same (`db0ffe8`, live script
+    `index-FBAlnT2P.js`). Before them (25 Oct): `main` as of PR m1omg/Steliterate#41 (`ff8440a`,
+    a list to send warships from, Asked for help first, and every ship's attack against both;
+    live script `index-DT9GC-Za.js`), and `/next/` at the same (`84bbd02`, live script
+    `index-D5FJQU1r.js`). Before them (24 Oct):
     `main` as of PR m1omg/Steliterate#40 (`0da09b3`, four fixes from the player's screenshots and
     a rush that finishes at once; live script `index-yrDLdqsE.js`), and `/next/` at the same
     fixes (`8783e38`, live script `index-vY0YBpb0.js`). Before them (21 Oct): `main`
@@ -310,6 +314,16 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   harness, as asked (PR m1omg/Steliterate#41; CHANGELOG, "Warships: a list to send them from").
   The `mobile` check fails at 390 and 360 px wide on "Research" on the rail, cut by a pixel, in
   the real fonts here, the same on the build before (`index-vY0YBpb0.js`): an open thread.
+- **26 Oct:** "what does Free Energy exactly do? QUESTION, not a change request" (answered: what
+  it scales and what spends it; the HUD tip's "every source" is broader than the rule, red dwarfs
+  and the Dusk's stars aside: offered to make it exact). Then "without breaking saves, but
+  applying to them, pls add options to systems menu to select different star types + black
+  holes, dont run the whole test suite after, just do it pls"; "collision stars should show in
+  the list even if theyre one turnhelium burnouts or am im missing something?"; "lanthe well for
+  whatever reason shows as unsurveyed after multiple surveys" (two Wells of one name); "no light
+  to collect, really ninja xD?" (a helium giant in a 290-billion-year turn); "what are the
+  "Wells" anyway?" (answered). All in both versions, PR m1omg/Steliterate#42; CHANGELOG, "Star
+  types in the Systems window" and "Two Wells of one name".
 - **7 Oct, after Part C went live:** "can you instead make the beacons temporary? … more realistic
   than having them last literally trillions and trillions of years" (instead of the earlier offer
   to undo them). Chosen: a beacon burns "while we keep feeding it", and lighting one turns the

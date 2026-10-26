@@ -114,6 +114,14 @@ word", then the player's list of 16 Oct, then the falling worlds.
   (`attackNote`, `src/game/data/ships.ts`; `FoesList`, `pleaStars`, `src/ui/screens/Lists.tsx`;
   `browser/warship-list`). PR m1omg/Steliterate#41 (`ff8440a`), merged back with `-s ours`; the
   new version `84bbd02`. CHANGELOG, "Warships: a list to send them from".
+- **Star types, helium stars listed, every star its own name, a brief star's light** (26 Oct,
+  both versions, display and names only): the Systems window's Star types tab and its Black holes
+  tab in every age; the Collision stars tab lists the helium stars and giants too;
+  `distinctNames` (`src/game/names.ts`, at the end of generation and on every load, drawing
+  nothing) gives two clusters of one name, and their two Wells, names of their own; the build
+  list says why a collector gathers nothing by a star too brief for the turn (`noLight`,
+  `projection.ts`). PR m1omg/Steliterate#42 (`398f1a5`), merged back with `-s ours`; the new
+  version `db0ffe8`. CHANGELOG, "Two Wells of one name".
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
@@ -144,8 +152,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#41 (`ff8440a`, warships' list and attack, 25 Oct) | `84bbd02` (25 Oct, the same), and its notes |
-  | Live script | `index-DT9GC-Za.js` | `index-D5FJQU1r.js` |
+  | As of | PR m1omg/Steliterate#42 (`398f1a5`, star types and names, 26 Oct) | `db0ffe8` (26 Oct, the same), and its notes |
+  | Live script | `index-DXvWTunJ.js` | `index-FBAlnT2P.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at
