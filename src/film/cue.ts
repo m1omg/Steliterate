@@ -228,7 +228,9 @@ const SPECS: Record<FilmId, CueSpec> = {
   great_decay: { bpm: 90, root: 36.71, cuts: [[0, 349.23], [8, 293.66], [15.5, 261.63], [22.5, 220], [30.5, 233.08], [38.5, 196], [46.5, 174.61], [55.5, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
   last_warmth: { bpm: 90, root: 36.71, cuts: [[0, 349.23], [7.5, 293.66], [15, 261.63], [22, 220], [30, 196], [38, 233.08], [46, 220], [54, 174.61], [61, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
   great_evaporation: { bpm: 90, root: 32.7, cuts: [[0, 311.13], [8.5, 261.63], [16.5, 233.08], [25.5, 196], [33.5, 174.61]], titleAt: 42, chord: [65.41, 77.78, 98], pads: true },
-  last_horizon: { bpm: 90, root: 30.87, cuts: [[0, 293.66], [8, 246.94], [15.5, 220], [23.5, 185], [33.5, 196], [43, 164.81], [52.5, 146.83]], titleAt: 62, chord: [61.74, 73.42, 92.5], pads: true },
+  // (since 26 Oct the Heart’s going opens it: three shots, a quickening heartbeat into its last flash;
+  // the cut before, saved/lasthorizon-v1.ts, has its cues in its header)
+  last_horizon: { bpm: 90, root: 30.87, cuts: [[0, 392], [7, 329.63], [14, 293.66], [22, 246.94], [29.5, 220], [37.5, 185], [47.5, 196], [57, 164.81], [66.5, 146.83]], titleAt: 76, chord: [61.74, 73.42, 92.5], pads: true, thumps: [14.6, 16, 17.1, 18, 18.7, 19.2, 19.6], boom: { at: 19.95, swell: 2.5 } },
   // (the endings' second cut: a cut at each scene; Recurrence comes back to the note it began on)
   end_long_thought: END(43.65, [[0, 349.23], [14.5, 293.66], [22.5, 261.63]], VICTORY),
   end_one_voice: END(43.65, [[0, 440], [8.5, 349.23], [16, 293.66], [23.5, 261.63]], VICTORY),
@@ -244,7 +246,7 @@ const SPECS: Record<FilmId, CueSpec> = {
 
 /** A film whose scenes fall on other beats in another fate of matter: its cue for that fate (`id:fate`). */
 const FATE_SPECS: Record<string, CueSpec> = {
-  'last_horizon:stable': { bpm: 90, root: 30.87, cuts: [[0, 293.66], [6, 246.94], [12, 220], [20, 196], [26.5, 233.08], [34.5, 185], [40, 196], [46.5, 164.81], [53.5, 146.83]], titleAt: 62, chord: [61.74, 73.42, 92.5], pads: true },
+  'last_horizon:stable': { bpm: 90, root: 30.87, cuts: [[0, 392], [7, 329.63], [14, 293.66], [20, 246.94], [26, 220], [34, 196], [40.5, 233.08], [48.5, 185], [54, 196], [60.5, 164.81], [67.5, 146.83]], titleAt: 76, chord: [61.74, 73.42, 92.5], pads: true, thumps: [14.6, 15.8, 16.8, 17.5, 18, 18.3], boom: { at: 18.55, swell: 2.5 } },
   'last_warmth:curvature': { bpm: 90, root: 36.71, cuts: [[0, 392], [7.5, 293.66], [21.5, 220], [29.5, 261.63], [38, 196], [46.5, 233.08], [54, 174.61], [61, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
 };
 

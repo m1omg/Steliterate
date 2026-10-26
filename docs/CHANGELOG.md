@@ -4350,3 +4350,39 @@ of the Last Horizon film to see what is there now.
   playtest; `structure-tips`, `build-kinds`, `a11y`, `lowvision` and `translate`. No harness: no
   rule changed. Videos of the Last Horizon and Supernova films were rendered for the player
   (`tools/film-render.mjs`, 1280×720 at 30 fps).
+
+## The Last Horizon opens with the Heart's going (26 Oct, the new version)
+
+The player, 26 Oct, on a video of the Last Horizon film: "extend the last horizon cutscene with the
+Heart evaporating as the last BH while backing up this version". The Heart is always the last
+black hole (it grows as the galaxy falls into it, to as much as 4.6 × 10¹⁰ Suns, and evaporates by
+η 99.3, the stellar holes by η 72), so its going is what ends the Black Hole Age, and the film of
+that crossing now opens with it.
+
+- **The cut before** is kept in `src/film/saved/lasthorizon-v1.ts` (`LAST_HORIZON_V1`, not in the
+  game), its cues in its header: to bring it back, import it in `films.ts` and put them back in
+  `cue.ts`.
+- **Three new shots** in place of the old first one (the film 68 beats to 82, the title at 76, every
+  later shot as it was, 14 beats on):
+  1. The Heart, the last black hole, the ring of what was saved round it, at its own scale: its
+     mass and its horizon from the game's own Heart (`FilmArgs.heartMass`, `heartMassOf`; 46 billion
+     Suns, a horizon 1,800 AU across, at its largest), beside the Sun and Neptune's orbit for
+     scale.
+  2. Its glow, ~10⁻¹⁸ K (6.2 × 10⁻⁸ K over its mass in Suns): the sky is colder still, so it gives
+     more than it takes; its Hawking waves as long as it is wide; its mass against η from 70 to
+     100, flat for ages and plunging at the end (M ∝ (1 − t/τ)^⅓), all of it given back as light
+     over ~10⁹⁹ years (`HAWKING_K` × M³).
+  3. Its end, smaller, hotter, brighter: all but a Sun's mass given back with ~10⁶⁷ years left; a
+     mountain's mass with ~10¹¹; its last second, ~10²³ J, less than one great flare of the Sun's
+     once gave (the last stages by the full Hawking rate: a hole of 5 × 10¹¹ kg lasts 13.8 billion
+     years); the flash, the frame trembling.
+- **Its words:** the crossing's own, "The Heart, the last and largest black hole, has evaporated."
+  across the three shots, then the Dark Era's introduction as before.
+- **Its sound** (`cue.ts`): new bells on the three cuts, and a heartbeat quickening into the last
+  flash and a boom at it (the Supernova's parts); the stable fate's cut the same, its last shot two
+  beats shorter (the stage notes spaced by shares of it).
+- **Where it bends things:** 10⁹⁹ years in a few seconds, and the last flash drawn as a blaze where
+  10²³ J would be faint across the dark.
+- **Checks:** `unit/heart-mass` (the film is told the Heart's mass, before and after it goes; the
+  Heart is the last hole); `browser/films` draws every film, both fates. A video of the new cut was
+  sent to the player.

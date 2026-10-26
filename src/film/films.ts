@@ -1,4 +1,5 @@
 import type { Ctx } from './draw';
+import type { GameState } from '../game/types';
 import type { Lazy } from './paint';
 import { blackHoleAge2 } from './blackhole';
 import { GREAT_EVAPORATION2, LAST_HORIZON2 } from './dark';
@@ -47,6 +48,15 @@ export interface FilmArgs {
   pageOverlays?: boolean;
   /** The grain held still (where the system asks for less motion), when it is drawn into the frame. */
   stillGrain?: boolean;
+  /** (the Last Horizon) the Heart's mass as it went, in Suns, for its figures. */
+  heartMass?: number;
+}
+
+/** The Heart's mass in a game (the supermassive hole, called the Heart; kept after it evaporates), for the Last Horizon's figures. */
+export function heartMassOf(state: GameState | null | undefined): number | undefined {
+  if (!state) return undefined;
+  const sys = Object.values(state.systems).find((x) => x.primary.kind === 'smbh') ?? Object.values(state.systems).find((x) => x.name === 'The Heart');
+  return sys && sys.primary.mass > 1e6 ? sys.primary.mass : undefined;
 }
 
 /** A line of text over the film: where, in which voice, and how present it is now (0..1). */

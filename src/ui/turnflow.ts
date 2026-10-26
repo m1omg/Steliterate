@@ -3,7 +3,7 @@ import { turnSlices, type TurnResult } from '../game/sim/turn';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
 import { act, autosave, busy, bump, engine, filmsOn, game, modal, notify, playFilm, selection, settings, toasts, type Modal } from './store';
-import { crossingFilm, endingFilmFor } from '../film/films';
+import { crossingFilm, endingFilmFor, heartMassOf } from '../film/films';
 import { fateOf } from '../game/fate';
 import { goToBody, goToFleet, pivotToSystem } from './screens/Lists';
 import { TECH_BY_ID } from '../game/data/techs';
@@ -123,7 +123,7 @@ export async function doEndTurn() {
   if (r.crossing) {
     // the crossing's film, then its report
     const film = crossingFilm(r.crossing.title, r.crossing.to);
-    if (film) playFilm(film, { kind: 'crossing' }, { fate: fateOf(s) });
+    if (film) playFilm(film, { kind: 'crossing' }, { fate: fateOf(s), heartMass: heartMassOf(s) });
     else modal.value = { kind: 'crossing' };
     sfx('crossing');
     return;

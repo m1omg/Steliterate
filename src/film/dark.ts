@@ -1,10 +1,11 @@
 import { pow10 } from '../ui/fmt';
+import { HAWKING_K } from '../game/gen';
 import { Stipple, circlePath, glow, ink, lerp, rgba, ss, type Ctx, type Pt } from './draw';
 import type { FilmDef } from './films';
 import { camera, landscape, layer, reticle, skyRatio } from './kit';
 import { Lazy, World, heatOf, paintBanded, paintLens, paintStar, paintWorldMap } from './paint';
 import { ease, note, reel2, type Moment, type Scene } from './reel';
-import { AMBER_RGB, ELECTRON, INK, TEAL_RGB, drawRing, figure, hash, lattice, noise1x, pairs, paintDark, plainHole, quanta, seen, wavy, type RingLook } from './holes';
+import { AMBER_RGB, ELECTRON, INK, TEAL_RGB, axes, drawRing, figure, hash, lattice, noise1x, pairs, paintDark, plainHole, quanta, seen, wavy, type RingLook } from './holes';
 
 // The last two age films, second cut. The Great Evaporation (curvature radiation, near η 89.5):
 // the last world unmade by the bending of space, every scrap of matter going in turn, what was
@@ -292,7 +293,7 @@ export const GREAT_EVAPORATION2: FilmDef = reel2({ id: 'great_evaporation', name
 });
 
 /** The Last Horizon, into the Dark Era: the last hole goes, and after it only what was saved. */
-export const LAST_HORIZON2: FilmDef = reel2({ id: 'last_horizon', name: 'The Last Horizon', bpm: 90, beats: 68, accent: GREY }, (w, h, S, k, args) => {
+export const LAST_HORIZON2: FilmDef = reel2({ id: 'last_horizon', name: 'The Last Horizon', bpm: 90, beats: 82, accent: GREY }, (w, h, S, k, args) => {
   const stable = args.fate === 'stable';
   const pr = args.pr ?? 1;
   const land = landscape(w, h);
@@ -326,45 +327,156 @@ export const LAST_HORIZON2: FilmDef = reel2({ id: 'last_horizon', name: 'The Las
   });
   const disc = (c: Ctx, img: HTMLCanvasElement, x: number, y: number, R: number) => c.drawImage(img, x - R, y - R, R * 2, R * 2);
 
-  // ------------------------------------------------------------ the last hole, and its last flash
-  const lastHole = (from: number, to: number): Scene => {
-    const end = from + (to - from) * 0.7;
-    const R0 = S * 0.07;
-    const ring = (rs: number, fade: number): RingLook => ({ a: R0 * 3.3, incl: 0.2, n: Math.round(180 * k) + 50, speed: 0.07, color: TEAL_RGB, size: Math.max(1.6, S * 0.0028), thE: rs * 1.4, rsh: rs, band: 0.4 * fade, lights: fade, width: Math.max(1, S * 0.0017), seed: 710, pr });
+  // ------------------------------------------------------------ the Heart, the last black hole (26 Oct)
+  // The player, 26 Oct: "extend the last horizon cutscene with the Heart evaporating as the last BH"
+  // (the cut before it is in saved/lasthorizon-v1.ts). The Heart is always the last hole to go (it
+  // grew as the galaxy fell into it, physics.ts growHeart), so its going is what ends the age. Its
+  // figures are its own, from its mass (the game's, as it went): the horizon 2.95 km across per Sun
+  // of radius, its glow 6.2 × 10⁻⁸ K over its mass in Suns, its life HAWKING_K × M³ years; the
+  // last stages from the full Hawking rate (a hole of 5 × 10¹¹ kg lasts the 13.8 billion years the
+  // universe had once lasted), so a mountain's mass has some 10¹¹ years left and the last second
+  // gives some 10²³ J, less than a single great flare of the Sun's once did.
+  const HM = args.heartMass ?? 4.6e10;
+  const horizonAU = (2 * 2.953 * HM) / 1.496e8;
+  const sunsWords = HM >= 1e9 ? `${Math.round(HM / 1e9)} BILLION SUNS` : `${Math.round(HM / 1e6)} MILLION SUNS`;
+  const auWords = Number(horizonAU.toPrecision(2)).toLocaleString('en-US');
+  const glowK = pow10(Math.round(Math.log10(6.17e-8 / HM)));
+  const lifeE = Math.log10(HAWKING_K * HM * HM * HM);
+  const RS = S * (land ? 0.17 : 0.15);
+  const heartRing = (rs: number, fade: number): RingLook => ({ a: rs * 2.9, incl: 0.2, n: Math.round(200 * k) + 60, speed: 0.05, color: TEAL_RGB, size: Math.max(1.6, S * 0.0028), thE: rs * 1.4, rsh: rs, band: 0.35 * fade, lights: fade, width: Math.max(1, S * 0.0017), seed: 740, pr });
+  /** 1. The Heart as it is: the last black hole, at its own scale. */
+  const heart = (from: number, to: number): Scene => {
+    // a planetary system for scale: the Sun and Neptune's orbit (30 AU)
+    const nep = Math.min(S * 0.4, Math.max(S * 0.004, (RS * 30) / (horizonAU / 2)));
+    // (beside it on a wide screen; under it, its words centred, on a phone)
+    const sx = land ? cx + RS * 1.55 : cx;
+    const sy = land ? cy + RS * 1.0 : cy + RS * 1.75;
     return {
       from,
       to,
       assets: [sky],
       draw(c, m) {
-        layer(c, sky.get(), w, h, M, 0, 0, 1.05 + 0.03 * m.p, 0.6);
-        const u = ss(from, end, m.b);
-        const rs = R0 * lerp(1, 0.08, Math.pow(u, 2.4));
-        const r = ring(rs, 1 - ss(end - 1.5, end, m.b) * 0.7);
-        if (m.b < end) {
+        layer(c, sky.get(), w, h, M, 0, 0, 1.05 + 0.04 * m.p, 0.6);
+        const z = 0.62 + 0.38 * ease(ss(from, to - 1, m.b));
+        camera(c, cx, cy, z, 0, 0, () => {
+          const r = heartRing(RS, 1);
           drawRing(c, cx, cy, r, m.t, 'back');
-          glow(c, cx, cy, rs * 5, u > 0.75 ? '#f4efff' : GSOFT, Math.min(0.9, 0.1 / Math.max(0.12, 1 - u)));
-          plainHole(c, cx, cy, rs, S, { glow: 1 + 2 * u, color: GREY });
+          plainHole(c, cx, cy, RS, S, { glow: 0.5, color: GREY });
           drawRing(c, cx, cy, r, m.t, 'front');
-          quanta(c, cx, cy, Math.max(rs, S * 0.008), m.t, S, { rate: 2 + 7 * u * u, seed: 711, reach: S * 0.18, color: GSOFT, alpha: 0.4 + 0.4 * u, lam: S * 0.03 });
+        });
+        const o = ss(from + 3.2, from + 4.2, m.b);
+        if (o > 0) {
+          glow(c, sx, sy, Math.max(2, S * 0.004), '#fff4d8', 0.9 * o);
+          ink(c, circlePath(sx, sy, nep, 48, 741), o, { width: thin, color: GSOFT, seed: 741, alpha: 0.7 });
         }
-        const flash = ss(end - 0.1, end + 0.15, m.b) * (1 - ss(end + 0.15, end + 1.8, m.b));
-        glow(c, cx, cy, S * 0.4, '#f4efff', 0.9 * flash);
-        glow(c, cx, cy, S * 0.06, '#ffffff', flash);
-        if (m.b >= end)
-          for (let i = 0; i < 3; i++) {
-            const ru = ss(end + i * 0.3, end + 3 + i * 0.3, m.b);
-            ink(c, circlePath(cx, cy, S * (0.02 + 0.55 * ru), 140, 712 + i), 1, { width: Math.max(1, S * (0.0026 - i * 0.0006)), color: i ? GREY : '#f4efff', seed: 712 + i, alpha: 0.8 * (1 - ru) });
-          }
       },
       notes(m) {
         return [
-          note('lh-a', 'THE LAST BLACK HOLE', 0.5, (cy + R0 * 4.4) / h, ss(from + 0.6, from + 1.4, m.b) * (1 - ss(end - 0.4, end, m.b)), { tone: 'accent', align: 'c' }),
-          note('lh-b', 'SMALLER, HOTTER, BRIGHTER', 0.5, (cy + R0 * 4.4 + S * 0.03) / h, ss(from + 2, from + 2.8, m.b) * (1 - ss(end - 0.4, end, m.b)), { tone: 'dim', align: 'c' }),
-          note('lh-c', 'ITS LAST FLASH', 0.5, (cy + R0 * 4.4) / h, ss(end + 0.3, end + 1, m.b), { tone: 'accent', align: 'c' }),
+          note('hh-a', 'THE HEART · THE LAST BLACK HOLE', 0.5, land ? 0.12 : 0.1, ss(from + 0.8, from + 1.6, m.b), { tone: 'accent', align: 'c' }),
+          note('hh-b', `${sunsWords} · ITS HORIZON ${auWords} AU ACROSS`, 0.5, (land ? 0.12 : 0.1) + (S * 0.03) / h, ss(from + 2, from + 2.8, m.b), { tone: 'dim', align: 'c' }),
+          note('hh-c', 'THE SUN AND NEPTUNE’S ORBIT, FOR SCALE', land ? (sx + nep + S * 0.015) / w : 0.5, land ? sy / h : (sy + nep + S * 0.035) / h, ss(from + 3.6, from + 4.4, m.b), { tone: 'ink', align: land ? 'l' : 'c' }),
         ];
       },
     };
   };
+  /** 2. Its glow, colder than the sky once was and warmer than it is now, and its long fall. */
+  const ch = land ? { x0: w * 0.52, x1: w * 0.88, y0: h * 0.7, y1: h * 0.3 } : { x0: w * 0.12, x1: w * 0.88, y0: h * 0.82, y1: h * 0.56 };
+  const ETA0 = 70;
+  const ex = (e: number) => ch.x0 + ((e - ETA0) / (100 - ETA0)) * (ch.x1 - ch.x0);
+  /** The mass left at η e, as a share: M = M₀ (1 − t/τ)^⅓, all but flat until the last decade. */
+  const left = (e: number) => (e >= lifeE ? 0 : Math.cbrt(1 - Math.pow(10, e - lifeE)));
+  const fall: Pt[] = Array.from({ length: 160 }, (_, i) => {
+    const e = ETA0 + (i / 159) * (lifeE - ETA0);
+    return [ex(e), ch.y0 - left(e) * (ch.y0 - ch.y1)] as const;
+  });
+  const heartGlow = (from: number, to: number): Scene => {
+    const hx = land ? w * 0.27 : w * 0.5;
+    const hy = land ? h * 0.47 : h * 0.33;
+    const rs = S * (land ? 0.1 : 0.09);
+    return {
+      from,
+      to,
+      fade: 1.5,
+      assets: [sky],
+      draw(c, m) {
+        layer(c, sky.get(), w, h, M, 0, 0, 1.08, 0.5);
+        plainHole(c, hx, hy, rs, S, { glow: 0.6, color: GREY });
+        // its Hawking glow: waves as long as it is wide, a few at a time
+        quanta(c, hx, hy, rs, m.t, S, { rate: 1.4, seed: 742, reach: S * 0.26, color: GSOFT, alpha: 0.5, lam: rs * 1.1, life: 2.6 });
+        axes(c, ch.x0, ch.y0, ch.x1, ch.y1, ss(from + 2.2, from + 3.2, m.b), S, 743);
+        ink(c, fall, ss(from + 3, from + 6, m.b), { width: Math.max(1, S * 0.0024), color: GSOFT, seed: 744, alpha: 0.9 });
+        const ax = ss(from + 3, from + 3.8, m.b);
+        for (const e of [70, 80, 90, 100]) figure(c, `η ${e}`, ex(e), ch.y0 + S * 0.03, S, ax * 0.8);
+        // where it is now: running down the curve to its end
+        const run = ss(from + 4.5, to - 0.3, m.b);
+        if (run > 0) {
+          const e = ETA0 + (lifeE - ETA0) * Math.pow(run, 0.6);
+          glow(c, ex(e), ch.y0 - left(e) * (ch.y0 - ch.y1), S * 0.02, '#f4efff', 0.9);
+        }
+      },
+      notes(m) {
+        return [
+          note('hg-a', `ITS GLOW · ${glowK} K`, 0.5, land ? 0.12 : 0.1, ss(from + 0.6, from + 1.4, m.b) * (1 - ss(to - 0.8, to, m.b)), { tone: 'accent', align: 'c' }),
+          note('hg-b', 'THE SKY IS COLDER STILL · SO IT GIVES MORE THAN IT TAKES', 0.5, (land ? 0.12 : 0.1) + (S * 0.03) / h, ss(from + 1.6, from + 2.4, m.b) * (1 - ss(to - 0.8, to, m.b)), { tone: 'dim', align: 'c' }),
+          note('hg-c', 'ITS MASS', ch.x0 / w, (ch.y1 - S * 0.03) / h, ss(from + 3, from + 3.8, m.b) * (1 - ss(to - 0.8, to, m.b)), { tone: 'ink' }),
+          note('hg-d', `ALL OF IT GIVEN BACK AS LIGHT · OVER ${pow10(Math.round(lifeE))} YEARS`, ch.x0 / w, (ch.y1 - S * 0.06) / h, ss(from + 4, from + 4.8, m.b) * (1 - ss(to - 0.8, to, m.b)), { tone: 'dim' }),
+          note('hg-e', 'SHRINKING, IT HEATS · HEATING, IT SHRINKS FASTER', 0.5, land ? 0.84 : 0.9, ss(from + 5.2, from + 6, m.b) * (1 - ss(to - 0.8, to, m.b)), { tone: 'accent', align: 'c' }),
+        ];
+      },
+    };
+  };
+  /** 3. Its end: smaller, hotter, brighter, and its last second. */
+  const heartEnd = (from: number, to: number): Scene => {
+    const end = from + (to - from) * 0.7;
+    const R0 = S * 0.09;
+    return {
+      from,
+      to,
+      fade: 1.4,
+      assets: [sky],
+      draw(c, m) {
+        layer(c, sky.get(), w, h, M, 0, 0, 1.05 + 0.03 * m.p, 0.6);
+        const u = ss(from, end, m.b);
+        const rs = R0 * lerp(1, 0.06, Math.pow(u, 2.2));
+        const r = heartRing(rs, 1 - ss(end - 1.5, end, m.b) * 0.7);
+        // the frame trembles as it goes
+        const sh = ss(end - 1.2, end, m.b) * (1 - ss(end, end + 1.2, m.b)) * S * 0.006;
+        const ox = sh * noise1x(745, m.t * 26);
+        const oy = sh * noise1x(746, m.t * 26);
+        if (m.b < end) {
+          drawRing(c, cx + ox, cy + oy, r, m.t, 'back');
+          glow(c, cx + ox, cy + oy, rs * 5, u > 0.75 ? '#f4efff' : GSOFT, Math.min(0.9, 0.1 / Math.max(0.12, 1 - u)));
+          plainHole(c, cx + ox, cy + oy, rs, S, { glow: 1 + 2 * u, color: GREY });
+          drawRing(c, cx + ox, cy + oy, r, m.t, 'front');
+          quanta(c, cx + ox, cy + oy, Math.max(rs, S * 0.008), m.t, S, { rate: 2 + 9 * u * u, seed: 747, reach: S * 0.2, color: GSOFT, alpha: 0.4 + 0.4 * u, lam: S * 0.03 });
+        }
+        const flash = ss(end - 0.1, end + 0.15, m.b) * (1 - ss(end + 0.15, end + 1.8, m.b));
+        glow(c, cx, cy, S * 0.45, '#f4efff', 0.9 * flash);
+        glow(c, cx, cy, S * 0.07, '#ffffff', flash);
+        if (m.b >= end)
+          for (let i = 0; i < 3; i++) {
+            const ru = ss(end + i * 0.3, end + 3 + i * 0.3, m.b);
+            ink(c, circlePath(cx, cy, S * (0.02 + 0.6 * ru), 140, 748 + i), 1, { width: Math.max(1, S * (0.0026 - i * 0.0006)), color: i ? GREY : '#f4efff', seed: 748 + i, alpha: 0.8 * (1 - ru) });
+          }
+      },
+      notes(m) {
+        // (under the hole, clear of the narration at the foot of the frame)
+        const y0 = land ? 0.72 : 0.7;
+        const y1 = y0 + (S * 0.03) / h;
+        const gone = (a: number) => 1 - ss(a, a + 0.6, m.b);
+        const at = (f: number) => from + (end - from) * f;
+        return [
+          // (each stage a share of the way to the flash, so a shorter shot keeps them apart)
+          note('he-a', 'SMALLER, HOTTER, BRIGHTER', 0.5, land ? 0.12 : 0.1, ss(from + 0.6, from + 1.4, m.b) * gone(end - 0.6), { tone: 'accent', align: 'c' }),
+          note('he-b', 'ALL BUT A SUN’S MASS GIVEN BACK · ~10⁶⁷ YEARS LEFT', 0.5, y0, ss(at(0.12), at(0.12) + 0.6, m.b) * gone(at(0.4)), { tone: 'dim', align: 'c' }),
+          note('he-c', 'A MOUNTAIN’S MASS · ~10¹¹ YEARS LEFT', 0.5, y0, ss(at(0.5), at(0.5) + 0.6, m.b) * gone(at(0.74)), { tone: 'dim', align: 'c' }),
+          note('he-d', 'ITS LAST SECOND · ~10²³ J', 0.5, y0, ss(at(0.84), at(0.84) + 0.5, m.b) * gone(end + 2.4), { tone: 'accent', align: 'c' }),
+          note('he-e', 'LESS THAN ONE GREAT FLARE OF THE SUN ONCE GAVE', 0.5, y1, ss(end + 0.6, end + 1.3, m.b) * gone(end + 2.4), { tone: 'dim', align: 'c' }),
+        ];
+      },
+    };
+  };
+  const heartOpening = (end: number): Scene[] => [heart(0, 7.5), heartGlow(7, 14.5), heartEnd(14, end)];
 
   // ------------------------------------------------------------ no sources: only what was saved
   const homes = Array.from({ length: 7 }, (_, i) => ({ x: lerp(0.12, 0.88, hash(720, i)) * w, y: lerp(0.18, 0.7, hash(721, i)) * h, r: S * lerp(0.025, 0.06, hash(722, i)), incl: lerp(0.15, 0.5, hash(723, i)) }));
@@ -760,37 +872,39 @@ export const LAST_HORIZON2: FilmDef = reel2({ id: 'last_horizon', name: 'The Las
       numeral: 'IV',
       title: 'The Dark Era',
       sub: 'Age IV · nothing warmer than the sky',
-      titleAt: 62,
+      titleAt: 76,
       eta: [99.4, 100.2],
       narration: [
-        { from: 0.6, to: 5.6, text: 'The last black hole has evaporated.' },
-        { from: 6.2, to: 11.6, text: 'There are no more sources, only what you saved.' },
-        { from: 12.2, to: 19.8, text: 'The matter is still here, dead stars and worlds as cold as the sky itself, giving nothing back,' },
-        { from: 20.4, to: 26.2, text: 'and slowly, a few nuclei at a time, tunnelling toward iron:' },
-        { from: 26.8, to: 34.2, text: 'the few dead stars born heavy enough will explode as their cores turn, the last flashes there will be.' },
-        { from: 34.8, to: 39.8, text: 'Photons stretched longer than galaxies once were drift through the dark.' },
-        { from: 40.4, to: 46.4, text: 'Every thought now draws on a reserve that will never refill,' },
-        { from: 47, to: 53, text: 'and time itself now passes in powers of powers.' },
-        { from: 53.8, to: 61.4, text: 'Even the matter will not last: in the end it tunnels into black holes.' },
+        { from: 0.8, to: 6.8, text: 'The Heart, the last and largest black hole,' },
+        { from: 18.9, to: 20.6, text: 'has evaporated.' },
+        { from: 21, to: 25.6, text: 'There are no more sources, only what you saved.' },
+        { from: 26.2, to: 33.8, text: 'The matter is still here, dead stars and worlds as cold as the sky itself, giving nothing back,' },
+        { from: 34.4, to: 40.2, text: 'and slowly, a few nuclei at a time, tunnelling toward iron:' },
+        { from: 40.8, to: 48.2, text: 'the few dead stars born heavy enough will explode as their cores turn, the last flashes there will be.' },
+        { from: 48.8, to: 53.8, text: 'Photons stretched longer than galaxies once were drift through the dark.' },
+        { from: 54.4, to: 60.4, text: 'Every thought now draws on a reserve that will never refill,' },
+        { from: 61, to: 67, text: 'and time itself now passes in powers of powers.' },
+        { from: 67.8, to: 75.4, text: 'Even the matter will not last: in the end it tunnels into black holes.' },
       ],
-      scenes: [lastHole(0, 6.5), noSources(6, 12.5), coldMatter(12, 20.5), ironTunnel(20, 27), lastFlashes(26.5, 35), photons(34.5, 40.5), reserve(40, 47), powers(46.5, 54), collapse(53.5, 62.5)],
+      scenes: [...heartOpening(20.5), noSources(20, 26.5), coldMatter(26, 34.5), ironTunnel(34, 41), lastFlashes(40.5, 49), photons(48.5, 54.5), reserve(54, 61), powers(60.5, 68), collapse(67.5, 76.5)],
       card,
     };
   return {
     numeral: 'IV',
     title: 'The Dark Era',
     sub: 'Age IV · nothing warmer than the sky',
-    titleAt: 62,
+    titleAt: 76,
     eta: [99.4, 100.2],
     narration: [
-      { from: 0.8, to: 7.4, text: 'The last black hole has evaporated.' },
-      { from: 8.4, to: 15.2, text: 'There are no more sources, only what you saved.' },
-      { from: 16.2, to: 23.2, text: 'Photons stretched longer than galaxies once were,' },
-      { from: 24.2, to: 33, text: 'and positronium atoms wider than the old observable universe, drift through the dark.' },
-      { from: 34, to: 42.6, text: 'Every thought now draws on a reserve that will never refill,' },
-      { from: 43.6, to: 52.4, text: 'and time itself now passes in powers of powers.' },
+      { from: 0.8, to: 6.8, text: 'The Heart, the last and largest black hole,' },
+      { from: 20.3, to: 22.6, text: 'has evaporated.' },
+      { from: 22.9, to: 29.2, text: 'There are no more sources, only what you saved.' },
+      { from: 30.2, to: 37.2, text: 'Photons stretched longer than galaxies once were,' },
+      { from: 38.2, to: 47, text: 'and positronium atoms wider than the old observable universe, drift through the dark.' },
+      { from: 48, to: 56.6, text: 'Every thought now draws on a reserve that will never refill,' },
+      { from: 57.6, to: 66.4, text: 'and time itself now passes in powers of powers.' },
     ],
-    scenes: [lastHole(0, 8.5), noSources(8, 16), photons(15.5, 24), positronium(23.5, 34), reserve(33.5, 43.5), powers(43, 53), drift(52.5, 62.5, 'WHAT YOU SAVED')],
+    scenes: [...heartOpening(22.5), noSources(22, 30), photons(29.5, 38), positronium(37.5, 48), reserve(47.5, 57.5), powers(57, 67), drift(66.5, 76.5, 'WHAT YOU SAVED')],
     card,
   };
 });

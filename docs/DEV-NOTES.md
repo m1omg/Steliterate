@@ -1638,7 +1638,12 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   camera, a ship, `falseColour`). A film's cue is `SPECS[id]`, or `FATE_SPECS['id:fate']` where a
   fate's version cuts on other beats (`cueOf`); keep its cuts on its scenes' `from`.
   `src/film/saved/` keeps earlier versions the player may want back (not imported, so not in the
-  game): to restore one, import it in `films.ts` in place of the current one. A film that shows
+  game): to restore one, import it in `films.ts` in place of the current one (and, where its cuts
+  differ, put back the cues its header gives: `lasthorizon-v1.ts`, the Last Horizon before the
+  Heart's going opened it, 26 Oct). `supernova.ts` (26 Oct) is the film of a game's first
+  supernova (`turnflow.ts`, `civ.flags.sn_film`); `FilmArgs.heartMass` (`heartMassOf`) gives the
+  Last Horizon the Heart's own mass. `CueSpec` has three optional parts, `chirp`, `thumps` and
+  `boom`, used by those two. A film that shows
   a body's temperature reads it from the game's own laws (`dwarfCoolingK`, `brownCoolingK` in
   `physics.ts`), as the Degenerate Age's specimens do.
 - **The films on a tablet (15 Oct):** played in the game (`FilmPlayer` with `painter: true`, from

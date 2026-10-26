@@ -8,7 +8,7 @@ import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
 import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, between, bump, engine, filmsOn, filmsSeen, game, modal, notify, rev, revealsOn, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
-import { FILMS, type FilmId } from '../../film/films';
+import { FILMS, heartMassOf, type FilmId } from '../../film/films';
 import { fateOf } from '../../game/fate';
 import { Icon } from '../Icon';
 import { CODEX } from './Codex';
@@ -123,7 +123,7 @@ function FilmsSeen() {
           {(Object.keys(FILMS) as FilmId[])
             .filter((id) => seen.includes(id))
             .map((id) => (
-              <button key={id} class="btn" onClick={() => (modal.value = { kind: 'film', id, args: { fate: game.value ? fateOf(game.value) : undefined }, then: { kind: 'codex', topic: 'films' } })}>
+              <button key={id} class="btn" onClick={() => (modal.value = { kind: 'film', id, args: { fate: game.value ? fateOf(game.value) : undefined, heartMass: heartMassOf(game.value) }, then: { kind: 'codex', topic: 'films' } })}>
                 <Icon name="system" /> {FILMS[id].name}
               </button>
             ))}
