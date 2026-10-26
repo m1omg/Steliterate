@@ -40,7 +40,8 @@ its own name, and why a brief star gives no light (26 Oct), and PR m1omg/Stelite
 `f685a36`, Our settlements sorted by the yield clicked and Star types by each star's measures
 (26 Oct), and PR m1omg/Steliterate#44, `133b568`, storage notes that say what they hold, Burst
 Catchers banking a star too brief for its turn, star states, a combat report and scrollable
-forecasts (26 Oct), all from `claude/promises-main`,
+forecasts (26 Oct), and PR m1omg/Steliterate#45, `0279db1`, each building's real effect on its
+chip's tip (26 Oct), all from `claude/promises-main`,
 the same way, each then merged into the work branch with `-s ours`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
@@ -71,7 +72,9 @@ finishes at once (24 Oct, both versions, PR m1omg/Steliterate#40); then warships
 of one name and a brief star's light (26 Oct, both versions, PR m1omg/Steliterate#42); then Our
 settlements sorted by a yield and Star types by measures (26 Oct, both versions, PR
 m1omg/Steliterate#43); then storage notes, brief stars caught, star states, a combat report and
-scrollable forecasts (26 Oct, both versions, PR m1omg/Steliterate#44).
+scrollable forecasts (26 Oct, both versions, PR m1omg/Steliterate#44); then each building's real
+effect on its chip's tip (26 Oct, both versions, PR m1omg/Steliterate#45) and a film for a game's
+first supernova (the new version only: today's game has no films).
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 

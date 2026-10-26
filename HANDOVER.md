@@ -141,6 +141,15 @@ word", then the player's list of 16 Oct, then the falling worlds.
   Harness: today's game 228 / 78 / 113, the new version 183 / 78, within the noise. PR
   m1omg/Steliterate#44 (`133b568`), merged back with `-s ours`; the new version `16df449`.
   CHANGELOG, "Storage that says what it holds".
+- **Each building's real effect, and a film for a game's first supernova** (26 Oct): a built
+  structure's chip says what all of that kind there give it now (`builtEffect`, `projection.ts`:
+  the economy with and without them), and where they make nothing, why, dimmed (both versions, PR
+  m1omg/Steliterate#45, `0279db1`, merged back with `-s ours`). The new version has a Supernova
+  film (`src/film/supernova.ts`, 40 s, with a chirp, a heartbeat and a boom in its cue), played
+  with a game's first supernova (`civ.flags.sn_film`; an older save's next one), the card behind
+  it; `eb70648`. The player asked for a film of the Heart evaporating, then (on being sent a video
+  of the Last Horizon) for the Last Horizon to open with it instead, its present cut kept in
+  `src/film/saved/`: the next batch. CHANGELOG, "Each building's real effect".
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
@@ -171,8 +180,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#44 (`133b568`, storage notes and the combat report, 26 Oct) | `16df449` (26 Oct, the same), and its notes |
-  | Live script | `index-NPMlTgkq.js` | `index-D8CMl69w.js` |
+  | As of | PR m1omg/Steliterate#45 (`0279db1`, each building's real effect, 26 Oct) | `eb70648` (26 Oct, the same and the Supernova film), and its notes |
+  | Live script | `index-D13F5Go2.js` | `index-CczYHvun.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at

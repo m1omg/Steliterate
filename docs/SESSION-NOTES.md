@@ -51,7 +51,10 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (26 Oct, evening): `main` as of PR m1omg/Steliterate#44 (`133b568`, storage notes that
+  - Now (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
+    effect on its chip's tip; live script `index-D13F5Go2.js`), and `/next/` at the same with the
+    Supernova film (`eb70648`, live script `index-CczYHvun.js`). Before them (26 Oct, evening):
+    `main` as of PR m1omg/Steliterate#44 (`133b568`, storage notes that
     say what they hold, Burst Catchers banking a star too brief for its turn, star states, a
     combat report, scrollable forecasts; live script `index-NPMlTgkq.js`), and `/next/` at the
     same (`16df449`, live script `index-D8CMl69w.js`). Before them: `main` as of PR
@@ -350,11 +353,16 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   PR m1omg/Steliterate#44; CHANGELOG, "Storage that says what it holds". Then "how much industry
   it turns to accord?" of the Protocol Registry (answered: up to 6 industry a turn, times the
   settlement's output, into a tenth as much accord, only with the Lattice there).
-- **Asked, not yet done (26 Oct):** "the buildings should show what their current real
-  effect/benefit or lack thereof is" (a screenshot of a settlement's Structures chips, whose tip
-  is only the description); and films like the ages' for the Degenerate Age's supernovae ("i mean
-  supernovae in degenerate era, not this particular one") and "an epic cutsene for Heart
-  evaporating too".
+- **26 Oct, late:** "the buildings should show what their current real effect/benefit or lack
+  thereof is" (both versions, PR m1omg/Steliterate#45); films like the ages' for the Degenerate
+  Age's supernovae ("make a kickass one pls :D", "i mean supernovae in degenerate era, not this
+  particular one"): on the plan, the first supernova each game, "and for old saves it should play
+  on the next supernova that occurs" (the new version, `eb70648`); "an epic cutsene for Heart
+  evaporating too": the player asked to see the Last Horizon film first ("for this one i say yes
+  to a spoiler"; sent as a video, rendered with `tools/film-render.mjs`), set the Heart's own
+  film aside ("we won't be doing the Heart film for now"), then asked: "extend the last horizon
+  cutscene with the Heart evaporating as the last BH while backing up this version". That is the
+  next batch (the present cut to `src/film/saved/`). The Supernova film was sent as a video too.
 - **7 Oct, after Part C went live:** "can you instead make the beacons temporary? … more realistic
   than having them last literally trillions and trillions of years" (instead of the earlier offer
   to undo them). Chosen: a beacon burns "while we keep feeding it", and lighting one turns the
