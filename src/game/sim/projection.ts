@@ -132,18 +132,30 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
   const notes: string[] = [];
   const e = b.energy - b.energyUpkeep - (a.energy - a.energyUpkeep);
   if (d.energy && b.energy - a.energy < 0.05) notes.push(d.energy.mode === 'light' ? noLight(state, c, ctx) : 'Nothing for it to draw on here right now');
+  notes.push(...standingNotes(state, c, more, id, ctx, 1, false));
+  return { energy: e, matter: b.matter - b.matterUpkeep - (a.matter - a.matterUpkeep), industry: b.industry - a.industry, insight: b.insight - a.insight, accord: b.accord - a.accord, room, notes };
+}
+
+/**
+ * What `n` of a structure do that is not a yield, as the build list and a built one's tip say it.
+ * `withIt` is the settlement with them, `c` without (for a terraformer's habitability); `built`:
+ * they stand already, so what they did once, when built, is not said again.
+ */
+function standingNotes(state: GameState, c: Colony, withIt: Colony, id: string, ctx: TurnContext, n: number, built: boolean): string[] {
+  const d = STRUCTURE_BY_ID[id];
+  const notes: string[] = [];
   // one reserve, whatever fills it (storage.ts): a burst caught lands in it too, and Deep Storage's
   // quarter more counts (26 Oct, the player: "how much these actually increase my storage")
-  if (d.reserveCap || d.burstCap) notes.push(`Energy reserve +${Math.floor(((d.reserveCap ?? 0) + (d.burstCap ?? 0)) * ctx.mods.reserveMult)}`);
-  if (id === 'burst_catcher') notes.push(`Catches bursts: up to +${BURST_CATCH} energy each into the reserve, even past its limit until the next turn ends (a black hole’s final burst here; a neutron star’s burst, a star that lights and goes out within a turn, or another flash nearby)`);
-  if (d.defense) notes.push(`Defence +${d.defense} against swarms and raids`);
+  if (d.reserveCap || d.burstCap) notes.push(`Energy reserve +${Math.floor(((d.reserveCap ?? 0) + (d.burstCap ?? 0)) * n * ctx.mods.reserveMult)}`);
+  if (id === 'burst_catcher') notes.push(`Catches bursts: up to +${BURST_CATCH * n} energy each into the reserve, even past its limit until the next turn ends (a black hole’s final burst here; a neutron star’s burst, a star that lights and goes out within a turn, or another flash nearby)`);
+  if (d.defense) notes.push(`Defence +${d.defense * n} against swarms and raids`);
   if (d.declineMult !== undefined && d.declineMult < 1) notes.push(`The world declines ${Math.round((1 - d.declineMult) * 100)}% slower`);
   if (d.warms) notes.push('Keeps this world alive after its star goes out');
-  if (d.coreHeatBonus) notes.push(`Core heat +${Math.round(d.coreHeatBonus * 100)}% when built`);
-  if (d.vitalityOnce) notes.push(`Vitality +${Math.round(d.vitalityOnce * 100)}% when built`);
-  if (d.resolve) notes.push(`Resolve +${d.resolve} a turn`);
+  if (d.coreHeatBonus && !built) notes.push(`Core heat +${Math.round(d.coreHeatBonus * 100)}% when built`);
+  if (d.vitalityOnce && !built) notes.push(`Vitality +${Math.round(d.vitalityOnce * 100)}% when built`);
+  if (d.resolve) notes.push(`Resolve +${Math.round(d.resolve * n * 10) / 10} a turn`);
   if (d.decayProof) notes.push('Survives the end of matter (the Great Decay, or the Great Evaporation)');
-  if (d.continuityMult) notes.push(`Continuity fades ${Math.round((1 - d.continuityMult) * 100)}% slower`);
+  if (d.continuityMult) notes.push(`Continuity fades ${Math.round((1 - Math.pow(d.continuityMult, n)) * 100)}% slower`);
   if (d.enables === 'upload') notes.push('Lets Kin upload into Echoes here');
   if (d.enables === 'merge') notes.push('Lets Echoes merge into the Chorus here');
   if (d.enables === 'cool') notes.push('Lets Echoes cool into Coldminds here');
@@ -153,12 +165,65 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
     if (d.terraform === 'seeding') notes.push(`Life spreads: vitality +${Math.round(SEED_RATE * 100)}% a turn at the Tide, up to ${Math.round(SEED_CAP * 100)}%`);
     else {
       const h0 = habitabilityOf(state, w, c);
-      const h1 = habitabilityOf(state, w, more);
-      notes.push(`Habitability ${Math.round(h0 * 100)}% → ${Math.round(h1 * 100)}% here (warmest ground ${Math.round(terraformedWarmth(state, w, terraformingOf(state, w, more)))} K)`);
-      if (d.terraform === 'works' && (w.water ?? 0) < WORKS_WATER) notes.push(`Brings water in with the air: ${Math.round(WORKS_WATER * 100)}% of the surface`);
+      const h1 = habitabilityOf(state, w, withIt);
+      const warm = `warmest ground ${Math.round(terraformedWarmth(state, w, terraformingOf(state, w, withIt)))} K`;
+      notes.push(built ? `Habitability ${Math.round(h1 * 100)}% here, ${Math.round(h0 * 100)}% without ${n > 1 ? 'them' : 'it'} (${warm})` : `Habitability ${Math.round(h0 * 100)}% → ${Math.round(h1 * 100)}% here (${warm})`);
+      if (d.terraform === 'works' && (w.water ?? 0) < WORKS_WATER && !built) notes.push(`Brings water in with the air: ${Math.round(WORKS_WATER * 100)}% of the surface`);
       if (w.vitality <= 0) notes.push('Room for Kin comes once life takes hold (Biosphere Seeding)');
     }
   }
   if (d.signature >= 2) notes.push('Bright: draws the Hunger');
-  return { energy: e, matter: b.matter - b.matterUpkeep - (a.matter - a.matterUpkeep), industry: b.industry - a.industry, insight: b.insight - a.insight, accord: b.accord - a.accord, room, notes };
+  return notes;
+}
+
+/** What the structures of a kind standing at a settlement do for it now, and why they give nothing if they do not. */
+export interface BuiltEffect extends BuildEffect {
+  /** Why they make nothing (the economy's own words for it), where they make nothing. */
+  why?: string;
+  /** They make nothing here now, and the economy says why (`why`): nothing to gather, no Lattice to run them, out of reach. */
+  idle: boolean;
+}
+
+/**
+ * What every structure of a kind standing at this settlement gives it now, per turn: the economy
+ * run with them and without them, so the figures are what they really give here, this turn
+ * (26 Oct, the player: "the buildings should show what their current real effect/benefit or lack
+ * thereof is").
+ */
+export function builtEffect(state: GameState, c: Colony, id: string, ctx: TurnContext): BuiltEffect {
+  const d = STRUCTURE_BY_ID[id];
+  const n = c.structures[id] ?? 0;
+  const less: Colony = { ...c, structures: { ...c.structures, [id]: 0 } };
+  const a = colonyTurn(state, less, ctx, state.civ.matter).y;
+  const b = colonyTurn(state, c, ctx, state.civ.matter).y;
+  const capA = capacity(state, less, ctx.mods);
+  const capB = capacity(state, c, ctx.mods);
+  const room: BuildEffect['room'] = {};
+  for (const k of [...THREADS, 'cryo'] as const) if (capB[k] !== capA[k]) room[k] = capB[k] - capA[k];
+  const fx = { energy: b.energy - b.energyUpkeep - (a.energy - a.energyUpkeep), matter: b.matter - b.matterUpkeep - (a.matter - a.matterUpkeep), industry: b.industry - a.industry, insight: b.insight - a.insight, accord: b.accord - a.accord };
+  const notes = standingNotes(state, less, c, id, ctx, n, true);
+  // the economy's own line for them says why they make nothing, where they do not ("2× Glow Array: nothing to gather")
+  const head = `${n > 1 ? `${n}× ` : ''}${d.name}: `;
+  let why = b.lines.find((l) => l.label.startsWith(head))?.label.slice(head.length);
+  const made = fx.matter > 0.05 || fx.industry > 0.05 || fx.insight > 0.05 || fx.accord > 0.05 || b.energy - a.energy > 0.05;
+  if (!why && d.energy && b.energy - a.energy < 0.05) why = d.energy.mode === 'light' ? noLight(state, c, ctx) : 'nothing for it to draw on here right now';
+  const idle = !!why && !made && !Object.keys(room).length;
+  return { ...fx, room, notes, ...(idle ? { why: why!.charAt(0).toLowerCase() + why!.slice(1) } : {}), idle };
+}
+
+/**
+ * A built structure's effect in words, for its tip: "Now, all 3: +18.6 energy, +2 industry; …".
+ * Empty for one whose work is not a yield or a note here (a Shipyard builds ships; its own text says so).
+ */
+export function builtEffectText(fx: BuiltEffect, n: number): string {
+  const num = (v: number) => `${v > 0 ? '+' : '−'}${Math.abs(v) >= 10 ? Math.round(Math.abs(v)) : Math.abs(v).toFixed(1)}`;
+  const parts: string[] = [];
+  for (const [k, v] of [['energy', fx.energy], ['matter', fx.matter], ['industry', fx.industry], ['insight', fx.insight], ['accord', fx.accord]] as const) if (Math.abs(v) >= 0.05) parts.push(`${num(v)} ${k}`);
+  for (const [k, v] of Object.entries(fx.room)) if (v) parts.push(`room for ${v > 0 ? '' : '−'}${Math.abs(v)} ${k === 'cryo' ? 'in cold sleep' : k === 'kin' ? 'Kin' : k === 'echoes' ? 'Echoes' : k === 'chorus' ? 'of the Chorus' : k === 'lattice' ? 'Lattice' : 'Coldminds'}`);
+  const head = n > 1 ? `Now, all ${n}` : 'Now';
+  const yields = parts.join(', ');
+  const rest = fx.notes.join('; ');
+  if (fx.why) return `${head}: ${yields ? `${yields}, and ` : ''}nothing made (${fx.why})${rest ? `; ${rest}` : ''}`;
+  if (!yields && !rest) return '';
+  return `${head}: ${[yields, rest].filter(Boolean).join('; ')}`;
 }

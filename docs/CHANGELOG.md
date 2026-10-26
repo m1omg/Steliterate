@@ -2591,3 +2591,55 @@ scrollable".
   m1omg/Steliterate#42's `distinctNames` renamed a twin in seed 24757, so its fingerprint moved;
   taken again without names on 7c0c763, the four seeds give the same fingerprints there and here,
   so generation draws exactly as before.
+
+## Each building's real effect, and a film for a game's first supernova (26 Oct)
+
+The player, 26 Oct, with a screenshot of a settlement's Structures: "the buildings should show what
+their current real effect/benefit or lack thereof is"; and, with one of the Supernova card: "this
+warrants a cutscene like the ages ones, make a kickass one pls :D", "i mean supernovae in
+degenerate era, not this particular one". On the plan: the first supernova of each game, "and for
+old saves it should play on the next supernova that occurs". A film for the Heart's evaporation was
+asked too, then set aside ("we won't be doing the Heart film for now"); the player was sent a video
+of the Last Horizon film to see what is there now.
+
+- **Each building's real effect** (both versions, display only): a built structure's chip on the
+  settlement's Overview gave only its description. Its tip now says what all of that kind there
+  give it now, per turn: the economy run with them and without them (`builtEffect`,
+  `projection.ts`), so the figures are this settlement's, with its light, richness, focus, morale
+  and pace ("Now, all 3: +18.6 energy"; a Protocol Registry run by the Lattice "−0.3 energy, −6.4
+  industry, +0.6 accord"). Where they make nothing, it says so and why, in the economy's own words
+  ("Now: −0.3 energy, and nothing made (no Lattice here to run it)", "nothing made (nothing to
+  gather)"), and the chip is dimmed, as an out-of-reach one is. What they do that is not a yield is
+  said for all of them together (the reserve, with Deep Storage's quarter; defence; Resolve; what
+  they enable), from the same notes the build list gives (`standingNotes`, one helper for both). A
+  building whose work is not a yield or a note (a Shipyard builds ships) is never called idle.
+- **The Supernova film** (the new version: today's game has no films): `src/film/supernova.ts`,
+  60 beats at 90 (40 s), Reel II. Two white dwarfs of 0.9 and 0.7 Suns, each the size of a world
+  (the lighter the larger, as degenerate matter is), spiral together as gravitational waves carry
+  their orbit away (their separation falling as (t_c − t)^¼, their period from 30 minutes down,
+  Peters 1964); the lighter is torn apart and heaped on the heavier; the remnant passes the
+  Chandrasekhar limit, 1.4 Suns; carbon ignites in its core; it detonates, about 10⁴⁴ J in a second
+  or two, the frame shaking, its ashes flying at 10,000 km/s in layers (nickel and iron inside,
+  silicon, sulphur and calcium, unburnt carbon and oxygen outside); for a few weeks about five
+  billion Suns, brighter than all that is left, its light finding dust (light echoes) and drifting
+  worlds; its light curve, peaking near 19 days, powered by nickel-56 (6 days) and cobalt-56 (77
+  days) decaying to iron-56; its shell centuries on, nothing at its centre. The words are the
+  event's own. Its sound (`cue.ts`, three new parts only it uses): the gravitational waves' chirp
+  rising through the spiral, a heartbeat quickening as the remnant nears the limit, a swell and a
+  deep boom at the detonation. Where it bends things: millions of years of spiralling and the
+  weeks of light are shown in moments, the gravitational waves (invisible) are drawn as rings, and
+  the ashes' colours stand for their elements.
+- **When it plays** (`turnflow.ts`): after a turn that leaves a Supernova card waiting, if the game
+  has no `civ.flags.sn_film`; the card waits behind it (`film` now holds the turn's events back, as
+  the combat report does, `App.tsx`), and a combat report the same turn follows the film. A game
+  saved before has no mark, so its next supernova plays it. With films off it waits for one that
+  plays. The Codex's Films seen keeps it once seen.
+- **Checks:** `unit/built-effect` and `browser/structure-tips` (both versions),
+  `browser/supernova-film` (the new version); `browser/films` draws every film, this one too.
+- **Validated:** the new version: tsc and the build clean; all 95 unit checks; savecompat on its 9
+  saves; the playtest (30/144 Hz parity 3e-16); the browser checks `supernova-film`,
+  `structure-tips`, `films`, `combat-report`, `build-kinds`, `a11y`, `lowvision` and `translate`.
+  Today's game: tsc and the build clean; all 63 unit checks; savecompat on its 6 saves; the
+  playtest; `structure-tips`, `build-kinds`, `a11y`, `lowvision` and `translate`. No harness: no
+  rule changed. Videos of the Last Horizon and Supernova films were rendered for the player
+  (`tools/film-render.mjs`, 1280×720 at 30 fps).
