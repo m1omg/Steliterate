@@ -4189,3 +4189,26 @@ no rule changes, nothing saved changes, so every save has it at once.
   on our map; the Black holes tab in the Dusk); `browser/systems-tab` adds a helium star gone out
   within the turn, under Already out. Validated as asked, not the whole suite: tsc and the build
   clean (`index-CBZr0ri8.js`); `star-types`, `holes` and `systems-tab` pass.
+
+## Two Wells of one name, and a brief star's light explained (26 Oct, both versions)
+
+- **Two Lanthe Wells** (the player, 26 Oct: "lanthe well for whatever reason shows as unsurveyed
+  after multiple surveys"). The two globular clusters draw their names apart from six, and in one
+  galaxy in eight (26 of 200) both drew the same, and so did the black holes at their hearts: two
+  Lanthe Wells, at opposite ends of the galaxy, one charted and the other not, under one name. Now
+  the later cluster takes the first name no cluster has ("Cluster Ossa", "Ossa Well"), and a
+  catalogue number drawn twice (5 of 200 galaxies) the next free number (`distinctNames`,
+  `src/game/names.ts`). It draws nothing, so every seed's galaxy is the same, and it runs on every
+  load, so a saved game has it at once: the Well already charted keeps its name. A Well's first
+  worlds, and the Wanderer's, kept the catalogue name their star had before it was named ("Evyorul
+  Deep" at Umber Well): they take its name now too.
+- **"No light to collect", by a blazing helium giant** (the player: "no light to collect, really
+  ninja xD?", with a screenshot: a helium giant of 120,000 years in a turn of 290 billion years,
+  while the star clock kept time with another star). A collector gathers the turn's average, and
+  120,000 years are 4×10⁻⁷ of that turn: the rule stands, but the build list now says why: "Its
+  star shines only 120,000 years of this turn's 290.4 billion years: too brief to gather, unless
+  we keep time with it" (`noLight`, `src/game/sim/projection.ts`).
+- **Checks:** `unit/names` (60 galaxies with no two stars or clusters of one name; every Well's
+  worlds bear its name; a save with two Lanthe Wells loads with the charted one as it was, and
+  loading again changes nothing). Validated as asked, not the whole suite: tsc and the build;
+  `unit/names`, `unit/determinism`, savecompat on its 9 saves.
