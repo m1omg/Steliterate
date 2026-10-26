@@ -4277,20 +4277,24 @@ scrollable".
   Look (to the ship, or its star); over a Long Sleep, all of them once it ends. The turn's events
   wait behind it. Siege progress and a Lance setting out are not fights' outcomes and open
   nothing; the first swarm's own event card stays as it was. The Record colours those lines too.
+  (In today's game the fights are the swarms', raids and sieges: it has no battles or Lances.)
 - **Forecasts scroll:** the HUD showed three (one or two on a shorter screen) and no way to the
   rest. Now every forecast not closed is in a list that scrolls, about three in view (two below
   950 px high, one below 790); on a phone the open sheet and in the magnifier mode the column hold
   them all.
 - **Checks:** `unit/storage-notes`, `unit/brief-star-catch`, `browser/combat-report`,
   `browser/forecasts-scroll` (new); `browser/star-types` (states), `browser/hunt` (the report, not
-  a toast). `unit/young-dwarfs` fingerprints generation without names now: PR
+  a toast).
+- **Balance** (300 standard competent games): today's game 228 survive, 78 victories, a
+  Degenerate Age of 113 turns (227 / 79 / 113 before); by fate decay 88 / 148, stable 79 / 81,
+  curvature 61 / 71. The new version 183 / 78 (184 / 79 before); by fate decay 108 / 148, stable
+  33 / 81, curvature 42 / 71. The same within the noise in both (the autoplayer builds few Burst
+  Catchers).
+- **Validated**, in each version: tsc and the build clean; all unit checks (62 in today's game,
+  94 in the new version); savecompat (6 saves and 9); the playtest (30/144 Hz parity 2e-15); the
+  browser checks `combat-report`, `forecasts-scroll`, `star-types`, `build-kinds`, `attack`,
+  `hunt`, `war`, `a11y`, `lowvision`, `translate` and `systems-tab` in the real fonts. In the new
+  version `unit/young-dwarfs` fingerprints generation without names now: PR
   m1omg/Steliterate#42's `distinctNames` renamed a twin in seed 24757, so its fingerprint moved;
   taken again without names on 7c0c763, the four seeds give the same fingerprints there and here,
   so generation draws exactly as before.
-- **Balance** (300 standard competent games): 183 survive, 78 victories (184 / 79 before); by
-  fate decay 108 / 148, stable 33 / 81, curvature 42 / 71: the same within the noise (the
-  autoplayer builds few Burst Catchers).
-- **Validated:** tsc and the build clean; all 94 unit checks; savecompat on its 9 saves; the
-  playtest (30/144 Hz parity 2e-15); the browser checks `combat-report`, `forecasts-scroll`,
-  `star-types`, `build-kinds`, `attack`, `hunt`, `war`, `a11y`, `lowvision`, `translate` and
-  `systems-tab` in the real fonts.

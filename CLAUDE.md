@@ -38,7 +38,9 @@ ship's attack against swarms and other civilizations (25 Oct), and PR m1omg/Stel
 `398f1a5`, star types in the Systems window, helium stars in its Collision stars tab, every star
 its own name, and why a brief star gives no light (26 Oct), and PR m1omg/Steliterate#43,
 `f685a36`, Our settlements sorted by the yield clicked and Star types by each star's measures
-(26 Oct), all from `claude/promises-main`,
+(26 Oct), and PR m1omg/Steliterate#44, `133b568`, storage notes that say what they hold, Burst
+Catchers banking a star too brief for its turn, star states, a combat report and scrollable
+forecasts (26 Oct), all from `claude/promises-main`,
 the same way, each then merged into the work branch with `-s ours`).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
@@ -68,7 +70,8 @@ finishes at once (24 Oct, both versions, PR m1omg/Steliterate#40); then warships
 (25 Oct, both versions, PR m1omg/Steliterate#41); then star types, helium stars listed, two Wells
 of one name and a brief star's light (26 Oct, both versions, PR m1omg/Steliterate#42); then Our
 settlements sorted by a yield and Star types by measures (26 Oct, both versions, PR
-m1omg/Steliterate#43).
+m1omg/Steliterate#43); then storage notes, brief stars caught, star states, a combat report and
+scrollable forecasts (26 Oct, both versions, PR m1omg/Steliterate#44).
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 

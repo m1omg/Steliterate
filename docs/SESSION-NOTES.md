@@ -51,7 +51,11 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (26 Oct, later): `main` as of PR m1omg/Steliterate#43 (`f685a36`, Our settlements sorted
+  - Now (26 Oct, evening): `main` as of PR m1omg/Steliterate#44 (`133b568`, storage notes that
+    say what they hold, Burst Catchers banking a star too brief for its turn, star states, a
+    combat report, scrollable forecasts; live script `index-NPMlTgkq.js`), and `/next/` at the
+    same (`16df449`, live script `index-D8CMl69w.js`). Before them: `main` as of PR
+    m1omg/Steliterate#43 (`f685a36`, Our settlements sorted
     by the yield clicked, Star types by each star's measures; live script `index-UG-o6OAt.js`),
     and `/next/` at the same (`27e603c`, live script `index-BuZ4epBX.js`). Before them: `main` as
     of PR m1omg/Steliterate#42 (`398f1a5`, star types in the Systems
@@ -334,6 +338,23 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   the economic aspect the player clicks on, like in civilization", and on the plan "make it shows
   matter/energy/lifetime etc when sorting by star type in system too". Both versions, PR
   m1omg/Steliterate#43; CHANGELOG, "Our settlements sorted by a yield".
+- **26 Oct, evening:** "how do i increase slow ones understanding?" (answered without spoilers).
+  On a screenshot of the build list, "can you explain how much these actually increase my storage
+  capacity?" (answered: one reserve, a quarter more with Deep Storage, a Ring +312, a Burst Catcher
+  +375), then on the plan: "do burst catchers actually catch bursts then? If they do, that should
+  stay in their description" (they do); "they should also be able to capture events like a helium
+  star and helium giant whose life is shorter than 1 turn"; "it should retroactively apply to my
+  current saves unless game-breaking" (it does from their next turn; stars already gone can't be
+  paid back); "systems view should show if white dwarf is cold, still cooling, or an ember etc.";
+  "there also should be popups for combat ... forecasts should also be scrollable". Both versions,
+  PR m1omg/Steliterate#44; CHANGELOG, "Storage that says what it holds". Then "how much industry
+  it turns to accord?" of the Protocol Registry (answered: up to 6 industry a turn, times the
+  settlement's output, into a tenth as much accord, only with the Lattice there).
+- **Asked, not yet done (26 Oct):** "the buildings should show what their current real
+  effect/benefit or lack thereof is" (a screenshot of a settlement's Structures chips, whose tip
+  is only the description); and films like the ages' for the Degenerate Age's supernovae ("i mean
+  supernovae in degenerate era, not this particular one") and "an epic cutsene for Heart
+  evaporating too".
 - **7 Oct, after Part C went live:** "can you instead make the beacons temporary? … more realistic
   than having them last literally trillions and trillions of years" (instead of the earlier offer
   to undo them). Chosen: a beacon burns "while we keep feeding it", and lighting one turns the

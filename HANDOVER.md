@@ -130,6 +130,17 @@ word", then the player's list of 16 Oct, then the falling worlds.
   CHANGELOG, "Our settlements sorted by a yield". From now on wait for `main`'s Pages run before
   pushing `next`: the workflow cancels a run in progress (`cancel-in-progress`), which left a red
   cross on PR #42's merge though the next run built both.
+- **Storage notes, brief stars caught, star states, a combat report, scrollable forecasts** (26
+  Oct, both versions): the build list gives each storage building's real reserve in one line
+  (Deep Storage's quarter counted: a Ring +312, a Burst Catcher +375); Burst Catchers say what they
+  catch, and bank a new star whose whole life was shorter than its turn (a rule: `briefStarLight`,
+  `physics.ts`, a flash by its light, not when we kept its clock; live, so saves have it); Star
+  types says each star's state (`starState`); fights' Record lines carry a tone (`combatLog`,
+  `util.ts`) and open a Combat window after the turn (`CombatReport.tsx`, gathered in
+  `turnflow.ts`, a Long Sleep's together); every forecast not closed is in a list that scrolls.
+  Harness: today's game 228 / 78 / 113, the new version 183 / 78, within the noise. PR
+  m1omg/Steliterate#44 (`133b568`), merged back with `-s ours`; the new version `16df449`.
+  CHANGELOG, "Storage that says what it holds".
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
@@ -160,8 +171,8 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#43 (`f685a36`, sorting, 26 Oct) | `27e603c` (26 Oct, the same), and its notes |
-  | Live script | `index-UG-o6OAt.js` | `index-BuZ4epBX.js` |
+  | As of | PR m1omg/Steliterate#44 (`133b568`, storage notes and the combat report, 26 Oct) | `16df449` (26 Oct, the same), and its notes |
+  | Live script | `index-NPMlTgkq.js` | `index-D8CMl69w.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 
 - **The backup:** today's game as of 13 Oct, frozen and playable, at
