@@ -5,8 +5,8 @@ import { ANOMALIES } from '../../game/data/events';
 import { bodyClimate, hawkingLight, sourceLight } from '../../game/physics';
 import { LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { habitabilityOf } from '../../game/sim/terraform';
-import { SiteStrip, bestOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
-import { YIELDS, yieldOf, yieldText, yieldTip } from '../yields';
+import { NEEDS, SiteStrip, bestOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
+import { YIELDS, yieldOf, yieldText, yieldTip, type YieldKey } from '../yields';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, formatYearsShort } from '../../game/eras';
@@ -22,7 +22,7 @@ import { atWar } from '../../game/sim/war';
 import { PROMISE_TURNS } from '../../game/sim/claims';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, Survivor, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
-import { kelvin, mult, n1, solarMass } from '../fmt';
+import { kelvin, mult, n1, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
 import { act, engine, game, hoverStar, modal, notify, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
@@ -204,6 +204,20 @@ function SendButton({ s, f, sys }: { s: GameState; f: Fleet; sys: StarSystem }) 
 }
 
 /**
+ * How Our settlements is sorted: by a yield, most or least first, or as founded (null). Kept
+ * while the game runs (26 Oct, the player: "make player systems sortable by the economic aspect the
+ * player clicks on, like in civilization").
+ */
+const yieldSort = signal<{ key: YieldKey; dir: -1 | 1 } | null>(null);
+
+/** A yield's icon in the head of Our settlements: most first, then least first, then as founded. */
+function sortBy(key: YieldKey) {
+  sfx('click');
+  const now = yieldSort.value;
+  yieldSort.value = now?.key !== key ? { key, dir: -1 } : now.dir < 0 ? { key, dir: 1 } : null;
+}
+
+/**
  * The Systems window: our settlements, every surveyed world, and in the Degenerate Age the
  * collision stars. The open tab lives in the modal itself, so S and W open (and close) the right one.
  * Opened from a ship (`send`), every star in it can be its destination.
@@ -274,7 +288,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
     );
   if (which === 'stars')
     return (
-      <ModalFrame title="Systems" eyebrow="Star types: every star on our map of one kind, the nearest first" icon="system" narrow>
+      <ModalFrame title="Systems" eyebrow="Star types: every star on our map of one kind" icon="system" narrow>
         {tabs}
         <StarsList s={s} send={sending} />
       </ModalFrame>
@@ -308,29 +322,57 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
     bySystem.set(c.systemId, list);
   }
   const total = colonies(s).reduce((a, c) => a + popsOf(c) + c.cryo, 0);
+  // sorted by a yield: each system by its settlements' total, and its settlements by their own
+  // (ties as founded: the sort is stable)
+  const sort = yieldSort.value;
+  const valueOf = (c: Colony) => {
+    const y = p.perColony[c.id]?.y;
+    return sort && y ? yieldOf(y, sort.key) : 0;
+  };
+  const sumOf = (cs: Colony[]) => cs.reduce((a, c) => a + valueOf(c), 0);
+  const groups = [...bySystem.entries()].map(([sid, cs]) => [sid, sort ? [...cs].sort((a, b) => (valueOf(a) - valueOf(b)) * sort.dir) : cs] as const);
+  if (sort) groups.sort((a, b) => (sumOf(a[1]) - sumOf(b[1])) * sort.dir);
+  const sortName = sort ? YIELDS.find((x) => x.key === sort.key)!.name : '';
   return (
     <ModalFrame title="Systems" eyebrow={`Our settlements: ${colonies(s).length} in ${bySystem.size} system${bySystem.size === 1 ? '' : 's'} · ${total} people`} icon="colony" narrow>
       {tabs}
       {bySystem.size > 0 && (
         <div class="yield-heads">
-          <span class="grow faint">Each turn</span>
+          <span class="grow faint">Each turn{sort ? ` · by ${sortName.toLowerCase()}, ${sort.dir < 0 ? 'most' : 'least'} first` : ''}</span>
           <span class="yield-cells">
-            {YIELDS.map(({ key, name, what }) => (
-              <span key={key} data-tip={`${name}: ${what}`}>
-                <Icon name={key} />
-              </span>
-            ))}
+            {YIELDS.map(({ key, name, what }) => {
+              const on = sort?.key === key;
+              return (
+                <button
+                  key={key}
+                  class={`yield-sort${on ? ' on' : ''}`}
+                  aria-label={`Sort by ${name}`}
+                  aria-pressed={on}
+                  data-tip={`${name}: ${what}.\nSort by ${name.toLowerCase()}: most first; click again for least first, a third time for the order they were founded.`}
+                  onClick={() => sortBy(key)}
+                >
+                  <Icon name={key} />
+                  {on && <span class="mono">{sort!.dir < 0 ? '▼' : '▲'}</span>}
+                </button>
+              );
+            })}
           </span>
         </div>
       )}
-      {[...bySystem.entries()].map(([sid, cs]) => {
+      {groups.map(([sid, cs]) => {
         const sys = s.systems[sid];
+        const sum = sort ? sumOf(cs) : 0;
         return (
           <div key={sid} class="section" style={{ marginTop: '6px' }}>
             <h3 class="row" style={{ gap: '4px' }}>
               <span class="grow">
                 {sys.name} <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>{PRIMARY_NAME[sys.primary.kind]}</span>
               </span>
+              {sort && (
+                <span class="mono sys-sum" style={{ letterSpacing: 0, fontSize: '13px' }} data-tip={`${sortName} each turn from our settlements at ${sys.name}`}>
+                  <Icon name={sort.key} /> {sort.key === 'industry' || sort.key === 'insight' ? n1(sum) : signed(sum)}
+                </span>
+              )}
               {sending && <SendButton s={s} f={sending} sys={sys} />}
             </h3>
             <div class="list">
@@ -551,10 +593,14 @@ function starsOnMap(s: GameState): StarSystem[] {
 
 /** The kind of star the Star types tab shows, kept while the window is closed and opened again. */
 const starKind = signal<PrimaryKind | null>(null);
+/** What the Star types tab is sorted by: the nearest first, or a measure, the best first. */
+const starSort = signal<'near' | Need>('near');
 
 /**
- * Every star on our map of one kind, the nearest first, the kinds on the map as buttons above
- * (26 Oct, the player: "add options to systems menu to select different star types + black holes").
+ * Every star on our map of one kind, the kinds on the map as buttons above (26 Oct, the player:
+ * "add options to systems menu to select different star types + black holes"); each surveyed
+ * one's Livable, Power, Matter and Lasting, at its best world, and sorted by any of them, the
+ * unsurveyed last (the player: "make it shows matter/energy/lifetime etc when sorting by star type").
  */
 function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
   const cap = s.civ.capitalId ? s.colonies[s.civ.capitalId] : null;
@@ -563,10 +609,12 @@ function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
   const kinds = TYPE_ORDER.filter((k) => onMap.some((x) => x.primary.kind === k));
   const kind = starKind.value && kinds.includes(starKind.value) ? starKind.value : kinds.includes(from.primary.kind) ? from.primary.kind : kinds[0];
   const ours = new Set(colonies(s).map((c) => c.systemId));
+  const by = starSort.value;
   const rows = onMap
     .filter((x) => x.primary.kind === kind)
-    .map((sys) => ({ sys, ly: distLy(from, sys) }))
-    .sort((a, b) => a.ly - b.ly);
+    .map((sys) => ({ sys, ly: distLy(from, sys), sites: s.civ.known[sys.id] === 2 ? starSites(s, sys) : null }))
+    .sort((a, b) => (by === 'near' ? 0 : (b.sites?.[by]?.v.score ?? -1e9) - (a.sites?.[by]?.v.score ?? -1e9)) || a.ly - b.ly);
+  const best = bestOf(rows.flatMap((r) => (r.sites ? [r.sites] : [])));
   const worldsOf = (sys: StarSystem) => sys.bodies.filter((id) => s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind !== 'deep').length;
   const chipGap = { marginLeft: '6px' };
   return (
@@ -578,12 +626,23 @@ function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
           </button>
         ))}
       </div>
+      <div class="row wrap" style={{ gap: '3px', marginBottom: '6px' }}>
+        <span class="faint" style={{ fontSize: '12.5px', alignSelf: 'center' }}>Sort:</span>
+        <button class={`btn small ghost ${by === 'near' ? 'on' : ''}`} data-tip="The nearest first" onClick={() => { sfx('click'); starSort.value = 'near'; }}>
+          Nearest
+        </button>
+        {NEEDS.map((n) => (
+          <button key={n.need} class={`btn small ghost ${by === n.need ? 'on' : ''}`} data-tip={`${n.what}: the best first, at each star’s best world; the unsurveyed last`} onClick={() => { sfx('click'); starSort.value = n.need; }}>
+            <Icon name={n.icon} /> {n.name}
+          </button>
+        ))}
+      </div>
       <div class="list">
-        {rows.map(({ sys, ly }) => {
+        {rows.map(({ sys, ly, sites }) => {
           const known = s.civ.known[sys.id] ?? 0;
           const worlds = worldsOf(sys);
           return (
-            <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
+            <div key={sys.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} {...pressable(() => goToSystem(sys.id))}>
               <Icon name={primaryIcon(sys.primary.kind)} />
               <span class="grow">
                 {sys.name}
@@ -597,6 +656,7 @@ function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
                 </div>
               </span>
               {send && <SendButton s={s} f={send} sys={sys} />}
+              {sites && <SiteStrip s={s} sites={sites} best={best} active={by === 'near' ? null : by} />}
             </div>
           );
         })}

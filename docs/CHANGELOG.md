@@ -2505,3 +2505,26 @@ changes; nothing saved changes shape; every save has it at once.
   turn; `unit/names`. Validated as asked, not the whole suite: tsc and the build clean
   (`index-DXvWTunJ.js`); `star-types`, `holes`, `systems-tab`, `unit/names`, `unit/determinism`;
   savecompat on its 6 saves.
+
+## Our settlements sorted by a yield, and Star types by Livable, Power, Matter and Lasting (26 Oct, both versions)
+
+The player, 26 Oct: "please make player systems sortable by the economic aspect the player clicks
+on, like in civilization, sort by matter output, industry, insight etc..."; and, on the plan:
+"make it shows matter/energy/lifetime etc when sorting by star type in system too". Display only:
+no rule changes, nothing saved.
+
+- **Our settlements**, the Systems window's first tab: each yield's icon above the columns is a
+  button (Energy, Matter, Industry, Insight, Accord). Click once: the systems by their
+  settlements' total of it, most first, each total beside the system's name, and within each
+  system its settlements by their own; again, least first; a third time, as founded. The head
+  says how ("Each turn · by matter, most first"). On a phone the icons stay, now over the rows'
+  columns (they were hidden). Kept while the game runs (`yieldSort`, `Lists.tsx`).
+- **Star types**: each surveyed star shows its best world's Livable, Power, Matter and Lasting,
+  the strip the fleet's Nearby list shows (`starSites`, `SiteStrip`), and the list sorts by any of
+  them (Nearest, the default; the best first, the unsurveyed last), the sorted one outlined.
+- **Checks:** `browser/settlement-sort` (new: by matter most first with totals, least first, as
+  founded; on a phone); `browser/star-types` (each surveyed star's four measures; Matter, the most
+  first and the unsurveyed last); `browser/settle-measures` counts the head's buttons. Validated:
+  tsc and the build clean (`index-UG-o6OAt.js`); `settlement-sort`, `star-types`,
+  `settle-measures`, `systems-tab`, `a11y` and `lowvision` pass in the real fonts. No harness: no
+  rule changed.

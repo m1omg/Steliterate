@@ -30,5 +30,33 @@ run(async () => {
   const rows = await page.evaluate(() => [...document.querySelectorAll('.modal .list-item')].map((r) => r.textContent));
   check(rows.length === 1 && rows[0].includes(hole) && rows[0].includes('not surveyed'), `Black hole lists the one on our map (${hole})`);
   await ck.shot('star-types.png');
+  // each surveyed star's measures, and sorted by one, the unsurveyed last (the player: "make it
+  // shows matter/energy/lifetime etc when sorting by star type")
+  await page.evaluate(() => {
+    const s = window.__stel.state();
+    for (const x of Object.values(s.systems)) if (x.primary.kind === 'red_dwarf' && !x.gone && s.civ.known[x.id]) s.civ.known[x.id] = 2;
+    const far = Object.values(s.systems).find((x) => x.primary.kind === 'red_dwarf' && !x.gone && !s.civ.known[x.id]);
+    if (far) s.civ.known[far.id] = 1;
+    window.__stel.refresh();
+  });
+  await page.locator('.modal .btn.ghost', { hasText: /^Red dwarf/ }).first().click();
+  await page.waitForTimeout(300);
+  await page.locator('.modal .btn.ghost', { hasText: /^\s*Matter$/ }).first().click();
+  await page.waitForTimeout(400);
+  const red = await page.evaluate(() =>
+    [...document.querySelectorAll('.modal .list-item')].map((r) => ({
+      text: r.textContent,
+      strip: r.querySelectorAll('.site-strip > .mark').length,
+      matter: r.querySelector('.site-strip .sorted')?.textContent?.trim() ?? null,
+    })),
+  );
+  console.log(`  red dwarfs by matter: ${red.slice(0, 4).map((r) => `[${r.matter}]`).join(' ')} … ${red.length} stars`);
+  const surveyed = red.filter((r) => !r.text.includes('not surveyed'));
+  check(surveyed.length > 1 && surveyed.every((r) => r.strip === 4), `each surveyed star shows its four measures (${surveyed.length} stars)`);
+  const firstOut = red.findIndex((r) => r.text.includes('not surveyed'));
+  check(firstOut === -1 || red.slice(firstOut).every((r) => r.text.includes('not surveyed')), 'the unsurveyed last');
+  const vals = surveyed.map((r) => (/none/.test(r.matter ?? '') ? -1 : Number((r.matter ?? '').replace(/[^\d.]/g, '')) || 0));
+  check(vals.every((v, i) => i === 0 || v <= vals[i - 1] + 1e-9), `Matter: the most first, marked (${vals.slice(0, 6).join(', ')})`);
+  await ck.shot('star-types-matter.png');
   await finish('STAR TYPES', ck);
 });
