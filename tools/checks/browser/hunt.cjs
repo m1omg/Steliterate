@@ -57,11 +57,14 @@ run(async () => {
   await page.waitForTimeout(300);
   await page.locator('button.endturn').click({ timeout: 8000 });
   await page.waitForTimeout(1200);
-  const toasts = await page.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => ({ text: t.textContent, look: !!t.querySelector('button') })));
-  const told = toasts.find((t) => /Lamp/.test(t.text) && /(caught|came for)/.test(t.text));
+  // (since 26 Oct a fight's outcome opens the turn's combat report, CombatReport.tsx, not a toast)
+  const lines = await page.evaluate(() =>
+    document.querySelector('.modal[aria-label="Combat"]') ? [...document.querySelectorAll('.modal .combat-line')].map((t) => ({ text: t.textContent, look: !!t.querySelector('button') })) : [],
+  );
+  const told = lines.find((t) => /Lamp/.test(t.text) && /(caught|came for)/.test(t.text));
   const alive = await page.evaluate(() => !!window.__stel.state().fleets.lamp);
-  check(!!told, `End turn says it struck, naming the ship: "${told?.text ?? toasts.map((t) => t.text).join(' | ')}"`);
-  check(!told || told.look === alive, alive ? 'with Look, to go to the ship' : 'with no Look, the ship being gone');
+  check(!!told, `End turn's combat report says it struck, naming the ship: "${told?.text ?? lines.map((t) => t.text).join(' | ')}"`);
+  check(!told || told.look, alive ? 'with Look, to go to the ship' : 'with Look, to go to its star, the ship being gone');
   await ck.shot('hunt-struck.png');
   await finish('HUNT', ck);
 });

@@ -10,7 +10,9 @@
 // - generation draws exactly as before: what it makes for these seeds is byte for byte what main's
 //   made before the change (the fingerprints were taken from main at 75efadc), but for the worlds
 //   black holes were given since 20 Oct and where a hole's worlds are drawn (unit/hole-worlds):
-//   since then they leave those out, taken again on 7c0c763, whose galaxies are 75efadc's.
+//   since then they leave those out, taken again on 7c0c763, whose galaxies are 75efadc's; and
+//   since 26 Oct the names (distinctNames gives a later twin, two clusters drawn alike, a name of its
+//   own, drawing nothing: unit/names), taken again on 7c0c763 without them.
 import { generateWorld } from '../../../src/game/gen';
 import { DEFAULT_SETTINGS, newGame } from '../../../src/game/newGame';
 import { ERA_BY_ID } from '../../../src/game/eras';
@@ -23,7 +25,7 @@ const crypto = process.getBuiltinModule('node:crypto') as { createHash(a: string
 const START = ERA_BY_ID.dusk.startYears;
 
 // generation, untouched
-const MAIN: Record<number, string> = { 1000: 'b1241afc3737a944', 8919: '60aa34e126295c35', 16838: '0db23767b5dcf628', 24757: 'f525cf87242ae344' };
+const MAIN: Record<number, string> = { 1000: 'fff24874d800e046', 8919: '17c599c3e97a682b', 16838: '0aa94c8c4e22c7e6', 24757: '7123fa9bad610654' };
 for (const [seed, want] of Object.entries(MAIN)) {
   const s = generateWorld({ ...DEFAULT_SETTINGS, seed: Number(seed), survivors: 3 });
   const h = crypto.createHash('sha256');
@@ -31,11 +33,12 @@ for (const [seed, want] of Object.entries(MAIN)) {
   const added = (id: string) => s.bodies[id].traits.includes('hole_world');
   for (const id of Object.keys(s.systems).sort()) {
     const y = s.systems[id];
-    h.update(JSON.stringify([id, y.name, y.primary, y.pos, y.phys, y.bodies.filter((b) => !added(b)), y.special ?? null]));
+    h.update(JSON.stringify([id, y.primary, y.pos, y.phys, y.bodies.filter((b) => !added(b)), y.special ?? null]));
   }
   for (const id of Object.keys(s.bodies).sort()) {
     if (added(id)) continue;
-    const b = s.bodies[id];
+    const { name, ...b } = s.bodies[id];
+    void name;
     h.update(JSON.stringify(s.systems[b.systemId]?.primary.kind === 'black_hole' ? { ...b, orbit: 0 } : b));
   }
   h.update(JSON.stringify([s.rng, s.fate ?? null, Object.keys(s.survivors), Object.keys(s.swarms)]));

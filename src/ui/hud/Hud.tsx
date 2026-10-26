@@ -139,7 +139,8 @@ function BottomLeft({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const ui = hudPrefs.value;
   const all = s.civ.forecasts;
-  const shown = all.filter((f) => !s.civ.flags[`fcd:${f.uid}`]).slice(0, 3);
+  // every one not closed, in a list that scrolls (26 Oct, the player: "forecasts should also be scrollable")
+  const shown = all.filter((f) => !s.civ.flags[`fcd:${f.uid}`]);
   const hidden = all.length - all.filter((f) => !s.civ.flags[`fcd:${f.uid}`]).length;
   const feed = s.civ.log.slice(-7).reverse();
   // (on a phone it is folded under the top bar until its turn line is tapped: styles.css)
@@ -164,59 +165,62 @@ function BottomLeft({ s }: { s: GameState }) {
           </button>
         )}
       </div>
-      {ui.forecasts &&
-        shown.map((f) => {
-          // turns at the pace you have chosen (the Tide figure too, when they differ)
-          // (in the Dark Era only the widest atoms' decay is near enough to count)
-          const due = isFinite(f.dueYears) && (calendarEra(s) !== 'dark' || f.kind === 'positronium');
-          // (deep time, past what a year can hold: counted on the deep-time calendar, deeptime.ts)
-          const deep = !due && f.dueEta !== undefined && s.era === 'dark';
-          // (as they will really fall: a flare's own clock and its first moment shorten them)
-          const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : deep ? turnsToEta(s, f.dueEta!, s.civ.pace) : Infinity;
-          const tideTurns = s.civ.pace === 0 ? turns : due ? turnsUntilYears(s, f.dueYears, 0, 5000) : deep ? turnsToEta(s, f.dueEta!, 0) : turns;
-          const tip = isFinite(turns) ? `${f.text}\n~${turns} turn${turns === 1 ? '' : 's'} at this pace${tideTurns !== turns && isFinite(tideTurns) ? ` (~${tideTurns} at the Tide)` : ''}.` : f.text;
-          return (
-            <div
-              key={f.uid}
-              class="forecast panel"
-              data-tip={tip}
-              {...(f.systemId
-                ? pressable(() => {
-                    selection.value = { kind: 'system', id: f.systemId! };
-                    engine()?.select(f.systemId!);
-                    if (view.value === 'galaxy') engine()?.focusGalaxyOn(f.systemId!, 120);
-                  })
-                : {})}
-              style={{ cursor: f.systemId ? 'pointer' : 'default' }}
-            >
-              <Icon name={f.severity === 'boon' ? 'energy' : 'warning'} cls={f.severity === 'danger' ? 'bad' : f.severity === 'boon' ? 'boon' : 'warn'} />
-              <div class="grow">
-                <div class="t">{f.title}</div>
-                <div class="faint" style={{ fontSize: '12.5px' }}>
-                  {isFinite(f.dueYears) ? `in ${formatYears(f.dueYears - s.years)}` : f.dueEta !== undefined ? (s.eta >= f.dueEta ? 'now' : `at ${formatDeepYears(f.dueEta)}`) : 'now'}
-                  {isFinite(turns) ? ` · ~${turns} turn${turns === 1 ? '' : 's'}` : ''}
-                </div>
-              </div>
-              <button
-                class="btn ghost small fc-close"
-                aria-label="Close this forecast"
-                data-tip="Close. It stays on the Chronometer."
-                onClick={(e) => {
-                  e.stopPropagation();
-                  act((g) => {
-                    g.civ.flags[`fcd:${f.uid}`] = g.turn;
-                  });
-                }}
+      {ui.forecasts && shown.length > 0 && (
+        <div class="forecast-list scroll" aria-label="Forecasts">
+          {shown.map((f) => {
+            // turns at the pace you have chosen (the Tide figure too, when they differ)
+            // (in the Dark Era only the widest atoms' decay is near enough to count)
+            const due = isFinite(f.dueYears) && (calendarEra(s) !== 'dark' || f.kind === 'positronium');
+            // (deep time, past what a year can hold: counted on the deep-time calendar, deeptime.ts)
+            const deep = !due && f.dueEta !== undefined && s.era === 'dark';
+            // (as they will really fall: a flare's own clock and its first moment shorten them)
+            const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : deep ? turnsToEta(s, f.dueEta!, s.civ.pace) : Infinity;
+            const tideTurns = s.civ.pace === 0 ? turns : due ? turnsUntilYears(s, f.dueYears, 0, 5000) : deep ? turnsToEta(s, f.dueEta!, 0) : turns;
+            const tip = isFinite(turns) ? `${f.text}\n~${turns} turn${turns === 1 ? '' : 's'} at this pace${tideTurns !== turns && isFinite(tideTurns) ? ` (~${tideTurns} at the Tide)` : ''}.` : f.text;
+            return (
+              <div
+                key={f.uid}
+                class="forecast panel"
+                data-tip={tip}
+                {...(f.systemId
+                  ? pressable(() => {
+                      selection.value = { kind: 'system', id: f.systemId! };
+                      engine()?.select(f.systemId!);
+                      if (view.value === 'galaxy') engine()?.focusGalaxyOn(f.systemId!, 120);
+                    })
+                  : {})}
+                style={{ cursor: f.systemId ? 'pointer' : 'default' }}
               >
-                <Icon name="close" />
-              </button>
-            </div>
-          );
-        })}
+                <Icon name={f.severity === 'boon' ? 'energy' : 'warning'} cls={f.severity === 'danger' ? 'bad' : f.severity === 'boon' ? 'boon' : 'warn'} />
+                <div class="grow">
+                  <div class="t">{f.title}</div>
+                  <div class="faint" style={{ fontSize: '12.5px' }}>
+                    {isFinite(f.dueYears) ? `in ${formatYears(f.dueYears - s.years)}` : f.dueEta !== undefined ? (s.eta >= f.dueEta ? 'now' : `at ${formatDeepYears(f.dueEta)}`) : 'now'}
+                    {isFinite(turns) ? ` · ~${turns} turn${turns === 1 ? '' : 's'}` : ''}
+                  </div>
+                </div>
+                <button
+                  class="btn ghost small fc-close"
+                  aria-label="Close this forecast"
+                  data-tip="Close. It stays on the Chronometer."
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    act((g) => {
+                      g.civ.flags[`fcd:${f.uid}`] = g.turn;
+                    });
+                  }}
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {ui.feed && (
         <div class="feed panel scroll" aria-live="polite">
           {feed.map((e, i) => (
-            <div key={i} class={`e ${e.kind}`}>
+            <div key={i} class={`e ${e.kind}${e.tone ? ` ${e.tone}` : ''}`}>
               <span class="faint mono" style={{ fontSize: '11.5px' }}>
                 {e.turn}
               </span>{' '}

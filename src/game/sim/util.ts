@@ -63,9 +63,18 @@ export function coloniesOf(state: GameState, civId: string): Colony[] {
 }
 
 /** A line in one civilization's Record (the universe's part of a turn tells each its own). */
-export function logTo(state: GameState, civ: Civ, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string) {
-  civ.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}) });
+export function logTo(state: GameState, civ: Civ, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string, tone?: LogEntry['tone']) {
+  civ.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}), ...(tone ? { tone } : {}) });
   if (civ.log.length > 400) civ.log.splice(0, civ.log.length - 400);
+}
+
+/**
+ * A fight's outcome in one civilization's Record, good or bad for it: for the player's, such a line
+ * opens the turn's combat report (turnflow.ts; 26 Oct, the player: "there also should be popups for
+ * combat, rn often you defeat a swarm or get your fleet destroyed with just tiny text footnote").
+ */
+export function combatLog(state: GameState, civ: Civ, text: string, tone: 'good' | 'bad', systemId?: string, fleet?: string) {
+  logTo(state, civ, text, 'combat', systemId, fleet, tone);
 }
 
 export function eraIndex(era: EraId): number {

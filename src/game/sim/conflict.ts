@@ -24,7 +24,7 @@ import { endCiv, fleetSeen, settlementSeen } from './others';
 import { sendSignal } from './signals';
 import { distanceToThem, spreadNews, voice } from './survivors';
 import { distanceBetween, hearOf, lightIn, othersPlaying, tieKey, tieOf } from './ties';
-import { allColonies, allFleets, clamp, distLy, log, logTo, popsOf } from './util';
+import { allColonies, allFleets, clamp, combatLog, distLy, log, logTo, popsOf } from './util';
 import { hashSeed } from '../rng';
 import { BLOCKADE, DEFENCE_CAUSE, HUNGER_CAUSE, SIEGE_TURNS, WAR_ACCORD } from './war';
 import { CORRUPT_AT, hungerAct } from './judge';
@@ -487,7 +487,7 @@ function battles(state: GameState): Set<string> {
       const them = record.filter((o) => o.owner !== me.owner && atWarWith(state, me.owner, o.owner));
       const gone = sides.find((x) => x.owner === me.owner)!.units.map((u) => u.f).filter((f, i, xs) => xs.indexOf(f) === i && !state.fleets[f.id]);
       if (me.owner !== state.player) {
-        for (const f of gone) logTo(state, civ, `${f.name} was destroyed in battle at ${star?.name}.`, 'combat', sys);
+        for (const f of gone) combatLog(state, civ, `${f.name} was destroyed in battle at ${star?.name}.`, 'bad', sys);
         continue;
       }
       const theirs: Record<string, number> = {};
@@ -496,7 +496,10 @@ function battles(state: GameState): Set<string> {
       const weLost = shipsInWords(me.lost);
       const who = them.map((o) => state.civs[o.owner]?.name ?? 'the enemy').join(' and ');
       const losses = !weLost && !theyLost ? ' No ship was lost.' : `${weLost ? ` We lost ${weLost}${gone.length ? ` (${gone.map((f) => f.name).join(', ')} destroyed)` : ''}.` : ''}${theyLost ? ` They lost ${theyLost}.` : ''}`;
-      logTo(state, civ, `Battle at ${star?.name} with ${who}: we dealt ${me.dealt.toFixed(1)} and took ${me.taken.toFixed(1)}.${losses}`, 'combat', sys);
+      // (a battle that cost neither side a ship is no news: the Record keeps it)
+      const line = `Battle at ${star?.name} with ${who}: we dealt ${me.dealt.toFixed(1)} and took ${me.taken.toFixed(1)}.${losses}`;
+      if (weLost || theyLost) combatLog(state, civ, line, weLost ? 'bad' : 'good', sys);
+      else logTo(state, civ, line, 'combat', sys);
     }
   }
   return fought;
@@ -653,9 +656,9 @@ export function assault(state: GameState, by: string, colonyId: string, raze = f
     const actor = state.civs[by];
     if (actor) {
       actor.resolve = Math.max(0, actor.resolve - 2);
-      logTo(state, actor, `The assault on ${c.name} at ${sys?.name} was thrown back. The siege must begin again.`, 'combat', sys?.id);
+      combatLog(state, actor, `The assault on ${c.name} at ${sys?.name} was thrown back. The siege must begin again.`, 'bad', sys?.id);
     }
-    if (from === state.player) log(state, `We threw back ${actor?.name ?? 'the enemy'}’s assault on ${c.name}.`, 'combat', c.systemId);
+    if (from === state.player) combatLog(state, state.civ, `We threw back ${actor?.name ?? 'the enemy'}’s assault on ${c.name}.`, 'good', c.systemId);
     state.battles.push({ systemId: c.systemId, turn: state.turn, text: `An assault on ${c.name} thrown back.` });
     return { won: false };
   }
@@ -743,9 +746,9 @@ export function conquer(state: GameState, by: string, c: Colony, how: Fall, caus
   if (loser) loser.flags.lost = (loser.flags.lost ?? 0) + 1;
   state.battles.push({ systemId: c.systemId, turn: state.turn, text: `${c.name} ${how === 'take' ? 'taken' : how === 'raze' ? 'razed' : 'struck down'}.` });
   heardEverywhere(state, by, from, c.systemId, what, how, cause);
-  if (by === state.player) log(state, `We ${verb} ${c.name}.${how === 'take' ? ' Some of its people fled to their own; the rest are ours now, and do not thank us.' : ''}`, 'bad', c.systemId);
+  if (by === state.player) combatLog(state, state.civ, `We ${verb} ${c.name}.${how === 'take' ? ' Some of its people fled to their own; the rest are ours now, and do not thank us.' : ''}`, 'good', c.systemId);
   // (a settlement of ours razed or struck down: destroyColony has told us)
-  else if (from === state.player && how === 'take') log(state, `${winner?.name ?? 'The enemy'} ${what}.`, 'bad', c.systemId);
+  else if (from === state.player && how === 'take') combatLog(state, state.civ, `${winner?.name ?? 'The enemy'} ${what}.`, 'bad', c.systemId);
   if (allColonies(state).some((x) => x.owner === from)) return;
   // the last of them: their game is over (ours too: a defeat of its own, endings.ts)
   if (from === state.player) {
@@ -828,7 +831,7 @@ function strikesTurn(state: GameState): void {
     const c = f.targetColony ? state.colonies[f.targetColony] : undefined;
     const w = c ? warOf(state, by, c.owner) : undefined;
     if (!c || c.systemId !== f.at || !w) {
-      if (actor) logTo(state, actor, `${f.name} found nothing of the enemy’s at ${sys?.name} and flew on into the dark.`, 'combat', f.at);
+      if (actor) combatLog(state, actor, `${f.name} found nothing of the enemy’s at ${sys?.name} and flew on into the dark.`, 'bad', f.at);
       continue;
     }
     const from = c.owner;
@@ -837,8 +840,8 @@ function strikesTurn(state: GameState): void {
     if (draw < screen) {
       // turned aside: the attempt is seen everywhere all the same
       heardEverywhere(state, by, from, c.systemId, `struck at ${c.name}, ${from === state.player ? 'one of our settlements' : `a settlement of ${state.civs[from]?.name ?? 'another'}`}, with a Kinetic Lance, and was turned aside`, 'lance', w.cause);
-      if (actor) logTo(state, actor, `${f.name} was turned aside at ${sys?.name} by the screens of the ships waiting there.`, 'combat', f.at);
-      if (from === state.player) log(state, `A Kinetic Lance from ${actor?.name ?? 'the enemy'} struck at ${c.name}. The screens of our ships there turned it aside.`, 'combat', c.systemId);
+      if (actor) combatLog(state, actor, `${f.name} was turned aside at ${sys?.name} by the screens of the ships waiting there.`, 'bad', f.at);
+      if (from === state.player) combatLog(state, state.civ, `A Kinetic Lance from ${actor?.name ?? 'the enemy'} struck at ${c.name}. The screens of our ships there turned it aside.`, 'good', c.systemId);
       state.battles.push({ systemId: c.systemId, turn: state.turn, text: `A Kinetic Lance turned aside at ${c.name}.` });
       continue;
     }
@@ -861,8 +864,8 @@ function strikesTurn(state: GameState): void {
     }
     state.gfe = Math.max(0.05, state.gfe - CONQUEST_GFE * lost);
     heardEverywhere(state, by, from, c.systemId, `struck ${c.name}, ${from === state.player ? 'one of our settlements' : `a settlement of ${state.civs[from]?.name ?? 'another'}`}, with a Kinetic Lance`, 'lance', w.cause);
-    if (actor) logTo(state, actor, `${f.name} struck ${c.name}. Scattered as it is through the Deep, half of it is gone, and half lives on.`, 'combat', f.at);
-    if (from === state.player) log(state, `A Kinetic Lance from ${actor?.name ?? 'the enemy'} struck ${c.name}. Half of it is gone.`, 'bad', c.systemId);
+    if (actor) combatLog(state, actor, `${f.name} struck ${c.name}. Scattered as it is through the Deep, half of it is gone, and half lives on.`, 'good', f.at);
+    if (from === state.player) combatLog(state, state.civ, `A Kinetic Lance from ${actor?.name ?? 'the enemy'} struck ${c.name}. Half of it is gone.`, 'bad', c.systemId);
     state.battles.push({ systemId: c.systemId, turn: state.turn, text: `A Kinetic Lance struck ${c.name}.` });
   }
 }

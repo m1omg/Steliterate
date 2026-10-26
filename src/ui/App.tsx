@@ -6,6 +6,7 @@ import { Hud } from './hud/Hud';
 import { Drawer } from './panels/Drawer';
 import { ChartersModal, ThreadsModal } from './screens/Society';
 import { CodexModal, LogModal, SaveModal, SettingsModal } from './screens/Misc';
+import { CombatReport } from './screens/CombatReport';
 import { MainMenu, Setup } from './screens/Menu';
 import { ResearchModal } from './screens/Research';
 import { SignalsModal } from './screens/Signals';
@@ -107,6 +108,8 @@ function ModalHost({ s }: { s: GameState | null }) {
       return <OutcomeScreen s={s} />;
     case 'era_intro':
       return <EraIntro s={s} />;
+    case 'combat':
+      return <CombatReport s={s} entries={m.entries} />;
   }
   return null;
 }
@@ -182,7 +185,8 @@ export function App() {
     music.setMood(danger ? 'tension' : 'calm');
   });
   const m = modal.value?.kind;
-  const blocking = m === 'crossing' || m === 'outcome' || m === 'era_intro';
+  // (the turn's events wait behind its combat report, and follow it)
+  const blocking = m === 'crossing' || m === 'outcome' || m === 'era_intro' || m === 'combat';
   const story = !!s && !blocking && (s.civ.pending.length > 0 || !!eventResult.value);
   const lore = !!s && !blocking && !!loreView.value && !s.civ.pending.length && !eventResult.value;
   return (

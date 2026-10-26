@@ -747,6 +747,9 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const own = (id: string | null | undefined) => (id && state.colonies[id]?.owner === state.civ.id ? state.colonies[id] : undefined);
   // the deep dark's flashes this turn, and falling worlds', for the Burst Catchers (catchFlashes)
   const flashes: Flashed[] = [];
+  // a new star whose clock we kept was lived in full in its light: no flash to bank from it (the
+  // clock is the player's, and is cleared only after the notes: clearStarClock)
+  const keptTimeWith = (dies: number | undefined) => dies !== undefined && state.civ.id === state.player && (state.civ.flags.star_flash ?? state.civ.flags.star_until) === dies;
   for (const n of notes) {
     const sys = state.systems[n.systemId];
     if (!sys) continue;
@@ -779,6 +782,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         // blindingly bright and very brief: as with any new star, we may keep time with it (a flash)
         queueEvent(state, 'helium_giant', { systemId: sys.id });
         known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
+        // the helium star it swelled from, if it lit and went out within this turn
+        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ), own: true });
         break;
       case 'supernova':
         for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'a supernova');
@@ -786,6 +791,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         break;
       case 'burnout':
         if (seen) log(state, `The star at ${sys.name} has burned out.`, mine ? 'bad' : 'info', sys.id);
+        // a new star that lit and went out within this turn: a flash for the Burst Catchers (26 Oct)
+        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ), own: true });
         break;
       case 'rogue':
         if (n.bodyId && own(state.bodies[n.bodyId]?.colonyId)) queueEvent(state, 'unmoored', { systemId: sys.id, bodyId: n.bodyId });
@@ -944,7 +951,7 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
 interface Flashed {
   sys: StarSystem;
   reach: number;
-  /** a world falling in: its own system's catchers bank it, even in a system cast out of the galaxy */
+  /** a world falling in, or a new star too brief for its turn: its own system's catchers bank it, even in a system cast out of the galaxy */
   own?: boolean;
 }
 
@@ -958,10 +965,11 @@ function suns(lum: number): string {
 
 /**
  * The turn's flashes: in the deep dark (black dwarf supernovae, matter tunnelling into black holes,
- * a neutron star's reach each), and since 20 Oct worlds falling in (by their energy: flashReach).
- * Each of our Burst Catchers banks from the best of them, once, by its distance (`burstShare`: all
- * of it in its own system or within the flash's reach), as from a neutron star bursting. In a
- * system cast out of the galaxy only a world falling into its own star reaches them.
+ * a neutron star's reach each), since 20 Oct worlds falling in, and since 26 Oct new stars that lit
+ * and went out within the turn (both by their energy: flashReach). Each of our Burst Catchers
+ * banks from the best of them, once, by its distance (`burstShare`: all of it in its own system or
+ * within the flash's reach), as from a neutron star bursting. In a system cast out of the galaxy
+ * only a flash in its own system reaches them.
  */
 function catchFlashes(state: GameState, flashes: Flashed[]) {
   let got = 0;

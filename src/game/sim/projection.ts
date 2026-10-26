@@ -4,6 +4,7 @@ import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
 import { capacity, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type ColonyTurn, type TurnContext } from './economy';
+import { BURST_CATCH } from './crossing';
 import { computeMods, strainFor, type Strain } from './mods';
 import { researchDraw } from './research';
 import { jointIncome } from './survivors';
@@ -134,8 +135,10 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
   const notes: string[] = [];
   const e = b.energy - b.energyUpkeep - (a.energy - a.energyUpkeep);
   if (d.energy && b.energy - a.energy < 0.05) notes.push(d.energy.mode === 'light' ? noLight(state, c, ctx) : 'Nothing for it to draw on here right now');
-  if (d.reserveCap) notes.push(`Energy reserve +${d.reserveCap}`);
-  if (d.burstCap) notes.push(`Catches final bursts: reserve +${d.burstCap}`);
+  // one reserve, whatever fills it (storage.ts): a burst caught lands in it too, and Deep Storage's
+  // quarter more counts (26 Oct, the player: "how much these actually increase my storage")
+  if (d.reserveCap || d.burstCap) notes.push(`Energy reserve +${Math.floor(((d.reserveCap ?? 0) + (d.burstCap ?? 0)) * ctx.mods.reserveMult)}`);
+  if (id === 'burst_catcher') notes.push(`Catches bursts: up to +${BURST_CATCH} energy each into the reserve, even past its limit until the next turn ends (a black hole’s final burst here; a neutron star’s burst, a star that lights and goes out within a turn, or another flash nearby)`);
   if (d.defense) notes.push(`Defence +${d.defense} against swarms and raids`);
   if (d.declineMult !== undefined && d.declineMult < 1) notes.push(`The world declines ${Math.round((1 - d.declineMult) * 100)}% slower`);
   if (d.warms) notes.push('Keeps this world alive after its star goes out');

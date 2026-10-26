@@ -3,7 +3,7 @@ import type { Engine, Quality } from '../render/engine';
 import { assertPlayerView } from '../game/civs';
 import { saveGame } from '../game/save';
 import { OLD_HUD_KEY, OLD_SETTINGS_KEY, STORE } from '../keys';
-import type { GameState } from '../game/types';
+import type { GameState, LogEntry } from '../game/types';
 import type { FilmArgs, FilmId } from '../film/films';
 import type { RevealStep } from '../render/systemView';
 
@@ -29,6 +29,8 @@ export type Modal =
   /** A film (part 4), then what comes after it. */
   | { kind: 'film'; id: FilmId; args?: FilmArgs; then?: Modal }
   | { kind: 'era_intro' }
+  /** The fights of the turn just played (or of a Long Sleep), as they went for us (CombatReport.tsx). */
+  | { kind: 'combat'; entries: LogEntry[] }
   | null;
 
 export interface Selection {

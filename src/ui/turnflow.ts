@@ -11,7 +11,7 @@ import { isIdleFleet, livingWorlds, naturalKinRoom } from '../game/sim/fleets';
 import { shipQueue } from './hud/ShipPrompt';
 import { researchPrompt } from './hud/ResearchPrompt';
 import { colonies, fleets } from '../game/sim/util';
-import type { GameState } from '../game/types';
+import type { GameState, LogEntry } from '../game/types';
 
 // Ending a turn: run the simulation, refresh the views, and surface what needs attention.
 // A Long Sleep keeps ending turns on its own, pausing whenever something happens.
@@ -141,10 +141,13 @@ export async function doEndTurn() {
     if (home) engine()?.ping(home.id, v.color);
     sfx('signal');
   }
-  // a swarm going for one of our ships: say so (two at most; the Record keeps the rest)
   const at = lastLog ? s.civ.log.lastIndexOf(lastLog) : -1;
   const fresh = lastLog && at < 0 ? [] : s.civ.log.slice(at + 1);
-  for (const e of fresh.filter((x) => x.fleet).slice(0, 2)) {
+  // the turn's fights, won or lost (combatLog): gathered for one report as the turn ends, or, over
+  // a Long Sleep, as it ends (below)
+  fights.push(...fresh.filter((x) => x.kind === 'combat' && x.tone));
+  // anything else about one of our ships: say so (two at most; the Record keeps the rest)
+  for (const e of fresh.filter((x) => x.fleet && !x.tone).slice(0, 2)) {
     const f = s.fleets[e.fleet!];
     const lost = !f || f.ships.length < (shipsBefore.get(e.fleet!) ?? 0);
     notify(e.text, e.kind === 'bad' || lost ? 'bad' : 'info', f ? { label: 'Look', tip: `Go to ${f.name}`, run: () => goToFleet(s, f) } : undefined);
@@ -204,5 +207,15 @@ export async function doEndTurn() {
   if (newSettlers.length) notify(`${newSettlers[0].name} is ready at ${s.systems[newSettlers[0].at ?? '']?.name ?? 'the shipyard'}. Open Fleets to choose a world.`, 'good');
   if (s.civ.sleepTurns > 0 && s.civ.pending.length === 0) {
     window.setTimeout(doEndTurn, 420);
+    return;
+  }
+  // the fights since the report was last shown: losses first (CombatReport.tsx); the turn's events
+  // wait behind it (App.tsx)
+  if (fights.length && !modal.value) {
+    modal.value = { kind: 'combat', entries: fights.splice(0) };
+    sfx(modal.value.entries.some((e) => e.tone === 'bad') ? 'bad' : 'good');
   }
 }
+
+/** Fights not yet reported: one turn's, or a Long Sleep's, until it ends (doEndTurn). */
+const fights: LogEntry[] = [];

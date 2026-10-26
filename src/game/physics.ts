@@ -652,6 +652,25 @@ export interface EvolutionNote {
   inFlash?: boolean;
   /** (flash) the world `bodyId` falling in, in a game begun since 20 Oct (`flashSystem`) */
   flash?: FlashNote;
+  /** (burnout, giant) when the new star went out: a clock kept with it is told by this */
+  dies?: number;
+  /** (burnout, giant) a new star whose whole life was shorter than this turn: all its light (J), a flash for Burst Catchers */
+  briefJ?: number;
+}
+
+/** A new star's light in Suns: a collision star burns as a 0.1-Sun red dwarf does, about a thousandth of the Sun. */
+const NEW_STAR_SUNS = { collision_star: 0.001, ...NEW_STAR_LUM } as const;
+
+/**
+ * All the light a new star gave (J), if its whole life was shorter than the turn it went out in:
+ * it lit and went out inside the turn, too briefly for collectors to use (they gather the turn's
+ * average), but a Burst Catcher banks it as a flash (26 Oct, the player: "they should also be able
+ * to capture events like a helium star and helium giant whose life is shorter than 1 turn").
+ */
+function briefStarLight(p: Primary, turn: number): number | undefined {
+  if (p.kind !== 'collision_star' && p.kind !== 'helium_star' && p.kind !== 'helium_giant') return undefined;
+  const life = (p.diesAt ?? 0) - (p.bornAt ?? Infinity);
+  return life > 0 && life < turn ? NEW_STAR_SUNS[p.kind] * SUN_W * life * YEAR_S : undefined;
 }
 
 /** Advance every primary and body to cosmic year `to` (from `from`). Returns what happened. */
@@ -686,6 +705,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
       notes.push({ systemId: sys.id, kind: 'burnout' });
     }
     if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant') && p.diesAt && to >= p.diesAt) {
+      // (before the star is rewritten: when it went out, and its light if it was too brief for the turn)
+      const ended = { dies: p.diesAt, ...(briefStarLight(p, L) ? { briefJ: briefStarLight(p, L) } : {}) };
       if (p.kind === 'helium_star' && (p.mass >= 0.9 || rand() < 0.3) && !sys.primary.rekindle) {
         // massive merger remnants swell into a brief, brilliant helium giant. Like every new star
         // it lights as the turn ends (it would have lit and gone out inside it): it shines through
@@ -693,14 +714,14 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         p.kind = 'helium_giant';
         p.bornAt = to;
         p.diesAt = to + GIANT_LIFE;
-        notes.push({ systemId: sys.id, kind: 'giant' });
+        notes.push({ systemId: sys.id, kind: 'giant', ...ended });
       } else {
         p.kind = p.kind === 'collision_star' ? 'white_dwarf' : 'white_dwarf';
         p.halo = false;
         p.lum = 0.02;
         delete p.bornAt;
         delete p.diesAt;
-        notes.push({ systemId: sys.id, kind: 'burnout' });
+        notes.push({ systemId: sys.id, kind: 'burnout', ...ended });
       }
     }
     // white dwarfs are called black: one no dark matter warms from η 16.7 (it has been cold for

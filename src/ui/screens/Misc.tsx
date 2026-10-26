@@ -43,7 +43,7 @@ export function LogModal({ s }: { s: GameState }) {
         {entries.map((e, i) => (
           <div
             key={i}
-            class={`e ${e.kind}`}
+            class={`e ${e.kind}${e.tone ? ` ${e.tone}` : ''}`}
             style={{ cursor: e.systemId ? 'pointer' : 'default' }}
             {...(e.systemId
               ? pressable(() => {

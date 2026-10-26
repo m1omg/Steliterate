@@ -14,7 +14,7 @@ import type { Colony, GameState, Survivor } from '../types';
 import { THREADS } from '../types';
 import { endPact, pactsWith } from './pacts';
 import { dealSize, distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
-import { allColonies, capital, clamp, fleets, log, marks } from './util';
+import { allColonies, capital, clamp, combatLog, fleets, log, marks } from './util';
 import { isWarship, strength } from '../data/ships';
 import { tacticOf } from '../data/tactics';
 import { JUST_CAUSE_AT } from './judge';
@@ -193,7 +193,7 @@ export function warTurn(state: GameState, chance: () => number) {
       f.ships = f.ships.filter((s) => s.hp > 0);
       if (!f.ships.length) {
         delete state.fleets[f.id];
-        log(state, `${f.name} was destroyed in the siege of ${state.systems[sv.homeSystemId]?.name}.`, 'combat', sv.homeSystemId);
+        combatLog(state, state.civ, `${f.name} was destroyed in the siege of ${state.systems[sv.homeSystemId]?.name}.`, 'bad', sv.homeSystemId);
       }
     }
     state.battles.push({ systemId: sv.homeSystemId, turn: state.turn, text: `The siege of ${sv.name}, turn ${sv.war!.siege}.` });

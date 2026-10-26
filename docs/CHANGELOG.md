@@ -4235,3 +4235,62 @@ no rule changes, nothing saved.
   tsc and the build clean (`index-BuZ4epBX.js`); `settlement-sort`, `star-types`,
   `settle-measures`, `systems-tab`, `a11y` and `lowvision` pass in the real fonts. No harness: no
   rule changed.
+
+## Storage that says what it holds, brief stars caught, star states, a combat report, scrollable forecasts (26 Oct, both versions)
+
+The player, 26 Oct, on a screenshot of the build list: "can you explain how much these actually
+increase my storage capacity?", then, one after another on the plan: the notes fixed ("do burst
+catchers actually catch bursts then? If they do, that should stay in their description"); "they
+should also be able to capture events like a helium star and helium giant whose life is shorter
+than 1 turn", applied to current saves; "systems view should show if white dwarf is cold, still
+cooling, or an ember etc."; "there also should be popups for combat, rn often you defeat a swarm
+or get your fleet destroyed with just tiny text footnote in events, forecasts should also be
+scrollable".
+
+- **Storage notes:** the build list said "Energy reserve +150" and "Catches final bursts: reserve
+  +100" for a Deep Storage Ring, but the reserve is one sum (`reserveCapacity`): 100 and every
+  storage building's figures, a quarter more with Deep Storage. Each says it in one line now, with
+  the quarter (`structureEffect`, `projection.ts`): a Ring +312 (it was +250, and its "catches
+  final bursts" was never so: a Ring catches nothing), a Burst Catcher +375, an Energy Vault +100.
+- **Burst Catchers** say what they do catch: up to 250 energy each into the reserve, even past
+  its limit until the next turn ends, from a black hole's final burst in its own system, a
+  neutron star's burst, a world falling into a dead star, and now a brief star. Their description
+  no longer names flares (nothing catches those).
+- **A new star too brief for its turn** (rule): a collision star, helium star or helium giant
+  whose whole life is shorter than the turn it goes out in lit and went out inside it, its light
+  next to nothing averaged over the turn. Now it is a flash for the Burst Catchers, by all the
+  light it gave (`briefStarLight`, `physics.ts`: 1,000 Suns for a giant's 120,000 years,
+  1.45×10⁴² J, filling a catcher out to 12 ly; a helium star about 10⁴⁴ J, about 100 ly; a
+  collision star, a thousandth of a Sun for 10¹²⁻¹³ years, 35 to 110 ly), banked as the turn's
+  other flashes are (`catchFlashes`): all of it at its own star, less with distance past its
+  reach. Not from a star whose clock we kept: its light was lived in full. Worked out as each
+  turn ends, so a saved game has it from its next turn; a star that went out before is a white
+  dwarf now, its dates gone, and cannot be paid back. The bend, as with bursts: a catcher takes a
+  share of a flash as it happens.
+- **Star states:** the Star types tab says how each star is, in a word, from its light's own
+  label (`starState`, `Lists.tsx`): a white dwarf cooling, nearly cold, an ember (warmed by dark
+  matter), fading or dimming, cold, or rekindled by a world falling in; a brown dwarf's last heat;
+  a neutron star spinning down; a new star burning, going out this turn, or out.
+- **The combat report:** every fight's outcome went only to the Record. Now each line of a fight
+  is marked good or bad for us (`combatLog`, `util.ts`, an optional `tone` on the Record's line,
+  saves safe), and after a turn with any, a Combat window lists them, the losses first, each with
+  Look (to the ship, or its star); over a Long Sleep, all of them once it ends. The turn's events
+  wait behind it. Siege progress and a Lance setting out are not fights' outcomes and open
+  nothing; the first swarm's own event card stays as it was. The Record colours those lines too.
+- **Forecasts scroll:** the HUD showed three (one or two on a shorter screen) and no way to the
+  rest. Now every forecast not closed is in a list that scrolls, about three in view (two below
+  950 px high, one below 790); on a phone the open sheet and in the magnifier mode the column hold
+  them all.
+- **Checks:** `unit/storage-notes`, `unit/brief-star-catch`, `browser/combat-report`,
+  `browser/forecasts-scroll` (new); `browser/star-types` (states), `browser/hunt` (the report, not
+  a toast). `unit/young-dwarfs` fingerprints generation without names now: PR
+  m1omg/Steliterate#42's `distinctNames` renamed a twin in seed 24757, so its fingerprint moved;
+  taken again without names on 7c0c763, the four seeds give the same fingerprints there and here,
+  so generation draws exactly as before.
+- **Balance** (300 standard competent games): 183 survive, 78 victories (184 / 79 before); by
+  fate decay 108 / 148, stable 33 / 81, curvature 42 / 71: the same within the noise (the
+  autoplayer builds few Burst Catchers).
+- **Validated:** tsc and the build clean; all 94 unit checks; savecompat on its 9 saves; the
+  playtest (30/144 Hz parity 2e-15); the browser checks `combat-report`, `forecasts-scroll`,
+  `star-types`, `build-kinds`, `attack`, `hunt`, `war`, `a11y`, `lowvision`, `translate` and
+  `systems-tab` in the real fonts.

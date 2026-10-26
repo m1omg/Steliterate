@@ -15,7 +15,7 @@ import { canConverse, rangeWith, sendSignal, voiceRange, voiceThread } from './s
 import { queueEvent } from './events';
 import { survivorWorld } from './homes';
 import { formatDistance, formatYears, logTurnLength } from '../eras';
-import { capital, clamp, colonies, distLy, fleets, hasCharter, log, marks, ownFleet, threadTotals, withRng } from './util';
+import { capital, clamp, colonies, combatLog, distLy, fleets, hasCharter, log, marks, ownFleet, threadTotals, withRng } from './util';
 import { turnStep } from './flare';
 import { capacity } from './economy';
 import { computeMods } from './mods';
@@ -681,7 +681,7 @@ export function seizeSurvivor(state: GameState, id: string, raze = false, colony
     sv.war!.siege = 0;
     civ.resolve = Math.max(0, civ.resolve - 2);
     state.battles.push({ systemId: sys.id, turn: state.turn, text: `Our assault on ${sv.name} was thrown back.` });
-    log(state, `Our assault on ${sv.name} at ${sys.name} was thrown back. The siege must begin again.`, 'combat', sys.id);
+    combatLog(state, state.civ, `Our assault on ${sv.name} at ${sys.name} was thrown back. The siege must begin again.`, 'bad', sys.id);
     return null;
   }
   const cause = warCause(state, sv);
@@ -868,7 +868,7 @@ export function raidSurvivor(state: GameState, fleetId: string): { ok: boolean; 
   civ.resolve = Math.max(0, civ.resolve - 3);
   civ.dissent = Math.min(100, civ.dissent + 4);
   state.battles.push({ systemId: sys.id, turn: state.turn, text: result.text });
-  log(state, result.text, 'combat', sys.id);
+  combatLog(state, civ, result.text, result.ok ? 'good' : 'bad', sys.id);
   sendSignal(state, {
     from: sv.id,
     kind: 'raided',
