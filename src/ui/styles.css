@@ -406,11 +406,19 @@ html.kbd [tabindex='-1']:focus-visible { outline: none; }
 .yield-cells .icon { display: none; }
 .yield-heads { display: flex; align-items: center; gap: 8px; padding: 0 4px 3px; font-size: 12.5px; }
 .yield-heads .icon { display: inline-block; color: var(--ink-faint); }
+/* each icon sorts the list by its yield (Lists.tsx, yieldSort): most first, least, then as founded */
+.yield-sort { display: inline-flex; align-items: center; justify-content: flex-end; gap: 2px; width: 100%; padding: 2px 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--ink-faint); font: inherit; cursor: pointer; }
+.yield-sort:hover .icon, .yield-sort.on .icon { color: var(--accent); }
+.yield-sort.on { color: var(--accent); border-bottom-color: var(--accent); }
+.yield-sort:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 @media (max-width: 560px) {
   .settlement-row { flex-wrap: wrap; }
   .settlement-row .yield-cells { flex-basis: 100%; grid-template-columns: repeat(5, 1fr); }
   .yield-cells .icon { display: inline-block; }
-  .yield-heads { display: none; }
+  /* the head stays, as five buttons over the rows' five columns */
+  .yield-heads { flex-wrap: wrap; }
+  .yield-heads .grow { flex-basis: 100%; }
+  .yield-heads .yield-cells { flex-basis: 100%; grid-template-columns: repeat(5, 1fr); }
 }
 /* every measure for a place (siteStrip.tsx), the one its list is sorted by outlined like its button */
 .site-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; flex-basis: 100%; padding-left: 20px; margin-top: 1px; font-size: 12.5px; }

@@ -68,7 +68,7 @@ run(async () => {
   await page.keyboard.press('s');
   await page.waitForTimeout(700);
   const list = await page.evaluate(() => ({
-    heads: document.querySelectorAll('.yield-heads .yield-cells > span').length,
+    heads: document.querySelectorAll('.yield-heads .yield-cells > *').length,
     rows: [...document.querySelectorAll('.settlement-row')].map((r) => ({
       name: r.querySelector('.grow')?.firstChild?.textContent?.trim() ?? '',
       cells: [...r.querySelectorAll('.yield-cells > span')].map((c) => c.textContent.trim()),
