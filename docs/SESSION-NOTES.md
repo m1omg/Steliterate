@@ -361,8 +361,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   evaporating too": the player asked to see the Last Horizon film first ("for this one i say yes
   to a spoiler"; sent as a video, rendered with `tools/film-render.mjs`), set the Heart's own
   film aside ("we won't be doing the Heart film for now"), then asked: "extend the last horizon
-  cutscene with the Heart evaporating as the last BH while backing up this version". That is the
-  next batch (the present cut to `src/film/saved/`). The Supernova film was sent as a video too.
+  cutscene with the Heart evaporating as the last BH while backing up this version": done in the
+  new version (`dda8ab8`), the cut before in `src/film/saved/lasthorizon-v1.ts`; a video of the new
+  cut sent. The Supernova film was sent as a video too.
 - **7 Oct, after Part C went live:** "can you instead make the beacons temporary? … more realistic
   than having them last literally trillions and trillions of years" (instead of the earlier offer
   to undo them). Chosen: a beacon burns "while we keep feeding it", and lighting one turns the

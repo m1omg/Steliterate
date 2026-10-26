@@ -148,8 +148,13 @@ word", then the player's list of 16 Oct, then the falling worlds.
   film (`src/film/supernova.ts`, 40 s, with a chirp, a heartbeat and a boom in its cue), played
   with a game's first supernova (`civ.flags.sn_film`; an older save's next one), the card behind
   it; `eb70648`. The player asked for a film of the Heart evaporating, then (on being sent a video
-  of the Last Horizon) for the Last Horizon to open with it instead, its present cut kept in
-  `src/film/saved/`: the next batch. CHANGELOG, "Each building's real effect".
+  of the Last Horizon) for the Last Horizon to open with it instead, its cut before kept in
+  `src/film/saved/lasthorizon-v1.ts`. CHANGELOG, "Each building's real effect".
+- **The Last Horizon opens with the Heart's going** (26 Oct, the new version, display only): three
+  shots (the Heart at its own scale, its glow and long fall, its end and last second) in place of
+  the old first, the film 82 beats, the title at 76 (`dark.ts`, `heartOpening`; its mass from
+  the game, `FilmArgs.heartMass`). The cut before: `src/film/saved/lasthorizon-v1.ts`, its cues in
+  its header. CHANGELOG, "The Last Horizon opens with the Heart's going".
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
@@ -180,7 +185,7 @@ last.
   |---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#45 (`0279db1`, each building's real effect, 26 Oct) | `eb70648` (26 Oct, the same and the Supernova film), and its notes |
+  | As of | PR m1omg/Steliterate#45 (`0279db1`, each building's real effect, 26 Oct) | `dda8ab8` (26 Oct, the same, the Supernova film and the Heart in the Last Horizon), and its notes |
   | Live script | `index-D13F5Go2.js` | `index-CczYHvun.js` |
   | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
 

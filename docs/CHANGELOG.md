@@ -4384,5 +4384,5 @@ that crossing now opens with it.
 - **Where it bends things:** 10⁹⁹ years in a few seconds, and the last flash drawn as a blaze where
   10²³ J would be faint across the dark.
 - **Checks:** `unit/heart-mass` (the film is told the Heart's mass, before and after it goes; the
-  Heart is the last hole); `browser/films` draws every film, both fates. A video of the new cut was
-  sent to the player.
+  Heart is the last hole); `browser/films` draws every film (the stable fate's cut drawn by hand
+  too, at 1280×720 and 390×844). A video of the new cut was sent to the player.
