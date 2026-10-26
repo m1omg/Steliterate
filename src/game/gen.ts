@@ -1,5 +1,5 @@
 import { ERA_BY_ID } from './eras';
-import { bodyName, catalogueName, properName } from './names';
+import { CLUSTER_NAMES, bodyName, catalogueName, distinctNames, properName } from './names';
 import { Rng, hashSeed } from './rng';
 import type {
   Body,
@@ -497,7 +497,7 @@ export function generateWorld(settings: GameSettings): GameState {
   const globulars: Region[] = [];
   for (let i = 0; i < 2; i++) {
     const pos = scale(dirFromAngles(rng.range(0, Math.PI * 2), rng.range(0.45, 0.9) * (i === 0 ? 1 : -1)), rng.range(820, 980));
-    const r = b.makeRegion(halo, `Cluster ${rng.pick(['Ossa', 'Keth', 'Umber', 'Lanthe', 'Mora', 'Sill'])}`, pos, 22, 'globular');
+    const r = b.makeRegion(halo, `Cluster ${rng.pick(CLUSTER_NAMES)}`, pos, 22, 'globular');
     globulars.push(r);
     b.fillRegion(r, rng.int(6, 8), GLOBULAR_WEIGHTS, 1);
     if (rng.chance(0.8)) {
@@ -673,6 +673,8 @@ export function generateWorld(settings: GameSettings): GameState {
   civ.known[home.id] = 2;
   civ.known[heart.id] = 1; // the Heart is visible from anywhere
 
+  // two clusters of one name, or a catalogue number drawn twice: each its own (no draw)
+  distinctNames(state);
   return state;
 }
 

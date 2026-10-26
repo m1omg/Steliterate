@@ -1,3 +1,4 @@
+import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { siteValue } from '../../game/sim/sites';
 import { ANOMALIES } from '../../game/data/events';
@@ -212,22 +213,26 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
   const degenerate = calendarEra(s) === 'degenerate';
   const lv = !!settings.value.lowVision;
   const foes = foeStars(s).length;
-  const which = (tab === 'beacons' && !degenerate) || (tab === 'afar' && !lv) || (tab === 'holes' && !(inAge(s, ['blackhole']) && holesOnMap(s).length)) || (tab === 'foes' && !foes) ? undefined : tab;
+  const which = (tab === 'beacons' && !degenerate) || (tab === 'afar' && !lv) || (tab === 'holes' && !holesOnMap(s).length) || (tab === 'foes' && !foes) ? undefined : tab;
   const f = send ? s.fleets[send] : undefined;
   const sending = f?.at ? f : undefined;
   const show = (t?: SystemsTab) => (modal.value = { kind: 'settlements', tab: t, send: sending?.id });
   const surveyedCount = Object.values(s.bodies).filter((b) => s.civ.known[b.systemId] === 2 && !b.dissolved && b.kind !== 'deep').length;
-  const burning = degenerate ? Object.values(s.systems).filter((x) => isBeacon(s, x)).length : 0;
-  const holes = inAge(s, ['blackhole']) ? holesOnMap(s).length : 0;
+  const burning = degenerate ? newStarsOnMap(s).filter((x) => newStarLit(s, x)).length : 0;
+  const holes = holesOnMap(s).length;
+  const starCount = starsOnMap(s).length;
   const tabs = (
     <div class="row wrap" style={{ gap: '4px', marginBottom: '8px' }}>
       <button class={`btn small ${!which ? 'primary' : ''}`} onClick={() => show()}>Our settlements</button>
       <button class={`btn small ${which === 'worlds' ? 'primary' : ''}`} onClick={() => show('worlds')}>Surveyed worlds <span class="mono faint">{surveyedCount}</span></button>
       {degenerate && (
-        <button class={`btn small ${which === 'beacons' ? 'primary' : ''}`} onClick={() => show('beacons')} data-tip={`${BEACON_TIP} Every one on our map, and how long each will burn.`}>
+        <button class={`btn small ${which === 'beacons' ? 'primary' : ''}`} onClick={() => show('beacons')} data-tip={`${BEACON_TIP} Every one on our map, and the helium stars of merging white dwarfs, how long each will burn, and those that lit and went out within the last turn.`}>
           ✦ Collision stars <span class={`mono ${burning ? 'boon' : 'faint'}`}>{burning}</span>
         </button>
       )}
+      <button class={`btn small ${which === 'stars' ? 'primary' : ''}`} onClick={() => show('stars')} data-tip="Every star on our map of one kind, black holes too, the nearest first: pick the kind.">
+        Star types <span class="mono faint">{starCount}</span>
+      </button>
       {holes > 0 && (
         <button class={`btn small ${which === 'holes' ? 'primary' : ''}`} onClick={() => show('holes')} data-tip="Every black hole on our map, the longest-lasting first: how long each has before it evaporates.">
           ● Black holes <span class="mono faint">{holes}</span>
@@ -265,6 +270,13 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       <ModalFrame title="Systems" eyebrow="Swarms and civilizations: the nearest first" icon="attack" narrow>
         {tabs}
         <FoesList s={s} send={sending} />
+      </ModalFrame>
+    );
+  if (which === 'stars')
+    return (
+      <ModalFrame title="Systems" eyebrow="Star types: every star on our map of one kind, the nearest first" icon="system" narrow>
+        {tabs}
+        <StarsList s={s} send={sending} />
       </ModalFrame>
     );
   if (which === 'afar')
@@ -532,6 +544,67 @@ function FoesList({ s, send }: { s: GameState; send?: Fleet }) {
   );
 }
 
+/** Every star on our map, seen from afar or surveyed. */
+function starsOnMap(s: GameState): StarSystem[] {
+  return Object.values(s.systems).filter((x) => !x.gone && (s.civ.known[x.id] ?? 0) > 0);
+}
+
+/** The kind of star the Star types tab shows, kept while the window is closed and opened again. */
+const starKind = signal<PrimaryKind | null>(null);
+
+/**
+ * Every star on our map of one kind, the nearest first, the kinds on the map as buttons above
+ * (26 Oct, the player: "add options to systems menu to select different star types + black holes").
+ */
+function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
+  const cap = s.civ.capitalId ? s.colonies[s.civ.capitalId] : null;
+  const from = s.systems[send?.at ?? cap?.systemId ?? s.civ.homeSystemId];
+  const onMap = starsOnMap(s);
+  const kinds = TYPE_ORDER.filter((k) => onMap.some((x) => x.primary.kind === k));
+  const kind = starKind.value && kinds.includes(starKind.value) ? starKind.value : kinds.includes(from.primary.kind) ? from.primary.kind : kinds[0];
+  const ours = new Set(colonies(s).map((c) => c.systemId));
+  const rows = onMap
+    .filter((x) => x.primary.kind === kind)
+    .map((sys) => ({ sys, ly: distLy(from, sys) }))
+    .sort((a, b) => a.ly - b.ly);
+  const worldsOf = (sys: StarSystem) => sys.bodies.filter((id) => s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind !== 'deep').length;
+  const chipGap = { marginLeft: '6px' };
+  return (
+    <>
+      <div class="row wrap" style={{ gap: '3px', marginBottom: '6px' }}>
+        {kinds.map((k) => (
+          <button key={k} class={`btn small ghost ${k === kind ? 'on' : ''}`} onClick={() => { sfx('click'); starKind.value = k; }}>
+            {PRIMARY_NAME[k]} <span class="mono faint">{onMap.filter((x) => x.primary.kind === k).length}</span>
+          </button>
+        ))}
+      </div>
+      <div class="list">
+        {rows.map(({ sys, ly }) => {
+          const known = s.civ.known[sys.id] ?? 0;
+          const worlds = worldsOf(sys);
+          return (
+            <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
+              <Icon name={primaryIcon(sys.primary.kind)} />
+              <span class="grow">
+                {sys.name}
+                {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
+                {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
+                {isBeacon(s, sys) && <span class="chip boon" style={chipGap} data-tip={BEACON_TIP}>collision star</span>}
+                {swarmSeenAt(s, sys.id) && <span class="chip danger" style={chipGap} data-tip={SWARM_TIP}>swarm</span>}
+                {nestSeenAt(s, sys.id) && <span class="chip" style={chipGap} data-tip={NEST_TIP}>nest asleep</span>}
+                <div class="faint" style={{ fontSize: '12.5px' }}>
+                  {known === 2 ? (worlds ? `${worlds} world${worlds === 1 ? '' : 's'}` : 'only its Deep') : 'worlds not charted'} · {formatDistance(ly)} from {from.name}
+                </div>
+              </span>
+              {send && <SendButton s={s} f={send} sys={sys} />}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 export function goToSystem(id: string) {
   selection.value = { kind: 'system', id };
   engine()?.select(id);
@@ -723,7 +796,7 @@ function HolesList({ s, send }: { s: GameState; send?: Fleet }) {
   return (
     <>
       <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
-        The last sources. Each black hole lasts until its Hawking radiation has carried off all its mass: about 2×10⁶⁷ years for one of a Sun, a thousand times longer for ten, so they go the lightest first, each in a last burst. What is settled at one drifts on after it, with nothing left there to draw on.
+        {inAge(s, ['blackhole']) ? 'The last sources. ' : ''}Each black hole lasts until its Hawking radiation has carried off all its mass: about 2×10⁶⁷ years for one of a Sun, a thousand times longer for ten, so they go the lightest first, each in a last burst. What is settled at one drifts on after it, with nothing left there to draw on.
       </p>
       <div class="list">
         {rows.map(({ sys, at, ly }, i) => {
@@ -778,22 +851,41 @@ function HolesList({ s, send }: { s: GameState; send?: Fleet }) {
  * collision star's whole life, so many light and go out within one; those keep the name until the
  * turn ends and are listed apart, without light.
  */
+/** The new stars of the Degenerate Age: collision stars (brown dwarfs merging), helium stars and helium giants (white dwarfs merging). */
+const NEW_STARS = new Set<PrimaryKind>(['collision_star', 'helium_star', 'helium_giant']);
+
+/** Every new star on our map, alight or gone out within the last turn (it settles into a dwarf as the turn ends). */
+function newStarsOnMap(s: GameState): StarSystem[] {
+  return Object.values(s.systems).filter((x) => NEW_STARS.has(x.primary.kind) && !x.gone && (s.civ.known[x.id] ?? 0) > 0);
+}
+
+/** A new star still alight (a collision star alight is a beacon: isBeacon). */
+function newStarLit(s: GameState, sys: StarSystem): boolean {
+  return calendarEra(s) === 'degenerate' && (sys.primary.diesAt ?? 0) > s.years;
+}
+
+/**
+ * The Collision stars tab: every new star on our map, the collision stars and (26 Oct, the player:
+ * "collision stars should show in the list even if theyre one turn helium burnouts") the helium
+ * stars and giants of merging white dwarfs, alight or gone out within the last turn.
+ */
 function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
   void rev.value;
   const cap = colonies(s).find((c) => c.id === s.civ.capitalId);
   const home = s.systems[cap?.systemId ?? s.civ.homeSystemId];
   const ours = new Set(colonies(s).map((c) => c.systemId));
   const L = turnStep(s).turnLength;
-  const stars = Object.values(s.systems).filter((x) => x.primary.kind === 'collision_star' && !x.gone && (s.civ.known[x.id] ?? 0) > 0);
+  const stars = newStarsOnMap(s);
+  const kindOf = (sys: StarSystem) => (sys.primary.kind === 'collision_star' ? null : <span class="faint"> · {PRIMARY_NAME[sys.primary.kind]}</span>);
   const burning = stars
-    .filter((x) => isBeacon(s, x))
+    .filter((x) => newStarLit(s, x))
     .map((sys) => {
       const dies = sys.primary.diesAt ?? s.years;
       return { sys, left: dies - s.years, turns: turnsUntilYears(s, dies), light: sourceLight(s, sys, s.years, isFinite(L) ? L : 0).light, ly: distLy(home, sys) };
     })
     .sort((a, b) => b.left - a.left || a.ly - b.ly);
   const out = stars
-    .filter((x) => !isBeacon(s, x))
+    .filter((x) => !newStarLit(s, x))
     .map((sys) => ({ sys, life: (sys.primary.diesAt ?? 0) - (sys.primary.bornAt ?? Infinity), ly: distLy(home, sys) }))
     .sort((a, b) => a.ly - b.ly);
   const kept = starClock(s);
@@ -810,7 +902,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
         </p>
       ) : (
         <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
-          Small red stars lit by colliding brown dwarfs: in this age nothing else nearby shines like them, and none lasts. The longest-burning first.
+          Small red stars lit by colliding brown dwarfs, and helium stars lit by merging white dwarfs: in this age nothing else nearby shines like them, and none lasts. The longest-burning first.
         </p>
       )}
       <div class="list">
@@ -822,6 +914,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
             <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
               <span class="grow">
                 <span class="boon">✦</span> {sys.name} <span class="faint">{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
+                {kindOf(sys)}
                 {kept?.systemId === sys.id && (
                   <span class="chip neon" style={chipGap} data-tip={`We are keeping time with it: turn ${kept.turn} of ${kept.of}, each a sixth of what was left of its life, whatever the pace.`}>
                     keeping time
@@ -879,6 +972,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
               <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
                 <span class="grow faint">
                   {sys.name} <span>{s.provinces.find((p) => p.id === sys.provinceId)?.name ?? ''}</span>
+                  {kindOf(sys)}
                   <div style={{ fontSize: '12.5px' }}>
                     {life > 0 ? `burned for ${formatYears(life)} · ` : ''}{formatDistance(ly)}
                   </div>
