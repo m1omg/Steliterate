@@ -4163,3 +4163,21 @@ civs requested help". No rule changes and nothing saved changes.
   and `tactics` pass in the real fonts. `mobile` fails at 390 and 360 px wide on "Research" on the
   rail, cut by a pixel, the same on the build before this change (`index-vY0YBpb0.js`), here.
   No harness run: no rule changed.
+
+## Star types in the Systems window, and its Black holes tab in every age (26 Oct, both versions)
+
+The player, 26 Oct: "without breaking saves, but applying to them, pls add options to systems menu
+to select different star types + black holes, dont run the whole test suite after". Display only:
+no rule changes, nothing saved changes, so every save has it at once.
+
+- **Star types**, a new tab of the Systems window: a button for each kind of star on our map
+  (seen from afar or surveyed), with how many there are: the Supermassive black hole, black holes,
+  neutron stars, white, black, brown and red dwarfs, and in their ages the collision and helium
+  stars. Pick one for every such star, the nearest first: settled, not surveyed, a swarm, its
+  worlds, its distance, and Send when the window was opened from a ship. It opens on our
+  capital's kind, and keeps the kind picked while the game runs.
+- **Black holes**, the tab with each hole's lifetime, mass, spin and Hawking light, is there in
+  every age once a black hole is on our map, not only in the Black Hole Age.
+- **Checks:** `browser/star-types` (the tab, its kinds, black holes too; Black hole lists the one
+  on our map; the Black holes tab in the Dusk). Validated as asked, not the whole suite: tsc and
+  the build clean (`index-Cu7bRdwQ.js`); `star-types`, `holes` and `systems-tab` pass.
