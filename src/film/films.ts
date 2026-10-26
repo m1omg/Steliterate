@@ -5,8 +5,10 @@ import { GREAT_EVAPORATION2, LAST_HORIZON2 } from './dark';
 import { DUSK2 } from './dusk';
 import { ENDINGS2 } from './endings';
 import { LAST_LIGHT2 } from './lastlight';
+import { SUPERNOVA2 } from './supernova';
 
-// The films (the new version, part 4): one for each age and each ending, every frame drawn by
+// The films (the new version, part 4): one for each age and each ending (and since 26 Oct one for
+// the Degenerate Age's first supernova), every frame drawn by
 // code from the film's time. A film is laid out once for its size and quality (`setup`), then
 // draws any moment of itself (`draw`) and says what text stands over it then (`text`, real DOM
 // text, for translation and screen readers). Its cuts fall on a beat grid; its sound is in cue.ts.
@@ -17,6 +19,7 @@ export type FilmQuality = 'low' | 'medium' | 'high';
 export type FilmId =
   | 'dusk'
   | 'last_light'
+  | 'supernova'
   | 'great_decay'
   | 'last_warmth'
   | 'great_evaporation'
@@ -89,6 +92,7 @@ export const filmLength = (f: FilmDef) => (f.beats * 60) / f.bpm;
 export const FILMS: Record<FilmId, FilmDef> = {
   dusk: DUSK2,
   last_light: LAST_LIGHT2,
+  supernova: SUPERNOVA2,
   great_decay: blackHoleAge2('great_decay', 'The Great Decay'),
   last_warmth: blackHoleAge2('last_warmth', 'The Last Warmth'),
   great_evaporation: GREAT_EVAPORATION2,

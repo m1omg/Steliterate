@@ -2,7 +2,7 @@ import { SHIP_BY_ID } from '../game/data/ships';
 import { turnSlices, type TurnResult } from '../game/sim/turn';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
-import { autosave, busy, bump, engine, filmsOn, game, modal, notify, playFilm, selection, settings, toasts } from './store';
+import { act, autosave, busy, bump, engine, filmsOn, game, modal, notify, playFilm, selection, settings, toasts, type Modal } from './store';
 import { crossingFilm, endingFilmFor } from '../film/films';
 import { fateOf } from '../game/fate';
 import { goToBody, goToFleet, pivotToSystem } from './screens/Lists';
@@ -211,9 +211,19 @@ export async function doEndTurn() {
   }
   // the fights since the report was last shown: losses first (CombatReport.tsx); the turn's events
   // wait behind it (App.tsx)
-  if (fights.length && !modal.value) {
-    modal.value = { kind: 'combat', entries: fights.splice(0) };
-    sfx(modal.value.entries.some((e) => e.tone === 'bad') ? 'bad' : 'good');
+  const report: Modal = fights.length && !modal.value ? { kind: 'combat', entries: fights.splice(0) } : null;
+  // a game's first supernova has a film of its own before its card (26 Oct, the player: "this
+  // warrants a cutscene like the ages ones"); a game saved before it has it at its next one
+  if (!modal.value && filmsOn() && s.civ.pending.some((p) => p.defId === 'supernova') && s.civ.flags.sn_film === undefined) {
+    act((g) => {
+      g.civ.flags.sn_film = g.turn;
+    });
+    playFilm('supernova', report, { eta: s.eta, fate: fateOf(s) });
+    return;
+  }
+  if (report) {
+    modal.value = report;
+    sfx(report.entries.some((e) => e.tone === 'bad') ? 'bad' : 'good');
   }
 }
 

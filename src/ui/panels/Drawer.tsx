@@ -48,7 +48,7 @@ import { spareYield, type SpareYield } from '../../game/sim/spare';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
-import { project, structureEffect, type BuildEffect } from '../../game/sim/projection';
+import { builtEffect, builtEffectText, project, structureEffect, type BuildEffect } from '../../game/sim/projection';
 import { allColonies, allFleets, capital, colonies, distLy, fleets, formOf, hasCharter, hasTech, leftBehind, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
 import { nearestSwarmSeen, nestSeenAt, readsSwarms, swarmArrives, swarmSight } from '../../game/sim/sight';
 import { FORMS } from '../../game/data/forms';
@@ -1296,11 +1296,15 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                   .map(([id, n]) => {
                     const why = dismantleCheck(s, c, id);
                     const away = leftBehind(s, c, STRUCTURE_BY_ID[id]);
+                    // what they give here now, or why nothing (26 Oct, the player: "the buildings should
+                    // show what their current real effect/benefit or lack thereof is")
+                    const fx = away ? null : builtEffect(s, c, id, p.ctx);
+                    const now = fx ? builtEffectText(fx, n) : '';
                     return (
                       <span
                         key={id}
-                        class={`chip ${armed === id ? 'warn' : away ? 'faint' : ''}`}
-                        data-tip={`${structureLabel(id, sys, formOf(c)).desc}${away ? '\nOut of reach: it was built around the star, and this world has drifted loose from it. It gives us nothing now.' : ''}`}
+                        class={`chip ${armed === id ? 'warn' : away || fx?.idle ? 'faint' : ''}`}
+                        data-tip={`${structureLabel(id, sys, formOf(c)).desc}${away ? '\nOut of reach: it was built around the star, and this world has drifted loose from it. It gives us nothing now.' : now ? `\n${now}.` : ''}`}
                       >
                         <KindIcon id={id} />
                         {structureLabel(id, sys, formOf(c)).name}

@@ -116,7 +116,7 @@ function FilmsSeen() {
       <h2>Films seen</h2>
       {seen.length === 0 ? (
         <p class="flavor" style={{ color: 'var(--ink)' }}>
-          A film plays as each age begins and as a game ends. Those you have seen are kept here, to play again.
+          A film plays as each age begins, with a game’s first supernova, and as a game ends. Those you have seen are kept here, to play again.
         </p>
       ) : (
         <div class="col" style={{ gap: '6px' }}>

@@ -185,8 +185,8 @@ export function App() {
     music.setMood(danger ? 'tension' : 'calm');
   });
   const m = modal.value?.kind;
-  // (the turn's events wait behind its combat report, and follow it)
-  const blocking = m === 'crossing' || m === 'outcome' || m === 'era_intro' || m === 'combat';
+  // (the turn's events wait behind its combat report, and behind a film, and follow them)
+  const blocking = m === 'crossing' || m === 'outcome' || m === 'era_intro' || m === 'combat' || m === 'film';
   const story = !!s && !blocking && (s.civ.pending.length > 0 || !!eventResult.value);
   const lore = !!s && !blocking && !!loreView.value && !s.civ.pending.length && !eventResult.value;
   return (

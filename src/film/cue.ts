@@ -70,6 +70,12 @@ interface CueSpec {
   chord: number[];
   /** A long film's: a soft chord under each scene, built on its cut's note, and the reel's tick only on each bar. */
   pads?: boolean;
+  /** (the Supernova's) the gravitational waves' chirp as two stars spiral in: from beat, to beat, Hz at each end. */
+  chirp?: [number, number, number, number];
+  /** (the Supernova's) low thumps, a heartbeat quickening, at these beats. */
+  thumps?: number[];
+  /** (the Supernova's) the detonation: a breath of noise rising into it over `swell` beats, then a deep boom, at this beat. */
+  boom?: { at: number; swell: number };
 }
 
 /** A soft pad: a few detuned sines, swelling in over `attack` and away over `release`. */
@@ -94,6 +100,77 @@ function swell(ctx: BaseAudioContext, out: AudioNode, buf: AudioBuffer, at: numb
   src.connect(f).connect(g).connect(out);
   src.start(at - secs);
   src.stop(at + 0.7);
+}
+
+/**
+ * A chirp: the gravitational waves of two stars spiralling in, their pitch rising as (t_c − t)^(−3/8)
+ * and their loudness with it, cut off as they merge. A triangle wave, so a phone's small speaker
+ * still gives it voice.
+ */
+function chirp(ctx: BaseAudioContext, out: AudioNode, at: number, secs: number, hz0: number, hz1: number, gain: number) {
+  const n = 96;
+  const f = new Float32Array(n);
+  const a = new Float32Array(n);
+  const k = 1 - Math.pow(hz0 / hz1, 8 / 3);
+  for (let i = 0; i < n; i++) {
+    const u = i / (n - 1);
+    f[i] = hz0 * Math.pow(1 - u * k, -3 / 8);
+    a[i] = gain * Math.pow(f[i] / hz1, 2 / 3) * Math.min(1, u * 12);
+  }
+  const o = ctx.createOscillator();
+  o.type = 'triangle';
+  o.frequency.setValueCurveAtTime(f, at, secs);
+  const g = ctx.createGain();
+  g.gain.setValueCurveAtTime(a, at, secs);
+  g.gain.setValueAtTime(gain, at + secs);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + secs + 0.08);
+  o.connect(g).connect(out);
+  o.start(at);
+  o.stop(at + secs + 0.12);
+}
+
+/** A low thump: a sine falling from 70 to 38 Hz and gone in a third of a second. */
+function thump(ctx: BaseAudioContext, out: AudioNode, at: number, gain: number) {
+  const o = ctx.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(70, at);
+  o.frequency.exponentialRampToValueAtTime(38, at + 0.3);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(gain, at + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + 0.36);
+  o.connect(g).connect(out);
+  o.start(at);
+  o.stop(at + 0.4);
+}
+
+/** A detonation: a deep sine falling away under a burst of noise that darkens as it fades. */
+function boom(ctx: BaseAudioContext, out: AudioNode, buf: AudioBuffer, at: number, gain: number) {
+  const o = ctx.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(96, at);
+  o.frequency.exponentialRampToValueAtTime(24, at + 3);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(gain, at + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + 3.6);
+  o.connect(g).connect(out);
+  o.start(at);
+  o.stop(at + 3.7);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const f = ctx.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(5200, at);
+  f.frequency.exponentialRampToValueAtTime(140, at + 2.4);
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.0001, at);
+  ng.gain.exponentialRampToValueAtTime(gain * 0.7, at + 0.01);
+  ng.gain.exponentialRampToValueAtTime(0.0001, at + 2.6);
+  src.connect(f).connect(ng).connect(out);
+  src.start(at);
+  src.stop(at + 2.7);
 }
 
 /** A note of a cue: when it begins (seconds from the cue's start) and what makes it, given the moment the cue starts. */
@@ -122,6 +199,16 @@ function reelCue(spec: CueSpec): CueNote[] {
     add(i * beat, (ctx, out, t0, n) => tick(ctx, out, n, t0 + i * beat, i % 4 === 0 ? 0.07 : 0.035));
   }
   if (spec.pads) add(hold - beat * 3, (ctx, out, t0, n) => swell(ctx, out, n, t0 + hold, beat * 3, 0.05));
+  if (spec.chirp) {
+    const [b0, b1, hz0, hz1] = spec.chirp;
+    add(b0 * beat, (ctx, out, t0) => chirp(ctx, out, t0 + b0 * beat, (b1 - b0) * beat, hz0, hz1, 0.06));
+  }
+  for (const b of spec.thumps ?? []) add(b * beat, (ctx, out, t0) => thump(ctx, out, t0 + b * beat, 0.32));
+  if (spec.boom) {
+    const { at: b, swell: sb } = spec.boom;
+    add((b - sb) * beat, (ctx, out, t0, n) => swell(ctx, out, n, t0 + b * beat, sb * beat, 0.09));
+    add(b * beat, (ctx, out, t0, n) => boom(ctx, out, n, t0 + b * beat, 0.5));
+  }
   for (const hz of spec.chord) add(hold, (ctx, out, t0) => tone(ctx, out, hz, t0 + hold, 0.5, spec.pads ? 3 : 1.4, spec.pads ? 3 : 1.6, 0.06));
   add(hold, (ctx, out, t0) => bell(ctx, out, spec.chord[0] * 2, t0 + hold, 0.07));
   return notes.sort((a, b) => a.at - b.at);
@@ -134,6 +221,8 @@ const DEFEAT = [110, 130.81, 164.81];
 const SPECS: Record<FilmId, CueSpec> = {
   // (the Long Dusk's second cut: 72 beats at 90, a cut at each scene)
   dusk: { bpm: 90, root: 55, cuts: [[0, 440], [6, 392], [10.5, 329.63], [17, 293.66], [23, 261.63], [36, 329.63], [41, 220], [45.5, 246.94], [49.5, 196], [55.5, 220], [60.5, 164.81]], titleAt: 66, chord: [110, 164.81, 277.18], pads: true },
+  // (the Supernova's: a chirp as the two spiral in, a heartbeat as the remnant passes its limit, the boom)
+  supernova: { bpm: 90, root: 36.71, cuts: [[0, 392], [8.5, 329.63], [16.5, 293.66], [25.5, 220], [32.5, 261.63], [42.5, 246.94], [48.5, 196]], titleAt: 54, chord: [73.42, 110, 146.83], pads: true, chirp: [0.5, 15.5, 48, 330], thumps: [17.5, 19.5, 21, 22.2, 23.1, 23.8, 24.35, 24.8, 25.15], boom: { at: 25.5, swell: 3 } },
   last_light: { bpm: 90, root: 41.2, cuts: [[0, 392], [6.5, 329.63], [12, 293.66], [18.3, 246.94], [30, 329.63], [37.5, 392], [44.5, 246.94], [51.5, 220], [58.5, 196]], titleAt: 64, chord: [82.41, 98, 123.47], pads: true },
   // (the Black Hole Age's second cut: 74 beats at 90, a cut at each scene; the Last Warmth's under curvature radiation below)
   great_decay: { bpm: 90, root: 36.71, cuts: [[0, 349.23], [8, 293.66], [15.5, 261.63], [22.5, 220], [30.5, 233.08], [38.5, 196], [46.5, 174.61], [55.5, 146.83]], titleAt: 68, chord: [73.42, 87.31, 110], pads: true },
