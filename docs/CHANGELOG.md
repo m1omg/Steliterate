@@ -2474,3 +2474,34 @@ civs requested help". No rule changes and nothing saved changes.
   unit checks; the browser checks `warship-list`, `prompt-systems`, `systems-tab`, `attack`,
   `follow-send`, `a11y`, `lowvision`, `translate` and `war` pass in the real fonts. No harness
   run: no rule changed.
+
+## Star types, helium stars in the Collision stars tab, two Wells of one name, and a brief star's light (26 Oct, both versions)
+
+The player, 26 Oct, in a row: "without breaking saves, but applying to them, pls add options to
+systems menu to select different star types + black holes, dont run the whole test suite after";
+"collision stars should show in the list even if theyre one turn helium burnouts or am im missing
+something?"; "lanthe well for whatever reason shows as unsurveyed after multiple surveys"; and,
+with a screenshot of a blazing helium giant, "no light to collect, really ninja xD?". No rule
+changes; nothing saved changes shape; every save has it at once.
+
+- **Star types**, a new tab of the Systems window: a button for each kind of star on our map,
+  black holes too, with how many; pick one for every such star, the nearest first, with Send when
+  the window was opened from a ship. **Black holes**, the tab with each hole's lifetime, is there
+  in every age once a black hole is on our map, not only in the Black Hole Age.
+- **The Collision stars tab** listed only the collision stars of brown dwarfs merging, never the
+  helium stars and giants of white dwarfs merging, so one that lit and went out within a turn was
+  in no list. Now every new star is there, alight or under Already out, its kind named. The map's
+  ✦ and the destination lists mark only the collision stars, as before.
+- **Two Lanthe Wells:** the two globular clusters draw their names apart from six, and in one
+  galaxy in eight both drew the same, and so did the black holes at their hearts: two Wells of one
+  name, one charted and one not. Now the later cluster takes the first free name ("Cluster Ossa",
+  "Ossa Well"), a catalogue number drawn twice the next free number, and a Well's first worlds its
+  name (`distinctNames`, `src/game/names.ts`). It draws nothing, so every seed's galaxy is the
+  same, and it runs on every load: the Well already charted keeps its name.
+- **"No light to collect" by a blazing helium giant:** a collector gathers the turn's average, and
+  a giant's 120,000 years are next to nothing of a turn of billions of years. The rule stands; the
+  build list now says why, and that keeping time with the star would catch it.
+- **Checks:** `browser/star-types`; `browser/systems-tab` adds a helium star gone out within the
+  turn; `unit/names`. Validated as asked, not the whole suite: tsc and the build clean
+  (`index-DXvWTunJ.js`); `star-types`, `holes`, `systems-tab`, `unit/names`, `unit/determinism`;
+  savecompat on its 6 saves.

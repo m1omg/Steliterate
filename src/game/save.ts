@@ -3,6 +3,7 @@ import { SHIP_BY_ID } from './data/ships';
 import { STRUCTURE_BY_ID } from './data/structures';
 import { TECH_BY_ID } from './data/techs';
 import { defaultWater } from './gen';
+import { distinctNames } from './names';
 import { surveyWhereStationed } from './sim/fleets';
 import { queueEvent } from './sim/events';
 import { relightTheLastStar } from './sim/minds';
@@ -90,6 +91,8 @@ export function migrate(s: GameState): GameState {
   }
   // ships parked at stars they could not chart before (only probes could survey) chart them now
   surveyWhereStationed(s);
+  // two clusters of one name, and their two Wells (26 Oct): each its own name, in the saves too
+  distinctNames(s);
   // the Unlit's messages wait for an answer now (11 Oct): one that lapsed before opens again
   for (const sig of s.signals) if (sig.resolved === 'lapsed' && waitsForAnswer(sig)) sig.resolved = null;
   // a Last Star lit by the old rule (before 12 Oct) burned out within a turn: it lights again,

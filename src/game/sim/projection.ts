@@ -1,4 +1,4 @@
-import { logTurnLength } from '../eras';
+import { formatYears, logTurnLength } from '../eras';
 import { effectivePace, livedShare, turnStep, upkeepShare } from './flare';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
@@ -102,6 +102,20 @@ export interface BuildEffect {
 }
 
 /**
+ * Why a light collector would gather nothing here. Most often a new star too brief for the turn:
+ * a collector gathers the turn's average, and a helium giant's 120,000 years are next to nothing
+ * of a turn of billions of years, however it blazes, unless we keep time with it (26 Oct, the
+ * player: "no light to collect, really ninja xD?").
+ */
+function noLight(state: GameState, c: Colony, ctx: TurnContext): string {
+  const p = state.systems[c.systemId]?.primary;
+  const left = p?.diesAt !== undefined ? p.diesAt - ctx.years : 0;
+  if (p && (p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant') && left > 0 && left < ctx.L)
+    return `Its star shines only ${formatYears(left)} of this turn’s ${formatYears(ctx.L)}: too brief to gather, unless we keep time with it`;
+  return 'No light to collect here right now';
+}
+
+/**
  * What one more of a structure would change at this settlement next turn: the economy run
  * with and without it, so the numbers include this world's light, heat, richness, focus and pace.
  */
@@ -116,7 +130,7 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
   for (const k of [...THREADS, 'cryo'] as const) if (capB[k] !== capA[k]) room[k] = capB[k] - capA[k];
   const notes: string[] = [];
   const e = b.energy - b.energyUpkeep - (a.energy - a.energyUpkeep);
-  if (d.energy && b.energy - a.energy < 0.05) notes.push(d.energy.mode === 'light' ? 'No light to collect here right now' : 'Nothing for it to draw on here right now');
+  if (d.energy && b.energy - a.energy < 0.05) notes.push(d.energy.mode === 'light' ? noLight(state, c, ctx) : 'Nothing for it to draw on here right now');
   if (d.reserveCap) notes.push(`Energy reserve +${d.reserveCap}`);
   if (d.burstCap) notes.push(`Catches final bursts: reserve +${d.burstCap}`);
   if (d.defense) notes.push(`Defence +${d.defense} against swarms and raids`);
