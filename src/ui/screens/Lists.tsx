@@ -591,6 +591,39 @@ function starsOnMap(s: GameState): StarSystem[] {
   return Object.values(s.systems).filter((x) => !x.gone && (s.civ.known[x.id] ?? 0) > 0);
 }
 
+/**
+ * A star's state in a word, from what its light says (`sourceLight`'s label, the physics in one
+ * place), with the label for its tip: a white dwarf still cooling, nearly cold, an ember warmed by
+ * dark matter, cold, or rekindled by a world falling in; a brown dwarf's last heat; a new star
+ * burning or out (26 Oct, the player: "systems view should show if white dwarf is cold, still
+ * cooling, or an ember etc."). Null where its kind says all there is (a red dwarf on the main
+ * sequence, the starless).
+ */
+function starState(s: GameState, sys: StarSystem, L: number): { word: string; label: string; tone: string } | null {
+  const src = sourceLight(s, sys, s.years, isFinite(L) ? L : 0);
+  const label = src.label;
+  const k = sys.primary.kind;
+  const say = (word: string, tone = '') => ({ word, label, tone });
+  if (/rekindled|raining onto it/.test(label)) return say('rekindled', 'good');
+  if (k === 'collision_star' || k === 'helium_star' || k === 'helium_giant' || k === 'dark_star') {
+    const dies = sys.primary.diesAt ?? Infinity;
+    return dies <= s.years ? say('out') : isFinite(L) && dies <= s.years + L ? say('goes out this turn', 'warn') : say('burning', 'good');
+  }
+  if (/^Ember, dimming/.test(label)) return say('ember, dimming', 'warn');
+  if (/^Ember, fading/.test(label)) return say('ember, fading', 'warn');
+  if (/^Ember/.test(label)) return say('ember', 'good');
+  if (/newly collapsed|still glowing as it cools|cooling since it formed/.test(label)) return say('cooling');
+  if (/last of the heat/.test(label)) return say('last heat');
+  if (/warmed by dark matter/.test(label)) return say('warmed by dark matter');
+  if (/nearly cold/.test(label)) return say('nearly cold');
+  if (/cold/i.test(label)) return say('cold');
+  if (/spinning down/.test(label)) return say('spinning down');
+  if (/last bright flare/.test(label)) return say('last flare', 'good');
+  if (/disk/.test(label)) return say(/faint|dimming/.test(label) ? 'faint disk' : 'disk shines', /faint|dimming/.test(label) ? '' : 'good');
+  if (/quiet/.test(label)) return say('quiet');
+  return null;
+}
+
 /** The kind of star the Star types tab shows, kept while the window is closed and opened again. */
 const starKind = signal<PrimaryKind | null>(null);
 /** What the Star types tab is sorted by: the nearest first, or a measure, the best first. */
@@ -617,6 +650,7 @@ function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
   const best = bestOf(rows.flatMap((r) => (r.sites ? [r.sites] : [])));
   const worldsOf = (sys: StarSystem) => sys.bodies.filter((id) => s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind !== 'deep').length;
   const chipGap = { marginLeft: '6px' };
+  const L = turnStep(s).turnLength;
   return (
     <>
       <div class="row wrap" style={{ gap: '3px', marginBottom: '6px' }}>
@@ -641,11 +675,17 @@ function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
         {rows.map(({ sys, ly, sites }) => {
           const known = s.civ.known[sys.id] ?? 0;
           const worlds = worldsOf(sys);
+          const state = starState(s, sys, L);
           return (
             <div key={sys.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} {...pressable(() => goToSystem(sys.id))}>
               <Icon name={primaryIcon(sys.primary.kind)} />
               <span class="grow">
                 {sys.name}
+                {state && (
+                  <span class={`chip ${state.tone}`} style={chipGap} data-tip={state.label}>
+                    {state.word}
+                  </span>
+                )}
                 {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
                 {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
                 {isBeacon(s, sys) && <span class="chip boon" style={chipGap} data-tip={BEACON_TIP}>collision star</span>}

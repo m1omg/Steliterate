@@ -58,5 +58,17 @@ run(async () => {
   const vals = surveyed.map((r) => (/none/.test(r.matter ?? '') ? -1 : Number((r.matter ?? '').replace(/[^\d.]/g, '')) || 0));
   check(vals.every((v, i) => i === 0 || v <= vals[i - 1] + 1e-9), `Matter: the most first, marked (${vals.slice(0, 6).join(', ')})`);
   await ck.shot('star-types-matter.png');
+  // each star's state in a word, its light's label for the tip (the player: "systems view should
+  // show if white dwarf is cold, still cooling, or an ember etc.")
+  await page.locator('.modal .btn.ghost', { hasText: /^White dwarf/ }).first().click();
+  await page.waitForTimeout(400);
+  const whites = await page.evaluate(() =>
+    [...document.querySelectorAll('.modal .list-item')].map((r) => {
+      const chip = [...r.querySelectorAll('.chip')].find((c) => /^(cooling|nearly cold|cold|ember|ember, fading|ember, dimming|rekindled)$/.test(c.textContent.trim()));
+      return { name: r.querySelector('.grow')?.firstChild?.textContent ?? '', state: chip?.textContent.trim() ?? null, tip: chip?.getAttribute('data-tip') ?? '' };
+    }),
+  );
+  console.log(`  white dwarfs: ${whites.map((w) => `${w.name} [${w.state}]`).join(', ')}`);
+  check(whites.length > 0 && whites.every((w) => w.state && /white dwarf|Ember/i.test(w.tip)), 'every white dwarf says how it is (cooling, nearly cold, an ember, cold…), its light’s words in the tip');
   await finish('STAR TYPES', ck);
 });

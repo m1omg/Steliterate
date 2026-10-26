@@ -249,6 +249,9 @@ html.kbd [tabindex='-1']:focus-visible { outline: none; }
 .flavor { font-family: var(--f-text); font-weight: 300; font-size: 15.5px; line-height: 1.5; color: var(--ink-dim); }
 
 .bottom-left { position: absolute; left: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: 360px; display: flex; flex-direction: column; gap: 6px; }
+/* the forecasts not closed, about three in view, the rest a scroll away (Hud.tsx, BottomLeft) */
+.forecast-list { display: flex; flex-direction: column; gap: 6px; max-height: 196px; overflow-y: auto; scrollbar-width: thin; }
+.forecast-list .forecast { flex: none; }
 .forecast { padding: 8px 10px; display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; }
 .forecast .t { font-weight: 600; font-size: 14px; }
 .forecast .n { font-family: var(--f-mono); font-size: 12.5px; white-space: nowrap; }
@@ -256,17 +259,21 @@ html.kbd [tabindex='-1']:focus-visible { outline: none; }
 /* shorter screens: keep the bottom-left stack clear of the rail */
 @media (min-width: 761px) and (max-height: 950px) {
   .feed { max-height: 78px; }
-  .bottom-left .forecast ~ .forecast ~ .forecast { display: none; }
+  .forecast-list { max-height: 128px; }
   .rail .iconbtn { width: 34px; height: 34px; }
   .rail { top: calc(122px + env(safe-area-inset-top, 0px)); gap: 2px; }
 }
 @media (min-width: 761px) and (max-height: 790px) {
-  .bottom-left .forecast ~ .forecast { display: none; }
+  .forecast-list { max-height: 62px; }
   .feed { max-height: 58px; }
 }
 .feed .e { padding: 2px 0; color: var(--ink-dim); }
 .feed .e.good { color: var(--good); }
 .feed .e.bad { color: var(--bad); }
+/* the turn's combat report (CombatReport.tsx): each fight marked by how it went for us */
+.combat-line { align-items: flex-start; padding-left: 8px; border-left: 2px solid transparent; }
+.combat-line.good { border-left-color: var(--good); }
+.combat-line.bad { border-left-color: var(--bad); }
 .feed .e.era, .feed .e.mind { color: var(--accent-soft); }
 
 .turnbox { position: absolute; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 320px; }
@@ -672,6 +679,7 @@ html.cine:not(.lv) .hud > :not(.reveal-card), html.cine:not(.lv) .toasts, html.c
     overflow-y: auto; scrollbar-width: thin;
   }
   html:not(.lv) .bottom-left.open .forecast { display: flex !important; flex: none; }
+  html:not(.lv) .bottom-left.open .forecast-list { max-height: none; overflow: visible; flex: none; }
   html:not(.lv) .bottom-left.open .feed { max-height: none; flex: none; }
 
   /* the resources: compact, the long names small */
@@ -889,6 +897,7 @@ html.lv .todo { position: static; justify-content: flex-start; margin: 0; }
 html.lv .endturn { min-height: 56px; font-size: 20px; }
 html.lv .bottom-left { display: flex; }
 html.lv .bottom-left .forecast { display: flex !important; }
+html.lv .bottom-left .forecast-list { max-height: none; overflow: visible; }
 html.lv .feed { max-height: none; }
 html.lv .viewswitch { flex-wrap: wrap; }
 html.lv .vs-label { display: inline; }

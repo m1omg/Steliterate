@@ -31,9 +31,14 @@ export function savableName(name: string): string {
   return name === '__inf' || name === '__-inf' ? name.slice(1) : name;
 }
 
-export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string) {
-  state.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}) });
+export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string, tone?: LogEntry['tone']) {
+  state.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}), ...(tone ? { tone } : {}) });
   if (state.log.length > 400) state.log.splice(0, state.log.length - 400);
+}
+
+/** How a fight went for us, in the Record: such a line opens the turn's combat report (turnflow.ts, since 26 Oct). */
+export function combatLog(state: GameState, text: string, tone: 'good' | 'bad', systemId?: string, fleet?: string) {
+  log(state, text, 'combat', systemId, fleet, tone);
 }
 
 export function eraIndex(era: EraId): number {

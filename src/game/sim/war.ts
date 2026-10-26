@@ -11,7 +11,7 @@ import type { GameState, Survivor } from '../types';
 import { THREADS } from '../types';
 import { endPact, pactsWith } from './pacts';
 import { distanceToThem, lightAt, raidStrength, spreadNews } from './survivors';
-import { capital, clamp, log } from './util';
+import { capital, clamp, combatLog, log } from './util';
 
 /** Accord the Threads' consent to a war costs. */
 export const WAR_ACCORD = 60;
@@ -138,7 +138,7 @@ export function warTurn(state: GameState, chance: () => number) {
       f.ships = f.ships.filter((s) => s.hp > 0);
       if (!f.ships.length) {
         delete state.fleets[f.id];
-        log(state, `${f.name} was destroyed in the siege of ${state.systems[sv.homeSystemId]?.name}.`, 'combat', sv.homeSystemId);
+        combatLog(state, `${f.name} was destroyed in the siege of ${state.systems[sv.homeSystemId]?.name}.`, 'bad', sv.homeSystemId);
       }
     }
     state.battles.push({ systemId: sv.homeSystemId, turn: state.turn, text: `The siege of ${sv.name}, turn ${sv.war!.siege}.` });

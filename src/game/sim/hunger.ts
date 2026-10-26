@@ -3,7 +3,7 @@ import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import type { Colony, Fleet, GameState, StarSystem, Swarm } from '../types';
 import { FORTIFY_BONUS, destroyColony, isWarFleet, signatureOf } from './fleets';
 import type { Mods } from './mods';
-import { colonies, distLy, hasCharter, log, uid, withRng } from './util';
+import { colonies, combatLog, distLy, hasCharter, log, uid, withRng } from './util';
 import { queueEvent } from './events';
 import { foughtFor, theirWarmth } from './claims';
 import { warHeat } from './war';
@@ -229,10 +229,10 @@ function hurtShipsAt(state: GameState, sys: StarSystem, hit: () => number) {
     f.ships = f.ships.filter((s) => s.hp > 0);
     if (!f.ships.length) {
       delete state.fleets[f.id];
-      if (before) log(state, `${f.name} was lost in the fighting at ${sys.name}.`, 'combat', sys.id, f.id);
+      if (before) combatLog(state, `${f.name} was lost in the fighting at ${sys.name}.`, 'bad', sys.id, f.id);
     } else if (f.ships.length < before) {
       const gone = before - f.ships.length;
-      log(state, `${f.name} lost ${gone} ship${gone === 1 ? '' : 's'} in the fighting at ${sys.name}.`, 'combat', sys.id, f.id);
+      combatLog(state, `${f.name} lost ${gone} ship${gone === 1 ? '' : 's'} in the fighting at ${sys.name}.`, 'bad', sys.id, f.id);
     }
   }
 }
@@ -269,7 +269,7 @@ export function swarmsHunt(state: GameState, mods: Mods) {
           sw.size -= lost;
           state.civ.matter += lost * 2;
           for (const s of f.ships) s.hp = Math.max(1, s.hp - rng.range(0, sw.size * 0.3));
-          log(state, `${what} at ${sys.name} came for ${f.name}, and ${f.name} beat it off (+${Math.round(lost * 2)} salvaged matter).`, 'combat', sys.id, f.id);
+          combatLog(state, `${what} at ${sys.name} came for ${f.name}, and ${f.name} beat it off (+${Math.round(lost * 2)} salvaged matter).`, 'good', sys.id, f.id);
           state.battles.push({ systemId: sys.id, turn: state.turn, text: `${f.name} beat off the swarm.` });
           if (sw.size <= 0.4) {
             delete state.swarms[sw.id];
@@ -286,10 +286,10 @@ export function swarmsHunt(state: GameState, mods: Mods) {
         f.ships = f.ships.filter((s) => s.hp > 0);
         if (!f.ships.length) {
           delete state.fleets[f.id];
-          log(state, `${what} at ${sys.name} caught ${f.name}. Nothing came back.`, 'combat', sys.id, f.id);
+          combatLog(state, `${what} at ${sys.name} caught ${f.name}. Nothing came back.`, 'bad', sys.id, f.id);
         } else {
           const gone = before - f.ships.length;
-          log(state, `${what} at ${sys.name} caught ${f.name}${gone ? `: ${gone} ship${gone === 1 ? '' : 's'} lost` : ''}. What is left is damaged, and still there.`, 'combat', sys.id, f.id);
+          combatLog(state, `${what} at ${sys.name} caught ${f.name}${gone ? `: ${gone} ship${gone === 1 ? '' : 's'} lost` : ''}. What is left is damaged, and still there.`, 'bad', sys.id, f.id);
         }
         state.battles.push({ systemId: sys.id, turn: state.turn, text: `The swarm caught ${f.name}.` });
       }
@@ -375,7 +375,7 @@ export function attackSwarm(state: GameState, fleetId: string): { ok: boolean; t
     }
   }
   state.battles.push({ systemId: sys.id, turn: state.turn, text: result.text });
-  log(state, result.text, 'combat', sys.id);
+  combatLog(state, result.text, result.ok ? 'good' : 'bad', sys.id);
   return result;
 }
 
@@ -493,7 +493,7 @@ export function updateHunger(state: GameState, L: number, mods: Mods, share = 1)
           sw.size -= lost;
           civ.matter += lost * 2;
           state.battles.push({ systemId: sys.id, turn: state.turn, text: `Defenders drove back the swarm (+${(lost * 2).toFixed(0)} salvaged matter).` });
-          log(state, `Defenders at ${sys.name} drove back the swarm and salvaged its dead.`, 'combat', sys.id);
+          combatLog(state, `Defenders at ${sys.name} drove back the swarm and salvaged its dead.`, 'good', sys.id);
           // damage escorts
           hurtShipsAt(state, sys, () => rng.range(0, sw.size * 0.4));
           if (sw.size <= 0.4) {
@@ -507,7 +507,7 @@ export function updateHunger(state: GameState, L: number, mods: Mods, share = 1)
             const k = rng.weighted(structs, (s) => (STRUCTURE_BY_ID[s]?.signature ?? 1) + 0.5);
             c.structures[k]--;
             if (c.structures[k] <= 0) delete c.structures[k];
-            log(state, `The swarm stripped ${structureLabel(k, sys).name} at ${c.name}.`, 'combat', sys.id);
+            combatLog(state, `The swarm stripped ${structureLabel(k, sys).name} at ${c.name}.`, 'bad', sys.id);
           }
           civ.matter = Math.max(0, civ.matter - sw.size * 2);
           if (rng.chance(0.35)) {
