@@ -177,6 +177,15 @@ word", then the player's list of 16 Oct, then the falling worlds.
   or where is it?" The state in a word (cooling, nearly cold, ember…) was only in Star types; now
   one chip (`StateChip`, `Lists.tsx`) follows the star's kind in Our settlements' headers, Surveyed
   worlds (Systems) and Seen from afar too. Display only. Check: `browser/star-types`.
+- **The governor** (27 Oct, PR m1omg/Steliterate#51, the plan approved): the player, "add a
+  governor like in alpha centauri to set a focus on building buildings of a certain category pls",
+  then "allow me to mark different worlds in system view to set the governor to". A settlement
+  handed one queues, whenever its queue is empty, the structure of its kind (the build list's
+  nine) worth the most there per cost, keeping 10 matter; set in its Build tab or for several at
+  once from a system's Worlds list (tick boxes, Mark all, a Governor row). `sim/governor.ts`;
+  DEV-NOTES says where the rest lives. The harness is unchanged game for game (183 / 78 / 104).
+  Checks: `unit/governor`, `browser/governor`. With it, Our settlements say which are leptonic
+  (the player: "should show which settlements are leptonic pls").
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
@@ -206,8 +215,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#50 (a star's state wherever the Systems window names its kind, 27 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-CV_2U7Jl.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#51 (the governor, 27 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-DnBP9xC5.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order

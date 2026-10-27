@@ -4486,6 +4486,9 @@ governor to". The plan, approved: a settlement handed a governor picks its own b
 - **Saves:** `Colony.governor` is optional (no version bump); a kind this game does not know is
   dropped on load; a settlement that changes hands loses its governor.
 - Only the player sets one: the autoplayer and other civilizations build as before.
+- **Balance** (300 standard competent games): 183 survive, 78 victories, a Degenerate Age of 104
+  turns; by fate decay 108 / 148, stable 33 / 81, curvature 42 / 71: the last reference to the game,
+  as it should be, since no autoplayer game sets a governor.
 
 ## Our settlements say which are leptonic (27 Oct)
 

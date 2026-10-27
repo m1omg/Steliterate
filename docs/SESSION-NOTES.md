@@ -74,6 +74,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     tab that names it. Before it the player asked for a loose description of the game, for
     ChatGPT to rebuild it as an experiment, one with the GPT image generator and one with Krea
     (given in chat; not in the repo).
+  - Then (27 Oct): PR m1omg/Steliterate#51 (live script `index-DnBP9xC5.js`), the governor, planned
+    and approved: "add a governor like in alpha centauri to set a focus on building buildings of a
+    certain category pls", then "allow me to mark different worlds in system view to set the
+    governor to"; and "should show which settlements are leptonic pls" (a chip in Our
+    settlements). On their screenshot of Our settlements the black dwarfs showed no state chip:
+    their page was from before PR #50 went live (a black dwarf reads "cold"); told them to reload.
   - Before (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
     effect on its chip's tip; live script `index-D13F5Go2.js`), and `/next/` at the same with the
     Supernova film (`eb70648`, live script `index-CczYHvun.js`). Before them (26 Oct, evening):
