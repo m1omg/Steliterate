@@ -167,6 +167,11 @@ word", then the player's list of 16 Oct, then the falling worlds.
     (open and merge it yourself, as always), and the work branch copied to `next`, which stays a
     mirror at `/next/`. No more ports to today's game, no `claude/promises-main`, no `-s ours`.
   - Wait for a running Pages run before pushing again (`cancel-in-progress`).
+- **Matter shown as we hold it** (27 Oct, the first batch the new way, PR m1omg/Steliterate#48,
+  `139d697`; the switch's notes were PR m1omg/Steliterate#47): the player, "but i have 30
+  matter...", with 29.6 shown rounded to 30 and a build of 30 refused. The top bar rounds energy
+  and matter down (`held`, `src/ui/fmt.ts`), and a refused build says what we have ("Needs 30
+  matter; we have 29.6.", `queueBuild`). Display only. Check: `unit/held-matter`.
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
@@ -196,8 +201,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#46 (`8a0d2ad`, the switch, 27 Oct) | `fe16fc5`, and its notes | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-DspRFv2h.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#48 (`139d697`, matter shown as we hold it, 27 Oct) | `71162c2`, and its notes | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-0z_W6BOz.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order
