@@ -42,7 +42,13 @@ its own name, and why a brief star gives no light (26 Oct), and PR m1omg/Stelite
 Catchers banking a star too brief for its turn, star states, a combat report and scrollable
 forecasts (26 Oct), and PR m1omg/Steliterate#45, `0279db1`, each building's real effect on its
 chip's tip (26 Oct), all from `claude/promises-main`,
-the same way, each then merged into the work branch with `-s ours`).
+the same way, each then merged into the work branch with `-s ours`). Then **the switch**, 27 Oct
+(the player: "Switch main to /next/"): PR m1omg/Steliterate#46, `8a0d2ad`, from `next`, put the
+new version at the main address; today's game is frozen at `/archive/2026-10-27/` (built from
+`0279db1`), where every game saved at the main address until then plays on. **From now on** a
+validated batch goes live by a PR from the work branch into `main`, merged with a merge commit,
+and the work branch is copied to `next` as before; `claude/promises-main` and the `-s ours`
+merges are done with.
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -52,10 +58,12 @@ an older commit to it, as Pages builds it too and would put the older build live
 and since 14 Oct it is up at https://m1omg.github.io/Steliterate/next/ ("Preview address, but once
 all is done"): the `next` branch, a copy of the work branch (`git push origin
 claude/epic-wozniak-lyhulf:next` after each validated batch), built beside `main` by the Pages
-workflow (`.github/workflows/pages.yml`). `main` keeps today's game until the player says to
-switch, by a PR from `next` merged with a merge commit. Its saves are its own (`steliterate2.`
-keys), and now that it is up, "Saves are sacred" holds for them too: `tools/saves/` has its first
-saves, which `savecompat` plays. `public/archive/` holds frozen builds: never edit them.
+workflow (`.github/workflows/pages.yml`). Since 27 Oct it is also the game at the main address
+(PR m1omg/Steliterate#46); `/next/` stays a mirror of the work branch. Its saves are its own
+(`steliterate2.` keys), and "Saves are sacred" holds for them: `tools/saves/` has its saves, which
+`savecompat` plays. `public/archive/` holds frozen builds (today's game as of 13 Oct and as of 27
+Oct, with today's storage keys, so the games saved before the switch play on there): never edit
+them.
 
 A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (rewritten
 16 Oct):
@@ -74,7 +82,9 @@ settlements sorted by a yield and Star types by measures (26 Oct, both versions,
 m1omg/Steliterate#43); then storage notes, brief stars caught, star states, a combat report and
 scrollable forecasts (26 Oct, both versions, PR m1omg/Steliterate#44); then each building's real
 effect on its chip's tip (26 Oct, both versions, PR m1omg/Steliterate#45) and a film for a game's
-first supernova (the new version only: today's game has no films).
+first supernova (the new version only: today's game has no films); then the switch (27 Oct, PR
+m1omg/Steliterate#46): the new version at the main address, today's game frozen at
+`/archive/2026-10-27/`.
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 
@@ -133,7 +143,8 @@ pace"). Before the pace, finds only where they can be and one sea: 165 / 77 / 70
 900 games on 19 Oct: 476 survive, 244 victories, by fate decay 43%, stable 69%, curvature 56%;
 noise ±12 in 300 (two runs of 900 can differ by 30). The victories beside 12 Oct's
 (154 / 72, 900 games 456 / 203) are a hidden step's (`docs/spoilers/slow-ones.md`). The full history is
-in DEV-NOTES (Balance reference). That is `main`'s game. The new version (on
+in DEV-NOTES (Balance reference). That was `main`'s game until the switch (27 Oct), now frozen at
+`/archive/2026-10-27/`. The new version (on
 `claude/epic-wozniak-lyhulf`) starts again with real neighbours: part 2a's reference (13 Oct,
 `3678301`) is 140 of 300 surviving, 41 victories; 900 games 397 / 131, a Degenerate Age of 71
 turns; by fate decay 36%, stable 57%, curvature 46%. With part 2b (the Hunger among them): 135 of
