@@ -10,7 +10,7 @@ import { researchDraw } from './research';
 import { jointIncome } from './survivors';
 import { beaconUpkeep } from './beacons';
 import { fleetUpkeep } from './fleets';
-import { colonies } from './util';
+import { colonies, governorBuilds } from './util';
 import { spareYield } from './spare';
 import { terraformingOf } from '../physics';
 import { SEED_CAP, SEED_RATE, WORKS_WATER, habitabilityOf, terraformedWarmth } from './terraform';
@@ -74,8 +74,9 @@ export function project(state: GameState, paceOverride?: number): Projection {
     p.industry += t.y.industry;
     p.insight += t.y.insight;
     p.accord += t.y.accord;
-    // and what its spare work will make of the industry its queue leaves over (turn.ts: applyIndustry)
-    if (!state.civ.dormant) {
+    // and what its spare work will make of the industry its queue leaves over (turn.ts: applyIndustry);
+    // none where a governor will queue the next build with it
+    if (!state.civ.dormant && !governorBuilds(state, c)) {
       const sp = spareYield(state, c, spareLeft(c, t.y.industry), t.y.energy);
       p.energyIn += sp.energy;
       p.matterIn += sp.matter;

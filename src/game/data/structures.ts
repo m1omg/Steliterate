@@ -165,7 +165,6 @@ export const STRUCTURE_KINDS: { id: StructureKind; name: string; tip: string }[]
   { id: 'defence', name: 'Defence', tip: 'Against swarms and raids.' },
 ];
 
-/** A structure's kind, from what it does: the first of these that it yields. */
 /** Does building this do something once, at that settlement, beyond what it does while it stands? */
 export function hasOnceEffect(d: StructureDef): boolean {
   return !!(d.vitalityOnce || d.coreHeatBonus || d.enables === 'merge');
@@ -189,8 +188,14 @@ export function dismantledKey(colonyId: string, id: string): string {
   return `dismantled_${colonyId}_${id}`;
 }
 
+/**
+ * A structure's kind, from what it does: the first of these that it yields. A Search Foundry and a
+ * Protocol Registry are kept by what their search makes, insight and accord (27 Oct: filed under
+ * People before, as nothing else here named them).
+ */
 export function structureKind(d: StructureDef): StructureKind {
   if (d.energy) return 'energy';
+  if (d.search) return d.search.into;
   if (d.matterYield || d.hydrogenYield || d.lift) return 'matter';
   if (d.reserveCap || d.burstCap) return 'storage';
   if (d.insight) return 'insight';

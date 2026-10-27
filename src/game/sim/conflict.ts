@@ -727,6 +727,7 @@ export function conquer(state: GameState, by: string, c: Colony, how: Fall, caus
     c.overdrive = false;
     c.damage = Math.min(1, c.damage + TAKEN_DAMAGE);
     c.owner = by;
+    delete c.governor; // (its governor was its old owner's)
     // a Deep beside the winner's own at that star joins it: each civilization holds one Deep there (deepFor)
     const own = state.bodies[c.bodyId]?.kind === 'deep' ? allColonies(state).find((x) => x.owner === by && x.id !== c.id && x.systemId === c.systemId && state.bodies[x.bodyId]?.kind === 'deep') : undefined;
     if (own) {

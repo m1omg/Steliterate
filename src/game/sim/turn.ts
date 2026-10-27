@@ -19,6 +19,7 @@ import { battlesTurn } from './conflict';
 import { feedBeacons } from './beacons';
 import { spareYield, type SpareYield } from './spare';
 import { finishQueued } from './queue';
+import { governorQueue } from './governor';
 import { coolAccord } from './accord';
 import { MATTER_AS_ENERGY, capacity, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
@@ -47,8 +48,14 @@ export interface TurnResult {
   wasted: number;
 }
 
-/** Industry drives the build queue; leftover goes to the settlement's spare work. Returns what that made (its resolve already given). */
-function applyIndustry(state: GameState, c: Colony, industry: number, energyMade: number, mods: Mods): SpareYield {
+/**
+ * Industry drives the build queue; leftover goes to the settlement's spare work. Returns what that
+ * made (its resolve already given). A settlement with a governor has it queue its next build when
+ * the queue is empty, before the turn's industry and whenever a build finishes in it (not asleep).
+ */
+function applyIndustry(state: GameState, c: Colony, industry: number, energyMade: number, mods: Mods, ctx: TurnContext): SpareYield {
+  const govern = () => !!c.governor && !c.queue.length && !state.civ.dormant && governorQueue(state, c, ctx);
+  govern();
   let left = Math.max(industry, c.queue[0] && c.queue[0].progress >= c.queue[0].cost - 0.01 ? 0.01 : 0);
   let guard = 0;
   while (left > 0 && c.queue.length && guard++ < 8) {
@@ -60,6 +67,7 @@ function applyIndustry(state: GameState, c: Colony, industry: number, energyMade
     if (item.progress >= item.cost - 1e-6) {
       c.queue.shift();
       finishQueued(state, c, item);
+      govern();
     }
   }
   void mods;
@@ -512,7 +520,7 @@ function economy(state: GameState, t: CivTurn) {
     }
     // spare work's yields count in the turn's own (and so in the energy net it reports: until
     // 19 Oct they went straight into the stores, unreported)
-    const spare = applyIndustry(state, c, y.y.industry, y.y.energy, mods);
+    const spare = applyIndustry(state, c, y.y.industry, y.y.energy, mods, ctx);
     insight += spare.insight;
     eIn += spare.energy;
     mIn += spare.matter;
