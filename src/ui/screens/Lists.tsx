@@ -17,10 +17,11 @@ import { orderFleet } from '../../game/sim/actions';
 import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
-import { colonies, distLy, fleets, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { colonies, distLy, fleets, governed, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
 import { nestSeenAt, swarmSight } from '../../game/sim/sight';
 import { atWar } from '../../game/sim/war';
 import { PROMISE_TURNS } from '../../game/sim/claims';
+import { governorName, isIdle } from '../../game/sim/governor';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, Survivor, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, signed, solarMass } from '../fmt';
@@ -391,7 +392,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                     class="list-item settlement-row"
                     {...pressable(() => {
                       // an idle settlement opens where it can be given something to do
-                      if (!c.queue.length && !c.spare) openBuildFor.value = c.id;
+                      if (isIdle(s, c)) openBuildFor.value = c.id;
                       goToColony(c);
                     })}
                   >
@@ -400,7 +401,16 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                       {s.civ.capitalId === c.id && <span class="chip neon" style={{ marginLeft: '6px' }}>capital</span>}
                       {c.starving > 0 && <span class="chip danger" style={{ marginLeft: '6px' }}>starving</span>}
                       <div class="faint" style={{ fontSize: '12.5px' }}>
-                        {bodyKindName(s, b)} · {c.queue.length ? `building ${c.queue.length}` : c.spare ? `working: ${spareChoices(s).find((x) => x.id === c.spare)?.name.toLowerCase()}` : <span class="warn">idle</span>}
+                        {bodyKindName(s, b)} ·{' '}
+                        {c.queue.length ? (
+                          `building ${c.queue.length}${c.governor ? ` · governor: ${governorName(c.governor)}` : ''}`
+                        ) : governed(s, c) ? (
+                          `governor: ${governorName(c.governor!)}, waiting to pay`
+                        ) : c.spare ? (
+                          `working: ${spareChoices(s).find((x) => x.id === c.spare)?.name.toLowerCase()}${c.governor ? ` (governor: no ${governorName(c.governor).toLowerCase()} worth building)` : ''}`
+                        ) : (
+                          <span class="warn">{c.governor ? `idle: no ${governorName(c.governor).toLowerCase()} worth building` : 'idle'}</span>
+                        )}
                       </div>
                     </span>
                     <span class="row" style={{ gap: '6px', fontSize: '13.5px' }}>

@@ -68,6 +68,18 @@ const fresh = () => {
   check(c.queue.length === 1 && s.civ.matter === 10 && s.civ.flags[govNoneKey(c.id)] === undefined, `with 20 it builds, and 10 are left (${s.civ.matter})`);
 }
 
+// waiting for matter, it queues once the turn's income is in, so the build shows while we play
+{
+  const { s, c } = fresh();
+  s.civ.matter = 19;
+  setGovernor(s, [c.id], 'energy');
+  const before = c.queue.length;
+  endTurn(s);
+  const q = c.queue[0];
+  console.log(`  waiting with 19 matter; after the turn ${s.civ.matter.toFixed(1)} left, queued ${q?.key} at ${q?.progress}`);
+  check(before === 0 && !!q && structureKind(STRUCTURE_BY_ID[q.key]) === 'energy' && q.progress === 0 && s.civ.matter >= GOVERNOR_KEEPS.matter, 'waiting for matter, it queues its pick once the turn’s income is in');
+}
+
 // a build finishing in the turn is followed at once by the next, with the turn's industry
 {
   const { s, c } = fresh();

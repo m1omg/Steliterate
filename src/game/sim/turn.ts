@@ -545,6 +545,9 @@ function economy(state: GameState, t: CivTurn) {
   civ.flags.last_insight = insight;
   civ.flags.last_accord = accord;
   t.insight = insight;
+  // a governor kept waiting for the matter (or energy) to pay for its pick queues it once the turn's
+  // income is in, so its build shows while we play our turn
+  if (!civ.dormant) for (const c of colonies(state)) if (c.governor && !c.queue.length) governorQueue(state, c, ctx);
 }
 
 /** An overdriven Hearth may fail and wreck what it powers. */

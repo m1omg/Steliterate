@@ -45,6 +45,7 @@ import { SPENT_SPIN, holeFailing } from '../../game/sim/crossing';
 import { beginHorizon, driftCheck, driftTerms, driftToAnotherHole, horizonCheck, horizonTerms } from '../../game/sim/horizon';
 import { POSITRONIUM_DECAY, beginWeave, leaveWeave, leaveWeaveCheck, leaveWeaveCost, positroniumHere, turnsToDecay, weaveCheck, weaveTerms } from '../../game/sim/positronium';
 import { spareYield, type SpareYield } from '../../game/sim/spare';
+import { GOVERNOR_KEEPS, governorChoice, governorName, setGovernor } from '../../game/sim/governor';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
@@ -308,6 +309,14 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const survivorHome = survivor && known === 2 ? survivorWorld(s, survivor, sys.id) : null;
   const fc = s.civ.forecasts.filter((f) => f.systemId === sys.id);
   const d = distFromCapital(s, sys);
+  // our settlements here, and those marked to be given a governor (27 Oct, the player: "allow me to
+  // mark different worlds in system view to set the governor to"); the marks are this star's only
+  const ours = sys.bodies.map((id) => s.bodies[id]?.colonyId).map((id) => (id ? ownColony(s, id) : null)).filter((c): c is Colony => !!c);
+  const [marks, setMarks] = useState<{ sys: string; ids: string[] }>({ sys: '', ids: [] });
+  const marked = marks.sys === sys.id ? marks.ids.filter((id) => ours.some((c) => c.id === id)) : [];
+  const mark = (id: string, on: boolean) => setMarks({ sys: sys.id, ids: on ? [...marked.filter((x) => x !== id), id] : marked.filter((x) => x !== id) });
+  const markedGov = marked.map((id) => s.colonies[id]?.governor ?? null);
+  const govValue = markedGov.every((g) => g === markedGov[0]) ? markedGov[0] : 'mixed';
   return (
     <>
       <div class="drawer-head">
@@ -350,9 +359,19 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                   const hab = b.habitability * b.vitality;
                   return (
                     <div key={b.id} class="list-item" {...pressable(() => selectBody(b))}>
+                      {c && (
+                        <label class="world-mark" data-tip={`Mark ${c.name} to give it a governor`} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={marked.includes(c.id)} aria-label={`Mark ${c.name}`} onChange={(e) => mark(c.id, (e.target as HTMLInputElement).checked)} />
+                        </label>
+                      )}
                       <Icon name={bodyIcon(b.kind)} cls={c ? 'neon' : hab >= LIVING_WORLD ? 'boon' : ''} />
                       <span class="grow">
                         {c ? c.name : b.name} <span class="faint" style={{ fontSize: '12.5px' }}>{bodyKindName(s, b)}</span>
+                        {c?.governor && (
+                          <span class={`chip governor-chip kind-${c.governor}`} style={{ marginLeft: '6px' }} data-tip={`Governor: ${governorName(c.governor)}. ${governorLine(s, c)}`}>
+                            <Icon name={KIND_ICON[c.governor]} /> {governorName(c.governor)}
+                          </span>
+                        )}
                       </span>
                       {b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls={b.relic.flowed ? '' : 'accent'} />}
                       {survivor && survivorHome?.id === b.id && (
@@ -370,6 +389,30 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                   );
                 })}
             </div>
+            {ours.length > 0 && (
+              <div class="governor-bar" style={{ marginTop: '6px' }}>
+                <div class="row" style={{ gap: '6px', fontSize: '12.5px' }}>
+                  <span class="grow faint" data-tip={GOVERNOR_TIP}>
+                    {marked.length ? `${marked.length} marked: give ${marked.length > 1 ? 'them' : 'it'} a governor` : 'Mark our settlements here to give them a governor'}
+                  </span>
+                  {ours.length > 1 && (
+                    <button class="btn ghost small" onClick={() => setMarks({ sys: sys.id, ids: marked.length === ours.length ? [] : ours.map((c) => c.id) })}>
+                      {marked.length === ours.length ? 'Unmark all' : 'Mark all'}
+                    </button>
+                  )}
+                </div>
+                {marked.length > 0 && (
+                  <GovernorPicker
+                    value={govValue}
+                    label="Governor of the marked settlements"
+                    onPick={(k) => {
+                      if (act((g) => setGovernor(g, marked, k))) sfx('click');
+                      setMarks({ sys: sys.id, ids: [] });
+                    }}
+                  />
+                )}
+              </div>
+            )}
           </div>
         )}
         <p class="flavor" style={{ margin: '8px 0' }}>{src.label}.</p>
@@ -1499,6 +1542,7 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
           </button>
         )}
       </div>
+      <GovernorSection s={s} c={c} />
       <SpareChoice s={s} c={c} industry={industry} energyMade={energyMade} />
       <div class="section">
         <div class="row" style={{ gap: '4px', marginBottom: '6px' }}>
@@ -1569,13 +1613,18 @@ function spareMade(y: SpareYield): string | null {
 function WorkingOn({ s, c, industry, energyMade }: { s: GameState; c: Colony; industry: number; energyMade: number }) {
   const work = spareChoices(s).find((x) => x.id === (c.spare ?? 'salvage'))!;
   const made = spareMade(spareYield(s, c, industry, energyMade));
+  // (a governor with a pick spends the turn's industry on it: no spare work)
+  const picks = !!c.governor && !!governorChoice(s, c, project(s).ctx).pick;
   return (
     <div style={{ fontSize: '13.5px' }}>
-      <div class="faint">Nothing queued.</div>
-      <div data-tip={work.tip}>
-        Working on: <b>{work.name}</b>
-        {c.spare ? '' : ' (by default: choose below)'} · {made ?? 'nothing comes of it here'}
-      </div>
+      <div class="faint">Nothing queued.{c.governor ? ` ${governorLine(s, c)}` : ''}</div>
+      {!picks && (
+        <div data-tip={work.tip}>
+          Working on: <b>{work.name}</b>
+          {c.spare ? '' : ' (by default: choose below)'}
+          {c.governor ? ' meanwhile' : ''} · {made ?? 'nothing comes of it here'}
+        </div>
+      )}
     </div>
   );
 }
@@ -1599,6 +1648,49 @@ function SpareChoice({ s, c, industry, energyMade }: { s: GameState; c: Colony; 
         })}
       </div>
       {c.queue.length > 0 && <div class="faint" style={{ fontSize: '12.5px', marginTop: '4px' }}>Starts once the queue is done.</div>}
+    </div>
+  );
+}
+
+const GOVERNOR_TIP = `A governor chooses this settlement’s builds: whenever its queue is empty, it queues the structure of one kind that gives it the most for what it costs, here and now, keeping ${GOVERNOR_KEEPS.matter} matter in store. What you queue comes first; it waits for the queue to empty. Off: you choose.`;
+
+/**
+ * Off, or one of the build list's kinds: the governor's choice (27 Oct, the player: "add a governor
+ * like in alpha centauri to set a focus on building buildings of a certain category"). `value`
+ * 'mixed' where the settlements it sets differ.
+ */
+function GovernorPicker({ value, onPick, label }: { value: StructureKind | null | 'mixed'; onPick: (k: StructureKind | null) => void; label: string }) {
+  return (
+    <div class="governor-picker" role="group" aria-label={label}>
+      <button class={`btn small ${value === null ? 'primary' : ''}`} aria-pressed={value === null} data-tip="No governor: you choose what is built" onClick={() => onPick(null)}>
+        Off
+      </button>
+      {STRUCTURE_KINDS.map((k) => (
+        <button key={k.id} class={`btn small kind-${k.id} ${value === k.id ? 'primary' : ''}`} aria-pressed={value === k.id} data-tip={`${k.name}: ${k.tip}
+Whenever the queue is empty, the governor queues the ${k.name.toLowerCase()} structure worth the most here for what it costs.`} onClick={() => onPick(k.id)}>
+          <Icon name={KIND_ICON[k.id]} /> {k.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** What a settlement's governor does next, in words. */
+function governorLine(s: GameState, c: Colony): string {
+  if (!c.governor) return '';
+  const name = governorName(c.governor);
+  if (c.queue.length) return `Once the queue is done, the governor builds ${name}.`;
+  const g = governorChoice(s, c, project(s).ctx);
+  return g.pick ? `Next: ${structureLabel(g.pick.id, s.systems[c.systemId], formOf(c)).name}, at the turn’s start.` : `The governor builds ${name}: ${g.why}.`;
+}
+
+/** The settlement's governor: Off, or the kind it builds whenever the queue is empty. */
+function GovernorSection({ s, c }: { s: GameState; c: Colony }) {
+  return (
+    <div class="section">
+      <h3 data-tip={GOVERNOR_TIP}>Governor</h3>
+      <GovernorPicker value={c.governor ?? null} label={`Governor of ${c.name}`} onPick={(k) => act((g) => setGovernor(g, [c.id], k)) && sfx('click')} />
+      {c.governor && <div class="faint governor-line" style={{ fontSize: '12.5px', marginTop: '4px' }}>{governorLine(s, c)}</div>}
     </div>
   );
 }
