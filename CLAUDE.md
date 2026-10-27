@@ -48,7 +48,8 @@ new version at the main address; today's game is frozen at `/archive/2026-10-27/
 `0279db1`), where every game saved at the main address until then plays on. **From now on** a
 validated batch goes live by a PR from the work branch into `main`, merged with a merge commit,
 and the work branch is copied to `next` as before; `claude/promises-main` and the `-s ours`
-merges are done with.
+merges are done with. So far: PR m1omg/Steliterate#47, `261443a`, the switch's notes, and PR
+m1omg/Steliterate#48, `139d697`, matter shown as we hold it (27 Oct).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.

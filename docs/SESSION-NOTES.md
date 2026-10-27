@@ -58,6 +58,16 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     copy. From now on a batch goes live by a PR from the work branch into `main`; no more ports.
     Earlier the same day the player was sent 1080p videos of the Last Horizon (with the Heart) and
     the Supernova film ("Make a high resolution rendering, please").
+  - Then (27 Oct): PR m1omg/Steliterate#47 (`261443a`, the switch's notes) and PR
+    m1omg/Steliterate#48 (`139d697`, live script `index-0z_W6BOz.js`): "but i have 30 matter...",
+    with 29.6 shown rounded to 30 and a build of 30 refused; the top bar now rounds what we hold
+    down, and a refused build says what we have. Answered the same day: "how do i reach The
+    Runaway?" (three dead stars thrown about 1.8 million light-years out; unseen, so not a
+    destination, until the Black Hole Age, when our sight reaches 10 million light-years; in the
+    Dusk 2,000 and the Degenerate Age 300,000, a survey ship three times that; then any ship, chosen
+    by hand: auto-explore never picks the outliers), and "i cannot use my current saves w the
+    main?" (the games played at `/next/` are at the main address too, the same browser storage;
+    only the old game's play on at `/archive/2026-10-27/`).
   - Before (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
     effect on its chip's tip; live script `index-D13F5Go2.js`), and `/next/` at the same with the
     Supernova film (`eb70648`, live script `index-CczYHvun.js`). Before them (26 Oct, evening):
