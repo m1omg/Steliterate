@@ -4427,3 +4427,16 @@ The player, 27 Oct, with a screenshot: "but i have 30 matter...", a build of 30 
   energy, `queueBuild`, `actions.ts`).
 - Display only: no rule changed. Check: `unit/held-matter`. Validated: tsc and the build clean,
   all 97 unit checks, the browser checks `lowvision`, `translate` and `build-kinds`.
+
+## A star's state wherever the Systems window names its kind (27 Oct)
+
+The player, 27 Oct, with a screenshot of Our settlements ("ANUIL White dwarf", "OREISHES Black
+dwarf"): "still no ember/cooling description etc or where is it?" A star's state in a word (26
+Oct, PR m1omg/Steliterate#44) was shown only in the Star types tab.
+
+- **Now it follows the star's kind wherever the window names it:** each system's header in Our
+  settlements, and each star's line in Surveyed worlds (Systems) and Seen from afar. One chip for
+  all four (`StateChip`, `src/ui/screens/Lists.tsx`), the words of `starState` as before, its
+  light's label on the tip; nothing where the kind says all there is (a red dwarf burning).
+- Display only: no rule changed. Check: `browser/star-types` (a settlement at a white dwarf: its
+  header in Our settlements and its line in Surveyed worlds say what Star types says).

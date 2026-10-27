@@ -70,5 +70,40 @@ run(async () => {
   );
   console.log(`  white dwarfs: ${whites.map((w) => `${w.name} [${w.state}]`).join(', ')}`);
   check(whites.length > 0 && whites.every((w) => w.state && /white dwarf|Ember/i.test(w.tip)), 'every white dwarf says how it is (cooling, nearly cold, an ember, cold…), its light’s words in the tip');
+  // and wherever the window names a star's kind: Our settlements' headers, Surveyed worlds one line
+  // per star (27 Oct, the player, on Our settlements: "still no ember/cooling description etc or where
+  // is it?")
+  const wd = await page.evaluate((name) => {
+    const s = window.__stel.state();
+    const sys = Object.values(s.systems).find((x) => x.name === name);
+    const body = sys.bodies.map((id) => s.bodies[id]).find((b) => b && b.kind !== 'deep' && !b.colonyId);
+    const cap = s.colonies[s.civ.capitalId];
+    s.colonies.check_wd = { ...structuredClone(cap), id: 'check_wd', name: `${sys.name} test`, systemId: sys.id, bodyId: body.id, queue: [] };
+    body.colonyId = 'check_wd';
+    s.civ.known[sys.id] = 2;
+    window.__stel.refresh();
+    return sys.name;
+  }, whites[0].name);
+  await page.locator('.modal button', { hasText: 'Our settlements' }).click();
+  await page.waitForTimeout(400);
+  const head = await page.evaluate((name) => {
+    const h = [...document.querySelectorAll('.modal .section > h3')].find((x) => x.textContent.includes(name));
+    const chip = h?.querySelector('.chip');
+    return h ? { text: h.textContent, state: chip?.textContent.trim() ?? null, tip: chip?.getAttribute('data-tip') ?? '', transform: chip ? getComputedStyle(chip).textTransform : '' } : null;
+  }, wd);
+  console.log(`  Our settlements: ${head?.text}`);
+  check(!!head && head.state === whites[0].state && head.tip === whites[0].tip && head.transform === 'none', `Our settlements: ${wd}’s header says how its star is (${head?.state}), as Star types does, in lower case`);
+  await ck.shot('star-state-settlements.png');
+  await page.locator('.modal button', { hasText: 'Surveyed worlds' }).click();
+  await page.waitForTimeout(400);
+  await page.locator('.modal .seg .btn', { hasText: /^\s*Systems\s*$/ }).click();
+  await page.locator('.modal .btn', { hasText: 'Unsettled only' }).click(); // its one world is ours now
+  await page.waitForTimeout(400);
+  const row = await page.evaluate((name) => {
+    const r = [...document.querySelectorAll('.modal .list-item')].find((x) => x.querySelector('.grow')?.firstChild?.textContent?.trim() === name);
+    return r ? [...r.querySelectorAll('.chip')].map((c) => c.textContent.trim()) : null;
+  }, wd);
+  console.log(`  Surveyed worlds, Systems: ${wd} ${JSON.stringify(row)}`);
+  check(!!row && row.includes(whites[0].state), `Surveyed worlds, one line per star: ${wd} says it too`);
   await finish('STAR TYPES', ck);
 });

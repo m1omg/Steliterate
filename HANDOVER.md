@@ -172,6 +172,11 @@ word", then the player's list of 16 Oct, then the falling worlds.
   matter...", with 29.6 shown rounded to 30 and a build of 30 refused. The top bar rounds energy
   and matter down (`held`, `src/ui/fmt.ts`), and a refused build says what we have ("Needs 30
   matter; we have 29.6.", `queueBuild`). Display only. Check: `unit/held-matter`.
+- **A star's state wherever the Systems window names its kind** (27 Oct, PR
+  m1omg/Steliterate#50): the player, on Our settlements, "still no ember/cooling description etc
+  or where is it?" The state in a word (cooling, nearly cold, ember…) was only in Star types; now
+  one chip (`StateChip`, `Lists.tsx`) follows the star's kind in Our settlements' headers, Surveyed
+  worlds (Systems) and Seen from afar too. Display only. Check: `browser/star-types`.
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
@@ -201,8 +206,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#48 (`139d697`, matter shown as we hold it, 27 Oct) | `71162c2`, and its notes | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-0z_W6BOz.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#50 (a star's state wherever the Systems window names its kind, 27 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-XlE8rx1K.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order
