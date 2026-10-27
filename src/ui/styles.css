@@ -344,6 +344,8 @@ html.kbd [tabindex='-1']:focus-visible { outline: none; }
 .menu-buttons { display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
 .menu-buttons .btn { justify-content: flex-start; min-height: 44px; font-family: var(--f-display); font-weight: 700; font-size: 17px; letter-spacing: 0.14em; text-transform: uppercase; padding-left: 18px; }
 .menu-foot { margin-top: auto; font-size: 12.5px; color: var(--ink-faint); line-height: 1.6; max-width: 46ch; }
+.menu-older { font-size: 13px; color: var(--ink-dim); line-height: 1.5; max-width: 46ch; margin: 0; }
+.menu-older a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field label { font-size: 12.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); }
 .field input, .field select { background: var(--panel-2); border: 1px solid var(--line-2); color: var(--ink); padding: 7px 9px; font: 14px var(--f-ui); }
@@ -479,10 +481,10 @@ sup.pow { font-size: 0.72em; vertical-align: 0.5em; line-height: 0; }
 .rp-options { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 .rp-option { justify-content: flex-start; text-align: left; }
 @media (max-width: 760px) { .research-prompt { top: calc(150px + env(safe-area-inset-top, 0px)); } .toasts { bottom: calc(230px + env(safe-area-inset-bottom, 0px)); } }
-/* the survey reveal's caption (21 Oct, over a flight of the camera, as in Endless Space 2): top
-   left over the view, with no box, like a film's titles; only its buttons and bars take the
-   pointer, so a click on it is a click on the view (Next). In the magnifier mode a panel in its
-   column. Its lines are typed in one after another (--i), then its bars fill (--j, --k). */
+/* the survey reveal's caption (part 4; over a flight of the camera since 21 Oct, as in Endless
+   Space 2): top left over the view, with no box, like a film's titles; only its buttons and bars
+   take the pointer, so a click on it is a click on the view (Next). In the magnifier mode a panel in
+   its column. Its lines are typed in one after another (--i), then its bars fill (--j, --k). */
 .reveal-card { z-index: 7; }
 .reveal-card.cine-caption { position: absolute; left: calc(18px + env(safe-area-inset-left, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); width: min(440px, calc(calc(100vw / var(--z, 1)) - 36px)); pointer-events: none; text-shadow: 0 1px 3px #000, 0 0 14px rgba(0, 0, 0, 0.8); }
 .reveal-card.cine-caption::before { content: ''; position: absolute; inset: -40px -140px -60px -60px; background: radial-gradient(ellipse at 25% 35%, rgba(2, 2, 6, 0.6), rgba(2, 2, 6, 0) 70%); z-index: -1; pointer-events: none; }
@@ -639,6 +641,7 @@ html.cine:not(.lv) .hud > :not(.reveal-card), html.cine:not(.lv) .toasts, html.c
 /* collision stars in the Degenerate Age: always named on the map */
 .map-label.beacon { color: #ffe0a0; font-weight: 600; text-shadow: 0 0 4px #000, 0 0 10px rgba(255, 190, 90, 0.45); }
 .map-label.others { font-weight: 600; letter-spacing: 0.06em; }
+.map-label.battle { color: var(--bad); font-weight: 600; letter-spacing: 0.06em; text-shadow: 0 0 4px #000, 0 0 10px rgba(255, 90, 70, 0.45); }
 
 /* ------------------------------------------------------------------ phones (store.ts: isPhone)
    Narrow screens (portrait) and short touchscreens (held sideways). The map is what a phone shows: the
@@ -928,3 +931,39 @@ html.lv .map-label.seen { color: rgba(233, 223, 207, 0.8); }
 html.lv .map-label.province { font-size: calc(18px * var(--z, 1)); color: rgba(233, 223, 207, 0.72); }
 .map-hover { position: fixed; z-index: 15; pointer-events: none; padding: 4px 10px; font-size: 16px; line-height: 1.35; background: var(--panel-solid); border: 2px solid var(--line-3); color: var(--ink); white-space: nowrap; }
 .map-hover .faint { font-size: 13.5px; }
+
+/* The films (part 4): a full-screen canvas with the words over it, sized by the screen's smaller side. */
+.film-screen { position: fixed; inset: 0; z-index: 60; background: #030304; overflow: hidden; cursor: pointer; }
+.film-screen.export { position: relative; cursor: default; }
+.film-canvas { position: absolute; inset: 0; display: block; }
+.film-text { position: absolute; inset: 0; pointer-events: none; }
+/* the lens's vignette and the film's grain, laid over the frame by the page (FilmPlayer), under its words */
+.film-vignette, .film-grain { position: absolute; inset: 0; pointer-events: none; }
+.film-grain { background-repeat: repeat; background-size: 256px 256px; mix-blend-mode: overlay; }
+.film-line { position: absolute; color: #e6dccb; white-space: nowrap; }
+.film-line.title { font-family: var(--f-display); font-weight: 800; font-size: 9.5vmin; letter-spacing: 0.1em; text-transform: uppercase; color: var(--film-accent, #f28a4f); }
+.film-line.sub { font-family: var(--f-mono); font-size: 1.9vmin; letter-spacing: 0.32em; text-transform: uppercase; color: #cfc4b2; }
+.film-line.narration { font-family: var(--f-text); font-style: italic; font-weight: 300; font-size: 3.6vmin; color: #efe6d6; white-space: normal; text-align: center; max-width: 78vw; }
+.film-line.label, .film-line.code { font-family: var(--f-mono); font-size: 1.55vmin; letter-spacing: 0.22em; color: #bdb2a0; font-variant-numeric: tabular-nums; }
+.film-line.at-tl { top: 7.6vmin; left: 8vmin; }
+.film-line.at-tr { top: 7.6vmin; right: 8vmin; }
+.film-line.at-bl { bottom: 7.6vmin; left: 8vmin; }
+.film-line.at-br { bottom: 7.6vmin; right: 8vmin; }
+.film-line.at-mid.title { left: 50%; top: 50%; transform: translate(-50%, -62%); }
+.film-line.at-mid.sub { left: 50%; top: calc(50% + 8.6vmin); transform: translateX(-50%); }
+.film-line.at-low { left: 50%; bottom: 13vmin; transform: translateX(-50%); }
+.film-line.note { font-family: var(--f-mono); font-size: 1.35vmin; letter-spacing: 0.18em; text-transform: uppercase; color: #d9cfbd; font-variant-numeric: tabular-nums; transform: translateY(-50%); }
+.film-line.note.size-m { font-size: 1.7vmin; }
+.film-line.note.align-c { transform: translate(-50%, -50%); }
+.film-line.note.align-r { transform: translate(-100%, -50%); }
+.film-line.note.tone-accent { color: var(--film-accent, #f28a4f); }
+.film-line.note.tone-dim { color: #8f8676; }
+.film-skip { position: absolute; right: 8vmin; bottom: 7vmin; z-index: 2; }
+/* while the first scene's pictures are painted: the dark screen says so, if it takes a moment */
+.film-line.film-wait { left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0; animation: film-wait 1.4s ease-in-out 0.5s infinite alternate; }
+@keyframes film-wait { from { opacity: 0.2; } to { opacity: 0.75; } }
+@media (prefers-reduced-motion: reduce) { .film-line.film-wait { animation: none; opacity: 0.6; } }
+html.lv .film-line.narration { font-size: 5vmin; max-width: 88vw; }
+html.lv .film-line.title { font-size: 11vmin; }
+html.lv .film-line.label, html.lv .film-line.code { font-size: 2.2vmin; }
+html.lv .film-line.note { font-size: 2vmin; }

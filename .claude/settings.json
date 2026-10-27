@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsx tools/sim.ts *)",
+      "Bash(npm run sim *)",
+      "Bash(sh tools/tally.sh *)"
+    ]
+  }
+}

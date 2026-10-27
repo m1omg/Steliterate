@@ -12,11 +12,11 @@ import { check, done } from '../lib';
 
 const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard' });
 let guard = 0;
-while (!s.outcome && guard++ < 700 && !(s.era === 'degenerate' && s.eta >= 17.3)) {
+while (!s.civ.outcome && guard++ < 700 && !(s.era === 'degenerate' && s.eta >= 17.3)) {
   autoPlay(s, 'competent');
   endTurn(s);
 }
-s.pending.length = 0;
+s.civ.pending.length = 0;
 console.log(`era ${s.era}, η ${s.eta.toFixed(2)}, turn ${s.turn}`);
 
 /** Make a test world in a system: a copy of any world, with the kind and orbit given. */
@@ -93,7 +93,7 @@ check(boilingAway(s, rubbleG17) === null && boilingAway(s, rubbleG19) === 'boils
 
 // ---------------------------------------------------------------- warnings before it happens
 updateForecasts(s);
-const fc = s.forecasts.find((f) => f.kind === 'boil' && f.bodyId === molten.id);
+const fc = s.civ.forecasts.find((f) => f.kind === 'boil' && f.bodyId === molten.id);
 check(!!fc && fc.severity === 'danger', `a forecast warns: "${fc?.title}"`);
 const wf = String((EVENT_BY_ID.white_fire.text as (s: GameState, d: Record<string, string | number>) => string)(s, { systemId: he.id }));
 check(wf.includes(molten.name) && wf.includes(rubble.name) && !wf.includes(lava.name) && /Deep/.test(wf), 'White Fire names the worlds it will boil, and that our people there can get off');
@@ -101,10 +101,10 @@ console.log(`  White Fire: ${wf}`);
 
 // ---------------------------------------------------------------- the turn ends
 const turnBefore = s.turn;
-const lastLog = s.log[s.log.length - 1];
+const lastLog = s.civ.log[s.civ.log.length - 1];
 const popsBefore = { echoes: col.pops.echoes, lattice: col.pops.lattice, cryo: col.cryo };
 endTurn(s);
-const news = s.log.slice(s.log.indexOf(lastLog) + 1).map((l) => l.text);
+const news = s.civ.log.slice(s.civ.log.indexOf(lastLog) + 1).map((l) => l.text);
 for (const b of [molten, rubble, inside, rubbleG19]) if (!b.dissolved) console.log(`  still there: ${b.name} (${s.systems[b.systemId].primary.kind}, gone ${!!s.systems[b.systemId].gone}, rogue ${!!b.rogue}, feeding ${!!b.feeding})`);
 check(!!(molten.dissolved && rubble.dissolved && inside.dissolved && rubbleG19.dissolved), 'the doomed worlds are gone after the turn');
 check(!cooler.dissolved && !hotGiant.dissolved && !lava.dissolved && !ocean.dissolved && !deep.dissolved && !edge.dissolved && !rubbleG17.dissolved, 'every other world is still there');

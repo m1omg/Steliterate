@@ -18,8 +18,9 @@ export function workRequirementMet(state: GameState, id: string): boolean {
     case 'archive_of_everything':
       return all > 0 && t.lattice >= all / 2;
     case 'aeon_seed': {
+      // (the Slow Ones and the Unlit are the player's alone: so is this Work)
       const heart = Object.values(state.systems).find((s) => s.special === 'core');
-      return !!heart && colonies(state).some((c) => c.systemId === heart.id) && (state.minds.slow.stage >= 4 || !!civ.flags.unlit_gift);
+      return civ.id === state.player && !!heart && colonies(state).some((c) => c.systemId === heart.id) && (state.minds.slow.stage >= 4 || !!civ.flags.unlit_gift);
     }
     case 'garden_of_embers': {
       let kin = 0;
@@ -38,8 +39,8 @@ export function workCost(state: GameState, id: string): number {
 }
 
 function end(state: GameState, kind: Outcome['kind'], ending: string): Outcome {
-  state.outcome = { kind, ending, turn: state.turn, eta: state.eta };
-  return state.outcome;
+  state.civ.outcome = { kind, ending, turn: state.turn, eta: state.eta };
+  return state.civ.outcome;
 }
 
 /**
@@ -47,20 +48,24 @@ function end(state: GameState, kind: Outcome['kind'], ending: string): Outcome {
  * the turn's own at its end: despair is counted only in that one, so once a turn.
  */
 export function checkEndings(state: GameState, atLastHorizon = false): Outcome | null {
-  if (state.outcome) return state.outcome;
+  if (state.civ.outcome) return state.civ.outcome;
   const civ = state.civ;
   if (civ.taint >= 100) return end(state, 'dark', DARK_ENDING.ending);
+  // the last of our settlements taken or destroyed in a war (conflict.ts): a defeat of its own
+  if (civ.flags.conquered !== undefined && !colonies(state).length) return end(state, 'defeat', 'Conquered');
   if (totalPops(state) <= 0) return end(state, 'defeat', 'Silence');
   if (civ.resolve <= 0) {
     if (!atLastHorizon) civ.flags.despair = (civ.flags.despair ?? 0) + 1;
     if ((civ.flags.despair ?? 0) >= 6) return end(state, 'defeat', 'The Will Fails');
   } else if (!atLastHorizon) civ.flags.despair = 0;
-  if (calendarEra(state) === 'dark' && civ.continuity <= 0) return end(state, 'defeat', 'The Fade');
+  // a Great Work finished this turn was finished before the turn's end took the last of Continuity
+  // (it is announced as it completes): it stands, ahead of The Fade
   if (atLastHorizon && (civ.works.aeon_seed ?? 0) >= workCost(state, 'aeon_seed') && workRequirementMet(state, 'aeon_seed')) return end(state, 'victory', WORK_BY_ID.aeon_seed.ending);
   for (const id of Object.keys(WORK_BY_ID)) {
     if (id === 'aeon_seed') continue;
     if ((civ.works[id] ?? 0) >= workCost(state, id) && workRequirementMet(state, id)) return end(state, 'victory', WORK_BY_ID[id].ending);
   }
+  if (calendarEra(state) === 'dark' && civ.continuity <= 0) return end(state, 'defeat', 'The Fade');
   if (calendarEra(state) === 'dark' && Math.log10(state.eta) >= 122) return end(state, 'endurance', ENDURANCE_ENDING.ending);
   return null;
 }

@@ -17,12 +17,12 @@ run(async () => {
     s.swarms = {};
     s.swarms.w1 = { id: 'w1', systemId: a.id, from: null, to: null, traveled: 0, distance: 0, size: 0.5, awake: true, tamed: false, appetite: 1, prey: 'spear' };
     s.swarms.w2 = { id: 'w2', systemId: b.id, from: null, to: null, traveled: 0, distance: 0, size: 1.6, awake: true, tamed: false, appetite: 1, prey: 'lamp' };
-    s.fleets.spear = { id: 'spear', name: 'Spear', ships: [{ cls: 'warden', hp: 10 }, { cls: 'warden', hp: 10 }], at: a.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' };
-    s.fleets.lamp = { id: 'lamp', name: 'Lamp', ships: [{ cls: 'probe', hp: 2 }], at: b.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' };
+    s.fleets.spear = { id: 'spear', owner: s.player, name: 'Spear', ships: [{ cls: 'warden', hp: 10 }, { cls: 'warden', hp: 10 }], at: a.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' };
+    s.fleets.lamp = { id: 'lamp', owner: s.player, name: 'Lamp', ships: [{ cls: 'probe', hp: 2 }], at: b.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' };
     s.civ.known[a.id] = 2;
     s.civ.known[b.id] = 2;
-    s.flags.first_swarm = -1;
-    s.pending.length = 0;
+    s.civ.flags.first_swarm = -1;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     return { a: a.name, b: b.name };
   });
@@ -56,7 +56,7 @@ run(async () => {
   await page.evaluate(() => {
     const s = window.__stel.state();
     s.swarms = {};
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.keyboard.press('Escape');

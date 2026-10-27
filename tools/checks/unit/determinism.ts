@@ -23,7 +23,7 @@ function firstDiff(a: unknown, b: unknown, path = 's'): string | null {
   return Object.is(a, b) ? null : `${path}: ${String(a)} vs ${String(b)}`;
 }
 const play = (s: GameState) => {
-  if (s.outcome) return;
+  if (s.civ.outcome) return;
   autoPlay(s, 'competent');
   endTurn(s);
 };
@@ -31,8 +31,8 @@ const play = (s: GameState) => {
 for (const seed of [1000, 16838, 32676]) {
   for (const at of [40, 120]) {
     const a = newGame({ seed });
-    for (let g = 0; !a.outcome && a.turn < at && g < 1200; g++) play(a);
-    if (a.outcome) {
+    for (let g = 0; !a.civ.outcome && a.turn < at && g < 1200; g++) play(a);
+    if (a.civ.outcome) {
       console.log(`  seed ${seed}: ended before turn ${at}`);
       continue;
     }

@@ -4,7 +4,7 @@ import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem }
 import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from './fate';
 import { ERA_BY_ID, tideTurnsAt } from './eras';
 import { hashSeed } from './rng';
-import { protonFateKnown } from './sim/util';
+import { allColonies, protonFateKnown } from './sim/util';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
 // share of a structure's nominal capture a source supports per Tide turn. Physical ratios
@@ -114,14 +114,29 @@ export function brownCoolingK(p: Primary, age: number): number {
 /** The year a dwarf the galaxy began with formed. */
 const FIRST_FORMED = 1e9;
 /**
+ * The stragglers of the last star formation (13 Oct, the player: "Make somewhat fresh/hot, hot
+ * enough to glow in the visible spectrum, white and brown dwarfs a little bit more common in the
+ * early game", and "I'm not asking you to change the cooling physics"): one dwarf in ten the galaxy
+ * begins with formed only this long before the Dusk, so it still glows by the same cooling laws.
+ * White ones 1 to 12 billion years (about 7,500 to 3,400 K at 0.6 M☉), brown ones 0.4 to 2 billion
+ * (about 2,100 to 1,200 K at 0.05 M☉, 1,400 to 870 K at 0.03, 2,900 to 2,000 K at 0.075). A bend,
+ * said in the Codex: a star formation fading as 1/t leaves far fewer so young.
+ */
+export const YOUNG_SHARE = 0.1;
+export const YOUNG_WHITE_AGES: [number, number] = [1e9, 1.2e10];
+export const YOUNG_BROWN_AGES: [number, number] = [4e8, 2e9];
+const logBetween = ([lo, hi]: [number, number], v: number) => Math.pow(10, Math.log10(lo) + v * (Math.log10(hi) - Math.log10(lo)));
+/**
  * When a dead star the galaxy began with formed (a red dwarf's remnant has its own collapse,
- * whiteAt): from 1 billion years after the Big Bang to the Dusk, as many in each tenfold of time,
- * a star formation fading as 1/t. From a hash of its own, so with no random draw, the same in any
- * game and in a save from before.
+ * whiteAt): one in ten a straggler (YOUNG_SHARE), the rest from 1 billion years after the Big Bang
+ * to the Dusk, as many in each tenfold of time, a star formation fading as 1/t. From a hash of its
+ * own, so with no random draw: the same in any game, and generation draws as it always did.
  */
 export function formedAt(p: Primary): number {
   const u = (hashSeed(`formed:${p.kind === 'brown_dwarf' ? 'bd' : 'wd'}:${p.mass}`) % 1000003) / 1000003;
-  return Math.pow(10, Math.log10(FIRST_FORMED) + u * (Math.log10(ERA_BY_ID.dusk.startYears) - Math.log10(FIRST_FORMED)));
+  const start = ERA_BY_ID.dusk.startYears;
+  if (u < YOUNG_SHARE) return start - logBetween(p.kind === 'brown_dwarf' ? YOUNG_BROWN_AGES : YOUNG_WHITE_AGES, u / YOUNG_SHARE);
+  return Math.pow(10, Math.log10(FIRST_FORMED) + ((u - YOUNG_SHARE) / (1 - YOUNG_SHARE)) * (Math.log10(start) - Math.log10(FIRST_FORMED)));
 }
 
 /** Years since a white or black dwarf formed: since its collapse if it was a star of ours to watch, else since formedAt. */
@@ -232,7 +247,7 @@ export function siphonsRunning(state: GameState): boolean {
  * starts at none, whatever it had researched, so no game loads into an emptier halo.
  */
 export function haloDrawn(state: GameState): number {
-  return state.civ?.flags?.halo_drawn ?? 0;
+  return state.flags?.halo_drawn ?? 0;
 }
 
 /** Has anything moved the halo's end (something drawn, or siphons running to draw more)? */
@@ -269,7 +284,7 @@ export function drainHalo(state: GameState, from: number, to: number): void {
   if (calendarEra(state) !== 'degenerate' || !isFinite(to) || !(to > from)) return;
   const d = haloDrawn(state);
   if (haloShare(from, d) <= 0) return;
-  state.civ.flags.halo_drawn = d + (to - from);
+  state.flags.halo_drawn = d + (to - from);
 }
 
 /**
@@ -477,9 +492,13 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
     }
     case 'white_dwarf': {
       if (era === 'dusk') {
-        // averaged over the turn: a long one right after the collapse gets only its share of the glow
-        const light = p.whiteAt ? youngDwarfLight(years - p.whiteAt, years - p.whiteAt + Math.max(0, L)) : 0.02;
-        return { light, label: p.whiteAt ? 'White dwarf, newly collapsed and cooling' : 'Old white dwarf, nearly cold', temperatureK: primaryTemperature(p, years, era), alive: null };
+        // averaged over the turn: a long one right after the collapse gets only its share of the glow;
+        // one the galaxy began with by the same law from when it formed (an old one gets the floor,
+        // 0.02, as before; a straggler of the last star formation still glows)
+        const born = p.whiteAt ?? formedAt(p);
+        const light = youngDwarfLight(years - born, years - born + Math.max(0, L));
+        const label = p.whiteAt ? 'White dwarf, newly collapsed and cooling' : light > 1.5 * COLD_LIGHT ? 'Young white dwarf, a straggler of the last stars, still glowing as it cools' : 'Old white dwarf, nearly cold';
+        return { light, label, temperatureK: primaryTemperature(p, years, era), alive: null };
       }
       if (era === 'degenerate') {
         const gf = 0.35 + 0.65 * gfe;
@@ -621,6 +640,8 @@ export interface EvolutionNote {
     | 'dissolved'
     | 'boiled'
     | 'faded'
+    | 'blackdwarf_sn'
+    | 'collapse'
     | 'flash';
   bodyId?: string;
   /** (boiled) inside a giant's own radius, rather than boiled by its light */
@@ -679,8 +700,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
     // short-lived stars
     if (p.kind === 'dark_star' && p.diesAt && to >= p.diesAt) {
       p.kind = 'black_dwarf';
-      p.bornAt = undefined;
-      p.diesAt = undefined;
+      delete p.bornAt;
+      delete p.diesAt;
       notes.push({ systemId: sys.id, kind: 'burnout' });
     }
     if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant') && p.diesAt && to >= p.diesAt) {
@@ -698,8 +719,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         p.kind = p.kind === 'collision_star' ? 'white_dwarf' : 'white_dwarf';
         p.halo = false;
         p.lum = 0.02;
-        p.bornAt = undefined;
-        p.diesAt = undefined;
+        delete p.bornAt;
+        delete p.diesAt;
         notes.push({ systemId: sys.id, kind: 'burnout', ...ended });
       }
     }
@@ -724,7 +745,10 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
         }
       }
     }
-    p.rekindle = rek > 0.001 ? rek : undefined;
+    // (deleted rather than left undefined: a saved or cloned game drops an undefined field, and
+    // one set again later would then stand in another place among the star's fields)
+    if (rek > 0.001) p.rekindle = rek;
+    else delete p.rekindle;
 
     // planets: close passes strip them (while bound in the galaxy); degenerate hosts pull them in
     for (const bid of sys.bodies) {
@@ -870,7 +894,10 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
               if (b.rogue) adrift = true;
               else b.dissolved = true;
             }
-            if (adrift) Object.assign(s.primary, { kind: 'void', lum: 0, spin: 0, spinMax: 0, rekindle: undefined });
+            if (adrift) {
+              Object.assign(s.primary, { kind: 'void', lum: 0, spin: 0, spinMax: 0 });
+              delete s.primary.rekindle;
+            }
             else s.gone = true;
             notes.push({ systemId: s.id, kind: 'swallowed' });
           } else {
@@ -954,8 +981,8 @@ export function evaporateHole(state: GameState, s: StarSystem): string[] {
   p.lum = 0;
   p.spin = 0;
   p.spinMax = 0;
-  p.rekindle = undefined;
-  let left = Object.values(state.colonies).some((c) => c.systemId === s.id);
+  delete p.rekindle;
+  let left = allColonies(state).some((c) => c.systemId === s.id);
   const held: string[] = [];
   for (const bid of s.bodies) {
     const b = state.bodies[bid];

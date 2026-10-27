@@ -35,9 +35,9 @@ export function swarmArrives(state: GameState, sw: Swarm): number {
   return state.years + Math.max(0, sw.distance - sw.traveled) / swarmSpeed(state);
 }
 
-/** Whether a swarm answers to us: tamed. */
-function ours(sw: Swarm): boolean {
-  return sw.tamed;
+/** Whether a swarm answers to us: tamed, by us. */
+function ours(state: GameState, sw: Swarm): boolean {
+  return sw.tamed && (sw.tamedBy ?? state.player) === state.civ.id;
 }
 
 /**
@@ -50,7 +50,7 @@ export function swarmSight(state: GameState, mods: Mods = computeMods(state)): (
   const reads = readsSwarms(state);
   const inRange = (p: Vec3) => eyes.some((e) => Math.hypot(e.sys.phys.x - p.x, e.sys.phys.y - p.y, e.sys.phys.z - p.z) <= e.range);
   return (sw) => {
-    if (ours(sw)) return true;
+    if (ours(state, sw)) return true;
     const p = swarmPlace(state, sw);
     if (!p) return false;
     if (!sw.awake && !sw.tamed) return reads && inRange(p);

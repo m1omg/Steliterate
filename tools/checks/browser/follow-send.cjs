@@ -11,7 +11,7 @@ run(async () => {
     const s = window.__stel.state();
     for (let i = 0; i < 60 && (s.era !== 'degenerate' || s.years < 2e15); i++) window.__stel.endTurns(3);
     delete s.civ.flags.star_until; delete s.civ.flags.star_step; delete s.civ.flags.star_next;
-    s.civ.pace = 0; s.pending.length = 0; s.civ.energy = 400;
+    s.civ.pace = 0; s.civ.pending.length = 0; s.civ.energy = 400;
     // a clock running for star A, four turns left
     const bds = Object.values(s.systems).filter((x) => x.primary.kind === 'brown_dwarf' && !x.gone && !x.ejected);
     const A = bds[0], B = bds[1], C = bds[2];
@@ -19,7 +19,7 @@ run(async () => {
     s.civ.flags.star_until = A.primary.diesAt; s.civ.flags.star_step = 1e12;
     B.primary.kind = 'collision_star'; B.primary.mass = 0.1; B.primary.bornAt = s.years; B.primary.diesAt = A.primary.diesAt + 8e12;
     s.civ.known[A.id] = Math.max(1, s.civ.known[A.id] ?? 0); s.civ.known[B.id] = 1;
-    s.pending.push({ uid: 'ev_follow', defId: 'new_star', data: { systemId: B.id } });
+    s.civ.pending.push({ uid: 'ev_follow', defId: 'new_star', data: { systemId: B.id } });
     window.__stel.refresh();
     return { era: s.era, turn: s.turn, years: s.years, A: A.name, B: B.name, Bid: B.id, Bdies: B.primary.diesAt, C: C.id };
   });
@@ -50,7 +50,7 @@ run(async () => {
     const s = window.__stel.state();
     const el = [...document.querySelectorAll('.chip.neon')].find((c) => c.textContent.includes('Star clock'));
     const chip = el?.textContent ?? '';
-    return { next: s.civ.flags.star_next, chip, chipW: el ? el.getBoundingClientRect().right : 0, boxW: el ? el.closest('.turnbox').getBoundingClientRect().right : 0, log: s.log[s.log.length - 1], known: s.civ.known };
+    return { next: s.civ.flags.star_next, chip, chipW: el ? el.getBoundingClientRect().right : 0, boxW: el ? el.closest('.turnbox').getBoundingClientRect().right : 0, log: s.civ.log[s.civ.log.length - 1], known: s.civ.known };
   });
   console.log(JSON.stringify({ next: after.next, chip: after.chip, log: after.log }));
   await ck.shot('pace-chip.png', { clip: { x: 1080, y: 690, width: 320, height: 130 } });
@@ -64,7 +64,7 @@ run(async () => {
     const C = s.systems[cid];
     C.primary.kind = 'collision_star'; C.primary.mass = 0.1; C.primary.bornAt = s.years; C.primary.diesAt = s.years + 2e12;
     s.civ.known[cid] = 1;
-    s.pending.push({ uid: 'ev_study', defId: 'new_star', data: { systemId: cid } });
+    s.civ.pending.push({ uid: 'ev_study', defId: 'new_star', data: { systemId: cid } });
     window.__stel.refresh();
     const c = s.civ; return { insight: c.researching ? (c.research[c.researching] ?? 0) : (c.flags.insight_bank ?? 0), known: s.civ.known[cid] };
   }, at.C);
@@ -76,14 +76,14 @@ run(async () => {
   const cont2 = await page.$('button:has-text("Continue")');
   if (cont2) await cont2.click();
   await page.waitForTimeout(400);
-  const st = await page.evaluate((cid) => ({ insight: ((c) => (c.researching ? (c.research[c.researching] ?? 0) : (c.flags.insight_bank ?? 0)))(window.__stel.state().civ), known: window.__stel.state().civ.known[cid], log: window.__stel.state().log.slice(-1)[0].text }), at.C);
+  const st = await page.evaluate((cid) => ({ insight: ((c) => (c.researching ? (c.research[c.researching] ?? 0) : (c.flags.insight_bank ?? 0)))(window.__stel.state().civ), known: window.__stel.state().civ.known[cid], log: window.__stel.state().civ.log.slice(-1)[0].text }), at.C);
   console.log(JSON.stringify({ before, st }));
   check(st.known === 2 && before.known === 1, 'Study it charts the system');
   check(st.insight >= before.insight + 25 - 1e-9, 'Study it still gives its insight');
   // the Systems window, opened from a ship
   const fl = await page.evaluate(() => {
     const s = window.__stel.state();
-    const f = Object.values(s.fleets).find((x) => x.at && !x.to);
+    const f = Object.values(s.fleets).find((x) => x.owner === s.player && x.at && !x.to);
     if (!f) return null;
     window.__stel.select('fleet', f.id);
     window.__stel.refresh();

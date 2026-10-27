@@ -1,20 +1,24 @@
 import { CHARTER_BY_ID, CHARTERS } from '../data/charters';
-import { SHIP_BY_ID, SHIPS, type ShipDef } from '../data/ships';
+import { SHIP_BY_ID, SHIPS, isWarship, type ShipDef } from '../data/ships';
 import { formatYears } from '../eras';
-import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, hasOnceEffect, structureLabel, type StructureDef } from '../data/structures';
+import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, enabledAt, hasOnceEffect, inLeptonicForm, structureLabel, type StructureDef } from '../data/structures';
+import { FORMS } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
 import { WORK_BY_ID } from '../data/works';
-import type { Colony, Focus, GameState, PactKind, SpareWork } from '../types';
+import type { Colony, Focus, GameState, PactKind, SpareWork, TacticId, ThreadId } from '../types';
+import { TACTIC_BY_ID } from '../data/tactics';
 import { endPact, proposePact } from './pacts';
 import { sanctuaryHeard } from './refuge';
 import { declareWar, makePeace } from './war';
 import { THREADS } from '../types';
-import { capacity } from './economy';
+import { MATTER_AS_ENERGY, capacity } from './economy';
+import { positroniumComes, positroniumGone, positroniumHere } from './positronium';
+import { ironAge } from './deeptime';
 import { workCost, workRequirementMet } from './endings';
 import { resolveEvent } from './events';
 import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
 import { absorbSwarm, attackSwarm, drawSwarmTo, tameSwarm } from './hunger';
-import { BEACON_COST } from './beacons';
+import { BEACON_COST, beaconOwner } from './beacons';
 import { gesture, resolveMindSignal } from './minds';
 import { computeMods } from './mods';
 import { completeTech, techAvailable, techCost } from './research';
@@ -22,9 +26,11 @@ import { flashShelterFor, rubbleGame, siphonsRunning, sourceLight } from '../phy
 import { terraformBlocked } from './terraform';
 import { turnStep } from './flare';
 import { beamEnergy, devourSurvivor, raidSurvivor, requestAid, resolveSurvivorSignal, seizeSurvivor } from './survivors';
-import { colonies, hasCharter, hasTech, leftBehind, log, savableName, uid } from './util';
-import { ageReached, inAge, matterGone } from '../fate';
+import { allColonies, capital, colonies, formOf, hasCharter, hasTech, leftBehind, log, ownColony, ownFleet, savableName, uid } from './util';
+import { hungerAct } from './judge';
 import { finishQueued } from './queue';
+import { launchStrike } from './conflict';
+import { ageReached, inAge, matterGone } from '../fate';
 
 export type ActionResult = string | null; // error message or null on success
 
@@ -52,6 +58,21 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return 'Needs a different kind of star or remnant.';
   if (d.notAt?.includes(sys.primary.kind)) return sys.primary.kind === 'brown_dwarf' ? 'A brown dwarf’s light is too faint and too red for these: Infrared Shrouds gather it.' : 'Gathers nothing from this kind of star.';
   if (d.habitable && b.habitability < 0.3) return 'Only on a living world.';
+  // who can live here (data/forms.ts): nothing that only houses Kin, or puts them to sleep, or uploads them
+  const form = FORMS[formOf(c)];
+  const onlyKin = (d.cap && Object.keys(d.cap).every((t) => !form.lives.includes(t as ThreadId))) || (d.cryoCap && !form.sleepers) || (d.enables === 'upload' && !form.lives.includes('kin'));
+  if (onlyKin) return `Kin are made of matter: a ${form.name.toLowerCase()} settlement has no room for them.`;
+  // and a leptonic settlement builds only what has a leptonic form (passage.ts)
+  if (formOf(c) !== 'baryonic' && !inLeptonicForm(d)) return `Made of matter: a ${formOf(c)} settlement cannot build it.`;
+  // nets for the widest atoms (positronium.ts): of fields, once they have formed, and not after they decay
+  if (d.energy?.mode === 'positronium') {
+    if (formOf(c) === 'baryonic') return 'Strung of fields: only a settlement no longer made of matter can build it.';
+    if (!positroniumComes(state)) return 'Matter is stable: no positronium will form.';
+    if (positroniumGone(state)) return 'The positronium has decayed: too little of it is left to build for.';
+    if (!positroniumHere(state)) return 'No positronium has formed yet: it pairs from η 85.';
+  }
+  // once everything has fused to iron (deeptime.ts) nothing is left to fuse
+  if (d.energy?.mode === 'fusion' && ironAge(state)) return 'Everything has fused to iron: nothing is left to fuse.';
   if (d.terraform) {
     const why = terraformBlocked(state, b, c, d.terraform);
     if (why) return why;
@@ -66,7 +87,7 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
     if (sourceLight(state, sys, state.years, turnStep(state).turnLength).light <= 0) return 'Nothing to gather: its star gives no light.';
   }
   if (d.systemUnique) {
-    for (const o of Object.values(state.colonies)) {
+    for (const o of allColonies(state)) {
       // one left behind by a world flung loose works for no one: it does not count
       if (o.systemId !== c.systemId || leftBehind(state, o, d)) continue;
       if ((o.structures[d.id] ?? 0) > 0 || o.queue.some((q) => q.key === d.id)) return 'Only one per system.';
@@ -81,12 +102,12 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
 export function buildCost(state: GameState, d: StructureDef | ShipDef, isShip: boolean): { industry: number; matter: number; energy: number } {
   let industry = d.cost;
   let matter = d.matter;
-  if (isShip && hasCharter(state, 'wardens_oath') && (d.id === 'warden' || d.id === 'aegis')) {
+  if (isShip && hasCharter(state, 'wardens_oath') && isWarship(d.id)) {
     industry *= 0.75;
     matter *= 0.75;
   }
   if (isShip && hasCharter(state, 'expansion_mandate')) industry *= 0.8;
-  if (matterIsEnergy(state)) return { industry: Math.round(industry), matter: 0, energy: Math.round(matter * 1.5) };
+  if (matterIsEnergy(state)) return { industry: Math.round(industry), matter: 0, energy: Math.round(matter * MATTER_AS_ENERGY) };
   return { industry: Math.round(industry), matter: Math.round(matter), energy: 0 };
 }
 
@@ -105,7 +126,7 @@ export function buildableShips(state: GameState, c: Colony): { def: ShipDef; err
 }
 
 export function queueBuild(state: GameState, colonyId: string, kind: 'structure' | 'ship', key: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const def = kind === 'structure' ? STRUCTURE_BY_ID[key] : SHIP_BY_ID[key];
   if (!def) return 'Unknown blueprint.';
@@ -158,7 +179,7 @@ export function dismantleCheck(state: GameState, c: Colony, id: string): string 
 
 /** Take one structure apart at a settlement. */
 export function dismantle(state: GameState, colonyId: string, id: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const err = dismantleCheck(state, c, id);
   if (err) return err;
@@ -179,7 +200,7 @@ export function dismantle(state: GameState, colonyId: string, id: string): Actio
 
 /** Emergency shifts: finish the first project in a queue now (not at the turn's end), paying for the remaining work. */
 export function rushCost(state: GameState, colonyId: string): { matter: number; energy: number } | null {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   const q = c?.queue[0];
   if (!q) return null;
   const left = Math.max(0, q.cost - q.progress);
@@ -188,7 +209,7 @@ export function rushCost(state: GameState, colonyId: string): { matter: number; 
 }
 
 export function rushBuild(state: GameState, colonyId: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   const cost = rushCost(state, colonyId);
   if (!c || !cost) return 'Nothing to rush.';
   if (state.civ.matter < cost.matter || state.civ.energy < cost.energy) return `Rushing needs ${cost.matter ? `${cost.matter} matter and ` : ''}${cost.energy} energy.`;
@@ -207,7 +228,7 @@ export function rushBuild(state: GameState, colonyId: string): ActionResult {
 }
 
 export function removeQueued(state: GameState, colonyId: string, qid: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const i = c.queue.findIndex((q) => q.uid === qid);
   if (i < 0) return 'Not in the queue.';
@@ -225,7 +246,7 @@ export function removeQueued(state: GameState, colonyId: string, qid: string): A
 }
 
 export function moveQueued(state: GameState, colonyId: string, qid: string, dir: -1 | 1): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const i = c.queue.findIndex((q) => q.uid === qid);
   const j = i + dir;
@@ -235,21 +256,21 @@ export function moveQueued(state: GameState, colonyId: string, qid: string, dir:
 }
 
 export function setFocus(state: GameState, colonyId: string, focus: Focus): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   c.focus = focus;
   return null;
 }
 
 export function setSpare(state: GameState, colonyId: string, spare: SpareWork): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   c.spare = spare;
   return null;
 }
 
 export function toggleOverdrive(state: GameState, colonyId: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   if (!hasCharter(state, 'overdrive_protocols')) return 'Enact the Overdrive Protocols charter first.';
   c.overdrive = !c.overdrive;
@@ -328,7 +349,8 @@ export function enactCharter(state: GameState, id: string): ActionResult {
   for (const [t, v] of Object.entries(d.stances)) civ.standing[t as keyof typeof civ.standing] = Math.max(0, Math.min(100, civ.standing[t as keyof typeof civ.standing] + (v ?? 0)));
   if (d.resolve) civ.resolve = Math.max(0, Math.min(100, civ.resolve + d.resolve));
   if (d.dissent) civ.dissent = Math.max(0, Math.min(100, civ.dissent + d.dissent));
-  if (d.taint) civ.taint = Math.min(100, civ.taint + d.taint);
+  // a dark charter is a Hunger act (judge.ts)
+  if (d.taint) hungerAct(state, civ.id, d.taint, capital(state)?.systemId ?? civ.homeSystemId, `enacted ${d.name}`);
   if (!again && (id === 'consume_the_dead' || id === 'salvage_the_dead')) state.gfe = Math.max(0.05, state.gfe - 0.01);
   // stripping what is already dead and in reach pays at once
   if (!again && id === 'salvage_the_dead') civ.matter += 40;
@@ -378,7 +400,7 @@ export function repealCharter(state: GameState, id: string): ActionResult {
 export type Conversion = 'upload' | 'merge' | 'cool' | 'freeze' | 'thaw';
 
 export function convert(state: GameState, colonyId: string, kind: Conversion): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   const civ = state.civ;
   const mods = computeMods(state);
@@ -396,7 +418,7 @@ export function convert(state: GameState, colonyId: string, kind: Conversion): A
       else if (!hasCharter(state, 'upload_at_death')) civ.standing.kin = Math.max(0, civ.standing.kin - 0.7);
       return null;
     case 'merge':
-      if (!(c.structures.confluence_node ?? 0)) return 'Needs a Confluence Node.';
+      if (!enabledAt(c.structures, 'merge')) return 'Needs a Confluence Node, or a Leptonic Confluence.';
       if (c.pops.echoes < 2) return 'Needs two Echoes.';
       if (c.pops.chorus >= cap.chorus) return 'The Chorus here is full.';
       if (civ.energy < 8) return 'Needs 8 energy.';
@@ -441,7 +463,7 @@ export function orderFleet(state: GameState, fleetId: string, systemId: string, 
 
 /** Set a survey ship exploring by itself (it sets out at once if it can), or call it off. */
 export function setAutoExplore(state: GameState, fleetId: string, on: boolean): ActionResult {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f) return 'No such fleet.';
   if (on && !canSurvey(f)) return 'Only survey ships can explore by themselves.';
   f.auto = on ? 'explore' : undefined;
@@ -454,7 +476,7 @@ export function setAutoExplore(state: GameState, fleetId: string, on: boolean): 
 }
 
 export function disbandFleet(state: GameState, fleetId: string): ActionResult {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f) return 'No such fleet.';
   if (!f.at) return 'Wait until it arrives.';
   state.civ.matter += f.ships.reduce((a, s) => a + (SHIP_BY_ID[s.cls]?.matter ?? 0) * 0.4, 0);
@@ -468,14 +490,15 @@ export function disbandFleet(state: GameState, fleetId: string): ActionResult {
  */
 export function placeBeacon(state: GameState, fleetId: string): ActionResult {
   if (!hasTech(state, 'hunger_lures')) return 'Research Decoy Beacons first.';
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f || !f.at) return 'The fleet must be stationed.';
   const sys = state.systems[f.at];
   if (sys.beacon) return 'A beacon already burns here.';
-  if (Object.values(state.colonies).some((c) => c.systemId === sys.id)) return 'Place beacons in empty systems, away from our people.';
+  if (colonies(state).some((c) => c.systemId === sys.id)) return 'Place beacons in empty systems, away from our people.';
   if (state.civ.energy < BEACON_COST) return `A beacon needs ${BEACON_COST} energy.`;
   state.civ.energy -= BEACON_COST;
   sys.beacon = true;
+  sys.beaconBy = state.civ.id;
   const from = drawSwarmTo(state, sys.id);
   log(state, `A decoy beacon burns at ${sys.name}. ${from ? `The swarm at ${from.name} has turned toward it.` : 'No swarm is near enough to notice it yet.'}`, from ? 'good' : 'info', sys.id);
   return null;
@@ -485,7 +508,9 @@ export function placeBeacon(state: GameState, fleetId: string): ActionResult {
 export function putOutBeacon(state: GameState, systemId: string): ActionResult {
   const sys = state.systems[systemId];
   if (!sys?.beacon) return 'No beacon burns there.';
+  if (beaconOwner(state, sys) !== state.civ.id) return 'That beacon is not ours to put out.';
   delete sys.beacon;
+  delete sys.beaconBy;
   log(state, `We let the beacon at ${sys.name} go dark.`, 'info', sys.id);
   return null;
 }
@@ -505,7 +530,7 @@ export function absorb(state: GameState, swarmId: string, colonyId: string): Act
 }
 
 export function answerSignal(state: GameState, sigUid: string, choice: string): ActionResult {
-  const s = state.signals.find((x) => x.uid === sigUid);
+  const s = state.civ.signals.find((x) => x.uid === sigUid);
   if (!s) return 'No such message.';
   if (s.from === 'slow' || s.from === 'dark') return resolveMindSignal(state, sigUid, choice);
   return resolveSurvivorSignal(state, sigUid, choice);
@@ -529,8 +554,32 @@ export function shutHaloSiphons(state: GameState): ActionResult {
   return null;
 }
 
-export function seize(state: GameState, survivorId: string): ActionResult {
-  return seizeSurvivor(state, survivorId);
+/** Storm their star (a civilization of its own: the settlement of theirs we hold the longest siege on, else the one the war is fought at), taking it, or with `raze` destroying it. */
+export function seize(state: GameState, survivorId: string, raze = false): ActionResult {
+  return seizeSurvivor(state, survivorId, raze);
+}
+
+/** Storm one settlement of a civilization at war with us, its siege held long enough by our warships there: taking it, or with `raze` destroying it. */
+export function storm(state: GameState, colonyId: string, raze = false): ActionResult {
+  const c = state.colonies[colonyId];
+  if (!c || c.owner === state.civ.id || !state.survivors[c.owner]) return 'There is no settlement of theirs to storm.';
+  return seizeSurvivor(state, c.owner, raze, colonyId);
+}
+
+/** How a fleet of ours fights (the combat system, 20 Oct), in every fight it is in until told otherwise. */
+export function setTactic(state: GameState, fleetId: string, tactic: TacticId): ActionResult {
+  const f = ownFleet(state, fleetId);
+  if (!f) return 'No such fleet.';
+  if (!TACTIC_BY_ID[tactic]) return 'No such tactic.';
+  if (!f.ships.some((s) => isWarship(s.cls))) return 'Only warships fight by a tactic.';
+  if (tactic === 'line') delete f.tactic;
+  else f.tactic = tactic;
+  return null;
+}
+
+/** Strike one of the enemy's settlements with a Kinetic Lance from this fleet. */
+export function strike(state: GameState, fleetId: string, colonyId: string): ActionResult {
+  return launchStrike(state, fleetId, colonyId);
 }
 
 /** Raid the civilization whose star this warship is parked at. Returns an error, or what happened. */
@@ -602,7 +651,7 @@ export function answerEvent(state: GameState, eventUid: string, choice: number) 
 }
 
 export function renameColony(state: GameState, colonyId: string, name: string): ActionResult {
-  const c = state.colonies[colonyId];
+  const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
   c.name = savableName(name.slice(0, 32)) || c.name;
   return null;
@@ -616,7 +665,7 @@ export const ALL_CHARTERS = CHARTERS;
  * purpose, so the game stops asking. idle: back to waiting for orders.
  */
 export function standFleet(state: GameState, fleetId: string, order: 'fortify' | 'hold' | 'idle'): ActionResult {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f || !f.at) return 'Only a fleet that has arrived can do that.';
   if (order === 'fortify' && !isWarFleet(f)) return 'Only warships can fortify.';
   f.order = order;

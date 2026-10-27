@@ -12,7 +12,7 @@ import type { GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
 
 const atDegenerateEnd = (understanding: number): GameState => {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
   s.era = 'degenerate';
   s.eta = 39.9;
   s.years = Math.pow(10, 39.9);
@@ -24,7 +24,7 @@ const atDegenerateEnd = (understanding: number): GameState => {
 
 for (const [answer, given] of [['math', 22], ['history', 15]] as const) {
   const s = atDegenerateEnd(given + 15);
-  runCrossing(s, computeMods(s));
+  runCrossing(s, [s.player], { [s.player]: computeMods(s) });
   const u = s.minds.slow.understanding;
   check(u === given + 30, `answered with ${answer}, awake at the Last Light and now this crossing: understanding ${u}`);
   s.era = 'blackhole';
@@ -35,7 +35,7 @@ for (const [answer, given] of [['math', 22], ['history', 15]] as const) {
 {
   const s = atDegenerateEnd(37);
   s.civ.dormant = true;
-  runCrossing(s, computeMods(s));
+  runCrossing(s, [s.player], { [s.player]: computeMods(s) });
   check(s.minds.slow.understanding === 37, `dormant through the crossing, understanding stays ${s.minds.slow.understanding}`);
 }
 

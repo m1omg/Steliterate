@@ -1,5 +1,5 @@
-// Browser check: the survey reveal (21 Oct, a flight of the camera, as the player pictured it from
-// Endless Space 2; the new version's since 14 Oct). A probe completes a survey through the real End
+// Browser check: the survey reveal (the new version, part 4; since 21 Oct a flight of the camera,
+// as the player pictured it from Endless Space 2). A probe completes a survey through the real End
 // Turn; Look opens the system, and at first there is only the star: its worlds hidden from the
 // pointer and the map's names, the rest of the interface stepped aside, a caption saying what is
 // being charted. The camera flies to each world in turn and stays close to it while its caption
@@ -9,17 +9,18 @@
 // rate (stepped at 30 and at 144 frames a second, 2 s and 6 s in). Escape skips one too; "Skip all"
 // skips the others charted as well; a drag takes the camera from it where it is. Off in Settings, a
 // system opens with its worlds. In the magnifier mode the caption has its place in the column and
-// the interface stays. The other checks run without reveals (?noreveals).
+// the interface stays. A find's card waits for the flight (24 Oct). The other checks run without
+// reveals (?nofilms).
 const { check, start, finish, run, url } = require('../lib.cjs');
 run(async () => {
-  const ck = await start('survey-reveal', { reveals: true });
+  const ck = await start('survey-reveal', { films: true });
   const { page } = ck;
   await page.evaluate(() => window.__stel.newGame({ seed: 4242 }));
   await page.waitForTimeout(1200);
   const target = await page.evaluate(() => {
     const s = window.__stel.state();
-    s.pending.length = 0;
-    const probe = Object.values(s.fleets).find((f) => f.ships.some((x) => x.cls === 'probe') && f.at);
+    s.civ.pending.length = 0;
+    const probe = Object.values(s.fleets).find((f) => f.owner === s.player && f.ships.some((x) => x.cls === 'probe') && f.at);
     const here = s.systems[probe.at];
     const d = (a, b) => Math.hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y, a.pos.z - b.pos.z);
     const t = Object.values(s.systems).filter((x) => s.civ.known[x.id] === 1 && !x.gone).sort((a, b) => d(here, a) - d(here, b))[0];
@@ -30,7 +31,7 @@ run(async () => {
   let toast = false;
   for (let i = 0; i < 12 && !toast; i++) {
     await page.evaluate(() => {
-      window.__stel.state().pending.length = 0;
+      window.__stel.state().civ.pending.length = 0;
       window.__stel.refresh();
     });
     await page.keyboard.press('Escape');
@@ -41,7 +42,7 @@ run(async () => {
   check(toast, `the probe charts ${target.name}, and the toast says so`);
   // (what the survey found waits as an event, whose window would answer Enter itself)
   const turn = await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
     return window.__stel.state().turn;
   });
@@ -226,7 +227,7 @@ run(async () => {
   await page.evaluate((id) => {
     const s = window.__stel.state();
     const b = s.systems[id].bodies.find((x) => s.bodies[x].kind !== 'deep');
-    s.pending.push({ uid: 'ev-waits', defId: 'relic_archive', data: { systemId: id, bodyId: b } });
+    s.civ.pending.push({ uid: 'ev-waits', defId: 'relic_archive', data: { systemId: id, bodyId: b } });
     window.__stel.engine().markForReveal(s, [id]);
     window.__stel.refresh();
   }, target.id);
@@ -238,7 +239,7 @@ run(async () => {
   const after = await page.evaluate(() => ({ revealing: window.__stel.engine().revealing, card: !!document.querySelector('.modal.event') }));
   check(!after.revealing && after.card, `Enter still skips the flight, and the card comes then (flying ${after.revealing}, card ${after.card})`);
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.waitForTimeout(200);
@@ -283,7 +284,7 @@ run(async () => {
   await lv.waitForTimeout(1200);
   const placed = await lv.evaluate(async () => {
     const s = window.__stel.state();
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     const id = Object.values(s.systems).find((x) => s.civ.known[x.id] === 1 && x.bodies.length > 1 && !x.gone).id;
     s.civ.known[id] = 2;
     window.__stel.refresh();

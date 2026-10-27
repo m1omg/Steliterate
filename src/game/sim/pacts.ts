@@ -14,9 +14,12 @@ import { availableTechs, techCost } from './research';
 import { reserveCapacity } from './economy';
 import { computeMods } from './mods';
 import { sendSignal } from './signals';
-import { beamEnergy, distanceToThem, inStep, lightAt, spreadNews, voice } from './survivors';
-import { distLy, log } from './util';
+import { beamEnergy, dealSize, distanceToThem, inStep, lightAt, spareOf, spreadNews, voice } from './survivors';
+import { capital, distLy, log, marks } from './util';
 import { breach } from './ways';
+import { send } from '../civs';
+import { civOf } from './others';
+import { SANCTION_AT, hungerAct, shuns } from './judge';
 
 export const PACT_KINDS: PactKind[] = ['aid', 'archives', 'watch'];
 
@@ -33,6 +36,8 @@ export const PACT_RISE = 1.6;
 export const AID_EVERY = 6;
 /** Open Archives: notes on a project every this many turns. */
 export const NOTES_EVERY = 10;
+/** Open Archives with a civilization of its own: the part of what it learns a turn that we read. */
+export const ARCHIVE_SHARE = 0.03;
 
 /** Pacts in force with them. */
 export function pactsWith(sv: Survivor): PactKind[] {
@@ -58,7 +63,7 @@ export function pactBlocked(state: GameState, sv: Survivor, kind: PactKind): str
   if (sv.war) return 'We are at war with them.';
   if (sv.proposal) return `Our proposal of ${PACTS[sv.proposal.kind].name} is still crossing to them, or their answer is.`;
   if (!inStep(state, sv)) return 'Our clocks are too far apart to agree on anything.';
-  if (state.civ.taint >= 60) return 'They will not bind themselves to what we are becoming.';
+  if (shuns(state, sv)) return 'They have heard what we are becoming, and will not bind themselves to it.';
   if (sv.disposition < -20) return 'They would not hear of it.';
   const cost = pactCost(state);
   if (state.civ.accord < cost) return `Needs ${cost} accord.`;
@@ -85,7 +90,7 @@ export function weighProposal(state: GameState, sv: Survivor) {
   if (!p) return;
   // the Tessellate keeps any agreement to the letter, and so enters one readily
   const need = PACTS[p.kind].need + (sv.way === 'lattice' ? -15 : 0) - (p.kind === 'aid' && sv.health < 0.5 ? 15 : 0);
-  const yes = sv.disposition >= need && state.civ.taint < 60;
+  const yes = sv.disposition >= need && !shuns(state, sv);
   sendSignal(state, {
     from: sv.id,
     kind: 'pact_answer',
@@ -153,7 +158,7 @@ export function theirPacts(state: GameState, sv: Survivor, chance: () => number)
     });
     return true;
   }
-  if (!sv.war && sv.disposition > 30 && mine.length < PACT_KINDS.length && !sv.proposal && state.civ.taint < 60 && chance() < 0.12) {
+  if (!sv.war && sv.disposition > 30 && mine.length < PACT_KINDS.length && !sv.proposal && !shuns(state, sv) && chance() < 0.12) {
     // the pact they need most: help while they are failing, a watch while the Hunger is near them
     const kind = (sv.health < 0.6 && !mine.includes('aid') ? 'aid' : !mine.includes('watch') && hungerNear(state, sv) ? 'watch' : PACT_KINDS.find((k) => !mine.includes(k)))!;
     sendSignal(state, {
@@ -184,14 +189,13 @@ export function pactsTurn(state: GameState) {
   for (const sv of Object.values(state.survivors)) {
     if (!sv.alive) continue;
     if (hasPact(sv, 'aid')) {
-      const outKey = `pact_aid_out_${sv.id}`;
-      const inKey = `pact_aid_in_${sv.id}`;
+      const m = marks(sv);
       // what they need, as far as we can spare it and keep 30% of our reserve
       const spare = civ.energy - cap * 0.3;
-      const due = sv.health < 0.35 && state.turn - (civ.flags[outKey] ?? -99) >= AID_EVERY;
+      const due = sv.health < 0.35 && state.turn - (m.aid_out ?? -99) >= AID_EVERY;
       if (due && spare < 5 && sv.way === 'lattice') {
         // the Tessellate holds us to our side of it, to the letter
-        civ.flags[outKey] = state.turn;
+        m.aid_out = state.turn;
         breach(state, sv);
         if (!hasPact(sv, 'aid')) continue;
       }
@@ -199,14 +203,15 @@ export function pactsTurn(state: GameState) {
         const e = Math.floor(Math.min(15 + (0.35 - sv.health) * 100, spare));
         civ.energy -= e;
         beamEnergy(state, sv, e, true);
-        civ.flags[outKey] = state.turn;
+        m.aid_out = state.turn;
         log(state, `As our pact says, we beamed ${e} energy to ${sv.name}.`, 'info', sv.homeSystemId);
       }
       // they pay their side while they can; the Tessellate pays it even while failing
-      if (weak && (sv.health > 0.4 || (sv.way === 'lattice' && sv.health > 0.05)) && state.turn - (civ.flags[inKey] ?? -99) >= AID_EVERY) {
-        const e = Math.round(Math.min(60, Math.max(8, sv.pop * sv.health * 0.8)));
-        sv.health = Math.max(0, sv.health - e / 1200);
-        civ.flags[inKey] = state.turn;
+      if (weak && (sv.health > 0.4 || (sv.way === 'lattice' && sv.health > 0.05)) && state.turn - (m.aid_in ?? -99) >= AID_EVERY) {
+        const e = spareOf(state, sv, Math.round(Math.min(60, Math.max(8, dealSize(state, sv) * sv.health * 0.8))));
+        if (civOf(state, sv)) send(state, sv.id, { energy: -e });
+        else sv.health = Math.max(0, sv.health - e / 1200);
+        m.aid_in = state.turn;
         // they see our trouble when its light reaches them, and their beam takes as long again
         sendSignal(state, {
           from: sv.id,
@@ -219,17 +224,25 @@ export function pactsTurn(state: GameState) {
       }
     }
     if (hasPact(sv, 'archives')) {
-      const gain = 0.5 + 0.02 * sv.pop * sv.health;
+      // a civilization of its own shares a part of what it really learns, and notes only on what it knows
+      const theirs = civOf(state, sv);
+      const gain = theirs ? ARCHIVE_SHARE * (theirs.flags.last_insight ?? 0) : 0.5 + 0.02 * dealSize(state, sv) * sv.health;
       if (civ.researching) civ.research[civ.researching] = (civ.research[civ.researching] ?? 0) + gain;
       else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + gain;
-      sv.health = Math.min(1, sv.health + 0.002);
+      if (!theirs) sv.health = Math.min(1, sv.health + 0.002);
       const since = state.turn - (sv.pacts!.archives ?? state.turn);
       if (since > 0 && since % NOTES_EVERY === 0) {
-        const t = civ.researching ? TECH_BY_ID[civ.researching] : availableTechs(state).filter((x) => !x.taint).sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];
+        // what they know; Hunger knowledge only from one on that path itself (judge.ts)
+        const fit = (x: { id: string; taint?: number }) => (!theirs || theirs.techs.includes(x.id)) && (!x.taint || (theirs?.taint ?? 0) >= SANCTION_AT);
+        const open = availableTechs(state).filter(fit);
+        const ours = civ.researching ? TECH_BY_ID[civ.researching] : undefined;
+        const t = ours && fit(ours) ? ours : open.sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];
         if (t) {
           const notes = Math.round(techCost(state, t.id) * 0.3);
           civ.research[t.id] = (civ.research[t.id] ?? 0) + notes;
           log(state, `From the archives of ${sv.name}: their notes on ${t.name} (${notes} insight toward it).`, 'good', sv.homeSystemId);
+          // reading Hunger knowledge is a Hunger act of ours: a quarter of what learning it is
+          if (t.taint) hungerAct(state, civ.id, Math.ceil(t.taint / 4), capital(state)?.systemId ?? civ.homeSystemId, `read notes on ${t.name} from ${sv.name}`);
         }
       }
     }

@@ -7,7 +7,10 @@ import { Icon } from '../Icon';
 import { modal, rev } from '../store';
 import { pressable } from '../a11y';
 import { matterGone } from '../../game/fate';
+import { DARK_STARVE, continuityLoss } from '../../game/sim/continuity';
 import { beaconUpkeep, litBeacons } from '../../game/sim/beacons';
+import { fleetUpkeep, warshipCount } from '../../game/sim/fleets';
+import { upkeepOf } from '../../game/sim/economy';
 
 function Gauge({ v, max, cls }: { v: number; max: number; cls?: string }) {
   return (
@@ -30,6 +33,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
     `Next turn: +${n1(p.energyIn)} captured, −${n1(p.energyOut)} upkeep`,
     ...Object.entries(p.perColony).map(([id, t]) => `${s.colonies[id]?.name}: ${signed(t.y.energy - t.y.energyUpkeep)}`),
     litBeacons(s).length ? `Decoy beacons (${litBeacons(s).length}): ${signed(-beaconUpkeep(s) * p.ctx.paceFactor)}` : '',
+    warshipCount(s) ? `Warships (${warshipCount(s)}): ${signed(-fleetUpkeep(s, upkeepOf(p.ctx)))}` : '',
     civ.dormant ? 'Dormant: upkeep is a fraction, nothing else gets done.' : '',
   ]
     .filter(Boolean)
@@ -92,7 +96,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         <span class={`mono ${s.gfe < 0.7 ? 'warn' : 'dim'}`}>{pct(s.gfe)}</span>
       </div>
       {s.era === 'dark' && (
-        <div class="res" data-tip="Continuity: how intact the pattern of you still is. Every cycle in the dark loses a little. At zero, you fade.">
+        <div class="res" data-tip={`Continuity: how intact the pattern of you still is. Every turn in the dark costs some of it: ${n1(continuityLoss(s, false))} a turn now, and ${DARK_STARVE} more each turn the reserve is empty, with nothing left to correct the errors.\nError-Correction Arrays keep the minds of their own settlement; the Long Sleep and the weave keep more. At zero, you fade.`}>
           <Icon name="continuity" size="lg" />
           <div class="col" style={{ gap: '2px' }}>
             <span class={`mono ${civ.continuity < 30 ? 'bad' : ''}`}>{n0(civ.continuity)}</span>
@@ -101,7 +105,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         </div>
       )}
       {civ.taint > 0 && (
-        <div class="res" data-tip={`Hunger Taint ${n0(civ.taint)}\nWhat you have taken from the Hunger. Past 30 and 60 some endings close. At 100 you become it.`}>
+        <div class="res" data-tip={`Hunger Taint ${n0(civ.taint)}\nWhat you have taken from the Hunger. Past 30 and 60 some endings close. At 100 you become it.\nThe others hear of each step at the speed of light, and judge it (the desperate less harshly); once they have heard of 30, most will not deal with you.`}>
           <span class="l bad" style={{ display: 'block' }}>Taint</span>
           <span class="mono bad">{n0(civ.taint)}</span>
         </div>

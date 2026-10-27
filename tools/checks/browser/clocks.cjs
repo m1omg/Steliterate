@@ -17,7 +17,7 @@ run(async () => {
     // four tenfolds slower than our turns at the Tide
     v.clock = Math.log10(s.turnLength) + 4;
     s.civ.pace = 0;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     return { id: v.id, name: v.name };
   });

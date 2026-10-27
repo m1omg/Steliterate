@@ -24,17 +24,17 @@ function setUp() {
   s.minds.dark.stage = 4;
   s.minds.dark.understanding = 80;
   s.minds.dark.flags.gathering = s.turn;
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   window.__stel.refresh();
 }
 
 // after End turn: only the Last Star's event waits (the jump to η 26 brings others)
 function onlyTheStar() {
   const s = window.__stel.state();
-  s.pending = s.pending.filter((p) => p.defId === 'last_star');
+  s.civ.pending = s.civ.pending.filter((p) => p.defId === 'last_star');
   window.__stel.refresh();
   const sys = Object.values(s.systems).find((x) => x.name === 'The Last Star');
-  return sys ? { id: sys.id, kind: sys.primary.kind, born: sys.primary.bornAt, years: s.years, n: s.pending.length } : null;
+  return sys ? { id: sys.id, kind: sys.primary.kind, born: sys.primary.bornAt, years: s.years, n: s.civ.pending.length } : null;
 }
 
 const event = (page) =>
@@ -92,7 +92,7 @@ run(async () => {
   for (let k = 1; k <= 6; k++) {
     await page.evaluate(() => {
       const s = window.__stel.state();
-      s.pending.length = 0;
+      s.civ.pending.length = 0;
       s.civ.energy = Math.max(s.civ.energy, 500);
       window.__stel.refresh();
     });
@@ -115,7 +115,7 @@ run(async () => {
   await ck.shot('last-star-out.png');
   await page.context().close();
   const lv = await ck.another(1280, 720);
-  await lv.goto(`${process.argv[2] || 'http://localhost:4173/'}?lowvision&noreveals`, { timeout: 90000, waitUntil: 'domcontentloaded' });
+  await lv.goto(`${process.argv[2] || 'http://localhost:4173/'}?lowvision&nofilms`, { timeout: 90000, waitUntil: 'domcontentloaded' });
   await lv.waitForFunction(() => !!window.__stel, null, { timeout: 90000 });
   await lv.evaluate(() => window.__stel.newGame({ seed: 1000 }));
   await lv.waitForTimeout(1500);

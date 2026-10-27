@@ -1,24 +1,40 @@
 import { aroundTheStar, type StructureDef } from '../data/structures';
 import { ERA_BY_ID } from '../eras';
 import { fateKnown } from '../fate';
-import { Rng } from '../rng';
-import type { Body, Colony, EraId, GameState, LogEntry, StarSystem, ThreadId } from '../types';
+import { Rng, hashSeed } from '../rng';
+import type { Body, Civ, Colony, ColonyForm, EraId, Fleet, GameState, LogEntry, StarSystem, Survivor, ThreadId } from '../types';
 import { THREADS } from '../types';
 
 export function uid(state: GameState, prefix = 'u'): string {
   return `${prefix}${(state.nextId++).toString(36)}`;
 }
 
-/** Run `fn` with an RNG whose state is persisted back into the game state. */
+/**
+ * Run `fn` with an RNG whose state is persisted back into the game state: the player's draws (and
+ * the universe's) from the state's own stream, as ever; another civilization's from its own, so
+ * that what it does never moves the player's draws.
+ */
 export function withRng<T>(state: GameState, fn: (rng: Rng) => T): T {
-  const rng = new Rng(state.rng);
+  const own = ownStream(state);
+  const rng = new Rng(own ? civStream(state) : state.rng);
   const out = fn(rng);
-  state.rng = rng.s;
+  if (own) state.civ.rng = rng.s;
+  else state.rng = rng.s;
   return out;
 }
 
 export function rngOf(state: GameState): Rng {
-  return new Rng(state.rng);
+  return new Rng(ownStream(state) ? civStream(state) : state.rng);
+}
+
+/** Whether the civilization whose turn it is draws from a stream of its own: anyone but the player. */
+function ownStream(state: GameState): boolean {
+  return !!state.civ && !!state.player && state.civ.id !== state.player;
+}
+
+/** Its stream: where it left it, or from the start, a hash of the seed and its id. */
+function civStream(state: GameState): number {
+  return state.civ.rng ?? hashSeed(`${state.settings.seed}:civ:${state.civ.id}`);
 }
 
 /** A swarm we can see feeding at this star (as the map shows it): ships sent there are at risk. */
@@ -31,22 +47,77 @@ export function savableName(name: string): string {
   return name === '__inf' || name === '__-inf' ? name.slice(1) : name;
 }
 
-export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string, tone?: LogEntry['tone']) {
-  state.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}), ...(tone ? { tone } : {}) });
-  if (state.log.length > 400) state.log.splice(0, state.log.length - 400);
+/** A line in the Record of the civilization whose turn or view it is. */
+export function log(state: GameState, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string) {
+  logTo(state, state.civ, text, kind, systemId, fleet);
 }
 
-/** How a fight went for us, in the Record: such a line opens the turn's combat report (turnflow.ts, since 26 Oct). */
-export function combatLog(state: GameState, text: string, tone: 'good' | 'bad', systemId?: string, fleet?: string) {
-  log(state, text, 'combat', systemId, fleet, tone);
+/** A line for every civilization that knows of this star (its Record), as `kind`. */
+export function tellKnown(state: GameState, systemId: string, text: string, kind: LogEntry['kind'] = 'info') {
+  for (const v of Object.values(state.civs)) if (v.known[systemId]) logTo(state, v, text, kind, systemId);
+}
+
+/** The settlements of one civilization, whoever's turn it is. */
+export function coloniesOf(state: GameState, civId: string): Colony[] {
+  return Object.values(state.colonies).filter((c) => c.owner === civId);
+}
+
+/** A line in one civilization's Record (the universe's part of a turn tells each its own). */
+export function logTo(state: GameState, civ: Civ, text: string, kind: LogEntry['kind'] = 'info', systemId?: string, fleet?: string, tone?: LogEntry['tone']) {
+  civ.log.push({ turn: state.turn, era: state.era, text, kind, systemId, ...(fleet ? { fleet } : {}), ...(tone ? { tone } : {}) });
+  if (civ.log.length > 400) civ.log.splice(0, civ.log.length - 400);
+}
+
+/**
+ * A fight's outcome in one civilization's Record, good or bad for it: for the player's, such a line
+ * opens the turn's combat report (turnflow.ts; 26 Oct, the player: "there also should be popups for
+ * combat, rn often you defeat a swarm or get your fleet destroyed with just tiny text footnote").
+ */
+export function combatLog(state: GameState, civ: Civ, text: string, tone: 'good' | 'bad', systemId?: string, fleet?: string) {
+  logTo(state, civ, text, 'combat', systemId, fleet, tone);
 }
 
 export function eraIndex(era: EraId): number {
   return ERA_BY_ID[era].index;
 }
 
+/** The settlements of the civilization whose turn or view it is. */
 export function colonies(state: GameState): Colony[] {
+  const me = state.civ.id;
+  return Object.values(state.colonies).filter((c) => c.owner === me);
+}
+
+/** Every civilization's settlements: for what the universe does to them, and what a star holds. */
+export function allColonies(state: GameState): Colony[] {
   return Object.values(state.colonies);
+}
+
+/** The fleets of the civilization whose turn or view it is. */
+export function fleets(state: GameState): Fleet[] {
+  const me = state.civ.id;
+  return Object.values(state.fleets).filter((f) => f.owner === me);
+}
+
+/** Every civilization's fleets. */
+export function allFleets(state: GameState): Fleet[] {
+  return Object.values(state.fleets);
+}
+
+/** A settlement of the civilization whose turn or view it is, by id: its actions never touch another's. */
+export function ownColony(state: GameState, id: string): Colony | undefined {
+  const c = state.colonies[id];
+  return c && c.owner === state.civ.id ? c : undefined;
+}
+
+/** A fleet of the civilization whose turn or view it is, by id: its orders never move another's. */
+export function ownFleet(state: GameState, id: string): Fleet | undefined {
+  const f = state.fleets[id];
+  return f && f.owner === state.civ.id ? f : undefined;
+}
+
+/** What a settlement is made of (data/forms.ts): matter, unless it went on past the end of matter. */
+export function formOf(c: Colony): ColonyForm {
+  return c.form ?? 'baryonic';
 }
 
 export function popsOf(c: Colony): number {
@@ -121,7 +192,7 @@ export function hasCharter(state: GameState, id: string): boolean {
 
 export function capital(state: GameState): Colony | null {
   const id = state.civ.capitalId;
-  if (id && state.colonies[id]) return state.colonies[id];
+  if (id && state.colonies[id]?.owner === state.civ.id) return state.colonies[id];
   const all = colonies(state).sort((a, b) => popsOf(b) - popsOf(a));
   return all[0] ?? null;
 }
@@ -129,4 +200,26 @@ export function capital(state: GameState): Colony | null {
 /** Do we know the fate of matter? (See fateKnown in fate.ts.) */
 export function protonFateKnown(state: GameState): boolean {
   return fateKnown(state);
+}
+
+/**
+ * Each civilization's temperament, 0 to 1 on each axis, from the seed and its id, never the dice
+ * (the new version, part 2a-5): how cautious it is (energy kept in hand before it builds), how
+ * generous (how readily it helps a partner, how much it sends, how warmly it proposes) and how
+ * ambitious (how far it spreads). Ours is the player's own, and the autoplayer plays it as ever.
+ */
+export interface Temperament {
+  caution: number;
+  generosity: number;
+  ambition: number;
+}
+
+export function temperament(state: GameState, id: string): Temperament {
+  const h = (k: string) => (hashSeed(`${state.settings.seed}:temper:${k}:${id}`) % 1001) / 1000;
+  return { caution: h('caution'), generosity: h('generosity'), ambition: h('ambition') };
+}
+
+/** What we keep of our dealings with a neighbour (Survivor.marks): turns and counts, by name. */
+export function marks(sv: Survivor): Record<string, number> {
+  return (sv.marks ??= {});
 }

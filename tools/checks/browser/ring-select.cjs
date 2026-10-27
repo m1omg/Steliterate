@@ -7,7 +7,7 @@ run(async () => {
   const { page } = ck;
   const home = await page.evaluate(() => {
     const s = window.__stel.state();
-    const col = Object.values(s.colonies).find((c) => c.systemId === s.civ.homeSystemId);
+    const col = Object.values(s.colonies).find((c) => c.owner === s.player && c.systemId === s.civ.homeSystemId);
     const sys = s.systems[s.civ.homeSystemId];
     const settled = new Set(Object.values(s.colonies).map((c) => c.bodyId));
     const empty = sys.bodies.map((id) => s.bodies[id]).find((b) => b && !b.dissolved && b.kind !== 'deep' && b.kind !== 'asteroids' && !settled.has(b.id));

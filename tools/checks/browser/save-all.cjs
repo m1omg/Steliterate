@@ -19,13 +19,13 @@ run(async () => {
   };
   // a turn played for real writes the autosave
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.locator('button.endturn').click();
   await page.waitForTimeout(1500);
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.waitForTimeout(300);
@@ -52,13 +52,13 @@ run(async () => {
   check(/^steliterate-all-saves-\d{4}-\d\d-\d\d\.json$/.test(dl.suggestedFilename()), `named by the day (${dl.suggestedFilename()})`);
   check(bundle.kind === 'steliterate-saves' && bundle.saves.length === 4, `one file, four saves (${bundle.saves.length})`);
   check(names.includes('slot:First of two') && names.includes('slot:Second of two') && names.includes('quick:Quick save') && names.includes('auto:Autosave'), 'both slots, the quick save and the autosave');
-  check(bundle.saves.every((x) => x.game && x.game.turn === turn && x.game.civ), `each a whole game at turn ${turn}`);
+  check(bundle.saves.every((x) => x.game && x.game.turn === turn && x.game.civs), `each a whole game at turn ${turn}`);
   const toast = await page.evaluate(() => [...document.querySelectorAll('.toast')].map((t) => t.textContent).join(' | '));
   check(/Exported 4 saves in steliterate-all-saves-/.test(toast), `the message says so (${toast.slice(0, 120)})`);
   await close();
   // another browser, as it were: no saves at all
   await page.evaluate(() => {
-    for (const k of Object.keys(localStorage)) if (k.startsWith('steliterate.slot') || k.startsWith('steliterate.save') || k.startsWith('steliterate.autosave')) localStorage.removeItem(k);
+    for (const k of Object.keys(localStorage)) if (k.startsWith('steliterate2.slot') || k.startsWith('steliterate2.save') || k.startsWith('steliterate2.autosave')) localStorage.removeItem(k);
   });
   await openSaves();
   check((await page.locator('.modal .save-slots .list-item').count()) === 0, 'emptied: no slots');
@@ -79,7 +79,7 @@ run(async () => {
   check(after.length === 4, `four slots in the list, refreshed (${after.length})`);
   check(after.some((x) => x.startsWith('First of two')) && after.some((x) => x.startsWith('Second of two')), 'the slots keep their names');
   check(after.some((x) => x.startsWith('Quick save:')) && after.some((x) => x.startsWith('Autosave:')), 'the quick save and the autosave come in as slots of their own');
-  const own = await page.evaluate(() => [localStorage.getItem('steliterate.save.v1'), localStorage.getItem('steliterate.autosave.v1')]);
+  const own = await page.evaluate(() => [localStorage.getItem('steliterate2.save'), localStorage.getItem('steliterate2.autosave')]);
   check(own[0] === null, 'the quick save itself is not written by an import');
   const t2 = await importIt();
   check(/No new saves, 4 already here/.test(t2) && (await page.locator('.modal .save-slots .list-item').count()) === 4, `imported again: nothing added (${t2.slice(0, 80)})`);

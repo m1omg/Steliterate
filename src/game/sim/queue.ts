@@ -2,13 +2,17 @@ import { SHIP_BY_ID } from '../data/ships';
 import { STRUCTURE_BY_ID, dismantledKey, structureLabel } from '../data/structures';
 import type { Colony, GameState, QueueItem } from '../types';
 import { newFleet } from './fleets';
+import { completeHorizon } from './horizon';
+import { completePassage } from './passage';
+import { completeWeave } from './positronium';
 import { WORKS_WATER } from './terraform';
-import { log } from './util';
+import { fleets, formOf, log } from './util';
 
 /**
  * A queued project is finished (already off the queue): a building stands, with what it does
- * once; a ship leaves the slips. At the turn's end when the work is put in (turn.ts,
- * applyIndustry), and at once when it is rushed (actions.ts, rushBuild).
+ * once; a ship leaves the slips; the Passage, the writing into a horizon or the weave is done.
+ * At the turn's end when the work is put in (turn.ts, applyIndustry), and at once when it is
+ * rushed (actions.ts, rushBuild).
  */
 export function finishQueued(state: GameState, c: Colony, item: QueueItem) {
   if (item.kind === 'structure') {
@@ -33,13 +37,16 @@ export function finishQueued(state: GameState, c: Colony, item: QueueItem) {
         const b = state.bodies[c.bodyId];
         b.water = Math.max(b.water ?? 0, WORKS_WATER);
       }
-      if (item.key === 'confluence_node') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
+      if (d?.enables === 'merge') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
     }
-    log(state, `${c.name}: ${item.kind === 'structure' ? structureLabel(item.key, state.systems[c.systemId]).name : d?.name ?? item.key} complete.`, 'good', c.systemId);
-  } else {
+    log(state, `${c.name}: ${structureLabel(item.key, state.systems[c.systemId], formOf(c)).name} complete.`, 'good', c.systemId);
+  } else if (item.kind === 'passage') completePassage(state, c);
+  else if (item.kind === 'horizon') completeHorizon(state, c);
+  else if (item.kind === 'weave') completeWeave(state, c);
+  else {
     const def = SHIP_BY_ID[item.key];
     if (def?.crew) c.pops.kin = Math.max(0, c.pops.kin - def.crew);
-    const existing = Object.values(state.fleets).find((f) => f.at === c.systemId && f.order === 'idle' && !f.auto && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
+    const existing = fleets(state).find((f) => f.at === c.systemId && f.order === 'idle' && !f.auto && f.ships.every((s) => s.cls === item.key) && !def?.settles && !def?.survey);
     if (existing) existing.ships.push({ cls: item.key, hp: def?.hp ?? 5 });
     else newFleet(state, c.systemId, [item.key]);
     log(state, `${c.name}: ${def?.name ?? item.key} launched from the slips.`, 'good', c.systemId);

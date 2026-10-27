@@ -2,12 +2,16 @@ import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
 import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, fallsInAt, flashBoils, flashMelts, flashShelterFor, flashSheltered, giantFlash, giantWorld, meltLineAU, rubbleGame, takesWorldsIn, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
-import { colonies, hasCharter, hasTech, inItsSystem, protonFateKnown } from './util';
+import { colonies, formOf, hasCharter, hasTech, inItsSystem, protonFateKnown } from './util';
 import { readsSwarms, swarmArrives, swarmSight } from './sight';
 import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
 import { computeMods } from './mods';
-import { flashReach } from './crossing';
-import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf } from '../fate';
+import { DEGENERATE_END, FATE_SHOWN_AT, MATTER_END, calendarEra, fateOf, matterGone } from '../fate';
+import { decayProof, flashReach } from './crossing';
+import { thinShare, thinning, thinningFrom } from './thinning';
+import { POSITRONIUM_DECAY, positroniumHere } from './positronium';
+import { COLLAPSE_FROM, IRON_ETA, collapsing, darkTurnsAtTide, ironAge, supernovaEta, willExplode } from './deeptime';
+import { STRUCTURE_BY_ID } from '../data/structures';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
 // question is whether you can prepare in time.
@@ -22,6 +26,16 @@ function tideTurnsTo(state: GameState, at: number, horizon: number): number {
   if (calendarEra(state) === 'dusk') return turnsUntilYears(state, at, 0, horizon + 1);
   const era = calendarEra(state);
   return turnsUntil(era === 'dark' ? 'blackhole' : era, state.years, at, state.settings.length);
+}
+
+/** Which of our settlements are still made of matter (neither made the Passage nor stand on anything decay-proof): named, for the forecasts. */
+function stillOfMatter(state: GameState): string {
+  const cs = colonies(state).filter((c) => formOf(c) === 'baryonic');
+  const bare = cs.filter((c) => !decayProof(c)).map((c) => c.name);
+  const kept = cs.filter((c) => decayProof(c)).map((c) => c.name);
+  const names = (xs: string[]) => (xs.length > 6 ? `${xs.slice(0, 6).join(', ')} and ${xs.length - 6} more` : xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}` : xs[0]);
+  if (!cs.length) return 'Nothing of ours is made of it any more.';
+  return [bare.length ? `Still made of matter, with nothing to go on: ${names(bare)}.` : '', kept.length ? `Made of matter around what will go on (Leptonic Substrate, a Bastion Shell): ${names(kept)}; only the Passage keeps all of it.` : ''].filter(Boolean).join(' ');
 }
 
 export function updateForecasts(state: GameState) {
@@ -109,7 +123,7 @@ export function updateForecasts(state: GameState) {
         let danger = false;
         for (const c of colonies(state)) {
           const b = state.bodies[c.bodyId];
-          if (c.systemId !== sid || !b || b.dissolved || !inItsSystem(state, c)) continue;
+          if (c.systemId !== sid || !b || b.dissolved || formOf(c) === 'horizon' || !inItsSystem(state, c)) continue;
           if (b.id === g.id) {
             ours.push(`${c.name} falls in with it: three in four of its people will get off to the Deep, into the flash.`);
             danger = true;
@@ -172,8 +186,8 @@ export function updateForecasts(state: GameState) {
   const known = protonFateKnown(state);
   if (state.era === 'degenerate') {
     if (!known)
-      add({ kind: 'crossing', title: 'The end of the Degenerate Age?', text: 'No one knows yet what becomes of matter. If protons decay, it dissolves near η 39, and only minds moved onto leptonic substrates, or living around black holes, will continue. If space itself slowly unmakes it, the neutron stars burst near η 68 and worlds last until η 90. If neither, nothing at all happens: the dead stars simply grow colder than the black holes, near η 30. The Proton Question would tell us; the neutron stars will, near η 30.', dueYears: Math.pow(10, FATE_SHOWN_AT), severity: 'danger' });
-    else if (fate === 'decay') add({ kind: 'crossing', title: 'The Great Decay', text: 'Ordinary matter dissolves. Only minds moved onto leptonic substrates, or living around black holes, will continue.', dueYears: Math.pow(10, DEGENERATE_END.decay), severity: 'danger' });
+      add({ kind: 'crossing', title: 'The end of the Degenerate Age?', text: 'No one knows yet what becomes of matter. If protons decay, it dissolves near η 39, and only minds moved onto leptonic substrates will continue, drifting to the black holes. If space itself slowly unmakes it, the neutron stars burst near η 68 and worlds last until η 90. If neither, nothing at all happens: the dead stars simply grow colder than the black holes, near η 30. The Proton Question would tell us; the neutron stars will, near η 30.', dueYears: Math.pow(10, FATE_SHOWN_AT), severity: 'danger' });
+    else if (fate === 'decay') add({ kind: 'crossing', title: 'The Great Decay', text: 'Ordinary matter dissolves, from η 37.5 one system at a time. Only what was re-encoded goes on, drifting to the black holes, the only sources left: a settlement that made the Passage whole, one on Leptonic Substrate with only that. The rest is lost.', dueYears: Math.pow(10, DEGENERATE_END.decay), severity: 'danger' });
     else if (fate === 'stable') add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars, the last things warm of their own accord, cool below the faint glow of the black holes. Nothing dissolves: matter endures, frozen, and gives nothing back. From then on only the black holes are sources, and Kin will need warmth no star can give.', dueYears: Math.pow(10, DEGENERATE_END.stable), severity: 'warn' });
     else add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars burst, one after another, at a tenth of a Sun: whatever is settled at one is lost, unless it is on a world flung loose from it long before, far away by then. Burst Catchers in other systems bank a share of the flash, the more the nearer they are. After that only the black holes are warm, and space goes on unmaking the rest: the dwarfs fade by η 85, worlds by η 90.', dueYears: Math.pow(10, DEGENERATE_END.curvature), severity: 'danger' });
   } else if (state.era !== 'dark') {
@@ -185,8 +199,8 @@ export function updateForecasts(state: GameState) {
     add({ kind: 'crossing', title: titles[state.era], text: texts[state.era], dueYears: Math.pow(10, d.endEta), severity: 'danger' });
   }
   // curvature radiation, once we know it: the end of matter, and the stars we live at that will go
-  if (known && fate === 'curvature' && state.civ.flags.matter_gone === undefined) {
-    add({ kind: 'evaporation_all', title: 'The Great Evaporation', text: 'Every world, every dead star and every scrap of ordinary matter will have evaporated. Only minds on leptonic substrate, living around the black holes that are left, go on.', dueYears: Math.pow(10, MATTER_END.curvature), severity: 'danger' });
+  if (known && fate === 'curvature' && state.flags.matter_gone === undefined) {
+    add({ kind: 'evaporation_all', title: 'The Great Evaporation', text: 'Every world, every dead star and every scrap of ordinary matter will have evaporated. Only what was re-encoded goes on, around the black holes that are left: a settlement that made the Passage whole, one on Leptonic Substrate with only that. The rest is lost.', dueYears: Math.pow(10, MATTER_END.curvature), severity: 'danger' });
     for (const sid of colonized) {
       const sys = state.systems[sid];
       const k = sys.primary.kind;
@@ -222,21 +236,67 @@ export function updateForecasts(state: GameState) {
         : `The dark-matter halo is being used up, ${siphonsRunning(state) ? 'faster while our Halo Siphons run' : 'sooner for what our Halo Siphons drew'}. White dwarfs will cool toward black dwarfs by about η ${embersOutEta(state).toFixed(1)}.`;
       add({ kind: 'embers', title: 'The embers begin to fade', text, dueYears: haloReachesYears(state, 22), severity: 'warn' });
     }
-    if (protonFateKnown(state) && state.protonsDecay && state.eta < 37.5) add({ kind: 'decay', title: 'Proton decay takes hold', text: 'Matter will begin to dissolve in earnest.', dueYears: Math.pow(10, 37.5), severity: 'danger' });
+    if (protonFateKnown(state) && state.protonsDecay && state.eta < 37.5) add({ kind: 'decay', title: 'Proton decay takes hold', text: `Matter will begin to dissolve in earnest, system by system, and whatever is still made of it will thin with it, structure by structure, until the Great Decay. ${stillOfMatter(state)}`, dueYears: Math.pow(10, 37.5), severity: 'danger' });
+  }
+  // the Thinning, once we know matter will end (thinning.ts): what is still made of it
+  if (known && fate !== 'stable' && !matterGone(state)) {
+    const from = thinningFrom(state);
+    if (thinning(state)) add({ kind: 'thinning', title: 'The Thinning', text: `Ordinary matter is ${fate === 'decay' ? 'dissolving' : 'evaporating'}: ${Math.round(thinShare(state) * 100)}% of it is gone, and what is still made of it fails with it, structure by structure. ${stillOfMatter(state)}`, dueYears: Math.pow(10, MATTER_END[fate]), severity: 'danger' });
+    else if (fate === 'curvature' && state.eta < from) add({ kind: 'thinning', title: 'The Thinning', text: `Once the brown dwarfs have faded the worlds themselves evaporate, and whatever is still made of matter will fail with them, structure by structure, until the Great Evaporation. ${stillOfMatter(state)}`, dueYears: Math.pow(10, from), severity: 'warn' });
+  }
+
+  // the widest atoms: their decay, counted down at our pace (Hud.tsx counts it in the Dark Era too)
+  if (positroniumHere(state)) {
+    const woven = colonies(state).filter((c) => formOf(c) === 'positronium').map((c) => c.name);
+    const nets = colonies(state).some((c) => (c.structures.positronium_net ?? 0) > 0);
+    const list = woven.length > 1 ? `${woven.slice(0, -1).join(', ')} and ${woven[woven.length - 1]}` : woven[0];
+    add({
+      kind: 'positronium',
+      title: 'The widest atoms end',
+      text: `The positronium atoms decay near η ${POSITRONIUM_DECAY}, each in a last flash of light.${woven.length ? ` Still woven through them: ${list}. Whoever is still there when they end, ends with them: leave the weave in time (the settlement’s panel).` : ' Nothing of ours is woven through them.'}${nets ? ' Our nets gather the light of their falling until then, and the last of the annihilation after it.' : ''}`,
+      dueYears: Math.pow(10, POSITRONIUM_DECAY),
+      severity: woven.length ? 'danger' : 'info',
+    });
   }
 
   // black holes we live on
   if (calendarEra(state) === 'blackhole' || state.era === 'blackhole') {
     for (const sid of colonized) {
       const p = state.systems[sid].primary;
-      if (p.evaporateAt && p.evaporateAt > years) add({ kind: 'evaporate', title: `${state.systems[sid].name} will evaporate`, text: 'Its Hawking radiation brightens as it shrinks, ending in a final burst that Burst Catchers here can bank. Its worlds then drift loose, and our settlements stay, with nothing left there to draw on: its spin, its Hawking light and its glow go with it, and Horizon Vaults here, which store energy in its spin, will hold nothing.', dueYears: p.evaporateAt, systemId: sid, severity: 'warn' });
+      // (what we wrote into its horizon comes back out with it, horizon.ts)
+      const written = colonies(state).some((c) => c.systemId === sid && formOf(c) === 'horizon');
+      if (p.evaporateAt && p.evaporateAt > years) add({ kind: 'evaporate', title: `${state.systems[sid].name} will evaporate`, text: `Its Hawking radiation brightens as it shrinks, ending in a final burst that Burst Catchers here can bank. Its worlds then drift loose, and our settlements stay, with nothing left there to draw on: its spin, its Hawking light and its glow go with it, and Horizon Vaults here, which store energy in its spin, will hold nothing. A leptonic settlement can drift to another black hole before then (its panel).${written ? ' What we wrote into its horizon will be written back out, leptonic, half its Lattice lost, and drift on.' : ''}`, dueYears: p.evaporateAt, systemId: sid, severity: 'warn' });
+    }
+  }
+
+  // matter stable, once that is known: the last flashes, the iron, the collapse (deeptime.ts; dated
+  // by η, too far for years), from the Black Hole Age on, while there is still time to prepare
+  // (before the Dark Era the HUD cannot count their turns: the text says how far into it they fall)
+  if (fateOf(state) === 'stable' && protonFateKnown(state) && (state.era === 'blackhole' || state.era === 'dark' || calendarEra(state) === 'blackhole')) {
+    const when = (eta: number) => {
+      if (state.era === 'dark') return '';
+      const n = darkTurnsAtTide(state, eta);
+      return isFinite(n) ? ` About ${n} turns into the Dark Era, at the Tide.` : '';
+    };
+    for (const sys of Object.values(state.systems)) {
+      if (sys.gone || !willExplode(sys.primary) || !state.civ.known[sys.id]) continue;
+      const ours = colonies(state).filter((c) => c.systemId === sys.id && inItsSystem(state, c));
+      add({ kind: 'blackdwarf', title: `${sys.name} will explode`, text: `One of the few dead stars born heavy enough (${sys.primary.mass.toFixed(2)} times the Sun): as its core turns to iron it will collapse and explode, its worlds with it.${ours.length ? ` Our settlements there will be lost: ${ours.map((c) => c.name).join(', ')}. Move what can be moved.` : ''} Burst Catchers bank its flash, the more the nearer.${when(supernovaEta(sys.primary.mass))}`, dueYears: Infinity, dueEta: supernovaEta(sys.primary.mass), systemId: sys.id, severity: ours.length ? 'danger' : 'info' });
+    }
+    if (!ironAge(state)) {
+      const fusing = colonies(state).some((c) => Object.entries(c.structures).some(([id, n]) => n && STRUCTURE_BY_ID[id]?.energy?.mode === 'fusion'));
+      add({ kind: 'iron', title: 'Iron stars', text: `By about 10¹⁵⁰⁰ years everything will have fused to iron, a few nuclei at a time: nothing will be left to fuse or burn.${fusing ? ' Our Fusion Plants will give nothing, nor the Hearths’ fuel.' : ''} Nothing will come in after it: what is stored by then, and the Long Sleep, are what there will be.${when(IRON_ETA)}`, dueYears: Infinity, dueEta: IRON_ETA, severity: fusing ? 'warn' : 'info' });
+    }
+    if (!matterGone(state)) {
+      const of = colonies(state).some((c) => formOf(c) === 'baryonic');
+      add({ kind: 'collapse', title: collapsing(state) ? 'Matter is tunnelling into black holes' : 'Tunnelling collapse', text: `From 10^(10²⁶) years matter tunnels into black holes that evaporate at once, each system at a time no one can foresee, all of it by 10^(10⁷⁶): a flash for Burst Catchers. What is still made of matter goes with it; what made the Passage goes on, and so do minds on decay-proof substrate. ${stillOfMatter(state)}${when(Math.pow(10, COLLAPSE_FROM))}`, dueYears: Infinity, dueEta: Math.pow(10, COLLAPSE_FROM), severity: of ? 'danger' : 'info' });
     }
   }
 
   // the galaxy's free energy
-  const prev = state.flags.gfe_prev ?? 1;
+  const prev = state.civ.flags.gfe_prev ?? 1;
   const rate = prev - state.gfe;
-  state.flags.gfe_prev = state.gfe;
+  state.civ.flags.gfe_prev = state.gfe;
   if (state.gfe < 0.92 || rate > 0.002) {
     add({
       kind: 'gfe',
@@ -264,6 +324,6 @@ export function updateForecasts(state: GameState) {
     );
   }
 
-  out.sort((a, b) => a.dueYears - b.dueYears);
-  state.forecasts = out;
+  out.sort((a, b) => a.dueYears - b.dueYears || (a.dueEta ?? Infinity) - (b.dueEta ?? Infinity));
+  state.civ.forecasts = out;
 }

@@ -17,7 +17,7 @@ let s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'sta
 let born: StarSystem | null = null;
 for (const seed of [1000, 8919, 16838, 24757, 32676, 40595]) {
   s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard' });
-  for (let guard = 0; guard < 700 && !s.outcome && !born; guard++) {
+  for (let guard = 0; guard < 700 && !s.civ.outcome && !born; guard++) {
     autoPlay(s, 'competent');
     const r = endTurn(s);
     const g = r.notes.find((n) => n.kind === 'giant');
@@ -29,7 +29,7 @@ check(!!born, `a helium giant forms in play (${born?.name}, seed ${s.settings.se
 if (born) {
   const p = born.primary;
   check(p.kind === 'helium_giant' && p.bornAt === s.years && p.diesAt === s.years + GIANT_LIFE, 'it lights as its turn ends, and burns for 120,000 years from then');
-  check(s.pending.some((e) => e.defId === 'helium_giant' && e.data.systemId === born!.id), 'its event is waiting');
+  check(s.civ.pending.some((e) => e.defId === 'helium_giant' && e.data.systemId === born!.id), 'its event is waiting');
   check((s.civ.known[born.id] ?? 0) >= 1, 'it is seen on the map');
   const text = EVENT_BY_ID.helium_giant.text(s, { systemId: born.id });
   console.log(`  event: ${text}`);
@@ -40,11 +40,11 @@ if (born) {
 /** A helium giant lit now at a dead dwarf, in a game at least at η `eta`. */
 function giantAt(eta: number): { s: GameState; sys: StarSystem } {
   const g = newGame({ seed: 8919, length: 'standard', survivors: 3, difficulty: 'standard' });
-  for (let guard = 0; guard < 900 && !g.outcome && !(g.era === 'degenerate' && g.eta >= eta); guard++) {
+  for (let guard = 0; guard < 900 && !g.civ.outcome && !(g.era === 'degenerate' && g.eta >= eta); guard++) {
     autoPlay(g, 'competent');
     endTurn(g);
   }
-  g.pending.length = 0;
+  g.civ.pending.length = 0;
   for (const k of ['star_until', 'star_step', 'star_next', 'star_flash']) delete g.civ.flags[k];
   const sys = Object.values(g.systems).find((x) => !x.gone && (x.primary.kind === 'white_dwarf' || x.primary.kind === 'black_dwarf'))!;
   sys.primary.kind = 'helium_giant';
@@ -79,7 +79,7 @@ for (const eta of [17.6, 18.5]) {
   const full = 70 * (0.5 + 0.5 * g.gfe);
   check(Math.abs(light - full) < 1e-9, `collectors get its full light: ×${light.toFixed(2)} (want ×${full.toFixed(2)})`);
   const y0 = g.years;
-  g.pending.length = 0;
+  g.civ.pending.length = 0;
   endTurn(g);
   const left = ['star_until', 'star_step', 'star_next', 'star_flash'].filter((k) => g.civ.flags[k] !== undefined);
   check(left.length === 0, `no clock flags are left (${left.join(', ') || 'none'})`);

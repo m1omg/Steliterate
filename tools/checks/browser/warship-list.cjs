@@ -15,13 +15,13 @@ run(async () => {
       .filter((x) => x.id !== home.id && !Object.values(s.swarms).some((w) => w.systemId === x.id) && !Object.values(s.colonies).some((c) => c.systemId === x.id))
       .sort((a, b) => Math.hypot(a.pos.x - home.pos.x, a.pos.y - home.pos.y, a.pos.z - home.pos.z) - Math.hypot(b.pos.x - home.pos.x, b.pos.y - home.pos.y, b.pos.z - home.pos.z))[0];
     s.swarms.hgx = { id: 'hgx', systemId: sys.id, from: null, to: null, traveled: 0, distance: 0, size: 2, awake: true, tamed: false, appetite: 1 };
-    s.fleets.fx = { id: 'fx', name: 'Spear', ships: [{ cls: 'warden', hp: 10 }, { cls: 'aegis', hp: 30 }], at: home.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' };
+    s.fleets.fx = { id: 'fx', owner: s.player, name: 'Spear', ships: [{ cls: 'warden', hp: 10 }, { cls: 'hunter', hp: 12 }], at: home.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' };
     s.civ.known[sys.id] = 2;
     // a civilization at peace with us asks for warships against a swarm at its first star
     const sv = Object.values(s.survivors).find((x) => x.alive && !x.war && x.homeSystemId !== sys.id);
     sv.contact = true;
     const plea = s.systems[sv.homeSystemId];
-    s.signals.push({ uid: 'sgx', from: sv.id, kind: 'swarm_plea', sentYears: s.years, arriveYears: s.years, arrivedTurn: s.turn, title: `${sv.name} asks for help against the Hunger`, text: '', data: { systemId: plea.id }, choices: [{ id: 'promise', label: 'We will send warships' }, { id: 'refuse', label: 'We cannot' }], resolved: null });
+    s.civ.signals.push({ uid: 'sgx', from: sv.id, kind: 'swarm_plea', sentYears: s.years, arriveYears: s.years, arrivedTurn: s.turn, title: `${sv.name} asks for help against the Hunger`, text: '', data: { systemId: plea.id }, choices: [{ id: 'promise', label: 'We will send warships' }, { id: 'refuse', label: 'We cannot' }], resolved: null });
     window.__stel.refresh();
     return { sys: sys.id, name: sys.name, plea: plea.name, civ: sv.name };
   });
@@ -30,7 +30,7 @@ run(async () => {
   const tips = await page.evaluate(() => [...document.querySelectorAll('.drawer .chip')].map((x) => x.getAttribute('data-tip') ?? '').filter((t) => t.includes('Attack')));
   console.log(`  tips: ${tips.map((t) => t.split('\n')[1]).join(' / ')}`);
   check(tips.some((t) => t.includes('Attack 3 against swarms and other civilizations')), 'the Warden’s tip gives its attack against both');
-  check(tips.some((t) => t.includes('Attack 8 against swarms and other civilizations')), 'the Aegis’s tip gives its attack against both');
+  check(tips.some((t) => t.includes('Attack 6 against swarms, 3 against other civilizations')), 'the Hunter’s tip gives its attack against both');
   const btn = page.locator('.drawer button', { hasText: 'Choose from list' });
   check((await btn.count()) === 1, 'the warship’s panel offers Choose from list');
   await btn.first().click();
@@ -43,7 +43,7 @@ run(async () => {
   }, ids.name);
   console.log(`  row: ${win.row}`);
   check(win.text.includes('Swarms and civilizations') && win.text.includes('Where should Spear go?'), 'the Systems window opens on the swarms and civilizations, to send it');
-  check(win.text.includes('Spear: attack 11 against swarms and other civilizations'), 'it gives the fleet’s attack');
+  check(win.text.includes('Spear: attack 9 against swarms, 6 against other civilizations’ ships, 6 against their settlements'), 'it gives the fleet’s attack against each');
   check(win.row.includes('swarm, size 2') && win.send, `the swarm’s star is listed with its size and a Send button (${ids.name})`);
   const asked = await page.evaluate(() => {
     const sec = [...document.querySelectorAll('.modal .section')].find((x) => x.querySelector('h3')?.textContent === 'Asked for help');
@@ -54,7 +54,7 @@ run(async () => {
   // we promise warships: it stays at the head, with the turns we have to keep our word
   await page.evaluate(() => {
     const s = window.__stel.state();
-    const sig = s.signals.find((x) => x.uid === 'sgx');
+    const sig = s.civ.signals.find((x) => x.uid === 'sgx');
     sig.resolved = 'promise';
     s.survivors[sig.from].promised = { systemId: String(sig.data.systemId), turn: s.turn - 3 };
     window.__stel.refresh();

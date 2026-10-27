@@ -11,18 +11,18 @@ run(async () => {
   const pre = await page.evaluate(() => {
     const s = window.__stel.state();
     let prev = s.eta;
-    for (let i = 0; i < 700 && !s.outcome; i++) {
+    for (let i = 0; i < 700 && !s.civ.outcome; i++) {
       if (s.eta + Math.max(s.eta - prev, 0.05) >= 65) break;
       prev = s.eta;
       window.__stel.endTurns(1, true, true);
     }
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     // a star we know with worlds of rock and a belt still there: home if it still has them
     const fit = (x) => !x.gone && x.bodies.some((id) => s.bodies[id] && !s.bodies[id].dissolved && s.bodies[id].kind === 'asteroids') && x.bodies.some((id) => s.bodies[id] && !s.bodies[id].dissolved && ['barren', 'ice', 'terran', 'super_earth', 'eyeball', 'ocean_ice'].includes(s.bodies[id].kind));
     const home = s.systems[s.civ.homeSystemId];
     const look = home && fit(home) ? home : Object.values(s.systems).find((x) => s.civ.known[x.id] === 2 && fit(x));
-    return { eta: s.eta, outcome: s.outcome ? s.outcome.ending : null, home: look ? look.id : s.civ.homeSystemId };
+    return { eta: s.eta, outcome: s.civ.outcome ? s.civ.outcome.ending : null, home: look ? look.id : s.civ.homeSystemId };
   });
   check(!pre.outcome && pre.eta < 65 && pre.eta > 62, `stable, η ${pre.eta.toFixed(1)}: just before the flow`);
   const tips = await page.evaluate(() => [...document.querySelectorAll('.chrono [data-tip]')].map((x) => x.dataset.tip.split('\n')[0]));
@@ -51,7 +51,7 @@ run(async () => {
   for (let i = 0; i < 8 && !ev; i++) {
     await page.evaluate(() => {
       window.__stel.autoPlay();
-      window.__stel.state().pending.length = 0;
+      window.__stel.state().civ.pending.length = 0;
       window.__stel.refresh();
     });
     await page.waitForTimeout(300);

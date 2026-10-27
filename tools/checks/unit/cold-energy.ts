@@ -18,22 +18,22 @@ import { check, done, near } from '../lib';
 const d = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard' });
 const other = Object.values(d.bodies).find((b) => b.coreHeat > 0.3 && !b.colonyId && b.kind !== 'deep')!;
 const h0 = other.coreHeat;
-d.pending.length = 0;
+d.civ.pending.length = 0;
 endTurn(d);
 check(other.coreHeat === h0, `in the Dusk an unsettled world keeps its core heat (${h0.toFixed(2)})`);
 const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard' });
-for (let g = 0; g < 400 && !s.outcome && s.era !== 'degenerate'; g++) {
+for (let g = 0; g < 400 && !s.civ.outcome && s.era !== 'degenerate'; g++) {
   autoPlay(s, 'competent');
   endTurn(s);
 }
 check(s.era === 'degenerate', `the Degenerate Age reached (turn ${s.turn})`);
 const world = Object.values(s.bodies).find((b) => b.coreHeat > 0.3 && b.kind !== 'deep' && !b.dissolved)!;
 const before = world.coreHeat;
-s.pending.length = 0;
+s.civ.pending.length = 0;
 endTurn(s);
 near('after the Last Light: core heat ×0.8 a turn', world.coreHeat, before * CORE_FADE);
 for (let i = 0; i < 25; i++) {
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   endTurn(s);
 }
 check(world.coreHeat === 0, `gone some 25 turns later (${world.coreHeat})`);

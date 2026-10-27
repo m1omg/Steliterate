@@ -5,6 +5,8 @@
 // keeps everything. Minds that all think slower than the flow keep watchers awake at half again
 // their upkeep; sleeping costs 0.3 of upkeep, not 0.1, unless The Long Watch; sleeping neighbours
 // fade twice as fast. With protons decaying there is no flow: matter is gone long before.
+// (In games whose neighbours sleep, civsAsleep: a sleeping neighbour fading is the neighbours'
+// light simulation; unit/others checks the neighbours as civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -18,8 +20,9 @@ import { FLOW_ETA, flowing, keeping } from '../../../src/game/sim/flow';
 import { logTurnLength } from '../../../src/game/eras';
 import type { Body, Colony, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 /** This turn's tempo and mods, as the economy sees them. */
 const ctxOf = (s: GameState) => {
   const step = turnStep(s, s.civ.pace);
@@ -33,13 +36,20 @@ const mindUpkeep = (s: GameState, c: Colony) =>
     .reduce((a, l) => a + (l.energy ?? 0), 0);
 
 // ---------------------------------------------------------------- a stable game, to just before the flow
-const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-for (let g = 0; g < 900 && !s.outcome && s.eta < FLOW_ETA - 2.5; g++) {
-  autoPlay(s, 'competent');
-  endTurn(s);
-}
-check(!s.outcome && s.eta < FLOW_ETA && s.civ.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come`);
-s.pending.length = 0;
+// (the first seed from 1000 whose autoplayed game lives that long: rules changes move how a game goes)
+const toFlow = (seed: number) => {
+  const g = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
+  for (let n = 0; n < 900 && !g.civ.outcome && g.eta < FLOW_ETA - 2.5; n++) {
+    autoPlay(g, 'competent');
+    endTurn(g);
+  }
+  return g;
+};
+let seed = 1000;
+let s = toFlow(seed);
+while (s.civ.outcome && seed < 1009) s = toFlow(++seed);
+check(!s.civ.outcome && s.eta < FLOW_ETA && s.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come (seed ${seed})`);
+s.civ.pending.length = 0;
 // with the Tide (the autoplayer may have slowed down, and a slow turn here outlasts the flow)
 s.civ.pace = 0;
 if (!s.civ.techs.includes('hawking_patience')) s.civ.techs.push('horizon_cognition', 'hawking_patience');
@@ -73,14 +83,14 @@ s.civ.matter = 5000;
 
 // ---------------------------------------------------------------- it comes
 const turns = (n: number) => {
-  for (let i = 0; i < n && !s.outcome; i++) {
-    s.pending = s.pending.filter((p) => p.defId === 'long_flow');
+  for (let i = 0; i < n && !s.civ.outcome; i++) {
+    s.civ.pending = s.civ.pending.filter((p) => p.defId === 'long_flow');
     endTurn(s);
   }
 };
-for (let i = 0; i < 12 && s.civ.flags.flowed === undefined && !s.outcome; i++) turns(1);
-check(flowing(s) && s.eta >= FLOW_ETA, `the Long Flow comes at η ${s.eta.toFixed(1)} (turn ${s.civ.flags.flowed})`);
-const ev = s.pending.find((p) => p.defId === 'long_flow');
+for (let i = 0; i < 12 && s.flags.flowed === undefined && !s.civ.outcome; i++) turns(1);
+check(flowing(s) && s.eta >= FLOW_ETA, `the Long Flow comes at η ${s.eta.toFixed(1)} (turn ${s.flags.flowed})`);
+const ev = s.civ.pending.find((p) => p.defId === 'long_flow');
 check(!!ev && Number(ev.data.ruins) >= 1, `we hear of it, and of the ruins we found that flowed (${ev?.data.ruins})`);
 check(bRuin.relic?.flowed === true && bEmpty.relic?.flowed === true && !bDug.relic?.flowed, `ruins no one was digging flowed, found or hidden; the dug one is kept (${bRuin.relic?.flowed}, ${bEmpty.relic?.flowed}, ${bDug.relic?.flowed})`);
 {
@@ -89,7 +99,7 @@ check(bRuin.relic?.flowed === true && bEmpty.relic?.flowed === true && !bDug.rel
 }
 const slowBefore = (() => {
   const b = clone(s);
-  delete b.civ.flags.flowed;
+  delete b.flags.flowed;
   return mindUpkeep(b, b.colonies[slow.id]);
 })();
 check(slow.structures.substrate_core === 1 && kept.structures.solar_array === 1, 'kept and watched places lose nothing');
@@ -106,7 +116,7 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
 {
   const a = clone(s);
   const b = clone(s);
-  delete b.civ.flags.flowed;
+  delete b.flags.flowed;
   for (const g of [a, b]) {
     g.civ.dormant = true;
     g.civ.charters = g.civ.charters.filter((x) => x !== 'the_long_watch');
@@ -124,7 +134,7 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
 {
   const a = clone(s);
   const b = clone(s);
-  delete b.civ.flags.flowed;
+  delete b.flags.flowed;
   const sv = Object.values(s.survivors).find((x) => x.alive) ?? Object.values(s.survivors)[0];
   for (const g of [a, b]) {
     g.survivors[sv.id].alive = true;
@@ -142,12 +152,12 @@ check(s.colonies[lepton.id]?.structures.lepton_substrate === 1, 'leptonic substr
 
 // ---------------------------------------------------------------- no flow where protons decay
 {
-  const d = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'decays' });
-  for (let g = 0; g < 900 && !d.outcome && d.eta < FLOW_ETA + 2; g++) {
+  const d = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'decays', civsAsleep: true });
+  for (let g = 0; g < 900 && !d.civ.outcome && d.eta < FLOW_ETA + 2; g++) {
     autoPlay(d, 'competent');
     endTurn(d);
   }
-  check(d.civ.flags.flowed === undefined, `protons decay: no flow (η ${d.eta.toFixed(1)}, ${d.outcome ? d.outcome.ending : 'playing'})`);
+  check(d.flags.flowed === undefined, `protons decay: no flow (η ${d.eta.toFixed(1)}, ${d.civ.outcome ? d.civ.outcome.ending : 'playing'})`);
 }
 void ({} as Body);
 done('FLOW');

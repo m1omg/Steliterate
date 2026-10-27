@@ -1,7 +1,10 @@
 import { signal } from '@preact/signals';
 import type { Engine, Quality } from '../render/engine';
+import { assertPlayerView } from '../game/civs';
 import { saveGame } from '../game/save';
+import { OLD_HUD_KEY, OLD_SETTINGS_KEY, STORE } from '../keys';
 import type { GameState, LogEntry } from '../game/types';
+import type { FilmArgs, FilmId } from '../film/films';
 import type { RevealStep } from '../render/systemView';
 
 // UI state around the simulation. The game state is mutated in place by the simulation;
@@ -23,6 +26,8 @@ export type Modal =
   | { kind: 'save' }
   | { kind: 'crossing' }
   | { kind: 'outcome' }
+  /** A film (part 4), then what comes after it. */
+  | { kind: 'film'; id: FilmId; args?: FilmArgs; then?: Modal }
   | { kind: 'era_intro' }
   /** The fights of the turn just played (or of a Long Sleep), as they went for us (CombatReport.tsx). */
   | { kind: 'combat'; entries: LogEntry[] }
@@ -51,7 +56,9 @@ export interface Settings {
   lvSide?: 'left' | 'right';
   /** The graphics were picked by hand in Settings (else a touch device starts at medium). */
   qualityChosen?: boolean;
-  /** The survey reveal (21 Oct): looking into a system just charted, the camera flies to each of its worlds. Unset, on unless the system asks for less motion. */
+  /** The films (part 4): unset, on, unless the system asks for reduced motion. */
+  films?: boolean;
+  /** The survey reveal (part 4): a system just charted shows its worlds one by one. Unset, as the films. */
   reveals?: boolean;
 }
 
@@ -109,6 +116,7 @@ export function engine(): Engine | null {
 export function bump() {
   rev.value++;
   const g = game.value;
+  if (g) assertPlayerView(g, 'bump');
   if (g && engineRef) engineRef.setState(g);
 }
 
@@ -125,6 +133,9 @@ export function notify(text: string, kind: 'info' | 'bad' | 'good' = 'info', act
 export function act(fn: (s: GameState) => string | null | void): boolean {
   const g = game.value;
   if (!g) return false;
+  // a turn half played (turnflow.ts, playTurn) is not to be acted on
+  if (busy.value) return false;
+  assertPlayerView(g, 'act');
   const err = fn(g);
   if (typeof err === 'string' && err) {
     notify(err, 'bad');
@@ -134,9 +145,21 @@ export function act(fn: (s: GameState) => string | null | void): boolean {
   return true;
 }
 
+/**
+ * Whether the game is between turns, not half-way through one (turnflow.ts, playTurn): what saves
+ * or replaces it waits for that. (A Long Sleep ends turns on its own, menus open or not.)
+ */
+export function between(): boolean {
+  if (!busy.value) return true;
+  notify('The turn is still ending: a moment.', 'info');
+  return false;
+}
+
 export function autosave() {
   const g = game.value;
-  if (g) saveGame(g, true);
+  if (!g) return;
+  assertPlayerView(g, 'autosave');
+  saveGame(g, true);
 }
 
 function loadSettings(): Settings {
@@ -145,7 +168,9 @@ function loadSettings(): Settings {
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const d: Settings = { music: 0.7, sfx: 0.7, quality: touch ? 'medium' : 'high', uiScale: 1, playlist: {}, overture: true };
   try {
-    const t = localStorage.getItem('steliterate.settings');
+    // the new version keeps its own settings; the first time, it starts from the older build's
+    // (the magnifier mode, sizes and volumes carry over), which it never writes
+    const t = localStorage.getItem(`${STORE}settings`) ?? localStorage.getItem(OLD_SETTINGS_KEY);
     const s: Settings = t ? { ...d, ...JSON.parse(t) } : d;
     // settings saved before carry high: once on a touch device, unless it was picked by hand
     if (touch && !s.qualityChosen && s.quality === 'high') s.quality = 'medium';
@@ -177,7 +202,7 @@ export function applyUiScale(u: number) {
 export function saveSettings(s: Settings) {
   settings.value = s;
   try {
-    localStorage.setItem('steliterate.settings', JSON.stringify(s));
+    localStorage.setItem(`${STORE}settings`, JSON.stringify(s));
   } catch {
     /* storage may be unavailable */
   }
@@ -202,7 +227,7 @@ export interface HudPrefs {
 function loadHudPrefs(): HudPrefs {
   const d: HudPrefs = { forecasts: true, feed: true, orbitsPaused: false, eventPivot: true, viewMode: 0 };
   try {
-    const t = localStorage.getItem('steliterate.hud');
+    const t = localStorage.getItem(`${STORE}hud`) ?? localStorage.getItem(OLD_HUD_KEY);
     return t ? { ...d, ...JSON.parse(t) } : d;
   } catch {
     return d;
@@ -212,7 +237,7 @@ export const hudPrefs = signal<HudPrefs>(loadHudPrefs());
 export function setHudPrefs(p: Partial<HudPrefs>) {
   hudPrefs.value = { ...hudPrefs.value, ...p };
   try {
-    localStorage.setItem('steliterate.hud', JSON.stringify(hudPrefs.value));
+    localStorage.setItem(`${STORE}hud`, JSON.stringify(hudPrefs.value));
   } catch {
     /* storage may be unavailable */
   }
@@ -266,13 +291,34 @@ export const touchInput = signal(false);
 /** The magnifier mode: what is under the pointer on the map, named in large type beside it. */
 export const mapHover = signal<{ text: string; x: number; y: number } | null>(null);
 
-/** Survey reveals off for this page (`?noreveals`, for the checks), or forced on or off (`__stel.reveals`). */
-let revealOverride: boolean | null = typeof location !== 'undefined' && new URLSearchParams(location.search).has('noreveals') ? false : null;
+export function toggleOrbits() {
+  const paused = !hudPrefs.value.orbitsPaused;
+  setHudPrefs({ orbitsPaused: paused });
+  const e = engine();
+  if (e) e.orbitsPaused = paused;
+}
+
+/** Films off for this page (`?nofilms`, for the checks), or forced on or off (`__stel.films`). */
+let filmOverride: boolean | null = typeof location !== 'undefined' && new URLSearchParams(location.search).has('nofilms') ? false : null;
+export function setFilmOverride(on: boolean | null) {
+  filmOverride = on;
+}
+
+/** Whether the films play: as set in Settings; unset, on unless the system asks for reduced motion. */
+export function filmsOn(): boolean {
+  if (filmOverride !== null) return filmOverride;
+  const s = settings.value.films;
+  if (s !== undefined) return s;
+  return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/** Survey reveals off for this page (`?nofilms` turns them off with the films, for the checks), or forced on or off (`__stel.reveals`). */
+let revealOverride: boolean | null = filmOverride === false ? false : null;
 export function setRevealOverride(on: boolean | null) {
   revealOverride = on;
 }
 
-/** Whether a system just charted is shown by a flight of the camera: as set in Settings; unset, on unless the system asks for reduced motion. */
+/** Whether a system just charted shows its worlds one by one: as set in Settings; unset, on unless the system asks for reduced motion. */
 export function revealsOn(): boolean {
   if (revealOverride !== null) return revealOverride;
   const s = settings.value.reveals;
@@ -280,9 +326,27 @@ export function revealsOn(): boolean {
   return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 
-export function toggleOrbits() {
-  const paused = !hudPrefs.value.orbitsPaused;
-  setHudPrefs({ orbitsPaused: paused });
-  const e = engine();
-  if (e) e.orbitsPaused = paused;
+/** Play a film (when films are on), then go on to `then`; with films off, straight to `then`. */
+export function playFilm(id: FilmId, then: Modal = null, args?: FilmArgs) {
+  modal.value = filmsOn() ? { kind: 'film', id, args, then: then ?? undefined } : then;
+}
+
+/** The films this player has seen, kept across games (the Codex lists them to play again). */
+export function filmsSeen(): FilmId[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(`${STORE}films`) ?? '[]');
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+export function sawFilm(id: FilmId) {
+  const seen = filmsSeen();
+  if (seen.includes(id)) return;
+  try {
+    localStorage.setItem(`${STORE}films`, JSON.stringify([...seen, id]));
+  } catch {
+    // (no storage here: it is only forgotten)
+  }
 }

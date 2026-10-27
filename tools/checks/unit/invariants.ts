@@ -32,7 +32,7 @@ for (let g = 0; g < games; g++) {
   const seed = 1000 + g * 7919;
   const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard' });
   let guard = 0;
-  while (!s.outcome && guard++ < 1200) {
+  while (!s.civ.outcome && guard++ < 1200) {
     autoPlay(s, 'competent');
     const era0 = s.era;
     endTurn(s);
@@ -44,14 +44,14 @@ for (let g = 0; g < games; g++) {
     for (const c of Object.values(s.colonies)) {
       for (const t of THREADS) if (c.pops[t] < 0) hit('negative people', `${tag} ${c.name} ${t} ${c.pops[t]}`);
       if (c.cryo < 0) hit('negative sleepers', tag);
-      if (s.bodies[c.bodyId]?.dissolved && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) hit('a settlement on a world that is gone', `${tag} ${c.name}`);
+      if (s.bodies[c.bodyId]?.dissolved && c.form !== 'leptonic' && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) hit('a settlement on a world that is gone', `${tag} ${c.name}`);
     }
     if (s.civ.energy < 0) hit('negative energy', `${tag} ${s.civ.energy}`);
     if (s.civ.matter < 0) hit('negative matter', `${tag} ${s.civ.matter}`);
     for (const sv of Object.values(s.survivors)) if (sv.alive && (sv.health < 0 || sv.health > 1)) hit('survivor health outside 0..1', `${tag} ${sv.name} ${sv.health.toFixed(3)}`);
     for (const f of Object.values(s.fleets)) for (const x of f.ships) if (x.hp <= 0) hit('a ship at zero hit points', tag);
   }
-  const k = s.outcome ? s.outcome.kind : 'unfinished';
+  const k = s.civ.outcome ? s.civ.outcome.kind : 'unfinished';
   outcomes[k] = (outcomes[k] ?? 0) + 1;
 }
 console.log(`  ${games} games, ${turns} turns: ${Object.entries(outcomes).map(([k, n]) => `${k} ${n}`).join(', ')}`);

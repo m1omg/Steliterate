@@ -3,11 +3,12 @@ import { useState } from 'preact/hooks';
 import { siteValue } from '../../game/sim/sites';
 import { ANOMALIES } from '../../game/data/events';
 import { bodyClimate, hawkingLight, sourceLight } from '../../game/physics';
-import { LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
+import { LANCE_SPEED, LIVING_WORLD, isLance, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { habitabilityOf } from '../../game/sim/terraform';
 import { NEEDS, SiteStrip, bestOf, starSites, worldSites, type Need, type Sites } from '../siteStrip';
 import { YIELDS, yieldOf, yieldText, yieldTip, type YieldKey } from '../yields';
-import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
+import { SHIP_BY_ID, fleetLook, isWarship, strength } from '../../game/data/ships';
+import { tacticOf } from '../../game/data/tactics';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, formatYearsShort } from '../../game/eras';
 import { computeMods } from '../../game/sim/mods';
@@ -16,7 +17,7 @@ import { orderFleet } from '../../game/sim/actions';
 import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
-import { colonies, distLy, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { colonies, distLy, fleets, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
 import { nestSeenAt, swarmSight } from '../../game/sim/sight';
 import { atWar } from '../../game/sim/war';
 import { PROMISE_TURNS } from '../../game/sim/claims';
@@ -108,12 +109,12 @@ function shipSummary(f: Fleet): string {
 export function FleetsModal({ s }: { s: GameState }) {
   void rev.value;
   const mods = computeMods(s);
-  const fleets = Object.values(s.fleets).sort((a, b) => Number(!!a.at) - Number(!!b.at) || a.name.localeCompare(b.name));
+  const ours = fleets(s).sort((a, b) => Number(!!a.at) - Number(!!b.at) || a.name.localeCompare(b.name));
   return (
-    <ModalFrame title="Fleets" eyebrow={`${fleets.length} fleet${fleets.length === 1 ? '' : 's'}`} icon="fleet" narrow>
-      {fleets.length === 0 && <p class="dim">No ships. Build probes and settlers at a settlement with a Shipyard.</p>}
+    <ModalFrame title="Fleets" eyebrow={`${ours.length} fleet${ours.length === 1 ? '' : 's'}`} icon="fleet" narrow>
+      {ours.length === 0 && <p class="dim">No ships. Build probes and settlers at a settlement with a Shipyard.</p>}
       <div class="list">
-        {fleets.map((f) => {
+        {ours.map((f) => {
           const moving = !f.at && f.to;
           const left = moving ? f.distance - f.traveled : 0;
           const settler = f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles);
@@ -122,14 +123,17 @@ export function FleetsModal({ s }: { s: GameState }) {
               <img class={`fleet-thumb${moving ? ' moving' : ''}`} src={`art/ships/${fleetLook(f.ships.map((x) => x.cls))}.png`} alt="" />
               <span class="grow">
                 {f.name}
-                <div class="faint" style={{ fontSize: '12.5px' }}>{shipSummary(f)}</div>
+                <div class="faint" style={{ fontSize: '12.5px' }}>
+                  {shipSummary(f)}
+                  {tacticOf(f).id !== 'line' ? ` · ${tacticOf(f).name.toLowerCase()}` : ''}
+                </div>
               </span>
               <span class="mono" style={{ fontSize: '12.5px', textAlign: 'right' }}>
                 {moving ? (
                   <>
                     → {s.systems[f.to!]?.name}
                     <div class="faint">
-                      {formatDistance(left)} · {tripLabel(s, left, mods)}{f.order === 'colonize' ? ' · to settle' : f.auto === 'explore' ? ' · exploring' : f.order === 'survey' ? ' · to survey' : ''}
+                      {formatDistance(left)} · {tripLabel(s, left, isLance(f) ? { ...mods, speed: Math.max(mods.speed, LANCE_SPEED) } : mods)}{f.order === 'colonize' ? ' · to settle' : f.order === 'strike' ? ' · to strike' : f.auto === 'explore' ? ' · exploring' : f.order === 'survey' ? ' · to survey' : ''}
                     </div>
                   </>
                 ) : (
@@ -487,7 +491,7 @@ interface Plea {
 /** Every star where a civilization asked us for warships against a swarm, unanswered or promised. */
 export function pleaStars(s: GameState): Plea[] {
   const out = new Map<string, Plea>();
-  for (const sig of s.signals) {
+  for (const sig of s.civ.signals) {
     if (sig.kind !== 'swarm_plea' || sig.arrivedTurn === null || sig.resolved) continue;
     const sv = s.survivors[sig.from];
     const sys = s.systems[String(sig.data.systemId)];
@@ -528,7 +532,7 @@ function FoesList({ s, send }: { s: GameState; send?: Fleet }) {
     .sort((a, b) => a.ly - b.ly);
   const asked = rows.filter((r) => pleas.has(r.sys.id));
   const chipGap = { marginLeft: '6px' };
-  const attack = send ? send.ships.reduce((a, x) => a + (SHIP_BY_ID[x.cls]?.settles ? 0 : (SHIP_BY_ID[x.cls]?.attack ?? 0)), 0) : 0;
+  const sum = (against: 'swarms' | 'ships' | 'settlements') => (send ? send.ships.reduce((a, x) => a + (isWarship(x.cls) ? strength(x.cls, against) : 0), 0) : 0);
   const row = ({ sys, ly }: { sys: StarSystem; ly: number }) => {
     const sw = Object.values(s.swarms).find((w) => w.systemId === sys.id && !w.tamed && seen(w));
     const plea = pleas.get(sys.id);
@@ -567,7 +571,7 @@ function FoesList({ s, send }: { s: GameState; send?: Fleet }) {
     <>
       {send && isWarFleet(send) && (
         <p class="dim" style={{ fontSize: '13.5px', margin: '0 0 6px' }}>
-          {send.name}: attack {n1(attack)} against swarms and other civilizations.
+          {send.name}: attack {n1(sum('swarms'))} against swarms, {n1(sum('ships'))} against other civilizations’ ships, {n1(sum('settlements'))} against their settlements.
         </p>
       )}
       {asked.length > 0 && (
@@ -752,7 +756,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
       best,
       room: rs.reduce((a, r) => a + r.room, 0),
       living: rs.filter((r) => r.hab >= LIVING_WORLD).length,
-      settled: rs.some((r) => r.b.colonyId),
+      settled: rs.some((r) => !!r.b.colonyId && !!ownColony(s, r.b.colonyId)),
       finds: [...new Set(rs.flatMap((r) => r.finds))],
       sites: bySystem ? starSites(s, rs[0].sys) : {},
     };
@@ -763,7 +767,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
   const deepOnly = bySystem && !findsOnly
     ? Object.values(s.systems)
         .filter((x) => s.civ.known[x.id] === 2 && !x.gone && !listed.has(x.id) && worldless(x) && (!open || !x.bodies.some((id) => s.bodies[id]?.colonyId)))
-        .map((x): StarRow => ({ sys: x, ly: distLy(home, x), worlds: 0, best: null, room: 0, living: 0, settled: x.bodies.some((id) => !!s.bodies[id]?.colonyId), finds: [], sites: starSites(s, x) }))
+        .map((x): StarRow => ({ sys: x, ly: distLy(home, x), worlds: 0, best: null, room: 0, living: 0, settled: x.bodies.some((id) => !!s.bodies[id]?.colonyId && !!ownColony(s, s.bodies[id].colonyId!)), finds: [], sites: starSites(s, x) }))
     : [];
   const mindOf = MIND_SORT[sort];
   const score = (x: StarRow) => x.best?.v?.score ?? (mindOf ? (x.sites[mindOf as Need]?.v.score ?? -1e9) : -1e9);
@@ -848,7 +852,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
               <span class="grow">
                 {b.name} <span class="faint">{bodyKindName(s, b)}</span>
                 {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
-                {b.colonyId && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
+                {b.colonyId && ownColony(s, b.colonyId) && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
                 {finds.map((t) => (
                   <span key={t} class="chip" style={{ marginLeft: '6px' }} data-tip={TRAIT_NAME[t][1]}>{TRAIT_NAME[t][0]}</span>
                 ))}

@@ -6,14 +6,20 @@ export interface AudioCore {
   ctx: AudioContext;
   master: GainNode;
   music: GainNode;
+  /** Between the music and the master: silent while a film plays (duckMusic). */
+  duck: GainNode;
+  /** A film's own sound, at the music's volume (part 4). */
+  film: GainNode;
   sfx: GainNode;
   reverb: ConvolverNode;
   reverbIn: GainNode;
   /**
-   * The music's way into the reverb (the synth's echo), at the music's volume. It went into the
-   * reverb directly before (15 Oct), so the slider at 0 still left the synth's echo heard.
+   * The music's way into the reverb (the synth's echo): at the music's volume, then silent under a
+   * film as the music is (`wetDuck`). It went into the reverb directly before (15 Oct), so the
+   * slider at 0, or a film, still left the synth's echo heard.
    */
   musicWet: GainNode;
+  wetDuck: GainNode;
   noise: AudioBuffer;
 }
 
@@ -99,9 +105,13 @@ export function unlockAudio() {
   master.connect(comp).connect(ctx.destination);
   const music = ctx.createGain();
   const sfx = ctx.createGain();
+  const duck = ctx.createGain();
+  const film = ctx.createGain();
   music.gain.value = volumes.music * volumes.music;
+  film.gain.value = volumes.music * volumes.music;
   sfx.gain.value = volumes.sfx * volumes.sfx;
-  music.connect(master);
+  music.connect(duck).connect(master);
+  film.connect(master);
   sfx.connect(master);
   const reverb = ctx.createConvolver();
   reverb.buffer = impulse(ctx, 3, 3.2, 5.5);
@@ -111,9 +121,10 @@ export function unlockAudio() {
   reverbOut.gain.value = 0.55;
   reverbIn.connect(reverb).connect(reverbOut).connect(master);
   const musicWet = ctx.createGain();
+  const wetDuck = ctx.createGain();
   musicWet.gain.value = wetLevel(volumes.music);
-  musicWet.connect(reverbIn);
-  core = { ctx, master, music, sfx, reverb, reverbIn, musicWet, noise: noiseBuffer(ctx) };
+  musicWet.connect(wetDuck).connect(reverbIn);
+  core = { ctx, master, music, duck, film, sfx, reverb, reverbIn, musicWet, wetDuck, noise: noiseBuffer(ctx) };
   void ctx.resume();
   for (const fn of listeners.splice(0)) fn();
 }
@@ -125,8 +136,20 @@ export function setVolumes(music: number, sfx: number) {
   const t = core.ctx.currentTime;
   // perceptual (squared) volume curve
   core.music.gain.setTargetAtTime(music * music, t, 0.1);
+  core.film.gain.setTargetAtTime(music * music, t, 0.1);
   core.musicWet.gain.setTargetAtTime(wetLevel(music), t, 0.1);
   core.sfx.gain.setTargetAtTime(sfx * sfx, t, 0.05);
+}
+
+/** The music fades out while a film plays its own (and back in after), ramped on the audio clock (music.hold pauses it too). */
+export function duckMusic(on: boolean) {
+  if (!core) return;
+  const t = core.ctx.currentTime;
+  for (const g of [core.duck.gain, core.wetDuck.gain]) {
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(on ? 0 : 1, t + (on ? 0.6 : 1.2));
+  }
 }
 
 export function installUnlock() {

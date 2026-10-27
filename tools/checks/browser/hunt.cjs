@@ -20,10 +20,10 @@ run(async () => {
       s.swarms = {};
       s.swarms.nest = { id: 'nest', systemId: a.id, from: null, to: null, traveled: 0, distance: 0, size: 1.5, awake: true, tamed: false, appetite: 1 };
       s.swarms.part = { id: 'part', systemId: null, from: a.id, to: b.id, traveled: 0, distance: ly(a, b), size: 1.6, awake: true, tamed: false, appetite: 1, prey: 'lamp' };
-      s.fleets.lamp = { id: 'lamp', name: 'Lamp', ships: [{ cls: 'probe', hp: 2 }], at: b.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' };
+      s.fleets.lamp = { id: 'lamp', owner: s.player, name: 'Lamp', ships: [{ cls: 'probe', hp: 2 }], at: b.id, from: null, to: null, traveled: 0, distance: 0, order: 'hold' };
       s.civ.known[a.id] = 2;
       s.civ.known[b.id] = 2;
-      s.flags.first_swarm = -1;
+      s.civ.flags.first_swarm = -1;
       window.__stel.refresh();
       return { a: a.id, b: b.id, aName: a.name };
     }
@@ -51,7 +51,7 @@ run(async () => {
   const here = await page.evaluate(() => document.querySelector('.drawer .drawer-body .warn')?.textContent ?? '');
   check(/came here for this ship\. It strikes each turn the ship stays/.test(here), `there: "${here.trim()}"`);
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.waitForTimeout(300);

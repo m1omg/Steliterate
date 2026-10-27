@@ -56,10 +56,10 @@ async function routeFonts(ctx) {
 }
 
 /** A page with console errors collected (they fail the check), opened on the game. */
-// The survey reveals (21 Oct) are off in every check unless it asks for them (`reveals: true`): a
-// system entered after a survey would otherwise fly the camera and hide the interface.
-async function newPage(browser, errors, width = 1400, height = 900, touch = false, query = '', reveals = false) {
-  if (!reveals) query = query ? `${query}&noreveals` : '?noreveals';
+// The films (part 4) are off in every check unless it asks for them (`films: true`): a crossing
+// or a new game would otherwise open one first.
+async function newPage(browser, errors, width = 1400, height = 900, touch = false, query = '', films = false) {
+  if (!films) query = query ? `${query}&nofilms` : '?nofilms';
   const ctx = await browser.newContext({ viewport: { width, height }, ...(touch ? { isMobile: true, hasTouch: true } : {}) });
   await routeFonts(ctx);
   const page = await ctx.newPage();
@@ -83,15 +83,17 @@ async function newPage(browser, errors, width = 1400, height = 900, touch = fals
  * Starts a check: the browser, a page on the game (with a new game of `seed` if given), and the
  * folder its screenshots go to.
  */
-async function start(name, { width = 1400, height = 900, seed, reveals = false } = {}) {
+// `asleep`: the neighbours do not play (civsAsleep), for a check that sets a neighbour's record by
+// hand, as the old light neighbours were; a civilization of its own would read its record anew.
+async function start(name, { width = 1400, height = 900, seed, asleep = false, films = false } = {}) {
   await waitForServer();
   const out = path.join(outRoot, name);
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch(LAUNCH);
   const errors = [];
-  const page = await newPage(browser, errors, width, height, false, '', reveals);
+  const page = await newPage(browser, errors, width, height, false, '', films);
   if (seed !== undefined) {
-    await page.evaluate((sd) => window.__stel.newGame({ seed: sd }), seed);
+    await page.evaluate(([sd, zz]) => window.__stel.newGame({ seed: sd, ...(zz ? { civsAsleep: true } : {}) }), [seed, asleep]);
     await page.waitForTimeout(1000);
   }
   return {
@@ -130,4 +132,4 @@ function run(body) {
   });
 }
 
-module.exports = { check, start, finish, run, url };
+module.exports = { check, start, finish, run, url, routeFonts, LAUNCH };

@@ -1,8 +1,11 @@
 // Living neighbours. Phase 0, honesty: energy we send travels as a beam and helps when the light
 // gets there; what we do to one civilization reaches the others when its light does; the Hunger in
-// us caps how well anyone can think of us; those we raided into the dark leave us nothing; asking
+// us, as far as they have heard of it (part 2b), caps how well anyone can think of us; those we raided into the dark leave us nothing; asking
 // needs clocks in step; refugees come only as far as we have room; nothing is sent to the dead; a
 // fork with no settlement of its own finds a star of its own.
+// (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
+// them, on their records, which a check sets by hand; unit/others checks the neighbours as
+// civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -15,18 +18,19 @@ import { capacity, reserveCapacity } from '../../../src/game/sim/economy';
 import { turnStep } from '../../../src/game/sim/flare';
 import { fork } from '../../../src/game/sim/society';
 import { logTurnLength } from '../../../src/game/eras';
-import { capital, distLy } from '../../../src/game/sim/util';
+import { capital, distLy, marks } from '../../../src/game/sim/util';
 import type { GameState, Survivor } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 const game = (turns: number) => {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < turns && !s.outcome; g++) {
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
+  for (let g = 0; g < turns && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   return s;
 };
 const first = (s: GameState): Survivor => {
@@ -121,9 +125,13 @@ const later = (s: GameState, years: number) => {
   const s = game(30);
   const sv = first(s);
   sv.disposition = 50;
+  // (our true Taint, unheard of, caps nothing: what they decide by is what they have heard)
   s.civ.taint = 60;
   theirTurn(s);
-  check(Math.abs(sv.disposition - 48) < 1e-9, `with Taint 60 their regard sinks toward 10, two a turn (${sv.disposition})`);
+  check(Math.abs(sv.disposition - 50) < 1e-9, `Taint 60 they have not heard of: their regard stays (${sv.disposition})`);
+  sv.heardTaint = 60;
+  theirTurn(s);
+  check(Math.abs(sv.disposition - 48) < 1e-9, `with Taint 60 heard of, their regard sinks toward 10, two a turn (${sv.disposition})`);
   for (let i = 0; i < 40; i++) theirTurn(s);
   check(Math.abs(sv.disposition - 10) < 1e-9, `and stays there (${sv.disposition.toFixed(1)})`);
 }
@@ -134,9 +142,9 @@ const later = (s: GameState, years: number) => {
   const sv = first(s);
   sv.health = 0.01;
   sv.raidedAt = s.turn - 2;
-  const n = s.signals.length;
+  const n = s.civ.signals.length;
   theirTurn(s);
-  check(!sv.alive && !s.signals.slice(n).some((x) => x.kind === 'last'), 'a civilization we raided into the dark sends us no last transmission');
+  check(!sv.alive && !s.civ.signals.slice(n).some((x) => x.kind === 'last'), 'a civilization we raided into the dark sends us no last transmission');
 }
 
 // ---------------------------------------------------------------- refugees, only as many as we have room for
@@ -186,14 +194,14 @@ const later = (s: GameState, years: number) => {
   check(proposePact(s, sv.id, 'aid') === null && s.civ.accord === 470 && !!sv.proposal && Math.abs(sv.proposal.at - (s.years + d)) < 1e-6, 'proposing Mutual Aid spends it, and the proposal sets out at light speed');
   check(pactCost(s) === 48 && pactBlocked(s, sv, 'archives') === 'Our proposal of Mutual Aid is still crossing to them, or their answer is.', `the next is dearer (${pactCost(s)}), and one proposal at a time`);
   later(s, d * 1.01);
-  const n = s.signals.length;
+  const n = s.civ.signals.length;
   theirTurn(s);
-  const answer = s.signals.slice(n).find((x) => x.kind === 'pact_answer');
+  const answer = s.civ.signals.slice(n).find((x) => x.kind === 'pact_answer');
   check(!!answer && Number(answer.data.yes) === 1 && Math.abs(answer.arriveYears - (s.years + d)) < 1e-6, 'it reaches them, they agree, and their answer sets out back');
   check(!hasPact(sv, 'aid'), 'not yet in force: the answer is still on its way');
-  const n2 = s.signals.length;
+  const n2 = s.civ.signals.length;
   theirTurn(s);
-  check(!s.signals.slice(n2).some((x) => x.kind === 'pact_answer'), 'they answer once, not every turn the answer is on its way');
+  check(!s.civ.signals.slice(n2).some((x) => x.kind === 'pact_answer'), 'they answer once, not every turn the answer is on its way');
   later(s, d * 1.01);
   for (const x of deliverSignals(s)) if (x.kind === 'pact_answer') answerArrived(s, x.from, x.data);
   check(hasPact(sv, 'aid') && !sv.proposal, 'when their answer arrives, Mutual Aid is in force');
@@ -216,13 +224,13 @@ const later = (s: GameState, years: number) => {
     // only what we can spare: 30% of our reserve stays
     const t = clone(s);
     const tv = t.survivors[sv.id];
-    delete t.civ.flags[`pact_aid_out_${sv.id}`];
+    delete marks(tv).aid_out;
     const keep = reserveCapacity(t, computeMods(t)) * 0.3;
     t.civ.energy = keep + 12;
     pactsTurn(t);
     check(t.civ.energy >= keep - 1e-9 && t.civ.energy < keep + 12 && tv.beams!.length > sv.beams!.length, `and only what we can spare: 30% of our reserve stays (${(keep + 12).toFixed(0)} → ${t.civ.energy.toFixed(0)})`);
     t.civ.energy = keep + 3;
-    delete t.civ.flags[`pact_aid_out_${sv.id}`];
+    delete marks(tv).aid_out;
     const e0 = t.civ.energy;
     pactsTurn(t);
     check(t.civ.energy === e0, 'with less than 5 to spare, nothing goes');
@@ -230,9 +238,9 @@ const later = (s: GameState, years: number) => {
   sv.health = 0.8;
   s.civ.energy = 1;
   s.civ.flags.last_energy_net = -5;
-  const m = s.signals.length;
+  const m = s.civ.signals.length;
   pactsTurn(s);
-  const help = s.signals.slice(m).find((x) => x.kind === 'aid_answer');
+  const help = s.civ.signals.slice(m).find((x) => x.kind === 'aid_answer');
   check(!!help && Number(help.data.energy) > 0 && Math.abs(help.arriveYears - (s.years + 2 * d)) < 1e-6, `we are failing: their help comes, after they see it and their beam crosses back (${help?.data.energy})`);
   // Open Archives
   acceptOffer(s, sv, 'archives');
@@ -248,8 +256,8 @@ const later = (s: GameState, years: number) => {
   // they renounce what they no longer believe in
   sv.disposition = -15;
   sv.lastSent = -99;
-  const k = s.signals.length;
-  check(theirPacts(s, sv, () => 0.5) && !hasPact(sv, 'aid') && s.signals.slice(k).some((x) => x.kind === 'pact_ended'), 'turned against us, they renounce every pact');
+  const k = s.civ.signals.length;
+  check(theirPacts(s, sv, () => 0.5) && !hasPact(sv, 'aid') && s.civ.signals.slice(k).some((x) => x.kind === 'pact_ended'), 'turned against us, they renounce every pact');
 }
 void clone;
 done('NEIGHBOURS');

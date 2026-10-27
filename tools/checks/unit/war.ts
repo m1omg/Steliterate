@@ -5,6 +5,9 @@
 // draws the Hunger, those who hate us join against us, and while it lasts there are no pacts, no
 // asking, no refuge. Against a fork, or a neighbour who keeps raiding us, few blame us, and taking
 // the star back carries no Taint.
+// (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
+// them, on their records, which a check sets by hand; unit/others checks the neighbours as
+// civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -13,20 +16,21 @@ import { pactBlocked } from '../../../src/game/sim/pacts';
 import { mayComeToUs } from '../../../src/game/sim/refuge';
 import { ARMING, SIEGE_TURNS, WAR_ACCORD, declareWar, inCoalition, makePeace, raidedUs, seizeBlocked, warBlocked, warCause, warDefence, warHeat, warTurn } from '../../../src/game/sim/war';
 import { newFleet } from '../../../src/game/sim/fleets';
-import { capital, colonies } from '../../../src/game/sim/util';
+import { capital, colonies, marks } from '../../../src/game/sim/util';
 import type { GameState, Survivor } from '../../../src/game/types';
 import { THREADS } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 const base = (() => {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 30 && !s.outcome; g++) {
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
+  for (let g = 0; g < 30 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
-  s.signals.length = 0;
+  s.civ.pending.length = 0;
+  s.civ.signals.length = 0;
   s.civ.taint = 0;
   return s;
 })();
@@ -59,7 +63,7 @@ const fleetAt = (s: GameState, sv: Survivor, n: number) => newFleet(s, sv.homeSy
   check(!sv.pacts?.aid && !sv.pacts?.archives, 'our pacts with them end');
   check((sv.news ?? []).some((n) => n.delta === -40) && (other.news ?? []).some((n) => n.delta === -15 && /went to war/.test(n.what)), 'they hear of it (−40), and so does everyone else (−15), each when the light arrives');
   check(pactBlocked(s, sv, 'watch') === 'We are at war with them.' && askBlocked(s, sv) === 'We are at war with them.' && !mayComeToUs(s, sv), 'no pacts, no asking, no refuge');
-  s.civ.flags[`joint_${sv.id}`] = 1;
+  marks(sv).joint = 1;
   check(jointIncome(s) === 0, 'and a shared work stops paying');
   other.disposition = -30;
   check(inCoalition(s, other), 'a civilization that hates us joins against us');
@@ -74,7 +78,7 @@ const fleetAt = (s: GameState, sv: Survivor, n: number) => newFleet(s, sv.homeSy
 {
   const { s, sv, other } = setup();
   check(warCause(s, sv) === null, 'one raid is not a cause');
-  s.civ.flags[`raid_last_${sv.id}`] = s.turn - 15;
+  marks(sv).raid_last = s.turn - 15;
   raidedUs(s, sv);
   check(warCause(s, sv) === 'They keep raiding us.', 'two raids within twenty turns are');
   const standing = { ...s.civ.standing };
@@ -138,8 +142,8 @@ const fleetAt = (s: GameState, sv: Survivor, n: number) => newFleet(s, sv.homeSy
 
 // ---------------------------------------------------------------- the warlike autoplayer: a whole game, no crash
 {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 200 && !s.outcome; g++) {
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
+  for (let g = 0; g < 200 && !s.civ.outcome; g++) {
     autoPlay(s, 'warlike');
     endTurn(s);
   }

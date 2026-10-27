@@ -24,7 +24,7 @@ const BASE = '9eea773-seed1000-turn119-merger.json.gz'; // seed 1000, stable fat
 const OLD = '98139af-seed1000-turn121-last-star-out.json.gz';
 const round = (s: GameState) => readSave(saveFile(s).text)!;
 const lastStar = (s: GameState) => Object.values(s.systems).find((x) => x.name === 'The Last Star' && !x.gone) as StarSystem | undefined;
-const pendingStar = (s: GameState) => s.pending.filter((p) => p.defId === 'last_star');
+const pendingStar = (s: GameState) => s.civ.pending.filter((p) => p.defId === 'last_star');
 const lightNow = (s: GameState, sys: StarSystem) => sourceLight(s, sys, s.years, turnStep(s).turnLength).light;
 
 /** The old save's own text, before migrate: main's code wrote it. */
@@ -32,7 +32,7 @@ function oldRaw(): any {
   const bytes = fs.readFileSync(new URL(`../../saves/${OLD}`, import.meta.url));
   return JSON.parse(new TextDecoder().decode(zlib.gunzipSync(bytes)));
 }
-const fromRaw = (raw: unknown) => readSave(JSON.stringify(raw))!;
+const fromRaw = (raw: unknown) => readSave(JSON.stringify(raw), true)!;
 
 /** The base save moved to η `at`, the gathering done this turn, at this pace (and fate). */
 function gathering(at: number, pace: number, fate?: 'decay' | 'stable' | 'curvature'): GameState {
@@ -66,7 +66,7 @@ for (const pace of [0, -1, -2]) {
   near(`pace ${pace}: it burns until the universe is three times as old`, sys.primary.diesAt!, lastStarDies(s, to));
   check(sys.primary.diesAt! >= 3 * to, `pace ${pace}: …at least`);
   check(pendingStar(s).length === 1, `pace ${pace}: its event waits (Light in the Halo)`);
-  const sig = s.signals.find((x) => x.kind === 'dark_star' && x.from === 'dark');
+  const sig = s.civ.signals.find((x) => x.kind === 'dark_star' && x.from === 'dark');
   check(!!sig && sig.title === rawSig.title && sig.text === rawSig.text, `pace ${pace}: the Unlit’s message is word for word as before`);
   const light = lightNow(s, sys);
   check(light > 0, `pace ${pace}: the next turn draws on its light (×${light.toFixed(3)})`);
@@ -137,7 +137,7 @@ for (const pace of [0, -1, -2]) {
   check(!!sys && sys.primary.diesAt! > 1e39, 'where protons decay, lit at η 38.75 it would burn past η 39');
   answerEvent(s, pendingStar(s)[0].uid, 0);
   check(!!starClock(s), 'kept time with');
-  for (let i = 0; i < 8 && s.era === 'degenerate' && !s.outcome; i++) endTurn(s);
+  for (let i = 0; i < 8 && s.era === 'degenerate' && !s.civ.outcome; i++) endTurn(s);
   const p = Object.values(s.systems).find((x) => x.name === 'The Last Star')!.primary;
   check(s.eta >= 39 && p.kind === 'void', `the Great Decay took it with the rest of matter (η ${s.eta.toFixed(2)})`);
   check(!s.civ.flags.star_until && !s.civ.flags.star_step && !starClock(s), 'and the clock kept with it ended there');
@@ -184,7 +184,7 @@ for (const pace of [0, -1, -2]) {
   endTurn(s);
   const sys = lastStar(s);
   check(!!sys && sys.primary.kind === 'black_dwarf' && pendingStar(s).length === 0, 'in the Dark Era it lights and goes out within the turn, as it always did there: no clock to offer');
-  check(s.log.some((e) => e.text.startsWith('The Last Star lit and went out within the turn')) && s.signals.some((x) => x.kind === 'dark_star'), 'the Record says so, and the Unlit’s message still comes');
+  check(s.civ.log.some((e) => e.text.startsWith('The Last Star lit and went out within the turn')) && s.civ.signals.some((x) => x.kind === 'dark_star'), 'the Record says so, and the Unlit’s message still comes');
   check(Number.isFinite(s.civ.energy) && Number.isFinite(sourceLight(s, sys!, s.years, s.turnLength).light), 'nothing reads NaN from it');
 }
 
@@ -198,11 +198,11 @@ for (const pace of [0, -1, -2]) {
   near('the coming turn at the Tide is lived in its light', lightNow(s, sys), 10);
   const r = round(s);
   check(pendingStar(r).length === 1 && lastStar(r)!.primary.bornAt === s.years, 'saved and loaded again: nothing more (one event, the same star)');
-  check(r.signals.find((x) => x.kind === 'dark_star')!.text === rawSig.text, 'the Unlit’s message is untouched');
+  check(r.civ.signals.find((x) => x.kind === 'dark_star')!.text === rawSig.text, 'the Unlit’s message is untouched');
   answerEvent(r, pendingStar(r)[0].uid, 0);
   const dies = lastStar(r)!.primary.diesAt!;
   let n = 0;
-  while (r.years < dies && n < 8 && !r.outcome) {
+  while (r.years < dies && n < 8 && !r.civ.outcome) {
     endTurn(r);
     n++;
   }
@@ -219,7 +219,7 @@ for (const pace of [0, -1, -2]) {
   ok('it went out turns after it lit', (x) => {
     for (const e of x.log) if (e.text === 'The star at The Last Star has burned out.') e.turn += 3;
   });
-  ok('matter is gone', (x) => (x.civ.flags.matter_gone = 1));
+  ok('matter is gone', (x) => (x.flags.matter_gone = 1));
   ok('lit by the new rule', (x) => (x.civ.flags.last_star_lit = 1));
 }
 

@@ -35,11 +35,15 @@ export function done(tag: string, note = ''): void {
   process.exitCode = bad ? 1 : 0;
 }
 
-/** A save from tools/saves/ (JSON or a save code, gzipped or not), migrated as the game loads it. */
+/**
+ * A save from tools/saves/ (JSON or a save code, gzipped or not), migrated as the older build
+ * loaded it. These fixtures are from before the new version, which refuses them to the player
+ * (13 Oct, `FIRST_OF_THIS_LINE` in save.ts); the checks still read them, as `legacy`.
+ */
 export function loadSave(name: string): GameState {
   const bytes = fs.readFileSync(new URL(`../saves/${name}`, import.meta.url));
   const text = new TextDecoder().decode(name.endsWith('.gz') ? zlib.gunzipSync(bytes) : bytes);
-  const state = readSave(text);
+  const state = readSave(text, true);
   if (!state) throw new Error(`${name} is not a readable save`);
   return state;
 }

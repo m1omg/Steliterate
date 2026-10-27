@@ -8,6 +8,7 @@ import { createPost, type PostChain } from './post';
 import { SystemView, type RevealEnd, type RevealStep } from './systemView';
 import { VIEW_MODE } from './shaders/bodies';
 import { calendarEra } from '../game/fate';
+import { allColonies, colonies, ownColony } from '../game/sim/util';
 
 export type ViewKind = 'galaxy' | 'system';
 export type Quality = 'low' | 'medium' | 'high';
@@ -22,7 +23,7 @@ export interface EngineEvents {
   onFollow?: (f: Followed | null) => void;
   /** The player started to turn, pan or zoom the view by hand. */
   onGesture?: () => void;
-  /** Where a survey reveal has come to (the caption), and null once it is over. */
+  /** Where a survey reveal has come to (the card), and null once it is over. */
   onReveal?: (r: RevealStep | null) => void;
   /** Whether survey reveals play (Settings). */
   revealsOn?: () => boolean;
@@ -186,9 +187,13 @@ export class Engine {
   }
 
   setQuality(q: Quality) {
+    const was = this.system.quality;
     this.quality = q;
     this.resize();
     this.post.bloom.enabled = q !== 'low';
+    // the system view draws fewer filaments, motes and ellipses on Low, and colour past white only where bloom runs
+    this.system.quality = q;
+    if (was !== q && this.view === 'system' && this.system.systemId && this.state) this.system.build(this.state, this.system.systemId);
   }
 
   private pixelRatio(): number {
@@ -701,7 +706,7 @@ export class Engine {
         }
         for (const r of state.regions) if (r.kind === 'outlier' || r.kind === 'globular') items.push({ text: r.name, pos: new THREE.Vector3(r.pos.x, r.pos.y + 20, r.pos.z), cls: 'province', w: 9 });
       } else {
-        const colonized = new Set(Object.values(state.colonies).map((c) => c.systemId));
+        const colonized = new Set(colonies(state).map((c) => c.systemId));
         const cand = this.galaxy.pickables
           .filter((p) => p.kind === 'system')
           .map((p) => ({ p, dd: p.pos.distanceTo(this.rig.target) }))
@@ -727,10 +732,23 @@ export class Engine {
         for (const p of this.galaxy.pickables) {
           if (p.kind === 'system' && others.has(p.id) && !cand.some((c) => c.p.id === p.id)) cand.push({ p, dd: 0 });
         }
+        // a star where we fought last turn, or where a siege of ours or of theirs on ours holds, is
+        // marked ✕ (the combat system)
+        const me = state.civ.id;
+        const war = new Set<string>();
+        for (const b of state.battles) if (b.turn === state.turn - 1 && b.sides?.some((x) => x.owner === me)) war.add(b.systemId);
+        for (const c of allColonies(state)) if (c.siege && (c.owner === me || c.siege.by === me)) war.add(c.systemId);
+        for (const p of this.galaxy.pickables) {
+          if (p.kind === 'system' && war.has(p.id) && !cand.some((c) => c.p.id === p.id)) cand.push({ p, dd: 0 });
+        }
         for (const { p } of cand) {
           const s = state.systems[p.id];
           const mine = colonized.has(p.id);
           const sv = others.get(p.id);
+          if (war.has(p.id)) {
+            items.push({ text: `✕ ${sv ? sv.name : s.name}`, pos: p.pos, cls: 'battle', w: 6, pick: p.id });
+            continue;
+          }
           if (sv) {
             items.push({ text: `◈ ${sv.name}`, pos: p.pos, cls: 'others', w: 4, color: sv.color, pick: p.id });
             continue;
@@ -756,7 +774,7 @@ export class Engine {
           items.push({ text: `${name} · ◈ ${sv.name}`, pos: p.pos.clone().add(lift), cls: 'others', w: 3, color: sv.color, pick: p.id });
           continue;
         }
-        items.push({ text: name, pos: p.pos.clone().add(lift), cls: b.colonyId ? 'mine' : 'body', w: 2, pick: p.id });
+        items.push({ text: name, pos: p.pos.clone().add(lift), cls: b.colonyId && ownColony(state, b.colonyId) ? 'mine' : 'body', w: 2, pick: p.id });
       }
     }
     let i = 0;

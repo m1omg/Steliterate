@@ -41,6 +41,7 @@ export interface TechDef {
   needsStable?: boolean; // only if protons are stable
   needsDecay?: boolean; // only if protons decay
   needsCurvature?: boolean; // only if curvature radiation is unmaking matter
+  needsUnstable?: boolean; // only if matter does not last (protons decay, or curvature radiation unmakes it)
 }
 
 const T = (t: TechDef) => t;
@@ -103,7 +104,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'deep_time_protocols', name: 'Deep-Time Protocols', era: 'degenerate', field: 'mind', cost: 600, requires: ['glacial_cognition'], desc: 'Echo clock limit 10³² years.', effects: { echoMaxClock: 32 } }),
   T({ id: 'abyssal_thought', name: 'Abyssal Thought', era: 'degenerate', field: 'mind', cost: 920, requires: ['deep_time_protocols'], desc: 'Echo clock limit 10⁴⁰ years.', effects: { echoMaxClock: 40 } }),
   T({ id: 'quickening', name: 'Quickening', era: 'degenerate', field: 'mind', cost: 400, requires: [], desc: 'Run fast and hot while a bright source lasts. You can quicken further, and Quick ×10 works while you keep time with a new star: each of its turns splits into ten.', effects: { paceMax: 2 } }),
-  T({ id: 'leptonic_computation', name: 'Leptonic Computation', era: 'degenerate', field: 'mind', cost: 900, requires: ['deep_time_protocols'], speculative: true, desc: 'Speculative: re-encode minds in electrons and positrons, which do not decay. Unlocks Leptonic Substrate.' }),
+  T({ id: 'leptonic_computation', name: 'Leptonic Computation', era: 'degenerate', field: 'mind', cost: 900, requires: ['deep_time_protocols'], speculative: true, desc: 'Speculative: re-encode minds in electrons and positrons, which do not decay. Unlocks Leptonic Substrate, the Leptonic Confluence, where a Chorus can go on, and, once the end of matter can be foreseen, the Passage: a settlement rewritten whole.' }),
   T({ id: 'garden_arks', name: 'Garden Arks', era: 'degenerate', field: 'stewardship', cost: 420, requires: [], desc: 'A living garden in the dark, lit by whatever you can spare. Kin can live on without stars.' }),
   T({ id: 'relativistic_arks', name: 'Relativistic Arks', era: 'degenerate', field: 'reach', cost: 380, requires: [], desc: 'Ships at 80% of light; long launches cost less.', effects: { speed: 0.8, flags: ['cheap_launch'] } }),
   T({ id: 'aegis_lattices', name: 'Aegis Lattices', era: 'degenerate', field: 'reach', cost: 360, requires: [], desc: 'Heavy pickets for heavy swarms. Unlocks the Aegis.' }),
@@ -112,7 +113,7 @@ export const TECHS: TechDef[] = [
   T({ id: 'communion', name: 'Communion', era: 'degenerate', field: 'mind', cost: 600, requires: ['hunger_engines'], taint: 18, desc: 'Do not tame the swarms: join them. Unlocks the Communion charter.' }),
   T({ id: 'gravitic_semaphore', name: 'Gravitic Semaphore', era: 'degenerate', field: 'continuity', cost: 380, requires: [], desc: 'Speak with mass itself: move worlds a little, read the replies in orbits. Contact with what hides in the halo becomes possible.' }),
   T({ id: 'halo_siphons', name: 'Halo Siphons', era: 'degenerate', field: 'harvest', cost: 560, requires: ['ember_harvest'], desc: 'Drive dark matter into the embers faster. Ember yields double, and the halo empties sooner. They can be shut for good later, but not started again.', noAuto: true }),
-  T({ id: 'great_decay_protocols', name: 'Great Decay Protocols', era: 'degenerate', field: 'continuity', cost: 700, requires: [], desc: 'Prepare for the end of matter. Losses in the Great Decay (or, if space itself unmakes matter, the Great Evaporation) are halved.', effects: { crossing: 0.5 } }),
+  T({ id: 'great_decay_protocols', name: 'Great Decay Protocols', era: 'degenerate', field: 'continuity', cost: 700, requires: [], desc: 'Prepare for the end of matter (the Great Decay, or, if space itself unmakes matter, the Great Evaporation): before they go, a third of the Echoes, Coldminds and Chorus in settlements still made of matter are carried onto one of ours already on leptonic substrate, as far as it has room for them, and re-encoding costs the Lattice half as many. Kin are made of matter, and cannot be carried.', effects: { crossing: 0.5 } }),
 
   // ============================================================ III. Black Hole
   T({ id: 'penrose_process', name: 'Penrose Process', era: 'degenerate', field: 'harvest', cost: 700, requires: ['accretion_engines'], desc: 'Extract a black hole’s spin. Unlocks Penrose Harvesters.' }),
@@ -120,6 +121,8 @@ export const TECHS: TechDef[] = [
   T({ id: 'bastion_architecture', name: 'Bastion Architecture', era: 'blackhole', field: 'stewardship', cost: 550, requires: [], desc: 'Shells of leptonic structure around black holes. Unlocks Bastion Shells.' }),
   T({ id: 'horizon_cognition', name: 'Horizon Cognition', era: 'blackhole', field: 'mind', cost: 800, requires: [], desc: 'Echo clock limit 10⁶⁰ years.', effects: { echoMaxClock: 60 } }),
   T({ id: 'hawking_patience', name: 'Hawking-Scale Patience', era: 'blackhole', field: 'mind', cost: 1000, requires: ['horizon_cognition'], desc: 'Echo clock limit 10⁸⁰ years.', effects: { echoMaxClock: 80 } }),
+  T({ id: 'positronium_weaving', name: 'Positronium Weaving', era: 'blackhole', field: 'mind', cost: 1000, requires: ['horizon_cognition'], speculative: true, needsUnstable: true, desc: 'Speculative: weave minds through atoms of positronium wider than the old observable universe, where they cost a fiftieth of their upkeep and think at a tenth of their pace, until the atoms decay near η 141. Positronium Nets gather the light of their shrinking orbits. Only where protons decayed or space unmade matter, from η 85.' }),
+  T({ id: 'horizon_writing', name: 'Horizon Writing', era: 'blackhole', field: 'mind', cost: 900, requires: ['horizon_cognition'], speculative: true, desc: 'Speculative: write minds into a black hole’s horizon, where they cost a tenth of their upkeep and think at a quarter of their pace, bound to the hole. A leptonic settlement in a hole’s Deep can do it, as a project.' }),
   T({ id: 'ultimate_slowness', name: 'Ultimate Slowness', era: 'blackhole', field: 'mind', cost: 1250, requires: ['hawking_patience'], desc: 'Echo clock limit 10¹⁰⁰ years.', effects: { echoMaxClock: 100 } }),
   T({ id: 'total_confluence', name: 'Total Confluence', era: 'blackhole', field: 'mind', cost: 950, requires: [], desc: 'What it would take for everyone to become one. Enables the Great Work Confluence.' }),
   T({ id: 'archive_theory', name: 'Archive Theory', era: 'blackhole', field: 'continuity', cost: 950, requires: [], desc: 'A record that maintains itself with no one to read it. Enables the Great Work Archive of Everything.' }),

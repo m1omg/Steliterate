@@ -8,13 +8,16 @@ import { surveyWhereStationed } from './sim/fleets';
 import { queueEvent } from './sim/events';
 import { relightTheLastStar } from './sim/minds';
 import { waitsForAnswer } from './sim/signals';
-import type { GameState } from './types';
+import type { GameState, War } from './types';
+import { BATTLE_MEMORY } from './sim/conflict';
+import { PLAYER_ID, assertPlayerView, linkCivs } from './civs';
+import { STORE } from '../keys';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
 // full or blocked (private windows, previews), and the game must still run.
 
-const KEY = 'steliterate.save.v1';
-const AUTO = 'steliterate.autosave.v1';
+const KEY = `${STORE}save`;
+const AUTO = `${STORE}autosave`;
 
 function ls(): Storage | null {
   try {
@@ -25,7 +28,19 @@ function ls(): Storage | null {
 }
 
 /** The current save format. Bump it with a new step in migrate() whenever saved state changes shape. */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 5;
+
+/**
+ * The new version's first save format (13 Oct). A save older than it is from the build before the
+ * new version, which keeps it (`OLDER_BUILD` in keys.ts): the game says so and does not load it.
+ * Only the checks still read such saves, as fixtures (`legacy`), through the old steps below.
+ */
+export const FIRST_OF_THIS_LINE = 4;
+
+/** Facts about the universe kept in the one civilization's flags before the new version (13 Oct). */
+const UNIVERSE_FLAGS = ['halo_drawn', 'matter_gone', 'flowed'];
+/** And one civilization's own, kept in the state's (with `fcd:<forecast>`, a forecast put away). */
+const CIV_FLAGS = ['first_swarm', 'decay_lost', 'gfe_prev', 'tut'];
 
 /**
  * Bring a save from any earlier version up to date, so old games keep working. Every step is
@@ -33,18 +48,48 @@ export const SAVE_VERSION = 3;
  */
 export function migrate(s: GameState): GameState {
   const v = s.saveVersion ?? 1;
+  // before the new version (13 Oct) the game had one civilization, the state's own `civ`: it is
+  // the player's of the civilizations now (only the checks' fixtures still come this way)
+  if (!s.civs) {
+    s.civ.id ??= PLAYER_ID;
+    s.civs = { [s.civ.id]: s.civ };
+    s.player = s.civ.id;
+  }
+  linkCivs(s);
+  // and these lists were the state's own; they are the civilization's now
+  const loose = s as unknown as Record<string, unknown>;
+  const civ = s.civ as unknown as Record<string, unknown>;
+  for (const k of ['signals', 'forecasts', 'pending', 'log', 'crossing', 'outcome', 'fired']) {
+    if (!(k in loose)) continue;
+    if (civ[k] === undefined) civ[k] = loose[k];
+    delete loose[k];
+  }
   // containers a partial or hand-edited save might lack
   s.flags ??= {};
-  s.fired ??= {};
-  s.pending ??= [];
-  s.log ??= [];
+  s.civ.flags ??= {};
+  // and some facts were kept with the wrong owner: what is true of the universe lives in the
+  // state's flags, what is true of one civilization in its own
+  for (const k of UNIVERSE_FLAGS) {
+    if (!(k in s.civ.flags)) continue;
+    s.flags[k] ??= s.civ.flags[k];
+    delete s.civ.flags[k];
+  }
+  for (const k of Object.keys(s.flags)) {
+    if (!CIV_FLAGS.includes(k) && !k.startsWith('fcd:')) continue;
+    s.civ.flags[k] ??= s.flags[k];
+    delete s.flags[k];
+  }
+  s.civ.fired ??= {};
+  s.civ.pending ??= [];
+  s.civ.log ??= [];
+  s.civ.crossing ??= null;
+  s.civ.outcome ??= null;
   s.battles ??= [];
   s.fleets ??= {};
   s.swarms ??= {};
   s.survivors ??= {};
-  s.signals ??= [];
-  s.forecasts ??= [];
-  s.civ.flags ??= {};
+  s.civ.signals ??= [];
+  s.civ.forecasts ??= [];
   s.civ.research ??= {};
   s.civ.techs ??= [];
   s.civ.charters ??= [];
@@ -58,6 +103,26 @@ export function migrate(s: GameState): GameState {
     // v3: the fate of matter has three answers; a game from before keeps the one it had
     s.fate ??= s.protonsDecay ? 'decay' : 'stable';
   }
+  if (v < 5) {
+    // v5 (the combat system, 20 Oct): a siege is the settlement's, whoever holds it. A war with a
+    // civilization of its own kept the siege of the side that began it on the war, at its front.
+    const move = (w: War | undefined, by: string, on: string) => {
+      if (!w?.siege || !w.at) return;
+      const c = Object.values(s.colonies).find((x) => x.owner === on && x.systemId === w.at);
+      if (c) c.siege = { by, turns: w.siege };
+      w.siege = 0;
+    };
+    for (const sv of Object.values(s.survivors ?? {})) if (sv.war && s.civs[sv.id]) move(sv.war, sv.war.by ?? s.player, sv.war.by && sv.war.by !== s.player ? s.player : sv.id);
+    for (const [k, t] of Object.entries(s.ties ?? {})) {
+      if (!t.war) continue;
+      const [a, b] = k.split('|');
+      const by = t.war.by ?? a;
+      move(t.war, by, by === a ? b : a);
+    }
+  }
+  // a battle is kept on the record BATTLE_MEMORY turns (before 20 Oct, for ever): as a turn's
+  // battles leave it (conflict.ts, battlesTurn, before the turn ends)
+  s.battles = s.battles.filter((x) => s.turn - x.turn <= BATTLE_MEMORY);
   // a settlement keeps its system: one placed in the Deep of a hole that had evaporated while only
   // others lived there (taking back our own people who left) was left in a system marked gone,
   // with nothing on the map to click and no way for ships to reach it
@@ -80,12 +145,15 @@ export function migrate(s: GameState): GameState {
   s.civ.charters = s.civ.charters.filter((c) => CHARTER_BY_ID[c]);
   if (s.civ.researching && !TECH_BY_ID[s.civ.researching]) s.civ.researching = null;
   for (const c of Object.values(s.colonies)) {
+    // (before the new version every settlement and fleet was the one civilization's)
+    c.owner ??= s.player;
     c.structures ??= {};
     c.queue ??= [];
     for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]) delete c.structures[k];
-    c.queue = c.queue.filter((q) => (q.kind === 'ship' ? SHIP_BY_ID[q.key] : STRUCTURE_BY_ID[q.key]));
+    c.queue = c.queue.filter((q) => (q.kind === 'ship' ? SHIP_BY_ID[q.key] : q.kind === 'passage' || q.kind === 'horizon' || q.kind === 'weave' ? true : STRUCTURE_BY_ID[q.key]));
   }
   for (const f of Object.values(s.fleets)) {
+    f.owner ??= s.player;
     f.ships = f.ships.filter((x) => SHIP_BY_ID[x.cls]);
     if (!f.ships.length) delete s.fleets[f.id];
   }
@@ -94,7 +162,7 @@ export function migrate(s: GameState): GameState {
   // two clusters of one name, and their two Wells (26 Oct): each its own name, in the saves too
   distinctNames(s);
   // the Unlit's messages wait for an answer now (11 Oct): one that lapsed before opens again
-  for (const sig of s.signals) if (sig.resolved === 'lapsed' && waitsForAnswer(sig)) sig.resolved = null;
+  for (const sig of s.civ.signals) if (sig.resolved === 'lapsed' && waitsForAnswer(sig)) sig.resolved = null;
   // a Last Star lit by the old rule (before 12 Oct) burned out within a turn: it lights again,
   // while matter lasts, and its event offers its clock (the player's choice)
   const relit = relightTheLastStar(s);
@@ -104,18 +172,44 @@ export function migrate(s: GameState): GameState {
 }
 
 function serialize(state: GameState): string {
-  // Infinity does not survive JSON; encode it
+  assertPlayerView(state, 'save');
+  // Infinity does not survive JSON; encode it (and `civ`, a pointer into `civs`, is left out)
   return JSON.stringify(state, (_k, v) => (v === Infinity ? '__inf' : v === -Infinity ? '__-inf' : v));
 }
 
-export function deserialize(text: string): GameState | null {
+function parse(text: string): GameState | null {
   try {
     const s = JSON.parse(text, (_k, v) => (v === '__inf' ? Infinity : v === '__-inf' ? -Infinity : v)) as GameState;
-    if (!s || typeof s !== 'object' || !s.systems || !s.civ) return null;
+    return s && typeof s === 'object' && s.systems && (s.civs || s.civ) ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A save as text, ready to play; null when it is not a save, or is from the build before the new version (unless `legacy`, for the checks' fixtures). */
+export function deserialize(text: string, legacy = false): GameState | null {
+  const s = parse(text);
+  if (!s || (!legacy && (s.saveVersion ?? 1) < FIRST_OF_THIS_LINE)) return null;
+  try {
     return migrate(s);
   } catch {
     return null;
   }
+}
+
+/** Whether this text (a save file or a save code) is a game from the build before the new version. */
+export function fromOlderBuild(text: string): boolean {
+  const t = text.trim().replace(/^\uFEFF/, '');
+  let json = t;
+  if (!t.startsWith('{')) {
+    try {
+      json = decodeURIComponent(escape(atob(t)));
+    } catch {
+      return false;
+    }
+  }
+  const s = parse(json);
+  return !!s && (s.saveVersion ?? 1) < FIRST_OF_THIS_LINE;
 }
 
 export function saveGame(state: GameState, auto = false): boolean {
@@ -160,9 +254,9 @@ export function exportCode(state: GameState): string {
   }
 }
 
-export function importCode(code: string): GameState | null {
+export function importCode(code: string, legacy = false): GameState | null {
   try {
-    return deserialize(decodeURIComponent(escape(atob(code.trim()))));
+    return deserialize(decodeURIComponent(escape(atob(code.trim()))), legacy);
   } catch {
     return null;
   }
@@ -170,8 +264,8 @@ export function importCode(code: string): GameState | null {
 
 // ---- save slots: as many named saves as the browser will hold, kept gzipped where it can
 
-const SLOT_INDEX = 'steliterate.slots.v1';
-const slotKey = (id: string) => `steliterate.slot.${id}`;
+const SLOT_INDEX = `${STORE}slots`;
+const slotKey = (id: string) => `${STORE}slot.${id}`;
 
 export interface SlotInfo {
   id: string;
@@ -319,14 +413,17 @@ export function readSaveBundle(text: string): BundledSave[] | null {
  * twice adds nothing. Resolves how many came in, were already here, and could not be read or did
  * not fit.
  */
-export async function importSaveBundle(saves: BundledSave[]): Promise<{ added: number; skipped: number; failed: number }> {
+export async function importSaveBundle(saves: BundledSave[]): Promise<{ added: number; skipped: number; failed: number; older: number }> {
   let added = 0;
   let skipped = 0;
   let failed = 0;
+  let older = 0;
   for (const b of saves) {
-    const g = b && typeof b === 'object' ? deserialize(JSON.stringify(b.game)) : null;
+    const text = b && typeof b === 'object' ? JSON.stringify(b.game) : '';
+    const g = text ? deserialize(text) : null;
     if (!g) {
-      failed++;
+      if (text && fromOlderBuild(text)) older++;
+      else failed++;
       continue;
     }
     const name = b.from === 'slot' ? String(b.name) : `${b.name}: ${g.settings.civName}, turn ${g.turn}`;
@@ -339,7 +436,7 @@ export async function importSaveBundle(saves: BundledSave[]): Promise<{ added: n
     if (typeof r === 'string') failed++;
     else added++;
   }
-  return { added, skipped, failed };
+  return { added, skipped, failed, older };
 }
 
 /** A save as a file of its own: the same JSON the browser keeps, under a readable name. */
@@ -348,12 +445,21 @@ export function saveFile(state: GameState): { name: string; text: string } {
   return { name: `steliterate-${civ}-turn-${state.turn}.json`, text: serialize(state) };
 }
 
-/** Read a save from a file or pasted text: plain JSON or a save code, from any version. */
-export function readSave(text: string): GameState | null {
+/** Read a save from a file or pasted text: plain JSON or a save code (of this version, unless `legacy`). */
+export function readSave(text: string, legacy = false): GameState | null {
   const t = text.trim().replace(/^\uFEFF/, '');
-  return t.startsWith('{') ? deserialize(t) : importCode(t);
+  return t.startsWith('{') ? deserialize(t, legacy) : importCode(t, legacy);
 }
 
 export function cloneState(state: GameState): GameState {
   return deserialize(serialize(state))!;
+}
+
+/**
+ * A deep copy, with nothing run on it (cloneState migrates its copy, as a load does): the checks
+ * play out alternatives on these. A plain JSON copy would lose `state.civ`, a pointer JSON leaves
+ * out; this one points it again.
+ */
+export function copyState(state: GameState): GameState {
+  return linkCivs(parse(serialize(state))!);
 }

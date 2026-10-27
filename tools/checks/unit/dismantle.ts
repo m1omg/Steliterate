@@ -15,14 +15,15 @@ import { project } from '../../../src/game/sim/projection';
 import { sourceLight } from '../../../src/game/physics';
 import type { Colony, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
 const fresh = (turns: number) => {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < turns && !s.outcome; g++) {
+  for (let g = 0; g < turns && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   return s;
 };
 const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
@@ -48,7 +49,7 @@ const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
   check(err === 'Taking it apart needs 7 energy.' && c.structures.geothermal_tap === 1, `without the energy it stays (${err})`);
   // once matter is gone, building is paid in energy, and so is what comes back
   s.civ.energy = 300;
-  s.civ.flags.matter_gone = s.turn;
+  s.flags.matter_gone = s.turn;
   c.structures.lepton_substrate = 1;
   const lt = dismantleTerms(s, STRUCTURE_BY_ID.lepton_substrate);
   check(lt.matter === 0 && lt.energy === 105 && lt.cost === 22, `matter gone: a Leptonic Substrate gives 105 energy back for 22 (${JSON.stringify(lt)})`);
@@ -97,7 +98,7 @@ const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
     return { err, built: (c.structures[id] ?? 0) > 0, vitality: b.vitality - 0.5, nodes: (s.civ.flags.chorus_nodes_built ?? 0) - nodes };
   };
   const base = fresh(20);
-  const again = JSON.parse(JSON.stringify(base)) as GameState;
+  const again = copyState(base);
   // taking one apart marks it: the next built here does not do again what the first did once
   const ca = capital(again);
   ca.structures.comet_shepherd = 1;
@@ -118,11 +119,11 @@ const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
 // ---------------------------------------------------------------- the autoplayer, short of matter
 {
   const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 600 && !s.outcome && s.eta < 20; g++) {
+  for (let g = 0; g < 600 && !s.civ.outcome && s.eta < 20; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   /** How many collectors gather nothing (and have matter in them to give back). */
   const idleCount = (g: GameState) => {
     const pr = project(g);
@@ -132,7 +133,7 @@ const capital = (s: GameState): Colony => s.colonies[s.civ.capitalId!];
   };
   // a settlement under a star that gives no light (the capital's may be an ember, which does)
   const dark = (x: Colony) => sourceLight(s, s.systems[x.systemId], s.years, 1).light <= 0;
-  const c = Object.values(s.colonies).find(dark) ?? capital(s);
+  const c = Object.values(s.colonies).find((x) => x.owner === s.player && dark(x)) ?? capital(s);
   if (!dark(c)) s.systems[c.systemId].primary.halo = false;
   c.structures.solar_array = Math.max(1, c.structures.solar_array ?? 0);
   const lines = project(s).perColony[c.id]?.y.lines ?? [];

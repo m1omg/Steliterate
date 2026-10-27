@@ -131,6 +131,9 @@ export function updateSociety(state: GameState, logL: number, popsLost: number, 
       }
       if (civ.standing[t] < 15 && civ.dissent > 45) civ.lowStanding[t]++;
       else civ.lowStanding[t] = Math.max(0, civ.lowStanding[t] - 1);
+      // (a Fork becomes one of the player's neighbours; another civilization's Thread leaves it
+      // just as ours would, but goes its own way among the stars, a people rather than a
+      // civilization the game follows: the new version, part 2a-5)
       if (civ.lowStanding[t] >= 3) fork(state, t);
     }
   });
@@ -158,7 +161,10 @@ function forkHome(state: GameState): string {
   return best ?? civ.homeSystemId;
 }
 
-/** A Thread leaves, taking the settlements where it is the majority. It becomes one of the other minds. */
+/**
+ * A Thread leaves, taking the settlements where it is the majority. From ours it becomes one of the
+ * other minds; from another civilization it goes its own way, unfollowed.
+ */
 export function fork(state: GameState, t: ThreadId) {
   const civ = state.civ;
   const leaving = colonies(state).filter((c) => c.pops[t] > 0 && c.pops[t] >= popsOf(c) / 2 && c.id !== civ.capitalId);
@@ -180,6 +186,10 @@ export function fork(state: GameState, t: ThreadId) {
   civ.standing[t] = 45;
   civ.dissent = Math.max(0, civ.dissent - 25);
   civ.resolve = Math.max(0, civ.resolve - 8);
+  if (civ.id !== state.player) {
+    log(state, `A Fork. Part of the ${t === 'kin' ? 'Kin' : t} has left, taking ${systems.length} settlement(s) with them, to go their own way.`, 'bad');
+    return;
+  }
   const id = uid(state, 'fk');
   const names: Record<ThreadId, string> = { kin: 'The Returned', echoes: 'The Unmoored Echoes', chorus: 'The Other Choir', lattice: 'The Loose Lattice', coldminds: 'The Far Cold' };
   state.survivors[id] = {

@@ -219,7 +219,7 @@ function misread(state: GameState, rand: () => number) {
 }
 
 export function resolveMindSignal(state: GameState, sigUid: string, choice: string): string | null {
-  const sig = state.signals.find((s) => s.uid === sigUid);
+  const sig = state.civ.signals.find((s) => s.uid === sigUid);
   if (!sig || sig.resolved) return 'Already answered.';
   const civ = state.civ;
   const slow: Mind = state.minds.slow;
@@ -305,7 +305,7 @@ export function relightTheLastStar(state: GameState): string | null {
   if (!f.unlit_gift || f.last_star_lit || matterGone(state)) return null;
   const era = calendarEra(state);
   if (era !== 'degenerate' && era !== 'blackhole') return null;
-  const sig = state.signals.find((x) => x.from === 'dark' && x.kind === 'dark_star');
+  const sig = state.civ.signals.find((x) => x.from === 'dark' && x.kind === 'dark_star');
   const host = Object.values(state.systems).find((x) => x.name === 'The Last Star' && !x.gone);
   if (!sig || !host || sig.sentYears * 3 <= LAST_STAR_FLOOR) return null;
   const p = host.primary;
@@ -315,7 +315,7 @@ export function relightTheLastStar(state: GameState): string | null {
   } else if (p.kind === 'black_dwarf') {
     // out: relit only if it went out in the turn it lit or the next (its message came the turn after it lit)
     const lit = (sig.arrivedTurn ?? state.turn) - 1;
-    const out = state.log.find((e) => e.systemId === host.id && e.text === `The star at ${host.name} has burned out.`);
+    const out = state.civ.log.find((e) => e.systemId === host.id && e.text === `The star at ${host.name} has burned out.`);
     if (out && out.turn > lit + 1) return null;
   } else return null;
   host.primary = { ...p, kind: 'dark_star', mass: 3, lum: 10, bornAt: state.years, diesAt: lastStarDies(state, state.years), spin: 0, spinMax: 0 };

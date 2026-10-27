@@ -5,9 +5,11 @@ import { thermalRGB } from './shaders/bodies';
 import { livingWorlds } from '../game/sim/fleets';
 import { starsSeen } from '../game/sim/claims';
 import { Rng, hashSeed } from '../game/rng';
-import type { GameState, StarSystem } from '../game/types';
+import type { ColonyForm, GameState, StarSystem } from '../game/types';
 import { blackbody } from './shaders/noise';
 import { calendarEra, matterGone } from '../game/fate';
+import { allFleets, colonies, fleets, formOf } from '../game/sim/util';
+import { fleetSeen } from '../game/sim/others';
 import { asleep, readsSwarms, swarmSight } from '../game/sim/sight';
 
 // The Coalescence seen from outside: layered star populations of the ancestral galaxies,
@@ -45,12 +47,16 @@ const DUST_FRAG = /* glsl */ `
   }
 `;
 
+/** The map's ring style for what our settlements at a star are made of (aForm): the higher wins. */
+const FORM_RING: Record<ColonyForm, number> = { baryonic: 0, leptonic: 1, horizon: 2, positronium: 3 };
+
 const NODE_VERT = /* glsl */ `
   attribute float aSize;
   attribute vec3 aColor;
   attribute vec4 aState; // x: owned, y: rust, z: pulse phase, w: dim
   attribute float aMark; // 0: seen from afar, 1: surveyed, 2: surveyed, with a living world
   attribute vec4 aOthers; // rgb: the colour of another civilization living here; w: 1 if one does
+  attribute float aForm; // what our settlements here are made of: 0 matter, 1 fields, 2 a horizon, 3 the positronium
   uniform float uTime;
   uniform float uPixel;
   uniform float uLift; // 0 natural, 1 enhanced, 2 thermal
@@ -60,6 +66,7 @@ const NODE_VERT = /* glsl */ `
   varying float vStar;
   varying float vMark;
   varying vec4 vOthers;
+  varying float vForm;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
@@ -73,6 +80,7 @@ const NODE_VERT = /* glsl */ `
     vSize = gl_PointSize;
     vMark = aMark;
     vOthers = aOthers;
+    vForm = aForm;
   }
 `;
 
@@ -90,6 +98,7 @@ const NODE_FRAG = /* glsl */ `
   varying float vStar;
   varying float vMark;
   varying vec4 vOthers;
+  varying float vForm;
   // a line lw pixels wide along the circle of radius R (pixels)
   float ringAt(float px, float R, float lw) {
     return 1.0 - smoothstep(0.0, lw, abs(px - R));
@@ -114,8 +123,22 @@ const NODE_FRAG = /* glsl */ `
     }
     float lw = 1.2 * uPixel;
     if (vState.x > 0.5) {
-      // settlement ring
-      float ring = ringAt(px, max(r * 0.72, 8.0 * uPixel), lw * 1.3) * (0.75 + 0.25 * sin(uTime * 1.6 + vState.z));
+      // settlement ring, in a style of its own for what it is made of
+      float R = max(r * 0.72, 8.0 * uPixel);
+      float ang = atan(c.y, c.x);
+      float ring;
+      if (vForm > 2.5) {
+        // woven through the positronium: a wide, soft ellipse
+        ring = ringAt(length(vec2(c.x, c.y * 1.7)) * vSize, R * 1.25, lw * 2.2) * 0.8;
+      } else if (vForm > 1.5) {
+        // written into a horizon: the ring, and two bright arcs travelling round it
+        float arcs = pow(max(0.0, cos(ang * 2.0 - uTime * 0.6 + vState.z)), 10.0);
+        ring = ringAt(px, R, lw * 1.3) * (0.45 + 0.9 * arcs);
+      } else if (vForm > 0.5) {
+        // fields: a standing wave round the ring, its nodes dark
+        float w = cos(ang * 6.0) * cos(uTime * 0.9 + vState.z);
+        ring = ringAt(px, R, lw * 1.3) * (0.5 + 0.5 * abs(w));
+      } else ring = ringAt(px, R, lw * 1.3) * (0.75 + 0.25 * sin(uTime * 1.6 + vState.z));
       col += uOwned * ring * 1.4;
       a = max(a, ring);
     } else if (vMark > 0.5) {
@@ -481,13 +504,17 @@ export class GalaxyView {
 
     // system nodes
     const known = state.civ.known;
-    const colonized = new Set(Object.values(state.colonies).map((c) => c.systemId));
+    const colonized = new Set(colonies(state).map((c) => c.systemId));
+    // what our settlements at each star are made of (the ring's style): the positronium, then a horizon, then fields, then matter
+    const formAt = new Map<string, number>();
+    for (const c of colonies(state)) formAt.set(c.systemId, Math.max(formAt.get(c.systemId) ?? 0, FORM_RING[formOf(c)]));
     const pos: number[] = [];
     const col: number[] = [];
     const size: number[] = [];
     const st: number[] = [];
     const mark: number[] = [];
     const others: number[] = [];
+    const forms: number[] = [];
     // the stars other civilizations live at, as far as their light has told us
     const theirs = new Map<string, THREE.Color>();
     for (const v of Object.values(state.survivors)) for (const id of starsSeen(state, v)) if (!theirs.has(id)) theirs.set(id, new THREE.Color(v.color));
@@ -505,6 +532,7 @@ export class GalaxyView {
       mark.push(known[s.id] === 2 ? (alive ? 2 : 1) : 0);
       const o = theirs.get(s.id);
       others.push(o ? o.r : 0, o ? o.g : 0, o ? o.b : 0, o ? 1 : 0);
+      forms.push(formAt.get(s.id) ?? 0);
       this.pickables.push({ kind: 'system', id: s.id, pos: new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z) });
     }
     if (this.nodes) {
@@ -518,6 +546,7 @@ export class GalaxyView {
     ng.setAttribute('aState', new THREE.Float32BufferAttribute(st, 4));
     ng.setAttribute('aMark', new THREE.Float32BufferAttribute(mark, 1));
     ng.setAttribute('aOthers', new THREE.Float32BufferAttribute(others, 4));
+    ng.setAttribute('aForm', new THREE.Float32BufferAttribute(forms, 1));
     this.nodes = new THREE.Points(ng, this.nodeMat);
     this.nodes.frustumCulled = false;
     this.nodes.renderOrder = 2;
@@ -546,7 +575,7 @@ export class GalaxyView {
   private syncFleets(state: GameState, now: number) {
     const seen = new Set<string>();
     const lp: number[] = [];
-    for (const f of Object.values(state.fleets)) {
+    for (const f of fleets(state)) {
       seen.add(f.id);
       let p: THREE.Vector3;
       if (f.at) {
@@ -582,6 +611,44 @@ export class GalaxyView {
       const pick: Pickable = { kind: 'fleet', id: f.id, pos: p.clone() };
       anim.pick = pick;
       this.pickables.push(pick);
+    }
+    // the others' fleets, where their light shows them (fleetSeen), in their colour and on the
+    // other side of a star from ours; never ours to pick
+    for (const f of allFleets(state)) {
+      if (f.owner === state.player) continue;
+      const sn = fleetSeen(state, f);
+      if (!sn) continue;
+      seen.add(f.id);
+      let p: THREE.Vector3;
+      let star: THREE.Vector3 | null = null;
+      let dest: THREE.Vector3 | null = null;
+      if ('at' in sn) {
+        const s = state.systems[sn.at];
+        star = new THREE.Vector3(s.pos.x, s.pos.y, s.pos.z);
+        p = star.clone().add(new THREE.Vector3(-2.2, 1.2, 0));
+      } else {
+        const a = state.systems[sn.from];
+        const b = state.systems[sn.to];
+        p = new THREE.Vector3(a.pos.x + (b.pos.x - a.pos.x) * sn.u, a.pos.y + (b.pos.y - a.pos.y) * sn.u, a.pos.z + (b.pos.z - a.pos.z) * sn.u);
+        dest = new THREE.Vector3(b.pos.x, b.pos.y, b.pos.z);
+      }
+      const kind = fleetLook(f.ships.map((s) => s.cls));
+      let anim = this.fleetAnim.get(f.id);
+      if (!anim || anim.kind !== kind) {
+        if (anim) this.fleetGroup.remove(anim.mesh);
+        const mesh = fleetGlyph(kind, state.survivors[f.owner]?.color ?? '#b7a58f');
+        mesh.material.opacity = 0.8;
+        this.fleetGroup.add(mesh);
+        mesh.position.copy(p);
+        anim = { from: p.clone(), to: p.clone(), t0: now, mesh, kind, star, dest, phase: (hashId(f.id) % 628) / 100 + Math.PI, pick: null };
+        this.fleetAnim.set(f.id, anim);
+      } else {
+        anim.from = anim.mesh.position.clone();
+        anim.to = p;
+        anim.t0 = now;
+        anim.star = star;
+        anim.dest = dest;
+      }
     }
     for (const [id, a] of this.fleetAnim) {
       if (!seen.has(id)) {
@@ -777,7 +844,13 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   const cold = [0.3, 0.3, 0.34];
   const toward = (c: number[], e: number): [number, number, number] => [cold[0] + (c[0] - cold[0]) * e, cold[1] + (c[1] - cold[1]) * e, cold[2] + (c[2] - cold[2]) * e];
   // after the Dusk a brown dwarf goes grey as it cools, as a white dwarf does: in the Black Hole Age it is as cold as a black dwarf
-  if (k === 'brown_dwarf') return toward([0.62, 0.3, 0.28], calendarEra(state) === 'dusk' ? 1 : brownWarmth(tK));
+  if (k === 'brown_dwarf') {
+    if (calendarEra(state) !== 'dusk') return toward([0.62, 0.3, 0.28], brownWarmth(tK));
+    // a young one, hot enough to glow (from about 780 K), shows its own colour, as a white dwarf does
+    const e = coolDwarfShine(tK);
+    const [r, g, b] = blackbody(Math.max(1000, tK));
+    return [0.62 + (r * 1.1 - 0.62) * e, 0.3 + (g * 1.1 - 0.3) * e, 0.28 + (b * 1.1 - 0.28) * e];
+  }
   if (k === 'black_dwarf') return s.primary.rekindle ? [0.9, 0.45, 0.25] : [0.3, 0.3, 0.34];
   if (k === 'white_dwarf' && calendarEra(state) !== 'dusk') {
     // grey as a black dwarf once nothing warms it; an ember blue-white while the halo warms it
@@ -870,6 +943,9 @@ const _fleetTex = new Map<string, THREE.CanvasTexture>();
  * colour so it reads against black space. The halo shows at once; the hull fills in once the
  * image has loaded.
  */
+/** Our fleets' colour on the map: the teal our systems are marked in (uOwned). */
+const OUR_FLEET = '#4fe3d1';
+
 function fleetTexture(kind: FleetKind, color: string): THREE.CanvasTexture {
   const key = `${kind}:${color}`;
   const hit = _fleetTex.get(key);
@@ -907,9 +983,6 @@ function hexA(hex: string, a: number): string {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
-
-/** Our fleets' colour on the map: the teal our systems are marked in (uOwned). */
-const OUR_FLEET = '#4fe3d1';
 
 function fleetGlyph(kind: FleetKind, color: string): THREE.Sprite {
   const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: fleetTexture(kind, color), transparent: true, depthWrite: false, depthTest: false }));

@@ -13,8 +13,9 @@ import { CLAIM_SPEED, MAX_CLAIMS, claimedStars } from './claims';
 import { sendSignal } from './signals';
 import { pactsWith } from './pacts';
 import { distanceToThem, inStep, lightAt, voice } from './survivors';
-import { colonies, distLy, log } from './util';
+import { allColonies, allFleets, colonies, coloniesOf, distLy, log, marks } from './util';
 import { feel } from './dealings';
+import { send } from '../civs';
 
 /** How far a new star's light wakes the sleepers (ly): their own cluster. */
 export const WAKE_REACH = 100;
@@ -38,7 +39,7 @@ export function newStarNear(state: GameState, sv: Survivor): StarSystem | null {
   for (const sys of Object.values(state.systems)) {
     const p = sys.primary;
     if (sys.gone || !NEW_STARS.has(p.kind) || !p.diesAt || p.diesAt <= state.years) continue;
-    if (Object.values(state.colonies).some((c) => c.systemId === sys.id)) continue;
+    if (allColonies(state).some((c) => c.systemId === sys.id)) continue;
     if (Object.values(state.survivors).some((o) => o.alive && (o.systems.includes(sys.id) || o.claim?.systemId === sys.id))) continue;
     if (!sys.bodies.some((id) => state.bodies[id] && !state.bodies[id].dissolved && COLD.has(state.bodies[id].kind))) continue;
     const d = Math.min(...mine.map((m) => distLy(m, sys)));
@@ -72,17 +73,43 @@ export function wakeForNewStar(state: GameState, sv: Survivor): boolean {
   return true;
 }
 
+/** How often at most we hear that the sleepers of a civilization of its own have woken for a new star (turns). */
+const WOKEN_EVERY = 20;
+
+/**
+ * The sleepers of a civilization of its own wake by their own choice (auto.ts, planSleep) and race
+ * for the new star in an Ark of their own; when they set out, they tell us, if we know them and can
+ * talk. Returns true if they told us.
+ */
+export function heardWaking(state: GameState, sv: Survivor): boolean {
+  if (sv.way !== 'dormant' || !sv.contact || !inStep(state, sv)) return false;
+  if (state.turn - (sv.marks?.woken ?? -99) < WOKEN_EVERY) return false;
+  const f = allFleets(state).find((x) => {
+    const p = x.to ? state.systems[x.to]?.primary : undefined;
+    return x.owner === sv.id && x.order === 'colonize' && !!p && NEW_STARS.has(p.kind) && (p.diesAt ?? 0) > state.years;
+  });
+  if (!f?.to) return false;
+  marks(sv).woken = state.turn;
+  sendSignal(state, {
+    from: sv.id,
+    kind: 'woken',
+    distanceLy: distanceToThem(state, sv),
+    title: `${sv.name} have woken`,
+    text: `A new star burns at ${state.systems[f.to].name}. We have slept through ages for a light like this; our ships are already on their way to it.`,
+  });
+  return true;
+}
+
 /**
  * The Choir would gather some of our Echoes into itself, those who wish it: it asks now and then,
  * while it thinks well of us and we have Echoes to spare. Returns true if it asked.
  */
 export function choirWish(state: GameState, sv: Survivor): boolean {
   if (sv.way !== 'chorus' || sv.war || sv.health <= 0.4 || sv.disposition <= 20) return false;
-  const key = `choir_wish_${sv.id}`;
-  if (state.turn - (state.civ.flags[key] ?? -99) < CHOIR_EVERY) return false;
+  if (state.turn - (sv.marks?.choir_wish ?? -99) < CHOIR_EVERY) return false;
   const echoes = colonies(state).reduce((a, c) => a + c.pops.echoes, 0);
   if (echoes < CHOIR_TAKES + 2) return false;
-  state.civ.flags[key] = state.turn;
+  marks(sv).choir_wish = state.turn;
   sv.lastSent = state.turn;
   const consent = state.civ.charters.includes('merge_consent');
   sendSignal(state, {
@@ -120,8 +147,12 @@ export function answerChoirWish(state: GameState, sv: Survivor, choice: string):
   civ.standing.echoes = Math.min(100, civ.standing.echoes + 3);
   // they cross as light, and are welcomed when they arrive
   (sv.news ??= []).push({ at: lightAt(state, distanceToThem(state, sv)), delta: 12, what: 'you let your Echoes come to us' });
-  sv.pop += went;
-  sv.health = Math.min(1, sv.health + 0.04 * went);
+  // (to a civilization of its own they come as Echoes, for it to gather in its own time)
+  if (state.civs[sv.id]) send(state, sv.id, { people: { thread: 'echoes', n: went } });
+  else {
+    sv.pop += went;
+    sv.health = Math.min(1, sv.health + 0.04 * went);
+  }
   log(state, `${went} Echo${went === 1 ? '' : 'es'} left us to become part of ${sv.name}.`, 'info', sv.homeSystemId);
   return null;
 }
@@ -144,18 +175,24 @@ export function drawTheirSpin(state: GameState, sv: Survivor): number {
   return drawn;
 }
 
-/** Who else draws on this hole's spin (living civilizations at it, in the Black Hole Age). */
+/**
+ * Who else draws on this hole's spin: a civilization of its own wherever its harvesters at the hole
+ * draw on it, as ours do, in any age; one simulated lightly, while living at it in the Black Hole Age.
+ */
 export function spinSharers(state: GameState, systemId: string): Survivor[] {
   const p = state.systems[systemId]?.primary;
-  if (!p || (p.kind !== 'black_hole' && p.kind !== 'smbh') || calendarEra(state) !== 'blackhole') return [];
-  return Object.values(state.survivors).filter((sv) => sv.alive && !sv.exodus && sv.systems.includes(systemId));
+  if (!p || (p.kind !== 'black_hole' && p.kind !== 'smbh')) return [];
+  return Object.values(state.survivors).filter((sv) => {
+    if (!sv.alive || sv.exodus) return false;
+    if (state.civs[sv.id]) return coloniesOf(state, sv.id).some((c) => c.systemId === systemId && (c.structures.penrose_harvester ?? 0) > 0);
+    return calendarEra(state) === 'blackhole' && sv.systems.includes(systemId);
+  });
 }
 
 /** The Tessellate holds us to Mutual Aid to the letter: a breach when we could not pay our side. */
 export function breach(state: GameState, sv: Survivor) {
-  const key = `breach_${sv.id}`;
-  const n = (state.civ.flags[key] ?? 0) + 1;
-  state.civ.flags[key] = n;
+  const n = (marks(sv).breach ?? 0) + 1;
+  marks(sv).breach = n;
   const dist = distanceToThem(state, sv);
   if (n < BREACHES) {
     sendSignal(state, {
@@ -169,7 +206,7 @@ export function breach(state: GameState, sv: Survivor) {
   }
   delete sv.pacts;
   feel(state, sv, -15, `you breached Mutual Aid ${BREACHES} times`);
-  delete state.civ.flags[key];
+  delete marks(sv).breach;
   sendSignal(state, {
     from: sv.id,
     kind: 'pact_ended',

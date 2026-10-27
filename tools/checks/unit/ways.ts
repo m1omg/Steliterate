@@ -4,6 +4,9 @@
 // Choir would gather those of our Echoes who wish it. A partner living at a new star keeps its
 // clock with us, at half the cost. In the Black Hole Age a hole's spin is a commons: those who
 // live there draw on it, a partner half.
+// (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
+// them, on their records, which a check sets by hand; unit/others checks the neighbours as
+// civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -18,19 +21,20 @@ import { reserveCapacity } from '../../../src/game/sim/economy';
 import { computeMods } from '../../../src/game/sim/mods';
 import { logTurnLength } from '../../../src/game/eras';
 import { calendarEra } from '../../../src/game/fate';
-import { colonies, distLy } from '../../../src/game/sim/util';
+import { colonies, distLy, marks } from '../../../src/game/sim/util';
 import type { GameState, StarSystem, Survivor } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 const play = (seed: number, until: (s: GameState) => boolean, fate: 'stable' | 'decays' | 'curvature' = 'stable') => {
-  const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate });
-  for (let g = 0; g < 900 && !s.outcome && !until(s); g++) {
+  const s = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate, civsAsleep: true });
+  for (let g = 0; g < 900 && !s.civ.outcome && !until(s); g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
-  s.signals.length = 0;
+  s.civ.pending.length = 0;
+  s.civ.signals.length = 0;
   s.civ.taint = 0;
   return s;
 };
@@ -69,7 +73,7 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
   const sys = near(s, sv)[0];
   light(s, sys);
   check(wakeForNewStar(s, sv) && sv.claim?.systemId === sys.id, `a new star lights at ${sys.name}: they wake, and set out for it at once`);
-  check(s.signals.some((x) => x.kind === 'woken' && /our ships are already on their way/.test(x.text)), 'and tell us so');
+  check(s.civ.signals.some((x) => x.kind === 'woken' && /our ships are already on their way/.test(x.text)), 'and tell us so');
   const t = clone(degenerate);
   const tv = only(t, 'dormant');
   const tsys = t.systems[sys.id];
@@ -96,17 +100,17 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
   s.civ.energy = 1;
   s.civ.flags.last_energy_net = -5;
   // our side falls due now: no aid beamed lately, no breach before (the seeded game may have had either)
-  delete s.civ.flags[`pact_aid_out_${sv.id}`];
-  delete s.civ.flags[`breach_${sv.id}`];
-  const n = s.signals.length;
+  delete marks(sv).aid_out;
+  delete marks(sv).breach;
+  const n = s.civ.signals.length;
   pactsTurn(s);
-  check(s.signals.slice(n).some((x) => x.kind === 'aid_answer'), 'it pays its side of Mutual Aid even while failing');
+  check(s.civ.signals.slice(n).some((x) => x.kind === 'aid_answer'), 'it pays its side of Mutual Aid even while failing');
   // and holds us to ours
-  check(s.civ.flags[`breach_${sv.id}`] === 1 && s.signals.some((x) => x.kind === 'breach'), 'we could not pay ours: a breach, logged');
+  check(marks(sv).breach === 1 && s.civ.signals.some((x) => x.kind === 'breach'), 'we could not pay ours: a breach, logged');
   s.turn += AID_EVERY;
-  delete s.civ.flags[`pact_aid_in_${sv.id}`];
+  delete marks(sv).aid_in;
   pactsTurn(s);
-  check(!sv.pacts && s.signals.some((x) => x.kind === 'pact_ended'), 'two breaches, and every agreement ends, as their terms provide');
+  check(!sv.pacts && s.civ.signals.some((x) => x.kind === 'pact_ended'), 'two breaches, and every agreement ends, as their terms provide');
 }
 
 // ---------------------------------------------------------------- the Choir gathers
@@ -114,13 +118,13 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
   const s = clone(degenerate);
   const sv = only(s, 'chorus');
   // (whatever this game's Choir last asked)
-  delete s.civ.flags[`choir_wish_${sv.id}`];
+  delete marks(sv).choir_wish;
   const cap = colonies(s)[0];
   cap.pops.echoes = Math.max(cap.pops.echoes, 6);
   const echoes = colonies(s).reduce((a, c) => a + c.pops.echoes, 0);
   check(choirWish(s, sv), 'the Choir asks for those of our Echoes who wish to come');
   check(!choirWish(s, sv), 'now and then, not every turn');
-  const sig = s.signals.find((x) => x.kind === 'choir_wish')!;
+  const sig = s.civ.signals.find((x) => x.kind === 'choir_wish')!;
   const k = clone(s);
   s.years = Math.max(s.years, sig.arriveYears);
   deliverSignals(s);
@@ -129,7 +133,7 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
   check(resolveSurvivorSignal(s, sig.uid, 'let') === null, 'we let those who wish go');
   check(colonies(s).reduce((a, c) => a + c.pops.echoes, 0) === echoes - CHOIR_TAKES && sv.pop === pop + CHOIR_TAKES, `${CHOIR_TAKES} Echoes leave us and join the Choir`);
   check(s.civ.standing.echoes === Math.min(100, standing + 3) && (sv.news ?? []).some((x) => x.delta === 12), 'the Echoes think better of us, and so will the Choir when they arrive');
-  const ksig = k.signals.find((x) => x.kind === 'choir_wish')!;
+  const ksig = k.civ.signals.find((x) => x.kind === 'choir_wish')!;
   k.years = Math.max(k.years, ksig.arriveYears);
   deliverSignals(k);
   const kd = k.survivors[sv.id].disposition;
@@ -160,7 +164,9 @@ const degenerate = play(8919, (s) => s.era === 'degenerate' && s.eta >= 17.6);
 
 // ---------------------------------------------------------------- spin, a commons
 {
-  const s = play(1000, (g) => calendarEra(g) === 'blackhole');
+  // (the first of these games the autoplayer takes there: as the rules change, which one does can)
+  let s = play(1000, (g) => calendarEra(g) === 'blackhole');
+  for (let k = 1; k <= 12 && !(calendarEra(s) === 'blackhole' && !s.civ.outcome); k++) s = play(1000 + k * 7919, (g) => calendarEra(g) === 'blackhole');
   check(calendarEra(s) === 'blackhole', `a stable game in the Black Hole Age (η ${s.eta.toFixed(1)})`);
   const sv = only(s, 'upload');
   const hole = Object.values(s.systems).find((x) => !x.gone && x.primary.kind === 'black_hole' && x.primary.spin > 10)!;

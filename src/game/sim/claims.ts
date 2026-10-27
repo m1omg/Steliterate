@@ -8,11 +8,12 @@
 // warships, and remember whether we came.
 
 import type { Body, GameState, StarSystem, Survivor, SurvivorWay } from '../types';
+import { settlementSeen } from './others';
 import { livingWorlds } from './fleets';
 import { residentsOf } from './homes';
 import { sendSignal } from './signals';
 import { distanceToThem, lightArrived, spreadNews, voice } from './survivors';
-import { capital, distLy, log } from './util';
+import { allColonies, capital, distLy, log, marks } from './util';
 import { feel } from './dealings';
 
 /** How far they look for new stars (ly): their own cluster. */
@@ -60,7 +61,7 @@ export function suits(state: GameState, sv: Survivor, sys: StarSystem): boolean 
 
 /** Whether anyone lives at a star already: we do, another civilization does, or settlers are on their way to it. */
 function taken(state: GameState, sys: StarSystem): boolean {
-  if (Object.values(state.colonies).some((c) => c.systemId === sys.id)) return true;
+  if (allColonies(state).some((c) => c.systemId === sys.id)) return true;
   return Object.values(state.survivors).some((o) => o.alive && (o.systems.includes(sys.id) || o.claim?.systemId === sys.id));
 }
 
@@ -95,7 +96,7 @@ export function expand(state: GameState, sv: Survivor, chance: () => number) {
     delete sv.claim;
     const sys = state.systems[c.systemId];
     // someone else got there first, or there is nothing left: they will look again
-    if (!sys || sys.gone || Object.values(state.colonies).some((x) => x.systemId === sys.id) || Object.values(state.survivors).some((o) => o !== sv && o.alive && o.systems.includes(sys.id))) return;
+    if (!sys || sys.gone || allColonies(state).some((x) => x.systemId === sys.id) || Object.values(state.survivors).some((o) => o !== sv && o.alive && o.systems.includes(sys.id))) return;
     sv.systems.push(sys.id);
     (sv.claimedAt ??= {})[sys.id] = state.years;
     sv.health = Math.min(1, sv.health + 0.05);
@@ -126,19 +127,18 @@ export function starsSeen(state: GameState, sv: Survivor): string[] {
 /** A living civilization is warm: the Hunger smells it as it smells us. */
 export function theirWarmth(state: GameState, systemId: string): number {
   let w = 0;
-  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.exodus && sv.systems.includes(systemId)) w += 0.1 * sv.pop * sv.health;
+  for (const sv of Object.values(state.survivors)) if (sv.alive && !sv.exodus && !state.civs[sv.id] && sv.systems.includes(systemId)) w += 0.1 * sv.pop * sv.health;
   return w;
 }
 
 /** A swarm feeds at one of their stars: they ask us for warships (at most once in PLEA_EVERY turns). Returns true if they asked. */
 export function askAgainstHunger(state: GameState, sv: Survivor): boolean {
   if (sv.promised || sv.war) return false;
-  const key = `swarm_plea_${sv.id}`;
-  if (state.turn - (state.civ.flags[key] ?? -99) < PLEA_EVERY) return false;
+  if (state.turn - (sv.marks?.swarm_plea ?? -99) < PLEA_EVERY) return false;
   const sw = Object.values(state.swarms).find((w) => w.systemId && w.awake && !w.tamed && sv.systems.includes(w.systemId));
   if (!sw) return false;
   const sys = state.systems[sw.systemId!];
-  state.civ.flags[key] = state.turn;
+  marks(sv).swarm_plea = state.turn;
   sv.lastSent = state.turn;
   sendSignal(state, {
     from: sv.id,
@@ -201,5 +201,8 @@ export function foughtFor(state: GameState, systemId: string, broke: boolean) {
 /** The civilization we can see living on this world: at its first star, or where the light of its arrival has reached us. */
 export function residentsSeen(state: GameState, b: Body): Survivor | null {
   const sv = residentsOf(state, b);
+  // (a settlement of a civilization of its own, once its founding's light has reached us)
+  const c = b.colonyId ? state.colonies[b.colonyId] : undefined;
+  if (sv && c && c.owner === sv.id && !settlementSeen(state, c)) return null;
   return sv && (sv.homeSystemId === b.systemId || seenThere(state, sv, b.systemId)) ? sv : null;
 }

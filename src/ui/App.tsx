@@ -12,6 +12,7 @@ import { ResearchModal } from './screens/Research';
 import { SignalsModal } from './screens/Signals';
 import { FleetsModal, SystemsModal } from './screens/Lists';
 import { CrossingScreen, EraIntro, EventModal, LoreModal, OutcomeScreen, eventResult, loreView } from './screens/Story';
+import { FilmScreen } from './screens/Film';
 import { TipLayer, uiFactor } from './Tip';
 import { Icon } from './Icon';
 import { dismissToast, engine, game, hoverStar, lvFolded, mapHover, modal, rev, screen, settings, targeting, toasts, touchInput, uiZoom } from './store';
@@ -76,6 +77,8 @@ function ModalHost({ s }: { s: GameState | null }) {
   const m = modal.value;
   if (!m) return null;
   switch (m.kind) {
+    case 'film':
+      return <FilmScreen id={m.id} args={m.args} then={m.then} />;
     case 'codex':
       return <CodexModal topic={m.topic} />;
     case 'settings':
@@ -177,15 +180,15 @@ export function App() {
   }, [sc]);
   // danger ahead: the score tightens
   useEffect(() => {
-    if (sc !== 'game' || !s || s.outcome) return;
-    const danger = s.forecasts.some((f) => f.severity === 'danger' && (f.kind === 'hunger' || f.kind === 'crossing'));
+    if (sc !== 'game' || !s || s.civ.outcome) return;
+    const danger = s.civ.forecasts.some((f) => f.severity === 'danger' && (f.kind === 'hunger' || f.kind === 'crossing'));
     music.setMood(danger ? 'tension' : 'calm');
   });
   const m = modal.value?.kind;
-  // (the turn's events wait behind its combat report, and follow it)
-  const blocking = m === 'crossing' || m === 'outcome' || m === 'era_intro' || m === 'combat';
-  const story = !!s && !blocking && (s.pending.length > 0 || !!eventResult.value);
-  const lore = !!s && !blocking && !!loreView.value && !s.pending.length && !eventResult.value;
+  // (the turn's events wait behind its combat report, and behind a film, and follow them)
+  const blocking = m === 'crossing' || m === 'outcome' || m === 'era_intro' || m === 'combat' || m === 'film';
+  const story = !!s && !blocking && (s.civ.pending.length > 0 || !!eventResult.value);
+  const lore = !!s && !blocking && !!loreView.value && !s.civ.pending.length && !eventResult.value;
   return (
     <div class="ui-root">
       {sc === 'menu' && <MainMenu />}

@@ -17,12 +17,12 @@ import { computeMods } from '../../../src/game/sim/mods';
 import { project, spareLeft } from '../../../src/game/sim/projection';
 import { updateSociety } from '../../../src/game/sim/society';
 import { spareYield } from '../../../src/game/sim/spare';
-import { endTurn } from '../../../src/game/sim/turn';
+import { growth, type CivTurn } from '../../../src/game/sim/turn';
 import { colonies } from '../../../src/game/sim/util';
 import type { GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
 
-const fresh = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const fresh = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 
 // ---- a met demand above 80
 {
@@ -49,13 +49,15 @@ const fresh = () => newGame({ seed: 1000, length: 'standard', survivors: 3, diff
   c.structures.lattice_foundry = 1;
   const mods = computeMods(s);
   const cap = capacity(s, c, mods);
-  for (const x of colonies(s)) x.queue = [];
+  const turn = { mods, starving: true, popsLost: 0 } as unknown as CivTurn;
   c.pops.lattice = cap.lattice;
   c.growth.lattice = 1;
   s.civ.matter = 50;
-  endTurn(s);
-  const after = s.colonies[c.id];
-  check(after.growth.lattice >= 1 && after.pops.lattice <= capacity(s, after, computeMods(s)).lattice, `with no room the grown Lattice point waits, unpaid (growth ${after.growth.lattice.toFixed(2)}; it was paid for and lost)`);
+  growth(s, turn);
+  check(s.civ.matter === 50 && c.pops.lattice === cap.lattice && c.growth.lattice === 1, `with no room the grown Lattice point waits, unpaid (matter ${s.civ.matter}, Lattice ${c.pops.lattice} of ${cap.lattice})`);
+  c.pops.lattice = Math.max(0, cap.lattice - 1);
+  growth(s, turn);
+  check(s.civ.matter === 47 && c.pops.lattice === cap.lattice && c.growth.lattice === 0, `with room it becomes a Lattice, for its 3 matter (matter ${s.civ.matter})`);
 }
 
 // ---- spare work in the figures

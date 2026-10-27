@@ -13,6 +13,7 @@ import type { GameState, StarSystem } from '../../../src/game/types';
 import { reserveCapacity } from '../../../src/game/sim/storage';
 import { computeMods } from '../../../src/game/sim/mods';
 import { check, done } from '../lib';
+import { pointAt } from '../../../src/game/civs';
 
 const state = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard' });
 let guard = 0;
@@ -24,7 +25,7 @@ while (stepTime(state.era, state.years, state.eta, state.civ.pace, state.setting
   autoPlay(state, 'competent');
   endTurn(state);
 }
-state.pending.length = 0;
+state.civ.pending.length = 0;
 delete state.civ.flags.star_until;
 delete state.civ.flags.star_step;
 state.civ.pace = 0;
@@ -96,7 +97,7 @@ for (let k = 1; k <= 6; k++) {
   const e = state.civ.energy;
   state.civ.pace = k % 2 ? 2 : -2;
   endTurn(state);
-  state.pending.length = 0;
+  state.civ.pending.length = 0;
   if (k === 1) check(state.civ.energy >= e - 400, 'no further charge while it runs');
 }
 state.civ.pace = 0;
@@ -106,7 +107,7 @@ check(livedShare(state) === 1 && Math.abs(turnStep(state).turnLength - next(stat
 // helium stars: possible while the calendar can count their turns, then too brief
 const wd = Object.values(state.systems).find((s) => s.primary.kind === 'white_dwarf' && s.id !== far.id && !s.gone)!;
 const asHelium = (years: number) => {
-  const s = { ...state, years, eta: Math.log10(years) } as GameState;
+  const s = pointAt({ ...state, years, eta: Math.log10(years) }, state.civ);
   wd.primary.kind = 'helium_star';
   wd.primary.bornAt = years;
   wd.primary.diesAt = years + 2e8;

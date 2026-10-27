@@ -1,12 +1,15 @@
 import { useState } from 'preact/hooks';
 import { music, PIECES, pieceOn, TRACK_CHOICES, type Piece, type TrackKey } from '../../audio/music';
 import { ERA_BY_ID } from '../../game/eras';
-import { deleteSlot, exportAllSaves, exportCode, hasSave, importSaveBundle, listSlots, loadGame, loadSlot, readSave, readSaveBundle, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
+import { deleteSlot, exportAllSaves, exportCode, fromOlderBuild, hasSave, importSaveBundle, listSlots, loadGame, loadSlot, readSave, readSaveBundle, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
+import { OLDER_BUILD } from '../../keys';
 import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
 import { setVolumes } from '../../audio/core';
 import { sfx } from '../../audio/sfx';
-import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, bump, engine, game, modal, notify, rev, revealsOn, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
+import { PLAIN_MAX_SCALE, UI_SCALES, uiZoom, between, bump, engine, filmsOn, filmsSeen, game, modal, notify, rev, revealsOn, saveSettings, screen, selection, setViewMode, settings, view } from '../store';
+import { FILMS, heartMassOf, type FilmId } from '../../film/films';
+import { fateOf } from '../../game/fate';
 import { Icon } from '../Icon';
 import { CODEX } from './Codex';
 import { MANUAL } from './Manual';
@@ -26,9 +29,9 @@ const LOG_FILTERS: { id: 'all' | LogEntry['kind']; name: string }[] = [
 export function LogModal({ s }: { s: GameState }) {
   void rev.value;
   const [f, setF] = useState<(typeof LOG_FILTERS)[number]['id']>('all');
-  const entries = s.log.filter((e) => f === 'all' || e.kind === f).slice(-400).reverse();
+  const entries = s.civ.log.filter((e) => f === 'all' || e.kind === f).slice(-400).reverse();
   return (
-    <ModalFrame title="The Record" eyebrow={`${s.log.length} entries`} icon="log">
+    <ModalFrame title="The Record" eyebrow={`${s.civ.log.length} entries`} icon="log">
       <div class="row wrap" style={{ gap: '4px', marginBottom: '8px' }}>
         {LOG_FILTERS.map((x) => (
           <button key={x.id} class={`btn small ${f === x.id ? 'primary' : ''}`} onClick={() => setF(x.id)}>
@@ -83,17 +86,50 @@ export function CodexModal({ topic }: { topic?: string }) {
         <nav class="codex-nav">
           {group('How to play', MANUAL)}
           {group('The science', CODEX)}
+          <div class="eyebrow codex-group">Films</div>
+          <button class={`btn small ${cur === 'films' ? 'primary' : 'ghost'}`} onClick={() => setCur('films')}>
+            Films seen
+          </button>
         </nav>
-        <article class={`codex-body${isManual ? ' manual' : ''}`}>
-          <h2>{entry.title}</h2>
-          {entry.body.map((p, i) => (
-            <p key={i} class={isManual ? '' : 'flavor'} style={{ color: 'var(--ink)' }}>
-              {p}
-            </p>
-          ))}
-        </article>
+        {cur === 'films' ? (
+          <FilmsSeen />
+        ) : (
+          <article class={`codex-body${isManual ? ' manual' : ''}`}>
+            <h2>{entry.title}</h2>
+            {entry.body.map((p, i) => (
+              <p key={i} class={isManual ? '' : 'flavor'} style={{ color: 'var(--ink)' }}>
+                {p}
+              </p>
+            ))}
+          </article>
+        )}
       </div>
     </ModalFrame>
+  );
+}
+
+/** The Codex's films: those this player has seen, in any game, to play again (back to this page after). */
+function FilmsSeen() {
+  const seen = filmsSeen();
+  return (
+    <article class="codex-body">
+      <h2>Films seen</h2>
+      {seen.length === 0 ? (
+        <p class="flavor" style={{ color: 'var(--ink)' }}>
+          A film plays as each age begins, with a game’s first supernova, and as a game ends. Those you have seen are kept here, to play again.
+        </p>
+      ) : (
+        <div class="col" style={{ gap: '6px' }}>
+          {(Object.keys(FILMS) as FilmId[])
+            .filter((id) => seen.includes(id))
+            .map((id) => (
+              <button key={id} class="btn" onClick={() => (modal.value = { kind: 'film', id, args: { fate: game.value ? fateOf(game.value) : undefined, heartMass: heartMassOf(game.value) }, then: { kind: 'codex', topic: 'films' } })}>
+                <Icon name="system" /> {FILMS[id].name}
+              </button>
+            ))}
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -119,7 +155,7 @@ export function SettingsModal() {
       <div class="col" style={{ gap: '14px' }}>
         {g && (
           <div class="row wrap" style={{ gap: '6px' }}>
-            <button class="btn primary" onClick={() => (saveGame(g) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Use a save code.', 'bad'))}>
+            <button class="btn primary" onClick={() => between() && (saveGame(g) ? notify('Saved.', 'good') : notify('Could not save: storage is unavailable here. Use a save code.', 'bad'))}>
               <Icon name="save" /> Quick save
             </button>
             <button class="btn" onClick={() => (modal.value = { kind: 'save' })}>
@@ -152,6 +188,20 @@ export function SettingsModal() {
                 {q}
               </button>
             ))}
+          </div>
+        </div>
+        <div class="field">
+          <label>Films</label>
+          <div class="seg">
+            <button class={`btn small ${filmsOn() ? 'primary' : ''}`} aria-pressed={filmsOn()} onClick={() => set({ films: true })}>
+              On
+            </button>
+            <button class={`btn small ${!filmsOn() ? 'primary' : ''}`} aria-pressed={!filmsOn()} onClick={() => set({ films: false })}>
+              Off
+            </button>
+          </div>
+          <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
+            A short film, drawn as it plays, as each age begins and as a game ends. A click, Space or Escape skips one; the Codex plays again those you have seen. Off to begin with where the system asks for less motion.
           </div>
         </div>
         <div class="field">
@@ -308,9 +358,11 @@ function PlaylistField({ playlist, overture, set }: { playlist: Record<string, b
 }
 
 export function startLoaded(g: GameState) {
+  if (!between()) return;
   game.value = g;
   screen.value = 'game';
-  modal.value = null;
+  // a crossing's report not yet read (the game was saved, or the page closed, with it open) opens again
+  modal.value = g.civ.crossing ? { kind: 'crossing' } : null;
   selection.value = null;
   bump();
   // start centred on the capital (or the homeworld, if there is no capital)
@@ -323,6 +375,7 @@ export function startLoaded(g: GameState) {
 
 /** Back to the title screen. The game is kept in the autosave slot, so Continue resumes it. */
 function quitToMenu(g: GameState) {
+  if (!between()) return;
   saveGame(g, true);
   sfx('click');
   modal.value = null;
@@ -355,15 +408,25 @@ async function importSave(onSlots?: () => void) {
   if (all) {
     const r = await importSaveBundle(all);
     onSlots?.();
-    const parts = [r.added ? `${r.added} save${r.added === 1 ? '' : 's'} added as slots` : 'No new saves', r.skipped ? `${r.skipped} already here` : '', r.failed ? `${r.failed} could not be read or did not fit` : ''].filter(Boolean);
-    notify(`${parts.join(', ')}.`, r.added ? 'good' : r.failed ? 'bad' : 'info');
+    const parts = [
+      r.added ? `${r.added} save${r.added === 1 ? '' : 's'} added as slots` : 'No new saves',
+      r.skipped ? `${r.skipped} already here` : '',
+      r.failed ? `${r.failed} could not be read or did not fit` : '',
+      r.older ? `${r.older} from the older build, which keeps them: import ${r.older === 1 ? 'it' : 'them'} there` : '',
+    ].filter(Boolean);
+    notify(`${parts.join(', ')}.`, r.added ? 'good' : r.failed || r.older ? 'bad' : 'info', r.older ? olderBuildAction : undefined);
     if (r.added) sfx('good');
     return;
   }
   const g = readSave(text);
   if (g) startLoaded(g);
+  else if (fromOlderBuild(text)) notify(OLDER_SAVE, 'bad', olderBuildAction);
   else notify('That file is not a Steliterate save.', 'bad');
 }
+
+/** A game saved before the new version: that build keeps it, and plays it. */
+const OLDER_SAVE = 'That game is from the older build, before the new version. It plays on there, with your other games from then.';
+const olderBuildAction = { label: 'Open it', tip: 'The older build, as it was on 27 Oct, in a new tab.', run: () => { window.open(OLDER_BUILD, '_blank', 'noopener'); } };
 
 const ERA_SHORT: Record<string, string> = { dusk: 'the Long Dusk', degenerate: 'the Degenerate Age', blackhole: 'the Black Hole Age', dark: 'the Dark' };
 
@@ -472,7 +535,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
         <div class="eyebrow">Quick save and autosave</div>
         <div class="row wrap" style={{ gap: '6px' }}>
           {s && (
-            <button class="btn" onClick={() => (saveGame(s) ? notify('Quick-saved.', 'good') : notify('Could not save: storage is unavailable here. Export a file or use a save code.', 'bad'))} data-tip="One quick slot, overwritten each time">
+            <button class="btn" onClick={() => between() && (saveGame(s) ? notify('Quick-saved.', 'good') : notify('Could not save: storage is unavailable here. Export a file or use a save code.', 'bad'))} data-tip="One quick slot, overwritten each time">
               Quick save
             </button>
           )}
@@ -528,7 +591,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
         </div>
         {s && !code && (
           <div>
-            <button class="btn small" onClick={() => setCode(exportCode(s))}>
+            <button class="btn small" onClick={() => between() && setCode(exportCode(s))}>
               Make a save code
             </button>
           </div>
@@ -551,6 +614,7 @@ export function SaveModal({ s }: { s: GameState | null }) {
             onClick={() => {
               const g = readSave(importText);
               if (g) startLoaded(g);
+              else if (fromOlderBuild(importText)) notify(OLDER_SAVE, 'bad', olderBuildAction);
               else notify('That code could not be read.', 'bad');
             }}
           >

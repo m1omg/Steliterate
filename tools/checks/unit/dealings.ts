@@ -6,6 +6,9 @@
 // defences turned away wait before trying again. They offer the pact they need most. And they
 // remember why they feel as they do, whatever moved them. An offer from an older save keeps its
 // old terms.
+// (In games whose neighbours sleep, civsAsleep: these are the rules of the neighbours as we know
+// them, on their records, which a check sets by hand; unit/others checks the neighbours as
+// civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
 import { endTurn } from '../../../src/game/sim/turn';
@@ -17,23 +20,24 @@ import { computeMods } from '../../../src/game/sim/mods';
 import { turnStep } from '../../../src/game/sim/flare';
 import { techCost } from '../../../src/game/sim/research';
 import { logTurnLength } from '../../../src/game/eras';
-import { capital } from '../../../src/game/sim/util';
+import { capital, marks } from '../../../src/game/sim/util';
 import { TECH_BY_ID } from '../../../src/game/data/techs';
 import { EVENT_BY_ID } from '../../../src/game/data/events';
 import { fork } from '../../../src/game/sim/society';
 import { Rng } from '../../../src/game/rng';
 import type { GameState, Survivor } from '../../../src/game/types';
 import { check, done } from '../lib';
+import { copyState } from '../../../src/game/save';
 
-const clone = (s: GameState) => JSON.parse(JSON.stringify(s)) as GameState;
+const clone = (s: GameState) => copyState(s);
 const base = (() => {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' });
-  for (let g = 0; g < 40 && !s.outcome; g++) {
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
+  for (let g = 0; g < 40 && !s.civ.outcome; g++) {
     autoPlay(s, 'competent');
     endTurn(s);
   }
-  s.pending.length = 0;
-  s.signals.length = 0;
+  s.civ.pending.length = 0;
+  s.civ.signals.length = 0;
   s.swarms = {};
   s.civ.taint = 0;
   return s;
@@ -57,7 +61,7 @@ const theirTurn = (s: GameState) => {
   updateSurvivors(s, logTurnLength(step), computeMods(s), step.turnLength);
 };
 const answer = (s: GameState, kind: string, choice: string) => {
-  const sig = s.signals.find((x) => x.kind === kind && !x.resolved)!;
+  const sig = s.civ.signals.find((x) => x.kind === kind && !x.resolved)!;
   s.years = Math.max(s.years, sig.arriveYears);
   deliverSignals(s);
   return resolveSurvivorSignal(s, sig.uid, choice);
@@ -98,14 +102,14 @@ const answer = (s: GameState, kind: string, choice: string) => {
   check(tradeOffer(s, sv) === null, 'and nothing at all when we could not spare even that');
   s.civ.energy = 200;
   // their turn, with their rhythm allowing it
-  s.civ.flags[`trade_next_${sv.id}`] = 0;
+  marks(sv).trade_next = 0;
   let sent = false;
   for (let i = 0; i < 40 && !sent; i++) {
     sv.lastSent = -99;
     theirTurn(s);
-    sent = s.signals.some((x) => x.kind === 'trade');
+    sent = s.civ.signals.some((x) => x.kind === 'trade');
   }
-  const sig = s.signals.find((x) => x.kind === 'trade')!;
+  const sig = s.civ.signals.find((x) => x.kind === 'trade')!;
   check(sent && new RegExp(`^We have notes on ${TECH_BY_ID[r].name} we cannot use, and we need energy\\. \\d+ energy for \\d+ insight\\?$`).test(sig.text), `the message says it all: "${sig?.text}"`);
   const insight = Number(sig.data.insight);
   const ask = Number(sig.data.ask);
@@ -121,13 +125,13 @@ const answer = (s: GameState, kind: string, choice: string) => {
   offered(s, sv, 'trade');
   check(!offerDue(s, sv, 'trade', () => 0), 'after an offer, nothing until their rhythm comes round');
   answered(s, sv, 'trade', false);
-  check(s.civ.flags[`trade_next_${sv.id}`] === s.turn + every * 2, `a refusal: they wait twice as long (${every * 2} turns)`);
+  check(marks(sv).trade_next === s.turn + every * 2, `a refusal: they wait twice as long (${every * 2} turns)`);
   answered(s, sv, 'trade', false);
-  check(s.civ.flags[`trade_next_${sv.id}`] === s.turn + every * 4, `two in a row: four times (${every * 4})`);
+  check(marks(sv).trade_next === s.turn + every * 4, `two in a row: four times (${every * 4})`);
   answered(s, sv, 'trade', true);
-  check(s.civ.flags[`trade_next_${sv.id}`] === s.turn + every && s.civ.flags[`trade_no_${sv.id}`] === undefined, 'a yes, and they are back to their own rhythm');
+  check(marks(sv).trade_next === s.turn + every && marks(sv).trade_no === undefined, 'a yes, and they are back to their own rhythm');
   for (let i = 0; i < 6; i++) answered(s, sv, 'joint', false);
-  check(s.civ.flags[`joint_next_${sv.id}`] === s.turn + every * 8, 'shared works too, and never longer than eight times');
+  check(marks(sv).joint_next === s.turn + every * 8, 'shared works too, and never longer than eight times');
 }
 
 // ---------------------------------------------------------------- an offer from an older save
@@ -154,18 +158,18 @@ const answer = (s: GameState, kind: string, choice: string) => {
     // in step with ours, so that each try is one they can make, whatever the draws before it gave)
     sv.clock = voiceClock(s, logTurnLength(turnStep(s)));
     theirTurn(s);
-    tried = s.signals.some((x) => x.kind === 'raid');
+    tried = s.civ.signals.some((x) => x.kind === 'raid');
   }
-  check(tried && s.signals.some((x) => x.title.includes('tried to raid')), 'desperate and hostile, they try to raid us, and our defences turn them away');
-  const wait = s.civ.flags[`raid_wait_${sv.id}`];
+  check(tried && s.civ.signals.some((x) => x.title.includes('tried to raid')), 'desperate and hostile, they try to raid us, and our defences turn them away');
+  const wait = marks(sv).raid_wait;
   check(wait === s.turn + 15, 'then they wait fifteen turns before they try again');
-  const n = s.signals.filter((x) => x.kind === 'raid').length;
+  const n = s.civ.signals.filter((x) => x.kind === 'raid').length;
   for (let i = 0; i < 5; i++) {
     sv.lastSent = -99;
     sv.health = 0.1;
     theirTurn(s);
   }
-  check(s.signals.filter((x) => x.kind === 'raid').length === n, 'and do not, meanwhile');
+  check(s.civ.signals.filter((x) => x.kind === 'raid').length === n, 'and do not, meanwhile');
 }
 
 // ---------------------------------------------------------------- the pact they need
@@ -175,7 +179,7 @@ const answer = (s: GameState, kind: string, choice: string) => {
   const home = s.systems[sv.homeSystemId];
   s.swarms.hgx = { id: 'hgx', systemId: home.id, from: null, to: null, traveled: 0, distance: 0, size: 2, awake: true, tamed: false, appetite: 1 };
   theirPacts(s, sv, () => 0);
-  const offer = s.signals.find((x) => x.kind === 'pact_offer');
+  const offer = s.civ.signals.find((x) => x.kind === 'pact_offer');
   check(String(offer?.data.pact) === 'watch', `with the Hunger at their star, they offer a Shared Watch first (${offer?.data.pact})`);
 }
 

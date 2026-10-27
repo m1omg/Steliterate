@@ -1,4 +1,5 @@
 import { STRUCTURE_BY_ID, type StructureDef } from '../data/structures';
+import { FORMS, HORIZON_PACE, HORIZON_UPKEEP, WEAVE_PACE, WEAVE_ROOM, WEAVE_UPKEEP, horizonRoom } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
 import { frozenHard, hawkingLight, insolation, siphonsRunning, sourceLight, tooColdForOpenAir } from '../physics';
 import type { Colony, GameState, ThreadId, YieldBreakdown, YieldLine } from '../types';
@@ -6,26 +7,35 @@ import { THREADS } from '../types';
 import { THAW_ROOM, scorched, thawed } from './flare';
 import { habitabilityOf } from './terraform';
 import { type Mods, strainFor, type Strain } from './mods';
-import { clamp, colonies, eraIndex, leftBehind } from './util';
+import { clamp, colonies, eraIndex, formOf, leftBehind } from './util';
 import { calendarEra, fateOf, matterGone } from '../fate';
 import { FLOW_DORMANT, FLOW_WATCH, flowing, keeping } from './flow';
+import { thinShare } from './thinning';
+import { netYield } from './positronium';
+import { ironAge } from './deeptime';
 
 export interface TurnContext {
   years: number; // start of the coming turn
   L: number; // its length in years (Infinity in deep time)
   logL: number;
   paceFactor: number; // share of the Tide turn actually lived: 10^-pace, or what a clock's turn covers (livedShare)
-  upkeepShare?: number; // what its machines and sleepers cost, in Tide turns (upkeepShare, flare.ts; else max(1, paceFactor))
+  upkeepShare?: number; // what its machines, sleepers and fleets cost, in Tide turns (upkeepShare, flare.ts; else max(1, paceFactor))
   mods: Mods;
 }
 
-/** What a turn's machines and sleepers cost, in Tide turns (TurnContext.upkeepShare). */
+/** What a turn's machines, sleepers and fleets cost, in Tide turns (TurnContext.upkeepShare). */
 export const upkeepOf = (ctx: TurnContext): number => ctx.upkeepShare ?? Math.max(1, ctx.paceFactor);
 
 export type Capacity = Record<ThreadId, number> & { cryo: number };
 
-/** What was paid in matter is paid in energy once no ordinary matter is left, at this many energy a unit (as construction is: actions.ts). */
+/**
+ * In the ages without ordinary matter, what was paid in matter is paid in energy, at this many
+ * energy for each unit: construction (actions.ts), and the Lattice's repairs and its growth.
+ */
 export const MATTER_AS_ENERGY = 1.5;
+
+/** What a settlement makes while the Passage rewrites it (passage.ts): its energy, matter, insight and accord. */
+export const PASSAGE_OUTPUT = 0.7;
 
 /**
  * After the Last Light every source gives this much more energy and matter (20 Oct, the player's
@@ -34,7 +44,7 @@ export const MATTER_AS_ENERGY = 1.5;
  * often it was won, leaned on that; the pace's ladder made them honest, so the late ages' yields
  * carry the difference instead, at every pace.
  */
-export const LATE_YIELD = 1.4;
+export const LATE_YIELD = 1.125;
 
 /** LATE_YIELD after the Dusk's calendar, 1 in it. */
 export function lateYield(state: GameState): number {
@@ -73,6 +83,16 @@ export function capacity(state: GameState, c: Colony, mods: Mods): Capacity {
     for (const t of THREADS) cap[t] += (d.cap?.[t] ?? 0) * n;
     cap.cryo += (d.cryoCap ?? 0) * n;
   }
+  // what it is made of decides who can live there at all (a leptonic settlement has no room for Kin)
+  const form = FORMS[formOf(c)];
+  // (written into a hole's horizon, the room is the horizon's, by the hole's mass; woven through
+  // the positronium, there is room to spare)
+  const more = form.id === 'horizon' ? horizonRoom(state.systems[c.systemId].primary) : form.id === 'positronium' ? WEAVE_ROOM : 0;
+  for (const t of THREADS) {
+    if (!form.lives.includes(t)) cap[t] = 0;
+    else cap[t] += more;
+  }
+  if (!form.sleepers) cap.cryo = 0;
   return cap;
 }
 
@@ -117,6 +137,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   const pf = ctx.paceFactor;
   // (after the Last Light every source gives more: LATE_YIELD)
   const late = lateYield(state);
+  // (the share of ordinary matter gone at the turn's start, in the Thinning)
+  const thin = thinShare(state, Math.log10(Math.max(1, ctx.years)));
 
   let energy = 0;
   let energyUpkeep = 0;
@@ -146,22 +168,29 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   // machines and sleepers run for the whole of a slowed turn; only minds can slow themselves down
   // (a turn a clock, a flare or the age's end cuts short costs for the time it covers: upkeepShare)
   const slowTime = upkeepOf(ctx);
+  // after matter, what the Lattice mended with matter it mends with energy
   const noMatter = matterGone(state);
+  // written into a hole's horizon, minds live in its time: a tenth of their upkeep, a quarter of
+  // their pace, and no tempo strain (horizon.ts); woven through the positronium, a fiftieth and a
+  // tenth (positronium.ts)
+  const inHorizon = formOf(c) === 'horizon';
+  const inWeave = formOf(c) === 'positronium';
+  const slowed = inHorizon || inWeave;
+  const paceMul = inHorizon ? HORIZON_PACE : inWeave ? WEAVE_PACE : 1;
+  const upMul = inHorizon ? HORIZON_UPKEEP : inWeave ? WEAVE_UPKEEP : 1;
   for (const t of THREADS) {
     const n = c.pops[t];
-    const s = strainFor(t, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor));
+    const s = slowed ? { clock: ctx.logL, m: 0, outMul: 1, upkeepMul: 1 } : strainFor(t, ctx.logL, ctx.mods, Math.log10(ctx.paceFactor));
     strain[t] = s;
     if (n <= 0) continue;
     const d = THREAD_DEFS[t];
-    let o = s.outMul * out;
+    let o = s.outMul * out * paceMul;
     if (t === 'lattice' && flags.has('charter:lattice_compact')) o *= 1.15;
     const ind = n * d.industry * o;
     const ins = n * d.insight * o;
     const acc = n * d.accord * o;
-    let eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1);
-    let mUp = n * d.matterUpkeep * upkeepScale;
-    // with no ordinary matter left, its repairs are paid in energy, as building is (until 19 Oct
-    // they were still asked in matter, and a Lattice wore out each turn for want of it)
+    let eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1) * upMul;
+    let mUp = n * d.matterUpkeep * upkeepScale * upMul;
     const mended = noMatter && mUp > 0;
     if (mended) {
       eUp += mUp * MATTER_AS_ENERGY;
@@ -172,7 +201,7 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     accord += acc;
     energyUpkeep += eUp;
     matterUpkeep += mUp;
-    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}${mended ? ' (repairs in energy: no matter is left)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
+    lines.push({ label: `${n} ${n === 1 ? d.one : d.name}${Math.abs(s.m) > 0.05 ? ` (strain ${s.m > 0 ? '+' : ''}${s.m.toFixed(1)})` : ''}${t === 'coldminds' && darkSky ? ' (dark sky: half upkeep)' : ''}${watch > 1 ? ' (watchers against the flow: half again)' : ''}${mended ? ' (repairs in energy: no matter is left)' : ''}${inHorizon ? ' (in the horizon: a tenth of the upkeep, a quarter of the pace)' : ''}${inWeave ? ' (in the weave: a fiftieth of the upkeep, a tenth of the pace)' : ''}`, industry: ind, insight: ins, accord: acc, energy: -eUp, matter: -mUp });
   }
   if (c.cryo > 0) {
     const cu = c.cryo * 0.08 * (flags.has('charter:cold_sleep_lottery') ? 0.5 : 1) * slowTime;
@@ -224,6 +253,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
           break;
         case 'fusion':
         case 'accretion': {
+          // once everything has fused to iron (matter stable, η 1500) nothing is left to fuse
+          if (d.energy.mode === 'fusion' && ironAge(state)) break;
           const want = (d.energy.input ?? 1) * n * pf;
           const got = Math.min(want, Math.max(0, matterAvailable - matterBurn));
           matterBurn += got;
@@ -254,6 +285,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
         case 'siphon':
           e = calendarEra(state) === 'dark' ? a : 0;
           break;
+        case 'positronium':
+          // its share of the window's trickle, or of the dole after it: the same in all whatever
+          // the pace, so not scaled by the turn's length below
+          e = pf > 0 ? (a * netYield(state, ctx.years, ctx.L)) / pf : 0;
+          break;
       }
       e *= pf * late * overdrive * focusMul(c, 'energy') * taintBoost;
     }
@@ -262,8 +298,9 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     if (d.hydrogenYield) mt += d.hydrogenYield * n * body.hydrogen * gfeMatter;
     if (d.lift && !away) mt += d.lift * n * gfeMatter;
     if (mt) {
-      // only its own focus touches matter: the others leave it as it was
-      mt *= pf * late * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1);
+      // only its own focus touches matter: the others leave it as it was; in the Thinning there
+      // is that much less of it to bring in (thinning.ts)
+      mt *= pf * late * taintBoost * (flags.has('hunger_engines') ? 1.4 : 1) * (c.focus === 'matter' ? focusMul(c, 'matter') : 1) * (1 - thin);
       depletion += (d.matterYield || d.hydrogenYield ? mt : 0);
       if (!matterGone(state)) matter += mt;
     }
@@ -278,8 +315,11 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     accord += acc;
     energyUpkeep += up;
     // a collector with nothing to collect says so, rather than vanishing from the list
-    const idle = away || (!!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion');
-    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${away ? ': out of reach, its world drifted loose from the star' : idle ? ': nothing to gather' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
+    const iron = d.energy?.mode === 'fusion' && ironAge(state);
+    const idle = away || iron || (!!d.energy && e <= 0 && d.energy.mode !== 'fusion' && d.energy.mode !== 'accretion');
+    // a Search Foundry or Protocol Registry with no Lattice here to run it says so too
+    const unrun = !!d.search && !(c.pops.lattice > 0);
+    if (e || mt || ind || ins || acc || up || idle) lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}${away ? ': out of reach, its world drifted loose from the star' : iron ? ': nothing left to fuse, all of it iron' : idle ? ': nothing to gather' : unrun ? ': no Lattice here to run it' : ''}`, energy: e - up, matter: mt, industry: ind, insight: ins, accord: acc, ...(idle ? { idle: d.id } : {}) });
   }
   if (matterBurn > 0) lines.push({ label: 'Fuel burned', matter: -matterBurn });
 
@@ -289,10 +329,12 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const hole = (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh') && !body.rogue;
     const fed = Math.max(Math.min(1.5, body.rogue ? 0 : light.light), body.coreHeat * 0.8, hole && eraIndex(calendarEra(state)) >= 1 ? 1 : 0);
     // where nothing local is left to draw on, it burns what was stored and salvaged, a little
-    const local = Math.max(0.25, fed);
+    // (once all of it is iron there is no fuel left in it to burn, nor anything to salvage)
+    const iron = ironAge(state);
+    const local = iron ? fed : Math.max(0.25, fed);
     const hearth = 2 * local * (1 - c.damage) * pf * late * overdrive * focusMul(c, 'energy') * taintBoost;
     energy += hearth;
-    lines.push({ label: `Hearth${c.overdrive ? ' (overdriven)' : ''}${fed < 0.25 ? ': stored fuel and salvage' : ''}`, energy: hearth });
+    lines.push({ label: `Hearth${c.overdrive ? ' (overdriven)' : ''}${fed < 0.25 ? (iron ? ': nothing left to burn, all of it iron' : ': stored fuel and salvage') : ''}`, energy: hearth });
   }
 
   industry *= ctx.mods.industryMult * focusMul(c, 'industry');
@@ -302,6 +344,31 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   if (flags.has('charters') && !dormant) {
     accord += LONG_RECORD_ACCORD;
     lines.push({ label: 'The Long Record', accord: LONG_RECORD_ACCORD });
+  }
+  // the Lattice's search and registry turn industry into insight and accord, where the Lattice is here to run them
+  if (c.pops.lattice > 0) {
+    for (const [id, n] of Object.entries(c.structures)) {
+      const d = STRUCTURE_BY_ID[id];
+      if (!d?.search || !n) continue;
+      const take = Math.min(industry, d.search.draw * n * out);
+      if (!(take > 0)) continue;
+      industry -= take;
+      const made = take * d.search.rate * (d.search.into === 'insight' ? ctx.mods.insightMult : 1);
+      if (d.search.into === 'insight') insight += made;
+      else accord += made;
+      lines.push({ label: `${n > 1 ? `${n}× ` : ''}${d.name}: industry into ${d.search.into}`, industry: -take, ...(d.search.into === 'insight' ? { insight: made } : { accord: made }) });
+    }
+  }
+
+  // the Passage, or the writing into a horizon: while the settlement is being rewritten it makes
+  // less (its industry goes into the rewriting)
+  if (c.queue[0]?.kind === 'passage' || c.queue[0]?.kind === 'horizon' || c.queue[0]?.kind === 'weave') {
+    const cut = 1 - PASSAGE_OUTPUT;
+    lines.push({ label: c.queue[0].kind === 'passage' ? 'The Passage: being rewritten' : c.queue[0].kind === 'horizon' ? 'Writing into the horizon: being rewritten' : 'Weaving through the positronium: being rewritten', energy: -energy * cut, matter: -matter * cut, insight: -insight * cut, accord: -accord * cut });
+    energy *= PASSAGE_OUTPUT;
+    matter *= PASSAGE_OUTPUT;
+    insight *= PASSAGE_OUTPUT;
+    accord *= PASSAGE_OUTPUT;
   }
 
   const y: YieldBreakdown = {

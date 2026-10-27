@@ -15,16 +15,16 @@ run(async () => {
     const cap = s.colonies[s.civ.capitalId];
     cap.structures.substrate_core = (cap.structures.substrate_core ?? 0) + 2;
     cap.pops.echoes = Math.max(cap.pops.echoes, 6);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     // their wish crosses to us at the speed of light
-    for (let i = 0; i < 40 && !s.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null); i++) {
+    for (let i = 0; i < 40 && !s.civ.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null); i++) {
       v.health = 0.8;
       v.disposition = 30;
       window.__stel.endTurns(1, false);
     }
     window.__stel.refresh();
-    const echoes = Object.values(s.colonies).reduce((a, c) => a + c.pops.echoes, 0);
-    return { id: v.id, name: v.name, echoes, asked: s.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null) };
+    const echoes = Object.values(s.colonies).filter((c) => c.owner === s.player).reduce((a, c) => a + c.pops.echoes, 0);
+    return { id: v.id, name: v.name, echoes, asked: s.civ.signals.some((x) => x.kind === 'choir_wish' && x.arrivedTurn !== null) };
   });
   check(sv.asked, `${sv.name} asks for those of our Echoes who wish to come`);
   await page.locator('button[aria-label="Signals: the other minds"]').click();
@@ -36,7 +36,10 @@ run(async () => {
   await ck.shot('choir-wish.png');
   await msg.locator('.btn.choice', { hasText: 'Let those who wish go' }).click();
   await page.waitForTimeout(400);
-  const after = await page.evaluate(() => Object.values(window.__stel.state().colonies).reduce((a, c) => a + c.pops.echoes, 0));
+  const after = await page.evaluate(() => {
+    const s = window.__stel.state();
+    return Object.values(s.colonies).filter((c) => c.owner === s.player).reduce((a, c) => a + c.pops.echoes, 0);
+  });
   check(after === sv.echoes - 2, `two Echoes left us for the Choir (${sv.echoes} → ${after})`);
   const answered = await page.locator('.modal .message', { hasText: 'would gather some of our Echoes' }).locator('.faint', { hasText: 'Answered:' }).textContent().catch(() => null);
   check(/Answered: Let those who wish go/.test(answered ?? ''), 'the message says what we answered');

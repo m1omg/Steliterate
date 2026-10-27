@@ -28,19 +28,20 @@ import { ERA_BY_ID, stepTime, tideTurnsAt } from '../../../src/game/eras';
 import { DEGENERATE_END, MATTER_END, calendarEra } from '../../../src/game/fate';
 import { newGame } from '../../../src/game/newGame';
 import { turnsToFreeze, vitalityLoss } from '../../../src/game/physics';
-import { cloneState as copyState } from '../../../src/game/save';
+import { copyState } from '../../../src/game/save';
 import { effectivePace, livedShare, paceMatters, slowPastTheEnd, slowestAllowed, turnEndEta, turnEndWhy, turnStep, turnsUntilYears, upkeepShare } from '../../../src/game/sim/flare';
 import { updateHunger } from '../../../src/game/sim/hunger';
 import { computeMods } from '../../../src/game/sim/mods';
 import { LATE_YIELD, colonyTurn, lateYield } from '../../../src/game/sim/economy';
 import { powerParts } from '../../../src/game/sim/sites';
 import { project } from '../../../src/game/sim/projection';
+import { continuityLoss } from '../../../src/game/sim/continuity';
 import { declineWorlds } from '../../../src/game/sim/turn';
 import type { EpochLength, EraId, GameState, ProtonFate } from '../../../src/game/types';
 import { check, done } from '../lib';
 
 const game = (seed = 1000, length: EpochLength = 'standard', protonFate: ProtonFate = 'decays') =>
-  newGame({ seed, length, survivors: 3, difficulty: 'standard', protonFate }) as GameState;
+  newGame({ seed, length, survivors: 3, difficulty: 'standard', protonFate, civsAsleep: true }) as GameState;
 const rel = (a: number, b: number) => Math.abs(a - b) / Math.max(Math.abs(a), Math.abs(b), 1e-300);
 /**
  * How far apart two spans of years may be after a few steps for float rounding alone: the game
@@ -302,7 +303,7 @@ const at = (s: GameState, era: EraId, years: number, eta = Math.log10(years)) =>
   const faded = Object.values(s.systems).find((x) => x !== sys)!;
   s.swarms = { sw1: { id: 'sw1', systemId: sys.id, size: 2, awake: true, tamed: false, appetite: 1, to: null, from: null, traveled: 0, distance: 0 } };
   faded.rust = 0.5;
-  const mods = computeMods(s);
+  const mods = () => computeMods(s);
   const a = copyState(s);
   const b = copyState(s);
   updateHunger(a, 1e12, mods, 1);
@@ -318,11 +319,11 @@ const at = (s: GameState, era: EraId, years: number, eta = Math.log10(years)) =>
   check(rel(fadeA, 0.45) < 1e-12 && rel(fadeB, 0.5 * Math.pow(0.9, 0.1)) < 1e-12, `rust where no swarm is fades a tenth in a Tide turn (${fadeA.toFixed(3)}), ${((1 - Math.pow(0.9, 0.1)) * 100).toFixed(2)}% in a Quick ×10 turn`);
   // tamed
   const t = copyState(s);
-  t.swarms.sw1.tamed = true;
+  Object.assign(t.swarms.sw1, { tamed: true, tamedBy: t.player });
   const ta = copyState(t);
   const tb = copyState(t);
-  updateHunger(ta, 1e12, computeMods(ta), 1);
-  updateHunger(tb, 1e12, computeMods(tb), 0.1);
+  updateHunger(ta, 1e12, () => computeMods(ta), 1);
+  updateHunger(tb, 1e12, () => computeMods(tb), 0.1);
   const gotA = ta.civ.matter - t.civ.matter;
   const gotB = tb.civ.matter - t.civ.matter;
   check(gotA > 0 && rel(gotA, 10 * gotB) < 1e-9, `a tamed swarm brings ${gotA.toFixed(2)} matter in a Tide turn, a tenth of it in a Quick ×10 turn`);
@@ -338,8 +339,7 @@ const at = (s: GameState, era: EraId, years: number, eta = Math.log10(years)) =>
     while (k.eta < Math.pow(10, ERA_BY_ID.dark.endEta) && turns < 500) {
       const step = turnStep(k, p);
       paid += livedShare(k, p, step);
-      // (Continuity: 2.2 a turn in the dark, with nothing to keep it: turn.ts)
-      lost += 2.2;
+      lost += continuityLoss(k, false);
       k.years = step.years;
       k.eta = step.eta;
       turns++;
@@ -366,10 +366,10 @@ const at = (s: GameState, era: EraId, years: number, eta = Math.log10(years)) =>
   check(rel(est(s), before) < 1e-9 && rel(est(late), after) < 1e-9, `where to settle counts it too: the capital’s world’s Hearth ≈${est(s).toFixed(2)} in the Dusk, ≈${est(late).toFixed(2)} after the Last Light`);
 }
 
-// ---- the autoplayer in the dark: the Long Sleep where the reserve would not last the age (until
-// 20 Oct it never slept: a slow turn in the dark paid a hundred Tide turns' trickle, and slowing
-// down was enough to last)
-for (const protonFate of ['decays', 'stable', 'curvature'] as ProtonFate[]) {
+// ---- the autoplayer in the dark, whatever the fate: the Long Sleep where the reserve would not last
+// the age (until 20 Oct only once matter stable was iron: a slow turn in the dark paid a hundred
+// Tide turns' trickle, and slowing down was enough to last)
+for (const protonFate of ['decays', 'curvature'] as ProtonFate[]) {
   const darkWith = (energy: number) => {
     const s = at(game(1000, 'standard', protonFate), 'dark', Infinity, 1e5);
     const c = s.colonies[s.civ.capitalId!];
@@ -385,7 +385,7 @@ for (const protonFate of ['decays', 'stable', 'curvature'] as ProtonFate[]) {
     s.civ.energy = energy;
     s.civ.matter = 0;
     s.civ.researching = null;
-    s.pending = [];
+    s.civ.pending = [];
     return s;
   };
   const short = darkWith(30);

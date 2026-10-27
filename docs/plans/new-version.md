@@ -4,6 +4,14 @@ The plan the player approved on 13 Oct 2026, kept here as it was approved so any
 it up. The work is on `claude/epic-wozniak-lyhulf`; `main` keeps today's game until the player says
 the new version is ready (see "How it ships"). Progress is in docs/SESSION-NOTES.md and the CHANGELOG.
 
+**Where it stands** (14 Oct): every part is built and up at https://m1omg.github.io/Steliterate/next/
+(the `next` branch, a copy of the work branch). Since the plan's last part, at the player's word:
+1b (ships see what they pass, built as proposed), the Archive of Everything at 6,000 insight, the
+new hulls, the event plates, a softer stable fate, and the films rebuilt in a second cut after
+their word on the first ("a good start but they need a lot more work"): one template for the
+endings became a film for each (`src/film/endings.ts`). `main` keeps today's game until the player
+says to switch ("Not yet", 14 Oct). Progress and numbers: CHANGELOG and SESSION-NOTES.
+
 ---
 
 
@@ -391,6 +399,69 @@ playing.
     read.
   - The balance reference starts again here.
 
+### 2a, as it is being built (13 Oct, added while building it)
+
+Part 2a in steps, each validated and pushed on its own, so the harness can tell what moved what:
+
+1. **2a-0, one rulebook** (done): the civilizations, the pointer, owners, flags, `asCiv` and its
+   guard, each one's own dice, the outbox, the turn and the crossings in parts. 900 games
+   identical.
+2. **2a-1, owners everywhere** (done): the clock the player's; the swarms by each one's charters,
+   defence and Record; actions on one's own only; beacons, the Deep, the Long Flow, events' scope;
+   the minds, ruins and finds the player's. Nothing changes with one civilization.
+3. **2a-2, the others become civilizations** (done). Each neighbour gets a Civ of its own (same
+   id as its Survivor record), made after everything else is generated and drawing nothing: its
+   capital on a world of its home (the most livable for gardens, the warmest for sleepers, the
+   richest and warmest rock for minds and the Lattice, which need ground to mine and warmth to
+   tap), people of its way (a Chorus with Echoes still to gather), and a start like ours scaled
+   by its `pop`, by the same rules: every structure where it may be built, its research known,
+   about our energy and matter to spare, or matter in store where its ground gives none. It
+   plays every turn: the autoplayer under its own perspective at the start of its part, then the
+   same parts as ours. As built, it needed some of what 2a-5 was to give: each way's needs, for
+   the neighbours alone (room for its own Threads, settlers of its own, defences when a swarm is
+   near, the Chorus gathering its Echoes, the sleepers keeping two awake), so that they live as
+   their ways allow. Its Survivor record stays as the relation and the identity, with `pop`,
+   `health`, `systems` and `alive` read from its civilization each turn, so that today's
+   messages, pleas, raids, trades and pacts keep their meaning on real numbers, and what they
+   move is real. A `civsAsleep` switch keeps them from playing (`--asleep` in the harness). The
+   harness's baseline starts again here, with each civilization's end printed.
+4. **2a-3, relations**: regard, memory, pacts, war, beams, news and proposals per pair; the
+   relationship keys in `civ.flags` move there; between AIs, regard, pacts, war and news. The
+   dealings set by real economies (2a-2 capped them at their old size, `dealSize`): what a joint
+   work, Open Archives, aid and trade give comes from what the civilizations really have.
+5. **2a-4, seen at light speed**: their settlements and fleets on our map once their light
+   reaches our capital, in their colour; the views, prompts and hover filtered by owner; the card
+   shows the age of what we know.
+6. **2a-5, minds of their own**: per-way strategies beyond the needs 2a-2 gave them (each way's
+   Great Work, gardens terraforming, the sleepers sleeping through hard times, and what the light
+   neighbours did that real ones do not yet: the sleepers' race for new stars, the Black Hole
+   Age's spin as a commons), temperament, plight, the Lattice's insight and accord with the
+   Search Foundry and Protocol Registry (and the Lattice-led strategy in the harness to tune
+   them), AIs' Forks rejoining the world as people, the event whitelist, each civilization's
+   homeworld. As built:
+   - **The Lattice thinks a little** (`6b6c04e`): 0.3 insight and 0.1 accord a Lattice; the
+     Search Foundry and the Protocol Registry, taking industry first, built by the Tessellate only
+     where a settlement makes three times what they would draw (taking it everywhere, they starved
+     its building: the Lattice-led strategy showed it).
+   - **Minds of their own** (`b299f6a`): each way's research lead and its own Great Work only; the
+     sleepers' Long Sleep through hard times and their race for a new star (we hear when their Ark
+     sets out); a temperament from the seed and the id (caution, generosity, ambition); a Fork
+     from another civilization goes its own way; a hole's spin a commons drawn by real harvesters.
+     Gardens terraform as before (Terraforming is now among the first they learn).
+   - **The event whitelist**: the events of ordinary life (who sleeps first, the prophet of
+     stillness, a derelict ark, the first upload, drift, an invitation to merge) and the Dark Era's
+     (forgetting, the widest atoms, the false vacuum) come to everyone.
+   - **The homeworld's story stays ours.** Its events (the last rain, the sea freezing over, the
+     mantle settling, the superflare, the comet) are about a world born with a failing dynamo, a
+     tidal lock and a substellar sea, which the others' capitals were not; they follow the general
+     rules of their worlds instead (life fading with their star, as every world's does).
+   - **Plight** moves to 2b, which is the first to judge by it; until then pleas and refuge read
+     each civilization's health, as its record says.
+7. **2a-6, the checks, the numbers and the time**: the rewritten and new checks listed above, the
+   harness by civilization, the balance reference; End Turn yielding to the browser between
+   civilizations, measured on the emulated phone (after 2a-2 a turn costs about 7 ms on average
+   here, 14 at the 95th percentile, 43 at worst, against 4.5, 9 and 46 asleep).
+
 ### 2b. The Hunger in civilizations, and diplomacy
 
 - **Taint for everyone,** by the same rules as ours: Hunger techs, dark charters, devouring.
@@ -423,6 +494,24 @@ playing.
   - A corrupted one may, with the offer marked, and accepting is a Hunger act.
 - **Checks:** `unit/hunger-judgement` (the same step by a desperate and by a prospering
   civilization), `unit/hunger-trade`, `unit/just-cause`.
+- **As built** (13 Oct):
+  - Every rise in Taint is a Hunger act (`judge.ts`), these too: communing, a point of Taint at a
+    time; taking a swarm in; notes on Hunger knowledge, in trade or from Open Archives; the
+    events' Taint choices. A fall is the taker's alone. `unit/rulebook-lint` keeps it so.
+  - Between the others the same rules: what one has heard of another's Hunger lowers its regard
+    for good (it never drifts back above what that allows), and past 30 it makes no pact with it
+    and closes its archives to it.
+  - At 60 of its own Taint the aggression is toward us for now: such a civilization raids anyone
+    it does not count a friend. Wars between the others, their coalitions and devouring belong to
+    2c (war between any two civilizations).
+  - At 100 another's game ends as ours would: its capital buds a swarm, its settlements go dark
+    the next turn, and it sends no last transmission (fate `hungered`).
+  - A civilization of its own offers notes only on what it knows, by the same rules: offers fell
+    by more than half, and our autoplayer, keeping the energy it paid for them, wins more often
+    (CHANGELOG, part 2b). Our autoplayer declines Hunger knowledge, as it declines every Hunger
+    step.
+  - The others rarely go far: about a third take a step, mostly Consume the Dead; in 900 games
+    none passed 45 Taint, and none became the Hunger.
 
 ### 2c. War, units, conquest
 
@@ -481,6 +570,38 @@ playing.
 - **Checks:** `unit/war-costs` (a conquest lowers galactic free energy as stated),
   `unit/battle-roles`, `unit/simultaneous` (turn order decides nothing), `browser/war-ui`.
 
+### 2c, as it is being built (13 Oct, added while building it)
+
+In steps, each validated on its own:
+
+1. **2c-0, one strength per role** (done, `60d0617`): every fleet strength through
+   `strength(cls, against)`, against ships, settlements or swarms; 30 games identical.
+2. **2c-1, the roster's first ships**: the Picket (eyes, a screen) and the Hunter (twice a
+   Warden on swarms); each warship's upkeep, screen and dug-in strength (the Aegis three times);
+   a Shipyard mends. The Breacher and the Kinetic Lance come with what they are for (2c-3). As
+   built, upkeep like a structure's cost the autoplayer its one escort's worth in the Dark Era
+   (as much as its whole net there): it now stands idle warships down after the Dusk once they
+   cost more than 15% of a turn's gain, with no war and no swarm in reach.
+3. **2c-2, war between any two civilizations** (done, `ab6bd75`): the war state on each tie; the
+   AIs declare it on the plan's causes; space battles once a turn, settled at once for everyone
+   (hashed luck, never the dice); a siege at any settlement, not only the first star. 900 games
+   identical to 2c-1, game for game: no war started in any of them.
+4. **2c-3, conquest** (as built): a settlement at a time, by the same rules for everyone (ours
+   through `seizeSurvivor`, the others' in the battles): the siege held, its walls breached (a
+   Breacher behind a Defence Grid or a Bastion Shell), an assault on a draw against what it
+   holds. Taken, three tenths of its people flee to their own, structures keep 70%, its hearth
+   damaged; or razed. Galactic free energy pays for every person and structure it held; without
+   a cause it is a Hunger act; the war goes on at the enemy's next settlement; the last one ends
+   that civilization ('Conquered', a defeat of ours too). The Kinetic Lance: at 99% of light, one
+   in flight at a time, free energy spent at launch, a world's settlement struck down whole and
+   one in the Deep by half, turned aside only by the screens of the target's ships waiting there
+   (a bend the Manual states). The AI builds a Breacher against a walled front.
+   - **Left for 2d:** the AI's use of the Lance, and Pickets kept at its settlements once an
+     enemy could have one; a defender's own sieges (in a war the other side began, it fights
+     where they come, and cannot storm theirs).
+5. **2c-4, the interface and the checks**; **2c-5, the sprites** (Higgsfield: 6.5 credits on
+   the basic plan, checked 13 Oct; each shown to the player before it goes in).
+
 ### 2d. The AI's judgement, and the numbers
 
 - **Mostly peaceable.** A civilization weighs war only when:
@@ -500,10 +621,310 @@ playing.
   - The aim is that most games have no war, and that most wars are started by the desperate or
     the corrupted.
 
+### 2d, as it is being built (13 Oct, added while building it)
+
+Where it starts: in 900 harness games after 2c-3, no war starts at all. The causes built so far (60
+Taint heard in a neighbour, or 60 of one's own) are never reached; Hunger steps stop by 45 (2b).
+Already done in 2a-5: each way's own Great Work (`WAY_WORK`), gardens terraform, sleepers sleep
+(`planSleep`).
+
+1. **The desperate's war** (as built): desperate five turns running and bold (caution under 0.4),
+   it looks to the richest neighbour within reach (five turns of its capital or a fleet), three
+   times as well stored, not desperate, not a friend, with no pact, while the galaxy's free energy
+   is above a fifth. It goes only once its warships carry half again all it would meet there (the
+   front, and every warship of the target's, counted dug in) and a fleet can pay the launch; it arms
+   until then. It takes, never razes, carries off what its sieges drain (for everyone now), and makes
+   peace once it has taken a settlement or its plight has eased. The first, looser version made
+   empty wars (no fleet able to pay its launch, one warship against a defender dug in at home); the
+   strict one makes few, and real ones.
+2. **Defence against the Lance:** once an enemy knows Relativistic Arks, a civilization keeps a
+   Picket at its capital (screens), and the most screened settlement is the one it holds closest.
+3. **The corrupted use the Lance:** only those far down the Hunger's path (60 Taint of their own),
+   at war, on an enemy's largest settlement they can see.
+4. **Each war's why in the harness:** who began it, on whom and for what (`*N` with its cause:
+   Hunger, corrupted, desperate), conquests, Lance strikes; the aim stays most games without war.
+5. **Then the numbers:** 900 games, by fate and by way, against 2c's reference.
+
 ## Part 3: life after matter, and positronium (items 6 and 7)
 
 This part comes after the civilizations, so its rules apply to everyone. All of it is
 speculation, and the Codex says so.
+
+### Part 3, the order it will be built in (13 Oct, written before starting it)
+
+Each step validated on its own, with the harness by fate:
+
+1. **3-0, the end of matter as it is, fixed** (the bugs listed under 3b): minds carried over by
+   the protocols counted as lost too, the Chorus counted twice, the forecast's promise, the
+   protocols' description, the Bastion Shell's placement, Horizon Vaults deleted at the end of
+   matter, a disk drawn at full heat after it.
+2. **3-1, forms:** `Colony.form`, baryonic until the end of matter, leptonic after it for what
+   survives on decay-proof substrate (who may live there, a leptonic Confluence Node for the
+   Chorus). Nothing else changes yet.
+   - As built (13 Oct): decay-proof work under way stays in the queue. Tried and moved to 3-3: a
+     system dissolving before the Great Decay making what was re-encoded there leptonic at once
+     (stranded without its sources until the Migration, it cost 15 decay survivals of 450). Then,
+     the player's word the
+     same evening ("there should be a way to continue with Lattice even with just energy"): after
+     matter the Lattice mends and grows with energy, at construction's rate, and only an empty
+     reserve wears one out. Before, with no matter left, one wore out every turn and none grew.
+3. **3-2, the Passage:** the conversion over several turns, Field Stores (the reserve's home), the
+   Kin's pattern archive, the Lattice at half; the AI's rule for it; the crossing report naming
+   each settlement lost and who was in it.
+4. **3-3, the Thinning:** structures still made of matter failing one by one, matter yields
+   falling, the forecasts and the Record naming what goes. Under decay, what was re-encoded in a
+   system that dissolves before the end goes leptonic then, and drifts to a black hole at once
+   (tried in 3-1 without the drift: stranded, it cost 15 decay survivals of 450).
+   - As built (13 Oct): the share of matter gone runs evenly from η 37.5 to 39 (decay) and 87 to
+     89.5 (curvature); each structure of matter fails with the chance that keeps the share standing
+     at the share left; matter yields scale by it; the drift goes to the nearest hole with spin, as
+     the Migration does (`sim/thinning.ts`, `goOnAlone` in `crossing.ts`).
+5. **3-4, the Horizon form:** written into a hole's horizon, bound to it; when it evaporates, to a
+   larger hole, another form, or the final burst.
+6. **3-5, positronium:** the form, the nets, the decay's countdown, Leave the weave, the two events.
+7. **3-6, the stable fate's late game:** iron stars, black dwarf supernovae, tunnelling collapse.
+8. **3-7, the look:** the leptonic lattices, the horizon arcs, the positronium ellipses, the map's
+   ring, the dissolve; every quality tier, with screenshots asked about first (the player has not
+   reached that far).
+
+### Part 4, as it will be built (14 Oct, written before starting it)
+
+1. **The films' engine** (`src/film/`): `draw.ts` (an ink line that draws itself, stipple,
+   hatching, glow, a grain tile laid at 24 offsets a second, the reel's corners, a vignette),
+   `films.ts` (each film laid out once for its size and quality, then any moment drawn from its
+   time alone; a reel template: shots cut on a beat grid, corners, labels, a timecode in η and
+   years, the narration and a title card), `cue.ts` (each film's sound on an audio clock: a drone,
+   a bell on each cut, the reel's tick, a chord under the title; the same rendered offline for the
+   videos), `player.ts` (one 2D canvas and real DOM text over it; time from the cue's clock, else
+   elapsed time).
+2. **The set:** the Long Dusk; the Last Light; into the Black Hole Age (the Great Decay, the Last
+   Warmth, by fate); the Great Evaporation; the Last Horizon; and one template for the endings,
+   with a motif of its own for each of the seven endings and the three defeats. The words are the
+   game's own (each age's introduction, each ending's epilogue), and nothing beyond them.
+3. **Where they play:** beginning a game (then the age's introduction), each crossing (then its
+   report), each ending (then the outcome, its music held until the film is over). A layer of its
+   own on the page, outside the interface's zoom; the game's view stops meanwhile; the music
+   ducks (a gain between the music and the master) under the film's cue (its own bus, at the
+   music's volume). A click, Space, Enter or Escape skips one, as does its Skip button, which has
+   the focus; Enter under a film ends no turn.
+4. **Settings and the Codex:** "Films: on/off", off to begin with under reduced motion; the
+   Codex's "Films seen" plays again those seen in any game (kept in the new version's storage).
+   The checks run without films (`?nofilms`, the default in `lib.cjs`) unless they ask for them.
+5. **Videos:** `tools/film-render.mjs` (the Vite dev server's `film.html`, never built into the
+   game): every frame at its exact time, the cue rendered offline, ffmpeg (H.264, AAC) from a path
+   given; never committed. The 10-second test piece (the Long Dusk) to the player first, the rest
+   as they are asked for.
+6. **Fixes along the way:** the crossing, outcome and introduction screens take the focus on
+   their titles; a reload with a crossing's report still unread opens it again.
+7. **The survey reveal** (after the films, its own commit): entering a system just charted plays
+   its worlds in one by one in orbit order (the star first; about 1.2 s a world, at most about 8
+   s): each orbit fades in, a scan line sweeps the world from silhouette to its look, labels and
+   picks wait for it, and a card names it (kind, temperature, water, habitability, room for Kin,
+   a find with its plate last). Skip, and Skip all for the turn; Enter and Escape skip it, never
+   ending the turn; "Survey reveals: on/off" (off under reduced motion; off in the checks unless
+   asked for). It plays on entering such a system (the survey toast's Look, or any way in),
+   rather than taking the view by itself after a turn.
+8. **Checks:** `browser/films` (play, skip by key and button, the Codex, off, the same frame at
+   30 and 144 frames a second, every film drawn) and `browser/survey-reveal`.
+   - As built (14 Oct), the films (items 1 to 6): as above. Their layer hangs on the page's body,
+     outside `#ui`, whose zoom had scaled the canvas with the interface; the narration sits low
+     and the picture above it, so the words never cross the world drawn.
+   - As built (14 Oct), the survey reveal (item 7): as above, with a ring of light leaving the
+     star first; the world the view was entered to look at comes first; a world with a find takes
+     two turns, for its card. The card sits low in the middle, where the messages are (they stack
+     on from it), and under the top bar on a phone; a world picked from a list before its turn
+     brings them all at once. `?nofilms` turns the reveals off too.
+
+### 3-7, as it will be built (14 Oct, written before starting it)
+
+Display only: no rule changes, so the harness is not run (a check confirms no game state is read
+differently). New: `render/fields.ts`.
+
+1. **Leptonic settlements are drawn as fields** (`fieldLattice`): filaments along a tilted
+   dipole's lines (r = L sin²θ) from just above the core, a standing wave round the equator in
+   the colour that says whose it is (it takes the habitat ring's place for the selection circle),
+   and motes trapped in the field, bouncing between the mirror points and drifting round as in a
+   planet's radiation belts. Additive, breathing on elapsed time, in the age's accent; ours with
+   the age's neon wave, the others' in their colour (a Chorus breathing as one, the Lattice laid
+   out exactly). On a world it replaces the habitat torus (and the surface's city lights: the
+   settlement is no longer there); in the Deep, the box hull. Its structures show in it: a
+   current loop for each Field Store, more shells for what houses minds, a wide cage for Burst
+   Catchers, lines strung outward for Positronium Nets; a Bastion Shell is a shell of field lines
+   round its hole.
+2. **Horizon settlements** ride the photon ring (`GLOW_FRAG` `uWrit`): glyph-like marks that
+   travel round it, and two bright arcs, in the colour of whose they are.
+3. **The positronium** (η 85 to its decay): a few vast, faint ellipses about a centre far outside
+   every system, barely moving (`positroniumVeil`); brighter, in the age's neon, where our minds
+   are woven through it.
+4. **The galaxy map:** a new attribute (`aForm`) gives our settlements' ring a style by form: a
+   standing wave for leptonic, travelling arcs for horizon, a wide soft ellipse for positronium.
+5. **The Thinning:** structures still made of matter dissolve (`uThin`, the share of matter gone):
+   blocky holes eaten into the Dyson swarm's panels, the habitat ring and the Deep's hull, with
+   glowing edges, and motes drifting off them and off the worlds.
+6. **The stable fate's deep time:** after the iron (η 1500), worlds and dead stars are iron grey,
+   faintly metallic; the turn's black dwarf supernovae and collapses ping the map (at most 16).
+7. **Quality:** the system view reads the setting: fewer filaments, motes and ellipses on Low,
+   colour brighter than white (for the bloom) only on Medium and High.
+8. **Checks:** `browser/leptonic-look` (each tier: the lattice, its counts falling on Low, the
+   horizon arcs, the veil, the map's form, the dissolve, the iron, a frame drawn the same at 30
+   and 144 Hz); screenshots for the player (the Black Hole Age's are theirs to see; the Dark
+   Era's far end only if they say).
+   - As built (14 Oct): as above. The writing rides just outside the photon ring, where the
+     ring's own glow does not drown it; the veil's centre lies along the orbits' long axis, so the
+     middle ellipses cross the system; a dissolving instance keys its holes by `gl_InstanceID`
+     (by its position they swam as it orbited). The Codex says the look is invention, borrowed
+     from magnetospheres and current loops; the Manual has "How they look".
+
+### 3-6, as it will be built (14 Oct, written before starting it)
+
+The sources, checked: Caplan 2020 (MNRAS 497, 4357, arXiv:2008.02296) gives black dwarfs of
+1.16 to 1.35 M☉ exploding as pycnonuclear fusion turns their cores to iron: 10^1100 years at 1.35,
+10^1600 at 1.24, 10^32000 at 1.16 (the lightest that can, a pure iron-56 dwarf), about 1% of all
+stars, if protons do not decay; what is left (an iron-cored dwarf, likelier, or a neutron star) is
+open. Dyson 1979: everything fused to iron by about 10^1500 years; matter tunnelling into black
+holes between 10^(10^26) years (any lump, if Planck-mass black holes can form) and 10^(10^76)
+(whole stars). The game's white dwarfs are 0.45 to 0.9 M☉ (mergers' remnants up to 1.1): none
+could explode. So:
+
+1. **Heavy dwarfs:** about one white dwarf in 30 (about 1% of the galaxy's stars, as Caplan
+   counts) begins the game at 1.16 to 1.35 M☉, by a hash of its mass draw: no draw is taken, every
+   other star and world is as before, and the passes that read temperature run after it.
+2. **Black dwarf supernovae** (stable only): each heavy dwarf explodes in the turn that passes its
+   date (Caplan's three points, interpolated in log η): its worlds are blown away, and whatever
+   we had in its system with them; Burst Catchers elsewhere bank a share of the flash by distance
+   (`burstShare`, once a turn each, from the nearest); an iron-cored dwarf is left. The first is an
+   event; each is forecast once the fate is known.
+3. **Iron stars** (stable, η 1500): nothing is left to fuse. Fusion Plants make nothing, and
+   cannot be built. An event; a forecast.
+4. **Tunnelling collapse** (stable, λ = log10 η from 26 to 76): each system's matter, its dead
+   star and its worlds, tunnels into black holes that evaporate within the turn, at a time of its
+   own in that span that no one can foresee (a hash per system; which estimate holds is unknown,
+   and the game spreads them, which the Codex says). What we have of matter there is lost; a
+   leptonic settlement on a world goes on in the system's Deep; Burst Catchers bank the flash as
+   above. The first is an event; the forecast gives the span. When the last is gone, matter is.
+5. **The Passage opens for the stable fate** once the fate is known: matter does end, if
+   unimaginably late. The autoplayer, in the Dark Era, builds Leptonic Substrate and begins the
+   Passage by turns before λ 26 (its decades rule cannot work where one turn spans so many).
+6. Codex (the dates, the bends: the heavy dwarfs' share and the spread of the collapse), Manual,
+   the age's introduction for the stable fate, the deep-time ruler; `unit/stable-dark`; the harness
+   by fate.
+   - As built (14 Oct): as above, and iron also takes a Hearth's "stored fuel and salvage" where
+     nothing local is left. The autoplayer began its Passage at once in the dark (λ 2), and with
+     a stable civilization's small industry never finished it; it now begins two turns before the
+     iron (matter pays its way until then) and rushes the turn before. Forecasts past 10^300
+     years carry their η (`Forecast.dueEta`). 900 games 460 / 209 / 72 (520 / 218 / 72 at
+     "Harder"): decay and curvature as before (a few curvature games moved by the heavy dwarfs),
+     stable 103 / 239 (164): the stable dark is a finite budget now, and the autoplayer reaches it
+     awake on whatever it holds.
+
+### 3-2, as it will be built (13 Oct, written before starting it)
+
+1. **A leptonic form for some structures** (`StructureDef.leptonic`, with a name of its own where it
+   changes): Energy Vaults are Field Stores there and Deep Storage Rings Deep Field Stores (the
+   reserve's home after matter); Substrate Cores, Cold Vaults, Lattice Foundries and Confluence
+   Nodes house the same minds; Burst Catchers, Horizon Vaults, Penrose Harvesters, Hawking
+   Collectors, the Lattice's Search Foundry and Protocol Registry, Defence Grids and the Dark
+   Era's structures work as before. Nothing else: mines, domes, collectors, plants, foundries,
+   shipyards are matter. A leptonic settlement builds only these, and the decay-proof ones.
+2. **Begin the Passage** (a settlement's project, in its queue, once the end of matter is foreseen
+   and Leptonic Computation is known): 40 industry and 15 for each structure that crosses over,
+   5 energy for each structure paid up front; while it is worked the settlement's energy, matter,
+   insight and accord fall to 70%. When it is done the settlement is leptonic: what has a leptonic
+   form crosses over, the rest is taken apart (its matter back, as dismantling gives); its Kin and
+   sleepers are lost, their patterns kept in the archive (20 insight each); the Lattice re-encodes
+   at half (a quarter under the protocols), once.
+3. **At the end of matter** a settlement that passed keeps everything it has; one with only
+   decay-proof structures keeps only those, as now; the rest go, each named in the report with
+   who was in it.
+4. **The autoplayer** begins the Passage where it can finish before the end, with a few turns to
+   spare, by the turns left (from the turn's length) and the settlement's industry.
+   - As built (13 Oct, `24fbc18`): by turns it began Passages fifteen decades early (a slow pace,
+     and the general rush finishing one the turn after it began), and 59 more games of 900 were
+     lost. It now counts decades, done about two before the end, rushed only in the last three
+     if behind. Three things the end of matter's survivors lacked came with it: the Migration to
+     a hole with spin left, a starving civilization cooling its Echoes, and after matter the pace
+     that drains least a decade. 900 games: 530 / 219 (431 / 133 before the Passage).
+5. **Checks:** `unit/passage`; the reserve after matter in it (Field Stores carried over).
+
+### 3-4, as it will be built (13 Oct, written before starting it)
+
+1. **Leaving a hole:** a leptonic settlement at a black hole can drift to another (an action on its
+   panel, a turn and some energy), to a hole we know with spin left; it joins our vault there only
+   if it is of its own form. The autoplayer leaves a hole drained of spin, or one that will
+   evaporate within a few turns, for the best hole it knows. Before, a vault stayed at its hole,
+   drained or gone, for good: the Black Hole Age's promised rhythm, "move as small holes
+   evaporate", had no way to happen.
+2. **The Horizon form** (speculative, and the Codex says so: a horizon holds more than anything
+   else of its size, and time runs slowest at its edge): a leptonic settlement in a hole's Deep can
+   write itself into the horizon, a project like the Passage, after a Black Hole Age tech of the
+   mind. There its minds cost a tenth of their upkeep and think at a quarter of their pace (a turn's
+   work a quarter as much), and room grows with the hole's mass. It is bound to its hole: it cannot
+   leave it, and when the hole evaporates its minds pass to our vault at a larger hole as far as it
+   has room, or are written back out as leptonic (half the Lattice lost, as ever) and drift; with
+   no hole left, they are lost in the final burst. At the Last Horizon, with no holes in the Dark
+   Era, every horizon settlement is written back out as leptonic.
+3. **The autoplayer** writes into the horizon where its reserve would not last the age at its
+   pace and the hole will outlive it; leaves it as above.
+4. **Checks:** `unit/horizon-form`; the harness by fate.
+
+**As built** (13 Oct), where it differs:
+- The drift goes to the hole with the most spin to give (100 at least) that will not evaporate
+  within 5 decades, the nearest of equals, for 5 energy a structure (at least 10), once a turn:
+  after matter any hole is a turn away, and the first try (the nearest with spin) had vaults
+  hopping between small holes they drained in a turn or two. A settlement that made the Passage
+  on a world can drift too: what is leptonic gathers energy only at a hole.
+- Its hole evaporating, a horizon settlement is written back out and drifts to the hole above,
+  joining our vault there whatever its room; if no hole will take it, it stays, leptonic, where its
+  hole was, rather than being lost: the Codex has what falls in come back out in the radiation.
+- Room in the horizon: 6, and 6 more for each decade of the hole's mass in Suns, for each Thread
+  the form houses. The writing costs 40 industry and 4 a mind, 5 energy a structure. Horizon
+  Writing: 900 insight, after Horizon Cognition.
+- The autoplayer counts the turns left in the Black Hole Age at our pace against its reserve and
+  net, and writes in only at a hole with ten decades or more to go.
+
+### 3-5, as it will be built (13 Oct, written before starting it)
+
+1. **The window:** positronium forms at η 85 where protons decayed or space unmade matter, and
+   decays at η 141 (Page & McKee's reference case). That is 14 Black Hole Age turns and 5 Dark Era
+   turns at the Tide; at a pace ten times slower 8 and 4, the last Dark Era turn jumping from
+   η 139.5 to 192, so every countdown counts turns at our pace.
+2. **Positronium Weaving** (a Black Hole Age tech of the mind, speculative, after Horizon
+   Cognition): a leptonic settlement is woven through the positronium as a project in its queue
+   (industry and a few for each mind, energy for each structure, 70% of its yields while worked),
+   inside the window only. A tech rather than the event's choice (the plan said "gains the choice
+   that opens the form"): an answer given once would otherwise close it for good, and the tech is
+   how the Horizon form opens too.
+3. **The Positronium form:** minds cost a fiftieth of their upkeep and do a tenth of their work,
+   with no tempo strain, and each Thread the form houses has 30 more room. It is bound to no hole:
+   its hole may evaporate and it stays. In the Dark Era, Continuity's loss each turn falls by half
+   the share of our minds in the weave. Its structures stay and work (its Field Stores still hold
+   the reserve).
+4. **Leave the weave** (the settlement's panel; no research, no event): the turn's end brings it
+   back, leptonic, for 2 energy a mind. Only minds still in the weave when it decays are lost,
+   named in the Record; a settlement with no one left goes.
+5. **The countdown:** a forecast of the decay in turns at our pace, from the weave's opening,
+   "danger" while anything of ours is in it.
+6. **Positronium Nets** (the same tech; leptonic, at any leptonic settlement): energy from the
+   shrinking orbits, a trickle from η 85 growing toward η 141; after it the never-ending
+   annihilation, half the turn before each turn, so it adds up to a fixed amount (as much again as
+   the last turn's).
+7. **Events:** "The Widest Atoms" loses "Nothing we do can touch them", and says minds could be
+   woven through them and their light gathered (Study them, Let them be, as before). Near the
+   decay, "The widest atoms end", for whoever has anything in the weave or nets.
+8. **The autoplayer:** researches it only where positronium will form and something of ours is
+   leptonic; weaves a vault in where its reserve would not last the Dark Era at its net, leaves
+   when the decay is within the next two turns at its pace, and builds nets.
+9. **The Codex:** the reference case and the spread (Adams & Laughlin's book: from about η 71,
+   centred on the 100th decade, decay after about 145; Wikipedia's 10⁹⁸ and 10¹⁷⁶ years); minds
+   woven through atoms wider than the old observable universe are the game's speculation; under
+   curvature, positrons from unmade matter are a bend.
+10. **Checks:** `unit/positronium` (the window, the form, leaving, the loss at the decay, the
+    nets' total as stated, the autoplayer); `browser/weave`; the harness by fate.
+
+**As built** (13 Oct), where it differs: leaving the weave is at once, not at the turn's end (one
+click before the turn that would cross the decay is enough, and the warning comes the turn before
+it), and never refused for want of energy (it costs what is left); the weaving is refused once the atoms have decayed, and a weaving finished too late does
+nothing. Nets give 40 over the window and 20 after it, each.
 
 ### 3a. Ways of existence
 
@@ -790,6 +1211,10 @@ Today these are only marks on the Dark Era ruler and Codex text. They become eve
 
    Then send the player the /next/ link. `main` switches only when the player says, by a PR from
    `next` with a merge commit.
+   - As built (14 Oct): as above on `next`. `main`'s workflow is left as it is: a PR into `main`
+     needs a branch of its own, which the permissions above did not name, so it is put to the
+     player; meanwhile a push to `main` builds `main` alone, and the workflow is run on `next`
+     again after one.
 
 ## Verification (every part)
 

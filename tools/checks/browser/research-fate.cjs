@@ -2,7 +2,8 @@
 // known (the Proton Question, a fate chosen at the start, or the universe showing it) each shows as
 // "???", saying the Proton Question would tell; once it is known, the projects of the other fates
 // are gone from the grid (they will never exist in this universe), and none is left as "???"
-// with a hint that no longer helps (seen 11 Oct, after the Proton Question).
+// with a hint that no longer helps (seen 11 Oct, after the Proton Question). Positronium Weaving
+// (the new version, part 3-5) is there under any fate but stable matter.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('research-fate');
@@ -24,7 +25,8 @@ run(async () => {
   };
   await open();
   const before = await grid();
-  check(before.hidden.length === 3 && before.hidden.every((t) => /Proton Question/.test(t)), `before the fate is known, its projects show as ??? with the hint (${before.hidden.length})`);
+  // (Decay Harvest, Curvature Harvest, the Garden of Embers, and Positronium Weaving, which needs matter not to last)
+  check(before.hidden.length === 4 && before.hidden.every((t) => /Proton Question/.test(t)), `before the fate is known, its projects show as ??? with the hint (${before.hidden.length})`);
   await ck.shot('research-before.png');
   // the Proton Question answered
   const fate = await page.evaluate(() => {
@@ -36,7 +38,9 @@ run(async () => {
   await open();
   const after = await grid();
   check(after.hidden.length === 0, `once it is known, no ??? is left (${after.hidden.length})`);
-  check(after.names.length === before.names.length - 2, `the other fates' projects are gone, this one's shown (${before.names.length} → ${after.names.length}, fate ${fate})`);
+  // (under stable matter both harvests go, and the weaving; under the others, the other harvest and the Garden)
+  const gone = fate === 'stable' ? 3 : 2;
+  check(after.names.length === before.names.length - gone, `the other fates' projects are gone, this one's shown (${before.names.length} → ${after.names.length}, fate ${fate})`);
   await ck.shot('research-after.png');
   await finish('RESEARCH FATE', ck);
 });

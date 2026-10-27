@@ -22,7 +22,17 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
    - If rules changed: `npx tsx tools/sim.ts 300 standard competent`. Count outcomes with
      `grep -oE "^seed [0-9]+: [A-Z]+" | awk '{print $3}' | sort | uniq -c`. Survival is
      ENDURANCE + VICTORY; noise is about ±12 per 300 games. For a closer call, compare 900 games
-     against a `git worktree` of HEAD (symlink `node_modules` into it).
+     against a `git worktree` of HEAD (symlink `node_modules` into it). `--asleep` plays the
+     neighbours as they were before the new version (`civsAsleep`): with it, a change that should
+     leave our own play alone must leave the games line for line as they were. `tools/sim.ts 300
+     standard lattice` plays us led by the Lattice, as the Tessellate plays (`ourWay` in `auto.ts`).
+     With real neighbours the noise is larger (14 Oct): the same rules with only the neighbours'
+     streams reshuffled (`foundCiv`'s `civ.rng` seeded under another key, in a worktree) move
+     900 games by up to 32 survivors and 37 victories, and only about a third end the same way.
+     Before calling a change of that size a cost, run such a reshuffle of the rules before it.
+   - End Turn as a phone feels it: `node tools/turn-timing.cjs http://localhost:4173/ [turns=40]
+     [slowdown=4] [seed=8919]` (Chromium with the CPU slowed, the End Turn button itself, the
+     longest task of each turn as `PerformanceObserver` reports it).
    - Save compatibility: `npm run savecompat` loads every save in `tools/saves/` through
      `readSave` → `migrate`, checks the round trip, and plays each to the end. It must end with
      "SAVE COMPAT OK". The saves: the 71-turn save from `551fb1a`, and four from the week of
@@ -79,10 +89,21 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `engine()`
   - `music()`: the music player (its `layer`: the synth `bus`, `silenced`, and the `track`
     element playing), for `browser/music-hidden`
-  - `setVolumes(music, sfx)` (0..1, as the sliders, for this page only), `sfx(name)` and
-    `audio()` (the sound's graph): for `browser/music-route`
   - `notify(text, kind)`: a message as the game shows them (`browser/lowvision`: how long one
     stays)
+  - `films(on)` (null: as the settings say), `filmList()`, `filmFrames(id, times, w, h)`: the
+    films, for `browser/films`; `filmTimes()`: the last frames played, as [film time (s), the
+    frame's time (ms)]; `filmOverlays()`: the last trial of where the vignette and grain go;
+    `filmChange(id, t1, t2, args)`: how much a frame changes between two moments (the mean
+    difference of its pixels' channels), and `askPainter(job)`: the painter thread's first answer
+    to a job (the project check, 15 Oct)
+  - `setVolumes(music, sfx)` (0..1, as the sliders, for this page only), `sfx(name)` and
+    `audio()` (the sound's graph): for `browser/music-route` (and `browser/films`, the music's
+    gain under a film)
+  - `slowSlices(ms)`: every slice of End Turn's turn made to take at least that long, a slow phone
+    on any machine (`browser/turn-slices`; a CPU slowed through CDP is paused in windows, so one
+    turn's length there is anyone's guess)
+  - `lastTurn()`: the last End Turn's own work, its longest run without a breath, and its length
 - **Playwright:** `require('/opt/node22/lib/node_modules/playwright')`. Launch with
   `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`, and add
   `--autoplay-policy=no-user-gesture-required` for music tests. Watch `request` events for
@@ -94,20 +115,18 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `unit/*.ts`: rules checks run with tsx, one per change (accord, boil, castout, clock,
     cold-energy, cooling, dismantle, evap, fates, flash, flow, focus, follow, neighbours,
     old-saves, pace, quake, quick, refuge, refund, repeal, rogue, spare, claims, war, ways,
-    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, promises, fall-in, unwritten, slow-ones, falling-flash, hole-worlds), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
+    beacon, dealings, terraform, twilight, icy, scorch, worlds, deadworlds, outer, attack, clocks, settled, curvature, hunt, siphons, last-star, embers-dim, rogue-reach, great-works, late-sky, burst-reach, young-dwarfs, civs, civ-turns, rulebook-lint, others, ties, lattice-search, minds, slices, hunger-judgement, hunger-trade, just-cause, battle-roles, civ-war, conquest, desperate-war, end-of-matter, forms, lattice-energy, passage, starving-cool, thinning, leave-hole, horizon-form, positronium, continuity, stable-dark, promises, fall-in, unwritten, slow-ones, falling-flash, hole-worlds), plus `invariants` (12 whole games checked every turn: no NaN, no negative stocks or
     people, no settlement on a vanished world unless decay-proof, survivors' health within
     0..1; `npx tsx tools/checks/unit/invariants.ts 100` for more) and `determinism` (a save code
     and a clone play on identically to the original). They import `check`, `near`, `done` and
-    `loadSave` (a save from `tools/saves/`) from `tools/checks/lib.ts`. `tsc` checks them, so
+    `loadSave` (a save from `tools/saves/`) from `tools/checks/lib.ts`, and copy a state with
+    `copyState` (`save.ts`), never a plain JSON copy (it loses `state.civ`, see Gotchas). `tsc` checks them, so
     they must type-check cleanly: the Pages build runs `tsc`.
   - `browser/*.cjs`: interface checks against a served build, each opening its own page through
     `start()` in `tools/checks/lib.cjs` (which waits for the server; any console error fails the
     check) and ending with `finish()`. Screenshots go to `playtest-shots/checks/<name>/`, or the
     folder given as the second argument. `ck.phone(w, h, query)` opens a page with a touchscreen
-    (`mobile` uses it; CDP `Input.dispatchTouchEvent` for long presses and drags). Every page opens
-    with `?noreveals` (no survey reveals, 21 Oct) unless the check asks for them
-    (`start(name, { reveals: true })`); a check that opens a page itself adds it, as the playtest
-    does.
+    (`mobile` uses it; CDP `Input.dispatchTouchEvent` for long presses and drags).
   - **The game's fonts in this container:** the headless browser cannot reach Google Fonts
     (the proxy's certificate), so text is measured in fallback faces, which are wider. With
     `STEL_FONTS=<dir>`, `lib.cjs` serves them from a local copy. Make one with curl, which checks
@@ -138,6 +157,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     the CHANGELOG ("Lighter on phones and tablets").
   - A new rule or fix gets a check here. One-off investigations (traces, censuses) stay in the
     scratchpad.
+- **A background command stops after 30 minutes** unless it is given a longer limit (14 Oct): start
+  `vite preview` in the background with the longest one (two hours), or the browser suite, about
+  45 minutes now, loses its server partway and every check after that fails at once ("no server").
+  Stop it with `pkill -f "vite prev[i]ew"`: the bracket keeps the pattern from matching the shell
+  running the command, which a plain `pkill -f "vite preview"` kills along with it.
 - **The container is ephemeral.** Anything installed with pip is gone next session: numpy,
   scipy, matplotlib, imageio-ffmpeg (ffmpeg binary at
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).
@@ -243,6 +267,27 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Gotchas
 
+- `src/ui/screens/Manual.tsx` strings are single-quoted: use typographic apostrophes (’) in
+  prose. A straight `'` breaks the build; it has happened twice.
+- Components that read mutable game state need `void rev.value`. Above all one with state of its
+  own (`useState`) whose props are the game's objects: `@preact/signals` skips re-rendering a
+  component with hooks state when its props are the same objects, and the game's state changes in
+  place, so without it the component shows what was (13 Oct: the Passage section still said
+  "Under way: 0%" after the Passage was done; the Kinetic Lance's strike section, a warship's
+  attack button and the Halo Siphons' shut button had the same gap).
+- Hooks must come before any early return. `FleetPanel` has several `useState` calls.
+- The date is kept in years, a double: at the Dusk's 9×10^13 years that is to a sixty-fourth of a
+  year, while its first Tide turns are 40 years and a Quick ×100 turn there a third of one. So a
+  check comparing spans of years there allows for rounding (`unit/ladder`, `slack`), and η does
+  not move at all over such a turn (to 16 digits): watch the years to see a turn advance.
+- Stopping a background harness: find its processes by their working directory (`readlink
+  /proc/PID/cwd`) and kill those PIDs. `pkill -f` with a pattern from the harness's command line
+  matches the shell running `pkill` too, and kills it (exit 144) with the rest.
+- A breath that is only a message to ourselves (`MessageChannel`) can run ahead of the timers that
+  are due: under load `browser/turn-slices` once saw no timer tick in a whole throttled turn, and
+  the synth's lookahead timer runs every 40 ms. End Turn's breaths wait for the timers at least
+  every `TIMER_MS` (40 ms, `turnflow.ts`); the timers' longest wait is bounded by the longest
+  slice that cannot be split (a civilization's part of a step), some 100 ms at a sixfold slowdown.
 - A screenshot of a world close up (20 Oct, the sea pictures): `engine().showSystem(sys, bodyId)`
   fades out, rebuilds the system and then flies to the world, which takes several seconds in the
   software renderer the checks run on. Set `engine().orbitsPaused = true` right after the new game
@@ -256,14 +301,36 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   few hundred held the next one up for 8 s to over 20 s on 20 Oct (`browser/survey-reveal`, on the
   build before as well). Wait for a few `requestAnimationFrame` callbacks before timing anything
   that runs on the engine's own loop.
-- `src/ui/screens/Manual.tsx` strings are single-quoted: use typographic apostrophes (’) in
-  prose. A straight `'` breaks the build; it has happened twice.
-- Components that read mutable game state need `void rev.value`.
-- Hooks must come before any early return. `FleetPanel` has several `useState` calls.
+- `pkill -f 'tools/sim.ts'` (or `pgrep -f 'node.*tools/sim.ts'` fed to `kill`) run from a shell
+  whose own command line holds that pattern kills the shell too (exit 144, three times on 13 Oct).
+  The bracket trick (`'[n]ode.*tools/sim[.]ts'`) fails as soon as the same command also holds the
+  text unbracketed (starting the next run, say). Anchor it instead: `pgrep -f '^node '` matches a
+  process started as `node …`, never the `bash -c …` around it.
 - **Save compatibility:** only add optional fields, or compute things live. Put small counters
-  in `civ.flags` (a `Record<string, number>`). `SAVE_VERSION` is 3. Every load goes through
-  `migrate()`, which also runs `surveyWhereStationed` (ships parked at unsurveyed stars chart
-  them).
+  in `civ.flags` (a `Record<string, number>`), or `state.flags` for a fact about the universe.
+  `SAVE_VERSION` is 4, the new version's first (`FIRST_OF_THIS_LINE`): until the new version is
+  live at `/next/` its format may still change (the player starts afresh with it), and from then
+  the rule holds again. Every load goes through `migrate()`, which also runs
+  `surveyWhereStationed` (ships parked at unsurveyed stars chart them).
+- **`state.civ` is a pointer, not data** (13 Oct, `civs.ts`): a non-enumerable property set by
+  `pointAt`, so JSON leaves it out and every civilization is saved once, in `state.civs`. A plain
+  `JSON.parse(JSON.stringify(s))` copy, a `structuredClone` or a spread `{ ...s }` loses it, and
+  the first `s.civ.…` throws. The checks copy with `copyState` (`save.ts`), and a shallow copy
+  keeps the pointer with `pointAt({ ...s, years }, s.civ)`.
+- **`colonies(state)` and `fleets(state)` are the active civilization's**, `allColonies` and
+  `allFleets` everyone's (`sim/util.ts`). A raw `Object.values(state.colonies)` fails
+  `unit/rulebook-lint`, as do flags kept with the wrong owner, a push into a civilization's
+  `signals` past `deliver`, and an assignment to `state.civ`.
+- **The browser checks are read from the tree as the suite reaches them**: editing one while the
+  suite runs against an older build fails it for nothing (13 Oct, `save-all` against the
+  foundation build). Edit them before building, or after the suite.
+- **A check that sets a neighbour's record by hand** (its health, way or people) needs
+  `civsAsleep: true` (13 Oct, 2a-2): a civilization's record is read from it each turn
+  (`syncSurvivor`), so what was set is gone after the first turn.
+- **tsc does not read the JavaScript checks** (`tools/checks/browser/*.cjs`, `tools/playtest.cjs`):
+  a change to the state's shape must be made there by hand. 13 Oct: the one-rulebook codemod
+  followed tsc's errors, and 74 references in 34 browser checks still read `s.pending` and the
+  rest; most browser checks failed at once against the new build. Grep them after any such change.
 - **Generation changes** must keep RNG consumption the same (pick from the already-shuffled
   order), or every seed's galaxy changes.
 - **Harness blind spots:** the autoplayer never raids, asks for aid or picks tracks, so those
@@ -349,6 +416,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   as it would on a slow machine. A check that waits on something eased (a camera move, a fade)
   polls in a bounded loop until it has settled, as `browser/lowvision` does, rather than trust
   one fixed wait.
+- **A check about timers' order, under load** (15 Oct, `browser/music-route`'s hold): waits
+  between steps (`setTimeout`) stretch when the page is busy, and a timer that should have come
+  between them comes after; the check then passes on the bug it was written for. Make the steps
+  that must come before a timer synchronous (a short busy wait on `performance.now()`), then
+  wait: timers fire in the order they are due, however late.
 - **`protonFate` is `'decays'`, not `'decay'`** (12 Oct): `newGame({ protonFate: 'decay' })` gets
   the seed's drawn fate without a word (a check thought it was testing decay on a stable game).
   `tsx` runs a check without type-checking it; `tsc` catches it, so run `tsc` before trusting one.
@@ -368,8 +440,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 
 ## Where the newer systems live
 
-- **The pace: ten turns to a Tide turn** (20 Oct, the player's word, as in the new version;
-  CHANGELOG, "The pace: ten turns to a Tide turn"):
+- **The pace: ten turns to a Tide turn** (20 Oct, both versions; CHANGELOG, "The pace: ten turns
+  to a Tide turn"):
   - `tideTurnsAt(era, years, eta, length)` (`eras.ts`): the Tide turns since the calendar's age
     began, not a whole number between them. `stepTime` at pace p covers `paceShare(era, p)` of
     them: `10^−p` (`Tide × (g^s − 1)/(g − 1)`; the Tide's own formula untouched at s = 1), but in
@@ -387,7 +459,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     simulated turn at `slowestAllowed` (our own comes back once a clock ends).
   - `livedShare`: exactly `paceShare` when the step is the plain `stepTime`; `1/split` on a new
     star's clock; otherwise the `tideTurnsAt` difference. `upkeepShare` (in `TurnContext`, read by
-    `upkeepOf(ctx)`): `max(1, share)` on a plain or star-clock turn, else the share.
+    `upkeepOf(ctx)`): `max(1, share)` on a plain or star-clock turn, else the share. The checks
+    that build a `TurnContext` by hand may leave it out (then `max(1, paceFactor)`).
   - The declines take the share: `declineWorlds(state, share)` (exported for `unit/ladder`),
     `seededVitality(…, share)`, `turnsToFreeze(…, share)`, `updateHunger(…, share)` (bite, gfe,
     rust, a tamed swarm's matter and Taint) and `fadeRust`. The Dark Era's Continuity stays a
@@ -396,14 +469,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - `LATE_YIELD` (`economy.ts`, `lateYield(state)`): after the Dusk's calendar every source gives
     that much more energy and matter (structures, the Hearth), carrying what the old slow turns'
     overpay had given the late game (the player, asked whether to bring the victories back: "Bring
-    them back"). 1.4 here, 1.125 in the new version, each tuned on the harness to about 77
-    victories of 300. `powerParts` and `matterAt` (`sites.ts`, where to settle) count it too.
+    them back"). 1.125 here, 1.4 in today's game, each tuned on the harness to about 77 victories
+    of 300. `powerParts` and `matterAt` (`sites.ts`, where to settle) count it too.
   - `effectivePace(state)`: the pace lit in the HUD; ours gets `.btn.stored` (dashed) while greyed.
   - The autoplayer (`planPace`) weighs only the paces open now, from the lit one, each by its net
-    per Tide turn covered, and in trouble goes no slower than the Tide before the Dark Era.
-    `planDarkSleep` (new here, as in the new version) takes the Long Sleep in the dark where the
-    reserve would not last the age: until now it never slept, and the overpay carried it through
-    the dark. `unit/ladder` checks the rules and the dark sleep; `browser/pace-grey` the lit pace.
+    per Tide turn covered, and in trouble goes no slower than the Tide before the Dark Era (new
+    version: unless nothing pays once matter is gone, its drain fallback). `planDarkSleep` takes
+    the Long Sleep in the dark under any fate where the reserve would not last the age (before,
+    only once matter stable was iron; today's game never slept): the overpay had carried it
+    through the dark. `unit/ladder` checks the rules and the dark sleep; `browser/pace-grey` the
+    lit pace.
 - **One sea for the Water row and the picture; finds only where they can be** (20 Oct, both
   versions; CHANGELOG, "Finds where they can be, and one sea"):
   - `seaBand(climate)` (`physics.ts`): where a world's water is liquid by f, the sine of its
@@ -418,7 +493,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     rogue ones: `warm_rogue` needs them). `pruneFinds` (`sim/events.ts`), at the start of the
     turn's step 8, drops a waiting find whose world no longer `fits` (trait off, `fired` down by
     one). `unit/finds` checks each wrong path.
-- **Falling worlds break up, giants fall in a flash** (20 Oct, in both versions, new games;
+- **Falling worlds break up, giants fall in a flash** (20 Oct, both versions, new games;
   CHANGELOG, "Falling worlds"): `state.flags.rubble` (set by `generateWorld`, no draw), read
   through `rubbleGame` (`physics.ts`).
   - In `evolveUniverse`, at a world's date, by what it is made of: `breakUp(b, to)` (rock and ice:
@@ -432,29 +507,32 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     Shadow Shield over a world (`shadowShielded`) spares it, and a belt behind one. A degenerate
     star's giant still makes both draws (rekindle, τ) before it flashes, so later draws stay put.
   - Notes: `plunge` with `inFlash` (the turn evacuates, no log, no +20), then `flash` with a
-    `FlashNote` (`energy`, `lum`, `years`, `inside`, `boiled`). `handleNotes` (`turn.ts`,
-    exported for the checks): settlements inside the melt line live only if `flashSheltered`
+    `FlashNote` (`energy`, `lum`, `years`, `inside`, `boiled`). `handleNotes` (`turn.ts`): each
+    civilization's settlements inside the melt line live only if `flashSheltered`
     (`flashShelterFor`: a locked rock or ice world takes a Flash Shelter, Deep Warrens or
-    Night-side Shelters; anything else a Shadow Shield; nothing on a boiled world); every flash
-    goes to `catchFlashes` with `flashReach(E)` (`crossing.ts`: 10 ly × √(E/10^42 J)), through
-    `burstShare(ly, reach)`, its own system's catchers banking it even in a system cast out.
+    Night-side Shelters; anything else a Shadow Shield; nothing on a boiled world), and every
+    flash goes to `catchFlashes` with `flashReach(E)` (`crossing.ts`: 10 ly × √(E/10^42 J)),
+    through `burstShare(ly, reach)`; in the new version a falling world's flash (`own`) reaches
+    its own system's catchers even when the system is cast out.
   - `flash_shelter` and `shadow_shield` (`structures.ts`, `rubble: true`: `structureCheck` says
     "Not in this game." elsewhere, and `buildableStructures` leaves them out); the Flash Shelter
     only on a locked world; from the Dusk, with `subterranean_cities` and `orbital_industry`
     (whose texts say so in such a game: `rubbleDesc`, through `techDesc`), as a white dwarf's
     close giant can fall in before the Last Light.
-  - "A World Falls": the rubble text, and "Take them apart" (`shown` only at Taint
-    `HUNGER_WAYS`, 60, where the others will no longer bind themselves to us; `takenApart`).
-    `EventChoice` gained `shown` (`choiceShown`): the story screen leaves such a choice out,
-    `resolveEvent` refuses it, the autoplayer skips it.
+  - "A World Falls": the rubble text, and "Take them apart" (`shown` only at Taint 60:
+    `CORRUPT_AT` in the new version, `HUNGER_WAYS` in today's game; `takenApart`). `EventChoice`
+    gained `shown` (`choiceShown`): the story screen leaves such a choice out, `resolveEvent`
+    refuses it, the autoplayer skips it.
   - `addHoleWorlds` (`gen.ts`, after `addOuterWorlds`, stream `:hole`), trait `hole_world` (a
     mark, hidden like `outer`; `insolationByDistance` leaves them out of the standard orbit for
     the world a hole had). The forecast's `flash` row; `FallsInwardRow` says what becomes of a
     world; the Drawer's Disk luminosity (`sourceLight` × `lightUnitSuns`); `TRAIT_NAME` rubble
     and flash_melted, "Rubble ring" (`bodyKindName`); a giant's flash pings the map.
-  - Checks: `unit/falling-flash`, `unit/hole-worlds`, `browser/rubble`; `unit/outer` lets the
-    hole worlds come last; `unit/dealings` keeps the raiders' clock in step.
-- **The game keeps its word** (19 Oct, in both versions; CHANGELOG, "The game keeps its word"):
+  - Checks: `unit/falling-flash`, `unit/hole-worlds`, `browser/rubble` (new version);
+    `unit/young-dwarfs` leaves the hole worlds and the holes' display orbits out of its
+    fingerprint (taken again on `7c0c763`, whose galaxies are `75efadc`'s); `unit/outer` lets
+    the hole worlds come last; `unit/dealings` keeps the raiders' clock in step.
+- **The game keeps its word** (19 Oct, both versions; CHANGELOG, "The game keeps its word"):
   where a text promised what the code did not do, the code now does it.
   - The Long Record: `LONG_RECORD_ACCORD` (`economy.ts`, `colonyTurn`, its own yield line).
   - What we see of the Hunger: `src/game/sim/sight.ts`. `swarmSight(state)` (a test for one
@@ -471,8 +549,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - Communion: `commune` in `updateHunger` (on arrival, and for one already sitting there), and
     `foldIn` (shared with `absorbSwarm`); `COMMUNION_TAINT` 8; `firstSwarm` spares a ship under
     it. No draw: only games under the charter change, and the autoplayer never takes it.
-  - Harsh: `HARSH_CROSSING` 1.25, `harshness(state)` (`crossing.ts`) in `runCrossing`'s and
-    `greatEvaporation`'s `crossingMult`, and the share the protocols carry over divided by it.
+  - Harsh: `HARSH_CROSSING` 1.25. The new version: `crossingHarm(state, era)` (`crossing.ts`) at
+    each crossing's losses, and `CARRIED` divided by it; `protocolsMult` alone stays for the
+    Passage, the Thinning and the collapse. Today's game: `harshness(state)` in `runCrossing`'s
+    and `greatEvaporation`'s `crossingMult`, and the carried share.
   - Falls into brown dwarfs and black holes: `state.flags.all_fall` (set by `generateWorld`, no
     draw), `allFall`, `takesWorldsIn`, `fallsInAt` (`physics.ts`), read by `evolveUniverse`, the
     `inspiral` forecast, `lastsUntil` and `FallsInwardRow`. A brown dwarf's world feeds it
@@ -482,17 +562,391 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     the old rule, for games without the flag.
   - Spare work in the figures: `applyIndustry` (`turn.ts`) returns the `SpareYield`, counted into
     the turn's `eIn`/`mIn`; `spareLeft(c, industry)` (`projection.ts`) for the coming turn.
-  - Growth paid only with room (inline in `endTurn`); a met demand never lowers a standing above
-    80 (`society.ts`).
-  - Once matter is gone, matter upkeep is paid in energy (`MATTER_AS_ENERGY` 1.5, `economy.ts`),
-    as building is (the new version did so since its part 3).
+  - Growth paid only with room (`growth`, exported for `unit/unwritten`, in the new version; inline
+    in `endTurn` in today's game); a met demand never lowers a standing above 80 (`society.ts`).
+  - Today's game only: once matter is gone, matter upkeep is paid in energy (`MATTER_AS_ENERGY`
+    1.5 in its `economy.ts`), as the new version had done since part 3.
   - The Expansion Mandate (`charters.ts`; its effect was always in `buildCost`). The energy
     reading's `.hazard-edge` (`styles.css`). The vault's text in a Deep. The hidden step:
     `docs/spoilers/slow-ones.md` (spoilers).
   - Checks: `unit/promises`, `unit/fall-in`, `unit/unwritten`, `unit/slow-ones`,
     `browser/hunger-sight`; `unit/late-sky` and `unit/evap` for both fall-in rules; `unit/evap`
-    finds the first of a few seeds the autoplayer takes to the Black Hole Age, as the rules move
-    which one does.
+    and (new version) `unit/ways` find the first of a few seeds the autoplayer takes to the Black
+    Hole Age, as the rules move which one does.
+- **One rulebook** (13 Oct, the new version's part 2a-0; CHANGELOG, "One rulebook"): every
+  civilization plays the same game, each its part of every step of the turn under its own
+  perspective. Nothing changes in play with one civilization; part 2a gives the others a Civ.
+  - `src/game/civs.ts`: `PLAYER_ID` ('us'); `pointAt` and `linkCivs` (the pointer);
+    `playerCiv`, `isPlayerView`; `asCiv(state, id, fn)` (the pointer at `id` for `fn`, back
+    afterwards whatever happens, never nested); `setCivGuard` (checks only: during another's part
+    every other civilization is a deep read-only proxy, so a write that crosses over throws where
+    it is made); `assertPlayerView(state, where)` (in `bump`, `act`, `autosave` and every save:
+    throws under the guard, else says so in the console and points back); `deliver` and
+    `flushOutbox` (`state.outbox`, transient: what one civilization sends another, delivered after
+    each step, never saved).
+  - `GameState.civs`, `player`; `Civ.id`, `Civ.rng` (another civilization's own random stream,
+    from `hashSeed('<seed>:civ:<id>')`: `withRng` and `rngOf` draw from it under that
+    civilization's perspective, so the player's draws never move); `Colony.owner`, `Fleet.owner`
+    (set by `createColony` and `newFleet` to the active civilization).
+  - The turn (`turn.ts`): `turnOrder` (the player first, then the others still playing);
+    `endTurn`'s `each(part)` runs a part for every civilization under `asCiv` and then flushes
+    the outbox; between the parts the universe moves once (`scorchWorlds`, `declineWorlds`,
+    `swarmsHunt`, `updateHunger`, `drainHalo` if anyone's siphons run, `evolveUniverse`, the
+    time). The time is the player's: `turnStep` and `livedShare` once, from the player. A
+    civilization's parts: `beginTurn` (mods, pace, siphons, sleep), `economy`,
+    `overdriveAccidents`, `starvation`, `researchAndWorks`, `growth`, society, its fleets, the
+    notes, the Long Flow, `continuity`, `signalsAndEvents`, the fate shown, endings and stats.
+    The player's alone: the neighbours (`updateSurvivors`, `pactsTurn`, `warTurn`), the other
+    minds (`updateMinds`, `gatherTheLastStar`) and the Slow Ones' notice at the Last Light.
+  - **Forms** (part 3-1): `Colony.form` (`data/forms.ts`, `formOf` in `sim/util.ts`), absent for
+    matter. `capacity` gives no room to a Thread the form does not house (a leptonic settlement:
+    no Kin, no sleepers), and `structureCheck` refuses what only houses Kin there.
+    `goLeptonic(state, c, mult)` (`crossing.ts`) is a settlement going on past the end of matter:
+    it keeps the decay-proof (and, at a hole, `keptAtHole`) structures and queue items, loses Kin
+    and sleepers, and halves the Lattice once. `enabledAt(structures,
+    'merge')` (`data/structures.ts`): a Confluence Node or a Leptonic Confluence; either counts
+    toward `chorus_nodes_built`. After matter the Lattice mends and grows with energy
+    (`MATTER_AS_ENERGY`, `economy.ts`, construction's rate too), and only an empty reserve wears
+    one out (`starvation`, `turn.ts`).
+  - **The Passage** (part 3-2, `sim/passage.ts`): a queue item of kind `'passage'` (key
+    `'passage'`; `applyIndustry` calls `completePassage`); `passageTerms`, `passageCheck`,
+    `beginPassage`, `endForeseen`, `etaToEndOfMatter`, `passageEta` (decades of η a settlement's
+    own industry would take at a pace) and `turnsToEndOfMatter` (the panel's turns, from
+    `turnStep`'s length). While it is `queue[0]`, `colonyTurn` cuts energy, matter, insight and
+    accord to `PASSAGE_OUTPUT`. A turn's industry from minds does not grow with the turn's length
+    (only machines' energy and matter scale with the lived share; minds feel tempo strain), so a
+    slower pace puts less work into it a decade: the autoplayer counts decades, not turns.
+    `StructureDef.leptonic` (with a name of its own: `structureLabel(id, sys, form)`) and
+    `inLeptonicForm(d)` decide what crosses over and what a leptonic settlement may build;
+    `decayProof(c)` (`crossing.ts`, exported) is true for a leptonic settlement too, and
+    `goLeptonic` keeps all of a passed settlement's structures. The autoplayer's `passageDue`
+    (`auto.ts`) times it: done about `PASSAGE_SPARE` (2) decades before the end at the Tide, or at
+    our pace if quicker; `passageLate` rushes it only in the last three decades, and the general
+    rush (matter over 600) skips a Passage, which once finished one the turn after it began, 15
+    decades early. `migrateToBlackHoles` goes to the nearest hole with spin left (`SPENT_SPIN`);
+    `planThreads` cools Echoes when the reserve would last fewer than `COOL_BELOW` turns (in the
+    Dark Era, fewer than `darkTurnsLeft`); and when no pace pays after matter or in the Dark Era,
+    `planPace` takes the one that drains the reserve least a decade (`turnReach`: decades of η, of
+    log η in the Dark Era), not the least a turn: quicker turns cost about as much a turn once
+    nothing comes in. Not before then: in the Dusk the rule took long turns and lost the turns a
+    civilization grows by.
+  - **The Thinning** (part 3-3, `sim/thinning.ts`): `thinningFrom`, `thinShare(state, η)` (the
+    share of matter gone, evenly from η 37.5 to 39 under decay, 87 to 89.5 under curvature),
+    `ofMatter(c)` and `theThinning(state, from, to)`, run in each civilization's part of the turn
+    after the Long Flow (the turn's η before and after). `colonyTurn` scales matter yields by
+    `1 − thinShare` at the turn's start. A decay-proof settlement in a system dissolving before
+    the end goes on through `goOnAlone` (`crossing.ts`, from `handleNotes`, which is exported for
+    the checks), with `driftToHole` and `harvesterFor`, which the Migration uses too.
+  - **Leaving a hole, and the Horizon form** (part 3-4, `sim/horizon.ts`): `driftTerms`,
+    `driftCheck` and `driftToAnotherHole` (once a turn: `Colony.flags_drifted`), through
+    `leaveTarget` and `leaveHole` (`crossing.ts`): `holeFor(…, leaving)` picks the hole with the
+    most spin (at least `LEAVE_SPIN`, 100) that is not `holeFailing` (drained below `SPENT_SPIN`,
+    or within `LEAVE_MARGIN`, 5 decades, of evaporating), the nearest of equals; the forced moves
+    (the Migration, `goOnAlone`) keep the nearest with spin left. The form `'horizon'`
+    (`data/forms.ts`: `HORIZON_UPKEEP`, `HORIZON_PACE`, `horizonRoom(primary)`, added in
+    `capacity` to each Thread the form houses) is a queue item of kind `'horizon'`
+    (`horizonTerms`, `horizonCheck`, `beginHorizon`; `applyIndustry` calls `completeHorizon`;
+    `PASSAGE_OUTPUT` while it is `queue[0]`); in `colonyTurn` its Threads take no strain, a quarter
+    of the output and a tenth of the upkeep. `writeOut` (half the Lattice, times the Black Hole
+    Age's protocols) runs from `horizonGone` when the hole's `'evaporated'` note is handled
+    (`handleNotes`, then `leaveHole`) and from the Last Horizon crossing for everyone left.
+    `decayProof`, `ofMatter`, `nextToFlow`, `structureCheck` and the leptonic names treat every
+    form but `'baryonic'` alike; `goLeptonic` leaves a horizon settlement as it is. The autoplayer:
+    `planDrift` and `planHorizon` (`auto.ts`, before `planBuilds`); the harness line counts
+    `horizon N` (settlements written in) and `drift N` (chosen drifts) from `civ.flags`.
+  - **Positronium** (part 3-5, `sim/positronium.ts`): `positroniumComes` (not under stable
+    matter), `positroniumHere(state, η)` (η 85 to `POSITRONIUM_DECAY`, 141), `positroniumGone`,
+    `turnsToDecay` (at our pace, `turnsUntilYears`: one slow turn can jump past it). The form
+    `'positronium'` (`data/forms.ts`: `WEAVE_UPKEEP` 0.02, `WEAVE_PACE` 0.1, `WEAVE_ROOM` 30) is a
+    queue item of kind `'weave'` (`weaveTerms`, `weaveCheck`, `beginWeave`; `applyIndustry` calls
+    `completeWeave`, which refuses once the atoms have decayed); `leaveWeave` is immediate (2 energy
+    a mind). `theWeaveEnds(state, from, to)` runs in each civilization's part after the Thinning;
+    the universe marks the turn they decayed in (`state.flags.positronium_end`), from which the
+    nets' dole counts. Positronium Nets: energy mode `'positronium'`, `netYield(state, years, L)`
+    (the window's 40 shared by `trickleShare`, a cube, so the sum does not depend on the pace; then
+    20 halving each turn), divided by the lived share in `colonyTurn` since it is already a turn's
+    worth; `structureCheck` lets them stand only in a settlement no longer of matter, inside the
+    window. Continuity in the Dark Era loses half as much for `wovenShare`. The forecast `kind`
+    `'positronium'` is the one the HUD counts turns for in the Dark Era. The event
+    `positronium_ends` is queued the turn before the decay for whoever has woven anything or strung
+    nets. The autoplayer: `planWeave` (`auto.ts`), nets in `planBuilds` before η 130
+    (`WEAVE_WORTH`) from spare energy, the research by two tests in `pickResearch`: `never` (of no
+    use for the rest of the game: never taken, and put down if it was) and `useless` (of no use
+    now: the list waits; the cheapest-left fallback may still take Horizon Writing, as idle insight
+    is banked at half, but not the weaving, which is seldom used). `WEAVE_TURNS` (6): fewer turns
+    to the decay, the weaving is not worth researching. The tech has `needsUnstable` (`techVisible`,
+    `sim/research.ts`): any fate but stable matter.
+  - **The stable fate's late game** (part 3-6, `sim/deeptime.ts`): `heavyDwarfs(state)` runs in
+    `newGame` straight after `generateWorld`, before the passes that read temperatures: about one
+    white dwarf in `HEAVY_ONE_IN` (30) gets `HEAVY_MIN`–`HEAVY_MAX` (1.16–1.35 M☉), by a hash of its
+    mass draw (no draw taken). `deepTime(state, fromEta, toEta)` is the universe's part, called in
+    `endTurn` right after `evolveUniverse`, its notes pushed onto the same list; stable only: a heavy
+    dwarf (`willExplode`) explodes at `supernovaEta(mass)` (Caplan's three points, interpolated in
+    log η; `Primary.exploded`, mass to 1.0, its non-rogue worlds dissolved; note
+    `'blackdwarf_sn'`); `state.flags.iron` is set as η passes `IRON_ETA` (1500); each system with
+    matter (`hasMatter`) collapses at `collapseLambda(sys)` (a hash in `COLLAPSE_FROM`–`COLLAPSE_TO`,
+    λ = log10 η 26–76): primary to `'void'`, every non-Deep body dissolved, `gone` unless something
+    leptonic is there (note `'collapse'`); past λ 76 `state.flags.matter_gone`. `handleNotes` takes
+    each civilization's losses (`blackdwarf_sn`: everything in its system, in its system;
+    `collapse`: baryonic lost, a leptonic settlement on a world moved into the Deep with
+    `moveToHole`) and `catchFlashes` banks the turn's flashes (each catcher from the nearest, once,
+    `burstShare`). `ironAge(state)`: Fusion Plants make nothing (`colonyTurn`, labelled), cannot
+    be built (`structureCheck`), and the Hearth loses its 0.25 floor. Events `black_dwarf_supernova`,
+    `iron_stars`, `tunnelling_collapse` (once each). Forecasts `blackdwarf`, `iron`, `collapse`
+    carry `Forecast.dueEta`: the HUD counts their turns with `turnsToEta` (stepping `stepTime` in
+    the Dark Era) and writes the date with `formatDeepYears`. `endForeseen` is true for the stable
+    fate too once the fate is known (the Passage opens). The autoplayer: in the stable Dark Era the
+    Passage is begun `IRON_LEAD` (2) turns before iron and rushed the turn before (`passageDue`,
+    `passageLate`; its decades rule cannot work where a turn spans so many), substrate from
+    `COLLAPSE_PREPARE` (12) turns before the collapse, and Burst Catchers.
+  - **Continuity in the Dark Era** (14 Oct, harder; `sim/continuity.ts`): `continuityLoss(state,
+    starving)` is what a turn takes, `DARK_DECAY` (2.2) times `correctedShare` (each settlement's
+    Error-Correction Arrays, `continuityMult` 0.6 each, keep its own minds and sleepers; the mean
+    over ours weighed by `popsOf + cryo`: arrays no longer multiply across settlements), times
+    `DARK_SLEEP` (0.35) while dormant and `1 − 0.5 × wovenShare`, plus `DARK_STARVE` (10) when the
+    reserve ran out this turn. `continuity()` in `turn.ts` applies it; the HUD's Continuity tip
+    shows `continuityLoss(s, false)`.
+  - The crossings (`crossing.ts`): `runCrossing(state, ids, mods)` and `greatEvaporation` return a
+    report per civilization; the universe's part runs once (`toAll` puts its lines in every
+    report where they fall), each civilization's under `eachCiv`; `leftOnSubstrate` is one
+    civilization at the end of matter. `burstNeutronStars(state, lines, ids)` returns what each
+    one's catchers bank.
+  - `tellOfWorld` (`turn.ts`): a world's steam, freezing and death are told to whoever lives there
+    as its loss, and as news to whoever surveyed it (`logTo`, `sim/util.ts`).
+  - **Owners everywhere** (part 2a-1): the clock is the player's (`clockCiv`, `flare.ts`, read
+    whoever's part it is); the swarms take each civilization's mods (`swarmsHunt` and
+    `updateHunger` take `ModsBy`: one `Mods`, or a function of the civilization's id), go for
+    anyone's ships and strike each one's settlements by its own defence (`defenseAt(…, owner)`),
+    spare a civilization under Communion (`communes`), and tell each of its own (`logTo`,
+    `tellKnown`); `Swarm.tamedBy`, `Swarm.preyOwner`; `destroyColony` takes the owner's capital
+    and Record; `ownColony` and `ownFleet` (`sim/util.ts`) in every action; `StarSystem.beaconBy`
+    (`beaconOwner`, `beacons.ts`); `deepFor(state, sys, owner)` (`fleets.ts`): a civilization's
+    own Deep, a new one built beside another's; `flowComes` (`flow.ts`): the Long Flow comes once
+    for the universe, `theLongFlow` tells each; `EventDef.scope` ('everyone', else the player's
+    alone; `forThisCiv` in `sim/events.ts`). The player's alone: the Aeon Seed, a survey's ruins,
+    sleepers and finds, the Unlit's gestures, the Forks, and research's fallback onto `noAuto`.
+  - **The others become civilizations** (part 2a-2): `sim/others.ts`. `foundCiv` (from
+    `newGame`, after everything else is made, drawing nothing; not with `settings.civsAsleep`): a
+    Civ under the neighbour's Survivor id; its capital (`capitalWorld`: the most livable world for
+    gardens and forks and the warmest for sleepers, as `survivorWorld` picks; the richest and
+    warmest rock for minds and the Lattice; else the Deep); its people (`startPeople`, for the size
+    of `8 × clamp(pop / 24, 0.75, 1.25)` of our Kin); its structures placed by `structureCheck`, each
+    one's research known with it (`put`), room for its people (`roomFor`), then sources of energy
+    (`START_SOURCES`) until it has about what we begin with to spare (`START_NET`, 3.5 energy and 4
+    matter a turn), and a home with nothing to mine brings `STORE_TURNS` of the shortfall in
+    store. `syncSurvivor` (each turn, in `updateSurvivors`): the record reads its civilization
+    (`pop` three to a person, a Chorus two; `health` from its reserve, its starving settlements and
+    its resolve; `systems`, its capital's first; `claimedAt` for a new star). `civOf`; `endCiv`
+    (through the outbox: `send(… {end})`, and `endNow` in `civs.ts` empties its settlements and
+    ships, or gives them to `to`). The dealings move real energy, matter, resolve and people
+    through `send`: beams (`reachThem`), aid, trades, refugees, joint works (`JOINT_ENERGY` to both
+    builders), their raids and ours, sieges, seizing, devouring, refuge, the Choir's Echoes.
+    `dealSize(state, sv)` (`survivors.ts`): the size a dealing weighs, a civilization of its own up
+    to `DEAL_SIZE_MAX` (40); `spareOf`: what it gives, never more than half its reserve.
+    `lightly()` (`survivors.ts`) is the old simulation, for `civsAsleep` and the Forks.
+  - The turn plays each one: `autoPlay(state, 'competent')` at the start of its part (round 0 of
+    `endTurn`). It is our autoplayer, `wayOf(state)` null for us so that our play and the
+    harness's numbers stay what they were, plus, for another civilization only: no domes, warrens
+    or lamps where no Kin live; room for its own (Confluence Nodes, Lattice Foundries; the
+    Tessellate builds no substrate, which would fill with Echoes); with a swarm near
+    (`swarmThreat`: on its way, awake within 90 ly in the Dusk, or asleep at a star it has
+    surveyed), Defense Grids first and Orbital Defence researched first; settlers of its own
+    Threads (`WAY_SETTLERS`); the Chorus merges its Echoes down to three; the sleepers keep two
+    awake. Pacts, war and pace are the player's (`planPacts`, `planWar`, `planPace`); the turn's
+    time too (`project`, `travelEstimate` and `planFlow` read `clockCiv`).
+  - The interface takes a settlement for ours only if it is (`ownColony`: the Drawer, the world
+    strip and list, the lists' chips, the magnifier's build key, the labels, hover); the views
+    already walked ours only.
+  - **Relations** (part 2a-3): `Survivor.marks` (`marks(sv)` to write, `sv.marks?.key` to read, so
+    that a read never adds anything to a save); the neighbours' records are our relations, so
+    `jointIncome` counts for us alone. `jointYield` (`survivors.ts`): a shared work's field
+    gathers its star's light. `ARCHIVE_SHARE` (`pacts.ts`): Open Archives with a real neighbour.
+    `sim/ties.ts`: a `Tie` (`state.ties`, by `a|b`) holds each one's regard (`baseRegard`:
+    `AFFINITY` and the seed; drifting back by `DRIFT`), pacts, a proposal and its answer, beams
+    and marks; `planTies` (another civilization's part, from `planPacts`), `tiesTurn` (between
+    the parts, after the neighbours', then the outbox), `tieCost`, `watchPartners`
+    (`defenseAt`), `heardTies` (the card), `state.tidings` (what we hear, at light speed). The
+    outbox carries `accord` and `insight`; `civ.flags.last_insight` is what another civilization
+    learned last turn.
+  - **Seen at light speed** (part 2a-4): `Colony.foundedAt`; `settlementSeen`, `asSeen` and
+    `Survivor.seen` (`others.ts`); the system view, `residentsSeen` and the card read them.
+    `fleetSeen` (`others.ts`) places another civilization's fleet by the times of its leg
+    (`Fleet.departed`, `since`, `cameFrom`, set for theirs only in `newFleet`, `orderMove` and
+    `arrive`); `syncFleets` (`galaxyView.ts`) and `buildFleets` (`systemView.ts`) draw them, never
+    as pickables.
+  - **The turn in slices** (part 2a-6): `turnSlices` (`sim/turn.ts`) yields after each
+    civilization's part of a step (`each`; `eachNow` where a step must not be cut), never inside
+    `asCiv`; `endTurn` runs it at once. `playTurn` (`turnflow.ts`) breathes (a `MessageChannel`
+    message) whenever 12 ms have run; `act` refuses while `busy`. Between two slices the state is
+    a turn half done: anything new that acts on the game from the interface goes through `act`,
+    or checks `busy` itself.
+  - **Minds of their own** (part 2a-5): `WAY_RESEARCH` and `WAY_WORK` (`auto.ts`, exported for
+    `unit/minds`); `EventDef.scope: 'everyone'` on the events of ordinary life (nine, `data/events.ts`); `planSleep` and `raceFor` (the sleepers); `temperament` (`util.ts`, from the
+    seed, read live, never saved); `heardWaking` (`ways.ts`, our side: their Ark under way to a
+    new star); `fork` from another civilization makes no neighbour. The Lattice's insight and
+    accord (`data/threads.ts`), `StructureDef.search` (`economy.ts`, after the multipliers). The
+    harness's `lattice` strategy sets `ourWay`, so that `wayOf` gives our autoplayer the
+    Tessellate's rules for that call; every other strategy leaves it null.
+  - **The Hunger among the civilizations** (part 2b): `sim/plight.ts` (`plight(state, id)`, 0 to
+    1: reserve, starving, falling, will; the worst counts most). `sim/judge.ts`: every Taint rise
+    goes through `hungerAct(state, actor, taint, systemId, act, delta?)`, never `civ.taint +=`
+    (research, charters, `absorbSwarm`, communing a point at a time through
+    `civ.flags.taint_fed`, seizing without cause, devouring, tainted notes, and the events' own
+    `taint` helper; a fall is the actor's alone, `easeTaint`; `unit/rulebook-lint` forbids any
+    other write to Taint). Ours goes out as `spreadNews(...,
+    taint)`; a neighbour counts it in `heardOfUs` when it arrives (`Survivor.heardTaint`), and
+    everything the others decide by our Taint reads that: the ceiling (`HEARD_CEILING`),
+    `shuns` (`SANCTION_AT`), pacts, trade, joint works, the card. Another's goes into each tie's
+    `news` (the hearer's regard, `Tie.taintHeard`, `shunsOther`) and into a tiding for us
+    (`taintOf`, `Survivor.taintSeen`, the just cause in `warCause`: `HUNGER_CAUSE`, news delta
+    0). `CORRUPT_AT` (its own Taint): it raids anyone not its friend (`corrupted`,
+    `survivors.ts`). `becomeHunger` at 100 (step 10 of `turnSlices`); the fate `'hungered'`
+    sends no last transmission, only a tiding of the silence. The autoplayer's `hungerSteps`
+    (`auto.ts`, AIs only: plight from 0.6 and caution under 0.5) opens Hunger research
+    (`HUNGER_FIRST`), Consume the Dead and the events' Taint choices.
+  - **War, units, conquest** (part 2c), as far as built: every fleet strength goes through
+    `strength(cls, against)` (`data/ships.ts`: against `'ships'`, `'settlements'` or `'swarms'`,
+    a class's `vs` figure or its `attack`), and what can fight is `isWarship`; never sum
+    `.attack` (2c-0, 30 games identical). `ShipDef.upkeep` (energy a turn, `fleetUpkeep` in
+    `fleets.ts`, charged in the turn and the projection like a structure's, a tenth asleep),
+    `screen` (`screenAt`: each ship's own chance to turn a raid away, read in the raids on us),
+    `eyes` (`updateDetection`), `dugIn` (fortified, instead of `FORTIFY_BONUS`); `repairFleets`
+    (a tenth of a hull a turn at a Shipyard). `shipNote` writes a class's figures for the build
+    list. The Picket and the Hunter wear the Warden's hull until they have their own.
+    `sim/conflict.ts` (2c-2): a war between us and another is still `sv.war`, between two others
+    `Tie.war` (`War`: `since`, `siege`, `by`, `cause`, `at`); `warOf`, `atWarWith`, `enemiesOf`;
+    `declareOn` (another's declaration, by our rules; `war_on_us` signal), `peaceBetween`;
+    `battlesTurn` (after `updateHunger`, once a turn): every battle at once from what stood at the
+    start, each side's `luck` hashed from seed, turn, star and side (never the dice, so no order
+    decides), then every settlement's siege, everyone's (`siegesTurn`, since the combat system; see
+    below). `planWarAI` (the others: the Hunger heard of in one, or the corrupted on the weakest;
+    arm, go at `WAR_ODDS`, tire at `WAR_TIRES`; at war, `fightWar`), `planDefence` (ours, any
+    strategy: `fightWar` too). We cannot make peace in a war they began (`makePeace`).
+    Conquest (2c-3, the end of `conflict.ts`): `assaultBlocked` (a war; warships at its star and
+    none of its owner's; `siegeAt` at least `SIEGE_TURNS`, in a war the stormer began; `walled`, a
+    Defence Grid or a Bastion Shell, needs a `breaches` ship), `assault` (`assaultForce`, the
+    warships' strength against settlements, × the hashed `luck` against `holdOf`; hulls pay either
+    way; won, `conquer` and the war's `at` moves to `frontOf` the enemy's next settlement), and
+    `conquer(state, by, c, how: Fall, cause)` for every way a settlement falls ('take', 'raze',
+    'lance'): `CONQUEST_GFE` a person or structure from `state.gfe`; taken, `FLEE` to their own
+    nearest settlement, structures × `SPOILS`, `TAKEN_DAMAGE` to the hearth, queue cleared,
+    overdrive off, the owner changed (a Deep beside the winner's own merges into it); the winner's
+    resolve and dissent by cause, `flags.conquests`, the loser's `flags.lost`; `heardEverywhere`
+    (`infamyOf`; without a cause a Hunger act of `FALL_TAINT`); the last settlement ends the
+    civilization through the outbox (`endCiv`: 'Seized' by us, fate 'seized' or 'destroyed'; by
+    another, 'Conquered', fate 'conquered', set at once on the record since `updateSurvivors`
+    keeps a fate it finds) and ours sets `flags.conquered`, a defeat of its own (`checkEndings`).
+    Our `seizeSurvivor(state, id, raze, colonyId?)` on a civilization of its own is `assault` at
+    the settlement asked for, else `stormTarget` (the one of theirs we hold the longest siege on,
+    else the front; in a war they began, theirs nearest us) (the light neighbours' and forks' path
+    is unchanged); our `declareWar` now keeps its cause on
+    the war. The others storm in `battlesTurn` when nothing blocks it, razing from `CORRUPT_AT`.
+    `warOf` gives no war once either side's game is over. The Kinetic Lance: `strikeBlocked`,
+    `launchStrike` (the Lance alone in a fleet of its own, `orderMove(..., 'strike')`,
+    `Fleet.targetColony`, `LANCE_GFE` at launch), flown at `LANCE_SPEED` (`advanceFleets`,
+    `isLance`) and kept on its order at arrival (`arrive` returns early), struck in `strikesTurn`
+    at the start of `battlesTurn`: the target owner's `screenAt(state, sys, owner)` against a
+    hashed draw; a world's settlement `conquer(..., 'lance')`, one in the Deep loses `LANCE_DEEP`.
+    A Lance on its order is neither surveyed from (`surveyWhereStationed`) nor hunted by a swarm
+    (`swarmsHunt`): it does not stop. The AI builds a Breacher (`needsBreacher`, `arm` in
+    `auto.ts`) when the front is walled; it does not use the Lance yet (2d). Until the combat
+    system (20 Oct) the defender in a war the other side began could not storm (`siegeAt` counted
+    only the declarer's siege); now either side can. A war whose settlement is gone (taken, razed,
+    abandoned) moves on to the enemy's next (`battlesTurn`, for every war).
+    The interface (2c-4): `assaultOdds` (the draw is uniform from 0.6 to 1.4), `warFront` (the
+    settlement our war with a civilization of its own is fought at), `screensSeen` (their screens at
+    a star as `fleetSeen` shows their ships). The card (`Signals.tsx`): the War row for one of its
+    own (where, the siege, what it holds), Storm and Raze (armed keys `storm:`/`raze:`, the
+    confirm row's texts, `seize(g, id, raze)`); the light neighbours keep Seize. The fleet panel
+    (`Drawer.tsx`, `StrikeSection`): every settlement of those we are at war with that we see,
+    nearest first, eight at most, Strike armed per row; the chip `striking` and "To strike ..."
+    while it flies, its trip at `LANCE_SPEED` (also in the Fleets list). `browser/war` is the
+    whole of it in a browser.
+  - **The AI's judgement in war** (part 2d, `auto.ts`): `planWarAI` keeps
+    `civ.flags.desperate_since` (plight from `DESPERATE`, turn by turn); `warTarget` returns a
+    `motive` (`War.motive`: 'hunger', 'corrupted', 'desperate'; `declareOn` keeps it and counts it in
+    `civ.flags.war_<motive>`): the desperate one `DESPERATE_FOR` turns running with caution under
+    `DESPERATE_BOLD` picks the richest that `worthWar` does not rule out ('no' once `state.gfe` is
+    under `GFE_SPARE`, and unless stores
+    `RICHER` times its own and `RICH_MIN`, plight under `CONTENT`, regard under `FRIEND`, no pact,
+    us only once in contact, the front within `REACH_TURNS` of its capital or a fleet of its
+    warships; 'go' once its line carries `WAR_ODDS` times what stands at the front plus every
+    warship of theirs elsewhere, counted dug in (`FORTIFY_BONUS`), and one of its fleets can pay the
+    launch there; 'arm' until then, building Wardens while `arm` allows). It takes (never razes:
+    razing is only from `CORRUPT_AT`), and makes peace once `War.took` (counted in `assault` for
+    the side that began it) or its plight is under `EASED`. `plunder` (`conflict.ts`): a siege's blockade energy goes
+    to the besiegers, ours (`warTurn`) and the others' (`battlesTurn`). `lineOfBattle`: warships
+    but not a fleet of Pickets alone, which keeps its watch; `keepWatch` builds a Picket at the
+    capital while an enemy knows Relativistic Arks (ours too, in `planDefence`); `lanceAt` (from
+    `CORRUPT_AT`, at war): a Lance built, then struck at the enemy's most peopled settlement
+    (`civ.flags.lances`). Harness marks: `*hcd`, a letter per war begun by motive; `^N` Lances.
+    Census before the rule (40 games, scratch scripts not kept): desperate (plight from 0.6) in
+    15% of the others' turns, about 4.5 spells a civilization a game; with the first conditions and
+    caution under 0.4, a war in 8 of 40 games. Followed turn by turn (60 games), those wars were
+    empty: 12 of 15 attackers could not pay their fleet's launch to the front, and those that came
+    brought one warship against a defender that dug in at home; hence the reach, the launch, the
+    odds against all the defender has, and the arming.
+  - **The combat system** (20 Oct, `docs/plans/2026-10-20-combat.md`, the new version only):
+    - `data/tactics.ts`: `TACTICS` (`line` ×1/×1, `close` ×1.5/×1.5, `standoff` ×0.5/×0.5 and
+      `holds: false`, `escort` ×0.75/×1 and `escorts`), `Fleet.tactic` (absent: `line`, as every
+      fleet before), `tacticOf` (a fleet without a warship holds the line), `shareHurt` (a fleet's
+      ships' hurt by its tactic, an Escort's unarmed ships' moved onto its warships, the same
+      draws whatever the tactic), `fleetDug` (fortified and not standing off). `setTactic` and
+      `storm(colonyId, raze)` in `actions.ts`.
+    - Battles (`conflict.ts`): `sidesAt` (every ship stopped at a star, armed or not, but a Lance
+      on its order; each settlement's `settlementFire`: `SETTLEMENT_FIRE` 0.5 + `SETTLEMENT_FIRE_PER`
+      0.075 a person, at most `SETTLEMENT_FIRE_MAX` 6, and its Defence Grids'), `foesAmong` (a battle
+      where one side can fire on another's ships), `exchange` (each side's `sideFire` × `FIRE` ×
+      luck, `allot`ted in `fireOrder`: an Escort's unarmed ships last, then the least hull left,
+      then a hashed draw; what destroys a ship goes on to the next, a ship taking its fleet's
+      `taken` share). Every list is sorted by id first, so no order decides. `battleForecast` is
+      the same at an even draw with one fleet's tactic swapped (the buttons' tips). Each battle
+      is a `Battle` with `sides` (`BattleSide`: fleets and tactics, ships, settlement fire, dealt,
+      taken, lost by class) and, for us, one log line; `state.battles` keeps `BATTLE_MEMORY` (20)
+      turns (it grew for ever; `migrate` trims it with `<=`, as a turn leaves it).
+    - Sieges: `Colony.siege` (`{ by, turns }`), counted for every settlement in `siegesTurn`
+      (`besieger`: at war with its owner, a fleet that `holdsSiege` there, none of the owner's
+      warships; the most fire, then the id). Its blockade (`plunder`) and the resolve, for everyone;
+      then the others storm at `STORM_ODDS` (0.5). `siegeAt`, `assaultBlocked` (`stormers`: not
+      standing off; any war, either side), `assaultForce` (by tactics), `assault` (hulls by
+      `taken`; `War.lost` counts the declarer's settlements lost to the other's counter-attack),
+      `besieged(by, owner)`. `warTurn` keeps only dissent and a light neighbour's siege
+      (`siegeStrength`, those holding); `warHeat` reads the sieges. Format 5 (`SAVE_VERSION`) moves
+      a war's `siege` onto its `at` settlement (`tools/saves/70c2d07-seed1000-turn43-siege-next.json.gz`,
+      a war of ours under way, made with the build before).
+    - The AI (`auto.ts`): `planWarAI` makes peace in a war it began also once `War.lost` or a siege
+      of ours it cannot break; at war, `fightWar(foes, line, strikeBack)`: `armWarship` while its
+      line is under `WAR_ODDS` times what threatens it (`threatened`: enemy fire stopped at its
+      stars, and on its way to them) or stands at its target; the line to the first threat
+      (capital first) once it and the guard there are `HOLD_OUT` (0.5) of it, else to the capital;
+      with none, to the front of its own war or, `strikeBack`, the enemy's settlement nearest it
+      (`frontOf(foe, me)`) at `WAR_ODDS`; else it waits at its settlement they come for, or at its
+      capital; dug in at its own stars (`idle` or `hold` to `fortify`); `tacticFor` each fleet
+      (escort with unarmed aboard; close at `WAR_ODDS`; else line where it must hold a siege or is
+      dug in at home, stand off elsewhere); a fleet outmatched `WITHDRAW_AT` (2) away from its
+      capital goes home. `pickResearch`: another civilization at war learns Orbital Defense first.
+      `planDefence` (ours): `fightWar` for a war on us, striking back only `warlike`, which also
+      storms; `planWar` (warlike) uses `fightWar` against a civilization of its own.
+    - The interface: `TacticRow` and `BattleSection` (Storm and Raze per settlement, asking
+      first) in the fleet panel, `WarHere` in a star's, the siege chip on a settlement, the
+      tactic chip and the Fleets list's word, the war card's sieges and `stormTarget`. Checks:
+      `unit/combat`, `browser/tactics`; `unit/civ-war`, `unit/conquest`, `browser/war` updated.
+      Harness: `--war=N` in `tools/sim.ts` (at turn N we go to war on our nearest neighbour that
+      plays a game of its own; `warlike` fights it).
+  - Still for part 2a: relations per pair (2a-3), light speed (2a-4), each way's strategy and
+    temperament, plight, the Lattice's thinking, an `EventDef.scope` whitelist, each
+    civilization's homeworld (the `homeworld` trait is the player's: an AI's capital world must not
+    carry it, or `handleNotes` tells the player of its fall), an AI's Fork rejoining the world as
+    people (2a-5); End Turn yielding between civilizations (2a-6).
+  - Checks: `unit/civs` (the pointer, the save format, owners, `asCiv`, the guard, the streams,
+    the outbox), `unit/civ-turns` (a second civilization, played by the autoplayer under its own
+    perspective, lives a whole Dusk and the Last Light beside ours under the guard),
+    `unit/rulebook-lint`, `unit/others` (the neighbours as civilizations: their starts by the
+    rules, generation untouched, every turn played at our pace, the record read from them, what
+    passes between us, the end). `civs`, `civ-turns` and the checks that set a neighbour's
+    record by hand (`claims`, `dealings`, `flow`, `neighbours`, `refuge`, `settled`, `war`,
+    `ways`) run with `civsAsleep: true`.
+
 - **Lighter on phones** (13 Oct; CHANGELOG, "Lighter on phones and tablets"):
   - The synth's continuous sounds: `voice(layer, t)` and `hush(layer)` in `src/audio/music.ts`.
     `apply` builds a layer without them when a recording is due; `wakeSynth` and the slow-recording
@@ -602,7 +1056,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **The audits of 8 Oct** (planet and star; their scripts were in the scratchpad):
   - Dead stars, one law per kind in every age (`physics.ts`): `dwarfCoolingK` (Mestel, then
     t^-0.58 from `DEBYE_AGE` 5×10¹¹; capped at a red dwarf's flare peak), `brownCoolingK` (Burrows
-    et al. 2001), `formedAt` (a hash of the mass: no random draw, so old saves get it too),
+    et al. 2001), `formedAt` (a hash of the mass: no random draw, so old saves get it too; since 13 Oct one
+    in ten young, `YOUNG_SHARE`: white 1 to 12 billion years, brown 0.4 to 2 billion),
     `giantHeatK`, `rekindledK` (`REKINDLE_SUNS`). `ownTemperature` no longer reads the era; dark
     matter warms from the Dusk on (`emberShare`, `haloShare`). Luminosities are `glow(R)` of the
     temperature. Neutron stars 900 K in the Dusk too. `SKY_K` 2.2×10⁻³⁰.
@@ -740,8 +1195,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     on its turn, nor under Communion). The part (1 to 1.6, taken from the swarm) carries
     `Swarm.prey` (the fleet) and `Swarm.nest` (its swarm). In `swarmsHunt` it strikes its prey
     with no draw (`sw.prey === f.id`); while the prey is there it does not move on. Once the prey
-    is not where it is (`loseTheScent`, on arrival and each turn) it heads for its swarm's star or
-    destination (`headForNest`) and on arrival merges into it (`rejoin`), following it if it moved
+    is not where it is (`loseTheScent`, on arrival and each turn) it goes on to the nearest
+    settlement of the prey's civilization (`nearestOf`; 14 Oct, harder), dropping `nest`: a swarm
+    of its own from then on, which feeds there and strikes the settlement as any swarm. Only if
+    that civilization has none (or lives in Communion) does it head for its swarm's star or
+    destination (`headForNest`) and on arrival merge into it (`rejoin`), following it if it moved
     on; with its swarm gone or tamed it is a swarm of its own. None of these take a draw. Taming
     and `drawSwarmTo` clear both fields. Swarms travel at 0.05 × the turn length in light-years
     in the Dusk (2 ly a turn at a 40-year turn), so a part can take several turns to arrive.
@@ -797,12 +1255,15 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `steamWorld(state, b)` tells the labels, and `declineWorlds` (`turn.ts`): life on a steam
     world dies with the turn, logged for ours and surveyed worlds. Only new games have `water_rich`, so
     old saves' climates are unchanged. `youngDwarfLight(a, b)`: a Dusk white dwarf's
-    collector light averaged over ages a..b (the power law integrated, then the 0.02 floor).
+    collector light averaged over ages a..b (the power law integrated, then the 0.02 floor); since
+    13 Oct one the galaxy began with gets it too, from `formedAt` (an old one: the floor).
   - `bodyClimate` holds a world under Orbital Lamps at `LAMP_K` (285 K) at least
     (`starClimate` is the star's part); a floor, so it never adds to a flare.
 - **`src/game/sim/flare.ts`:** `livedShare(state, pace, step)` is the pace factor everything
-  scales by (yields, projection, tempo strain): 10^-pace, except 1 on a flare-clock turn and at
-  most 1 on a turn cut short by a flare's start.
+  scales by (yields, projection, tempo strain): 10^-pace, `1/split` on a new star's clock, and
+  since 20 Oct the Tide turns covered on any other turn a clock, a flare or the age's end sets
+  (until then 1 on a flare-clock turn and at most 1 on a turn cut short by a flare's start).
+  Upkeep reads `upkeepShare`.
 - **`src/game/sim/economy.ts`:** Kin surface room is 0 when scorched and ≥5 when warm-thawed;
   Solar Arrays × insolation. Focus: Matter (+25%) touches only matter raised by mines, skimmers
   and lifters; no other focus touches matter (the −10% applies to energy, industry, insight and
@@ -1082,20 +1543,22 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     rotation) starts with the synth silent (`silenced`, the hiss at 0). It wakes the synth only
     if the recording has not started within `RECORDING_GRACE` (8 s), or fails, so the synth is the
     fallback, not a stopgap while a slow browser loads the file. Check `browser/music-hidden`.
-  - How a recording reaches the speakers (15 Oct, `src/audio/trackOut.ts`, the same file as the
-    new version's): `trackOut(el)` gives an `ElementOut` where the browser lets a page set an
-    element's volume (`elementVolumeWorks`: set 0.5, read it back; iOS Safari reads 1), else a
-    `GraphOut` (the old route: a `MediaElementSource` into a gain into `audio().music`).
-    `ElementOut` sets `el.volume` = its level × `musicLevel()` (the slider squared) × `MASTER`
-    (0.9, the master's gain), on a 40 ms timer while anything fades, and at once when
-    `setVolumes` runs (`onVolumes`). `fade(to, secs)` is a ramp on `performance.now()`.
-    (`holdElements` is the new version's, for its films; nothing here calls it.) Do not make a
-    `MediaElementSource` for an element that plays this way: once made, the element's sound goes
-    only through the graph. Check `browser/music-route`.
-  - The synth's echo (the layer's `send`, the snare's `wet`) goes into `audio().musicWet`, at the
-    music's volume (`music² / 0.49`, so as loud as before at the slider's 70%), then the reverb.
-    It went into `reverbIn` directly before the project check (15 Oct), so the slider at 0 left
-    it heard.
+  - How a recording reaches the speakers (15 Oct, `src/audio/trackOut.ts`): `trackOut(el)` gives
+    an `ElementOut` where the browser lets a page set an element's volume (`elementVolumeWorks`:
+    set 0.5, read it back; iOS Safari reads 1), else a `GraphOut` (the old route: a
+    `MediaElementSource` into a gain into `audio().music`). `ElementOut` sets `el.volume` = its
+    level × the films' hold × `musicLevel()` (the slider squared) × `MASTER` (0.9, the master's
+    gain), on a 40 ms timer while anything fades, and at once when `setVolumes` runs
+    (`onVolumes`). `fade(to, secs)` is a ramp on `performance.now()`; `holdElements(on)` fades
+    every element out over 0.6 s and in over 1.2 s, as `duckMusic` does the graph (`music.hold`
+    calls both). Do not make a `MediaElementSource` for an element that plays this way: once
+    made, the element's sound goes only through the graph. Check `browser/music-route`.
+  - The synth's echo (the layer's `send`, the snare's `wet`) goes into `audio().musicWet` (at the
+    music's volume, `music² / 0.49`, so as loud as before at the slider's 70%), then `wetDuck`
+    (ramped with `duck` by `duckMusic`), then the reverb. It went into `reverbIn` directly before
+    the project check (15 Oct), so the slider at 0, or a film, left it heard. `music.hold` keeps
+    its pause's timer (`holdTimer`) and clears it on every hold: a hold taken again within 0.7 s
+    of one let go was paused by the first one's timer, part-way through its fade.
   - The reverb (`core.ts`): `impulse(ctx, 3, 3.2, 5.5)`, 3 s of noise decaying as
     (1 − τ/5.5)^3.2 with a 0.2 s fade at its end (it was the full 5.5 s). The interface's sounds
     send into it through one `bus` made once in `sfx.ts`.
@@ -1139,38 +1602,183 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   (`selRing`) takes its colour, with an opacity floor of 0.35 (0.12 and the pale `SELECT` on a
   world no one lives on). It holds still: since 7 Oct neither it nor the galaxy map's selected
   star ring (`galaxyView.ts`) pulses.
-- **The survey reveal (21 Oct, a flight of the camera):** `SystemView` keeps it (`reveal`: its
-  system, its start, its look at the star (`intro`, Next cuts it), its `shots` (each world's
-  flight, its while there as planned and as it is (`plan`, `hold`: Next cuts `hold`, and what the
-  camera does there is timed by `plan`), whether its star rises over it), the orbits' order out
-  from the star, the yaw it began at, the world the view was entered for, the dust's cell;
-  `REVEAL` is the pace) outside `build()`, which reruns on every `bump()`. `schedule()` gives each
-  flight's start, each arrival, the way out and the end. `build()` tags whatever it draws for each
-  body (`userData.reveal`; `orbit` holds an orbit line's opacity, `deep` the Deep's ring's, `belt`
-  a belt's instance count, `world` marks a world's pivot), and `applyReveal()`, every frame in
-  `update()`, sets what shows (a world from its flight on, its scan `uReveal` (`PLANET_FRAG`: a
-  silhouette, then a scan line) from 0.25 s before its arrival to 0.7 s after, what is round it
-  once scanned, the orbits on the way out), tells the caption where it has come to
-  (`RevealStep.phase`: intro, fly, hold, outro), and sets `cinema`, the camera's pose, from
-  `cinePose(r, schedule, t, orbitTime)` alone: `introPose`, `shotPose` (a world, the Deep, a belt;
-  `framed()` puts a point at a place on the screen, seen from a distance at an angle round from
-  its star), `blendPose` (round the star, midway keeping out of its glare), `endPose`.
-  `Engine.frame` puts the rig there (`OrbitRig.setPose`) after `system.update` and before
-  `rig.update`. `flightDust` draws the streaks from two poses 1/30 s apart (not in the magnifier
-  mode). `endReveal(how)` puts everything back and tells the engine (`onRevealEnd`): played out,
-  the camera stays (on the world the view was entered for, followed); skipped, it flies back out;
-  let go of (`drop`: a gesture, `select` of a world, another system or game), it stays.
-  `hidden(id)` is a world whose scan is not over (`Engine.pickAt` leaves it out); `labelsHeld`
-  holds every world's name and the selection ring until the way out.
+- **The films (part 4, `src/film/`):** `films.ts` defines each film as a `reel()` (shots cut on
+  a beat grid, corners, labels, timecode, narration, title card) whose `setup(w, h, quality,
+  args)` lays it out once and returns `draw(c, t)` and `text(t)`: pure in `t`, so never keep state
+  between frames (`browser/films` compares a frame reached at 30 and at 144 frames a second).
+  `FilmArgs` carries the fate and η. `cue.ts` schedules each film's sound from `SPECS` on any
+  `BaseAudioContext` (`renderCue` for the videos). `player.ts` (`FilmPlayer`) draws on one canvas
+  and keeps the words as DOM (`.film-line`, styles at the end of `styles.css`, larger under
+  `html.lv`). `ui/screens/Film.tsx` mounts it on `document.body` (outside `#ui`'s zoom), stops
+  the engine, ducks the music (`duckMusic`, the `duck` gain in `core.ts`) and plays the cue on
+  `audio().film`. `playFilm(id, then, args)` (`store.ts`) honours `filmsOn()`: Settings, reduced
+  motion, `?nofilms` and `__stel.films(on)`. `crossingFilm` and `endingFilmFor` map a crossing's
+  title and an ending's name to films (`turnflow.ts`). Checks: `lib.cjs` adds `?nofilms` unless
+  `start(name, { films: true })`; `__stel.filmFrames(id, times)` hashes frames, `__stel.filmList()`
+  lists them. Videos: `tools/film-render.mjs` (needs an ffmpeg path, e.g. imageio-ffmpeg in a
+  scratch venv; it starts `vite` on port 5179 for `film.html`; `--fate=` for the films that
+  differ by fate, `--jpeg` for lighter frames; it waits out a page reload by the dev server).
+- **The films' second cut (14 Oct):** every film is now a `reel2(def, make)` (`reel.ts`), whose
+  `make(w, h, S, k, args, quality)` returns a `ReelSpec`: numeral, title, sub, `titleAt`, `eta`
+  (the timecode's span), narration, an optional `card` under the title, and `scenes`, each
+  `{from, to, enter ('fade' | 'zoom' | 'cut'), fade, draw(c, m), notes(m), assets}`. A `Moment`
+  is `{b, t, p, w, h, S, k, q}`: the beat, the seconds, the scene's progress, the frame and the
+  quality. `note(id, text, x, y, opacity, {align, tone, size})` places a label anywhere (x and y
+  as fractions of the frame); ids must be unique within a film. Heavy paintings are `Lazy` jobs
+  (`paint.ts`): list them in the scene's `assets` and the reel paints them a slice a frame ahead
+  of their scene, or at once when a moment is drawn on demand, so a frame is the same however it
+  is reached. Where things live: `dusk.ts` (the Long Dusk), `lastlight.ts` (the Last Light),
+  `blackhole.ts` (`blackHoleAge2`, the Black Hole Age in three versions by `args.fate`), `dark.ts`
+  (the Great Evaporation; the Last Horizon, its stable version by fate), `endings.ts` (the ten
+  endings, `ENDINGS2`, through its `ending()` helper: 36 beats at 84, the title at 31), `holes.ts`
+  (the holes' kit: the point lens, `drawRing`, `plainHole`, `quanta`, `lattice` for settlements of
+  fields, `pairs`, `figure` and `axes` for charts, `paintDark` for the late skies), `paint.ts`
+  (stars, worlds, skies, galaxies, `heatOf` and `HEAT_LUT` for what is seen by its heat, and
+  `World`'s `heat` option), `hr.ts` (the H–R diagram's stars), `kit.ts` (layout, layers, the
+  camera, a ship, `falseColour`). A film's cue is `SPECS[id]`, or `FATE_SPECS['id:fate']` where a
+  fate's version cuts on other beats (`cueOf`); keep its cuts on its scenes' `from`.
+  `src/film/saved/` keeps earlier versions the player may want back (not imported, so not in the
+  game): to restore one, import it in `films.ts` in place of the current one (and, where its cuts
+  differ, put back the cues its header gives: `lasthorizon-v1.ts`, the Last Horizon before the
+  Heart's going opened it, 26 Oct). `supernova.ts` (26 Oct) is the film of a game's first
+  supernova (`turnflow.ts`, `civ.flags.sn_film`); `FilmArgs.heartMass` (`heartMassOf`) gives the
+  Last Horizon the Heart's own mass. `CueSpec` has three optional parts, `chirp`, `thumps` and
+  `boom`, used by those two. A film that shows
+  a body's temperature reads it from the game's own laws (`dwarfCoolingK`, `brownCoolingK` in
+  `physics.ts`), as the Degenerate Age's specimens do.
+- **The films on a tablet (15 Oct):** played in the game (`FilmPlayer` with `painter: true`, from
+  `ui/screens/Film.tsx`), a film is laid out with `setup(w, h, q, args, false)` (its first scene not
+  painted then) and its pictures are painted by `src/film/paintWorker.ts`, a module worker (Vite
+  builds it as `assets/paintWorker-*.js`), which lays out the same film at the same size and
+  quality and paints `scene.assets` (the reel's paintings in the order the film needs them, each
+  once; the first `scene.first` of them are the first scene's) one by one, sending each through
+  `transfer.ts`: `pack` turns an `OffscreenCanvas` into an `ImageBitmap`, a `World` into its
+  `save()` (its tables and its picture), typed arrays into copies handed over whole, lists and
+  plain records into their parts, and anything else into `local` (the page paints that one). The
+  page `unpack`s each into a canvas of its own and `Lazy.fulfil`s the job; `player.ready` resolves
+  once the first scene's are there, and Film.tsx starts the cue and the clock on the next frame
+  (the screen dark meanwhile, "PREPARING THE REEL" fading in after half a second, `.film-wait`).
+  Where there is no `Worker`, `OffscreenCanvas` or `createImageBitmap`, or the worker fails, the
+  page paints as before (`warm`, a slice a frame). `canvas()` (`paint.ts`) makes an
+  `OffscreenCanvas` where there is no document, so a painting job must not touch the page (none
+  does; text is drawn in the frame, not in a job). `browser/films` checks that frames drawn from
+  the worker's pictures hash the same as from the page's (`__stel.filmFramesApart`). `World`
+  keeps only its disc's pixels with their light (`WorldPixels`) and each map point's colours
+  (`texels`, nine numbers a point), and writes each pixel as one 32-bit word (`HEAT_WORD` for the
+  thermal palette). `player.play` steps the frame's resolution down by a fifth (to 0.75 a CSS
+  pixel at least) after a second of frames more than 45 ms apart (`resize`; the reel's crossfade
+  layer follows the canvas's size). The music under a film: `music.hold(true/false)` (core's
+  `duckMusic` to 0; the recording paused 0.7 s later; `tick` schedules nothing; a recording due
+  waits in `start()`; the slow-start grace timer waits for the hold to end; `music.holding` for
+  the checks). A cue is a sorted list of `CueNote`s (`reelCue`): `playCue` makes each `AHEAD` (3 s)
+  before it sounds from a 250 ms timer, `renderCue` makes them all at once. Hooks:
+  `__stel.playFilm(id, args)`, `__stel.filmFramesApart(id, times, w, h, q)`, `__stel.audio()`.
+  Measuring (scripts in a scratch folder, not kept): a tablet's screen (1280×800 at 2× with
+  touch), CDP `Emulation.setCPUThrottlingRate` 4, rAF gaps over a film and a DevTools trace
+  (`Tracing.start` with `devtools.timeline`, tasks over 150 ms and what ran in them); frame rates
+  here measure the software rasteriser, so compare the main thread's own stops.
+- **Films smooth in every browser (15 Oct):**
+  - **The clock** (`audioClock`, `player.ts`): film time is `getOutputTimestamp()`'s
+    `contextTime` carried on by `performance.now()` from its `performanceTime`, at the frame's own
+    time (the rAF timestamp, passed to `clock.now(at)`), never backwards, less the cue's start.
+    Without a timestamp (or with `performanceTime` 0, or one ahead of `currentTime` or more than
+    a second behind it), `currentTime` carried on between its steps, for 250 ms at most and only
+    while the context runs (the project check: carried on without end, a stopped sound left the
+    film running on in silence, then frozen; `unit/film-clock`);
+    without sound, `elapsedClock`. Do not read `currentTime` straight: it steps by the output's
+    buffer (23 ms with `latencyHint: 'playback'`), and frames repeat.
+  - **The overlays:** with `pageOverlays` (the game's `Film.tsx`), `FilmPlayer` lays
+    `.film-vignette` (a CSS radial gradient, as `vignette` in `draw.ts`) and `.film-grain` (the
+    256-pixel tile from `grainTile256()` as a data URL, `mix-blend-mode: overlay`, its
+    `backgroundPosition` from `grainOffset(t)`) between the canvas and `.film-text`; the reel
+    skips its own `vignette` and `grain` while `args.pageOverlays` is set (read as each frame is
+    drawn). The trial: at the first half-second judgement with frames more than 45 ms apart, the
+    player sets `args.pageOverlays` false and hides the layers; at the next, it keeps the canvas
+    if its median gap is under 0.9 of the layers', else it shows the layers again
+    (`FilmPlayer.overlayTrial`). Only then does it step the resolution down: every half second,
+    by `clamp(√(30/median gap), 0.6, 0.85)`, to 0.5 a CSS pixel at least. Export and the checks'
+    `filmFrames` leave `pageOverlays` unset, so their frames keep both in the canvas. Under
+    reduced motion the game's films set `args.stillGrain`, and the canvas's grain holds still too
+    (drawn at time 0), as the page's layer does.
+  - **The painter thread's failures:** `paintWorker.ts`'s handler is async, so an error in it
+    rejects a promise inside the thread and reaches the page as no error at all. Its whole body
+    is in a `try`: a film it cannot lay out or send it answers `{ job, failed: true }`, and the
+    page paints that film itself (`fallBack`).
+  - **Measuring:** a frame's drawing in software at 1920×1080, with and without the two passes
+    (`setup(..., { pr: 1, pageOverlays })` on the dev server's `film.html`, each frame flushed by
+    `getImageData(0, 0, 1, 1)`); a whole film in the game in Chromium with
+    `--disable-accelerated-2d-canvas` (and swiftshader's GL) at 1920×1080: rAF gaps and the
+    canvas's width. Without the graphics chip for compositing too, as here, each page layer over a
+    changing canvas costs more than its canvas pass.
+- **The galaxy's own light (15 Oct, `galaxyView.ts`):** `buildGlows` (from `buildDust`, once per
+  world) adds soft additive sprites over the dust: the envelope (1900 across, flattened 0.62) and
+  its middle (760), each ancestral province (2.6 × its radius), 15 along each stream, each
+  globular cluster, with `glowTexture()` (brightness as e^(−3.2 r^0.7), zero at the edge) and a
+  blackbody colour. `sync` tints them with the dust's era tint; `update` sets each one's height
+  on the screen from the camera's elevation (√(flat² cos² + sin²)) and its opacity as base ×
+  the era's natural brightness (not the enhanced and thermal views' floors, which keep the dust
+  faintly visible: the glow showed in the Dark there until the project check, 15 Oct) × a fade in
+  with distance (`smoothstep(distance, 220, 900)`). The
+  grade in `post.ts` has no lift: with the neutral tone mapping a lift with unequal channels shows
+  as a tinted cast (the purple oval), and one with equal channels is taken away anyway.
+- **`/next/` (part 5):** the `next` branch (a copy of the work branch: `git push origin
+  claude/epic-wozniak-lyhulf:next`) carries a Pages workflow that checks out `main` and `next`
+  into folders of those names, builds each (`npm ci && npm run build`), drops `next/dist/archive`
+  and copies `next/dist` to `main/dist/next` before publishing `main/dist` to `gh-pages`. The build
+  is relocatable (`base: './'`), so the new version runs under `/next/` unchanged, and its storage
+  keys (`steliterate2.`) keep its saves apart from today's game on the same origin. A push runs
+  the workflow file of the branch pushed: `main`'s still builds `main` alone (HANDOVER, Traps).
+- **The survey reveal (part 4; a flight of the camera since 21 Oct):** `SystemView` keeps it
+  (`reveal`: its system, its start, its look at the star (`intro`, Next cuts it), its `shots` (each
+  world's flight, its while there as planned and as it is (`plan`, `hold`: Next cuts `hold`, and
+  what the camera does there is timed by `plan`), whether its star rises over it), the orbits'
+  order out from the star, the yaw it began at, the world the view was entered for, the dust's
+  cell; `REVEAL` is the pace) outside `build()`, which reruns on every `bump()`. `schedule()` gives
+  each flight's start, each arrival, the way out and the end. `build()` tags whatever it draws for
+  each body (`userData.reveal`; `orbit` holds an orbit line's opacity, `deep` the Deep's ring's,
+  `belt` a belt's instance count, `world` marks a world's pivot), and `applyReveal()`, every frame
+  in `update()`, sets what shows (a world from its flight on, its scan `uReveal` from 0.25 s
+  before its arrival to 0.7 s after, what is round it once scanned, the orbits on the way out),
+  tells the caption where it has come to (`RevealStep.phase`: intro, fly, hold, outro), and sets
+  `cinema`, the camera's pose, from `cinePose(r, schedule, t, orbitTime)` alone: `introPose`,
+  `shotPose` (a world, the Deep, a belt; `framed()` puts a point at a place on the screen, seen
+  from a distance at an angle round from its star), `blendPose` (round the star, midway keeping
+  out of its glare), `endPose`. `Engine.frame` puts the rig there (`OrbitRig.setPose`) after
+  `system.update` and before `rig.update`. `flightDust` draws the streaks from two poses 1/30 s
+  apart (not in the magnifier mode). `endReveal(how)` puts everything back and tells the engine
+  (`onRevealEnd`): played out, the camera stays (on the world the view was entered for, followed);
+  skipped, it flies back out; let go of (`drop`: a gesture, `select` of a world, another system or
+  game), it stays. `hidden(id)` is a world whose scan is not over (`Engine.pickAt` leaves it out);
+  `labelsHeld` holds every world's name and the selection ring until the way out.
   `Engine.markForReveal(state, ids)` (turnflow: the systems charted this turn, kept for that
   `GameState` only), `showSystem` starts it on entering one (`focusBodyId` first, and the flight
   ends on it), `skipReveal(all)`, `nextReveal()`; in the flight a click is Next (`Engine.click`)
   and a double-click nothing. `EngineEvents.onReveal` feeds `revealing` (`ui/hud/RevealCard.tsx`,
   which sets `html.cine`: styles.css hides the rest of the HUD, the messages and the map's hover
-  card, not in the magnifier mode); main.tsx plays its sounds (`whoosh`, `scan`). `revealsOn`
-  asks `store.ts` (Settings, reduced motion, `?noreveals`, `__stel.reveals(on)`). The caption's
-  Enter, Escape and Space are a capture listener on `window`, so main.tsx's handler never sees
-  them (it would end the turn or clear the selection).
+  card, not in the magnifier mode); main.tsx plays its sounds (`whoosh`, `scan`). `revealsOn` asks
+  `store.ts` (Settings, reduced motion, `?nofilms`, `__stel.reveals(on)`). The caption's Enter,
+  Escape and Space are a capture listener on `window`, as the films' keys are, so main.tsx's
+  handler never sees them (it would end the turn or clear the selection).
+- **What is not matter, drawn (part 3-7, `src/render/fields.ts`):** `fieldLattice` (a dipole's
+  lines r = L sin²θ, a standing-wave torus whose `userData.markColor` the selection circle takes,
+  motes bouncing between the mirror points in `MOTE_VERT`, loops for Field Stores, a
+  `fieldCage` for Burst Catchers), `fieldCage` (a Bastion Shell round its hole too) and
+  `positroniumVeil` (ellipses about a centre far out along their long axis, so the middle ones
+  cross the system). `systemView.ts` `addField` puts one in the Deep (`buildDeep`, in place of
+  the box hull) or round a world (`buildBody`, in place of the habitat torus, and the planet's
+  city lights off), for ours and the others' (`theirForms`, `styleOf`); `horizonWriters` sets
+  `GLOW_FRAG`'s `uWrit`/`uWritColor` on a hole's photon ring; `buildVeil` while
+  `positroniumHere`. Every field material sits in `fieldMats` (its `uTime` set from elapsed time
+  in `update`), what turns slowly in `fieldSpin`. The Thinning: `THIN` (the share gone, set on
+  each build) feeds `withDissolve`, which patches a `MeshBasicMaterial` (composes with
+  `withNearFade`; its own `customProgramCacheKey`; an instance's holes keyed by `gl_InstanceID`
+  so they stay put as it orbits), and `thinMotes` drift off worlds (through `eatMotes`, which
+  moves `uFrom`) and off a Dyson shell. Iron (`ironAge`, or a dwarf `exploded`): `IRON_STAR` and
+  `PLANET_FRAG`'s `uIron`. `SystemView.quality` (from `Engine.setQuality`, which rebuilds an open
+  system view) sets the counts and `fieldGain` (colour past white only where bloom runs).
+  `SystemView.look` counts what the last build drew, for `browser/leptonic-look`. The map:
+  `aForm` (`FORM_RING`, the highest form of ours at a star) styles `NODE_FRAG`'s settlement
+  ring. `turnflow.ts` pings the turn's `blackdwarf_sn` and `collapse` notes (`MAX_FLASH_PINGS`).
 - **UI:**
   - `Story.tsx`: `LoreModal`, `loreView`, `worldFinds`.
   - `Drawer.tsx`: Raid button, settler list sorts, Sunlight row, resident lines, Ruins "Read
@@ -1470,10 +2078,39 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the Last Star shines when it lights; its clock free (12 Oct) | 150 | 67 victories, Degenerate Age 72 turns; 900 games 445 / 199 / 70 (442 / 195 / 70 on `main`), within the noise: 721 of 900 play out as on `main`, and all 179 that changed light the Last Star, outcomes moving both ways. By fate: decay 177 / 450, stable 166 / 239, curvature 102 / 211. In the first 300, 75 games light it (η 15.0 to 2,370, median 23.1; 40 before η 24.5; 19 in the Black Hole Age's calendar, 1 in the Dark Era); the autoplayer keeps time with it in 32 |
 | The Embers Dim only while the halo thins (12 Oct) | 157 | 69 victories, Degenerate Age 72 turns; 900 games 449 / 202 / 70 (445 / 199 / 70 with the Last Star), within the noise: 534 of 900 play out as before, the rest moved by the changed pool of chance events, both ways (35 defeat → endurance, 31 back). By fate: decay 181 / 450, stable 169 / 239, curvature 99 / 211 |
 | rogue worlds leave their star behind; a finished Work not resumed; positronium (12 Oct) | 154 | 72 victories, Degenerate Age 72 turns; 900 games 456 / 203 / 71 (449 / 202 / 70 before), within the noise: 406 of 900 play out as before, the outcomes that moved going both ways (43 defeat → endurance, 38 back; 8 defeat → victory, 6 back). By fate: decay 189 / 450, stable 168 / 239, curvature 99 / 211; Aeon Seed victories 67 → 71 |
-| the game keeps its word: the Long Record's +1, what Hunger Studies shows, Communion, Harsh's crossings, falls into brown dwarfs and holes in new games, the unwritten rules, the Expansion Mandate, a hidden step (19 Oct) | 160 | 81 victories, Degenerate Age 72 turns; 900 games 476 / 244 / 71 (456 / 203 / 71 before): survival within the noise, the victories from the hidden step alone (without it the same 300 games give 160 / 72 / 72; `docs/spoilers/slow-ones.md`). By fate: decay 193 / 450 (19 wins), stable 165 / 239 (127), curvature 118 / 211 (98). Harsh, 300 games: 147 / 62 / 68 (140 / 52 / 70 before). 204 of 300 play out as without the step |
-| falling worlds break up and giants flash; more worlds at black holes; in new games (20 Oct) | 149 | 80 victories, Degenerate Age 72 turns (160 / 81 / 72 before). The new worlds re-roll every game (0 of 300 the same): within the noise. The new version's control runs (its new worlds with the old falls) put what the rules cost an autoplayer that builds no shelters at about 10 games in 300 at standard, and nothing at Harsh. By fate: decay 57 / 148, stable 51 / 81, curvature 41 / 71. Harsh, 300 games: 154 / 58 / 68 (147 / 62 / 68 before) |
-| finds only where they can be; one sea for the Water row and the picture (20 Oct) | 165 | 77 victories, Degenerate Age 70 turns (149 / 80 / 72 before); 36 of 300 the same, the finds' tests changing which find a survey turns up. By fate decay 67 / 148, stable 63 / 81, curvature 35 / 71. Harsh, 300 games: 150 / 59 / 71 (154 / 58 / 68 before; 43 the same). Within the noise |
-| the pace: ten turns to a Tide turn, the Dark Era's own clock, no slow turn ending an age; the late ages two fifths richer (`LATE_YIELD` 1.4); the autoplayer sleeps through the dark (20 Oct) | 229 | 73 victories, Degenerate Age 112 turns (165 / 77 / 70 before). By fate decay 87 / 148, stable 79 / 81, curvature 63 / 71. Harsh, 300 games: 209 / 63 / 106 (150 / 59 / 71 before). The Fade 8 (38), The Will Fails 4 (31). Without the dark sleep ×1.2 gave 93 / 49 / 110, ×1.6 141 / 105 / 119. Survival rose with the sleep (the overpay had carried the autoplayer through the dark, and it never slept); the Degenerate Age is longer in turns as it no longer takes slow turns there in trouble |
+| a few young, glowing dwarfs (13 Oct; the new version, on its work branch) | 155 | 72 victories, Degenerate Age 72 turns; 900 games 455 / 202 / 70 (456 / 203 / 71 before), within the noise: 860 of 900 play out as before. By fate: decay 189 / 450, stable 168 / 239, curvature 98 / 211 |
+| the others become civilizations (13 Oct; part 2a-2, `d216742`) | 204 | 81 victories, Degenerate Age 73 turns; the balance reference starts again: real neighbours that live on keep sharing (joint works, Open Archives, trades). 900 games 618 / 266 / 73 (455 / 202 / 70 with the light neighbours, which `--asleep` still plays line for line). By fate: decay 255 / 450, stable 219 / 239, curvature 144 / 211 |
+| relations and light speed (13 Oct; parts 2a-3 and 2a-4, `a6cb1a5`) | 135 | 54 victories, Degenerate Age 75 turns; 900 games 364 / 142 / 74 (618 / 266 / 73 after 2a-2): a shared work gathers its star's light instead of a flat 6 a turn, Open Archives and the dealings by what each really has. By fate: decay 132 / 450, stable 137 / 239, curvature 95 / 211. Alive at our end: Lattice 46%, uploaded 29%, Chorus 26%, gardens 18%, sleepers 9% |
+| the Lattice thinks a little (13 Oct; part 2a-5, `6b6c04e`) | 140 | 54 victories, Degenerate Age 73 turns; 900 games 376 / 147 / 73 (364 / 142 / 74 before), within the noise. By fate: decay 144 / 450, stable 131 / 239, curvature 101 / 211. The Tessellate builds the Archive of Everything itself in 53 of 558 games (12 before) |
+| minds of their own (13 Oct; part 2a-5, `b299f6a`) | 136 | 45 victories, Degenerate Age 71 turns; 900 games 410 / 143 / 72 (376 / 147 / 73 before). By fate: decay 178 / 450, stable 147 / 239, curvature 85 / 211. Alive at our end: Chorus 30%, uploaded 27%, sleepers 21% (11%), gardens 17%, Tessellate 20% with the Archive of Everything its own in 196 of 558. A Lattice-led player wins the Quiet Lattice in about 9 of 10 games where matter lasts, as before the Lattice thought (`lattice` strategy) |
+| the events of ordinary life for everyone; End Turn in slices: part 2a's reference (13 Oct; `3678301`) | 140 | 41 victories, Degenerate Age 71 turns; 900 games 397 / 131 / 71 (410 / 143 / 72 before), within the noise; the slices change nothing (24 games identical). By fate: decay 164 / 450, stable 136 / 239, curvature 97 / 211. Alive at our end: uploaded 30%, Chorus 28%, Tessellate 20% with the Archive of Everything its own in 198 of 558, sleepers 19%, gardens 17% |
+| the Hunger among the civilizations (13 Oct; part 2b) | 135 | 64 victories, Degenerate Age 78 turns; 900 games 411 / 167 / 76 (397 / 131 / 71 at 2a's reference): survival within the noise, victories up as a neighbour offers notes only on what it knows (in 40 games 159 offers against 355, 1,260 energy paid against 5,927), so our autoplayer keeps its energy and quickens. By fate: decay 163 / 450, stable 148 / 239 (102 victories), curvature 100 / 211 (59). Of 2,700 others, 895 took a Hunger step (673 to Taint 15, 158 to 27, 64 to 45), none past 45; 6 of the first 300 games as before |
+| ships by role: upkeep, screens, mending, the Picket and the Hunter (13 Oct; parts 2c-0, 2c-1) | 149 | 47 victories, Degenerate Age 75 turns; 900 games 409 / 152 / 75 (411 / 167 / 76 after 2b), within the noise. By fate: decay 175 / 450, stable 140 / 239, curvature 94 / 211. Without the autoplayer standing idle warships down after the Dusk: 361 / 146 (Vigil's upkeep in the Dark Era as much as the whole net) |
+| war between civilizations, conquest, the Breacher and the Kinetic Lance (13 Oct; parts 2c-2, 2c-3) | 149 | 47 victories, Degenerate Age 75 turns; 900 games 409 / 152 / 75, identical to 2c-1 game for game: no war starts in any of the 900 (no one hears of 60 Taint in a neighbour, or reaches it); the war is checked by `unit/civ-war` and `unit/conquest` |
+| the AI's judgement in war: the desperate's war, plunder, the Picket at home, the corrupted's Lance (13 Oct; part 2d) | 148 | 47 victories, Degenerate Age 75 turns; 900 games 407 / 151 / 75 (409 / 152 / 75 after 2c), within the noise: 863 of 900 as before. A war in 6 games of 900, all begun by the desperate; settlements taken in 3, one civilization conquered. By fate: decay 175 / 450, stable 138 / 239, curvature 94 / 211 |
+| the end of matter fixed: each loss counted once, the protocols as far as there is room, a Horizon Vault kept at its hole, the reserve's home, the Bastion Shell at black holes only, the autoplayer re-encoding from η 27 under curvature (13 Oct; part 3-0) | 149 | 37 victories, Degenerate Age 73 turns; 900 games 416 / 124 / 75 (407 / 151 / 75 after 2d). By fate: decay 175 / 450 (11 wins, as before), stable 141 / 239 (95), curvature 100 / 211 (18 wins, 45 before: the Bastion Shells built everywhere had carried whole populations through the Great Evaporation). 533 of 900 as before |
+| what a settlement is made of: forms, the Leptonic Confluence (13 Oct; part 3-1) | 145 | 36 victories, Degenerate Age 73 turns; 900 games 421 / 124 / 75 (416 / 124 / 75 after 3-0); by fate decay 179 / 450, stable 141 / 239, curvature 101 / 211. 745 of 900 as before. With what was re-encoded in a system dissolving before the Great Decay made leptonic at once (left to 3-3): 402 / 123, decay 160 |
+| the Lattice lives on energy after matter (13 Oct; the player's word) | 144 | 39 victories, Degenerate Age 73 turns; 900 games 431 / 133 / 75 (421 / 124 / 75 before): decay 190 / 450 (14 wins), curvature 100 / 211 (24), stable as before; the wins the Long Thought's |
+| the Passage; the autoplayer through the end of matter (13 Oct; part 3-2, `24fbc18`) | 175 | 62 victories, Degenerate Age 73 turns; 900 games 530 / 219 / 74 (431 / 133 / 75 before): decay 221 / 450 (65 wins), stable 169 / 239 (112), curvature 140 / 211 (42); 456 of 900 end as before. The Long Thought 174 (98), Silence 164 (211). The Passage as first built, by turns and rushed: 372 / 172, decay 138; with the timing, the Migration and cooling but not the pace: 428 / 210, decay 160; the pace rule at every age: Silence 107 of 295 where 60 had been |
+| the Thinning (13 Oct; part 3-3, `a0352ef`) | 173 | 58 victories, Degenerate Age 73 turns; 900 games 522 / 205 / 74 (530 / 219 / 74 before): decay 210 / 450 (53 wins), stable as before game for game, curvature 143 / 211 (40); 760 of 900 end as before. First built, the early drift merged a passed settlement into one of ours still of matter: 531 / 192, decay wins 40 |
+| the widest atoms: the weave, the nets, the countdown (13 Oct; part 3-5) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 636 / 226 / 74 (639 / 226 / 74 at 3-4): decay and stable end exactly as before, game for game; curvature 136 / 211 (139), its 36 wins as before; 893 of 900 as before. The weave in 2 games. First built: 632 / 217 (the weaving researched into the Dark Era after the decay, and from the cheapest-left fallback in 100 stable games), then 637 / 218, 634 / 218, 635 / 226 (nets before the Last Horizon from what Continuity counts; a vault that could not afford to leave the weave, lost at the decay) |
+| leaving a hole, and the Horizon form (13 Oct; part 3-4) | 217 | 69 victories, Degenerate Age 73 turns; 900 games 639 / 226 / 74 (522 / 205 / 74 before): decay 330 / 450 (210; 77 wins, 53), stable 170 / 239 (169; 235 of 239 end as before), curvature 139 / 211 (143; 36 wins, 40), within the noise. Drifts in 384 games, the Horizon form in 4. Under decay the vaults now drift to a hole with spin, the Heart above all, where before they starved at the small hole the Migration found, slowed the pace to stretch the reserve, and entered the Dark Era short: of the 450, 125 saved (72 had faded, 41 lost their will), 5 lost. The first drift rule, the nearest hole with spin: 638 / 227 with Horizon Writing researched everywhere |
+| harder: the dark's Continuity (an empty reserve 10 a turn, arrays for their own settlement), swarms on to our settlements (14 Oct; the player: "make it harder pls") | 167 | 67 victories, Degenerate Age 71 turns; 900 games 520 / 218 / 72 (636 / 226 / 74 at 3-5): decay 251 / 450 (73 wins), stable 164 / 239 (107), curvature 105 / 211 (38); victories as before. The Fade 126 (78), Silence 224 (159), The Will Fails 30 (27); 466 of 900 end the same way (88 line for line). The dark alone (300): 186 / 68, The Fade 23 → 56; the swarms on top: 167 / 67, Silence in the Degenerate Age 12 → 23. The Harsh setting before both: 198 / 58 of 300. A part turning on a settlement founded where it waits (an ark come down) changes none of the 900 |
+| the stable fate's late game: a few heavy dwarfs, black dwarf supernovae, iron stars, tunnelling collapse; the Passage where matter is stable (14 Oct; part 3-6) | 144 | 61 victories, Degenerate Age 71 turns; 900 games 460 / 209 / 72 (520 / 218 / 72 at "Harder"): decay 251 / 450 (449 line for line, every outcome the same), curvature 106 / 211 (105; the heavy dwarfs are in every fate), stable 103 / 239 (164): The Long Thought 80 (89), Recurrence 5 (57), The Fade 79 (37), Silence in the Dark Era 21 (2). The stable dark is a finite budget now; the autoplayer never sleeps. 748 of 900 line for line |
+| the Archive of Everything dearer, 6,000 insight (14 Oct; `9516abc`) | 146 | 63 victories, Degenerate Age 71 turns; 900 games 461 / 214 / 72 (460 / 209 / 72 at 3-6), within the noise. By fate: decay 248 / 450 (73 wins), stable 107 / 239 (101), curvature 106 / 211 (40). The Lattice-led strategy wins the Quiet Lattice in 74 of 300 (214 at 1,500) |
+| ships see what they pass (14 Oct; part 1b, `dd34cc4`) | 147 | 64 victories, Degenerate Age 72 turns; 900 games 420 / 164 / 70 (461 / 214 / 72 before), within the noise: the same rules with the neighbours' streams reshuffled (seeded under `civX`) give 429 / 179 / 71, and only 333 of 900 end as before (this change: 371). By fate: decay 237 / 450 (65 wins), stable 86 / 239 (78), curvature 97 / 211 (21). The sight for our own ships only: 439 / 195 / 71 |
+| the stable fate, a little softer: substrate outlasts the collapse, earlier warnings, the autoplayer's Long Sleep; a Work finished as Continuity runs out stands (14 Oct; `d92849a`) | 153 | 63 victories, Degenerate Age 72 turns; 900 games 444 / 160 / 70 (420 / 164 / 70 before): stable 110 / 239 (86; 74 wins, 78), decay and curvature identical game for game. With the neighbours reshuffled: 440 / 177 / 69 (decay 237, stable 105, curvature 98; 313 of 900 as with the usual streams). Survival over two runs each: 445 before the sight under way, 442 now |
+| the game keeps its word (19 Oct; the new version, `ea5ec7b`) | 156 | 65 victories, Degenerate Age 71 turns (153 / 63 / 70 before), within the noise; by fate decay 82 / 148, stable 44 / 81, curvature 30 / 71. Harsh, 300 games: 124 / 35 / 66 (114 / 29 / 66 before). Run again on 19 Oct at `3073232` (no code changed since `ea5ec7b`): the same figures, standard, Harsh and by fate |
+| the game keeps its word (19 Oct; today's game, `claude/promises-main` `7d4c702`, PR m1omg/Steliterate#34, `e827e2f`) | 160 | 81 victories, Degenerate Age 72 turns; 900 games 476 / 244 / 71 (456 / 203 / 71 before): survival within the noise, the victories from the hidden step alone (without it the same 300 games give 160 / 72 / 72; `docs/spoilers/slow-ones.md`). By fate: decay 193 / 450 (19 wins), stable 165 / 239 (127), curvature 118 / 211 (98). Harsh, 300 games: 147 / 62 / 68 (140 / 52 / 70 before). 204 of 300 play out as without the step |
+| falling worlds break up and giants flash; more worlds at black holes; in new games (20 Oct; the new version) | 147 | 63 victories, Degenerate Age 68 turns (156 / 65 / 71 before). The new worlds re-roll every game (0 of 300 the same), so a control with the new worlds and the old falls measures the rules: 157 / 65 / 69, against which they cost 10 games (44 lost, 34 won; the autoplayer builds no shelters), within the noise. By fate decay 74 / 148, stable 39 / 81, curvature 34 / 71. Harsh, 300 games: 145 / 52 / 73 (124 / 35 / 66 before; the control 135 / 56 / 71, so there the rules gave 10). Moving the shelters to Dusk research afterwards changed no game: 10 replayed, all the same |
+| falling worlds, the same (20 Oct; today's game, `claude/promises-main` `8133d7f`, PR m1omg/Steliterate#35, `e4c77d7`) | 149 | 80 victories, Degenerate Age 72 turns (160 / 81 / 72 before), every game re-rolled, within the noise. By fate decay 57 / 148, stable 51 / 81, curvature 41 / 71. Harsh, 300 games: 154 / 58 / 68 (147 / 62 / 68 before). 12 replayed after the shelters moved: all the same |
+| finds only where they can be; one sea for the Water row and the picture (20 Oct; the new version) | 165 | 77 victories, Degenerate Age 72 turns (147 / 63 / 68 before); 30 of 300 the same, the finds' tests changing which find a survey turns up. By fate decay 80 / 148, stable 43 / 81, curvature 42 / 71. Harsh, 300 games: 136 / 38 / 68 (145 / 52 / 73 before; 32 the same). Within the noise |
+| the same (20 Oct; today's game, `claude/promises-main` `b48562d`, PR m1omg/Steliterate#36, `981e0f0`) | 165 | 77 victories, Degenerate Age 70 turns (149 / 80 / 72 before); 36 of 300 the same. By fate decay 67 / 148, stable 63 / 81, curvature 35 / 71. Harsh, 300 games: 150 / 59 / 71 (154 / 58 / 68 before; 43 the same). Within the noise |
+| the pace: ten turns to a Tide turn, the Dark Era's own clock, no slow turn ending an age; the late ages an eighth richer (`LATE_YIELD` 1.125); the autoplayer sleeps through the dark (20 Oct; the new version) | 187 | 77 victories, Degenerate Age 103 turns (165 / 77 / 72 before). By fate decay 107 / 148, stable 39 / 81, curvature 41 / 71. Harsh, 300 games: 147 / 51 / 98 (136 / 38 / 68 before). The Fade 26 (50). On the way: the honest turns alone 113 / 49 / 99; the late yield ×1.13 138 / 84, ×1.2 150 / 91, ×1.4 180 / 122, without the dark sleep. The Degenerate Age is longer in turns as the autoplayer no longer takes slow turns there in trouble |
+| the same, the late ages two fifths richer (`LATE_YIELD` 1.4) (20 Oct; today's game, `claude/promises-main` `bd86639`, PR m1omg/Steliterate#37, `d2abd2a`) | 229 | 73 victories, Degenerate Age 112 turns (165 / 77 / 70 before). By fate decay 87 / 148, stable 79 / 81, curvature 63 / 71. Harsh, 300 games: 209 / 63 / 106 (150 / 59 / 71 before). The Fade 8 (38), The Will Fails 4 (31). Without the dark sleep ×1.2 gave 93 / 49 / 110, ×1.6 141 / 105 / 119. Survival rose with the sleep: the overpay had carried the autoplayer through the dark, and it never slept |
+| combat: battles fought out a round a turn, tactics, every settlement firing, sieges by either side, the others fighting back (20 Oct; the new version) | 187 | 77 victories, Degenerate Age 103 turns, as before: our outcome the same in all 300 games, 299 the same in every detail (in the other a neighbour no longer begins a war it could not win). Harsh, 300 games: 147 / 51 / 98, all 300 the same. Wars are rare here (a neighbour's in 4 of 300, ours never), so a forced war measures it: `tools/sim.ts 300 standard warlike --war=40` gives 160 / 56 / 97 (121 / 47 / 90 under the old rules, where 76 games died in the Dusk); we took 66 settlements in 40 games and lost 3 in 3 (4 and 2), none conquered. Its first run, before one blockade and one storm a star a turn, ended 4 games in 12 with every settlement of ours taken |
+| open air only above −14.9 °C (the coldest towns on Earth, Oymyakon and Verkhoyansk), domes or warrens below; a rush finishes its project at once (24 Oct; the new version, `8783e38`) | 184 | 79 victories, Degenerate Age 104 turns (187 / 77 / 103 before), within the noise: the autoplayer settles warm worlds first, and builds domes. By fate decay 108 / 148, stable 33 / 81, curvature 43 / 71. Harsh, 300 games: 141 / 51 / 97 (147 / 51 / 98 before). About 401 of 1,915 living worlds in 60 galaxies are too cold for open air at the start; no homeworld is |
+| the same (24 Oct; today's game, `claude/promises-main` `dd60b5f`, PR m1omg/Steliterate#40, `0da09b3`) | 227 | 79 victories, Degenerate Age 113 turns (229 / 73 / 112 before), within the noise. By fate decay 87 / 148, stable 79 / 81, curvature 61 / 71. Harsh, 300 games: 204 / 57 / 105 (209 / 63 / 106 before) |
 | our clock a span: the pace reaches other minds (8 Oct) | 148 | any rhythm from our dominant minds' clock to our turn's can talk (before, the minds' clock alone); 72 victories, Degenerate Age 71 turns; 900 games 439 / 203 / 71 (435 / 184 / 71 before): survival within the noise, victories up 19 as more neighbours are saved (775 of 2,894 against 688 of 2,899); 426 of 900 games play out as before. By fate: decay 167 / 450, stable 165 / 239, curvature 107 / 211. The autoplayer changes pace only for energy |
 | water-rich worlds and steam worlds (8 Oct) | 139 | water-rich icy worlds keep their water; past the runaway limit, steam worlds (about 5 a galaxy); only the warm water-poor dry out; 62 victories, Degenerate Age 72 turns; 900 games 423 / 188 / 69 (426 / 184 / 68 with the dry pass), within the noise: 232 of 900 games play out as with it, and the changes go both ways (81 endurance → defeat, 79 back). By fate: decay 169 / 450, stable 157 / 239, curvature 97 / 211 |
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |

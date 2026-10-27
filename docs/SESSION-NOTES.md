@@ -51,7 +51,36 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - The game is as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
+  - Now (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
+    effect on its chip's tip; live script `index-D13F5Go2.js`), and `/next/` at the same with the
+    Supernova film (`eb70648`, live script `index-CczYHvun.js`). Before them (26 Oct, evening):
+    `main` as of PR m1omg/Steliterate#44 (`133b568`, storage notes that
+    say what they hold, Burst Catchers banking a star too brief for its turn, star states, a
+    combat report, scrollable forecasts; live script `index-NPMlTgkq.js`), and `/next/` at the
+    same (`16df449`, live script `index-D8CMl69w.js`). Before them: `main` as of PR
+    m1omg/Steliterate#43 (`f685a36`, Our settlements sorted
+    by the yield clicked, Star types by each star's measures; live script `index-UG-o6OAt.js`),
+    and `/next/` at the same (`27e603c`, live script `index-BuZ4epBX.js`). Before them: `main` as
+    of PR m1omg/Steliterate#42 (`398f1a5`, star types in the Systems
+    window, helium stars in its Collision stars tab, every star its own name, a brief star's
+    light; live script `index-DXvWTunJ.js`), and `/next/` at the same (`db0ffe8`, live script
+    `index-FBAlnT2P.js`). Before them (25 Oct): `main` as of PR m1omg/Steliterate#41 (`ff8440a`,
+    a list to send warships from, Asked for help first, and every ship's attack against both;
+    live script `index-DT9GC-Za.js`), and `/next/` at the same (`84bbd02`, live script
+    `index-D5FJQU1r.js`). Before them (24 Oct):
+    `main` as of PR m1omg/Steliterate#40 (`0da09b3`, four fixes from the player's screenshots and
+    a rush that finishes at once; live script `index-yrDLdqsE.js`), and `/next/` at the same
+    fixes (`8783e38`, live script `index-vY0YBpb0.js`). Before them (21 Oct): `main`
+    as of PR m1omg/Steliterate#39 (`2d345e4`, the survey reveal as a flight
+    of the camera; live script `index-Zc5orquV.js`), after PR m1omg/Steliterate#37 (`d2abd2a`, the
+    pace: ten turns to a Tide turn), PR m1omg/Steliterate#36 (`981e0f0`, finds only where they
+    can be and one sea), PR m1omg/Steliterate#35 (`e4c77d7`, falling worlds) and PR
+    m1omg/Steliterate#34 (`e827e2f`, the game keeps its word), and the new version at `/next/`
+    from `next`, a copy of `claude/epic-wozniak-lyhulf` (live script `index-C9puCHR0.js` since 21
+    Oct, `5890f97`: the combat system of 20 Oct, the new version only, and the survey reveal as a
+    flight of the camera of 21 Oct). HANDOVER, section 0, has where things stand; CLAUDE.md lists
+    every PR. What follows is the history up to 13 Oct.
+  - The game was as of PR m1omg/Steliterate#16 (12 Oct, merge commit `3538f47`, the Last Star
     shines when it lights and its clock is free; CHANGELOG, "The Last Star shines when it lights";
     live script `index-BRmxB_Lf.js`), from `claude/affectionate-johnson-qqr7p2`, the plan's
     second session (merged; a follow-up starts it again from `main`). Then PR m1omg/Steliterate#18
@@ -82,7 +111,9 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   - `claude/lucid-newton-30cbpk`, the old live branch, stays at `fc6c59a`, behind `main`. Pages
     builds it too, so leave it alone: a push of anything older than `main` would put that build
     live.
-  - `claude/epic-wozniak-lyhulf` was this session's branch, and it is merged.
+  - `claude/epic-wozniak-lyhulf` carries the new version since 13 Oct, pushed and not merged;
+    `next` is its copy, live at `/next/` (HANDOVER, section 3). Before that it was the halo's
+    branch (11 Oct) and the third Dusk track's (12 Oct), both merged.
   - 10 Oct, from the first account's session: the phone interface, on `claude/lucid-newton-v2`
     (started from `main` at `83f498e`), merged by PR m1omg/Steliterate#6 (CHANGELOG: "A phone
     interface that leaves the map usable"). That session's work branch; a follow-up batch starts
@@ -112,8 +143,63 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     IDs the notes cite.
   - Then check that the Pages run succeeded, and that the live page loads the new script (its
     `index-*.js` name, the same as the local build's).
-- **The baseline, from the last validation (13 Oct, PR m1omg/Steliterate#27: who a burst reaches;
-  lighter on phones and tablets):**
+- **Today's game, from its last validation (21 Oct, PR m1omg/Steliterate#39, the survey reveal,
+  display only):** tsc and the build clean (`index-Zc5orquV.js`); the playtest "ALL CHECKS PASSED"
+  (30/144 Hz parity 2e-15); savecompat on its 6 saves; all 58 unit checks; all 56 browser checks
+  in the real fonts (`survey-reveal` new; `a11y` waiting for the focus, as the new version's has
+  since 14 Oct: with the fixed 400 ms it failed on `main` as it stood). No rule changed.
+- **The baseline, from the last validation (21 Oct, the survey reveal as a flight of the camera,
+  the new version, display only):** tsc and the build clean (`index-C9puCHR0.js`); the
+  playtest "ALL CHECKS PASSED" (30/144 Hz parity 2e-15); savecompat on the 9 saves; all 90 unit
+  checks; all 64 browser checks in the real fonts (`survey-reveal` rewritten). No rule changed, so
+  the harness was not run: the combat batch's figures below stand.
+- **The baseline before it (20 Oct, combat, the new version only):** tsc and the
+  build clean; the playtest "ALL CHECKS PASSED"; savecompat on the 9 saves (the new
+  `70c2d07-seed1000-turn43-siege-next.json.gz`, a war of ours under way, among them); all 90 unit
+  checks; all 64 browser checks in the real fonts; the harness 187 / 77 / 103 of 300, our outcome
+  the same as before in all 300 games, Harsh 147 / 51 / 98 (all 300 the same); a forced war
+  (`--war=40`, warlike) 160 / 56 of 300 (121 / 47 under the old rules). Today's game did not
+  change.
+- **The baseline before it (20 Oct, the pace: ten turns to a Tide turn, both
+  versions):**
+  - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
+    8 saves; all 89 unit checks; all 63 browser checks in the real fonts; the harness 187 / 77 /
+    103 of 300 (by fate decay 107 / 148, stable 39 / 81, curvature 41 / 71), Harsh 147 / 51 / 98;
+  - today's game (`main`): tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat
+    on its 6 saves; all 58 unit checks; all 55 browser checks in the real fonts; the harness
+    229 / 73 / 112 of 300 (by fate decay 87 / 148, stable 79 / 81, curvature 63 / 71), Harsh
+    209 / 63 / 106.
+  - The autoplayer's pace and its sleep in the dark changed with it: compare runs by their totals.
+- **The baseline before it (20 Oct, finds only where they can be and one sea, both versions):**
+  - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
+    8 saves; all 88 unit checks; all 63 browser checks in the real fonts (five passed only on a
+    rerun alone, two of them after their fixes: CHANGELOG); the harness 165 / 77 / 72 of 300 (by
+    fate decay 80 / 148, stable 43 / 81, curvature 42 / 71), Harsh 136 / 38 / 68;
+  - today's game (`main`): tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat
+    on its 6 saves; all 57 unit checks; all 55 browser checks in the real fonts; the harness
+    165 / 77 / 70 of 300 (by fate decay 67 / 148, stable 63 / 81, curvature 35 / 71), Harsh
+    150 / 59 / 71.
+  - Nearly every game re-rolls with the finds' tests: compare runs by their totals.
+- **The baseline before it (20 Oct, falling worlds, both versions; new games only):**
+  - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
+    8 saves; all 86 unit checks; all 63 browser checks in the real fonts; the harness 147 / 63 / 68
+    of 300 (by fate decay 74 / 148, stable 39 / 81, curvature 34 / 71), Harsh 145 / 52 / 73;
+  - today's game (`main`): tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat
+    on its 6 saves; all 55 unit checks; all 55 browser checks in the real fonts; the harness
+    149 / 80 / 72 of 300 (by fate decay 57 / 148, stable 51 / 81, curvature 41 / 71), Harsh
+    154 / 58 / 68.
+  - Every game re-rolls from its first turn (the new worlds), so compare runs by their totals, or
+    against a control (CHANGELOG, "Falling worlds").
+- **The baseline before it (20 Oct, the game keeps its word, both versions):**
+  - the new version: tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the
+    8 saves; all 84 unit checks; all 62 browser checks in the real fonts; the harness 156 / 65 / 71
+    of 300 (by fate decay 82 / 148, stable 44 / 81, curvature 30 / 71), Harsh 124 / 35 / 66;
+  - today's game (`main`): tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat
+    on its 6 saves; all 53 unit checks; all 54 browser checks in the real fonts; the harness 160 / 81 / 72 of 300, 900 games
+    476 / 244 / 71 (by fate decay 193 / 450, stable 165 / 239, curvature 118 / 211), Harsh
+    147 / 62 / 68.
+- **The baseline before it (13 Oct, PR m1omg/Steliterate#27: who a burst reaches; lighter on
+  phones and tablets):**
   - tsc and the build clean; the playtest "ALL CHECKS PASSED"; savecompat on the 6 saves; all 49
     unit checks; all 51 browser checks in the real fonts (live script `index-B4EKBtSN.js`);
   - the harness: 154 of 300 survive, 72 victories, a Degenerate Age of 72 turns, all 300 as
@@ -219,6 +305,65 @@ clone, with none of this session's scratch files, uploads or memory: everything 
 
 ## Open threads and pending decisions
 
+- **24 Oct, three screenshots** (the player named each file as its question): "why is my warship
+  yellow?"; "the planet exploration popup occurs while it's showing all the planets"; "The world
+  looks barren, but it says two without domes even though its max temperature is less than
+  freezing". Their choices: all our ships in our teal; the open-air line at the coldest towns on
+  Earth ("Oymyakon and Verkhoyansk … yearly average temperatures around -14.9°C … So that should
+  be the limit"); the ice worlds' look kept true to their light. Then: "Why is there even an
+  option to rush a building which will complete in one turn? … I would like this fixed even for
+  existing saves without breaking them. Actually all of the changes we discussed today should
+  apply to existing saves". Done in both versions, no save-shape change (PR
+  m1omg/Steliterate#40; CHANGELOG, "Four fixes from the player's screenshots").
+- **25 Oct, warships:** "Can all ships attack both aliens AND swarms?" (answered: only warships,
+  each with its own figures). Then: "pls add the ability to choose systems from a list to military
+  craft too and a description of the damage vs both other civs and swarms … dont be too verbose,
+  dont run the whole game, dont break saves, its just a minor edit, do it in both next and
+  normal", and "for military ships also include a list of stars where friendly other civs
+  requested help". Done in both versions, display only; validated without the playtest or the
+  harness, as asked (PR m1omg/Steliterate#41; CHANGELOG, "Warships: a list to send them from").
+  The `mobile` check fails at 390 and 360 px wide on "Research" on the rail, cut by a pixel, in
+  the real fonts here, the same on the build before (`index-vY0YBpb0.js`): an open thread.
+- **26 Oct:** "what does Free Energy exactly do? QUESTION, not a change request" (answered: what
+  it scales and what spends it; the HUD tip's "every source" is broader than the rule, red dwarfs
+  and the Dusk's stars aside: offered to make it exact). Then "without breaking saves, but
+  applying to them, pls add options to systems menu to select different star types + black
+  holes, dont run the whole test suite after, just do it pls"; "collision stars should show in
+  the list even if theyre one turnhelium burnouts or am im missing something?"; "lanthe well for
+  whatever reason shows as unsurveyed after multiple surveys" (two Wells of one name); "no light
+  to collect, really ninja xD?" (a helium giant in a 290-billion-year turn); "what are the
+  "Wells" anyway?" (answered). All in both versions, PR m1omg/Steliterate#42; CHANGELOG, "Star
+  types in the Systems window" and "Two Wells of one name".
+- **26 Oct, later:** "do deepmines hurt lattice?" (answered: no; the Lattice has no demands, and
+  mines feed its matter upkeep). A screenshot of the cancelled Pages run on PR #42's merge: "Why
+  was it cancelled?" (answered: the next push's run cancels one in progress, and builds both; I
+  now wait for `main`'s run before pushing `next`). Then "please make player systems sortable by
+  the economic aspect the player clicks on, like in civilization", and on the plan "make it shows
+  matter/energy/lifetime etc when sorting by star type in system too". Both versions, PR
+  m1omg/Steliterate#43; CHANGELOG, "Our settlements sorted by a yield".
+- **26 Oct, evening:** "how do i increase slow ones understanding?" (answered without spoilers).
+  On a screenshot of the build list, "can you explain how much these actually increase my storage
+  capacity?" (answered: one reserve, a quarter more with Deep Storage, a Ring +312, a Burst Catcher
+  +375), then on the plan: "do burst catchers actually catch bursts then? If they do, that should
+  stay in their description" (they do); "they should also be able to capture events like a helium
+  star and helium giant whose life is shorter than 1 turn"; "it should retroactively apply to my
+  current saves unless game-breaking" (it does from their next turn; stars already gone can't be
+  paid back); "systems view should show if white dwarf is cold, still cooling, or an ember etc.";
+  "there also should be popups for combat ... forecasts should also be scrollable". Both versions,
+  PR m1omg/Steliterate#44; CHANGELOG, "Storage that says what it holds". Then "how much industry
+  it turns to accord?" of the Protocol Registry (answered: up to 6 industry a turn, times the
+  settlement's output, into a tenth as much accord, only with the Lattice there).
+- **26 Oct, late:** "the buildings should show what their current real effect/benefit or lack
+  thereof is" (both versions, PR m1omg/Steliterate#45); films like the ages' for the Degenerate
+  Age's supernovae ("make a kickass one pls :D", "i mean supernovae in degenerate era, not this
+  particular one"): on the plan, the first supernova each game, "and for old saves it should play
+  on the next supernova that occurs" (the new version, `eb70648`); "an epic cutsene for Heart
+  evaporating too": the player asked to see the Last Horizon film first ("for this one i say yes
+  to a spoiler"; sent as a video, rendered with `tools/film-render.mjs`), set the Heart's own
+  film aside ("we won't be doing the Heart film for now"), then asked: "extend the last horizon
+  cutscene with the Heart evaporating as the last BH while backing up this version": done in the
+  new version (`dda8ab8`), the cut before in `src/film/saved/lasthorizon-v1.ts`; a video of the new
+  cut sent. The Supernova film was sent as a video too.
 - **7 Oct, after Part C went live:** "can you instead make the beacons temporary? … more realistic
   than having them last literally trillions and trillions of years" (instead of the earlier offer
   to undo them). Chosen: a beacon burns "while we keep feeding it", and lighting one turns the
@@ -509,6 +654,314 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   line in PR m1omg/Steliterate#28 (`db34424`; CHANGELOG, "A backup of the game as it is"). The tag
   and a Release with a zip were refused by this session's GitHub access (HTTP 403): the commit's own
   zip stands in. The answer on galactic free energy, asked that morning, is in the plan (Part 2c).
+- **13 Oct, morning: the new version's first parts** (on `claude/epic-wozniak-lyhulf`, nothing in
+  `main`, all in CHANGELOG under "The new version"):
+  - its own storage (`steliterate2.` keys; older saves refused with a pointer to the older build);
+  - a few young, glowing dwarfs (item 8; 900 games 455 / 202 / 70 against 456 / 203 / 71, 860 as
+    before: no change beyond noise);
+  - one rulebook (part 2a-0): the civilizations, the pointer, owners, flags, `asCiv` and its guard,
+    each one's own dice, the outbox, the turn and the crossings in parts. All 900 harness games
+    identical, line for line; the second civilization in `unit/civ-turns`, played by the
+    autoplayer under its own perspective, lives a whole Dusk beside ours with nothing crossing over;
+  - owners everywhere (part 2a-1): the clock the player's, the swarms by each one's own charters
+    and defence, actions on one's own only, beacons, the Deep, the Long Flow, events' scope, the
+    minds and finds the player's. With one civilization nothing changes in play;
+  - the others become civilizations (part 2a-2): each neighbour a civilization of its own, its
+    start like ours by the same rules, played by our autoplayer with its way's needs, its record
+    read from it, every dealing moving something real. With them, our survival rose from 455 to
+    618 of 900 (victories 202 to 266): living neighbours keep sharing for longer (joint works
+    6,300 energy a game against 1,500, Open Archives 2,930 insight against 1,530). The balance
+    reference starts again; 2a-3 grounds the dealings in what is really there. Tell the player
+    plainly, and ask whether to tune back toward the old balance;
+  - relations and light speed (parts 2a-3, 2a-4): the dealings by what each really has, the others'
+    ties among themselves, their settlements and fleets seen as their light shows them (364 / 142
+    of 900);
+  - the Lattice thinks a little and minds of their own (part 2a-5): insight 0.3, accord 0.1, a
+    Search Foundry and a Protocol Registry for everyone; each way its own research, Great Work,
+    temperament and, for the sleepers, sleep; the events of ordinary life for everyone. The Quiet
+    Lattice is far the easiest ending, and was before: the player was asked (13 Oct) to choose
+    between leaving it, a dearer Archive of Everything (recommended), moving it to the Dark Era, or
+    needing the Lattice to be three quarters of everyone. Waiting for the answer; nothing changed
+    meanwhile. Also asked: whether to tune survival back toward the old numbers;
+  - End Turn in slices (part 2a-6): the browser breathes every 12 ms between civilizations' parts.
+    Part 2a's reference (`3678301`): 900 games 397 / 131 / 71;
+  - the Hunger among the civilizations (part 2b): see CHANGELOG. Its harness numbers moved
+    victories up, for a reason worth telling the player: a neighbour now offers notes only on what
+    it knows, so we trade less and keep the energy (CHANGELOG, part 2b).
+  - war, units and conquest (parts 2c-0 to 2c-4, pushed `b93ae36`): strengths by role, the Picket,
+    Hunter, Breacher and Kinetic Lance, upkeep and screens; war between any two civilizations,
+    battles at once; conquest a settlement at a time (Storm and Raze on the card, the odds shown
+    first; the Lance's Strike in its fleet panel). 900 games identical to 2c-1 game for game: no one
+    reaches the 60-Taint causes, so no war starts.
+  - the AI's judgement (part 2d): the desperate's war, strict (reach, a paid launch, the odds
+    against all the defender has, dug in, arming until then, the galaxy's free energy above a
+    fifth); sieges carry off what they drain; a Picket at home against the Lance; the corrupted
+    strike with one. 900 games 407 / 151 / 75, within the noise; a war in 6 of 900, all by the
+    desperate. End Turn on a slowed CPU unchanged since 2a-6.
+  - The new hulls (Picket, Breacher, Hunter, and a Kinetic Lance as an extra) were made with
+    Higgsfield (2 of 6.5 credits, two takes each) and shown to the player as one sheet
+    (`hull-candidates.png` in the scratchpad, not kept): they go in only once the player picks.
+    `tools/process-sprites.mjs` cuts them; `fleetLook` and `lookRole` (`data/ships.ts`) need the new
+    looks, the Lance's only for a fleet of Lances alone.
+  - the end of matter fixed (part 3-0): each loss counted once, the protocols carrying minds only
+    as far as there is room, a Horizon Vault kept at its hole, the reserve cut to what still holds
+    it (and said), the forecast and the protocols' text honest, the Bastion Shell at black holes
+    only, no disk after matter. The autoplayer had come through the Great Evaporation on Bastion
+    Shells built everywhere; it now re-encodes from η 27 under curvature, while matter can pay for
+    it. 900 games 416 / 124 / 75: survival as before, curvature wins 45 to 18 (the Long Thought's).
+  - 13 Oct evening, the player: "IDGAF about spoilers rn, just be straight with me" (for that
+    answer: the Lattice after matter, and what galactic free energy does); the session is in auto
+    mode ("didnt wanna manually approve every damn thing", but keep planning and asking where the
+    rules say so); "Always allow check balance": `.claude/settings.json` allows the harness and
+    the tally script.
+  - what a settlement is made of (part 3-1): `Colony.form`, matter or leptonic; no Kin in a leptonic
+    settlement; a Leptonic Confluence for the Chorus after matter. 900 games 421 / 124 / 75. Making
+    what was re-encoded in a dissolving system leptonic at once cost 15 decay survivals of 450, so
+    it waits for the Thinning (3-3), with a drift to a black hole at once.
+  - the Lattice lives on energy after matter, the player's word ("there should be a way to continue
+    with Lattice even with just energy", 13 Oct evening): repairs 0.45 energy a turn each, a new
+    one 4.5, only an empty reserve wears one out. 900 games 431 / 133 / 75. It bears on the Quiet
+    Lattice question, still open.
+  - the Passage (part 3-2): a settlement rewritten whole before matter ends, as a project in its
+    queue; Field Stores (Energy Vaults and Deep Storage Rings in leptonic form) hold the reserve
+    after matter; the report names each settlement lost. Lattice-led games, 13 Oct: the Quiet
+    Lattice in 88% of stable games (71 of 81) and 76% of curvature ones (54 of 71), before and
+    after the Lattice lived on energy; under decay none of 148 before, 7 (5%) after (300 games
+    each, for the open Quiet Lattice question).
+    The autoplayer first began Passages far too early (the general rush finished one the turn
+    after it began, fifteen decades before the end): 372 survived of 900. Fixed with the AI
+    through the end of matter (`24fbc18`): the Passage timed in decades, the Migration to holes
+    with spin, a starving civilization cooling its Echoes, and after matter the pace that drains
+    least a decade. 900 games 530 / 219 / 74 (431 / 133 / 75 before the Passage), 175 of 300.
+    Survival is up far past the noise, in every fate: the autoplayer no longer starves through
+    the end of matter and the Dark Era. Is the game too easy now? The player's word is wanted
+    (the survival question was open already). Lattice-led games on it (300): the Quiet Lattice
+    in 86% of stable games, 76% of curvature and now 57% of decay ones (84 of 148, 5% before): the
+    Passage carries a Lattice-led civilization through the Great Decay. 236 of 300 survive (146).
+    The Quiet Lattice question (A to D) is still the player's.
+  - the Thinning (part 3-3): from η 37.5 (decay) or 87 (curvature) what is still made of matter
+    fails, structure by structure, with the share of matter left, and mines bring in less; what
+    was re-encoded in a system dissolving before the Great Decay goes on at once, leptonic, and
+    drifts to a black hole with spin. The forecasts name what is still made of matter. 900 games
+    522 / 205 / 74.
+  - leaving a hole, and the Horizon form (part 3-4): a leptonic settlement drifts to the hole with
+    the most spin (the Heart, mostly), from a failing hole or from its world after the Passage; with
+    Horizon Writing it can be written into its hole's horizon (a tenth of the upkeep, a quarter of
+    the pace, no strain, room by the hole's mass, bound to the hole, written back out when it
+    evaporates and at the Last Horizon). 900 games 639 / 226 / 74: decay survival 210 to 330 of
+    450, the vaults no longer starving at drained holes; stable as before; curvature within the
+    noise. Survival is now 71%: the difficulty question to the player stands, with this number
+    (59% at 3-2, 48% before the Passage). End Turn's breaths now let due timers run every 40 ms
+    (the turn-slices check had seen none under load).
+  - the widest atoms (part 3-5): Positronium Weaving (only where matter does not last) weaves a
+    leptonic settlement through the positronium between η 85 and its decay near η 141 (a fiftieth
+    of the upkeep, a tenth of the pace, room to spare, Continuity kept better); Leave the weave at
+    any time, never refused for want of energy; whoever is still woven at the decay is lost, with a
+    countdown at our pace and a last warning the turn before. Positronium Nets: 40 energy over the
+    window and 20 after it, whatever the pace. 900 games 636 / 226 / 74, decay and stable exactly as
+    at 3-4; the autoplayer weaves only in a real shortage (2 games), so the weave is mostly the
+    player's tool. Its research rules took four harness runs to stop costing victories (CHANGELOG).
+  - harder (14 Oct): asked whether 71% surviving was too easy, the player: "make it harder pls".
+    Two grounded changes, neither undoing the drift or the Passage: in the Dark Era an empty
+    reserve costs Continuity 10 a turn (5), nothing being left to correct the errors with, and
+    Error-Correction Arrays keep only their own settlement's minds (they had multiplied across
+    settlements, to nothing at ten); and a swarm's part whose ship is gone goes on to the ship's
+    nearest settlement, the harsher version offered on 11 Oct. 900 games 520 / 218 / 72 (636 /
+    226 / 74): decay 251 / 450, stable 164 / 239, curvature 105 / 211. Victories as before. The
+    Harsh setting, for comparison, had 198 of 300 before the change. If they want it harder still,
+    the next notches: a costlier Dark Era for everyone (its 2.2 a turn), bigger or more swarms, or
+    dearer Great Works (victories have not moved). Validated: tsc, the build (`index-BwUArnSE.js`),
+    the playtest, savecompat (6 saves), 75 unit checks and 56 browser checks.
+  - the stable fate's late game (part 3-6, 14 Oct): about one white dwarf in 30 now begins 1.16 to
+    1.35 M☉ (a hash of its mass draw: nothing drawn, every seed's galaxy otherwise the same), and
+    where protons are stable it explodes in the Dark Era at Caplan's dates (10^1100 years at 1.35
+    M☉ to 10^32000 at 1.16), blowing its worlds away; by 10^1500 years everything is iron (Fusion
+    Plants make nothing, a Hearth loses its stored fuel); between 10^(10^26) and 10^(10^76) each
+    system's matter tunnels into black holes that evaporate within the turn, at a time of its own
+    (a hash). Burst Catchers bank the flashes; the Passage opens there once the fate is known.
+    900 games 460 / 209 / 72 (520 / 218 / 72): decay and curvature as before, stable 103 / 239
+    (164; Recurrence 57 → 5, The Fade 37 → 79). The stable dark is a finite budget now, as in the
+    other fates: the autoplayer reaches it awake on whatever it holds, where a player can prepare
+    (stores, Coldminds, the Long Sleep, the Passage before the iron). Told the player plainly,
+    with the offer to soften it if they find it too hard. Validated: tsc, the build
+    (`index-BChwPo-9.js`), the playtest, savecompat (6 saves), 76 unit checks and 56 browser checks
+    (`a11y` once failed to give focus back to the Research button after its window closed, and
+    passed four runs after; three others had lost the preview server, which the background limit
+    stopped: start it with a longer limit).
+  - the look of what is not matter (part 3-7, 14 Oct, display only): leptonic settlements drawn
+    as their fields (`render/fields.ts`: a dipole's lines, a standing wave in whose colour, motes
+    in the belts; loops for Field Stores, cages for Burst Catchers and Bastion Shells, nets strung
+    out), horizon minds as marks riding the photon ring, the positronium as vast faint ellipses,
+    the map's ring by form, matter dissolving in the Thinning, iron in the stable deep time, the
+    supernovae and collapses ringing on the map; the system view reads the quality setting for
+    the first time. Screenshots of the Black Hole Age's sent to the player; the Dark Era's deep
+    time (iron, the supernova's ring) kept until they say. Validated: tsc, the build
+    (`index-CosIVzyB.js`), the playtest, 76 unit checks and 57 browser checks
+    (`leptonic-look` new).
+  - the films (part 4, 14 Oct): a film as each age begins and as a game ends, every frame drawn
+    by code ("the programmatic beautiful ones"): an ink line that draws itself, a timecoded reel
+    cut on the beat, hatching, stipple and grain, and the game's own words. There are 16: the
+    ages' (the Black Hole Age's by fate) and one for each of the seven endings and three defeats,
+    each with a cue made as it plays while the music steps back. A click, Space, Enter or Escape
+    skips one (Enter ends no turn); Films on or off in Settings; the Codex plays again those seen.
+    `tools/film-render.mjs` makes the videos (never committed). The 10-second test piece (the Long
+    Dusk) went to the player before the rest was built; their word on its look is awaited, and
+    the set can change with it. Other films go to them only when asked, and the endings they have
+    not had and the Dark Era's far end only once they say. Validated: tsc, the build
+    (`index-BLaKqR0I.js`), the playtest, 76 unit checks, and 58 browser checks (`films` new) on
+    `index-DwkWmDe7.js`, all but `turn-slices` at once. It and `a11y` (which then failed twice in
+    four runs) had been measuring by luck, and are now sure of it (CHANGELOG), passing every run
+    since. End Turn
+    on a slowed CPU after Parts 3 and 4: at worst 20 ms without a breath (34 after part 2).
+  - the survey reveal (part 4, 14 Oct, display only): looking into a system our ships have just
+    charted, a ring of light leaves the star and its worlds come in one by one, a scan line
+    sweeping each from a silhouette to its look, with a card naming each and what the survey found
+    there (its plate). Skip, Skip all, Enter or Escape (no turn ends); Survey reveals on or off in
+    Settings. Validated: tsc, the build (`index-CrfEF9mB.js`), the playtest, 76 unit checks and
+    59 browser checks at once (`survey-reveal` new).
+  - up at /next/ (part 5, 14 Oct): https://m1omg.github.io/Steliterate/next/, the `next` branch (a
+    copy of the work branch), built beside `main` by the Pages workflow on `next`, without a second
+    copy of the archive. The root stays today's game and `/archive/2026-10-13/` the backup. The new
+    version's first saves are in `tools/saves/` (`*-next.json.gz`), and "Saves are sacred" holds
+    for them from here. `main`'s own workflow was left as it is (it builds `main` alone, so a push
+    to it takes `/next/` down until the workflow runs on `next` again): changing it needs a branch
+    of its own for the PR, which the plan's permissions did not cover, so it is put to the player.
+    The films' frame cost on Medium: about 20 ms at 1920×1080 here (CHANGELOG, "Up at /next/").
+    Verified live (14 Oct, Pages run 38577291741 on `next`, `5375272`): `/next/` serves
+    `index-B9snKdTy.js`, the build validated here; the root still `index-DZiWCpcP.js` and the
+    backup `index-B4EKBtSN.js`; no second archive under `/next/`. On the live page a new game plays
+    the Long Dusk's film, Enter skips to the introduction, a turn ends, and only `steliterate2.`
+    keys are written (the browser here does not trust the session proxy's certificate, so the
+    check fetched the live files through curl, which does).
+  - the player's answers (14 Oct, two rounds of questions): "Dearer Archive (Recommended)";
+    the stable fate "Soften it a little"; ships seeing what they pass "Build the proposal
+    (Recommended)"; the Pages PR "Yes, do it (Recommended)" (PR m1omg/Steliterate#30, merged as
+    `3a3f4c2`: a push to `main` or `next` builds both); the hulls "Picket A. Breacher B. Hunter A,
+    Lance B."; "Start the plates"; switching `main` to the new version "Not yet (Recommended)".
+    And on how I write: "I never saw the 10s showcase you produce walls of texts this was likely
+    66447886556 pages ago": keep messages short, and send again what they may have missed.
+  - "btw i bought krea credits so dont have to be stingy": all fifteen event plates painted
+    (CHANGELOG, "The event plates, all fifteen"); A Tomb and Light in the Halo retaken until right.
+  - the Archive of Everything at 6,000 insight: the Lattice-led player's Quiet Lattice 214 → 74 of
+    300; the competent harness 461 / 214 / 72.
+  - ships see what they pass (part 1b, built): 900 games 420 / 164 / 70. That looked like a cost
+    of 41 survivors and 50 victories, so I measured the harness's noise: the same rules with only
+    the neighbours' dice reshuffled give 429 / 179 / 71, and at today's rules 440 / 177 against
+    444 / 160. Survival is unchanged (445 on average before, 442 after); victories may be about 3
+    points lower, at the edge of the noise. No fix: the rule stays for everyone. DEV-NOTES has
+    the way to measure such noise.
+  - the stable fate, a little softer (the player's word): substrate outlasts the tunnelling
+    collapse (the collapse takes baryons; field-held electron–positron structures are not), the
+    iron, collapse and heavy-dwarf forecasts from the Black Hole Age on, the autoplayer's Long
+    Sleep once all is iron; and a Great Work finished as Continuity runs out now stands. 900 games
+    444 / 160 / 70: stable 110 / 239 (46%, from 36%), the other fates game for game as before.
+  - the films, second cut (the player on the first: "A GOOD START but they need a LOT MORE
+    work", with a video as the level to reach, "don't copy it … create something as
+    sophisticated and as pretty, but in the game's art style"): all sixteen rebuilt as composed
+    scenes with diagrams that draw themselves, camera moves, painted stars, worlds and holes, what
+    is too cold to see by its faint heat, and real physics labelled with whose it is (CHANGELOG,
+    "The films, second cut"). Sent: the Long Dusk and the Black Hole Age (decay) as videos. The
+    endings' videos only when asked (spoilers); the player had said they would be away watching a
+    film: "please don't ask me questions unless it's something absolutely crucial".
+  - the Degenerate Age's film (the Last Light), sent as a video: "this looks absolutely awesome",
+    "maybe a little bit more dimming when the era starts in that cutscene", "the glowing remnants
+    should be visibly cooling with stated temps lowering as the time goes by. Otherwise, it's
+    basically like I envisioned it", and "Save the current version as well in case if I don't
+    like the slightly changed one". Saved as `src/film/saved/lastlight-v1.ts` (not in the game;
+    one import brings it back), its video kept; the new one sent beside it. If they prefer the
+    first, swap the import in `films.ts`.
+  - 15 Oct: "Thank you, looking great so far, but cutscenes are very slow on tablet and sound
+    crackles at times especially during them plus regular background music plays during
+    cutscenes, pls fix". Measured on a tablet's screen with the CPU slowed: the films stopped for
+    up to 2 s as each scene began while their pictures were painted, the music only stepped back,
+    and a film's sound made all its voices at once. Now: the pictures painted in a thread of their
+    own (the same frames), the film beginning once its first scene's are there, turning worlds
+    twice as fast, fewer pixels on a device that cannot keep up, the music silent and paused
+    under a film and carrying on after it, and the sound's notes made as they come (CHANGELOG,
+    "The films on a tablet").
+  - 15 Oct, the map: "why this weird purplish blob around most of the playfield?", then "oh it
+    doesnt dispay in firefox and its in orig version too, i get it was supposed to be for ambient
+    light likely? implement something but...prettier pls" and "pls do track down the source".
+    Found: the grade's lift of the blacks (CHANGELOG, "The purple oval"). Asked what should take
+    its place: "The galaxy's own light (Recommended)"; and whether to fix today's game at the
+    main address too, on a branch of its own: "Yes, fix main too (Recommended)".
+  - 15 Oct, after that: "it's much better in Chrome. Thing is, Firefox runs it very slow. Well, I
+    mean the cutscenes. The game itself is choppy but playable in Firefox, but smooth in Chrome.
+    But there is a little bit of choppiness in Chrome and Vivaldi as well. And the sound does
+    crackle". Asked what the crackle is like: "Also outside the films" and "Irregular pops or
+    stutter"; asked whether to fix the sound in today's game too: "Yes, fix main too
+    (Recommended)". Found: the film's clock stepped with the sound's buffer (a frame in four
+    repeated); the vignette and grain were two passes over every pixel; the recordings went
+    through the sound's graph, the way known to stutter, worst in Firefox; a heavy reverb. Now:
+    a clock from the sound being heard, the vignette and grain as page layers or in the canvas,
+    whichever the device draws quicker, a quicker step down, the recordings played by their
+    element, and a lighter reverb (CHANGELOG, "Smoother films in every browser"; the sound in
+    `main` by PR m1omg/Steliterate#32, `4435f3f`). There is no
+    Firefox here: software Chromium stood in for it, so ask the player how it plays there now.
+  - 15 Oct, after the session was compacted twice: "um, sorry....compacted twice, please, do a
+    comprehensive project check to compensate". A plan was approved for it: the branches and
+    GitHub, a fresh reading of today's code, every check on both versions, 300 games on each, the
+    live scripts against the builds, `main` merged into the work branch for the switch, and the
+    notes. Found: all as the notes said, 300 games game for game as before on both versions, and
+    six faults in today's code (two reviewers, each finding confirmed in the code first), fixed
+    with checks, three of them in `main` too by PR m1omg/Steliterate#33 (CHANGELOG, "The project
+    check"). Not changed, for the player to decide: a film's resolution steps down on a slow
+    device and never back up; a build tool's reported flaw (`source-map-js`, build only).
+    The container restarted mid-way (the suites and servers stopped, the trees kept); the plan to
+    finish was approved with "All good but pls also do a .MD for handover": `HANDOVER.md` was
+    rewritten from the ground up on 16 Oct, as of `main` at PR #33 and `next` after the check.
+  - 19 Oct: "Make a comprehensive full summary of this game for an AI agent to replicate."
+    Asked, they chose today's game (the main address), the spoilers in a sealed section at the end
+    ("Sealed section at the end"), a full spec rather than an open brief, and the repository as
+    its place. Written as `docs/REPLICATE.md`: about 78,000 words, every number read from the code
+    of `4b92446` (about 30 spot-checked by hand), its data tables generated from the data files,
+    and no spoiler above its sealed section (searched for every ending title and stranger mind).
+  - 19 Oct, then: "what are those things? In regular version or /next?", of the places the spec
+    found where the game's text promised one thing and its code did another. All were in both
+    versions. Asked, they chose to fix them in both ("Both versions"), the code made to keep each
+    promise ("Code matches the text"), and the step of a hidden storyline that could not be
+    reached made reachable without being told how ("Make it reachable"; docs/spoilers). Asked what
+    the leftover ship discount was ("wdym?": a charter the code named and the book never had) and
+    whether worlds merging with black holes and brown dwarfs is feasible (it is: gravitational
+    waves drain every orbit; only the game kept them apart), they chose "Yes, new games only" and
+    "Make the charter"; and for the rules no text told of, "Fix the bugs, document the rest". The
+    harder numbers for each are in CHANGELOG (19 Oct).
+  - 19 Oct, late: the player asked for falling worlds ("make the black hole flashes harvestable";
+    a world being eaten by its star "should then break up into asteroids and eventually be…
+    accreted"; "even something that seems like it's just a few years… can also be very
+    energetic… So it should present an opportunity for the civilization") and sent their list of
+    16 Oct about `/next/` (seven items, four with screenshots: "Please look at the pictures as
+    well in the document"). Asked, they chose rubble you can mine with an evacuation event and a
+    darker Hunger choice at high Taint, both versions in new games, and for the flashes "please
+    calculate the effects…", molten worlds staying molten, a Flash Shelter for a world whose night
+    side stays cool and Shadow Shields where the whole world melts; for the pace, "Ten per Tide
+    turn", in "Both versions". The plan (`docs/plans/2026-10-19-falling-worlds-and-the-list.md`)
+    was approved: "It sounds good, though not all black holes should have planets, just a lot of
+    them." Their usage ran out before anything of it was built ("93% of usage is gone right
+    now… I'll be back"), and the session wrote the handover.
+  - 20 Oct, a new session (the player: "wasn't on this account, if you're wondering"): "Continue
+    my game Steliterate … from where the previous session stopped", in this order: finish "the
+    game keeps its word" (validation in both versions, the harness for `main` standard and harsh,
+    the docs, `next`, the PR into `main` merged and checked live, merged back with `-s ours`),
+    then the list ("the .odt is attached. Look at its four screenshots before anything else"),
+    then the falling worlds. The `.odt` did not reach the session (not on the machine, not in
+    their Google Drive): asked for again. The batch went live as PR m1omg/Steliterate#34
+    (CHANGELOG, "The game keeps its word", with the figures). The harness of today's game showed
+    41 more victories in 900; measured by taking the hidden step out again, they are that step's
+    alone, survival within the noise either way (`docs/spoilers/slow-ones.md`). `browser/fates`
+    now takes the first of the harness's seeds whose decay game lives to the Great Decay (seed
+    48514's dies out at η 38.3 under the new rules).
+  - Later on 20 Oct, items 3 to 5 of the list (the pace). Built as planned ("Ten per Tide
+    turn"), it showed that one Slow ×100 turn crossed the whole Dark Era, and that the victories
+    had leaned on the old slow turns' overpay. The player: "okay hold on so one slow x 100 turn
+    should not cross the entire dark era what what's going on". Asked again (a tapped option had
+    vanished: "Ask again pls"), they chose "Dark keeps its clock" and, for the victories, "Bring
+    them back": the late ages richer, tuned on the harness to about 77 victories in each version
+    (×1.4 in today's game, ×1.125 in the new version). The autoplayer now sleeps through the dark
+    when its reserve would not last, so survival in the harness rose (229 and 187 of 300). Live as
+    PR m1omg/Steliterate#37 (CHANGELOG, "The pace: ten turns to a Tide turn").
+  - Next: the player's word on Firefox now, the films' second cut and the open threads
+    (HANDOVER, section 3).
 - **Next steps (11 Oct):** the player will be back ("ill be back dont worry"). Start from
   `HANDOVER.md`, then "Picking up" above; the open threads are listed there, the Slovak
   translation first, with four new ones from 11 Oct in HANDOVER.md. Wait for the player's word
@@ -712,6 +1165,30 @@ clone, with none of this session's scratch files, uploads or memory: everything 
   session's swarm batch had stopped mid-validation ("bit the dust mid-change"); I finished its
   browser checks and put it live before this one.
 
+- **20 Oct, combat:** "right now I can literally be at war with a civilization, send spaceships
+  into their system and they won't even attack. Let's make a combat system. For now it can be an
+  auto resolve one, tho let's do custom tactics choosable as modifiers that would modify the
+  damage inflicted and damage received." Asked, they chose all four recommended answers: "Pick
+  from a set" (four tactics per fleet), "New version only", "Yes, strike back" (in a war we
+  begin they come for our settlements too), "Yes, every fight" (swarms too). Built as the plan
+  `docs/plans/2026-10-20-combat.md` says, with two changes said to them: Stand off takes ×0.5,
+  not the ×0.35 offered (at ×0.35 it won every fight, four ships against five holding the line),
+  and one blockade and one storm a star a turn (the first forced wars took every settlement of
+  ours at one star in a single turn). Offered for later: a battle fought by hand, focus fire on a
+  chosen ship, a retreat threshold as part of a tactic, and the same in today's game, if they ask
+  before they switch to the new version.
+
+- **21 Oct, the survey reveal:** the player uploaded a clip of Endless Space 2 (16m14s to
+  16m47s of a gameplay video) with "dude prolongs the sequence by yapping but this is how i
+  imagine the reveal planetary system sequence...not ur version". Rebuilt as a flight of the
+  camera in the new version (CHANGELOG, "The survey reveal as a flight of the camera"): a look at
+  the star, a flight to each world (close, three parts lit, its star off to the left), a caption
+  typed in at the top left with four bars, dust streaking between worlds, the star rising over
+  the last world's edge, then back out. Kept from ours: the scan line, Skip and Skip all, the
+  Settings switch. Their clip went no further than the scratchpad. Asked whether they wanted it in
+  today's game too: "yes" (PR m1omg/Steliterate#39, `2d345e4`; today's game had had no survey
+  reveal at all).
+
 ## Found in the review of 28 Sep (verified)
 
 Decided (29 Sep): a fading civilization's last transmission always reaches us, as an archive that
@@ -746,7 +1223,9 @@ Still open:
   - Energy per turn scales with the share of a Tide turn lived.
   - A 4 Gyr flare is ~0.16% of a 2.5 Tyr late-Dusk turn. Even at 174× brightness it totals
     ≈28% of one ordinary turn's starlight.
-  - So flare-clock turns count as full turns lived at the flare's pace: a deliberate bend.
+  - So flare-clock turns counted as full turns lived at the flare's pace: a deliberate bend,
+    until 20 Oct. Since then each pays for the time it covers (the player's list, item 3: "Quick
+    10x is not Quick 10x here"); a new star's clock still lives each turn in full.
 - **Flare physics numbers:**
   - The game gives a 0.1 M☉ red dwarf 0.00115 L☉, and 0.2 L☉ as a blue dwarf (174×). The
     0.1 M☉ peak is probably lower in reality; treat it as an estimate.

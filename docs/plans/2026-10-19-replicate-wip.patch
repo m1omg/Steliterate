@@ -1,0 +1,97 @@
+diff --git a/docs/REPLICATE.md b/docs/REPLICATE.md
+index 2a8f3bc..8cefbff 100644
+--- a/docs/REPLICATE.md
++++ b/docs/REPLICATE.md
+@@ -1,7 +1,8 @@
+ # Steliterate: a full specification, for replication
+ 
+ This document describes **Steliterate** as it plays at https://m1omg.github.io/Steliterate/,
+-as of commit `4b92446` on `main` of `github.com/m1omg/Steliterate` (16 October 2026, PR #33).
++as of the merge of PR #PRNUM on `main` of `github.com/m1omg/Steliterate` (19 October 2026; branch
++commit `7d4c702` on top of `4b92446`).
+ It was written for an AI agent asked to rebuild the game as closely as it can, in the player's
+ words: "a comprehensive full summary of this game for an AI agent to replicate".
+ 
+@@ -45,11 +46,12 @@ With the autoplayer playing 300 standard games at the "competent" level (section
+ 
+ | | Today's game |
+ |---|---|
+-| Games surviving to the end | 154 of 300 |
+-| Victories | 72 |
+-| Length of the Degenerate Age | 72 turns on average |
+-| 900 games | 456 survive, 203 victories, a Degenerate Age of 71 turns |
+-| By the fate of matter (900) | decay 189 of 450 survive, stable 168 of 239, curvature 99 of 211 |
++| Games surviving to the end | STD_S of 300 |
++| Victories | STD_V |
++| Length of the Degenerate Age | STD_D turns on average |
++| 900 games | N900_S survive, N900_V victories, a Degenerate Age of N900_D turns |
++| By the fate of matter (900) | decay F_DEC survive, stable F_STA, curvature F_CUR |
++| At harsh (300) | H_S survive, H_V victories |
+ | Noise | about ±12 survivors in 300 games; two runs of 900 can differ by 30 |
+ 
+ A faithful copy will not match game for game, since its random draws differ, but it should
+@@ -227,7 +229,7 @@ Collections that need lookup by id are `Record<string, T>`; the iteration order
+ | `nextId` | number | Counter for `uid()` (starts at 1). |
+ | `crossing` | `CrossingReport \| null` | The last crossing's report, until the player closes its screen. |
+ | `outcome` | `Outcome \| null` | Set when the game ends: `{kind, ending, turn, eta}`. Kinds and conditions: sealed (S.4.1). |
+-| `flags` | `Record<string, number>` | Global counters: `tut` (tutorial step), `hunger_woke`, `first_swarm`, `decay_lost` (people lost when matter dissolved), `gfe_prev`. |
++| `flags` | `Record<string, number>` | Global counters: `tut` (tutorial step), `hunger_woke`, `first_swarm`, `decay_lost` (people lost when matter dissolved), `gfe_prev`, and `all_fall` (1 in every game begun since 19 October 2026: brown dwarfs and black holes take their worlds in, B.5.7; absent in older saves). |
+ | `fired` | `Record<string, number>` | Event id → turn it fired (once-only events), and `last_<id>` → turn a random event last fired. |
+ | `saveVersion` | number | Save format version (A.7). Optional. |
+ 
+@@ -451,14 +453,16 @@ light-speed delays always use `phys`. `randomInSphere(rng, r, flatten)`: draw x,
+ 16. The sleeper vault: in the last reach of the shuffled `otherReaches`, at
+     `randomInSphere(rng, radius·0.6, 0.5)`, a white dwarf with special `sleeper`; the relic
+     `{kind: 'sleepers', state: 'hidden'}` goes on its last body (the Deep itself if the dwarf has
+-    no worlds); then the system is renamed `properName(rng, 3)`.
++    no worlds, and then its event reads "In orbit around <system>" instead of "Under <body>":
++    D.4.6); then the system is renamed `properName(rng, 3)`.
+ 17. `makeCiv` (A.2 start values).
+ 18. The fate of matter: `'decays'` → decay, `'stable'` → stable, `'curvature'` → curvature,
+     else `drawFate(rng.next())`: `u < 0.5` decay, `u < 0.75` curvature, else stable. Only the
+     Unknown setting draws.
+ 19. The state is assembled: `rng = hashSeed(seed·7 + 13)`, turn 1, era `dusk`, eraTurn 0,
+     years 9 × 10¹³, `eta = log10(9e13) ≈ 13.954`, `turnLength` 40, `protonsDecay`, `fate`, `gfe`
+-    1, the stranger minds' records (sealed), everything else empty, `nextId` 1.
++    1, the stranger minds' records (sealed), `flags = { all_fall: 1 }` (no draw; B.5.7),
++    everything else empty, `nextId` 1.
+ 20. Hunger nests (section D): candidates are the systems, in insertion order, whose region is a
+     reach or a globular cluster other than the home reach and that have no `special`; shuffled.
+     Count: gentle 1, standard 2, harsh 3. If any candidate lies in one of the two reaches
+@@ -809,8 +813,9 @@ energy upkeep, matter in, matter upkeep, insight, accord; `net[c] = energy − u
+ system's spin `−= t.spinDraw` (floor 0); depletion `richness −= d·0.0006` (floor 0.05) and
+ `hydrogen −= d·0.0004` (floor 0); overdrive: `damage +0.04` (max 1) and `gfe −0.0002`, else
+ `damage −0.02` (min 0); each structure with `gfeDrain` (not left behind by a rogue world): `gfe
+-−= gfeDrain·n·paceFactor` (floor 0.05 throughout); then `applyIndustry` (below) adds its
+-insight. After the loop: energy in `+= jointIncome·paceFactor`; energy out `+= researchDraw`
++−= gfeDrain·n·paceFactor` (floor 0.05 throughout); then `applyIndustry` (below) returns its
++spare work's yield, whose insight, energy and matter join the turn's insight, energy in and
++matter in. After the loop: energy in `+= jointIncome·paceFactor`; energy out `+= researchDraw`
+ (0.02 per insight while researching or working on a Work); accord `−= latticeAlienation`;
+ `civ.energy += in − out`; `feedBeacons(state, paceFactor)` pays the decoy beacons; `civ.matter
+ += in − out`; `civ.accord = clamp(accord + Δ, 0, 999)`; `cap = reserveCapacity` (stored in
+@@ -825,7 +830,9 @@ dismantled there before); a finished ship takes its `crew` from the settlement's
+ an idle fleet at that star with no standing orders made only of its class, or starts a new
+ fleet (settlers and survey ships always start their own). Industry left with an empty queue,
+ while awake, becomes the settlement's spare work (`spareYield`: matter, energy, resolve or
+-insight).
++insight). Its resolve is added at once (clamped 0..100); its matter, energy and insight are
++returned (a `SpareYield`) and counted in the turn's figures, so `last_energy_net` and
++`last_matter_net` include them.
+ 
+ **2. Starvation.** If `civ.energy < 0`: it is set to 0; the (up to) three colonies with the
+ most negative `net` each gain a starving turn and lose one Kin (into cold sleep under the Cold
+@@ -848,9 +855,10 @@ freezing, `worldDies`: section B);
+ `wakeArchivedEchoes`. Then for each colony with `capc = capacity(...)`, if awake and not
+ starving: Kin growth `+= 0.12·(0.5 + 0.5·vitality)` (×0.4 under Child Quotas) when `0 < kin <
+ cap`; Echoes `+= 0.22` when below cap (and either present or with capacity) and energy > 15;
+-Lattice `+= 0.35` when below cap and matter ≥ 4. For each Thread, a full point of growth is
+-spent (a Lattice costs 3 matter, an Echo 3 energy, paid even if there is no room) and adds one
+-if there is room; over capacity, one is lost (Kin into cold sleep under the Lottery if there is
++Lattice `+= 0.35` when below cap and matter ≥ 4. For each Thread, a full point of growth
++becomes one person only where there is room (below capacity, or a Kin where there are none):
++the point is spent then, and paid then (a Lattice costs 3 matter, an Echo 3 energy); without
++room it waits, unspent and unpaid. Over capacity, one is lost (Kin into cold sleep under the Lottery if there is
+ room). Cold sleepers above capacity wake as Kin. A colony with nobody and no structures is
+ abandoned.
+ 

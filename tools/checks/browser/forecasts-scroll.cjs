@@ -12,8 +12,8 @@ run(async () => {
   const put = () =>
     page.evaluate(() => {
       const s = window.__stel.state();
-      s.forecasts = Array.from({ length: 10 }, (_, i) => ({ uid: `fx${i}`, kind: 'test', title: `Forecast ${i + 1}`, text: `The forecast numbered ${i + 1}.`, dueYears: s.years + (i + 1) * 1e9, severity: i % 3 ? 'warn' : 'danger' }));
-      for (const k of Object.keys(s.flags)) if (k.startsWith('fcd:')) delete s.flags[k];
+      s.civ.forecasts = Array.from({ length: 10 }, (_, i) => ({ uid: `fx${i}`, kind: 'test', title: `Forecast ${i + 1}`, text: `The forecast numbered ${i + 1}.`, dueYears: s.years + (i + 1) * 1e9, severity: i % 3 ? 'warn' : 'danger' }));
+      for (const k of Object.keys(s.civ.flags)) if (k.startsWith('fcd:')) delete s.civ.flags[k];
       window.__stel.refresh();
     });
   await put();

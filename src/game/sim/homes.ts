@@ -1,11 +1,13 @@
 import type { Body, GameState, Survivor } from '../types';
+import { coloniesOf } from './util';
 
-// Where another civilization actually lives within one of its systems. It is worked out from how
-// they survive, never stored: those still in their bodies keep to the most livable world, the
-// sleepers to a vault under the warmest core, and minds on substrate to orbital habitats in the
-// Deep (or failing that the largest world). A world we have settled is never theirs.
+// Where another civilization actually lives within one of its systems. A civilization of its own
+// (others.ts) lives in its settlements. One simulated lightly (a game with civsAsleep) is worked
+// out from how they survive, never stored: those still in their bodies keep to the most livable
+// world, the sleepers to a vault under the warmest core, and minds on substrate to orbital
+// habitats in the Deep (or failing that the largest world). A world we have settled is never theirs.
 
-const ROCKY = ['eyeball', 'terran', 'super_earth', 'barren', 'ice', 'ocean_ice'];
+export const ROCKY = ['eyeball', 'terran', 'super_earth', 'barren', 'ice', 'ocean_ice'];
 
 function best(list: Body[], score: (b: Body) => number): Body | null {
   let top: Body | null = null;
@@ -17,6 +19,9 @@ function best(list: Body[], score: (b: Body) => number): Body | null {
 export function survivorWorld(state: GameState, sv: Survivor, systemId = sv.homeSystemId): Body | null {
   const sys = state.systems[systemId];
   if (!sys) return null;
+  // a civilization of its own lives in its settlements (once it has any)
+  const own = coloniesOf(state, sv.id).filter((c) => c.systemId === systemId);
+  if (own.length) return state.bodies[own.sort((a, b) => Number(b.id === state.civs[sv.id]?.capitalId) - Number(a.id === state.civs[sv.id]?.capitalId))[0].bodyId] ?? null;
   const free = sys.bodies.map((id) => state.bodies[id]).filter((b): b is Body => !!b && !b.dissolved && !b.colonyId);
   if (!free.length) return null;
   const rocky = free.filter((b) => ROCKY.includes(b.kind));
@@ -33,7 +38,11 @@ export function survivorWorld(state: GameState, sv: Survivor, systemId = sv.home
 
 /** The civilization living on this world, if one does. */
 export function residentsOf(state: GameState, b: Body): Survivor | null {
+  // a settlement of a civilization of its own
+  const c = b.colonyId ? state.colonies[b.colonyId] : undefined;
+  if (c && c.owner !== state.player) return state.survivors[c.owner]?.alive ? state.survivors[c.owner] : null;
   for (const sv of Object.values(state.survivors)) {
+    if (state.civs[sv.id]) continue;
     if (!sv.alive || !sv.systems.includes(b.systemId)) continue;
     if (survivorWorld(state, sv, b.systemId)?.id === b.id) return sv;
   }

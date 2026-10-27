@@ -12,7 +12,7 @@ run(async () => {
     await page.waitForTimeout(800);
     let at = { era: '', years: 0, over: false };
     for (let i = 0; i < 60 && !there(at) && !at.over; i++) {
-      at = await page.evaluate(() => { window.__stel.endTurns(5); const s = window.__stel.state(); s.pending.length = 0; return { era: s.era, years: s.years, over: !!s.outcome }; });
+      at = await page.evaluate(() => { window.__stel.endTurns(5); const s = window.__stel.state(); s.civ.pending.length = 0; return { era: s.era, years: s.years, over: !!s.civ.outcome }; });
     }
     console.log(`  seed ${seed}: ${at.era}, ${at.years.toExponential(1)} years${at.over ? ', the game over' : ''}`);
     if (there(at)) break;
@@ -29,7 +29,7 @@ run(async () => {
     sys.primary.evaporateAt = s.years * (1 + 1e-12);
     s.civ.known[sys.id] = 2;
     window.__stel.endTurns(1, false);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     const w = sys.bodies.map((id) => s.bodies[id]).find((b) => b && !b.dissolved && b.kind !== 'deep');
     return { era: s.era, sys: sys.id, name: sys.name, kind: sys.primary.kind, gone: sys.gone, world: w.id, rogue: w.rogue };

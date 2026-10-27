@@ -14,16 +14,22 @@ import { sfx } from './audio/sfx';
 import { Engine } from './render/engine';
 import type { Pickable } from './render/galaxyView';
 import { App } from './ui/App';
-import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, revealing, revealsOn, saveSettings, screen, selection, setEngine, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
+import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, playFilm, saveSettings, screen, selection, revealing, revealsOn, setEngine, setFilmOverride, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
 import { PRIMARY_NAME, bodyKindName } from './ui/labels';
-import { doEndTurn } from './ui/turnflow';
+import { doEndTurn, lastTurn, setSlowSlices } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
 import { sendPicked } from './ui/screens/Lists';
 import { guardTranslation } from './ui/translateGuard';
 import { applyLowVision, trackKeyboard } from './ui/a11y';
 import { buildSelected, nextTodo } from './ui/hud/Hud';
 import { eventResult, loreView } from './ui/screens/Story';
+import { STORE } from './keys';
 import './ui/styles.css';
+import { colonies, ownColony } from './game/sim/util';
+import { hashSeed } from './game/rng';
+import { FILMS, type FilmArgs, type FilmId, type FilmQuality } from './film/films';
+import { FilmPlayer, askPainter } from './film/player';
+import type { PaintJob } from './film/paintWorker';
 
 const stage = document.getElementById('stage')!;
 /** The star system a pick stands for: the star itself, the one a fleet is parked at, or a swarm's (where it is, or where it is going). */
@@ -43,12 +49,13 @@ function hoverName(p: Pickable): string {
   if (!g) return '';
   if (p.kind === 'system' && p.id.startsWith('body:')) {
     const b = g.bodies[p.id.slice(5)];
-    return b ? `${b.colonyId ? g.colonies[b.colonyId]?.name ?? b.name : b.name} · ${bodyKindName(g, b)}` : '';
+    // (another civilization's settlement goes by its world's name)
+    return b ? `${(b.colonyId && ownColony(g, b.colonyId)?.name) || b.name} · ${bodyKindName(g, b)}` : '';
   }
   if (p.kind === 'system') {
     const sys = g.systems[p.id];
     if (!sys) return '';
-    const ours = Object.values(g.colonies).some((c) => c.systemId === sys.id);
+    const ours = colonies(g).some((c) => c.systemId === sys.id);
     return `${sys.name} · ${PRIMARY_NAME[sys.primary.kind]}${ours ? ' · ours' : g.civ.known[sys.id] === 2 ? '' : ' · not surveyed'}`;
   }
   if (p.kind === 'fleet') {
@@ -235,7 +242,7 @@ else boot(hot?.data ?? null);
 
 // The GPU context: phones take it away in the background. Usually it comes back by itself;
 // if it will not, save, reload the page, and pick the game up again where it was.
-const RESUME = 'steliterate.resume';
+const RESUME = `${STORE}resume`;
 // (a phone does this at every switch to another app and back: said only when it takes a while)
 let lostNote = 0;
 let lostSaid = false;
@@ -309,7 +316,7 @@ window.addEventListener('keydown', (e) => {
   if (open) return;
   // an event (or what came of it) is answered with its own buttons; the survey report closes with Escape
   const g = game.value;
-  const story = !!g && (g.pending.length > 0 || !!eventResult.value);
+  const story = !!g && (g.civ.pending.length > 0 || !!eventResult.value);
   // the magnifier mode: N what needs attention next, B the selected settlement's Build tab, M the column folded away
   if (settings.value.lowVision && !story && g && (key === 'n' || key === 'b' || key === 'm')) {
     e.preventDefault();
@@ -368,7 +375,7 @@ declare global {
 window.__stel = {
   newGame(opts: Record<string, unknown> = {}) {
     game.value = newGame(opts);
-    if (opts.tutorial) game.value.flags.tut = 0;
+    if (opts.tutorial) game.value.civ.flags.tut = 0;
     screen.value = 'game';
     modal.value = null;
     bump();
@@ -379,18 +386,22 @@ window.__stel = {
   endTurns(n: number, auto = true, keep = false) {
     const s = game.value;
     if (!s) return;
-    for (let i = 0; i < n && !s.outcome; i++) {
+    for (let i = 0; i < n && !s.civ.outcome; i++) {
       if (auto) autoPlay(s, 'competent');
       endTurn(s);
-      s.crossing = null;
-      if (!keep) s.pending.length = 0;
+      s.civ.crossing = null;
+      if (!keep) s.civ.pending.length = 0;
     }
     bump();
+  },
+  /** The last turn's time as End Turn played it (turnflow.ts, playTurn). */
+  lastTurn() {
+    return lastTurn;
   },
   /** One turn's worth of the autoplayer's choices (events answered too), without ending the turn. */
   autoPlay() {
     const s = game.value;
-    if (s && !s.outcome) autoPlay(s, 'competent');
+    if (s && !s.civ.outcome) autoPlay(s, 'competent');
     bump();
   },
   orderFleet(fleetId: string, systemId: string, order: 'move' | 'survey' | 'colonize' = 'survey') {
@@ -404,14 +415,66 @@ window.__stel = {
   notify: (text: string, kind: 'info' | 'bad' | 'good' = 'info') => notify(text, kind),
   state: () => game.value,
   engine: () => engine(),
+  /** The films on or off for this page (null: as the settings say), for the checks. */
+  films: (on: boolean | null) => setFilmOverride(on),
+  /** The survey reveals on or off for this page (null: as the settings say), for the checks. */
+  reveals: (on: boolean | null) => setRevealOverride(on),
+  /** Every slice of End Turn's turn made to take at least this long (ms), as on a slow phone (turn-slices). */
+  slowSlices: (ms: number) => setSlowSlices(ms),
+  /** The films, by id, with their names. */
+  filmList: () => Object.fromEntries(Object.values(FILMS).map((f) => [f.id, f.name])),
+  /** A film's frames at these times, drawn one after another on one canvas (a hash of each), for the checks: a moment draws the same picture whatever was drawn before it. `timed`: each one's drawing time (ms) instead. */
+  filmFrames(id: FilmId, times: number[], w = 480, h = 270, quality: FilmQuality = 'high', timed = false) {
+    const p = new FilmPlayer(document.createElement('div'), id, { quality, width: w, height: h, pixelRatio: 1 });
+    const c = p.canvas.getContext('2d')!;
+    const out = times.map((t) => {
+      const a = performance.now();
+      p.frame(t);
+      // timed: how long the moment took to draw (a pixel read back, so the drawing is done)
+      if (timed) return c.getImageData(0, 0, 1, 1) && performance.now() - a;
+      return hashSeed(p.canvas.toDataURL());
+    });
+    p.dispose();
+    return out;
+  },
+  /** The same frames with the film's pictures painted in the painter thread (15 Oct), once it has sent them all, and how many it sent: the same pictures as painted on the page. */
+  async filmFramesApart(id: FilmId, times: number[], w = 480, h = 270, quality: FilmQuality = 'high') {
+    const p = new FilmPlayer(document.createElement('div'), id, { quality, width: w, height: h, pixelRatio: 1, painter: true });
+    await p.painted;
+    const frames = times.map((t) => {
+      p.frame(t);
+      return hashSeed(p.canvas.toDataURL());
+    });
+    p.dispose();
+    return { sent: p.sent, frames };
+  },
+  /** How much a film's frame changes between two moments, with these args: the mean difference of its pixels' channels (0..255), for the checks (the grain held still). */
+  filmChange(id: FilmId, t1: number, t2: number, args: FilmArgs = {}, w = 480, h = 270) {
+    const p = new FilmPlayer(document.createElement('div'), id, { quality: 'high', args, width: w, height: h, pixelRatio: 1 });
+    const c = p.canvas.getContext('2d')!;
+    p.frame(t1);
+    const a = c.getImageData(0, 0, w, h).data;
+    p.frame(t2);
+    const b = c.getImageData(0, 0, w, h).data;
+    p.dispose();
+    let sum = 0;
+    for (let i = 0; i < a.length; i += 4) sum += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+    return sum / (a.length / 4) / 3;
+  },
+  /** The painter thread's first answer to a job (askPainter), for the checks. */
+  askPainter: (job: PaintJob) => askPainter(job),
+  /** The last frames played: [film time (s), the page's time (ms)] (FilmPlayer.times). */
+  filmTimes: () => FilmPlayer.times.map((x) => [...x]),
+  /** The last trial of where a film's vignette and grain go (FilmPlayer.overlayTrial). */
+  filmOverlays: () => FilmPlayer.overlayTrial,
+  /** Play a film as the game does (with films on), then back to the game. */
+  playFilm: (id: FilmId, args?: FilmArgs) => playFilm(id, null, args),
   /** The music player (its layer: the synth bus, and the recording playing), for the checks. */
   music: () => music,
-  /** The sound's graph (`browser/music-route`: the synth's echo at the music's volume). */
+  /** The sound's graph (the films' check: the music's gain under a film). */
   audio: () => audio(),
   /** Set the music's and the sounds' volumes, 0..1, as the settings' sliders do (for this page only). */
   setVolumes: (m: number, s: number) => setVolumes(m, s),
   /** Play one of the interface's sounds. */
   sfx: (name: Parameters<typeof sfx>[0]) => sfx(name),
-  /** The survey reveals on or off for this page (null: as the settings say), for the checks. */
-  reveals: (on: boolean | null) => setRevealOverride(on),
 };

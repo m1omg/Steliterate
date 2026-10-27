@@ -5,7 +5,7 @@ run(async () => {
   const { page } = ck;
   await page.evaluate(() => window.__stel.newGame({ seed: 1000 }));
   await page.waitForTimeout(800);
-  await page.evaluate(() => { const s = window.__stel.state(); s.colonies[s.civ.capitalId].queue = []; window.__stel.endTurns(1, false); s.pending.length = 0; window.__stel.refresh(); });
+  await page.evaluate(() => { const s = window.__stel.state(); s.colonies[s.civ.capitalId].queue = []; window.__stel.endTurns(1, false); s.civ.pending.length = 0; window.__stel.refresh(); });
   await page.waitForTimeout(1200);
   const chip = page.locator('text=/1 idle settlement/').first();
   check((await chip.count()), `the reminder says 1 idle settlement`);

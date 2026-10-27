@@ -11,7 +11,7 @@ run(async () => {
   const map = await page.evaluate(() => {
     const s = window.__stel.state();
     const g = window.__stel.engine().galaxy;
-    const ours = Object.values(s.fleets).map((f) => f.id);
+    const ours = Object.values(s.fleets).filter((f) => f.owner === s.player).map((f) => f.id);
     const cols = ours.map((id) => g.fleetAnim.get(id)?.mesh.userData.color ?? 'none');
     const kinds = ours.map((id) => g.fleetAnim.get(id)?.kind ?? 'none');
     return { cols: [...new Set(cols)], kinds: [...new Set(kinds)], n: ours.length, home: s.civ.homeSystemId };

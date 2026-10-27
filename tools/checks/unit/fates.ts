@@ -13,30 +13,33 @@ import { TECH_BY_ID } from '../../../src/game/data/techs';
 import { calendarEra, fateKnown, fateOf, matterGone } from '../../../src/game/fate';
 import { shownKind } from '../../../src/game/physics';
 import type { CrossingReport, GameState, ProtonFate } from '../../../src/game/types';
+import { SAVE_VERSION } from '../../../src/game/save';
 import { check, done, loadSave } from '../lib';
 
 check(drawFate(0.1) === 'decay' && drawFate(0.49) === 'decay' && drawFate(0.5) === 'curvature' && drawFate(0.74) === 'curvature' && drawFate(0.75) === 'stable', 'an unknown fate: decay below 0.5, curvature to 0.75, stable above');
 const old = loadSave('551fb1a-seed24757-turn71.json.gz');
-check(old.saveVersion === 3 && old.fate === (old.protonsDecay ? 'decay' : 'stable'), `an old save keeps its fate (${old.fate}) and loads as version 3`);
+check(old.saveVersion === SAVE_VERSION && old.fate === (old.protonsDecay ? 'decay' : 'stable'), `an old save (a fixture, read as legacy) keeps its fate (${old.fate}) and migrates to version ${SAVE_VERSION}`);
 
 /**
  * Play a game of this fate with the autoplayer until `stop` says so; every crossing seen is kept.
- * A game that ends before `stop` says so (the autoplayer lost it) is played again from the next
- * seed, as is one that stops where `fits` says it cannot show what is checked (a turn can run past
- * two moments at once): these checks are about the universe, not the play.
+ * (The neighbours asleep: these are the universe's rules, and a game that ends early, as the others'
+ * play can make it, would not reach them.) A game that ends before `stop` says so (the autoplayer
+ * lost it) is played again from the next seed, as is one that stops where `fits` says it cannot
+ * show what is checked (a turn can run past two moments at once): these checks are about the
+ * universe, not the play.
  */
 function play(fate: ProtonFate, stop: (s: GameState) => boolean, fits: (s: GameState) => boolean = () => true, seed = 1000) {
   let last: { s: GameState; crossings: CrossingReport[] } | null = null;
   for (let tries = 0; tries < 8; tries++) {
-    const s = newGame({ seed: seed + tries, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate });
+    const s = newGame({ seed: seed + tries, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: fate, civsAsleep: true });
     const crossings: CrossingReport[] = [];
-    for (let g = 0; g < 1200 && !s.outcome && !stop(s); g++) {
+    for (let g = 0; g < 1200 && !s.civ.outcome && !stop(s); g++) {
       autoPlay(s, 'competent');
       const r = endTurn(s);
       if (r.crossing) crossings.push(r.crossing);
     }
     last = { s, crossings };
-    if ((stop(s) && fits(s)) || (!stop(s) && !s.outcome)) {
+    if ((stop(s) && fits(s)) || (!stop(s) && !s.civ.outcome)) {
       if (tries) console.log(`  (${fate}: seed ${seed + tries}; the games before it ended early or ran past the moment)`);
       return last;
     }
@@ -93,12 +96,12 @@ const seen = (fate: 'decays' | 'stable' | 'curvature') => {
   s.protonsDecay = fate === 'decays';
   // stop short of η 30, where the neutron stars tell (a slow turn here can be two η long)
   let prev = s.eta;
-  for (let g = 0; g < 900 && !s.outcome && s.eta < 29; g++) {
+  for (let g = 0; g < 900 && !s.civ.outcome && s.eta < 29; g++) {
     if (s.eta + 2 * Math.max(s.eta - prev, 0.05) >= 29.8) break;
     prev = s.eta;
     blindTurn(s);
   }
-  const f = s.forecasts.find((x) => x.kind === 'crossing');
+  const f = s.civ.forecasts.find((x) => x.kind === 'crossing');
   return { s, f };
 };
 const before = (['decays', 'stable', 'curvature'] as const).map(seen);
@@ -121,12 +124,12 @@ check(before.every((b) => b.f?.title === 'The end of the Degenerate Age?' && b.f
 for (const b of before) {
   const g = b.s;
   let r: CrossingReport | undefined;
-  for (let n = 0; n < 60 && !g.outcome && !fateKnown(g); n++) r = blindTurn(g).crossing ?? r;
+  for (let n = 0; n < 60 && !g.civ.outcome && !fateKnown(g); n++) r = blindTurn(g).crossing ?? r;
   const shown = fateOf(g) === 'decay' ? 'decay_shown' : fateOf(g) === 'curvature' ? 'curvature_shown' : null;
   check(fateKnown(g) && g.eta >= 30, `${fateOf(g)}: known at η ${g.eta.toFixed(2)}${shown ? `, with ${shown}` : ', by the crossing itself'}`);
-  if (shown) check(g.pending.some((e) => e.defId === shown) && !r, `its reveal (${shown}) is waiting, and the age goes on (${g.pending.map((e) => e.defId).join(', ')})`);
+  if (shown) check(g.civ.pending.some((e) => e.defId === shown) && !r, `its reveal (${shown}) is waiting, and the age goes on (${g.civ.pending.map((e) => e.defId).join(', ')})`);
   else check(r?.title === 'The Last Warmth' && text(r).includes('The question is settled: the protons are stable.'), 'and the Last Warmth says so');
-  check(g.forecasts.find((x) => x.kind === 'crossing')?.title !== 'The end of the Degenerate Age?', `the forecast no longer asks (${g.forecasts.find((x) => x.kind === 'crossing')?.title})`);
+  check(g.civ.forecasts.find((x) => x.kind === 'crossing')?.title !== 'The end of the Degenerate Age?', `the forecast no longer asks (${g.civ.forecasts.find((x) => x.kind === 'crossing')?.title})`);
 }
 TECH_BY_ID.proton_question.requires = asked;
 // ---------------------------------------------------------------- research by fate

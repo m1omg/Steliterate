@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { SHIP_BY_ID, attackNote, fleetLook } from '../../game/data/ships';
-import { STRUCTURE_BY_ID, STRUCTURE_KINDS, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
+import { SHIP_BY_ID, attackNote, fleetLook, isWarship, shipNote } from '../../game/data/ships';
+import { STRUCTURE_BY_ID, STRUCTURE_KINDS, enabledAt, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
@@ -20,7 +20,9 @@ import {
   moveQueued,
   orderFleet,
   setAutoExplore,
+  setTactic,
   standFleet,
+  storm,
   placeBeacon,
   putOutBeacon,
   queueBuild,
@@ -33,16 +35,27 @@ import {
   tame,
   toggleOverdrive,
   attack as attackOrder,
+  strike,
   type Conversion,
 } from '../../game/sim/actions';
-import { capacity } from '../../game/sim/economy';
+import { PASSAGE_OUTPUT, capacity } from '../../game/sim/economy';
+import { beginPassage, endForeseen, passageCheck, passageTerms, turnsToEndOfMatter } from '../../game/sim/passage';
+import { turnsToCollapse } from '../../game/sim/deeptime';
+import { SPENT_SPIN, holeFailing } from '../../game/sim/crossing';
+import { beginHorizon, driftCheck, driftTerms, driftToAnotherHole, horizonCheck, horizonTerms } from '../../game/sim/horizon';
+import { POSITRONIUM_DECAY, beginWeave, leaveWeave, leaveWeaveCheck, leaveWeaveCost, positroniumHere, turnsToDecay, weaveCheck, weaveTerms } from '../../game/sim/positronium';
 import { spareYield, type SpareYield } from '../../game/sim/spare';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
 import { builtEffect, builtEffectText, project, structureEffect, type BuildEffect } from '../../game/sim/projection';
-import { capital, distLy, hasCharter, hasTech, leftBehind, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
+import { allColonies, allFleets, capital, colonies, distLy, fleets, formOf, hasCharter, hasTech, leftBehind, ownColony, popsOf, protonFateKnown, swarmSeenAt } from '../../game/sim/util';
 import { nearestSwarmSeen, nestSeenAt, readsSwarms, swarmArrives, swarmSight } from '../../game/sim/sight';
+import { FORMS } from '../../game/data/forms';
+import { assaultBlocked, assaultOdds, atWarWith, battleForecast, holdOf, screensSeen, settlementFire, shipsInWords, strikeBlocked, walled } from '../../game/sim/conflict';
+import { TACTICS, tacticNote, tacticOf } from '../../game/data/tactics';
+import { SIEGE_TURNS } from '../../game/sim/war';
+import { settlementSeen } from '../../game/sim/others';
 import { attackBlocked, attackOdds, swarmReach, warshipsAt } from '../../game/sim/hunger';
 import { BEACON_COST, BEACON_UPKEEP } from '../../game/sim/beacons';
 import type { Body, Colony, Fleet, GameState, StarSystem, Swarm, ThreadId } from '../../game/types';
@@ -53,7 +66,7 @@ import type { IconName } from '../icons';
 import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
 import { act, engine, following, hudPrefs, isPhone, notify, openBuildFor, rev, selection, setHudPrefs, sheetHint, sheetSize, targeting, view } from '../store';
 import { uiFactor } from '../Tip';
-import { RAID_COOLDOWN, raidStrength, raidTarget } from '../../game/sim/survivors';
+import { RAID_COOLDOWN, raidForce, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { loreView } from '../screens/Story';
 import { siteValue } from '../../game/sim/sites';
@@ -62,10 +75,10 @@ import { YIELDS, yieldText, yieldTip } from '../yields';
 import { survivorPeople, survivorWorld } from '../../game/sim/homes';
 import { residentsSeen, seenThere } from '../../game/sim/claims';
 import { spinSharers } from '../../game/sim/ways';
-import { EXPLORE_RESERVE, FORTIFY_BONUS, LIVING_WORLD, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
+import { EXPLORE_RESERVE, FORTIFY_BONUS, LANCE_SPEED, LIVING_WORLD, isLance, isWarFleet, naturalKinRoom } from '../../game/sim/fleets';
 import { sfx } from '../../audio/sfx';
 import { focusTitle, lowVision, pressable, useWholeScroll } from '../a11y';
-import { calendarEra } from '../../game/fate';
+import { MATTER_DISSOLVES, calendarEra, fateOf } from '../../game/fate';
 import { flowing, keeping, nextToFlow } from '../../game/sim/flow';
 import { livedShare, turnStep, turnsUntilYears } from '../../game/sim/flare';
 
@@ -131,7 +144,9 @@ export function Drawer({ s }: { s: GameState }) {
   if (sel.kind === 'system' && s.systems[sel.id]) body = <SystemPanel s={s} sys={s.systems[sel.id]} />;
   else if (sel.kind === 'body' && s.bodies[sel.id]) {
     const b = s.bodies[sel.id];
-    body = b.colonyId && s.colonies[b.colonyId] ? <ColonyPanel s={s} c={s.colonies[b.colonyId]} /> : <BodyPanel s={s} b={b} />;
+    // (a settlement of another civilization is its world to us, not a settlement of ours)
+    const c = b.colonyId ? ownColony(s, b.colonyId) : undefined;
+    body = c ? <ColonyPanel s={s} c={c} /> : <BodyPanel s={s} b={b} />;
   } else if (sel.kind === 'fleet' && s.fleets[sel.id]) body = <FleetPanel s={s} f={s.fleets[sel.id]} />;
   else if (sel.kind === 'swarm' && s.swarms[sel.id]) body = <SwarmPanel s={s} sw={s.swarms[sel.id]} />;
   if (!body) return null;
@@ -255,7 +270,7 @@ function WorldStrip({ s, sys, current }: { s: GameState; sys: StarSystem; curren
         <Icon name={primaryIcon(sys.primary.kind)} />
       </button>
       {worlds.map((b) => {
-        const c = b.colonyId ? s.colonies[b.colonyId] : null;
+        const c = b.colonyId ? ownColony(s, b.colonyId) : null;
         const hab = b.habitability * b.vitality;
         return (
           <button
@@ -283,7 +298,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const src = sourceLight(s, sys, s.years, p.turnYears);
   const T = primaryTemperature(sys.primary, s.years, calendarEra(s), decayWarmth(s), curvatureWarmth(s), haloDrawn(s));
   const province = s.provinces.find((x) => x.id === sys.provinceId);
-  const fleets = Object.values(s.fleets).filter((f) => f.at === sys.id);
+  const fleetsHere = fleets(s).filter((f) => f.at === sys.id);
   // the swarms we see here (a sleeping one only with Hunger Studies: sight.ts)
   const seenSwarm = swarmSight(s);
   const swarms = Object.values(s.swarms).filter((w) => w.systemId === sys.id && seenSwarm(w));
@@ -291,7 +306,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
   const survivor = Object.values(s.survivors).find((v) => v.alive && v.systems.includes(sys.id) && (v.homeSystemId === sys.id || seenThere(s, v, sys.id)));
   const outpost = !!survivor && survivor.homeSystemId !== sys.id;
   const survivorHome = survivor && known === 2 ? survivorWorld(s, survivor, sys.id) : null;
-  const fc = s.forecasts.filter((f) => f.systemId === sys.id);
+  const fc = s.civ.forecasts.filter((f) => f.systemId === sys.id);
   const d = distFromCapital(s, sys);
   return (
     <>
@@ -331,7 +346,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                 .map((id) => s.bodies[id])
                 .filter((b) => b && !b.dissolved)
                 .map((b) => {
-                  const c = b.colonyId ? s.colonies[b.colonyId] : null;
+                  const c = b.colonyId ? ownColony(s, b.colonyId) : null;
                   const hab = b.habitability * b.vitality;
                   return (
                     <div key={b.id} class="list-item" {...pressable(() => selectBody(b))}>
@@ -393,7 +408,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           )}
           {sys.primary.spinMax > 0 && (
             <>
-              <dt data-tip={spinSharers(s, sys.id).length ? 'In the Black Hole Age a hole’s spin is a commons: others living here draw on it as we do (a partner only half what it could), and it does not come back.' : undefined}>Spin reservoir</dt>
+              <dt data-tip={spinSharers(s, sys.id).length ? (s.settings.civsAsleep ? 'In the Black Hole Age a hole’s spin is a commons: others living here draw on it as we do (a partner only half what it could), and it does not come back.' : 'A hole’s spin is a commons: others living here draw on it with Penrose Harvesters of their own, as we do, and it does not come back.') : undefined}>Spin reservoir</dt>
               <dd class="mono">
                 {pct(sys.primary.spin / sys.primary.spinMax)}
                 {(() => {
@@ -448,11 +463,12 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
             Seen from afar: the star is known, its worlds are not. Send any ship to survey it (probes are the cheapest, and see farthest).
           </p>
         )}
-        {(fleets.length > 0 || swarms.length > 0) && (
+        <WarHere s={s} sys={sys} />
+        {(fleetsHere.length > 0 || swarms.length > 0) && (
           <div class="section">
             <h3>In orbit</h3>
             <div class="list">
-              {fleets.map((f) => (
+              {fleetsHere.map((f) => (
                 <div key={f.id} class="list-item" {...pressable(() => { selection.value = { kind: 'fleet', id: f.id }; engine()?.select(f.id); })}>
                   <Icon name="fleet" cls="neon" /> <span class="grow">{f.name}</span> <span class="faint">{f.ships.length} ship{f.ships.length > 1 ? 's' : ''}</span>
                 </div>
@@ -549,7 +565,7 @@ function TerraformedRow({ s, c }: { s: GameState; c: Colony }) {
 
 /** How seeded life on a world of ours is doing (sim/terraform.ts), or undefined if none is seeded. */
 function seededTip(s: GameState, b: Body): string | undefined {
-  const c = b.colonyId ? s.colonies[b.colonyId] : undefined;
+  const c = b.colonyId ? ownColony(s, b.colonyId) : undefined;
   if (!c || !((c.structures.biosphere_seeding ?? 0) > 0)) return undefined;
   return seedingGrowth(s, b, c) > 0
     ? `Seeded life is spreading: +${Math.round(SEED_RATE * 100)}% a turn at the Tide, up to ${Math.round(SEED_CAP * 100)}%.`
@@ -749,7 +765,7 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
   void rev.value; // mutable game state: re-render on every change
   const sys = s.systems[b.systemId];
   const surveyed = s.civ.known[sys.id] === 2;
-  const settlers = Object.values(s.fleets).filter((f) => f.at && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles && (!SHIP_BY_ID[x.cls]?.inSystem || f.at === b.systemId)));
+  const settlers = fleets(s).filter((f) => f.at && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles && (!SHIP_BY_ID[x.cls]?.inSystem || f.at === b.systemId)));
   const residents = surveyed ? residentsSeen(s, b) : null;
   return (
     <>
@@ -874,11 +890,247 @@ function BodyPanel({ s, b }: { s: GameState; b: Body }) {
 
 const CONVERSIONS: { id: Conversion; label: string; icon: 'upload' | 'merge' | 'coldminds' | 'cryo' | 'wake'; tip: string; show: (s: GameState, c: Colony) => boolean }[] = [
   { id: 'upload', label: 'Upload', icon: 'upload', tip: 'One Kin becomes an Echo (6 energy). Needs an Upload Clinic and free substrate.', show: (_s, c) => (c.structures.upload_clinic ?? 0) > 0 },
-  { id: 'merge', label: 'Merge', icon: 'merge', tip: 'Two Echoes become one Chorus (8 energy). Needs a Confluence Node.', show: (_s, c) => (c.structures.confluence_node ?? 0) > 0 },
+  { id: 'merge', label: 'Merge', icon: 'merge', tip: 'Two Echoes become one Chorus (8 energy). Needs a Confluence Node, or a Leptonic Confluence.', show: (_s, c) => enabledAt(c.structures, 'merge') },
   { id: 'cool', label: 'Cool', icon: 'coldminds', tip: 'One Echo becomes a Coldmind, thinking far slower and costing almost nothing to keep. Needs a Cold Vault.', show: (_s, c) => (c.structures.cold_vault ?? 0) + (c.structures.lepton_substrate ?? 0) + (c.structures.bastion ?? 0) > 0 },
   { id: 'freeze', label: 'Freeze', icon: 'cryo', tip: 'Put one Kin into Cold Sleep. Sleepers cost almost nothing and do nothing.', show: (s, c) => capacity(s, c, computeMods(s)).cryo > 0 },
   { id: 'thaw', label: 'Thaw', icon: 'wake', tip: 'Wake one sleeper.', show: (_s, c) => c.cryo > 0 },
 ];
+
+/**
+ * The Passage (passage.ts): this settlement rewritten in electron–positron structures before
+ * matter ends, as a project in its queue. Shown once it can be foreseen and Leptonic Computation is
+ * known; asks once more before it begins.
+ */
+function PassageSection({ s, c }: { s: GameState; c: Colony }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [sure, setSure] = useState(false);
+  const going = c.queue.find((q) => q.kind === 'passage');
+  if (formOf(c) !== 'baryonic' || (!going && !(hasTech(s, 'leptonic_computation') && endForeseen(s)))) return null;
+  const t = passageTerms(s, c);
+  const why = going ? null : passageCheck(s, c);
+  const industry = c.last?.industry ?? 0;
+  const turns = industry > 0 ? Math.ceil(t.industry / industry) : Infinity;
+  const left = turnsToEndOfMatter(s);
+  // (under decay matter begins to dissolve a decade and a half before it is gone)
+  const dissolves = fateOf(s) === 'decay' && s.eta < MATTER_DISSOLVES ? turnsToEndOfMatter(s, MATTER_DISSOLVES) : Infinity;
+  // (if matter is stable it tunnels into black holes, from 10^(10^26) years, deep in the Dark Era: deeptime.ts)
+  const stable = fateOf(s) === 'stable';
+  const collapse = stable ? turnsToCollapse(s, s.civ.pace) : Infinity;
+  const out = Math.round(PASSAGE_OUTPUT * 100);
+  const what = `${t.crossing} structure${t.crossing === 1 ? '' : 's'} cross${t.crossing === 1 ? 'es' : ''} over (Energy Vaults as Field Stores, the homes of minds, harvesters at a black hole); ${t.apart} ${t.apart === 1 ? 'is' : 'are'} taken apart${t.matterBack ? ` (+${t.matterBack} matter)` : ''}.${t.kin ? ` Its ${t.kin} Kin cannot go: their patterns are kept in the archive (+${t.insight} insight).` : ''}${t.lattice ? ` ${t.lattice} of its Lattice will not survive the re-encoding.` : ''}`;
+  return (
+    <div class="section passage">
+      <h3>The Passage</h3>
+      {going ? (
+        <p class="dim">
+          Under way: {Math.round((going.progress / going.cost) * 100)}%, in the queue. While it is worked here, this settlement makes {out}% of its energy, matter, insight and accord.
+        </p>
+      ) : (
+        <>
+          <p class="dim">
+            Rewrite this settlement in electron–positron structures held by fields, which will outlast matter: {t.industry} industry ({isFinite(turns) ? `about ${turns} turn${turns === 1 ? '' : 's'} here` : 'nothing builds here'}
+            {stable
+              ? isFinite(collapse)
+                ? `; matter begins to tunnel into black holes in about ${collapse}`
+                : '; matter, stable, tunnels into black holes from 10^(10²⁶) years, deep in the Dark Era'
+              : isFinite(dissolves)
+                ? `; matter begins to dissolve in about ${Math.floor(dissolves)}, and is gone in about ${Math.floor(left)}`
+                : isFinite(left)
+                  ? `; matter ends in about ${Math.floor(left)}`
+                  : ''}
+            ) and {t.energy} energy now. {what} While it is worked, the settlement makes {out}% of its energy, matter, insight and accord; then only what has a leptonic form can be built there.
+          </p>
+          <button
+            class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+            data-tip={why ?? 'It goes into the queue as a project; taking it off gives the energy back.'}
+            onClick={() => {
+              if (why) return;
+              if (!sure) return setSure(true);
+              setSure(false);
+              if (act((g) => beginPassage(g, c.id))) sfx('build');
+            }}
+          >
+            {sure ? 'Really begin the Passage? (click again)' : 'Begin the Passage'}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Leaving a black hole (horizon.ts): a leptonic settlement drifts to the hole with the most spin to
+ * give and years to last. Shown where it is leptonic and its hole is failing it, or it is at none;
+ * asks once more.
+ */
+function DriftSection({ s, c }: { s: GameState; c: Colony }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [sure, setSure] = useState(false);
+  if (formOf(c) !== 'leptonic') return null;
+  const sys = s.systems[c.systemId];
+  // (only where its hole is failing it, or there is none: from a healthy hole it would go to a poorer one)
+  const failing = holeFailing(s, sys);
+  if (!failing) return null;
+  const t = driftTerms(s, c);
+  const why = driftCheck(s, c);
+  const p = sys.primary;
+  const atHole = p.kind === 'black_hole' || p.kind === 'smbh';
+  const state =
+    p.kind === 'void'
+      ? 'Its black hole has evaporated.'
+      : !atHole
+        ? 'Away from the black holes nothing it is made of gathers energy.'
+        : p.spin < SPENT_SPIN
+          ? 'Its black hole has no spin left to give.'
+          : failing
+            ? 'Its black hole will soon evaporate.'
+            : '';
+  return (
+    <div class="section drift">
+      <h3>{atHole ? 'Another black hole' : 'To a black hole'}</h3>
+      <p class="dim">
+        {state ? `${state} ` : ''}
+        {t.target
+          ? `It can drift to ${t.target.name}, ${Math.round(t.ly)} ly away, with ${Math.round(t.target.primary.spin)} spin to give, taking all it has, for ${t.energy} energy.`
+          : 'No other black hole we could reach has spin to give and years to last.'}
+      </p>
+      {t.target && (
+        <button
+          class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+          data-tip={why ?? 'It joins our vault there, if we have one.'}
+          onClick={() => {
+            if (why) return;
+            if (!sure) return setSure(true);
+            setSure(false);
+            if (act((g) => driftToAnotherHole(g, c.id))) sfx('click');
+          }}
+        >
+          {sure ? `Really drift to ${t.target.name}? (click again)` : `Drift to ${t.target.name}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Writing into a horizon (horizon.ts): a leptonic settlement in a black hole's Deep, once Horizon
+ * Writing is known, as a project in its queue; and, once written, what that means and how long the
+ * hole will hold it. Asks once more before it begins.
+ */
+function HorizonSection({ s, c }: { s: GameState; c: Colony }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [sure, setSure] = useState(false);
+  const going = c.queue.find((q) => q.kind === 'horizon');
+  const sys = s.systems[c.systemId];
+  const p = sys.primary;
+  const hole = p.kind === 'black_hole' || p.kind === 'smbh';
+  const left = hole && p.evaporateAt ? Math.max(0, Math.log10(p.evaporateAt) - s.eta) : Infinity;
+  if (formOf(c) === 'horizon')
+    return (
+      <div class="section horizon">
+        <h3>In the horizon</h3>
+        <p class="dim">
+          Written into the horizon of {sys.name}: its minds cost a tenth of their upkeep and think at a quarter of their pace, with room by the hole’s mass. Bound to it{isFinite(left) ? `, which will evaporate in about ${left < 10 ? left.toFixed(1) : Math.round(left)} decades` : ''}: then they are written back out, leptonic, and drift on.
+        </p>
+      </div>
+    );
+  if (formOf(c) !== 'leptonic' || !hole || s.bodies[c.bodyId]?.kind !== 'deep' || (!going && !hasTech(s, 'horizon_writing'))) return null;
+  const t = horizonTerms(c);
+  const why = going ? null : horizonCheck(s, c);
+  return (
+    <div class="section horizon">
+      <h3>The horizon</h3>
+      {going ? (
+        <p class="dim">Under way: {Math.round((going.progress / going.cost) * 100)}%, in the queue. While it is worked here, this settlement makes {Math.round(PASSAGE_OUTPUT * 100)}% of its energy, insight and accord.</p>
+      ) : (
+        <>
+          <p class="dim">
+            Write this settlement into the horizon of {sys.name}: {t.industry} industry and {t.energy} energy now. Its minds would cost a tenth of their upkeep and think at a quarter of their pace, bound to the hole{isFinite(left) ? ` (it will evaporate in about ${left < 10 ? left.toFixed(1) : Math.round(left)} decades)` : ''}.
+          </p>
+          <button
+            class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+            data-tip={why ?? 'It goes into the queue as a project; taking it off gives the energy back.'}
+            onClick={() => {
+              if (why) return;
+              if (!sure) return setSure(true);
+              setSure(false);
+              if (act((g) => beginHorizon(g, c.id))) sfx('build');
+            }}
+          >
+            {sure ? 'Really write it into the horizon? (click again)' : 'Write into the horizon'}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The widest atoms (positronium.ts): a leptonic settlement, once Positronium Weaving is known and
+ * the atoms have formed, can be woven through them, as a project in its queue; woven, the section
+ * counts down to their decay at our pace and offers to leave the weave. Asks once more each time.
+ */
+function WeaveSection({ s, c }: { s: GameState; c: Colony }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [sure, setSure] = useState(false);
+  const going = c.queue.find((q) => q.kind === 'weave');
+  const woven = formOf(c) === 'positronium';
+  if (!woven && (formOf(c) !== 'leptonic' || !positroniumHere(s) || (!going && !hasTech(s, 'positronium_weaving')))) return null;
+  const left = turnsToDecay(s);
+  const when = isFinite(left) ? (left <= 1 ? 'within the next turn' : `in about ${left} turns at this pace`) : 'one day';
+  if (woven) {
+    const why = leaveWeaveCheck(s, c);
+    const cost = leaveWeaveCost(s, c);
+    return (
+      <div class="section weave">
+        <h3>In the weave</h3>
+        <p class="dim">
+          Woven through the positronium: its minds cost a fiftieth of their upkeep and think at a tenth of their pace. The atoms decay {when} {`(η\u00a0${POSITRONIUM_DECAY})`}: whoever is still woven through them then ends with them.
+        </p>
+        <button
+          class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+          data-tip={why ?? `Back out at once, leptonic: ${cost} energy.`}
+          onClick={() => {
+            if (why) return;
+            if (!sure) return setSure(true);
+            setSure(false);
+            if (act((g) => leaveWeave(g, c.id))) sfx('click');
+          }}
+        >
+          {sure ? 'Really leave the weave? (click again)' : 'Leave the weave'}
+        </button>
+      </div>
+    );
+  }
+  const t = weaveTerms(c);
+  const why = going ? null : weaveCheck(s, c);
+  return (
+    <div class="section weave">
+      <h3>The positronium</h3>
+      {going ? (
+        <p class="dim">Under way: {Math.round((going.progress / going.cost) * 100)}%, in the queue. While it is worked here, this settlement makes {Math.round(PASSAGE_OUTPUT * 100)}% of its energy, insight and accord. The atoms decay {when}.</p>
+      ) : (
+        <>
+          <p class="dim">
+            Weave this settlement through the positronium: {t.industry} industry and {t.energy} energy now. Its minds would cost a fiftieth of their upkeep and think at a tenth of their pace, with room to spare, until the atoms decay {when} {`(η\u00a0${POSITRONIUM_DECAY})`}. It can leave the weave at any time before.
+          </p>
+          <button
+            class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
+            data-tip={why ?? 'It goes into the queue as a project; taking it off gives the energy back.'}
+            onClick={() => {
+              if (why) return;
+              if (!sure) return setSure(true);
+              setSure(false);
+              if (act((g) => beginWeave(g, c.id))) sfx('build');
+            }}
+          >
+            {sure ? 'Really weave it through the positronium? (click again)' : 'Weave through the positronium'}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
   void rev.value; // mutable game state: re-render on every change
@@ -924,10 +1176,16 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
         <h2>{c.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
           {isCap && <span class="chip neon">capital</span>}
+          {formOf(c) !== 'baryonic' && <span class="chip" data-tip={FORMS[formOf(c)].desc}>{FORMS[formOf(c)].name.toLowerCase()}</span>}
           {shownTraits(s, b).map((tr) => (
             <span key={tr} class="chip" data-tip={TRAIT_NAME[tr]?.[1] ?? ''}>{TRAIT_NAME[tr]?.[0] ?? tr}</span>
           ))}
           {c.starving > 0 && <span class="chip danger">starving</span>}
+          {c.siege && (
+            <span class="chip danger" data-tip={`${s.civs[c.siege.by]?.name ?? 'The enemy'}’s warships hold this star with none of ours here: our stores and will run down each turn, and they carry off what the blockade drains. From turn ${SIEGE_TURNS} they can storm it (behind a Defence Grid or a Bastion Shell, only with a Breacher). Warships of ours here break the siege, even standing off.`}>
+              under siege {Math.min(c.siege.turns, SIEGE_TURNS)}/{SIEGE_TURNS}
+            </span>
+          )}
           {keep === 'unmanned' && nextToFlow(c) && <span class="chip danger" data-tip="No one is awake here to mend it against the Long Flow: a structure a turn runs into smooth lumps, the cheapest first, Cryo Halls last, with their sleepers. One awake Kin, a Lattice process or a mind that thinks faster than the flow would keep it whole.">flowing away</span>}
           {keep === 'watched' && <span class="chip warn" data-tip="Everyone here thinks more slowly than the Long Flow, so they keep watchers awake between their thoughts: half again their upkeep.">keeping watch</span>}
           {c.overdrive && <span class="chip warn">overdrive</span>}
@@ -1046,14 +1304,14 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                       <span
                         key={id}
                         class={`chip ${armed === id ? 'warn' : away || fx?.idle ? 'faint' : ''}`}
-                        data-tip={`${structureLabel(id, sys).desc}${away ? '\nOut of reach: it was built around the star, and this world has drifted loose from it. It gives us nothing now.' : now ? `\n${now}.` : ''}`}
+                        data-tip={`${structureLabel(id, sys, formOf(c)).desc}${away ? '\nOut of reach: it was built around the star, and this world has drifted loose from it. It gives us nothing now.' : now ? `\n${now}.` : ''}`}
                       >
                         <KindIcon id={id} />
-                        {structureLabel(id, sys).name}
+                        {structureLabel(id, sys, formOf(c)).name}
                         {n > 1 ? ` ×${n}` : ''}
                         <button
                           class={`dismantle ${why ? 'off' : ''}`}
-                          aria-label={`Take apart ${structureLabel(id, sys).name}`}
+                          aria-label={`Take apart ${structureLabel(id, sys, formOf(c)).name}`}
                           data-tip={why ? `Cannot take it apart: ${why}` : `Take one apart: ${dismantleBack(dismantleTerms(s, STRUCTURE_BY_ID[id]))}.`}
                           onClick={() => !why && setArmed(armed === id ? null : id)}
                         >
@@ -1066,7 +1324,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
               {armed && (c.structures[armed] ?? 0) > 0 && (
                 <div ref={armRef} class="row wrap dismantle-confirm" style={{ gap: '6px', marginTop: '6px', alignItems: 'center' }}>
                   <span class="dim">
-                    Take apart one {structureLabel(armed, sys).name}? {dismantleBack(dismantleTerms(s, STRUCTURE_BY_ID[armed]))}. The work that built it is lost.
+                    Take apart one {structureLabel(armed, sys, formOf(c)).name}? {dismantleBack(dismantleTerms(s, STRUCTURE_BY_ID[armed]))}. The work that built it is lost.
                   </span>
                   <button
                     class="btn small danger"
@@ -1084,6 +1342,10 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
                 </div>
               )}
             </div>
+            <PassageSection s={s} c={c} />
+            <DriftSection s={s} c={c} />
+            <HorizonSection s={s} c={c} />
+            <WeaveSection s={s} c={c} />
           </>
         ) : (
           <BuildTab s={s} c={c} industry={y?.industry ?? 0} energyMade={y?.energy ?? 0} />
@@ -1095,7 +1357,7 @@ function ColonyPanel({ s, c }: { s: GameState; c: Colony }) {
 
 /** Founding new settlements from here: ready settler ships, and one-click orders for more. */
 function ExpandSection({ s, c }: { s: GameState; c: Colony }) {
-  const ready = Object.values(s.fleets).filter((f) => f.at === c.systemId && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+  const ready = fleets(s).filter((f) => f.at === c.systemId && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
   const ships = buildableShips(s, c).filter((x) => x.def.settles);
   const queued = (id: string) => c.queue.filter((q) => q.key === id).length;
   const noYard = !(c.structures.shipyard ?? 0);
@@ -1187,8 +1449,8 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
   type Item = { id: string; name: string; desc: string; error: string | null | undefined; cost: ReturnType<typeof buildCost>; count: number; fx?: BuildEffect; sk?: StructureKind };
   const list: Item[] =
     kind === 'structure'
-      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId]), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx), sk: structureKind(x.def) }))
-      : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: `${x.def.desc} ${attackNote(x.def)}.`, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
+      ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId], formOf(c)), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx), sk: structureKind(x.def) }))
+      : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: `${x.def.desc} ${shipNote(x.def)}`, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
   // structures come grouped by kind, and can be narrowed to one kind
   const present = STRUCTURE_KINDS.filter((k) => list.some((x) => x.sk === k.id));
   const only = kind === 'structure' && buildKind.value !== 'all' && present.some((k) => k.id === buildKind.value) ? buildKind.value : null;
@@ -1215,10 +1477,10 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
                     <KindIcon id={q.key} />
                   ) : (
                     <span class="kind-icon">
-                      <Icon name="fleet" />
+                      <Icon name={q.kind === 'passage' || q.kind === 'horizon' || q.kind === 'weave' ? 'upload' : 'fleet'} />
                     </span>
                   )}
-                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId]).name : def?.name ?? q.key}
+                  {q.kind === 'structure' ? structureLabel(q.key, s.systems[c.systemId], formOf(c)).name : q.kind === 'passage' ? 'The Passage' : q.kind === 'horizon' ? 'Writing into the horizon' : q.kind === 'weave' ? 'Weaving through the positronium' : def?.name ?? q.key}
                 </span>
                 <span class="mono faint" style={{ fontSize: '12.5px' }}>{isFinite(turns) ? `${turns} turn${turns > 1 ? 's' : ''}` : 'stalled'}</span>
                 <button class="btn ghost small" aria-label="Move up" data-tip="Build this sooner (move up the queue)" disabled={i === 0} onClick={() => act((g) => moveQueued(g, c.id, q.uid, -1))}>▲</button>
@@ -1477,6 +1739,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   useEffect(() => setRaidArmed(false), [f.id, f.at]);
   const raidSv = here && isWarFleet(f) ? raidTarget(s, here.id) : null;
   const raidWait = raidSv?.raidedAt !== undefined ? RAID_COOLDOWN - (s.turn - raidSv.raidedAt) : 0;
+  const raiders = here && raidSv ? raidForce(s, here.id) : 0;
   const doRaid = () => {
     if (!raidArmed) {
       setRaidArmed(true);
@@ -1507,8 +1770,11 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               {SHIP_BY_ID[x.cls]?.name ?? x.cls}
             </span>
           ))}
-          {f.order === 'fortify' && <span class="chip neon" data-tip={`Dug in: counts ${FORTIFY_BONUS}× against swarms here, and turns raiders away from the capital.`}><Icon name="shield" /> fortified</span>}
+          {f.order === 'fortify' && <span class="chip neon" data-tip={`Dug in: counts ${FORTIFY_BONUS}× against ships and swarms here (an Aegis 3×; not while standing off), and turns raiders away from the capital.`}><Icon name="shield" /> fortified</span>}
+          {tacticOf(f).id !== 'line' && <span class="chip" data-tip={`${tacticOf(f).desc}
+${tacticNote(tacticOf(f))}`}>{tacticOf(f).name.toLowerCase()}</span>}
           {f.order === 'hold' && <span class="chip" data-tip="Parked on purpose: the game will not ask about it.">holding</span>}
+          {f.order === 'strike' && <span class="chip danger" data-tip="A Kinetic Lance on its way at 99% of the speed of light: it strikes as it arrives, and is spent.">striking</span>}
           {f.auto === 'explore' && <span class="chip neon" data-tip={`Exploring by itself: always the nearest unsurveyed star. It waits while the reserve is under ${EXPLORE_RESERVE} energy plus the launch.`}><Icon name="survey" /> exploring</span>}
         </div>
         <div class="row wrap" style={{ marginTop: '8px', gap: '4px' }}>
@@ -1526,21 +1792,23 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
         </div>
       </div>
       <div class="drawer-body scroll">
+        <TacticRow s={s} f={f} />
         {hunter && (
           <div class="warn" style={{ fontSize: '13.5px', marginBottom: '8px' }}>
             <Icon name="warning" />{' '}
             {hunter.systemId
-              ? 'Part of a swarm came here for this ship. It strikes each turn the ship stays; once the ship is gone, it goes back to its swarm.'
-              : `Part of the swarm at ${s.systems[hunter.from ?? '']?.name ?? 'a star nearby'} is coming for this ship. A ship under way is safe from it; once the ship is gone, it goes back to its swarm.`}
+              ? 'Part of a swarm came here for this ship. It strikes each turn the ship stays; once the ship is gone, it goes on to our nearest settlement.'
+              : `Part of the swarm at ${s.systems[hunter.from ?? '']?.name ?? 'a star nearby'} is coming for this ship. A ship under way is safe from it; once the ship is gone, it goes on to our nearest settlement.`}
           </div>
         )}
         {!here && f.to && (
           <>
             <div class="bar neon" style={{ marginBottom: '6px' }}><i style={{ width: pct(f.distance > 0 ? f.traveled / f.distance : 1) }} /></div>
             <div class="mono dim" style={{ fontSize: '13.5px' }}>
-              {formatDistance(f.traveled)} of {formatDistance(f.distance)} · {tripLabel(s, f.distance - f.traveled, mods, true)} to go
+              {formatDistance(f.traveled)} of {formatDistance(f.distance)} · {tripLabel(s, f.distance - f.traveled, isLance(f) ? { ...mods, speed: Math.max(mods.speed, LANCE_SPEED) } : mods, true)} to go
             </div>
             {f.order === 'colonize' && f.targetBody && <div class="faint" style={{ fontSize: '13.5px', marginTop: '4px' }}>To settle {s.bodies[f.targetBody]?.name}.</div>}
+            {f.order === 'strike' && <div class="faint" style={{ fontSize: '13.5px', marginTop: '4px' }}>To strike {s.colonies[f.targetColony ?? '']?.name ?? 'its target'}. No one there will see it coming until it arrives.</div>}
             {f.auto === 'explore' && (
               <button class="btn small" style={{ marginTop: '8px' }} onClick={() => act((g) => setAutoExplore(g, f.id, false)) && sfx('click')} data-tip="It finishes this trip, then waits for orders.">
                 <Icon name="survey" /> Stop exploring
@@ -1583,7 +1851,7 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                   Stand down
                 </button>
               ) : isWarFleet(f) ? (
-                <button class="btn small primary" data-tip={`Dig in here: counts ${FORTIFY_BONUS}× against swarms in this system, turns raiders away from the capital, and stops asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
+                <button class="btn small primary" data-tip={`Dig in here: counts ${FORTIFY_BONUS}× against ships and swarms in this system (an Aegis 3×; not while standing off), turns raiders away from the capital, and stops asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
                   <Icon name="shield" /> Fortify
                 </button>
               ) : (
@@ -1595,12 +1863,14 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
               {raidSv && (
                 <button
                   class={`btn small danger ${raidArmed ? 'on' : ''}`}
-                  disabled={raidWait > 0}
+                  disabled={raidWait > 0 || raiders <= 0}
                   onClick={doRaid}
                   data-tip={
                     raidWait > 0
                       ? `${raidSv.name} is on guard since our last raid. ${raidWait} more turn${raidWait === 1 ? '' : 's'}.`
-                      : `Take part of ${raidSv.name}’s reserve by force. Every warship here joins in (attack ${raidStrength(s, here.id)}); if their defences hold, it is our ships that get hurt.\nWhatever happens: they will not forgive it, every civilization we know hears of it, Resolve −3, Dissent +4. Once every ${RAID_COOLDOWN} turns at most.`
+                      : raiders <= 0
+                        ? 'Warships standing off cannot raid: they must hold the line, close in or escort.'
+                        : `Take part of ${raidSv.name}’s reserve by force. Every warship here not standing off joins in, by its fleet’s tactic (attack ${n1(raiders)}); if their defences hold, it is our ships that get hurt.\nWhatever happens: they will not forgive it, every civilization we know hears of it, Resolve −3, Dissent +4. Once every ${RAID_COOLDOWN} turns at most.`
                   }
                 >
                   <Icon name="attack" /> {raidArmed ? 'Really raid? (click again)' : `Raid ${raidSv.name}`}
@@ -1610,6 +1880,8 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
                 Disband
               </button>
             </div>
+            <BattleSection s={s} f={f} />
+            <StrikeSection s={s} f={f} />
             {settleTargets.length > 0 && (
               <div class="section">
                 <h3>
@@ -1690,10 +1962,256 @@ function FleetPanel({ s, f }: { s: GameState; f: Fleet }) {
   );
 }
 
+// ------------------------------------------------------------------ battle (the combat system, 20 Oct)
+
+/**
+ * War at a star, in its panel: the battle fought here last turn, as we saw it (both sides' fire
+ * and losses), and every siege here, ours or theirs. Nothing where there was neither.
+ */
+function WarHere({ s, sys }: { s: GameState; sys: StarSystem }) {
+  void rev.value; // mutable game state: re-render on every change
+  const me = s.civ.id;
+  const last = [...s.battles].reverse().find((b) => b.systemId === sys.id && b.turn === s.turn - 1 && b.sides?.some((x) => x.owner === me));
+  const sieges = allColonies(s).filter((c) => c.systemId === sys.id && c.siege && (c.owner === me || c.siege.by === me));
+  if (!last && !sieges.length) return null;
+  const mine = last?.sides?.find((x) => x.owner === me);
+  const theirLoss: Record<string, number> = {};
+  for (const x of last?.sides ?? []) if (x.owner !== me) for (const [k, n] of Object.entries(x.lost)) theirLoss[k] = (theirLoss[k] ?? 0) + n;
+  const who = (last?.sides ?? []).filter((x) => x.owner !== me).map((x) => s.civs[x.owner]?.name ?? 'the enemy');
+  return (
+    <div class="section">
+      <h3>
+        <Icon name="attack" /> War here
+      </h3>
+      {mine && (
+        <div class="dim" style={{ fontSize: '13.5px' }}>
+          Last turn, against {who.join(' and ')}: we dealt {n1(mine.dealt)} and took {n1(mine.taken)}
+          {lossWords(mine.lost, theirLoss, false)}.
+        </div>
+      )}
+      {sieges.map((c) => (
+        <div key={c.id} class={c.owner === me ? 'warn' : 'dim'} style={{ fontSize: '13.5px', marginTop: '4px' }}>
+          {c.owner === me ? `${s.civs[c.siege!.by]?.name ?? 'The enemy'} hold ${c.name} under siege` : `Our siege of ${c.name}, ${s.civs[c.owner]?.name ?? 'theirs'}`}: turn {c.siege!.turns}
+          {c.siege!.turns < SIEGE_TURNS ? ` of ${SIEGE_TURNS}` : ', and it can be stormed'}.
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+
+/** Ships counted by class, for `shipsInWords`. */
+function byClass(ships: { cls: string }[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const x of ships) out[x.cls] = (out[x.cls] ?? 0) + 1;
+  return out;
+}
+
+/** What a turn's losses would be, in words, after a forecast's figures. */
+function lossWords(weLose: Record<string, number>, theyLose: Record<string, number>, would = true): string {
+  const we = shipsInWords(weLose);
+  const they = shipsInWords(theyLose);
+  const v = would ? 'would lose' : 'lost';
+  return `${we ? `; we ${v} ${we}` : ''}${they ? `; they ${v} ${they}` : ''}${!we && !they ? (would ? '; no ship would be lost' : '; no ship was lost') : ''}`;
+}
+
+/**
+ * How this fleet fights: its tactic, one of four, in every fight it is in (ships, settlements,
+ * swarms) until told otherwise. With an enemy at its star, each button's tip says what it would
+ * deal and take there this turn. Nothing for a fleet without a warship: there is no one to fight.
+ */
+function TacticRow({ s, f }: { s: GameState; f: Fleet }) {
+  void rev.value; // mutable game state: re-render on every change
+  if (f.owner !== s.civ.id || !f.ships.some((x) => isWarship(x.cls))) return null;
+  const cur = tacticOf(f).id;
+  const unarmed = f.ships.some((x) => !isWarship(x.cls));
+  return (
+    <div class="row wrap tactics" style={{ gap: '4px', marginBottom: '8px', alignItems: 'center' }}>
+      <span class="eyebrow" style={{ marginRight: '2px' }} data-tip="How this fleet fights, in every fight it is in: against ships, settlements and swarms. Change it any turn; it holds until you do.">
+        Tactic
+      </span>
+      {TACTICS.map((t) => {
+        const fc = f.at ? battleForecast(s, f.at, f.id, t.id) : null;
+        const tip = [
+          `${t.name}: ${t.desc}`,
+          tacticNote(t),
+          t.escorts && !unarmed ? 'It has no unarmed ships aboard to escort.' : '',
+          !t.holds && f.order === 'fortify' ? 'Standing off, it gives up being dug in.' : '',
+          fc ? `Here, this turn, at an even draw: we would deal ${n1(fc.dealt)} and take ${n1(fc.taken)}${lossWords(fc.weLose, fc.theyLose)}.` : '',
+        ]
+          .filter(Boolean)
+          .join('\n');
+        return (
+          <button key={t.id} class={`btn small ${cur === t.id ? 'on' : ''}`} aria-pressed={cur === t.id} data-tip={tip} onClick={() => act((g) => setTactic(g, f.id, t.id)) && sfx('click')}>
+            {t.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * The war at this fleet's star: who stands here against us (their ships and tactics, their
+ * settlements' guns) and what stands with us, last turn's exchange, our siege of a settlement of
+ * theirs here (its turns, then Storm and Raze, asking first), and theirs of one of ours.
+ */
+function BattleSection({ s, f }: { s: GameState; f: Fleet }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => setArmed(null), [f.id, f.at]);
+  const at = f.at;
+  if (!at) return null;
+  const me = s.civ.id;
+  const theirFleets = allFleets(s).filter((x) => x.at === at && x.owner !== me && x.order !== 'strike' && x.ships.length > 0 && atWarWith(s, me, x.owner));
+  const theirColonies = allColonies(s).filter((c) => c.systemId === at && c.owner !== me && atWarWith(s, me, c.owner));
+  const foes = [...new Set([...theirFleets.map((x) => x.owner), ...theirColonies.map((c) => c.owner)])].sort();
+  if (!foes.length) return null;
+  const ours = fleets(s).filter((x) => x.at === at && x.ships.length > 0);
+  const ourGuns = colonies(s).filter((c) => c.systemId === at).reduce((a, c) => a + settlementFire(c), 0);
+  const last = [...s.battles].reverse().find((b) => b.systemId === at && b.turn === s.turn - 1 && b.sides?.some((x) => x.owner === me));
+  const mine = last?.sides?.find((x) => x.owner === me);
+  const theirLoss: Record<string, number> = {};
+  for (const x of last?.sides ?? []) if (x.owner !== me) for (const [k, n] of Object.entries(x.lost)) theirLoss[k] = (theirLoss[k] ?? 0) + n;
+  const besiegedHere = colonies(s).filter((c) => c.systemId === at && c.siege && c.siege.by !== me);
+  const go = (id: string, raze: boolean) => {
+    const key = `${raze ? 'raze' : 'storm'}:${id}`;
+    if (armed !== key) {
+      setArmed(key);
+      sfx('warn');
+      return;
+    }
+    setArmed(null);
+    if (act((g) => storm(g, id, raze))) sfx('bad');
+  };
+  return (
+    <div class="section battle">
+      <h3 data-tip="Wherever we and a civilization at war with us stand at one star, ships or a settlement, we fight once a turn, all at once. Every ship is a target, armed or not, the least hull left first (an Escort's unarmed ships last); every settlement fires with what it has, its Defence Grids and more. Fire is a warship's strength against ships, dug in if fortified, by its fleet's tactic, on a draw.">
+        <Icon name="attack" /> Battle
+      </h3>
+      {foes.map((o) => {
+        const fl = theirFleets.filter((x) => x.owner === o);
+        const guns = theirColonies.filter((c) => c.owner === o).reduce((a, c) => a + settlementFire(c), 0);
+        return (
+          <div key={o} class="row" style={{ fontSize: '13.5px', gap: '6px' }}>
+            <span class="bad">{s.civs[o]?.name ?? 'The enemy'}</span>
+            <span class="grow dim">
+              {fl.length ? fl.map((x) => `${shipsInWords(byClass(x.ships))} (${tacticOf(x).name.toLowerCase()})`).join('; ') : 'no ships'}
+              {guns > 0 ? ` · their guns ${n1(guns)}` : ''}
+            </span>
+          </div>
+        );
+      })}
+      <div class="row" style={{ fontSize: '13.5px', gap: '6px' }}>
+        <span class="good">With us</span>
+        <span class="grow dim">
+          {ours.map((x) => `${x.name}: ${shipsInWords(byClass(x.ships))}${x.ships.some((y) => isWarship(y.cls)) ? ` (${tacticOf(x).name.toLowerCase()}${x.order === 'fortify' && tacticOf(x).holds ? ', dug in' : ''})` : ''}`).join('; ')}
+          {ourGuns > 0 ? ` · our guns ${n1(ourGuns)}` : ''}
+        </span>
+      </div>
+      {mine && (
+        <div class="dim" style={{ fontSize: '13.5px', marginTop: '4px' }}>
+          Last turn: we dealt {n1(mine.dealt)} and took {n1(mine.taken)}
+          {lossWords(mine.lost, theirLoss, false)}.
+        </div>
+      )}
+      {besiegedHere.map((c) => (
+        <div key={c.id} class="warn" style={{ fontSize: '13.5px', marginTop: '4px' }}>
+          {s.civs[c.siege!.by]?.name ?? 'The enemy'} hold {c.name} under siege: turn {c.siege!.turns}
+          {c.siege!.turns < SIEGE_TURNS ? ` of ${SIEGE_TURNS}` : ', and can storm it'}.
+        </div>
+      ))}
+      {theirColonies.map((c) => {
+        const why = assaultBlocked(s, me, c);
+        const turns = c.siege?.by === me ? c.siege.turns : 0;
+        const odds = assaultOdds(s, me, c);
+        const terms = `It holds ${n1(holdOf(c))}${walled(c) ? ', walled' : ''}; about ${pct(odds)} to win.`;
+        return (
+          <div key={c.id} style={{ marginTop: '6px' }}>
+            <div class="row wrap" style={{ gap: '4px', alignItems: 'center' }}>
+              <span class="grow" style={{ fontSize: '13.5px' }}>
+                {turns ? `Our siege of ${c.name}: turn ${turns}${turns < SIEGE_TURNS ? ` of ${SIEGE_TURNS}` : ''}` : `${c.name}: no siege of ours`}
+              </span>
+              <button
+                class={`btn small danger ${armed === `storm:${c.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
+                data-tip={`${why ? `${why}\n` : ''}Storm ${c.name}: our warships here not standing off, their strength against settlements by their tactics, on a draw. ${terms} Taken, three tenths of its people flee to their own and the rest are ours, unwilling; three tenths of what was built there is wreckage. Thrown back, the siege begins again. Either way it costs hulls, and everyone hears of it.`}
+                onClick={() => !why && go(c.id, false)}
+              >
+                {armed === `storm:${c.id}` ? `Really storm? ${pct(odds)} (click again)` : why ? 'Storm' : `Storm (${pct(odds)})`}
+              </button>
+              <button
+                class={`btn small danger ${armed === `raze:${c.id}` ? 'on' : ''} ${why ? 'disabled' : ''}`}
+                data-tip={`${why ? `${why}\n` : ''}Raze ${c.name}: the same assault, and won, nothing there is left, and no one. Everyone hears of it, and thinks worse of it than of a taking.`}
+                onClick={() => !why && go(c.id, true)}
+              >
+                {armed === `raze:${c.id}` ? 'Really raze? (click again)' : 'Raze'}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ the Kinetic Lance
+
+/**
+ * Strike an enemy's settlement with a Kinetic Lance from this fleet: the settlements of those we
+ * are at war with that we can see, nearest first, each with its flight and the screens we see of
+ * its own ships there; a second click to confirm. Nothing for a fleet without a Lance.
+ */
+function StrikeSection({ s, f }: { s: GameState; f: Fleet }) {
+  void rev.value; // mutable game state: re-render on every change
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => setArmed(null), [f.id, f.at]);
+  const here = f.at ? s.systems[f.at] : null;
+  if (!here || !f.ships.some((x) => SHIP_BY_ID[x.cls]?.lance)) return null;
+  const targets = allColonies(s)
+    .filter((c) => c.owner !== s.player && atWarWith(s, s.player, c.owner) && settlementSeen(s, c))
+    .map((c) => ({ c, ly: distLy(here, s.systems[c.systemId]) }))
+    .sort((a, b) => a.ly - b.ly)
+    .slice(0, 8);
+  const go = (id: string) => {
+    if (armed !== id) {
+      setArmed(id);
+      sfx('warn');
+      return;
+    }
+    setArmed(null);
+    if (act((g) => strike(g, f.id, id))) sfx('bad');
+  };
+  return (
+    <div class="section">
+      <h3 data-tip="One strike at an enemy’s settlement we can see, from anywhere: the Lance flies alone at 99% of light and strikes as it arrives, and is spent. Only the screens of their ships already waiting at that star can turn it aside. One in flight at a time.">Strike with the Kinetic Lance</h3>
+      {!targets.length && <div class="faint" style={{ fontSize: '13.5px' }}>Only in a war, at a settlement of theirs we can see. There is none.</div>}
+      {targets.map(({ c, ly }) => {
+        const deep = s.bodies[c.bodyId]?.kind === 'deep';
+        const screens = screensSeen(s, c.systemId, c.owner);
+        const why = strikeBlocked(s, f.id, c.id);
+        const owner = s.civs[c.owner]?.name ?? 'the enemy';
+        const tip = `${why ? `${why}\n` : ''}${c.name}, a settlement of ${owner}, at ${s.systems[c.systemId]?.name}: ${formatDistance(ly)} away, ${ly > 0 ? formatYears(ly / LANCE_SPEED) : 'no time'} at 99% of light. ${deep ? 'In the Deep, scattered around its star, it would lose half its people and half of all it built.' : 'On a world, it would be struck down whole, with everyone in it.'} The screens of their ships we see there would turn it aside ${pct(screens)} of the time, as far as we can tell: ships come since that light left, we cannot see. Driving it so fast spends the galaxy’s free energy, and every civilization hears of the strike, turned aside or not.`;
+        return (
+          <div key={c.id} class="row" style={{ gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+            <span style={{ flex: 1, fontSize: '13.5px' }}>
+              {c.name} <span class="faint">· {owner} · {formatDistance(ly)}{screens > 0 ? ` · screens ${pct(screens)}` : ''}</span>
+            </span>
+            <button class={`btn small danger ${armed === c.id ? 'on' : ''} ${why ? 'disabled' : ''}`} data-tip={tip} onClick={() => !why && go(c.id)}>
+              <Icon name="attack" /> {armed === c.id ? 'Really strike? (click again)' : 'Strike'}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------ swarm
 
 /** Send every warship of ours at this star against its swarm: the odds shown, a second click to confirm. */
 function AttackButton({ s, systemId, fleetId }: { s: GameState; systemId: string; fleetId: string }) {
+  void rev.value; // mutable game state: re-render on every change
   const [armed, setArmed] = useState(false);
   useEffect(() => setArmed(false), [systemId, fleetId]);
   const sw = Object.values(s.swarms).find((w) => w.systemId === systemId && !w.tamed);
@@ -1721,7 +2239,7 @@ function AttackButton({ s, systemId, fleetId }: { s: GameState; systemId: string
   };
   const tip =
     blocked ??
-    `Every warship of ours here goes for it together: attack ${n1(attack)} against its size ${n1(sw.size)} (fortified ships fight at their plain strength when they go out to attack). About ${pct(odds)} to win. A win kills ${n1(Math.min(sw.size, attack * 0.3))} of it, and we salvage twice that in matter, while what is left of it hurts our ships; a loss tears into all of them and can sink them.${sw.awake ? '' : ' It is asleep: unless we break it, it wakes.'} Once a turn.`;
+    `Every warship of ours here goes for it together: attack ${n1(attack)} against its size ${n1(sw.size)} (fortified ships fight at their plain strength when they go out to attack; each fleet by its tactic). About ${pct(odds)} to win. A win kills ${n1(Math.min(sw.size, attack * 0.3))} of it, and we salvage twice that in matter, while what is left of it hurts our ships; a loss tears into all of them and can sink them.${sw.awake ? '' : ' It is asleep: unless we break it, it wakes.'} Once a turn.`;
   return (
     <button class={`btn small danger ${armed ? 'on' : ''}`} disabled={!!blocked} onClick={go} data-tip={tip}>
       <Icon name="attack" /> {armed ? `Really attack? ${pct(odds)} to win (click again)` : `Attack the swarm (${pct(odds)})`}
@@ -1732,12 +2250,12 @@ function AttackButton({ s, systemId, fleetId }: { s: GameState; systemId: string
 function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
   void rev.value; // mutable game state: re-render on every change
   const at = sw.systemId ? s.systems[sw.systemId] : null;
-  const col = at ? Object.values(s.colonies).find((c) => c.systemId === at.id) : null;
-  const tenderHere = at && Object.values(s.fleets).some((f) => f.at === at.id && f.ships.some((x) => SHIP_BY_ID[x.cls]?.tames));
+  const col = at ? colonies(s).find((c) => c.systemId === at.id) : null;
+  const tenderHere = at && fleets(s).some((f) => f.at === at.id && f.ships.some((x) => SHIP_BY_ID[x.cls]?.tames));
   // where it is going, and when it gets there: Hunger Studies reads its way (sight.ts); without
   // it we see where only when it comes for a settlement of ours
   const dest = sw.to ? s.systems[sw.to] : null;
-  const toUs = !!dest && Object.values(s.colonies).some((c) => c.systemId === dest.id);
+  const toUs = !!dest && colonies(s).some((c) => c.systemId === dest.id);
   const reads = readsSwarms(s) || sw.tamed;
   const due = swarmArrives(s, sw);
   const dueTurns = turnsUntilYears(s, due);
@@ -1749,7 +2267,7 @@ function SwarmPanel({ s, sw }: { s: GameState; sw: Swarm }) {
         <div class="row wrap" style={{ marginTop: '6px' }}>
           <span class={`chip ${sw.tamed ? 'neon' : 'danger'}`}>{sw.tamed ? 'answers to us' : sw.awake ? 'awake' : 'dormant'}</span>
           {sw.prey && s.fleets[sw.prey] && (
-            <span class="chip danger" data-tip="Part of a swarm sent after one of our ships: it strikes that ship wherever it finds it stopped, and once the ship is gone it goes back to its swarm.">
+            <span class="chip danger" data-tip="Part of a swarm sent after one of our ships: it strikes that ship wherever it finds it stopped, and once the ship is gone it goes on to the nearest settlement of the ship’s people.">
               after {s.fleets[sw.prey].name}
             </span>
           )}

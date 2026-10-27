@@ -13,7 +13,7 @@ run(async () => {
     delete s.civ.flags.star_until;
     delete s.civ.flags.star_step;
     s.civ.pace = 0;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     s.civ.energy = 400;
     window.__stel.refresh();
     return { era: s.era, turn: s.turn, L: s.turnLength };
@@ -29,7 +29,7 @@ run(async () => {
         a.primary.bornAt = s.years;
         a.primary.diesAt = s.years + life;
         const uid = 'ev_' + Math.random().toString(36).slice(2);
-        s.pending.push({ uid, defId: kind === 'collision_star' ? 'new_star' : 'white_fire', data: { systemId: a.id } });
+        s.civ.pending.push({ uid, defId: kind === 'collision_star' ? 'new_star' : 'white_fire', data: { systemId: a.id } });
         window.__stel.refresh();
         // the next turn at our pace, for the caller's arithmetic
         return { id: a.id, name: a.name };

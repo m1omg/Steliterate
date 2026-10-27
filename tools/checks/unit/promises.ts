@@ -8,7 +8,7 @@
 //   be tamed first): a swarm at our settlement merges into its Lattice, Taint +8;
 // - Harsh: "crueller crossings" (it changed none): a crossing takes a quarter more.
 import { newGame } from '../../../src/game/newGame';
-import { HARSH_CROSSING, harshness, runCrossing } from '../../../src/game/sim/crossing';
+import { HARSH_CROSSING, crossingHarm, runCrossing } from '../../../src/game/sim/crossing';
 import { createColony } from '../../../src/game/sim/fleets';
 import { updateForecasts } from '../../../src/game/sim/forecast';
 import { COMMUNION_TAINT, updateHunger } from '../../../src/game/sim/hunger';
@@ -16,14 +16,14 @@ import { computeMods } from '../../../src/game/sim/mods';
 import { project } from '../../../src/game/sim/projection';
 import { swarmArrives, swarmSight } from '../../../src/game/sim/sight';
 import { colonies, distLy } from '../../../src/game/sim/util';
-import { deserialize } from '../../../src/game/save';
+import { copyState } from '../../../src/game/save';
 import type { GameState, Swarm } from '../../../src/game/types';
 import { check, done } from '../lib';
 
 const fresh = (difficulty: 'standard' | 'harsh' = 'standard') => {
-  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty, protonFate: 'stable' }) as GameState;
+  const s = newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty, protonFate: 'stable', civsAsleep: true }) as GameState;
   s.swarms = {};
-  s.flags.first_swarm = 1;
+  s.civ.flags.first_swarm = 1;
   return s;
 };
 const swarm = (id: string, p: Partial<Swarm>): Swarm => ({ id, systemId: null, from: null, to: null, traveled: 0, distance: 0, size: 3, awake: true, tamed: false, appetite: 1, ...p });
@@ -62,13 +62,13 @@ const swarm = (id: string, p: Partial<Swarm>): Swarm => ({ id, systemId: null, f
   check(seen(s.swarms.coming), 'one under way within our eyes is seen');
   check(!seen(s.swarms.nest), 'a sleeping one is not seen without Hunger Studies');
   updateForecasts(s);
-  let fc = s.forecasts.find((f) => f.kind === 'hunger');
+  let fc = s.civ.forecasts.find((f) => f.kind === 'hunger');
   check(!!fc && !isFinite(fc.dueYears), `without Hunger Studies the swarm coming for us is forecast, without a date (${fc?.title})`);
   s.civ.techs.push('hunger_studies');
   seen = swarmSight(s);
   check(seen(s.swarms.nest) && !seen(s.swarms.far), 'with Hunger Studies the sleeping one in range is seen too, the far one still not');
   updateForecasts(s);
-  fc = s.forecasts.find((f) => f.kind === 'hunger');
+  fc = s.civ.forecasts.find((f) => f.kind === 'hunger');
   const due = swarmArrives(s, s.swarms.coming);
   const want = s.years + (distLy(inside, home) * 0.75) / 0.05;
   check(!!fc && fc.dueYears === due && Math.abs(due - want) < 1e-6 * want, `with it the forecast has the arrival: ${fc ? Math.round(fc.dueYears - s.years) : '?'} years from now (three quarters of the way at 0.05 c)`);
@@ -83,7 +83,7 @@ const swarm = (id: string, p: Partial<Swarm>): Swarm => ({ id, systemId: null, f
   const from = Object.values(s.systems).filter((x) => x.id !== home.id && !x.gone).sort((a, b) => distLy(home, a) - distLy(home, b))[0];
   const d = distLy(from, home);
   s.swarms.arriving = swarm('arriving', { from: from.id, to: home.id, distance: d, traveled: d * 0.999, size: 4.5 });
-  const plain = deserialize(JSON.stringify(s))!;
+  const plain = copyState(s);
   s.civ.charters.push('communion_charter');
   const lattice = c.pops.lattice;
   const taint = s.civ.taint;
@@ -107,14 +107,16 @@ const swarm = (id: string, p: Partial<Swarm>): Swarm => ({ id, systemId: null, f
 // ---- Harsh: crueller crossings
 {
   const s = fresh('harsh');
-  check(harshness(s) === HARSH_CROSSING && harshness(fresh()) === 1, `at Harsh a crossing takes ×${harshness(s)}, at Standard ×1`);
+  check(crossingHarm(s, 'dusk') === HARSH_CROSSING, `at Harsh a crossing takes ×${crossingHarm(s, 'dusk')}`);
+  s.civ.techs.push('last_light_protocols');
+  check(Math.abs(crossingHarm(s, 'dusk') - 0.5 * HARSH_CROSSING) < 1e-12, `with its protocols, ×${crossingHarm(s, 'dusk')} (half of it)`);
   const lostAt = (difficulty: 'standard' | 'harsh') => {
     const g = fresh(difficulty);
     const col = colonies(g)[0];
     col.pops.kin = 40;
     col.cryo = 0;
     g.civ.energy = 0;
-    runCrossing(g, computeMods(g));
+    runCrossing(g, [g.player], { [g.player]: computeMods(g) });
     return 40 - (g.colonies[col.id]?.pops.kin ?? 0);
   };
   const std = lostAt('standard');

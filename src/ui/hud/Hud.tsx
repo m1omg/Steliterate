@@ -1,9 +1,10 @@
 import { SHIP_BY_ID } from '../../game/data/ships';
-import { formatYears } from '../../game/eras';
+import { formatDeepYears, formatYears } from '../../game/eras';
+import { turnsToEta } from '../../game/sim/deeptime';
 import { computeMods } from '../../game/sim/mods';
 import { project, type Projection } from '../../game/sim/projection';
 import { setDormant, setPace, longSleep } from '../../game/sim/actions';
-import { colonies, hasTech } from '../../game/sim/util';
+import { colonies, fleets, hasTech, ownColony } from '../../game/sim/util';
 import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
@@ -114,9 +115,9 @@ function Rail({ s }: { s: GameState }) {
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   });
-  const unanswered = s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
+  const unanswered = s.civ.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
   const m = modal.value?.kind;
-  const readySettlers = Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles)).length;
+  const readySettlers = fleets(s).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles)).length;
   return (
     <nav ref={ref} class="rail panel" aria-label="Civilization">
       <RailBtn icon="research" label={`Research${s.civ.researching ? '' : ': nothing chosen'}`} short="Research" on={m === 'research'} badge={s.civ.researching ? 0 : 1} onClick={() => (modal.value = { kind: 'research' })} />
@@ -137,11 +138,11 @@ function Rail({ s }: { s: GameState }) {
 function BottomLeft({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const ui = hudPrefs.value;
-  const all = s.forecasts;
+  const all = s.civ.forecasts;
   // every one not closed, in a list that scrolls (26 Oct, the player: "forecasts should also be scrollable")
-  const shown = all.filter((f) => !s.flags[`fcd:${f.uid}`]);
-  const hidden = all.length - all.filter((f) => !s.flags[`fcd:${f.uid}`]).length;
-  const feed = s.log.slice(-7).reverse();
+  const shown = all.filter((f) => !s.civ.flags[`fcd:${f.uid}`]);
+  const hidden = all.length - all.filter((f) => !s.civ.flags[`fcd:${f.uid}`]).length;
+  const feed = s.civ.log.slice(-7).reverse();
   // (on a phone it is folded under the top bar until its turn line is tapped: styles.css)
   return (
     <div class={`bottom-left${phoneMore.value ? ' open' : ''}`}>
@@ -157,7 +158,7 @@ function BottomLeft({ s }: { s: GameState }) {
             class="btn ghost small"
             data-tip="Bring back the forecasts you closed"
             onClick={() => act((g) => {
-              for (const k of Object.keys(g.flags)) if (k.startsWith('fcd:')) delete g.flags[k];
+              for (const k of Object.keys(g.civ.flags)) if (k.startsWith('fcd:')) delete g.civ.flags[k];
             })}
           >
             {hidden} closed
@@ -168,10 +169,13 @@ function BottomLeft({ s }: { s: GameState }) {
         <div class="forecast-list scroll" aria-label="Forecasts">
           {shown.map((f) => {
             // turns at the pace you have chosen (the Tide figure too, when they differ)
-            const due = isFinite(f.dueYears) && calendarEra(s) !== 'dark';
+            // (in the Dark Era only the widest atoms' decay is near enough to count)
+            const due = isFinite(f.dueYears) && (calendarEra(s) !== 'dark' || f.kind === 'positronium');
+            // (deep time, past what a year can hold: counted on the deep-time calendar, deeptime.ts)
+            const deep = !due && f.dueEta !== undefined && s.era === 'dark';
             // (as they will really fall: a flare's own clock and its first moment shorten them)
-            const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : Infinity;
-            const tideTurns = due && s.civ.pace !== 0 ? turnsUntilYears(s, f.dueYears, 0, 5000) : turns;
+            const turns = due ? turnsUntilYears(s, f.dueYears, s.civ.pace, 5000) : deep ? turnsToEta(s, f.dueEta!, s.civ.pace) : Infinity;
+            const tideTurns = s.civ.pace === 0 ? turns : due ? turnsUntilYears(s, f.dueYears, 0, 5000) : deep ? turnsToEta(s, f.dueEta!, 0) : turns;
             const tip = isFinite(turns) ? `${f.text}\n~${turns} turn${turns === 1 ? '' : 's'} at this pace${tideTurns !== turns && isFinite(tideTurns) ? ` (~${tideTurns} at the Tide)` : ''}.` : f.text;
             return (
               <div
@@ -191,7 +195,7 @@ function BottomLeft({ s }: { s: GameState }) {
                 <div class="grow">
                   <div class="t">{f.title}</div>
                   <div class="faint" style={{ fontSize: '12.5px' }}>
-                    {isFinite(f.dueYears) ? `in ${formatYears(f.dueYears - s.years)}` : 'now'}
+                    {isFinite(f.dueYears) ? `in ${formatYears(f.dueYears - s.years)}` : f.dueEta !== undefined ? (s.eta >= f.dueEta ? 'now' : `at ${formatDeepYears(f.dueEta)}`) : 'now'}
                     {isFinite(turns) ? ` · ~${turns} turn${turns === 1 ? '' : 's'}` : ''}
                   </div>
                 </div>
@@ -202,7 +206,7 @@ function BottomLeft({ s }: { s: GameState }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     act((g) => {
-                      g.flags[`fcd:${f.uid}`] = g.turn;
+                      g.civ.flags[`fcd:${f.uid}`] = g.turn;
                     });
                   }}
                 >
@@ -395,7 +399,7 @@ function TurnBox({ s, p }: { s: GameState; p: Projection }) {
           {hasTech(s, 'hibernation_protocols') && <div class="row">{longSleepBtn()}</div>}
         </div>
       )}
-      <button class="btn primary endturn" disabled={busy.value || !!s.outcome} onClick={() => doEndTurn()} data-tip={warnings.length ? `Before you go: ${warnings.join(', ')}.` : 'End the turn.'}>
+      <button class="btn primary endturn" disabled={busy.value || !!s.civ.outcome} onClick={() => doEndTurn()} data-tip={warnings.length ? `Before you go: ${warnings.join(', ')}.` : 'End the turn.'}>
         <span>
           End Turn
           <small>{civ.sleepTurns > 0 ? `sleeping · ${civ.sleepTurns} more` : warnings.length ? warnings[0] : `turn ${s.turn}`}</small>
@@ -501,9 +505,9 @@ function ThermalLegend() {
 
 /** Settlements with nothing queued and no work chosen for when nothing is (such a settlement only recycles). */
 const idleColonies = (s: GameState) => colonies(s).filter((c) => c.queue.length === 0 && !c.spare);
-const readySettlers = (s: GameState) => Object.values(s.fleets).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
-const idleShips = (s: GameState) => Object.values(s.fleets).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
-const unansweredSignals = (s: GameState) => s.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
+const readySettlers = (s: GameState) => fleets(s).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+const idleShips = (s: GameState) => fleets(s).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
+const unansweredSignals = (s: GameState) => s.civ.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
 
 /** Things worth a look before ending the turn (the to-do chips); each one takes you there. */
 function todoItems(s: GameState): { text: string; tip: string; go: () => void }[] {
@@ -573,7 +577,7 @@ export function nextTodo(s: GameState) {
 export function buildSelected(s: GameState) {
   const sel = selection.value;
   const b = sel?.kind === 'body' ? s.bodies[sel.id] : null;
-  let c = b?.colonyId ? s.colonies[b.colonyId] : null;
+  let c = b?.colonyId ? (ownColony(s, b.colonyId) ?? null) : null;
   if (!c && sel?.kind === 'system') {
     const here = colonies(s).filter((x) => x.systemId === sel.id);
     if (here.length === 1) c = here[0];

@@ -12,8 +12,9 @@ import { capacity } from './economy';
 import { computeMods } from './mods';
 import { pactsWith } from './pacts';
 import { sendSignal } from './signals';
-import { distanceToThem, lightArrived, lightAt, newcomerThread, settleNewcomers, spreadNews, voice } from './survivors';
+import { dealSize, distanceToThem, lightArrived, lightAt, newcomerThread, settleNewcomers, spreadNews, voice } from './survivors';
 import { capital, colonies, hasCharter, hasTech, log } from './util';
+import { endCiv } from './others';
 
 /** A civilization this far gone (health) asks to come to us, if it trusts us. */
 export const DYING = 0.2;
@@ -153,12 +154,14 @@ export function arriveAmongUs(state: GameState, sv: Survivor) {
     }
   }
   // they bring everything they knew
-  const insight = Math.round(60 + sv.pop * 4) + memory * MEMORY_INSIGHT;
+  const insight = Math.round(60 + dealSize(state, sv) * 4) + memory * MEMORY_INSIGHT;
   if (civ.researching) civ.research[civ.researching] = (civ.research[civ.researching] ?? 0) + insight;
   else civ.flags.insight_bank = (civ.flags.insight_bank ?? 0) + insight;
   sv.alive = false;
   sv.fate = merge ? 'absorbed' : 'saved';
   delete sv.exodus;
+  // a civilization of its own: it has come to us, and what it leaves behind is empty
+  endCiv(state, sv, merge ? 'Absorbed' : 'Came to us');
   const cap = capital(state);
   spreadNews(state, cap?.systemId ?? civ.homeSystemId, 8, merge ? `you took ${sv.name} into your Chorus` : `you took in ${sv.name} when their sources failed`, sv.id);
   sendSignal(state, {

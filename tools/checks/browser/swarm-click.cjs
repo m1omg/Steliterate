@@ -68,7 +68,9 @@ check(fair(g.res, 8) && g.res.filter((k) => k === 'swarm').length >= 3 && g.onSt
   await ck.shot('swarm-click-galaxy.png');
   // inside the system
   await page.evaluate((id) => { const e = window.__stel.engine(); e.showSystem(id); }, sysId);
-  await page.waitForTimeout(3000);
+  // (the view changes once its fade is done: on a loaded machine that is more than a fixed wait)
+  await page.waitForFunction(() => window.__stel.engine().view === 'system', null, { timeout: 20000 });
+  await page.waitForTimeout(2500);
   const sv = await probe('system');
   console.log(`  system: cloud ${sv.rpx} px across its radius; clicks on it pick ${sv.res.join(', ')}`);
   check(sv.view === 'system' && fair(sv.res, 13) && sv.res.filter((k) => k === 'swarm').length >= 3, `system view: the cloud picks the swarm (a world right under the pointer wins)`);

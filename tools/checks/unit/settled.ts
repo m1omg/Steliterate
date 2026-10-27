@@ -4,6 +4,8 @@
 // again (a node, a label, something to click) and ships can reach it. A game saved with such a
 // settlement in a system still marked gone is repaired as it loads; one that fell into the Heart
 // stays gone.
+// (In a game whose neighbours sleep, civsAsleep: our own people who left us are a neighbour
+// simulated lightly, as every Fork is; unit/others checks the neighbours as civilizations.)
 import { newGame } from '../../../src/game/newGame';
 import { evaporateHole } from '../../../src/game/physics';
 import { readSave, saveFile } from '../../../src/game/save';
@@ -12,7 +14,7 @@ import { seizeSurvivor } from '../../../src/game/sim/survivors';
 import type { Fleet, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
 
-const game = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const game = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 
 /** A hole far from home whose worlds are long gone, our own people who left us living in its Deep. */
 const setup = () => {
@@ -35,14 +37,14 @@ const setup = () => {
   check(sys.gone === true && sys.primary.kind === 'void' && !deep.dissolved, 'a hole that evaporates with nothing of ours there is gone, its Deep kept');
   // war, a siege held, and we take our own people back
   sv.war = { since: s.turn, siege: 3 };
-  const f: Fleet = { id: 'fx', name: 'Spear', ships: [{ cls: 'aegis', hp: 30 }, { cls: 'aegis', hp: 30 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
+  const f: Fleet = { id: 'fx', owner: 'us', name: 'Spear', ships: [{ cls: 'aegis', hp: 30 }, { cls: 'aegis', hp: 30 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
   s.fleets[f.id] = f;
   const err = seizeSurvivor(s, sv.id);
   const c = Object.values(s.colonies).find((x) => x.systemId === sys.id);
   check(err === null && !!c && c.bodyId === deep.id, `taking back our own people settles its Deep (${c?.name ?? 'no settlement'})`);
   check(sys.gone === false, 'and the system is no longer gone: the galaxy map draws it and it can be clicked');
   // a ship elsewhere can be sent there
-  const away: Fleet = { id: 'fy', name: 'Reach', ships: [{ cls: 'probe', hp: 2 }], at: s.civ.homeSystemId, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
+  const away: Fleet = { id: 'fy', owner: 'us', name: 'Reach', ships: [{ cls: 'probe', hp: 2 }], at: s.civ.homeSystemId, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
   s.fleets[away.id] = away;
   s.civ.energy = 1e6;
   const sent = orderMove(s, away.id, sys.id);
@@ -54,7 +56,7 @@ const setup = () => {
   const { s, sys, sv } = setup();
   evaporateHole(s, sys);
   sv.war = { since: s.turn, siege: 3 };
-  s.fleets.fx = { id: 'fx', name: 'Spear', ships: [{ cls: 'aegis', hp: 30 }, { cls: 'aegis', hp: 30 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
+  s.fleets.fx = { id: 'fx', owner: 'us', name: 'Spear', ships: [{ cls: 'aegis', hp: 30 }, { cls: 'aegis', hp: 30 }], at: sys.id, from: null, to: null, traveled: 0, distance: 0, order: 'idle' } as Fleet;
   seizeSurvivor(s, sv.id);
   sys.gone = true; // as the bug left it
   const loaded = readSave(saveFile(s).text)!;

@@ -1,15 +1,34 @@
 // Headless balance harness: autoplay whole games and report how far each strategy gets.
 declare const process: { argv: string[] };
-// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [-v]
+// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [--asleep] [--war=N] [-v]
 // Game g uses seed 1000 + g·7919; --from=N starts at game N, so runs can be split and run in parallel.
+// --asleep: the neighbours as they were before the new version, simulated lightly (civsAsleep).
+// --war=N: at turn N we go to war on our nearest neighbour that plays a game of its own, cause or
+// none (contact made, and the Threads' consent given), to see how a war goes: with the 'warlike'
+// strategy we fight it (planWar), with 'competent' we only defend.
 
 import { autoPlay, type Strategy } from '../src/game/auto';
 import { formatEta } from '../src/game/eras';
 import { newGame } from '../src/game/newGame';
 import { endTurn } from '../src/game/sim/turn';
-import { colonies, threadTotals, totalPops } from '../src/game/sim/util';
-import type { EpochLength, ProtonFate } from '../src/game/types';
+import { capital, colonies, distLy, threadTotals, totalPops } from '../src/game/sim/util';
+import type { EpochLength, GameState, ProtonFate } from '../src/game/types';
 import { fateOf } from '../src/game/fate';
+import { shuns } from '../src/game/sim/judge';
+import { WAR_ACCORD, declareWar } from '../src/game/sim/war';
+
+/** --war=N: we go to war on our nearest neighbour that plays a game of its own, contact made and the Threads' consent given. */
+function forceWar(state: GameState) {
+  const cap = capital(state);
+  const home = state.systems[cap?.systemId ?? state.civ.homeSystemId];
+  const sv = Object.values(state.survivors)
+    .filter((v) => v.alive && state.civs[v.id] && !state.civs[v.id].outcome && !v.war)
+    .sort((a, b) => distLy(home, state.systems[a.homeSystemId]) - distLy(home, state.systems[b.homeSystemId]))[0];
+  if (!sv) return;
+  sv.contact = true;
+  state.civ.accord = Math.max(state.civ.accord, WAR_ACCORD);
+  declareWar(state, sv.id);
+}
 
 // positional arguments, with the flags (-v, --diff=…) taken out wherever they stand
 const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));
@@ -19,6 +38,8 @@ const which = args[2] ?? 'both';
 const strategies: Strategy[] = which === 'both' ? ['competent', 'passive'] : [which as Strategy];
 const verbose = process.argv.includes('-v');
 const from = Number(process.argv.find((a) => a.startsWith('--from='))?.slice(7) ?? 0);
+const asleep = process.argv.includes('--asleep');
+const warAt = Number(process.argv.find((a) => a.startsWith('--war='))?.slice(6) ?? 0);
 
 for (const strategy of strategies) {
   console.log(`\n=== ${strategy} · ${length} ===`);
@@ -26,12 +47,13 @@ for (const strategy of strategies) {
     const seed = 1000 + g * 7919;
     const difficulty = (process.argv.find((a) => a.startsWith('--diff='))?.slice(7) ?? 'standard') as 'gentle' | 'standard' | 'harsh';
     const protonFate = (process.argv.find((a) => a.startsWith('--fate='))?.slice(7) ?? 'unknown') as ProtonFate;
-    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate });
+    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate, ...(asleep ? { civsAsleep: true } : {}) });
     const eraTurns: Record<string, number> = {};
     let crossings = '';
     const t0 = Date.now();
     let guard = 0;
-    while (!state.outcome && guard++ < 1200) {
+    while (!state.civ.outcome && guard++ < 1200) {
+      if (warAt && state.turn === warAt) forceWar(state);
       autoPlay(state, strategy);
       const r = endTurn(state);
       eraTurns[state.era] = (eraTurns[state.era] ?? 0) + 1;
@@ -45,16 +67,25 @@ for (const strategy of strategies) {
         );
       }
     }
-    // each neighbour: alive or its fate, +N for every star it settled beyond its first, and the
-    // pacts in force or once sealed with it (a: Mutual Aid, r: Open Archives, w: Shared Watch)
+    // each neighbour: alive or its fate (a civilization of its own: @ the turn its game ended), +N
+    // for every star it lives at beyond its first, and the pacts in force or once sealed with it
+    // (a: Mutual Aid, r: Open Archives, w: Shared Watch), ~N its own Taint if it took any Hunger
+    // step, * the wars it began, a letter for each by why (h the Hunger heard of in another, c its
+    // own corruption, d desperation), #N the settlements it took or destroyed, %N those it lost in
+    // war, ^N the Kinetic Lances it launched, and ! if it shuns us for the Hunger it has heard of in us
     const sv = Object.values(state.survivors)
       .map((s) => {
         const pacts = (['aid', 'archives', 'watch'] as const).filter((k) => s.pacts?.[k] !== undefined).map((k) => (k === 'archives' ? 'r' : k[0])).join('');
-        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}`;
+        const ended = state.civs[s.id]?.outcome?.turn;
+        const taint = state.civs[s.id]?.taint ?? 0;
+        const fl = state.civs[s.id]?.flags ?? {};
+        const why = `${'h'.repeat(fl.war_hunger ?? 0)}${'c'.repeat(fl.war_corrupted ?? 0)}${'d'.repeat(fl.war_desperate ?? 0)}`;
+        const war = `${why ? `*${why}` : ''}${fl.conquests ? `#${fl.conquests}` : ''}${fl.lost ? `%${fl.lost}` : ''}${fl.lances ? `^${fl.lances}` : ''}`;
+        return `${s.adjective}:${s.alive ? 'alive' : s.fate}${ended !== undefined ? `@${ended}` : ''}${s.systems.length > 1 ? `+${s.systems.length - 1}` : ''}${pacts ? `[${pacts}]` : ''}${taint > 0 ? `~${taint.toFixed(0)}` : ''}${war}${shuns(state, s) ? '!' : ''}`;
       })
       .join(' ');
     console.log(
-      `seed ${seed}: ${state.outcome ? `${state.outcome.kind.toUpperCase()} "${state.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage}${state.civ.flags.wars ? ` wars ${state.civ.flags.wars}` : ''} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
+      `seed ${seed}: ${state.civ.outcome ? `${state.civ.outcome.kind.toUpperCase()} "${state.civ.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage}${state.civ.flags.wars ? ` wars ${state.civ.flags.wars}` : ''}${state.civ.flags.conquests ? ` took ${state.civ.flags.conquests}` : ''}${state.civ.flags.lost ? ` lost ${state.civ.flags.lost}` : ''}${state.civ.flags.horizons ? ` horizon ${state.civ.flags.horizons}` : ''}${state.civ.flags.drifts ? ` drift ${state.civ.flags.drifts}` : ''}${state.civ.flags.woven ? ` weave ${state.civ.flags.woven}` : ''} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
     );
   }
 }

@@ -29,8 +29,8 @@ export function nextReveal() {
 }
 
 /**
- * The survey reveal's caption (21 Oct, over a flight of the camera, as in Endless Space 2): top
- * left over the view, the rest of the interface stepping aside while the camera flies
+ * The survey reveal's caption (part 4; since 21 Oct over a flight of the camera, as in Endless
+ * Space 2): top left over the view, the rest of the interface stepping aside while the camera flies
  * (in the magnifier mode it stays, and the caption has its place in the column). At the star its
  * name; at each world its name, then its kind, how it is to live on, its warmth, its water and what
  * the survey found there, typed in line by line, and four bars filling, one for each kind of
@@ -59,7 +59,7 @@ export function RevealCard({ s }: { s: GameState }) {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       // (a button in focus answers Space itself; held down, Space goes no further than once)
       if (next && (tag === 'BUTTON' || e.repeat)) return;
-      // (a window or a story over it answers its own keys)
+      // (a window over it answers its own keys; an event waits for the flight to end: Story.tsx)
       if (modal.value || eventResult.value || loreView.value) return;
       e.preventDefault();
       e.stopPropagation();

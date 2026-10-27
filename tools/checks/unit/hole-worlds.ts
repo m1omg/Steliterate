@@ -14,7 +14,7 @@ import { insolation } from '../../../src/game/physics';
 import type { GameState } from '../../../src/game/types';
 import { check, done, loadSave } from '../lib';
 
-const game = (seed: number) => newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const game = (seed: number) => newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 let holes = 0;
 let given = 0;
@@ -80,7 +80,7 @@ check(sun === 0, `the world each had keeps its sunlight (${sun})`);
 const heart = game(1000);
 check(!Object.values(heart.systems).some((x) => (x.primary.kind === 'smbh' || x.special) && x.bodies.some((id) => heart.bodies[id].traits.includes('hole_world'))), 'none at the Heart or the Wanderer');
 check(JSON.stringify(game(4000).bodies) === JSON.stringify(game(4000).bodies), 'the same seed gives the same worlds');
-const older = loadSave('551fb1a-seed24757-turn71.json.gz');
+const older = loadSave('b1fc6a7-seed1000-turn61-next.json.gz');
 check(!Object.values(older.bodies).some((x) => x.traits.includes('hole_world')), 'an older save has none');
 
 done('HOLE WORLDS');

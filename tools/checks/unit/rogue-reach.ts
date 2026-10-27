@@ -73,7 +73,7 @@ const can = (g: GameState, c: Colony, id: string) => structureCheck(g, c, STRUCT
       x.queue = [];
       x.overdrive = false;
     }
-    g.pending.length = 0;
+    g.civ.pending.length = 0;
     endTurn(g);
     return g.gfe;
   };

@@ -23,7 +23,7 @@ import type { Body, GameState, PrimaryKind } from '../../../src/game/types';
 import { check, done } from '../lib';
 
 const START = ERA_BY_ID.dusk.startYears;
-const fresh = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const fresh = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 /** A world of this kind of star with an orbit (not the Deep), unsettled. */
 const worldOf = (s: GameState, kind: PrimaryKind): Body =>
   Object.values(s.bodies).find((b) => b.kind !== 'deep' && b.orbitAU > 0 && !b.colonyId && !b.rogue && s.systems[b.systemId].primary.kind === kind && !s.systems[b.systemId].special)!;
@@ -79,7 +79,7 @@ const at = (s: GameState, years: number) => {
   b.orbitAU = 0.1 * Math.pow(t / (3e19 * (1 / Math.max(0.01, b.massEarth)) * Math.pow(0.6 / Math.max(0.05, sys.primary.mass), 2)), 0.25);
   check(fallsInAt(s, b) > s.years && fallsInAt(s, b) < s.years * 1.001, `${b.name}, at ${b.orbitAU.toFixed(3)} AU from a ${sys.primary.mass.toFixed(0)}-Sun hole, falls in just after now`);
   updateForecasts(s);
-  const fc = s.forecasts.find((f) => f.kind === 'inspiral' && f.bodyId === b.id);
+  const fc = s.civ.forecasts.find((f) => f.kind === 'inspiral' && f.bodyId === b.id);
   check(!!fc && /torn apart by its black hole/.test(fc.title), `the forecast warns: "${fc?.title}"`);
   endTurn(s);
   const deep = colonies(s).find((x) => x.systemId === sys.id && s.bodies[x.bodyId].kind === 'deep');
@@ -96,7 +96,7 @@ const at = (s: GameState, years: number) => {
   at(s, b.inspiralAt! * 0.5);
   createColony(s, b, { kin: 2 });
   updateForecasts(s);
-  check(!s.forecasts.some((f) => f.kind === 'inspiral' && f.bodyId === b.id), `in a game begun before, no warning that ${b.name} will fall into its brown dwarf (it never does)`);
+  check(!s.civ.forecasts.some((f) => f.kind === 'inspiral' && f.bodyId === b.id), `in a game begun before, no warning that ${b.name} will fall into its brown dwarf (it never does)`);
 }
 
 done('FALL IN');

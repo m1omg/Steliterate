@@ -1,4 +1,4 @@
-import type { BodyKind, EraId, PrimaryKind, StarSystem, ThreadId } from '../types';
+import type { BodyKind, ColonyForm, EraId, PrimaryKind, StarSystem, ThreadId } from '../types';
 
 export type EnergyMode =
   | 'light' // share of the primary's light (stars, embers, merger stars, rekindled dwarfs)
@@ -10,6 +10,7 @@ export type EnergyMode =
   | 'decay' // proton decay in degenerate matter
   | 'curvature' // curvature radiation: a neutron star's mass turned into particles by the space around it
   | 'siphon' // horizon siphoning (speculative)
+  | 'positronium' // the shrinking orbits of positronium, then its never-ending annihilation (positronium.ts)
   | 'rekindle'; // debris stream of a feeding world
 
 export interface StructureDef {
@@ -25,6 +26,15 @@ export interface StructureDef {
   bodies?: BodyKind[]; // allowed body kinds (default: any)
   notBodies?: BodyKind[];
   primaries?: PrimaryKind[]; // allowed primary kinds
+  /** Kept at the end of matter on a settlement that goes on at its black hole: what it holds is in the hole itself (a Horizon Vault's charge, as spin). It does not make the settlement outlast matter. */
+  keptAtHole?: boolean;
+  /**
+   * It exists in leptonic form too (passage.ts): it crosses over in the Passage, can be built in a
+   * leptonic settlement and goes on past the end of matter there; with a name and text of its own
+   * in that form where they change (an Energy Vault is a Field Store). Decay-proof structures are
+   * leptonic wherever they stand.
+   */
+  leptonic?: { name?: string; desc?: string };
   notAt?: PrimaryKind[]; // primary kinds it gathers nothing from (and cannot be built at)
   habitable?: boolean; // only bodies with intrinsic habitability > 0.3
   energy?: { mode: EnergyMode; amount: number; input?: number };
@@ -50,6 +60,8 @@ export interface StructureDef {
   warms?: boolean; // keeps a living world warm after its star has gone
   gfeDrain?: number; // unsustainable
   enables?: string; // conversion / action key
+  /** Industry turned into insight or accord where the Lattice runs it: up to `draw` points a turn each, at `rate` (economy.ts). */
+  search?: { draw: number; rate: number; into: 'insight' | 'accord' };
   terraform?: 'mirrors' | 'works' | 'seeding'; // terraforming (sim/terraform.ts): its rules and effects live there
   /** Only in a game where falling worlds break up and giants flash (a game begun since 20 Oct: rubbleGame, physics.ts). */
   rubble?: boolean;
@@ -70,7 +82,7 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'archive_spire', name: 'Archive Spire', desc: 'Observatory, library and argument hall in one tower.', era: 'dusk', cost: 40, matter: 10, max: 2, insight: 3, signature: 0.5 }),
   S({ id: 'commons', name: 'The Commons', desc: 'Where people gather to decide how to go on.', era: 'dusk', cost: 35, matter: 5, max: 1, accord: 1, resolve: 0.3, signature: 0.5 }),
   S({ id: 'shipyard', name: 'Shipyard', desc: 'Slips, cranes and a long queue of repairs.', era: 'dusk', cost: 40, matter: 20, max: 1, industry: 1, signature: 1 }),
-  S({ id: 'reserve_vault', name: 'Energy Vault', desc: 'Superconducting rings holding charge against lean years.', era: 'dusk', tech: 'energy_storage', cost: 40, matter: 20, max: 4, reserveCap: 80, signature: 0.3 }),
+  S({ id: 'reserve_vault', name: 'Energy Vault', desc: 'Superconducting rings holding charge against lean years.', era: 'dusk', tech: 'energy_storage', cost: 40, matter: 20, max: 4, reserveCap: 80, signature: 0.3, leptonic: { name: 'Field Store', desc: 'Energy held in the magnetic fields of electron–positron currents, which outlast ordinary matter.' } }),
   S({ id: 'foundry', name: 'Orbital Foundry', desc: 'Furnaces in orbit, fed by the belts.', era: 'dusk', tech: 'orbital_industry', cost: 50, matter: 20, max: 2, industry: 3, signature: 1 }),
   S({ id: 'mag_shield', name: 'Magnetic Shield', desc: 'A superconducting loop at the inner Lagrange point, standing in for a dead dynamo.', era: 'dusk', tech: 'magnetospherics', cost: 80, matter: 30, max: 1, habitable: true, declineMult: 0.4, upkeep: 1, signature: 1 }),
   S({ id: 'warrens', name: 'Deep Warrens', desc: 'Cities dug below the frost line, lit by strip lamps.', era: 'dusk', tech: 'subterranean_cities', cost: 60, matter: 15, max: 3, notBodies: ['deep', 'gas_giant', 'asteroids'], cap: { kin: 4 }, upkeep: 0.5, signature: 0.3 }),
@@ -86,11 +98,13 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'dyson_swarm', name: 'Dyson Swarm', desc: 'Thousands of patched collectors wrapped around the star. Bright work, visible for light-years.', era: 'dusk', tech: 'dyson_swarms', cost: 300, matter: 150, max: 1, systemUnique: true, bodies: ['deep'], notAt: ['brown_dwarf'], energy: { mode: 'light', amount: 40 }, signature: 8 }),
   S({ id: 'fusion_plant', name: 'Fusion Plant', desc: 'Burns hydrogen hauled up from the giants.', era: 'dusk', tech: 'fusion', cost: 60, matter: 20, max: 2, energy: { mode: 'fusion', amount: 4, input: 2 }, signature: 2 }),
   S({ id: 'hydrogen_skimmer', name: 'Hydrogen Skimmer', desc: 'Scoops fuel from a gas giant’s upper air.', era: 'dusk', tech: 'fusion', cost: 50, matter: 10, max: 1, bodies: ['gas_giant', 'ice_giant'], hydrogenYield: 3, signature: 1 }),
-  S({ id: 'substrate_core', name: 'Substrate Core', desc: 'Cold racks of thinking matter.', era: 'dusk', tech: 'mind_substrate', cost: 50, matter: 20, max: 6, cap: { echoes: 4 }, upkeep: 0.5, signature: 1 }),
+  S({ id: 'substrate_core', name: 'Substrate Core', desc: 'Cold racks of thinking matter.', era: 'dusk', tech: 'mind_substrate', cost: 50, matter: 20, max: 6, cap: { echoes: 4 }, upkeep: 0.5, signature: 1, leptonic: { name: 'Leptonic Core', desc: 'Echoes re-encoded in electron–positron structures held by fields.' } }),
   S({ id: 'upload_clinic', name: 'Upload Clinic', desc: 'Where Kin become Echoes. Some call it a door, some a grave.', era: 'dusk', tech: 'upload', cost: 60, matter: 15, max: 1, enables: 'upload', signature: 0.5 }),
-  S({ id: 'confluence_node', name: 'Confluence Node', desc: 'A chamber where minds merge.', era: 'dusk', tech: 'mind_merging', cost: 70, matter: 20, max: 3, cap: { chorus: 3 }, enables: 'merge', upkeep: 0.5, signature: 1 }),
-  S({ id: 'lattice_foundry', name: 'Lattice Foundry', desc: 'Replicator beds that build and repair without anyone asking.', era: 'dusk', tech: 'autonomous_replicators', cost: 80, matter: 30, max: 3, cap: { lattice: 6 }, enables: 'lattice', signature: 2 }),
-  S({ id: 'defense_grid', name: 'Defense Grid', desc: 'Point-defence lasers and a web of kinetic mines.', era: 'dusk', tech: 'orbital_defense', cost: 50, matter: 20, max: 2, defense: 8, signature: 1 }),
+  S({ id: 'confluence_node', name: 'Confluence Node', desc: 'A chamber where minds merge.', era: 'dusk', tech: 'mind_merging', cost: 70, matter: 20, max: 3, cap: { chorus: 3 }, enables: 'merge', upkeep: 0.5, signature: 1, leptonic: {} }),
+  S({ id: 'lattice_foundry', name: 'Lattice Foundry', desc: 'Replicator beds that build and repair without anyone asking.', era: 'dusk', tech: 'autonomous_replicators', cost: 80, matter: 30, max: 3, cap: { lattice: 6 }, enables: 'lattice', signature: 2, leptonic: { name: 'Field Foundry', desc: 'The Lattice re-encoded: processes that build and mend in fields instead of matter.' } }),
+  S({ id: 'search_foundry', name: 'Search Foundry', desc: 'The Lattice set to brute-force and evolutionary search: it tries everything, keeps what works, and turns industry into insight at a poor rate. Needs the Lattice here to run it.', era: 'dusk', tech: 'autonomous_replicators', cost: 60, matter: 25, max: 2, search: { draw: 8, rate: 0.25, into: 'insight' }, upkeep: 0.5, signature: 1.5, leptonic: {} }),
+  S({ id: 'protocol_registry', name: 'Protocol Registry', desc: 'Every agreement the Lattice is bound by, kept to the letter and enforced on itself: industry turned into accord. Needs the Lattice here to run it.', era: 'dusk', tech: 'autonomous_replicators', cost: 50, matter: 15, max: 1, search: { draw: 6, rate: 0.1, into: 'accord' }, upkeep: 0.3, signature: 0.5, leptonic: {} }),
+  S({ id: 'defense_grid', name: 'Defense Grid', desc: 'Point-defence lasers and a web of kinetic mines.', era: 'dusk', tech: 'orbital_defense', cost: 50, matter: 20, max: 2, defense: 8, signature: 1, leptonic: {} }),
   S({ id: 'stellar_lifter', name: 'Stellar Lifter', desc: 'Magnetic funnels that pull matter out of the star itself. Fast, and ruinous over time.', era: 'dusk', tech: 'stellar_lifting', cost: 150, matter: 40, max: 1, systemUnique: true, bodies: ['deep'], primaries: ['red_dwarf', 'blue_dwarf', 'white_dwarf', 'brown_dwarf', 'black_dwarf'], lift: 7, gfeDrain: 0.0015, signature: 4 }),
   S({ id: 'relic_dig', name: 'Relic Excavation', desc: 'Careful work in the ruins of someone older.', era: 'dusk', cost: 45, matter: 10, max: 1, insight: 4, signature: 0.3 }),
   S({ id: 'accretion_engine', name: 'Accretion Engine', desc: 'Feeds matter to a black hole and catches the light of its falling.', era: 'dusk', tech: 'accretion_engines', cost: 160, matter: 60, max: 2, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'accretion', amount: 30, input: 2 }, signature: 6 }),
@@ -101,10 +115,10 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'infrared_shroud', name: 'Infrared Shrouds', desc: 'Cold radiators wrapped close around a brown dwarf, drinking its infrared: its gravity is weak enough to work in close. Next to nothing while stars still shine; after the Last Light, while it still holds the heat of its youth, more than an ember gives, fading as it cools.', era: 'dusk', tech: 'ember_harvest', cost: 70, matter: 40, max: 3, bodies: ['deep'], primaries: ['brown_dwarf'], energy: { mode: 'light', amount: 12 }, signature: 2 }),
   S({ id: 'disk_skimmer', name: 'Disk Skimmer', desc: 'Harvests the debris stream of a world falling into its dead star.', era: 'degenerate', tech: 'accretion_modelling', cost: 80, matter: 30, max: 2, bodies: ['deep'], energy: { mode: 'rekindle', amount: 14 }, signature: 2 }),
   S({ id: 'brown_siphon', name: 'Hydrogen Siphon', desc: 'Drinks from a brown dwarf that never became a star.', era: 'degenerate', tech: 'brown_dwarf_mining', cost: 70, matter: 20, max: 1, bodies: ['deep'], primaries: ['brown_dwarf'], lift: 6, signature: 2 }),
-  S({ id: 'cold_vault', name: 'Cold Vault', desc: 'A shielded vault near absolute zero, home to Coldminds.', era: 'degenerate', tech: 'cold_computation', cost: 60, matter: 25, max: 4, cap: { coldminds: 6 }, enables: 'cool', upkeep: 0.1, signature: 0.1 }),
+  S({ id: 'cold_vault', name: 'Cold Vault', desc: 'A shielded vault near absolute zero, home to Coldminds.', era: 'degenerate', tech: 'cold_computation', cost: 60, matter: 25, max: 4, cap: { coldminds: 6 }, enables: 'cool', upkeep: 0.1, signature: 0.1, leptonic: { name: 'Leptonic Cold Vault', desc: 'Coldminds re-encoded in electron–positron structures, as cold as ever.' } }),
   S({ id: 'garden_ark', name: 'Garden Ark', desc: 'A lit, warm, living garden in the dark, at a cost few can afford.', era: 'degenerate', tech: 'garden_arks', cost: 110, matter: 50, max: 3, cap: { kin: 4 }, upkeep: 3, signature: 3 }),
-  S({ id: 'horizon_vault', name: 'Horizon Vault', desc: 'Stores energy as black-hole spin. Almost nothing leaks.', era: 'degenerate', tech: 'horizon_storage', cost: 110, matter: 60, max: 2, bodies: ['deep'], primaries: ['black_hole', 'smbh'], reserveCap: 400, signature: 1 }),
-  S({ id: 'burst_catcher', name: 'Burst Catcher', desc: 'Buffers for flashes too fast to use as they happen: a black hole’s final burst in its own system, a star that lights and goes out within a turn, a world falling into a dead star nearby, even a neutron star bursting in a neighbouring system.', era: 'degenerate', tech: 'burst_capture', cost: 90, matter: 40, max: 2, burstCap: 300, signature: 1 }),
+  S({ id: 'horizon_vault', name: 'Horizon Vault', desc: 'Stores energy as black-hole spin. Almost nothing leaks.', era: 'degenerate', tech: 'horizon_storage', cost: 110, matter: 60, max: 2, bodies: ['deep'], primaries: ['black_hole', 'smbh'], reserveCap: 400, keptAtHole: true, signature: 1, leptonic: {} }),
+  S({ id: 'burst_catcher', name: 'Burst Catcher', desc: 'Buffers for flashes too fast to use as they happen: a black hole’s final burst in its own system, a star that lights and goes out within a turn, a world falling into a dead star nearby, even a neutron star bursting in a neighbouring system.', era: 'degenerate', tech: 'burst_capture', cost: 90, matter: 40, max: 2, burstCap: 300, signature: 1, leptonic: {} }),
   // against a giant's flash as it falls into its star (physics.ts: flashShelterFor), in a game where giants flash;
   // from the Dusk, as a white dwarf's close giant can fall in before the Last Light
   S({ id: 'flash_shelter', name: 'Flash Shelter', desc: 'Bunkers under a kilometre of rock on the night side of a tidally locked world, against the flash of a giant falling into its star: the world keeps its own face between them and the flash, and its night side stays cold while the day side melts. Deep Warrens serve as well. Only on a locked world: a turning one needs a Shadow Shield.', era: 'dusk', tech: 'subterranean_cities', cost: 50, matter: 20, max: 1, notBodies: ['deep', 'gas_giant', 'ice_giant', 'asteroids'], signature: 0.3, rubble: true }),
@@ -112,16 +126,18 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'decay_harvester', name: 'Decay Harvester', desc: 'Collects the faint heat of protons decaying inside dead stars.', era: 'degenerate', tech: 'baryon_decay_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['white_dwarf', 'black_dwarf', 'neutron_star', 'brown_dwarf'], energy: { mode: 'decay', amount: 4 }, signature: 1 }),
   S({ id: 'curvature_collector', name: 'Curvature Collector', desc: 'Catches the particles that space, curved tight around a neutron star, makes from its mass.', era: 'degenerate', tech: 'curvature_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['neutron_star'], energy: { mode: 'curvature', amount: 4 }, signature: 1 }),
   S({ id: 'lepton_substrate', name: 'Leptonic Substrate', desc: 'Speculative: minds re-encoded in electron–positron structures that will outlast ordinary matter.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 70, max: 3, decayProof: true, cap: { echoes: 4, coldminds: 4, lattice: 2 }, signature: 1 }),
-  S({ id: 'superconducting_ring', name: 'Deep Storage Ring', desc: 'Giant, patient batteries for the long nights between sources.', era: 'degenerate', tech: 'deep_storage', cost: 70, matter: 40, max: 3, reserveCap: 150, burstCap: 100, signature: 0.3 }),
+  S({ id: 'lepton_confluence', name: 'Leptonic Confluence', desc: 'Speculative: a Confluence Node re-encoded in electron–positron structures, where minds merge. The Chorus has room nowhere else once ordinary matter is gone.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 60, max: 3, decayProof: true, cap: { chorus: 3 }, enables: 'merge', upkeep: 0.5, signature: 1 }),
+  S({ id: 'superconducting_ring', name: 'Deep Storage Ring', desc: 'Giant, patient batteries for the long nights between sources.', era: 'degenerate', tech: 'deep_storage', cost: 70, matter: 40, max: 3, reserveCap: 150, burstCap: 100, signature: 0.3, leptonic: { name: 'Deep Field Store', desc: 'Long, patient currents of electrons and positrons, holding energy, and the flashes of bursts, in their fields.' } }),
 
   // ---------------------------------------------------------------- Black Hole Age
-  S({ id: 'penrose_harvester', name: 'Penrose Harvester', desc: 'Throws mass into the ergosphere and catches it coming back heavier.', era: 'degenerate', tech: 'penrose_process', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'spin', amount: 20 }, signature: 2 }),
-  S({ id: 'hawking_collector', name: 'Hawking Collector', desc: 'Listens to the faint heat of a black hole slowly boiling away.', era: 'degenerate', tech: 'hawking_capture', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'hawking', amount: 12 }, signature: 1 }),
-  S({ id: 'bastion', name: 'Bastion Shell', desc: 'A shell of leptonic structure around a black hole.', era: 'blackhole', tech: 'bastion_architecture', cost: 90, matter: 0, max: 3, cap: { echoes: 3, coldminds: 4, lattice: 3 }, decayProof: true, signature: 1 }),
+  S({ id: 'penrose_harvester', name: 'Penrose Harvester', desc: 'Throws mass into the ergosphere and catches it coming back heavier.', era: 'degenerate', tech: 'penrose_process', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'spin', amount: 20 }, signature: 2, leptonic: {} }),
+  S({ id: 'hawking_collector', name: 'Hawking Collector', desc: 'Listens to the faint heat of a black hole slowly boiling away.', era: 'degenerate', tech: 'hawking_capture', cost: 100, matter: 0, max: 3, bodies: ['deep'], primaries: ['black_hole', 'smbh'], energy: { mode: 'hawking', amount: 12 }, signature: 1, leptonic: {} }),
+  S({ id: 'positronium_net', name: 'Positronium Net', desc: 'Speculative: fields strung through the widest atoms there will ever be, catching the faint light of their shrinking orbits: a trickle that grows toward their decay near η 141, then the last of the annihilation, half as much each turn. Only in a settlement no longer made of matter, once positronium has formed.', era: 'blackhole', tech: 'positronium_weaving', cost: 60, matter: 20, max: 3, energy: { mode: 'positronium', amount: 1 }, signature: 0, leptonic: {} }),
+  S({ id: 'bastion', name: 'Bastion Shell', desc: 'A shell of leptonic structure around a black hole.', era: 'blackhole', tech: 'bastion_architecture', cost: 90, matter: 0, max: 3, primaries: ['black_hole', 'smbh'], cap: { echoes: 3, coldminds: 4, lattice: 3 }, decayProof: true, signature: 1 }),
 
   // ---------------------------------------------------------------- Dark Era
-  S({ id: 'horizon_siphon', name: 'Horizon Siphon', desc: 'Speculative: draws on the faint temperature of the cosmic horizon itself.', era: 'dark', tech: 'horizon_siphon', cost: 120, matter: 0, max: 4, energy: { mode: 'siphon', amount: 0.6 }, signature: 0 }),
-  S({ id: 'preservation_array', name: 'Error-Correction Array', desc: 'Keeps the pattern of you from dissolving into noise.', era: 'dark', tech: 'error_correction', cost: 110, matter: 0, max: 2, continuityMult: 0.6, upkeep: 0.3, signature: 0 }),
+  S({ id: 'horizon_siphon', name: 'Horizon Siphon', desc: 'Speculative: draws on the faint temperature of the cosmic horizon itself.', era: 'dark', tech: 'horizon_siphon', cost: 120, matter: 0, max: 4, energy: { mode: 'siphon', amount: 0.6 }, signature: 0, leptonic: {} }),
+  S({ id: 'preservation_array', name: 'Error-Correction Array', desc: 'Keeps the pattern of you from dissolving into noise.', era: 'dark', tech: 'error_correction', cost: 110, matter: 0, max: 2, continuityMult: 0.6, upkeep: 0.3, signature: 0, leptonic: {} }),
 ];
 
 export const STRUCTURE_BY_ID: Record<string, StructureDef> = Object.fromEntries(STRUCTURES.map((s) => [s.id, s]));
@@ -152,7 +168,17 @@ export const STRUCTURE_KINDS: { id: StructureKind; name: string; tip: string }[]
 /** A structure's kind, from what it does: the first of these that it yields. */
 /** Does building this do something once, at that settlement, beyond what it does while it stands? */
 export function hasOnceEffect(d: StructureDef): boolean {
-  return !!(d.vitalityOnce || d.coreHeatBonus || d.id === 'confluence_node');
+  return !!(d.vitalityOnce || d.coreHeatBonus || d.enables === 'merge');
+}
+
+/** Whether it can stand in a leptonic settlement: it has a leptonic form, or is decay-proof (leptonic wherever it stands). */
+export function inLeptonicForm(d: StructureDef): boolean {
+  return !!d.leptonic || !!d.decayProof;
+}
+
+/** Whether something standing at a settlement lets it do this (a conversion's key: 'merge' needs a Confluence Node, or a Leptonic Confluence). */
+export function enabledAt(structures: Record<string, number>, what: string): boolean {
+  return Object.entries(structures).some(([id, n]) => n > 0 && STRUCTURE_BY_ID[id]?.enables === what);
 }
 
 /**
@@ -219,9 +245,11 @@ function lightSourceOf(sys: StarSystem): LightSource {
 }
 
 /** A structure's name and description where it stands (in `sys`), or in general. */
-export function structureLabel(id: string, sys?: StarSystem | null): { name: string; desc: string } {
+export function structureLabel(id: string, sys?: StarSystem | null, form?: ColonyForm): { name: string; desc: string } {
   const def = STRUCTURE_BY_ID[id];
   if (!def) return { name: id, desc: '' };
+  // in leptonic form, its own name where it has one (an Energy Vault is a Field Store)
+  if (form && form !== 'baryonic' && def.leptonic?.name) return { name: def.leptonic.name, desc: def.leptonic.desc ?? def.desc };
   const local = sys ? LOCAL_NAMES[id]?.[lightSourceOf(sys)] : undefined;
   return local ? { name: local[0], desc: local[1] } : { name: def.name, desc: def.desc };
 }

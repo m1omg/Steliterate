@@ -10,7 +10,8 @@ import { TECH_BY_ID } from '../data/techs';
 import type { GameState, Survivor, SurvivorWay } from '../types';
 import { matterGone } from '../fate';
 import { availableTechs, techCost } from './research';
-import { clamp } from './util';
+import { clamp, marks } from './util';
+import { SANCTION_AT, shuns } from './judge';
 
 export type Want = 'matter' | 'energy';
 
@@ -61,14 +62,25 @@ export interface Offer {
   insight: number;
   tech: string | null;
   techName: string | null;
+  /** Notes on a Hunger technology, which only a civilization on that path offers: taking them is a Hunger act of ours. */
+  tainted?: boolean;
 }
 
-/** The project their notes would be on: ours now, or else the cheapest one open to us. */
-function subject(state: GameState): { id: string; name: string; cost: number } | null {
+/**
+ * The project their notes would be on: ours now, or else the cheapest one open to us. A
+ * civilization of its own has notes only on what it knows, and on a Hunger technology only once it
+ * is on that path itself (judge.ts); one simulated lightly, never on one.
+ */
+function subject(state: GameState, sv: Survivor): { id: string; name: string; cost: number; tainted: boolean } | null {
+  const theirs = state.civs[sv.id];
+  const ok = (id: string) => {
+    const d = TECH_BY_ID[id];
+    if (!d || (theirs && !theirs.techs.includes(id))) return false;
+    return !d.taint || (theirs?.taint ?? 0) >= SANCTION_AT;
+  };
   const r = state.civ.researching;
-  if (r && TECH_BY_ID[r]) return { id: r, name: TECH_BY_ID[r].name, cost: techCost(state, r) };
-  const t = availableTechs(state).sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0];
-  return t ? { id: t.id, name: t.name, cost: techCost(state, t.id) } : null;
+  const id = r && ok(r) ? r : availableTechs(state).filter((t) => ok(t.id)).sort((a, b) => techCost(state, a.id) - techCost(state, b.id))[0]?.id;
+  return id ? { id, name: TECH_BY_ID[id].name, cost: techCost(state, id), tainted: !!TECH_BY_ID[id].taint } : null;
 }
 
 /**
@@ -76,36 +88,38 @@ function subject(state: GameState): { id: string; name: string; cost: number } |
  * spare it, or there is nothing left for us to learn.
  */
 export function tradeOffer(state: GameState, sv: Survivor): Offer | null {
+  // the Hunger they have heard of in us: they trade nothing more (judge.ts)
+  if (shuns(state, sv)) return null;
   const t = termsFor(sv);
   const want: Want = t.want === 'matter' && matterGone(state) ? 'energy' : t.want;
-  const p = subject(state);
+  const p = subject(state, sv);
   if (!p) return null;
   const worth = Math.round(p.cost * t.share * (0.6 + 0.4 * sv.health));
   const have = want === 'matter' ? state.civ.matter : state.civ.energy;
   // at their rate, and never more than we could spare: half of what we hold
   const ask = Math.min(Math.round(worth / t.rate), ASK_MAX, Math.floor(have / 2));
   if (ask < ASK_MIN) return null;
-  return { want, ask, insight: Math.round(Math.min(worth, ask * t.rate)), tech: p.id, techName: p.name };
+  return { want, ask, insight: Math.round(Math.min(worth, ask * t.rate)), tech: p.id, techName: p.name, ...(p.tainted ? { tainted: true } : {}) };
 }
 
 /** Whether their rhythm (and our last answers) lets them make an offer of this kind now. */
 export function offerDue(state: GameState, sv: Survivor, kind: 'trade' | 'joint', chance: () => number): boolean {
-  if (sv.war || state.turn < (state.civ.flags[`${kind}_next_${sv.id}`] ?? 0)) return false;
+  if (sv.war || state.turn < (sv.marks?.[`${kind}_next`] ?? 0)) return false;
   return sv.way === 'lattice' || chance() < OFFER_CHANCE;
 }
 
 /** They made an offer of this kind: the next waits at least their rhythm. */
 export function offered(state: GameState, sv: Survivor, kind: 'trade' | 'joint') {
-  state.civ.flags[`${kind}_next_${sv.id}`] = state.turn + termsFor(sv).every;
+  marks(sv)[`${kind}_next`] = state.turn + termsFor(sv).every;
 }
 
 /** Our answer to an offer of this kind: a yes resets their patience, a no doubles it. */
 export function answered(state: GameState, sv: Survivor, kind: 'trade' | 'joint', yes: boolean) {
-  const f = state.civ.flags;
-  const no = yes ? 0 : (f[`${kind}_no_${sv.id}`] ?? 0) + 1;
-  if (no) f[`${kind}_no_${sv.id}`] = no;
-  else delete f[`${kind}_no_${sv.id}`];
-  f[`${kind}_next_${sv.id}`] = state.turn + termsFor(sv).every * Math.min(BACKOFF_MAX, 2 ** no);
+  const f = marks(sv);
+  const no = yes ? 0 : (f[`${kind}_no`] ?? 0) + 1;
+  if (no) f[`${kind}_no`] = no;
+  else delete f[`${kind}_no`];
+  f[`${kind}_next`] = state.turn + termsFor(sv).every * Math.min(BACKOFF_MAX, 2 ** no);
 }
 
 /**

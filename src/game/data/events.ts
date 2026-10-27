@@ -1,16 +1,19 @@
 import type { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
-import { capital, colonies, hasCharter, hasTech, log, popsOf, threadTotals, uid } from '../sim/util';
+import { capital, colonies, formOf, hasCharter, hasTech, log, popsOf, threadTotals, uid } from '../sim/util';
 import { welcomeEchoes } from '../sim/archive';
-import { digShelters, effectivePace, FLARE_TURNS, keepTimeWithFlare, keepTimeWithStar, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, sheltersNeeded, STAR_TURNS, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
+import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, effectivePace, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime, sup } from '../eras';
 import { SURFACE_LIFE, boilingAway, buriedOcean, embersOutEta, haloEta, haloMoved, siphonsRunning, steamWorld } from '../physics';
 import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
+import { send } from '../civs';
+import { CORRUPT_AT, easeTaint, hungerAct } from '../sim/judge';
 import { destroyColony } from '../sim/fleets';
 import { capacity } from '../sim/economy';
 import { computeMods } from '../sim/mods';
+import { leaveWeave, leaveWeaveCost } from '../sim/positronium';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -41,6 +44,14 @@ export interface EventDef {
   eras?: EraId[];
   weight?: number; // random pool weight (0 or undefined = scripted only)
   once?: boolean;
+  /**
+   * Who it can happen to: the player alone (absent), or every civilization ('everyone'): the
+   * ordinary life of Threads and people, and the Dark Era's own (the new version, part 2a-5). The
+   * other minds, the Lattice's and the Hunger's stories, the star clocks, the news of the universe
+   * and the homeworld's story (a world born with its failing dynamo and its substellar sea) are the
+   * player's.
+   */
+  scope?: 'everyone';
   bind?: (s: GameState, rng: Rng) => EventData | null;
   text: (s: GameState, d: EventData) => string;
   choices: EventChoice[];
@@ -59,7 +70,11 @@ const insight = (s: GameState, n: number) => {
   if (c.researching) c.research[c.researching] = (c.research[c.researching] ?? 0) + n;
   else c.flags.insight_bank = (c.flags.insight_bank ?? 0) + n;
 };
-const taint = (s: GameState, n: number) => (s.civ.taint = Math.max(0, Math.min(100, s.civ.taint + n)));
+/** Taint: a rise is a Hunger act (`act`, at `at`), heard of by the others when its light reaches them (judge.ts); a fall is ours alone. */
+const taint = (s: GameState, n: number, act = 'took the Hunger’s ways', at?: string) => {
+  if (n > 0) hungerAct(s, s.civ.id, n, at ?? capital(s)?.systemId ?? s.civ.homeSystemId, act);
+  else easeTaint(s, s.civ.id, -n);
+};
 
 function shelterNote(r: { built: number; missing: number }): string {
   if (!r.built && !r.missing) return 'Everyone already has somewhere to go.';
@@ -231,14 +246,11 @@ function bodyById(s: GameState, d: EventData): Body | undefined {
  * a Lattice for every three of them at the capital, as far as the capital has room. Only for a
  * settlement of ours that is not the capital.
  */
-/** Taint enough that the others will no longer bind themselves to us (pacts.ts): a civilization gone over to the Hunger's ways. */
-const HUNGER_WAYS = 60;
-
 function takenApart(s: GameState, d: EventData): { people: number; lattice: number } {
   const b = bodyById(s, d);
   const c = b?.colonyId ? s.colonies[b.colonyId] : undefined;
   const cap = capital(s);
-  if (!c || !cap || c.id === cap.id) return { people: 0, lattice: 0 };
+  if (!c || !cap || c.owner !== s.civ.id || c.id === cap.id) return { people: 0, lattice: 0 };
   const people = popsOf(c) + c.cryo;
   const room = Math.max(0, capacity(s, cap, computeMods(s)).lattice - cap.pops.lattice);
   return { people, lattice: Math.min(Math.floor(people / 3), Math.floor(room)) };
@@ -286,6 +298,7 @@ export const EVENTS: EventDef[] = [
     id: 'superflare',
     title: 'Superflare',
     art: 'flare',
+    plate: 'superflare',
     eras: ['dusk'],
     weight: 6,
     bind: (s) => {
@@ -341,6 +354,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'who_sleeps_first',
     title: 'Who Sleeps First',
+    scope: 'everyone',
     art: 'dusk',
     plate: 'who_sleeps_first',
     eras: ['dusk', 'degenerate'],
@@ -376,7 +390,9 @@ export const EVENTS: EventDef[] = [
   {
     id: 'derelict_ark',
     title: 'A Derelict Ark',
+    scope: 'everyone',
     art: 'ruins',
+    plate: 'derelict_ark',
     eras: ['dusk', 'degenerate'],
     weight: 3,
     once: true,
@@ -403,6 +419,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'prophet_of_stillness',
     title: 'The Prophet of Stillness',
+    scope: 'everyone',
     art: 'dusk',
     plate: 'prophet_of_stillness',
     eras: ['dusk', 'degenerate'],
@@ -420,6 +437,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'first_upload',
     title: 'The First Upload',
+    scope: 'everyone',
     art: 'dusk',
     plate: 'first_upload',
     eras: ['dusk'],
@@ -436,6 +454,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'echo_drift',
     title: 'Drift',
+    scope: 'everyone',
     art: 'dusk',
     weight: 4,
     bind: (s) => (threadTotals(s).echoes >= 3 ? {} : null),
@@ -462,6 +481,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'chorus_invitation',
     title: 'An Invitation to Merge',
+    scope: 'everyone',
     art: 'dusk',
     weight: 3,
     bind: (s) => (threadTotals(s).chorus >= 1 && threadTotals(s).echoes >= 2 ? {} : null),
@@ -477,6 +497,7 @@ export const EVENTS: EventDef[] = [
     id: 'rust_in_the_belt',
     title: 'Rust in the Belt',
     art: 'hunger',
+    plate: 'rust_in_the_belt',
     once: true,
     text: (_s, d) =>
       'Surveyors found asteroids hollowed from the inside, and a haze of fine dark motes that moved away from their lights. It is a swarm: harvesters left running by a civilization that died before our sun was born. It does not seem to know it is alone. It only eats and grows, and it is drawn to warmth.' +
@@ -490,6 +511,7 @@ export const EVENTS: EventDef[] = [
     id: 'last_flare',
     title: 'The Last Flare',
     art: 'flare',
+    plate: 'last_flare',
     text: (s, d) => {
       const need = sheltersNeeded(s, String(d.systemId)).reduce((a, x) => a + x.n, 0);
       const day = Number(d.day1) > 1000 ? 'hot enough to soften rock' : Number(d.day1) > 373 ? 'far past boiling' : 'hotter than anything we have known';
@@ -532,6 +554,7 @@ export const EVENTS: EventDef[] = [
     id: 'first_contact',
     title: 'We Are Not Alone',
     art: 'survivor',
+    plate: 'first_contact',
     text: (_s, d) =>
       `Our listeners have picked out a civilization: ${d.name}, at ${d.star}, ${d.dist} away. What we are hearing left them ${d.age} ago; whatever they are now, they were alive then, and facing the same end as us. The first thing we could make out: “${d.words}”`,
     choices: [
@@ -550,7 +573,7 @@ export const EVENTS: EventDef[] = [
       'The command language decodes into a single standing order, repeated in every swarm: PERSIST. Its makers wrote it the night their star went out. They meant themselves. The machines took it literally, and have been obeying for a trillion years.',
     choices: [
       { label: 'Hear the warning', hint: 'Resolve +3. Taint −5.', run: (s) => { res(s, 3); taint(s, -5); } },
-      { label: 'Hear the promise', hint: 'Insight +80. Taint +5.', run: (s) => { insight(s, 80); taint(s, 5); } },
+      { label: 'Hear the promise', hint: 'Insight +80. Taint +5.', run: (s) => { insight(s, 80); taint(s, 5, 'heard the Hunger’s promise'); } },
     ],
   },
 
@@ -579,7 +602,8 @@ export const EVENTS: EventDef[] = [
         run: (s, d) => {
           for (const sv of Object.values(s.survivors)) {
             if (!sv.alive || !sv.contact) continue;
-            sv.health = Math.min(1, sv.health + 0.08);
+            if (s.civs[sv.id]) send(s, sv.id, { resolve: 3 });
+            else sv.health = Math.min(1, sv.health + 0.08);
             feel(s, sv, 8, `you told us of the new star at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'}`);
           }
         },
@@ -634,6 +658,7 @@ export const EVENTS: EventDef[] = [
     id: 'last_star',
     title: 'Light in the Halo',
     art: 'degenerate',
+    plate: 'last_star',
     text: (s, d) => {
       const sys = s.systems[String(d.systemId)];
       // where protons decay it can light as the Great Decay comes, and go with the rest of matter
@@ -724,7 +749,7 @@ export const EVENTS: EventDef[] = [
           const t = takenApart(s, d);
           return `Its ${t.people} people are not taken off: we take them apart with the rubble. Matter +${5 * t.people}.${t.lattice ? ` Lattice +${t.lattice} at the capital.` : ''} Taint +8. Resolve −6. Kin standing −10.`;
         },
-        shown: (s, d) => !!bodyById(s, d)?.traits.includes('rubble') && s.civ.taint >= HUNGER_WAYS && takenApart(s, d).people > 0,
+        shown: (s, d) => !!bodyById(s, d)?.traits.includes('rubble') && s.civ.taint >= CORRUPT_AT && takenApart(s, d).people > 0,
         run: (s, d) => {
           const b = bodyById(s, d);
           const c = b?.colonyId ? s.colonies[b.colonyId] : undefined;
@@ -735,7 +760,7 @@ export const EVENTS: EventDef[] = [
           cap.pops.lattice += t.lattice;
           res(s, -6);
           stand(s, 'kin', -10);
-          taint(s, 8);
+          taint(s, 8, 'took apart the people of a falling world', b.systemId);
           destroyColony(s, c, 'its people were taken apart with their world');
           return `What was left of ${c.name} is matter now, and some of it thinks again, as Lattice at ${cap.name}. No one speaks of it at the capital, and everyone knows.`;
         },
@@ -746,6 +771,7 @@ export const EVENTS: EventDef[] = [
     id: 'embers_dim',
     title: 'The Embers Dim',
     art: 'degenerate',
+    plate: 'embers_dim',
     eras: ['degenerate'],
     once: true,
     weight: 20,
@@ -763,6 +789,7 @@ export const EVENTS: EventDef[] = [
     id: 'proton_answer',
     title: 'The Proton Question',
     art: 'degenerate',
+    plate: 'proton_detector',
     once: true,
     text: (s) =>
       fateOf(s) === 'decay'
@@ -779,6 +806,7 @@ export const EVENTS: EventDef[] = [
     id: 'decay_shown',
     title: 'Not for Ever',
     art: 'degenerate',
+    plate: 'neutron_warm',
     once: true,
     text: () =>
       'The neutron stars should be a few billionths of a degree above nothing by now, and still falling. They are at one and a half degrees, and holding; every dead dwarf at a twentieth of one. The warmth is their own protons dying. Ordinary matter is not for ever: by about 10³⁹ years every planet, every dead star and every body will have dissolved into light and leptons. Whatever we are then, we cannot be made of this.',
@@ -791,6 +819,7 @@ export const EVENTS: EventDef[] = [
     id: 'curvature_shown',
     title: 'The Stars That Would Not Cool',
     art: 'degenerate',
+    plate: 'neutron_warm',
     once: true,
     text: () =>
       'The neutron stars should be a few billionths of a degree above nothing by now, and still falling. They are at thirty billionths, and holding. The warmth is not theirs: space itself, curved tight around them, is turning their mass into particles, a little at a time. The protons are stable, and still matter is not for ever. The neutron stars will burst near η 68, the dwarfs fade by η 85, and every world will be gone by η 90. Matter will outlast the stellar black holes, though not the Heart.',
@@ -804,6 +833,7 @@ export const EVENTS: EventDef[] = [
     id: 'long_flow',
     title: 'The Long Flow',
     art: 'blackhole',
+    plate: 'long_flow',
     once: true,
     text: (_s, d) =>
       `Ten to the sixty-five years. At the absolute zero an atom still slips out of its place now and then, tunnelling through what holds it: in iron, about once in that long. From now on every solid flows, like a liquid too slow for anyone to see. Whatever no one is awake to mend runs into smooth lumps${Number(d.ruins) > 0 ? `: the ${Number(d.ruins) === 1 ? 'ruin' : `${d.ruins} ruins`} we found and never dug among them` : ''}. Every world, and every stone in the belts, is slumping into a sphere. It was always happening, far too slowly to notice; our turns have grown long enough to see it. Kin, the Lattice and any mind that thinks faster than the flow keep a settlement whole. Minds that think more slowly must keep watchers awake between their thoughts, and a place where no one is awake at all will flow away.`,
@@ -822,10 +852,77 @@ export const EVENTS: EventDef[] = [
     // queued as the calendar passes η 85 (turn.ts), where protons decayed or space unmade matter;
     // until 12 Oct the milestone was on the chronometer and nothing came of it
     text: (s) =>
-      `The electrons and positrons that ${fateOf(s) === 'curvature' ? 'space has made out of the dead stars’ matter' : 'the dying protons left behind'} are spread thinner than anything has ever been, and still, since about 10⁸⁵ years, here and there one electron and one positron have found each other. Each pair is an atom of positronium, bound across a gulf wider than the whole universe anyone could once see, going once around in far longer than the stars lasted. They will be the last atoms there are. Nothing we do can touch them: they fall slowly together and, near η 141, end in a flash of light.`,
+      `The electrons and positrons that ${fateOf(s) === 'curvature' ? 'space has made out of the dead stars’ matter' : 'the dying protons left behind'} are spread thinner than anything has ever been, and still, since about 10⁸⁵ years, here and there one electron and one positron have found each other. Each pair is an atom of positronium, bound across a gulf wider than the whole universe anyone could once see, going once around in far longer than the stars lasted. They will be the last atoms there are, and the widest: they fall slowly together and, near η 141, end in a flash of light. Until then minds could be woven through them, the slowest and cheapest thinking there will ever be, and nets strung through them could catch the faint light of their falling (Positronium Weaving).`,
     choices: [
       { label: 'Study them', hint: 'Insight +40.', run: (s) => { insight(s, 40); } },
       { label: 'Let them be', hint: 'Resolve +1.', run: (s) => { res(s, 1); } },
+    ],
+  },
+  {
+    id: 'positronium_ends',
+    title: 'The Widest Atoms End',
+    art: 'dark',
+    once: true,
+    // queued the turn before they decay (turn.ts), for whoever has woven anything through them or strung nets
+    text: (s) => {
+      const woven = colonies(s).filter((c) => formOf(c) === 'positronium');
+      return `The positronium atoms have fallen nearly all the way together. Before the next turn is out they will annihilate, each in a last flash of light, and after them only scattered electrons and positrons are left, meeting less and less often, for ever.${woven.length ? ` ${woven.length === 1 ? `${woven[0].name} is` : `${woven.map((c) => c.name).join(', ')} are`} still woven through them: whoever is still there when they end, ends with them.` : ' Our nets will catch the last of it, and then less and less of the annihilation that never quite stops.'}`;
+    },
+    choices: [
+      {
+        label: 'Leave the weave, all of it',
+        hint: (s) => `Every settlement of ours in the weave comes back out, leptonic: ${Math.min(Math.floor(s.civ.energy), colonies(s).filter((c) => formOf(c) === 'positronium').reduce((a, c) => a + leaveWeaveCost(s, c), 0))} energy.`,
+        ok: (s) => colonies(s).some((c) => formOf(c) === 'positronium'),
+        run: (s) => {
+          for (const c of colonies(s).filter((x) => formOf(x) === 'positronium')) leaveWeave(s, c.id);
+        },
+      },
+      {
+        label: 'Watch them end',
+        hint: (s) => `${colonies(s).some((c) => formOf(c) === 'positronium') ? 'Whoever is still woven through them ends with them. ' : ''}Insight +20.`,
+        run: (s) => {
+          insight(s, 20);
+        },
+      },
+    ],
+  },
+  {
+    id: 'black_dwarf_supernova',
+    title: 'The Last Flashes',
+    art: 'dark',
+    once: true,
+    // the first heavy black dwarf to explode (deeptime.ts; Caplan 2020), matter stable: the rest are lines in the Record
+    text: (s, d) =>
+      `For longer than anything else has lasted, the nuclei inside the black dwarf at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'} have been tunnelling into one another, crushed together, fusing a few at a time, until its core was iron. Iron has fewer electrons for its weight than the carbon and oxygen it was made from, and it is the electrons that hold a dead star up: this one, one of the few born heavy, could stand no longer. It has collapsed and exploded, a supernova in a universe that had forgotten what light was, and its worlds went with it. The heaviest dead stars go first; the lightest that can, at 1.16 times the Sun, will hold out for some 10³²⁰⁰⁰ years. Burst Catchers bank their flashes.`,
+    choices: [
+      { label: 'Study the flash', hint: 'Insight +60.', run: (s) => { insight(s, 60); } },
+      { label: 'Mark it in the Record', hint: 'Resolve +2.', run: (s) => { res(s, 2); } },
+    ],
+  },
+  {
+    id: 'iron_stars',
+    title: 'Iron Stars',
+    art: 'dark',
+    once: true,
+    // as the calendar passes 10^1500 years, matter stable (deeptime.ts; Dyson 1979)
+    text: () =>
+      'By tunnelling, a few nuclei at a time, everything lighter than iron has fused up to it, and everything heavier has split or decayed down to it. Every dead star and every world is iron-56 now, where every nuclear road ends, and nothing is left in any of it to fuse or burn: Fusion Plants and the Hearths’ fuel give nothing more. The matter is still here, cold and dark and perfectly still. It will not be here for ever: from 10^(10²⁶) years it begins to tunnel into black holes.',
+    choices: [
+      { label: 'Study the iron', hint: 'Insight +30.', run: (s) => { insight(s, 30); } },
+      { label: 'Let it be', hint: 'Resolve +1.', run: (s) => { res(s, 1); } },
+    ],
+  },
+  {
+    id: 'tunnelling_collapse',
+    title: 'The Matter Goes',
+    art: 'dark',
+    once: true,
+    // the first system to tunnel into black holes, matter stable (deeptime.ts; Dyson 1979)
+    text: (s, d) =>
+      `The iron at ${s.systems[String(d.systemId)]?.name ?? 'a dead star'} is gone. Given long enough, any lump of matter can tunnel all at once into a black hole (if holes that small can exist, and a whole star can, in any case), and such a hole evaporates almost as soon as it forms, in a flash. Somewhere between 10^(10²⁶) and 10^(10⁷⁶) years this happens to everything: no one can say which system goes when, only that none will be left. Whatever is still made of matter goes with it; what made the Passage stays, in the dark where the system was, and so do minds on decay-proof substrate, without the Kin and what has no leptonic form. Burst Catchers bank the flashes.`,
+    choices: [
+      { label: 'Watch them go', hint: 'Insight +40.', run: (s) => { insight(s, 40); } },
+      { label: 'Hold to what is left', hint: 'Resolve +3.', run: (s) => { res(s, 3); } },
     ],
   },
   {
@@ -834,13 +931,14 @@ export const EVENTS: EventDef[] = [
     art: 'blackhole',
     plate: 'final_burst',
     text: (s, d) =>
-      `The black hole at ${s.systems[String(d.systemId)]?.name} has finished evaporating. In its last second it gave back, as a burst of gamma rays and particles, what was left of everything it ever swallowed. As it shrank, its hold on what circled it faded to nothing: our settlements there drift on, everything we built with them, with no hole left to draw on.${Object.values(s.colonies).some((c) => c.systemId === String(d.systemId) && (c.structures.horizon_vault ?? 0) > 0) ? ' The charge our Horizon Vaults kept in its spin went with it.' : ''}`,
+      `The black hole at ${s.systems[String(d.systemId)]?.name} has finished evaporating. In its last second it gave back, as a burst of gamma rays and particles, what was left of everything it ever swallowed. As it shrank, its hold on what circled it faded to nothing: our settlements there drift on, everything we built with them, with no hole left to draw on.${colonies(s).some((c) => c.systemId === String(d.systemId) && (c.structures.horizon_vault ?? 0) > 0) ? ' The charge our Horizon Vaults kept in its spin went with it.' : ''}`,
     choices: [{ label: 'Record it', hint: 'Its light is gone; what we built there stays.', run: () => {} }],
   },
   {
     id: 'horizon_whispers',
     title: 'Whispers at the Horizon',
     art: 'blackhole',
+    plate: 'horizon_whispers',
     eras: ['blackhole'],
     weight: 3,
     once: true,
@@ -855,6 +953,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'forgetting',
     title: 'Forgetting',
+    scope: 'everyone',
     art: 'dark',
     eras: ['dark'],
     weight: 8,
@@ -870,6 +969,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'positronium',
     title: 'Atoms Wider Than Galaxies',
+    scope: 'everyone',
     art: 'dark',
     eras: ['dark'],
     weight: 4,
@@ -881,6 +981,7 @@ export const EVENTS: EventDef[] = [
   {
     id: 'false_vacuum',
     title: 'The False Vacuum',
+    scope: 'everyone',
     art: 'dark',
     eras: ['dark'],
     weight: 3,
@@ -913,16 +1014,18 @@ export const EVENTS: EventDef[] = [
     id: 'relic_archive',
     title: 'An Archive of the Dead',
     art: 'ruins',
+    plate: 'relic_archive',
     text: (s, d) => `On ${bodyById(s, d)?.name} the survey found a library cut into bedrock by someone who died before our star formed. Much of it is still readable.`,
     choices: [
       { label: 'Read it, slowly', hint: 'Insight +90.', run: (s, d) => { insight(s, 90); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
-      { label: 'Strip it for matter', hint: 'Matter +50 (more under salvage charters).', run: (s, d) => { const m = hasCharter(s, 'consume_the_dead') ? 3 : hasCharter(s, 'salvage_the_dead') ? 2 : 1; matter(s, 50 * m); if (m === 3) taint(s, 2); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; } },
+      { label: 'Strip it for matter', hint: 'Matter +50 (more under salvage charters).', run: (s, d) => { const m = hasCharter(s, 'consume_the_dead') ? 3 : hasCharter(s, 'salvage_the_dead') ? 2 : 1; matter(s, 50 * m); const b = bodyById(s, d); if (m === 3) taint(s, 2, 'stripped an archive of the dead for matter', b?.systemId); if (b?.relic) b.relic.state = 'spent'; } },
     ],
   },
   {
     id: 'relic_engine',
     title: 'A Cold Engine',
     art: 'ruins',
+    plate: 'relic_engine',
     text: (s, d) => `Beneath the ice of ${bodyById(s, d)?.name} lies an ancient reactor, shut down and sealed. Its fuel is still there.`,
     choices: [
       { label: 'Restart it', hint: 'Energy +70. Its heat may be noticed.', run: (s, d, rng) => { energy(s, 70); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; if (rng.chance(0.3)) { const sys = b ? s.systems[b.systemId] : null; const from = sys ? drawSwarmTo(s, sys.id) : null; if (sys && from) log(s, `The swarm at ${from.name} has turned toward the warmth of the engine at ${sys.name}.`, 'bad', sys.id); } } },
@@ -933,17 +1036,19 @@ export const EVENTS: EventDef[] = [
     id: 'relic_tomb',
     title: 'A Tomb',
     art: 'ruins',
+    plate: 'relic_tomb',
     text: (s, d) => `On ${bodyById(s, d)?.name}: rows upon rows of markers in a script no one alive can read, and one monument in the middle. Someone stayed to bury everyone else.`,
     choices: [
       { label: 'Mourn them', hint: 'Resolve +4.', run: (s, d) => { res(s, 4); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
       { label: 'Study the script', hint: 'Insight +45.', run: (s, d) => { insight(s, 45); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'studied'; } },
-      { label: 'Salvage the site', hint: 'Matter +40. Resolve −3.', run: (s, d) => { const m = hasCharter(s, 'consume_the_dead') ? 3 : hasCharter(s, 'salvage_the_dead') ? 2 : 1; matter(s, 40 * m); res(s, -3); if (m === 3) taint(s, 2); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; } },
+      { label: 'Salvage the site', hint: 'Matter +40. Resolve −3.', run: (s, d) => { const m = hasCharter(s, 'consume_the_dead') ? 3 : hasCharter(s, 'salvage_the_dead') ? 2 : 1; matter(s, 40 * m); res(s, -3); const b = bodyById(s, d); if (m === 3) taint(s, 2, 'stripped a tomb for matter', b?.systemId); if (b?.relic) b.relic.state = 'spent'; } },
     ],
   },
   {
     id: 'relic_ghosts',
     title: 'Ghosts in the Archive',
     art: 'ruins',
+    plate: 'relic_ghosts',
     text: (s, d) => `The machines under ${bodyById(s, d)?.name} are still running, and still storing minds: thousands of archived people from a civilization that ended ages ago. They are not asleep. They are paused, mid-sentence.`,
     choices: [
       { label: 'Run them again, as Echoes', hint: '+2 Echoes, wherever there is substrate (they wait in the archive until there is). They are strange to us.', ok: (s) => hasTech(s, 'mind_substrate'), run: (s, d) => { welcomeEchoes(s, 2); stand(s, 'echoes', -3); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'woken'; } },
@@ -989,7 +1094,7 @@ export const EVENTS: EventDef[] = [
           return 'Something went wrong in the vault a very long time ago. What woke up is not the people who went to sleep. Their machines woke with them, and they are hungry.';
         },
       },
-      { label: 'Devour the vault', hint: 'Energy +150, Matter +60. Hunger Taint +6. Requires Strip the Sleepers.', ok: (s) => hasCharter(s, 'strip_the_sleepers'), run: (s, d) => { energy(s, 150); matter(s, 60); taint(s, 6); res(s, -5); const b = bodyById(s, d); if (b?.relic) b.relic.state = 'spent'; } },
+      { label: 'Devour the vault', hint: 'Energy +150, Matter +60. Hunger Taint +6. Requires Strip the Sleepers.', ok: (s) => hasCharter(s, 'strip_the_sleepers'), run: (s, d) => { energy(s, 150); matter(s, 60); const b = bodyById(s, d); taint(s, 6, 'devoured a vault of sleepers', b?.systemId); res(s, -5); if (b?.relic) b.relic.state = 'spent'; } },
     ],
   },
 ];

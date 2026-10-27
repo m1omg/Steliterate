@@ -7,8 +7,9 @@ end of the Stelliferous Era, about 90 trillion years after the Big Bang. The goa
 your people alive for as long as the universe allows, and to decide what "alive" means.
 
 The antagonist is the dying universe itself (a little like Frostpunk, at cosmic scale). You
-are not alone, but the other minds are part of the world's texture and drama, not rivals on a
-scoreboard. There is no conquest victory.
+are not alone: other young civilizations play the same game by the same rules, each in its own
+way, and stranger minds are part of the world's texture and drama. There is no conquest victory:
+war rarely pays, and a taking spends the galaxy's free energy, everyone's.
 
 The civilization is never shown. It could be human descendants or something else; the text
 calls its original people "the Kin" and nothing more.
@@ -132,7 +133,7 @@ range, **standing** (0 to 100) and a rotating **demand**.
 | **Kin** | The original biological people | Industry, insight, accord | Heavy upkeep; fixed clock; need living worlds, domes or warrens |
 | **Echoes** | Uploaded minds on substrate | Insight, low upkeep, can slow | Need substrate; drift |
 | **Chorus** | Many minds merged into one | Industry, insight, accord | Harder to slow; unsettles others |
-| **Lattice** | Self-maintaining processes that ask for nothing; everyone assumes no one is inside, and the game only ever hints otherwise | Huge industry, strain-immune | No insight; matter upkeep; the other Threads resent it |
+| **Lattice** | Self-maintaining processes that ask for nothing; everyone assumes no one is inside, and the game only ever hints otherwise | Huge industry, strain-immune | Little insight or accord of its own (0.3 and 0.1; a Search Foundry and a Protocol Registry turn its industry into more, at poor rates); matter upkeep; the other Threads resent it |
 | **Coldminds** | Minds in vaults near 0 K | Almost free to keep, extreme clocks | Low output; need Cold Vaults |
 
 * Conversions: Upload (Kin to Echo), Merge (two Echoes to a Chorus), Cool (Echo to Coldmind,
@@ -178,18 +179,26 @@ range, **standing** (0 to 100) and a rotating **demand**.
   insight is banked and carried into the next project, as is any overflow or found knowledge.
   Pausing is how a starving civilization buys a few turns; it is never free.
 * **Galactic free energy** (100% at the start) scales every source and deposit for everyone.
-  The Hunger spends it, and so do your unsustainable acts: stellar lifting, long overdrive,
-  consuming the dead. It never moves the cosmic clock; what disappears early is what anyone
-  can do with the time.
+  The Hunger spends it, and so does anyone's unsustainable act: stellar lifting, long overdrive,
+  consuming the dead, and since the new version a conquest, a razing or a Kinetic Lance. It never
+  moves the cosmic clock; what disappears early is what anyone can do with the time. One pool for
+  every civilization is the game's own device, and the Codex says so: the thermodynamics behind it
+  is real (fuel burnt faster than it must burn leaves less to use later), but nothing physical dims
+  a brown dwarf here because a swarm fed over there.
+* **The reserve has a home** (since the new version): batteries and superconducting rings while
+  matter lasts; Field Stores, energy held in the fields of electron–positron currents, after it
+  (the Passage carries Energy Vaults and Deep Storage Rings over); Horizon Vaults, a hole's spin,
+  until their hole's last burst. What no longer fits when a store is lost goes at once, and the
+  crossing report says how much.
 
 ### Energy sources by age
 
 | Age | Sources |
 |---|---|
-| Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase (about 174× as luminous; about 3× the light per turn for collectors while you keep time with it); geothermal (declining); fusion |
+| Dusk | Red-dwarf light (arrays, orbital collectors, a Dyson swarm); blue dwarfs, a dying red dwarf's last bright phase (about 174× as luminous; about 3× the light per turn for collectors while you keep time with it); young white dwarfs, one in ten of those the galaxy begins with (stragglers of the last star formation, 1 to 12 billion years old: up to ten times an old one's light; a bend, as 1/t leaves far fewer); geothermal (declining); fusion |
 | Degenerate | **Embers**: white dwarfs warmed by annihilating dark matter (about 10^15 W, 63 K) until η ≈ 22 to 25 (sooner while Halo Siphons run). The others cool on (Mestel's law, then faster once crystallised: about 50 K as the age opens, 13 K at η 15) and give collectors nothing; the game calls them black dwarfs from η 16.7. An ember cast out of the galaxy dims over a decade of η as it leaves the halo behind. Worlds' core heat runs out after the Last Light (×0.8 a turn). **Collision stars** from brown dwarfs (η 15 until the galaxy evaporates: rarer from η 18.4, none after 21). **Merger stars**: white-dwarf pairs igniting as short, very bright helium stars (sometimes a type Ia supernova); their ultraviolet boils away the closest worlds (warmest ground past 3,000 K, rubble past 1,600 K; gas and ice giants spared), and a heavier one swells into a helium giant (1,000 L☉, 120,000 years) that swallows whatever orbits inside its 0.116 AU. A turn soon outlasts every kind of new star, so each lights as its turn ends (a bend) and can be kept time with, as a flare can: six short turns while it burns, each lived in full, or, for one too brief for six (a giant, a late helium star), a single flash turn; one clock at a time, though a star that outlasts it can be followed on (priced from our own pace, never below 250 energy); with Quickening, Quick ×10 splits each clock turn into ten, each lived as a tenth; free while the next turn is within a hundredfold of its life, then a one-time energy price per tenfold, at most a full store. Any civilization can study one for insight and resolve, which charts its system. Neutron-star spin-down. **Feeding worlds** (Section 7). Black-hole **accretion**. Fusion. The **Penrose process** and **Hawking collectors** can be learned here. Late, if protons decay: **decay harvesting**; under curvature radiation, **curvature collectors** at neutron stars (η 30 to 68) |
 | Black Hole | Penrose (finite spin), Hawking collectors (rising as holes shrink), final bursts, accretion only if protons are stable |
-| Dark | The reserve; a trickle of speculative horizon siphoning |
+| Dark | The reserve (what the Field Stores carried into it); Positronium Nets while the widest atoms last, then the never-ending annihilation's dole; where matter is stable, black dwarf supernovae and tunnelling collapses for Burst Catchers; a trickle of speculative horizon siphoning |
 
 ---
 
@@ -214,9 +223,10 @@ to the Black Hole Age's Tide at 10^40 years (η 39) whatever the fate (`calendar
 
 * **The Last Light:** every remaining star becomes a white dwarf. Settlements without
   starless power, reserves or cold sleep lose people.
-* **The Great Decay** (η 39): if protons decay, every planet and baryonic structure dissolves.
-  Settlements with leptonic substrate survive, and migrate to the black holes (bringing a
-  Penrose harvester if they know how to build one).
+* **The Great Decay** (η 39): if protons decay, every planet and everything still made of matter
+  is gone. A settlement that made the Passage lives on in its fields, one on Leptonic Substrate
+  keeps only that, and both migrate to the black hole with spin left; the rest vanish, each named
+  in the report with who was in it, but for the minds the protocols carry to a decay-proof host.
 * **The Last Warmth:** if matter is stable (η 30), nothing dissolves: the neutron stars cool
   below the black holes, the white dwarfs are named black, and Kin with no warmth suffer. Under
   curvature radiation (η 68) the neutron stars burst, and whatever is settled at one is lost.
@@ -224,6 +234,27 @@ to the Black Hole Age's Tide at 10^40 years (η 39) whatever the fate (`calendar
   world and every scrap of ordinary matter is gone, as at the Great Decay; the dwarfs have faded
   before it (white dwarfs η 78.5 to 85 by mass, brown dwarfs η 87), their worlds drifting loose.
 * **The Last Horizon:** the last supermassive black holes evaporate.
+
+**Life after matter** (the new version, Part 3; speculation, and the Codex says so). Every
+settlement has a form (`Colony.form`): of matter; *leptonic*, minds and works in electron–positron
+structures held by fields (Echoes, Coldminds, the Lattice and the Chorus can live there; Kin
+cannot); *horizon*, minds written into a black hole's horizon (a tenth of the upkeep, a quarter of
+the pace, bound to its hole); and *positronium*, minds woven through the widest atoms (η 85 to
+their decay near η 141, where matter does not last; a fiftieth of the upkeep, Continuity kept
+better, and Leave the weave at any time; whoever is still woven at the decay is lost). **The
+Passage** rewrites a settlement over turns once the end of matter can be foreseen: what has a
+leptonic form crosses over, the rest is taken apart, Kin go into an archive of patterns, the
+Lattice re-encodes at half. **The Thinning** comes first (decay from η 37.5, curvature from
+η 87): structures of matter fail one by one, yields fall, and the forecasts name what is going.
+A leptonic settlement drifts to the hole with the most spin, and leaves a failing hole for
+another. Everyone plays by these rules, the others too.
+
+**The stable fate's deep time** (the new version, 3-6). Where protons never decay the Dark Era is
+not empty: the heaviest white dwarfs (1.16 to 1.35 M☉) explode as black dwarf supernovae at
+Caplan's dates (10^1100 to 10^32000 years, the heaviest first), by 10^1500 years everything has
+fused to iron (Dyson 1979), and between 10^(10^26) and 10^(10^76) years each system's matter
+tunnels into black holes that evaporate within the turn. Burst Catchers bank the flashes, and the
+Passage opens there once the fate is known.
 
 **The Long Flow** (η 65, stable and curvature fates, until the Great Evaporation; `sim/flow.ts`).
 Not a crossing but a change in the world: from 10^65 years even iron flows (Dyson 1979), so a
@@ -339,43 +370,73 @@ the disagreement as real model uncertainty.
   the Sleepers*, *Absorb the Weak*, *Communion*), Hunger-derived technology, devouring
   failing survivors. **Taint** brings plenty now, closes endings past 30 and 60, turns the
   other minds against you, and at 100 you become it.
-* **Fellow survivors** (0 to 4): other young civilizations with their own way of coping
-  (clinging to biology, uploading, merging, sleeping, or the Tessellate, which is not
-  conscious at all and speaks only in protocol). They send pleas, trades, refugees, joint
-  works and raids; you can help, trade, take them in, go to war, or devour them. You watch
-  other lights go out, and some you keep lit. Since 7 Oct they are **living neighbours**
-  (`sim/survivors.ts`, `pacts.ts`, `refuge.ts`, `claims.ts`, `war.ts`, `ways.ts`), built on one
-  rule: everything between civilizations moves at the speed of light. Not rivals on a
-  scoreboard (there is no conquest victory); cooperation pays in people, energy, eyes on the
-  Hunger and lights still on beside ours; taking pays once and is heard everywhere.
+* **Other civilizations** (0 to 4): other young civilizations with their own way of coping
+  (clinging to biology, uploading, merging, sleeping, or the Tessellate, which is not conscious
+  at all and speaks only in protocol). Since the new version (13 Oct) each plays the same game as
+  ours, by the same rules (`sim/others.ts`, `ties.ts`, `conflict.ts`, `judge.ts`, `plight.ts`):
+  its own reserve, matter, accord, research, charters, Threads and Taint, its settlements and
+  ships, its own part of every turn. One rulebook, one pointer: whatever the game does for a
+  civilization it does for the one whose part of the turn it is (`asCiv`). Everything between
+  civilizations moves at the speed of light. You watch other lights go out, and some you keep lit.
+  * *Their starts* are made after the galaxy and draw nothing, so a seed's galaxy is as ever: a
+    capital on the world of its home its way of life needs, structures a player could build there
+    with research it knows, and about what we begin with to spare.
+  * *How they play:* our autoplayer under their own view, by their own way: each learns its own
+    first and builds toward its own Great Work (gardens and sleepers the Last Garden, the uploaded
+    the Long Thought, the Choir One Voice, the Tessellate the Quiet Lattice); a temperament from
+    the seed (caution, generosity, ambition); the sleepers sleep through hard times and wake for
+    new stars. They settle anywhere, by the same rules as us. Their Threads move as ours do, and a
+    Fork leaves them as one leaves us. They make the Passage when the end of matter is foreseen,
+    and leave failing holes, by the same rules.
+  * *What we see of them* is what their light has brought: a settlement once the light of its
+    founding reaches our capital, their fleets where they were when the light left, their size as
+    of then (the card says how old the light is).
   * *Honesty.* Help is a beam that arrives when it arrives; what we do at one star changes how
-    the others feel when its light reaches them; the Hunger in us (Taint) caps how well anyone
-    can think of us.
+    the others feel when its light reaches them; what they decide by our Taint is what they have
+    heard of it.
+  * *The Hunger among them* (part 2b). Every step toward the Hunger, ours or another's, is the
+    taker's Taint at once and news at light speed, judged as it arrives, the desperate at three
+    tenths of the prospering ("desperate players adopting SOME hunger tech should not be viewed as
+    badly as prospering ones", the player). Past 30 heard of, those not on that path shun the one
+    taking it (no new pact, trade or joint work, and no archives); at 60 heard of, the Hunger in
+    one is a just cause, a war on which no one holds against anyone; at 60 of its own, a
+    civilization raids anyone not its friend; at 100 another becomes the Hunger, its capital
+    budding a swarm. Only one on that path itself offers Hunger knowledge in trade.
   * *Pacts* (Mutual Aid, Shared Watch, Open Archives), proposed and answered at light speed,
-    priced in accord, dearer with every pact; breaking one is heard everywhere.
-  * *Refuge.* A dying civilization that trusts us comes to us, minds as light and flesh by
-    ship, and lives on among us (fate *saved*); the Choir joins our Chorus (*absorbed*).
-    Sanctuary is heard of, and trusted.
-  * *Expansion.* They settle the stars of their own cluster that suit their way of life, slowly,
-    never ours; we see it when the light arrives. The Hunger hunts them too, and they ask for
-    warships.
-  * *War,* narrow and costly: an accord vote, resolve, calm and standing; a siege while they
-    arm; an assault we can lose; infamy at light speed and coalitions of those who hate us; its
-    heat draws the Hunger; no pacts, trade or refuge while it lasts. It pays only against our
-    own people who left us or a neighbour who keeps raiding us, and then only a little.
+    priced in accord, dearer with every pact; breaking one is heard everywhere. The others make
+    them with each other too, and we hear of it.
+  * *Refuge.* A dying civilization that trusts us comes to us, minds as light and flesh by ship,
+    and lives on among us (fate *saved*); the Choir joins our Chorus (*absorbed*). Sanctuary is
+    heard of, and trusted.
+  * *War* between any two (part 2c), by our rules: the Threads' consent and what it costs, the
+    pacts ended, infamy at light speed (none for a war on the Hunger in them), its heat drawing the
+    Hunger. Battles once a turn, everyone at once, the luck drawn from the seed and never the dice,
+    so the order of the fleets decides nothing. Since the combat system (20 Oct, auto-resolved):
+    every ship at the star is a target, armed or not, the least hull left first, so ships are lost
+    one by one; every settlement fires with what it has; and each fleet fights by a tactic the
+    player picks, a modifier of the damage it deals and takes (Hold the line, Close in, Stand off,
+    Escort): between two fleets Close in and Stand off set how fast a fight goes, not who wins it
+    (strength does), and what makes them matter is what no battle silences (a settlement's guns),
+    a swarm's odds, a siege, help on its way, and luck. Ships by role (Picket, Warden, Hunter,
+    Aegis, Breacher, Kinetic Lance), each with its upkeep; screens turn raids and strikes aside; a
+    Shipyard mends. Conquest a settlement at a time: a siege, then storming it (Breachers behind
+    Defence Grids or a Bastion Shell), by either side of a war, one settlement at a star a turn;
+    taken, three tenths of its people flee, or razed. Attacked, the others fight back: they arm,
+    go for our ships at their stars, and strike back at our nearest settlement, a taking of
+    theirs then no Hunger act (we began it). A taking
+    spends the galaxy's free energy, everyone's (Section 5), and so does a Kinetic Lance, one
+    strike from anywhere at 99% of light. Conquering everyone is no victory: the game goes on.
+    War rarely pays, and the others are mostly peaceable: they go to war only when desperate and
+    bold, far down the Hunger's path, or against the Hunger in another.
   * *Ways that meet.* The sleepers wake for new stars and race for them; the Tessellate keeps
     its agreements to the letter and holds us to ours; the Choir gathers the Echoes who wish it;
     a partner at a new star shares its clock; in the Black Hole Age a hole's spin is a commons.
   * *The Hunger* stays possible but hard to fight: allies add eyes and a little strength, never
     a shield.
-  * *How they decide.* Each civilization is a light simulation, not a second empire: health,
-    people, stars, a clock, and its regard for us. Every turn it lives by its way of life's needs
-    (pleas when failing, refuge when dying, warships against the Hunger, settlers when thriving)
-    and deals by its own terms and rhythm (`dealings.ts`): it asks for what it lacks, says
-    exactly what it gives, and waits longer after every refusal. Its regard moves only by what it
-    sees us do or hears of us, at light speed, and it remembers why, which its card shows. Closer
-    to Civilization V's city-states (requests and rewards, a relationship) than to its rival
-    empires: no one is playing to win against us.
+  * *How they decide.* As a player would, by their own needs: they ask for what they lack, say
+    exactly what they give, and wait longer after every refusal (`dealings.ts`). Their regard for
+    us moves only by what they see us do or hear of us, at light speed, and they remember why,
+    which their card shows. They play for their own lives and their own endings, not to beat us.
 * **The Slow Ones** think around the Heart on clocks of millions of years. You can only
   converse when your own clock comes close to theirs (within 2.5 tenfolds of the span above).
   They matter for the *Aeon Seed*.
@@ -404,7 +465,7 @@ stop them from talking.
 | **The Last Garden** | Biology | Matter stable (no decay, no curvature radiation); 6+ living Kin reach the Dark Era; complete the *Garden of Embers* |
 | **The Hunger** | The dark path | Taint reaches 100 |
 | **Recurrence** | Endurance | Still exist at 10^(10^122) years, when the horizon's state recurs |
-| Defeat | | *Silence* (everyone gone), *The Will Fails*, *The Fade* (Continuity lost in the dark) |
+| Defeat | | *Silence* (everyone gone), *The Will Fails*, *The Fade* (Continuity lost in the dark), *Conquered* (our last settlement taken in war) |
 
 ---
 
@@ -426,17 +487,29 @@ stop them from talking.
   holes with disks and photon rings, dying eyeball worlds that freeze, Dyson swarms, swarm
   murmurations) and a restrained post chain: a faint, tight bloom only on what is brighter
   than white (light sources carry their own coronae, as in ra-system-alpha), fine midtone
-  grain, vignette, edge chromatic aberration. No full-screen haze and no lens dirt.
-* **The survey reveal** (21 Oct, as the player pictured it, from Endless Space 2): a system just
-  charted is shown by a flight of the camera. A ring of light leaves the star, then the camera
-  flies to each world in turn, close and half in its star's light, while a line of light sweeps it
-  from a silhouette to its look and a caption types in what it is, with four bars for what each
-  kind of settler would make of it; dust streaks past between them (for the sense of speed: real
-  interplanetary dust is far too thin to see); the star rises over the last world's edge, and the
-  camera pulls back to the whole system.
-* **Plates:** eleven painterly images for the ages and events and thirteen for the survey
-  discoveries (Krea and Codex image generation), one grade for all (`tools/process-art.mjs`);
-  four painted ship sprites (Higgsfield, `tools/process-sprites.mjs`).
+  grain, vignette, edge chromatic aberration. No full-screen haze and no lens dirt: the empty
+  sky is black (15 Oct: no lift of the blacks), and the galaxy's own light, the glow of its
+  unresolved red dwarfs, lies where its stars are, seen from afar, dimming as they go out.
+* **Plates:** painterly images for the ages and events (fifteen more for the events in the new
+  version) and thirteen for the survey discoveries (Krea and Codex image generation), one grade
+  for all (`tools/process-art.mjs`); painted ship sprites (Higgsfield, `tools/process-sprites.mjs`),
+  the Picket, Breacher, Hunter and Kinetic Lance among them.
+* **Films** (the new version, Part 4, rebuilt in a second cut): one as each age begins and as a
+  game ends, every frame drawn by code on one canvas from its moment alone. Each is a few composed
+  scenes cut on the beat: painted stars, worlds and holes, diagrams that ink themselves in, slow
+  camera moves, what is too cold to see by its faint heat, and the physics labelled with whose it
+  is; the game's own words as text over it, and a cue made as it plays. A system just charted is
+  shown by a flight of the camera (**the survey reveal**; since 21 Oct as the player pictured it,
+  from Endless Space 2): a ring of light leaves the star, then the camera flies to each world in
+  turn, close and half in its star's light, while a line of light sweeps it from a silhouette to
+  its look and a caption types in what it is, with four bars for what each kind of settler would
+  make of it; dust streaks past between them (for the sense of speed: real interplanetary dust is
+  far too thin to see); the star rises over the last world's edge, and the camera pulls back to
+  the whole system.
+* **What is not matter** (3-7): a leptonic settlement is drawn as its fields (a dipole's lines, a
+  standing wave in whose colour it is, motes trapped in its belts), horizon minds as writing riding
+  the photon ring, the positronium as vast faint ellipses; matter dissolves in the Thinning, and
+  turns to iron in the stable deep time.
 * **Refresh-rate independence:** one rAF loop with clamped real-time deltas; all smoothing is
   `1 − exp(−k·dt)`; camera flights and fleet moves follow elapsed time exactly. The playtest
   checks 30 Hz against 144 Hz.
@@ -599,7 +672,10 @@ events; forecasts; save, autosave and save codes; the score and plates.
 
 Since 7 Oct, living neighbours: pacts, refuge, expansion, war and the wants of each way of life
 (Section 8). Since 9 Oct, a magnifier mode for low vision, and the keyboard throughout
-(Section 10).
+(Section 10). The new version (13 and 14 Oct, `docs/plans/new-version.md`, at `/next/`): the
+other civilizations play the same game, with the Hunger among them, war, ships by role and
+conquest (Section 8); life after matter, positronium and the stable fate's deep time (Section 6);
+young glowing dwarfs (Section 5); films and the survey reveal (Section 10).
 
 Candidates for later: ship design, more events and relics, an in-game advisor built on the
 autoplayer, a multi-scale camera without a view switch, localisation (a Slovak translation

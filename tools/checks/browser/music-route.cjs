@@ -1,10 +1,12 @@
 // Browser check: how the recorded music reaches the speakers (15 Oct). The player heard it stutter,
-// "irregular pops", worst in Firefox: it went through the sound's graph (a MediaElementSource),
-// whose samples cross into the graph on its audio thread, and gave out when the browser was busy.
-// Now the audio element plays it itself, by its own volume: the piece's level times the music's
-// volume (the slider), fading in and out on a timer. The interface's sounds share one reverb, and
-// no sound the game makes here makes a MediaElementSource. The project check (15 Oct): the synth's
-// echo follows the slider too.
+// "irregular pops", in the films and out of them, worst in Firefox: it went through the sound's
+// graph (a MediaElementSource), whose samples cross into the graph on its audio thread, and gave out
+// when the browser was busy. Now the audio element plays it itself, by its own volume: the piece's
+// level times the music's volume (the slider), fading in and out on a timer; under a film it falls
+// silent and pauses, and comes back after. The interface's sounds share one reverb, and no sound
+// the game makes here makes a MediaElementSource. The project check (15 Oct): the synth's echo
+// follows the slider and falls silent under a film, and a hold taken again soon after one let go is
+// not cut short.
 const { check, start, finish, run } = require('../lib.cjs');
 
 function hooks() {
@@ -87,5 +89,45 @@ run(async () => {
     return window.__gains - g0;
   });
   check(made === 20, `ten sounds with an echo make 20 gains, their tones' own (${made})`);
+  // under a film it falls silent and pauses; after it, it fades back in
+  await page.evaluate(() => {
+    window.__stel.films(true);
+    window.__stel.playFilm('dusk');
+  });
+  await page.waitForTimeout(2500);
+  const e = await look(page);
+  check(e.vol < 0.01 && e.paused === true, `under a film it is silent and paused (volume ${e.vol.toFixed(3)})`);
+  const wetUnder = await page.evaluate(() => window.__stel.audio().wetDuck.gain.value);
+  check(wetUnder < 0.01, `and the synth's echo with it (${wetUnder.toFixed(3)})`);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(2500);
+  const f = await look(page);
+  check(f.paused === false && f.vol > 0.02, `after it, it plays again (volume ${f.vol.toFixed(3)}, rising)`);
+  // a hold let go and taken again soon after (a film skipped at once, then another) is not cut
+  // short by the first hold's pause, which came 0.7 s after it and paused the recording part-way
+  // through the second's fade (the project check, 15 Oct)
+  const again = await page.evaluate(async () => {
+    const m = window.__stel.music();
+    const el = () => m.layer?.track?.el;
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    // (the three within half a second, no timer between them however busy the page: the first
+    // hold's pause, due at 0.7 s, then comes after the second hold, as it would in play)
+    const spin = (ms) => {
+      const end = performance.now() + ms;
+      while (performance.now() < end);
+    };
+    m.hold(true);
+    spin(300);
+    m.hold(false);
+    spin(200);
+    m.hold(true);
+    await wait(350);
+    const mid = el()?.paused;
+    await wait(900);
+    const end = el()?.paused;
+    m.hold(false);
+    return { mid, end };
+  });
+  check(again.mid === false && again.end === true, `held, let go and held again: still playing 0.35 s into the second hold (${again.mid ? 'paused' : 'playing'}), paused once it has faded (${again.end ? 'paused' : 'playing'})`);
   await finish('MUSIC ROUTE', ck);
 });

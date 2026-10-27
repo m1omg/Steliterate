@@ -3,12 +3,13 @@ import { effectivePace, livedShare, turnStep, upkeepShare } from './flare';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
-import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type ColonyTurn, type TurnContext } from './economy';
+import { capacity, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type ColonyTurn, type TurnContext } from './economy';
 import { BURST_CATCH } from './crossing';
 import { computeMods, strainFor, type Strain } from './mods';
 import { researchDraw } from './research';
 import { jointIncome } from './survivors';
 import { beaconUpkeep } from './beacons';
+import { fleetUpkeep } from './fleets';
 import { colonies } from './util';
 import { spareYield } from './spare';
 import { terraformingOf } from '../physics';
@@ -41,6 +42,7 @@ export function spareLeft(c: Colony, industry: number): number {
 /** What the coming turn will look like at the current pace, without changing anything. */
 export function project(state: GameState, paceOverride?: number): Projection {
   const mods = computeMods(state);
+  // (time is the player's: another civilization lives at our pace)
   const pace = paceOverride ?? effectivePace(state);
   const step = turnStep(state, pace);
   const logL = logTurnLength(step);
@@ -82,6 +84,7 @@ export function project(state: GameState, paceOverride?: number): Projection {
   }
   p.energyIn += jointIncome(state) * ctx.paceFactor;
   p.energyOut += beaconUpkeep(state) * ctx.paceFactor;
+  p.energyOut += fleetUpkeep(state, upkeepOf(ctx));
   p.accord -= latticeAlienation(state, mods);
   p.researchDraw = researchDraw(state, p.insight);
   p.energyOut += p.researchDraw;

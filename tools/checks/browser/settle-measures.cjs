@@ -31,9 +31,9 @@ run(async () => {
     window.__stel.endTurns(40);
     const s = window.__stel.state();
     const cap = s.colonies[s.civ.capitalId];
-    const f = Object.values(s.fleets)[0];
+    const f = Object.values(s.fleets).find((x) => x.owner === s.player);
     Object.assign(f, { at: cap.systemId, to: null, from: null, traveled: 0, distance: 0, order: 'idle', auto: undefined, ships: [{ cls: 'ark', hp: 6 }] });
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     window.__stel.select('fleet', f.id);
   });

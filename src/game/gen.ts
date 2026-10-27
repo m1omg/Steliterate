@@ -1,3 +1,4 @@
+import { PLAYER_ID, pointAt } from './civs';
 import { ERA_BY_ID } from './eras';
 import { CLUSTER_NAMES, bodyName, catalogueName, distinctNames, properName } from './names';
 import { Rng, hashSeed } from './rng';
@@ -603,7 +604,7 @@ export function generateWorld(settings: GameSettings): GameState {
   const civ = makeCiv(settings, home.id);
   // the fate of matter: as chosen, or one draw (the same single draw as ever, so no galaxy changes)
   const fate: Fate = settings.protonFate === 'decays' ? 'decay' : settings.protonFate === 'stable' ? 'stable' : settings.protonFate === 'curvature' ? 'curvature' : drawFate(rng.next());
-  const state: GameState = {
+  const world: Omit<GameState, 'civ'> = {
     v: 1,
     settings,
     rng: hashSeed(settings.seed * 7 + 13),
@@ -622,26 +623,21 @@ export function generateWorld(settings: GameSettings): GameState {
     bodies: b.bodies,
     colonies: {},
     fleets: {},
-    civ,
+    civs: { [civ.id]: civ },
+    player: civ.id,
     survivors,
     minds: {
       slow: { id: 'slow', kind: 'slow', name: 'The Slow Ones', systemId: heart.id, stage: 0, understanding: 0, clock: 6.5, lastPattern: [], flags: {} },
       dark: { id: 'dark', kind: 'dark', name: 'The Unlit', systemId: null, stage: 0, understanding: 0, clock: 5, lastPattern: [], flags: {} },
     },
     swarms: {},
-    signals: [],
-    forecasts: [],
-    pending: [],
-    log: [],
     battles: [],
     nextId: 1,
-    crossing: null,
-    outcome: null,
     // brown dwarfs and black holes take their worlds in, in a game begun since 19 Oct (physics.ts:
     // fallsInAt), and since 20 Oct falling worlds break up into rubble, giants in a flash (rubbleGame)
     flags: { all_fall: 1, rubble: 1 },
-    fired: {},
   };
+  const state = pointAt(world, civ);
   void coreSystems;
   void globulars;
 
@@ -765,8 +761,14 @@ function addHoleWorlds(b: Builder, settings: GameSettings) {
 }
 
 function makeCiv(settings: GameSettings, homeSystemId: string): Civ {
+  return blankCiv(PLAYER_ID, settings.civName, homeSystemId);
+}
+
+/** A civilization as every one begins, before its start is set: ours, or another's (others.ts). */
+export function blankCiv(id: string, name: string, homeSystemId: string): Civ {
   return {
-    name: settings.civName,
+    id,
+    name,
     homeSystemId,
     capitalId: null,
     energy: 60,
@@ -792,6 +794,13 @@ function makeCiv(settings: GameSettings, homeSystemId: string): Civ {
     taint: 0,
     flags: {},
     stats: { pops: [], energy: [], resolve: [] },
+    signals: [],
+    forecasts: [],
+    pending: [],
+    log: [],
+    crossing: null,
+    outcome: null,
+    fired: {},
   };
 }
 

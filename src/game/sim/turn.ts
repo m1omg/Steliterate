@@ -1,20 +1,29 @@
+import { autoPlay } from '../auto';
+import { asCiv, flushOutbox } from '../civs';
+import { tiesTurn } from './ties';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
 import { ERA_BY_ID, POSITRONIUM_ETA, formatYears, logTurnLength, tideLength } from '../eras';
 import { ICE_MELTS_K, LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, drainHalo, evolveUniverse, flashSheltered, giantWorld, lampsOver, seededLifeUnkept, siphonsRunning, steamWorld, sunGone, turnsToFreeze, vitalityLoss, type EvolutionNote } from '../physics';
 import type { Body, Colony, CrossingReport, GameState, Outcome, Signal, StarSystem } from '../types';
 import { THREADS } from '../types';
-import { burstShare, finalBurstCatch, flashReach, greatEvaporation, runCrossing } from './crossing';
-import { theLongFlow } from './flow';
+import { NEAR_BURST_LY, burstShare, decayProof, finalBurstCatch, flashReach, goLeptonic, goOnAlone, greatEvaporation, moveToHole, protocolsMult, runCrossing } from './crossing';
+import { flowComes, theLongFlow } from './flow';
+import { theThinning } from './thinning';
+import { horizonGone } from './horizon';
+import { POSITRONIUM_DECAY, positroniumComes, positroniumHere, theWeaveEnds, turnsToDecay } from './positronium';
+import { continuityLoss } from './continuity';
+import { deepTime } from './deeptime';
 import { answerArrived, pactsTurn } from './pacts';
 import { warTurn } from './war';
+import { battlesTurn } from './conflict';
 import { feedBeacons } from './beacons';
 import { spareYield, type SpareYield } from './spare';
 import { finishQueued } from './queue';
 import { coolAccord } from './accord';
-import { capacity, colonyTurn, latticeAlienation, reserveCapacity, type TurnContext } from './economy';
+import { MATTER_AS_ENERGY, capacity, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { pruneFinds, queueEvent, rollRandomEvent } from './events';
-import { advanceFleets, autoExplore, createColony, destroyColony, surveyWhereStationed, updateDetection } from './fleets';
+import { advanceFleets, autoExplore, createColony, deepFor, destroyColony, fleetUpkeep, repairFleets, surveyWhereStationed, updateDetection } from './fleets';
 import { updateForecasts } from './forecast';
 import { wakeArchivedEchoes } from './archive';
 import { clearStarClock, effectivePace, flareData, livedShare, scorched, turnStep, upkeepShare } from './flare';
@@ -25,9 +34,10 @@ import { completeTech, discoverFromSurplus, IDLE_STUDY, researchDraw, techCost }
 import { deliverSignals } from './signals';
 import { updateSociety } from './society';
 import { jointIncome, updateSurvivors } from './survivors';
-import { clamp, colonies, distLy, hasCharter, inItsSystem, leftBehind, log, popsOf, totalPops, withRng } from './util';
+import { allColonies, clamp, colonies, distLy, formOf, hasCharter, inItsSystem, leftBehind, log, logTo, popsOf, totalPops, withRng } from './util';
+import { becomeHunger } from './judge';
 import { seededVitality } from './terraform';
-import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf } from '../fate';
+import { FATE_SHOWN_AT, MATTER_END, ageOver, calendarEra, calendarTurnDue, fateKnown, fateOf, matterGone } from '../fate';
 
 export interface TurnResult {
   crossing: CrossingReport | null;
@@ -37,7 +47,7 @@ export interface TurnResult {
   wasted: number;
 }
 
-/** Industry drives the build queue; leftover goes to the settlement's spare work. Returns the insight it made. */
+/** Industry drives the build queue; leftover goes to the settlement's spare work. Returns what that made (its resolve already given). */
 function applyIndustry(state: GameState, c: Colony, industry: number, energyMade: number, mods: Mods): SpareYield {
   let left = Math.max(industry, c.queue[0] && c.queue[0].progress >= c.queue[0].cost - 0.01 ? 0.01 : 0);
   let guard = 0;
@@ -72,11 +82,11 @@ export function declineWorlds(state: GameState, share: number) {
   // the game keeps it through the Dusk), and Geothermal Taps wind down with it
   if (calendarEra(state) !== 'dusk') for (const b of Object.values(state.bodies)) if (b.coreHeat > 0) b.coreHeat = b.coreHeat < 0.02 ? 0 : b.coreHeat * Math.pow(CORE_FADE, share);
   // seeded life spreads over a terraformed world while its star burns (terraform.ts)
-  for (const c of colonies(state)) {
+  for (const c of allColonies(state)) {
     const b = state.bodies[c.bodyId];
     if (b) b.vitality = seededVitality(state, b, c, share);
   }
-  const byBody = new Map(colonies(state).map((c) => [c.bodyId, c]));
+  const byBody = new Map(allColonies(state).map((c) => [c.bodyId, c]));
   for (const b of Object.values(state.bodies)) {
     if (b.dissolved || b.vitality <= 0) continue;
     const c = byBody.get(b.id);
@@ -84,22 +94,34 @@ export function declineWorlds(state: GameState, share: number) {
     // live under, no sea, and a turn is longer than an ocean takes to boil
     if (steamWorld(state, b)) {
       b.vitality = 0;
-      if (c || (state.civ.known[b.systemId] ?? 0) === 2) log(state, `Nothing lives on ${b.name} now: its seas have boiled into a sky of steam.`, c ? 'bad' : 'info', b.systemId);
+      tellOfWorld(state, b, c?.owner, `Nothing lives on ${b.name} now: its seas have boiled into a sky of steam.`);
       continue;
     }
     const loss = vitalityLoss(state, b, c);
     b.vitality = Math.max(0, b.vitality - loss.decline * share);
     if (c && b.traits.includes('homeworld') && calendarEra(state) === 'dusk') b.coreHeat = Math.max(0, b.coreHeat - 0.007 * share * ((c.structures.core_stimulator ?? 0) > 0 ? 0.4 : 1));
     if (b.vitality > 0) b.vitality = Math.max(0, b.vitality - loss.freeze * share);
-    // one of ours begins to freeze, its dead star cooled at last: say so once (the Last Light
-    // says it for every world)
-    if (c && loss.freeze > 0 && b.vitality > 0 && calendarEra(state) === 'dusk' && !b.rogue && !state.civ.flags[`frz_${b.id}`]) {
-      state.civ.flags[`frz_${b.id}`] = state.turn;
+    // one of its settlers' worlds begins to freeze, its dead star cooled at last: they hear it
+    // once (the Last Light says it for every world)
+    const owner = c ? state.civs[c.owner] : undefined;
+    if (c && owner && loss.freeze > 0 && b.vitality > 0 && calendarEra(state) === 'dusk' && !b.rogue && !owner.flags[`frz_${b.id}`]) {
+      owner.flags[`frz_${b.id}`] = state.turn;
       const n = turnsToFreeze(state, b, c, share);
-      if (seededLifeUnkept(state, b, c)) log(state, `The life seeded on ${b.name} has begun to freeze: nothing keeps the world warm now. It dies in about ${n} turn${n === 1 ? '' : 's'}.`, 'bad', b.systemId);
-      else log(state, `${b.name} has begun to freeze: its dead star no longer warms it. It dies in about ${n} turn${n === 1 ? '' : 's'} unless Orbital Lamps keep it warm.`, 'bad', b.systemId);
+      if (seededLifeUnkept(state, b, c)) logTo(state, owner, `The life seeded on ${b.name} has begun to freeze: nothing keeps the world warm now. It dies in about ${n} turn${n === 1 ? '' : 's'}.`, 'bad', b.systemId);
+      else logTo(state, owner, `${b.name} has begun to freeze: its dead star no longer warms it. It dies in about ${n} turn${n === 1 ? '' : 's'} unless Orbital Lamps keep it warm.`, 'bad', b.systemId);
     }
     if (b.vitality <= 0) worldDies(state, b);
+  }
+}
+
+/**
+ * Tell of what befell a world: the civilization settled there (`owner`) hears it as its own loss,
+ * and every other that has surveyed its system hears of it.
+ */
+function tellOfWorld(state: GameState, b: Body, owner: string | undefined, text: string) {
+  for (const v of Object.values(state.civs)) {
+    if (v.id === owner) logTo(state, v, text, 'bad', b.systemId);
+    else if ((v.known[b.systemId] ?? 0) === 2) logTo(state, v, text, 'info', b.systemId);
   }
 }
 
@@ -168,9 +190,9 @@ function worldDies(state: GameState, b: Body, scorched = false) {
   b.habitability = b.kind === 'ice' ? 0.05 : 0;
   b.vitality = 0;
   if (!b.traits.includes('once_alive')) b.traits.push('once_alive');
-  const mine = !!b.colonyId;
-  const seen = (state.civ.known[b.systemId] ?? 0) === 2;
-  if (mine || seen) {
+  // who hears of it: whoever lives there, and whoever has surveyed it
+  const owner = b.colonyId ? (state.colonies[b.colonyId]?.owner ?? state.player) : undefined;
+  if (owner || Object.values(state.civs).some((v) => (v.known[b.systemId] ?? 0) === 2)) {
     const c = bodyClimate(state, b);
     const open = !scorched && b.kind === 'ice' && (c.day ?? c.mean) >= ICE_MELTS_K;
     const what = scorched
@@ -178,13 +200,258 @@ function worldDies(state: GameState, b: Body, scorched = false) {
       : open
         ? `Nothing lives there now, though its star still keeps ${c.night !== undefined && c.night < ICE_MELTS_K ? 'a sea open on its day side, ice beyond it' : 'its seas open'}`
         : `${was === 'eyeball' ? 'Its sea has frozen from the terminator to the substellar point' : 'Its seas have frozen and its air has settled out as frost'}; it is ${b.kind === 'ice' ? 'an ice world' : 'bare rock'} now`;
-    log(state, `${b.name} has died. ${what}.`, mine ? 'bad' : 'info', b.systemId);
+    tellOfWorld(state, b, owner, `${b.name} has died. ${what}.`);
   }
 }
 
+/** What one civilization carries from one part of its turn to the next. */
+export interface CivTurn {
+  mods: Mods;
+  /** Its Halo Siphons as the turn began (its economy reads them so): research or a shut-down counts from the next. */
+  siphoning: boolean;
+  ctx: TurnContext;
+  /** Each settlement's energy net: the hungriest go cold first. */
+  net: Record<string, number>;
+  insight: number;
+  starving: boolean;
+  popsLost: number;
+  /** Energy over the reserve's cap, thrown away. */
+  wasted: number;
+}
+
+/**
+ * The civilizations that play this turn: the player first, then the others still playing. Every
+ * civilization plays the same game, each its part of each step under its own perspective (asCiv),
+ * and the universe moves once between the steps (docs/plans/new-version.md, part 2a-0).
+ */
+export function turnOrder(state: GameState): string[] {
+  return [state.player, ...Object.keys(state.civs).filter((id) => id !== state.player && !state.civs[id].outcome).sort()];
+}
+
+/**
+ * The turn in slices (the new version, part 2a-6): it yields after each civilization's part of a
+ * step, never inside one, so that the interface can let the browser breathe between them
+ * (turnflow.ts, playTurn); endTurn plays it at once. The state between two slices is a turn half
+ * done: nothing may act on it then.
+ */
+export function* turnSlices(state: GameState): Generator<void, TurnResult, void> {
+  const result: TurnResult = { crossing: null, outcome: state.civ.outcome, arrived: [], notes: [], wasted: 0 };
+  if (state.civ.outcome) return result;
+  const me = state.player;
+  const ids = turnOrder(state);
+  const t: Record<string, CivTurn> = {};
+  // each civilization plays its part of a step, the player first; then what they sent each other is delivered
+  function* each(part: (c: CivTurn, id: string) => void): Generator<void, void, void> {
+    for (const id of ids) {
+      asCiv(state, id, () => part(t[id], id));
+      yield;
+    }
+    flushOutbox(state);
+  }
+  // (the same at once, inside a step that must not be cut)
+  const eachNow = (part: (c: CivTurn, id: string) => void) => {
+    for (const id of ids) asCiv(state, id, () => part(t[id], id));
+    flushOutbox(state);
+  };
+
+  // ------------------------------------------------ 0. each one's start: its mods, pace, siphons, sleep
+  // (another civilization decides first, as the autoplayer decides for us; part 2a-5 of the new
+  // version gives each a mind of its own)
+  yield* each((_c, id) => {
+    if (id !== me) autoPlay(state, 'competent');
+    t[id] = beginTurn(state);
+  });
+  // the turn's time is the player's, its pace and clocks: everyone lives the same turn
+  // (a turn stops when one of our stars begins its last flare; see flare.ts)
+  // (at the pace that is lit: ours, or the nearest toward the Tide while ours is greyed)
+  const pace = effectivePace(state);
+  const step = turnStep(state, pace);
+  const logL = logTurnLength(step);
+  const paceFactor = livedShare(state, pace, step);
+  const upkeep = upkeepShare(state, pace, step);
+
+  // ------------------------------------------------ 1-3. economy, starvation, research and works
+  yield* each((c) => {
+    c.ctx = { years: state.years, L: step.turnLength, logL, paceFactor, upkeepShare: upkeep, mods: c.mods };
+    economy(state, c);
+    overdriveAccidents(state);
+    starvation(state, c);
+    researchAndWorks(state, c);
+  });
+  result.wasted = t[me].wasted;
+
+  // ------------------------------------------------ 4. growth, capacity, worlds
+  // what the stars do to the worlds, once for everyone
+  scorchWorlds(state, state.years, step.years);
+  declineWorlds(state, paceFactor);
+  yield* each((c) => {
+    growth(state, c);
+    // ---------------------------------------------- 5. society
+    // Consume the Dead: nothing is buried any more
+    if (c.popsLost > 0 && hasCharter(state, 'consume_the_dead')) state.civ.matter += c.popsLost * 4;
+    updateSociety(state, logL, c.popsLost, c.starving);
+    coolAccord(state);
+    if (state.civ.wakeBonus > 0 && !state.civ.dormant) state.civ.wakeBonus--;
+    // ---------------------------------------------- 6. fleets, hazards, other minds
+    const flown = advanceFleets(state, step.turnLength, c.mods);
+    surveyWhereStationed(state);
+    repairFleets(state);
+    // look around before exploring ships set off again, so they scan every star they reach
+    updateDetection(state, c.mods, flown);
+    firstSwarm(state);
+  });
+  // swarms go for ships that have just stopped at their star, before exploring probes move on
+  // (each civilization's ships and settlements by its own mods; one no longer playing, by its own now)
+  const modsOf = (id: string) => t[id]?.mods ?? asCiv(state, id, () => computeMods(state));
+  swarmsHunt(state, modsOf);
+  yield* each((c) => autoExplore(state, c.mods));
+  updateHunger(state, step.turnLength, modsOf, paceFactor);
+  // wherever civilizations at war meet, they fight, all at once; the sieges of wars the others began
+  battlesTurn(state);
+  // (the neighbours we know, our pacts and wars with them, and the other minds are the player's)
+  yield* each((c, id) => {
+    if (id !== me) return;
+    updateSurvivors(state, logL, c.mods, step.turnLength, c.ctx.paceFactor);
+    pactsTurn(state);
+    withRng(state, (rng) => warTurn(state, () => rng.next()));
+    updateMinds(state, logL, c.mods);
+  });
+  // the others among themselves: their pacts sealed and at work (and what we hear of it)
+  tiesTurn(state);
+  flushOutbox(state);
+
+  // ------------------------------------------------ 7. the universe moves on
+  const from = state.years;
+  // while Halo Siphons run, the halo falls twice as fast: its clock gains this turn's years again
+  if (ids.some((id) => t[id].siphoning)) drainHalo(state, from, step.years);
+  const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
+  // matter stable: the heaviest dead stars explode, everything turns to iron, then tunnels into black holes (no draw)
+  notes.push(...deepTime(state, state.eta, step.eta));
+  result.notes = notes;
+  // from 10^65 years solid matter flows: once, the ruins no one awake is digging run into smooth lumps
+  flowComes(state, step.eta, logL, modsOf, Math.log10(paceFactor));
+  // the widest atoms decay as this turn passes η 141: the never-ending annihilation counts its turns from here (positronium.ts)
+  if (positroniumComes(state) && state.eta < POSITRONIUM_DECAY && step.eta >= POSITRONIUM_DECAY) state.flags.positronium_end = state.turn;
+  yield* each((c, id) => {
+    handleNotes(state, notes);
+    // the Unlit's gathering is done: the Last Star lights as the turn ends, as every new star does
+    if (id === me) {
+      const lastStar = gatherTheLastStar(state, step.years);
+      if (lastStar) queueEvent(state, 'last_star', { systemId: lastStar });
+    }
+    // from 10^65 years solid matter flows: what no one is awake to mend runs into smooth lumps
+    theLongFlow(state, step.eta, logL, c.mods, Math.log10(c.ctx.paceFactor));
+    // in the last decades of matter, what is still made of it thins with it
+    theThinning(state, state.eta, step.eta);
+    // and as positronium decays, whatever is still woven through it ends with it
+    theWeaveEnds(state, state.eta, step.eta);
+    continuity(state, c);
+  });
+  state.years = step.years;
+  state.eta = step.eta;
+  state.turnLength = step.turnLength;
+  state.turn++;
+  state.eraTurn++;
+  // the turn's clock is the player's (flare.ts, clockCiv): one of our stars has just begun its
+  // last flare (the turn stopped for it); a flare's clock or a new star's has run out
+  yield* each((_c, id) => {
+    if (id !== me) return;
+    const civ = state.civ;
+    for (const sys of new Set(colonies(state).map((c) => state.systems[c.systemId]))) {
+      if (sys?.primary.kind === 'blue_dwarf' && sys.primary.blueAt === state.years) queueEvent(state, 'last_flare', flareData(state, sys));
+    }
+    if (civ.flags.flare_until && state.years >= civ.flags.flare_until) {
+      delete civ.flags.flare_until;
+      delete civ.flags.flare_step;
+    }
+    // the new star we kept time with has burned out: our own pace again
+    clearStarClock(state);
+  });
+  // ------------------------------------------------ 8. signals, forecasts, events
+  yield* each((_c, id) => {
+    const arrived = signalsAndEvents(state);
+    if (id === me) result.arrived = arrived;
+  });
+
+  // ------------------------------------------------ 9. crossings
+  // the fate of matter shows itself: near η 30 the neutron stars tell the fates apart
+  yield* each((_c, id) => {
+    if (!fateKnown(state) && state.eta >= FATE_SHOWN_AT) {
+      revealFate(state);
+      if (id === me) updateForecasts(state);
+    }
+  });
+  const crossed = (reports: Record<string, CrossingReport>) => {
+    for (const id of ids) state.civs[id].crossing = reports[id];
+    result.crossing = reports[me];
+  };
+  if (ageOver(state)) {
+    if (state.era === 'dark') {
+      // the deep-time ruler has run out: endurance
+    } else {
+      const atLastHorizon = state.era === 'blackhole';
+      if (atLastHorizon) {
+        const o = checkEndings(state, true);
+        if (o) {
+          result.outcome = o;
+          return result;
+        }
+      }
+      crossed(runCrossing(state, ids, Object.fromEntries(ids.map((id) => [id, t[id].mods]))));
+      yield* each((_c, id) => id === me && updateForecasts(state));
+    }
+  }
+  // the calendar turns without the age (a fate other than decay): the Black Hole Age's Tide
+  else if (calendarTurnDue(state)) calendarTurn(state);
+  // each one's mods as they are now (for a storm that comes after the turn's changes)
+  const modsNow = () => {
+    const m: Record<string, Mods> = {};
+    eachNow((_c, id) => (m[id] = computeMods(state)));
+    return m;
+  };
+  // curvature radiation unmakes the last ordinary matter: a storm of its own, inside the age
+  if (fateOf(state) === 'curvature' && state.eta >= MATTER_END.curvature && state.flags.matter_gone === undefined && state.era !== 'dark') {
+    crossed(greatEvaporation(state, ids, modsNow()));
+    yield* each((_c, id) => id === me && updateForecasts(state));
+  }
+  // the last black hole may evaporate before the calendar says so
+  if (state.era === 'blackhole' && !Object.values(state.systems).some((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone)) {
+    const o = checkEndings(state, true);
+    if (o) {
+      result.outcome = o;
+      return result;
+    }
+    crossed(runCrossing(state, ids, modsNow()));
+  }
+
+  // ------------------------------------------------ 10. endings, stats
+  yield* each((_c, id) => {
+    const had = !!state.civ.outcome;
+    const o = checkEndings(state);
+    if (id === me) result.outcome = o;
+    // another civilization whose Taint has reached 100 becomes the Hunger (judge.ts)
+    else if (!had && o?.kind === 'dark') becomeHunger(state, id);
+    const civ = state.civ;
+    civ.stats.pops.push(totalPops(state));
+    civ.stats.energy.push(Math.round(civ.energy));
+    civ.stats.resolve.push(Math.round(civ.resolve));
+    for (const k of ['pops', 'energy', 'resolve'] as const) if (civ.stats[k].length > 500) civ.stats[k].shift();
+    // (a capital lost, or taken by another: the most populous settlement left)
+    if (!civ.capitalId || state.colonies[civ.capitalId]?.owner !== civ.id) civ.capitalId = colonies(state).sort((a, b) => popsOf(b) - popsOf(a))[0]?.id ?? null;
+  });
+  return result;
+}
+
+/** The whole turn at once: the harness, the checks, and whatever needs it done before going on. */
 export function endTurn(state: GameState): TurnResult {
-  const result: TurnResult = { crossing: null, outcome: state.outcome, arrived: [], notes: [], wasted: 0 };
-  if (state.outcome) return result;
+  const g = turnSlices(state);
+  let r = g.next();
+  while (!r.done) r = g.next();
+  return r.value;
+}
+
+/** A civilization's turn begins: its mods, its pace within them, its Halo Siphons, its Long Sleep. */
+function beginTurn(state: GameState): CivTurn {
   const civ = state.civ;
   const mods = computeMods(state);
   civ.pace = clamp(civ.pace, mods.paceMin, mods.paceMax);
@@ -202,15 +469,13 @@ export function endTurn(state: GameState): TurnResult {
       log(state, 'We wake.', 'info');
     }
   }
+  return { mods, siphoning, ctx: null as unknown as TurnContext, net: {}, insight: 0, starving: false, popsLost: 0, wasted: 0 };
+}
 
-  // (a turn stops when one of our stars begins its last flare; see flare.ts)
-  // (at the pace that is lit: ours, or the nearest toward the Tide while ours is greyed)
-  const pace = effectivePace(state);
-  const step = turnStep(state, pace);
-  const logL = logTurnLength(step);
-  const ctx: TurnContext = { years: state.years, L: step.turnLength, logL, paceFactor: livedShare(state, pace, step), upkeepShare: upkeepShare(state, pace, step), mods };
-
-  // ------------------------------------------------ 1. economy
+/** 1. The economy: every settlement's yields and upkeep, and what they come to for the civilization. */
+function economy(state: GameState, t: CivTurn) {
+  const civ = state.civ;
+  const { ctx, mods, net } = t;
   let eIn = 0;
   let eOut = 0;
   let mIn = 0;
@@ -218,24 +483,23 @@ export function endTurn(state: GameState): TurnResult {
   let insight = 0;
   let accord = 0;
   let matterAvail = civ.matter;
-  const net: Record<string, number> = {};
   for (const c of colonies(state)) {
-    const t = colonyTurn(state, c, ctx, matterAvail);
-    matterAvail -= t.matterBurn;
-    c.last = t.y;
-    eIn += t.y.energy;
-    eOut += t.y.energyUpkeep;
-    mIn += t.y.matter;
-    mOut += t.y.matterUpkeep;
-    insight += t.y.insight;
-    accord += t.y.accord;
-    net[c.id] = t.y.energy - t.y.energyUpkeep;
+    const y = colonyTurn(state, c, ctx, matterAvail);
+    matterAvail -= y.matterBurn;
+    c.last = y.y;
+    eIn += y.y.energy;
+    eOut += y.y.energyUpkeep;
+    mIn += y.y.matter;
+    mOut += y.y.matterUpkeep;
+    insight += y.y.insight;
+    accord += y.y.accord;
+    net[c.id] = y.y.energy - y.y.energyUpkeep;
     const sys = state.systems[c.systemId];
-    sys.primary.spin = Math.max(0, sys.primary.spin - t.spinDraw);
-    if (t.depletion > 0) {
+    sys.primary.spin = Math.max(0, sys.primary.spin - y.spinDraw);
+    if (y.depletion > 0) {
       const b = state.bodies[c.bodyId];
-      b.richness = Math.max(0.05, b.richness - t.depletion * 0.0006);
-      b.hydrogen = Math.max(0, b.hydrogen - t.depletion * 0.0004);
+      b.richness = Math.max(0.05, b.richness - y.depletion * 0.0006);
+      b.hydrogen = Math.max(0, b.hydrogen - y.depletion * 0.0004);
     }
     if (c.overdrive) {
       c.damage = Math.min(1, c.damage + 0.04);
@@ -248,12 +512,13 @@ export function endTurn(state: GameState): TurnResult {
     }
     // spare work's yields count in the turn's own (and so in the energy net it reports: until
     // 19 Oct they went straight into the stores, unreported)
-    const spare = applyIndustry(state, c, t.y.industry, t.y.energy, mods);
+    const spare = applyIndustry(state, c, y.y.industry, y.y.energy, mods);
     insight += spare.insight;
     eIn += spare.energy;
     mIn += spare.matter;
   }
   eIn += jointIncome(state) * ctx.paceFactor;
+  eOut += fleetUpkeep(state, upkeepOf(ctx));
   eOut += researchDraw(state, insight);
   accord -= latticeAlienation(state, mods);
   civ.energy += eIn - eOut;
@@ -264,15 +529,18 @@ export function endTurn(state: GameState): TurnResult {
   const cap = reserveCapacity(state, mods);
   civ.flags.reserve_cap = cap;
   if (civ.energy > cap) {
-    result.wasted = civ.energy - cap;
+    t.wasted = civ.energy - cap;
     civ.energy = cap;
   }
   civ.flags.last_energy_net = eIn - eOut - beacons;
   civ.flags.last_matter_net = mIn - mOut;
   civ.flags.last_insight = insight;
   civ.flags.last_accord = accord;
+  t.insight = insight;
+}
 
-  // overdrive accidents
+/** An overdriven Hearth may fail and wreck what it powers. */
+function overdriveAccidents(state: GameState) {
   withRng(state, (rng) => {
     for (const c of colonies(state)) {
       if (c.overdrive && c.damage > 0.5 && rng.chance(c.damage * 0.25)) {
@@ -287,12 +555,14 @@ export function endTurn(state: GameState): TurnResult {
       }
     }
   });
+}
 
-  // ------------------------------------------------ 2. starvation
-  let starving = false;
-  let popsLost = 0;
+/** 2. Starvation: an empty reserve, and the hungriest settlements go cold; no matter, and a Lattice wears out. */
+function starvation(state: GameState, t: CivTurn) {
+  const civ = state.civ;
+  const { mods, net } = t;
   if (civ.energy < 0) {
-    starving = true;
+    t.starving = true;
     civ.energy = 0;
     const hungry = colonies(state).filter((c) => (net[c.id] ?? 0) < 0).sort((a, b) => (net[a.id] ?? 0) - (net[b.id] ?? 0));
     for (const c of hungry.slice(0, 3)) {
@@ -302,16 +572,24 @@ export function endTurn(state: GameState): TurnResult {
         c.pops.kin--;
         if (lottery) c.cryo++;
         else {
-          popsLost++;
+          t.popsLost++;
           if (hasCharter(state, 'upload_at_death') && capacity(state, c, mods).echoes > c.pops.echoes && withRng(state, (r) => r.chance(0.5))) c.pops.echoes++;
         }
       } else if (c.pops.chorus + c.pops.echoes + c.pops.coldminds > 0 && c.starving % 2 === 0) {
-        const t = c.pops.echoes > 0 ? 'echoes' : c.pops.chorus > 0 ? 'chorus' : 'coldminds';
-        c.pops[t]--;
-        popsLost++;
+        const th = c.pops.echoes > 0 ? 'echoes' : c.pops.chorus > 0 ? 'chorus' : 'coldminds';
+        c.pops[th]--;
+        t.popsLost++;
       }
     }
     log(state, 'The reserve is empty. Settlements are going cold.', 'bad');
+    // after matter the Lattice mends itself with energy: with none left, one wears out, as one does without matter
+    if (matterGone(state)) {
+      const c = colonies(state).find((x) => x.pops.lattice > 0);
+      if (c) {
+        c.pops.lattice--;
+        log(state, `Without energy for repairs, a Lattice at ${c.name} wore out.`, 'bad', c.systemId);
+      }
+    }
   } else {
     for (const c of colonies(state)) c.starving = 0;
   }
@@ -323,8 +601,14 @@ export function endTurn(state: GameState): TurnResult {
       log(state, `Without matter for repairs, a Lattice at ${c.name} wore out.`, 'bad', c.systemId);
     }
   }
+}
 
-  // ------------------------------------------------ 3. research and works
+/** 3. Research and the Great Work share the insight; a great deal left over fills in cheap projects. */
+function researchAndWorks(state: GameState, t: CivTurn) {
+  const civ = state.civ;
+  const insight = t.insight;
+  // (what it learns a turn: Open Archives between others share a part of it, ties.ts)
+  if (civ.id !== state.player) civ.flags.last_insight = insight;
   let research = insight;
   if (civ.work) {
     const share = civ.researching ? 0.5 : 1;
@@ -348,12 +632,17 @@ export function endTurn(state: GameState): TurnResult {
   } else civ.flags.insight_bank = Math.min((civ.flags.insight_bank ?? 0) + research * IDLE_STUDY, 2000);
   // a great deal of insight left over: the scholars fill in the cheapest open projects themselves
   discoverFromSurplus(state);
+}
 
-  // ------------------------------------------------ 4. growth, capacity, worlds
-  scorchWorlds(state, state.years, step.years);
-  declineWorlds(state, ctx.paceFactor);
+/** 4. Growth: Echoes out of the archive first, then every Thread grows toward the room it has, or is crowded out. */
+/** People grow where there is room (exported for the checks: unit/unwritten). */
+export function growth(state: GameState, t: CivTurn) {
+  const civ = state.civ;
+  const { mods, starving } = t;
   // Echoes waiting in the archive move into any free substrate before anyone is counted
   wakeArchivedEchoes(state);
+  // (after matter a Lattice is built from energy, as everything is)
+  const noMatter = matterGone(state);
   for (const c of colonies(state)) {
     const capc = capacity(state, c, mods);
     const b = state.bodies[c.bodyId];
@@ -362,23 +651,26 @@ export function endTurn(state: GameState): TurnResult {
         c.growth.kin += 0.12 * (0.5 + 0.5 * b.vitality) * (hasCharter(state, 'child_quotas') ? 0.4 : 1);
       }
       if (c.pops.echoes < capc.echoes && (c.pops.echoes > 0 || capc.echoes > 0) && civ.energy > 15) c.growth.echoes += 0.22;
-      if (c.pops.lattice < capc.lattice && civ.matter >= 4) c.growth.lattice += 0.35;
+      if (c.pops.lattice < capc.lattice && (noMatter ? civ.energy > 15 : civ.matter >= 4)) c.growth.lattice += 0.35;
     }
-    for (const t of THREADS) {
+    for (const th of THREADS) {
       // a grown point becomes a person where there is room, and is paid for then; without room it
       // waits, unpaid (until 19 Oct it was paid for and lost)
-      if (c.growth[t] >= 1 && (c.pops[t] < capc[t] || (t === 'kin' && c.pops.kin === 0))) {
-        c.growth[t] -= 1;
-        if (t === 'lattice') civ.matter -= 3;
-        if (t === 'echoes') civ.energy -= 3;
-        c.pops[t]++;
+      if (c.growth[th] >= 1 && (c.pops[th] < capc[th] || (th === 'kin' && c.pops.kin === 0))) {
+        c.growth[th] -= 1;
+        if (th === 'lattice') {
+          if (noMatter) civ.energy -= 3 * MATTER_AS_ENERGY;
+          else civ.matter -= 3;
+        }
+        if (th === 'echoes') civ.energy -= 3;
+        c.pops[th]++;
       }
-      if (c.pops[t] > capc[t] && !(t === 'kin' && capc.kin === 0 && c.pops.kin <= 0)) {
-        c.pops[t]--;
-        popsLost++;
-        if (t === 'kin' && hasCharter(state, 'cold_sleep_lottery') && capc.cryo > c.cryo) {
+      if (c.pops[th] > capc[th] && !(th === 'kin' && capc.kin === 0 && c.pops.kin <= 0)) {
+        c.pops[th]--;
+        t.popsLost++;
+        if (th === 'kin' && hasCharter(state, 'cold_sleep_lottery') && capc.cryo > c.cryo) {
           c.cryo++;
-          popsLost--;
+          t.popsLost--;
         }
       }
     }
@@ -389,75 +681,22 @@ export function endTurn(state: GameState): TurnResult {
     }
     if (popsOf(c) + c.cryo <= 0 && Object.keys(c.structures).length === 0) destroyColony(state, c, 'abandoned');
   }
+}
 
-  // ------------------------------------------------ 5. society
-  // Consume the Dead: nothing is buried any more
-  if (popsLost > 0 && hasCharter(state, 'consume_the_dead')) civ.matter += popsLost * 4;
-  updateSociety(state, logL, popsLost, starving);
-  coolAccord(state);
-  if (civ.wakeBonus > 0 && !civ.dormant) civ.wakeBonus--;
+/** Continuity in the Dark Era: every cycle risks a little of the pattern (continuity.ts). */
+function continuity(state: GameState, t: CivTurn) {
+  if (calendarEra(state) !== 'dark') return;
+  state.civ.continuity = Math.max(0, state.civ.continuity - continuityLoss(state, t.starving));
+}
 
-  // ------------------------------------------------ 6. fleets, hazards, other minds
-  advanceFleets(state, step.turnLength, mods);
-  surveyWhereStationed(state);
-  // look around before exploring ships set off again, so they scan every star they reach
-  updateDetection(state, mods);
-  firstSwarm(state);
-  // swarms go for ships that have just stopped at their star, before exploring probes move on
-  swarmsHunt(state, mods);
-  autoExplore(state, mods);
-  updateHunger(state, step.turnLength, mods, ctx.paceFactor);
-  updateSurvivors(state, logL, mods, step.turnLength);
-  pactsTurn(state);
-  withRng(state, (rng) => warTurn(state, () => rng.next()));
-  updateMinds(state, logL, mods);
-
-  // ------------------------------------------------ 7. the universe moves on
-  const from = state.years;
-  // while Halo Siphons run, the halo falls twice as fast: its clock gains this turn's years again
-  if (siphoning) drainHalo(state, from, step.years);
-  const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
-  result.notes = notes;
-  handleNotes(state, notes);
-  // the Unlit's gathering is done: the Last Star lights as the turn ends, as every new star does
-  const lastStar = gatherTheLastStar(state, step.years);
-  if (lastStar) queueEvent(state, 'last_star', { systemId: lastStar });
-  // from 10^65 years solid matter flows: what no one is awake to mend runs into smooth lumps
-  theLongFlow(state, step.eta, logL, mods, Math.log10(ctx.paceFactor));
-  if (calendarEra(state) === 'dark') {
-    // Continuity: every cycle risks a little of the pattern
-    let decay = 2.2;
-    for (const c of colonies(state)) {
-      for (const [id, n] of Object.entries(c.structures)) {
-        const d = STRUCTURE_BY_ID[id];
-        if (d?.continuityMult && n) decay *= Math.pow(d.continuityMult, n);
-      }
-    }
-    if (civ.dormant) decay *= 0.35;
-    if (starving) decay += 5;
-    civ.continuity = Math.max(0, civ.continuity - decay);
-  }
-  state.years = step.years;
-  state.eta = step.eta;
-  state.turnLength = step.turnLength;
-  state.turn++;
-  state.eraTurn++;
-  // one of our stars has just begun its last flare (the turn stopped for it)
-  for (const sys of new Set(colonies(state).map((c) => state.systems[c.systemId]))) {
-    if (sys?.primary.kind === 'blue_dwarf' && sys.primary.blueAt === state.years) queueEvent(state, 'last_flare', flareData(state, sys));
-  }
-  if (civ.flags.flare_until && state.years >= civ.flags.flare_until) {
-    delete civ.flags.flare_until;
-    delete civ.flags.flare_step;
-  }
-  // the new star we kept time with has burned out: our own pace again
-  clearStarClock(state);
-
-  // ------------------------------------------------ 8. signals, forecasts, events
+/** 8. What has reached us: signals, their deliveries, the turn's events and forecasts. Returns the signals that arrived. */
+function signalsAndEvents(state: GameState): Signal[] {
+  const civ = state.civ;
+  const mine = civ.id === state.player;
   // a find about a world the universe has just changed is dropped (events.ts)
   pruneFinds(state);
-  result.arrived = deliverSignals(state);
-  for (const s of result.arrived) {
+  const arrived = deliverSignals(state);
+  for (const s of arrived) {
     // a pact's answer: sealed, or our accord back
     if (s.kind === 'pact_answer') answerArrived(state, s.from, s.data);
     // help we asked for, arriving by beam with their answer
@@ -475,7 +714,7 @@ export function endTurn(state: GameState): TurnResult {
   }
   if (state.turn === 3) queueEvent(state, 'dynamo_fails');
   if (state.turn === 7) queueEvent(state, 'first_night');
-  if ((state.flags.hunger_woke ?? 0) > 0 && !state.fired.rust_in_the_belt) {
+  if ((state.flags.hunger_woke ?? 0) > 0 && !state.civ.fired.rust_in_the_belt) {
     // our surveyors found it: say where (the woken swarm nearest the capital), and chart that star
     const capSys = state.systems[state.colonies[state.civ.capitalId ?? '']?.systemId ?? state.civ.homeSystemId];
     // (a swarm that has already set off was found where it fed: the system it left)
@@ -491,69 +730,26 @@ export function endTurn(state: GameState): TurnResult {
   // positronium forms where matter has decayed or been unmade (η 85): news, once, after the random
   // roll so that it never changes what the roll draws (a game already past it hears it now)
   if (state.era === 'blackhole' && state.eta >= POSITRONIUM_ETA && fateOf(state) !== 'stable') queueEvent(state, 'positronium_forms');
-  updateForecasts(state);
-
-  // ------------------------------------------------ 9. crossings
-  // the fate of matter shows itself: near η 30 the neutron stars tell the fates apart
-  if (!fateKnown(state) && state.eta >= FATE_SHOWN_AT) {
-    revealFate(state);
-    updateForecasts(state);
-  }
-  if (ageOver(state)) {
-    if (state.era === 'dark') {
-      // the deep-time ruler has run out: endurance
-    } else {
-      const atLastHorizon = state.era === 'blackhole';
-      if (atLastHorizon) {
-        const o = checkEndings(state, true);
-        if (o) {
-          result.outcome = o;
-          return result;
-        }
-      }
-      result.crossing = runCrossing(state, mods);
-      state.crossing = result.crossing;
-      updateForecasts(state);
-    }
-  }
-  // the calendar turns without the age (a fate other than decay): the Black Hole Age's Tide
-  else if (calendarTurnDue(state)) calendarTurn(state);
-  // curvature radiation unmakes the last ordinary matter: a storm of its own, inside the age
-  if (fateOf(state) === 'curvature' && state.eta >= MATTER_END.curvature && state.civ.flags.matter_gone === undefined && state.era !== 'dark') {
-    result.crossing = greatEvaporation(state, computeMods(state));
-    state.crossing = result.crossing;
-    updateForecasts(state);
-  }
-  // the last black hole may evaporate before the calendar says so
-  if (state.era === 'blackhole' && !Object.values(state.systems).some((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone)) {
-    const o = checkEndings(state, true);
-    if (o) {
-      result.outcome = o;
-      return result;
-    }
-    result.crossing = runCrossing(state, computeMods(state));
-    state.crossing = result.crossing;
-  }
-
-  // ------------------------------------------------ 10. endings, stats
-  result.outcome = checkEndings(state);
-  civ.stats.pops.push(totalPops(state));
-  civ.stats.energy.push(Math.round(civ.energy));
-  civ.stats.resolve.push(Math.round(civ.resolve));
-  for (const k of ['pops', 'energy', 'resolve'] as const) if (civ.stats[k].length > 500) civ.stats[k].shift();
-  if (!civ.capitalId || !state.colonies[civ.capitalId]) civ.capitalId = colonies(state).sort((a, b) => popsOf(b) - popsOf(a))[0]?.id ?? null;
-  return result;
+  // matter stable: by 10^1500 years everything is iron (deeptime.ts), news once
+  if (state.flags.iron !== undefined) queueEvent(state, 'iron_stars');
+  // and the turn before they decay, for whoever has woven anything through them or strung nets
+  if (mine && positroniumHere(state) && colonies(state).some((c) => formOf(c) === 'positronium' || (c.structures.positronium_net ?? 0) > 0) && turnsToDecay(state) <= 1) queueEvent(state, 'positronium_ends');
+  // (the forecasts are for the player to read)
+  if (mine) updateForecasts(state);
+  return arrived;
 }
 
-/** What the universe did this turn (exported for the checks). */
+/** What the universe did this turn, for the civilization whose part it is (exported for the checks). */
 export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const colonized = new Set(colonies(state).map((c) => c.systemId));
   const known = state.civ.known;
-  // falling worlds' flashes this turn, for the Burst Catchers (catchFlashes)
+  // (each civilization sees to its own settlements, in its own part of the turn)
+  const own = (id: string | null | undefined) => (id && state.colonies[id]?.owner === state.civ.id ? state.colonies[id] : undefined);
+  // the deep dark's flashes this turn, and falling worlds', for the Burst Catchers (catchFlashes)
   const flashes: Flashed[] = [];
   // a new star whose clock we kept was lived in full in its light: no flash to bank from it (the
-  // clock is cleared only after the notes: clearStarClock)
-  const keptTimeWith = (dies: number | undefined) => dies !== undefined && (state.civ.flags.star_flash ?? state.civ.flags.star_until) === dies;
+  // clock is the player's, and is cleared only after the notes: clearStarClock)
+  const keptTimeWith = (dies: number | undefined) => dies !== undefined && state.civ.id === state.player && (state.civ.flags.star_flash ?? state.civ.flags.star_until) === dies;
   for (const n of notes) {
     const sys = state.systems[n.systemId];
     if (!sys) continue;
@@ -587,7 +783,7 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         queueEvent(state, 'helium_giant', { systemId: sys.id });
         known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
         // the helium star it swelled from, if it lit and went out within this turn
-        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ) });
+        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ), own: true });
         break;
       case 'supernova':
         for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'a supernova');
@@ -596,10 +792,10 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
       case 'burnout':
         if (seen) log(state, `The star at ${sys.name} has burned out.`, mine ? 'bad' : 'info', sys.id);
         // a new star that lit and went out within this turn: a flash for the Burst Catchers (26 Oct)
-        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ) });
+        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ), own: true });
         break;
       case 'rogue':
-        if (n.bodyId && state.bodies[n.bodyId]?.colonyId) queueEvent(state, 'unmoored', { systemId: sys.id, bodyId: n.bodyId });
+        if (n.bodyId && own(state.bodies[n.bodyId]?.colonyId)) queueEvent(state, 'unmoored', { systemId: sys.id, bodyId: n.bodyId });
         break;
       case 'feeding':
       case 'rekindle':
@@ -609,13 +805,11 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
       case 'plunge':
         if (n.bodyId) {
           const b = state.bodies[n.bodyId];
+          const c = own(b?.colonyId);
           // (into a black hole all at once: its tides tore the world apart, physics.ts)
           const hole = sys.primary.kind === 'black_hole';
           const giant = !!b && giantWorld(b) && !!n.inFlash;
-          if (b?.colonyId) {
-            const c = state.colonies[b.colonyId];
-            if (c) evacuate(state, c, giant ? `its world fell into its ${hole ? 'black hole' : 'star'} in a flash` : hole ? 'its world was torn apart by the black hole' : 'its world finished falling into its star');
-          }
+          if (c) evacuate(state, c, giant ? `its world fell into its ${hole ? 'black hole' : 'star'} in a flash` : hole ? 'its world was torn apart by the black hole' : 'its world finished falling into its star');
           // (gone in a flash, since 20 Oct: the note after this one tells of it)
           if (n.inFlash) break;
           if (seen) log(state, hole ? `${b?.name} was torn apart by the black hole at ${sys.name} and fell in: one flash, then nothing.` : `The last of ${b?.name} has fallen into its star: one final flash.`, 'info', sys.id);
@@ -629,7 +823,7 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         const f = n.flash;
         const src = state.bodies[n.bodyId ?? ''];
         if (!f || !src) break;
-        flashes.push({ sys, reach: flashReach(f.energy) });
+        flashes.push({ sys, reach: flashReach(f.energy), own: true });
         if (!giantWorld(src)) {
           if (seen) log(state, `${src.name} was torn apart by the black hole at ${sys.name}, and the hole took all of its rubble within the turn: a faint flash, harming nothing.`, 'info', sys.id);
           break;
@@ -640,7 +834,7 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         let people = 0;
         for (const c of colonies(state)) {
           const b = state.bodies[c.bodyId];
-          if (c.systemId !== sys.id || !b || !inside(b)) continue;
+          if (c.systemId !== sys.id || !b || formOf(c) === 'horizon' || !inside(b)) continue;
           const boiled = f.boiled.includes(b.id);
           if (!boiled && flashSheltered(c, b)) {
             lived.push(c.name);
@@ -668,10 +862,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         if (n.bodyId) {
           const b = state.bodies[n.bodyId];
           if (seen) log(state, n.swallowed ? `${b?.name} was swallowed by the swelling giant at ${sys.name}.` : `${b?.name} boiled away in the heat of the new star at ${sys.name}.`, mine ? 'bad' : 'info', sys.id);
-          if (b?.colonyId) {
-            const c = state.colonies[b.colonyId];
-            if (c) evacuate(state, c, n.swallowed ? 'its world was swallowed by its star' : 'its world boiled away');
-          }
+          const c = own(b?.colonyId);
+          if (c) evacuate(state, c, n.swallowed ? 'its world was swallowed by its star' : 'its world boiled away');
         }
         break;
       case 'ejected':
@@ -688,7 +880,9 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
           state.civ.energy += caught;
           log(state, `Burst Catchers at ${sys.name} caught the black hole’s final burst: +${caught} energy.`, 'good', sys.id);
         }
-        // its worlds drift loose and what we built there stays (physics.ts): nothing is lost with it
+        // its worlds drift loose and what we built there stays (physics.ts): nothing is lost with it;
+        // what was written into its horizon is written back out, and drifts on (horizon.ts)
+        for (const c of colonies(state)) if (c.systemId === sys.id && formOf(c) === 'horizon') horizonGone(state, c);
         if (mine) queueEvent(state, 'final_burst', { systemId: sys.id });
         else if (seen) log(state, `The black hole at ${sys.name} has evaporated in a final burst. Whatever orbited it drifts loose.`, 'info', sys.id);
         break;
@@ -698,10 +892,52 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         // and what we built there stays (with nothing left there to warm it)
         if (mine || seen) log(state, `The dwarf at ${sys.name} is gone: space has turned the last of its mass into particles. Whatever orbited it drifts loose.`, mine ? 'bad' : 'info', sys.id);
         break;
+      case 'blackdwarf_sn': {
+        // a heavy black dwarf exploded (deeptime.ts): its worlds blown away, and whatever we had in its system with them
+        let lost = 0;
+        for (const c of colonies(state)) {
+          if (c.systemId !== sys.id || !inItsSystem(state, c)) continue;
+          lost += popsOf(c) + c.cryo;
+          destroyColony(state, c, 'its dead star exploded');
+        }
+        flashes.push({ sys, reach: NEAR_BURST_LY });
+        if (!state.civ.fired.black_dwarf_supernova) queueEvent(state, 'black_dwarf_supernova', { systemId: sys.id });
+        else if (mine || seen) log(state, `The black dwarf at ${sys.name} has exploded, its core turned to iron.${lost ? ` ${lost} of our people were lost with it.` : ''}`, lost ? 'bad' : 'info', sys.id);
+        break;
+      }
+      case 'collapse': {
+        // its matter tunnelled into black holes, which evaporated at once (deeptime.ts): what is of
+        // matter is lost; what is leptonic goes on, in the Deep where the system was. A settlement
+        // of matter with decay-proof substrate goes on as at the end of matter in the other fates
+        // (goLeptonic): what was re-encoded, its Kin and the rest of what was matter lost
+        let lost = 0;
+        for (const c of colonies(state)) {
+          if (c.systemId !== sys.id) continue;
+          if (formOf(c) === 'baryonic' && !decayProof(c)) {
+            lost += popsOf(c) + c.cryo;
+            destroyColony(state, c, 'its matter tunnelled into black holes');
+            continue;
+          }
+          if (formOf(c) === 'baryonic') {
+            const gone = goLeptonic(state, c, protocolsMult(state, 'degenerate'));
+            lost += gone;
+            log(state, `${c.name}: what was re-encoded on its substrate goes on as leptonic${gone ? `; ${gone} of its people, made of matter, were lost` : ''}.`, 'bad', sys.id);
+          }
+          if (state.bodies[c.bodyId]?.kind !== 'deep') moveToHole(state, c, sys);
+        }
+        flashes.push({ sys, reach: NEAR_BURST_LY });
+        if (!state.civ.fired.tunnelling_collapse && (mine || seen || colonies(state).length)) queueEvent(state, 'tunnelling_collapse', { systemId: sys.id });
+        else if (mine) log(state, `The matter at ${sys.name} has tunnelled into black holes and gone in a flash.${lost ? ` ${lost} of our people, still made of it, went with it.` : ''}`, lost ? 'bad' : 'info', sys.id);
+        break;
+      }
       case 'dissolved':
         for (const c of colonies(state)) {
-          if (c.systemId === sys.id && !Object.keys(c.structures).some((k) => STRUCTURE_BY_ID[k]?.decayProof)) {
-            state.flags.decay_lost = (state.flags.decay_lost ?? 0) + popsOf(c) + c.cryo;
+          if (c.systemId !== sys.id) continue;
+          // what made the Passage, or has something decay-proof, goes on alone: leptonic, to a
+          // black hole now (the Thinning); the rest is gone, each loss counted for the report
+          if (decayProof(c)) goOnAlone(state, c);
+          else {
+            state.civ.flags.decay_lost = (state.civ.flags.decay_lost ?? 0) + popsOf(c) + c.cryo;
             destroyColony(state, c, 'its matter decayed');
           }
         }
@@ -715,6 +951,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
 interface Flashed {
   sys: StarSystem;
   reach: number;
+  /** a world falling in, or a new star too brief for its turn: its own system's catchers bank it, even in a system cast out of the galaxy */
+  own?: boolean;
 }
 
 /** A dead star's kind, as a falling world's flash names it. */
@@ -726,11 +964,12 @@ function suns(lum: number): string {
 }
 
 /**
- * The turn's flashes: worlds falling in (since 20 Oct) and new stars that lit and went out within
- * the turn (since 26 Oct), each by its energy (flashReach). Each of our Burst Catchers banks from
- * the best of them, once, by its distance (`burstShare`: all of it in its own system or within the
- * flash's reach), as from a neutron star bursting. In a system cast out of the galaxy only a flash
- * in its own system reaches them.
+ * The turn's flashes: in the deep dark (black dwarf supernovae, matter tunnelling into black holes,
+ * a neutron star's reach each), since 20 Oct worlds falling in, and since 26 Oct new stars that lit
+ * and went out within the turn (both by their energy: flashReach). Each of our Burst Catchers
+ * banks from the best of them, once, by its distance (`burstShare`: all of it in its own system or
+ * within the flash's reach), as from a neutron star bursting. In a system cast out of the galaxy
+ * only a flash in its own system reaches them.
  */
 function catchFlashes(state: GameState, flashes: Flashed[]) {
   let got = 0;
@@ -740,8 +979,8 @@ function catchFlashes(state: GameState, flashes: Flashed[]) {
     const home = state.systems[c.systemId];
     if (!n || !home || !inItsSystem(state, c)) continue;
     let share = 0;
-    // (nothing reaches a system cast out of the galaxy, but a flash at its own star)
-    for (const f of flashes) if (!home.ejected || f.sys.id === home.id) share = Math.max(share, burstShare(distLy(home, f.sys), f.reach));
+    // (nothing reaches a system cast out of the galaxy, but a world falling into its own star)
+    for (const f of flashes) if (!home.ejected || (f.own && f.sys.id === home.id)) share = Math.max(share, burstShare(distLy(home, f.sys), f.reach));
     if (share > 0) {
       got += share * n;
       where.push(c.name);
@@ -756,7 +995,8 @@ function catchFlashes(state: GameState, flashes: Flashed[]) {
 /** A world is lost (it falls into its star, or boils away): whoever can get off is caught by the habitats of the Deep. */
 function evacuate(state: GameState, c: Colony, reason: string) {
   const sys = state.systems[c.systemId];
-  const deep = sys.bodies.map((id) => state.bodies[id]).find((b) => b && b.kind === 'deep' && !b.dissolved);
+  // (its own civilization's Deep, beside any other's)
+  const deep = deepFor(state, sys, c.owner);
   const saved: Partial<Record<(typeof THREADS)[number], number>> = {};
   let n = 0;
   for (const t of THREADS) {

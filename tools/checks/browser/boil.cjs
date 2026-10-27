@@ -8,14 +8,14 @@ run(async () => {
   const ids = await page.evaluate(() => {
     const s = window.__stel.state();
     for (let i = 0; i < 80 && (s.era !== 'degenerate' || s.eta < 17.3); i++) window.__stel.endTurns(3);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     const sys = Object.values(s.systems).find((x) => !x.gone && (x.primary.kind === 'white_dwarf' || x.primary.kind === 'black_dwarf') && !Object.values(s.colonies).some((c) => c.systemId === x.id));
     sys.primary.kind = 'helium_star';
     sys.primary.mass = 0.7;
     sys.primary.bornAt = s.years;
     sys.primary.diesAt = s.years + 2e8;
     s.civ.known[sys.id] = 2;
-    const home = Object.values(s.colonies)[0];
+    const home = Object.values(s.colonies).find((c) => c.owner === s.player);
     const proto = JSON.parse(JSON.stringify(s.bodies[home.bodyId]));
     const b = { ...proto, id: 'tboil', systemId: sys.id, name: `${sys.name} Ember`, kind: 'barren', orbitAU: 0.023, orbit: 18, colonyId: null, dissolved: false, rogue: false, feeding: undefined, relic: undefined, vitality: 0, traits: ['tidally_locked'], water: 0.005 };
     s.bodies[b.id] = b;

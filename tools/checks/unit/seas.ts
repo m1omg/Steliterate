@@ -15,7 +15,7 @@ import { ICE_MELTS_K, SMALL_SEA_FROM, WATER_BOILS_K, bodyClimate, buriedOcean, s
 import type { Body, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
 
-const game = (seed: number) => newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const game = (seed: number) => newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 const profile = (c: BodyClimate, f: number) => (c.day === undefined ? c.mean : Math.max(c.night!, c.day * Math.pow(Math.max(0, f), 0.25)));
 const liquid = (k: number) => k >= ICE_MELTS_K && k < WATER_BOILS_K;
 const SAMPLES = Array.from({ length: 81 }, (_, i) => -1 + i / 40);

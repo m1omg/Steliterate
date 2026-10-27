@@ -20,7 +20,7 @@ const warm = (s: GameState, b: Body) => {
   const c = bodyClimate(s, b);
   return c.day ?? c.mean;
 };
-const fresh = (seed: number) => newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const fresh = (seed: number) => newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 
 // ---- a living world colder than Oymyakon, and one warmer
 let cold: { s: GameState; b: Body } | null = null;

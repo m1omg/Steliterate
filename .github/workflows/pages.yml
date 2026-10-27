@@ -1,7 +1,8 @@
 # Build the game and publish it to the gh-pages branch, which GitHub Pages serves: `main` at the
-# root (today's game), and the new version, the `next` branch, at /next/ (without its own copy of
-# the archive, which the root already serves). A push runs the workflow file of the branch pushed,
-# so `main` and `next` carry this same file, and a push to either rebuilds both.
+# root (the game: the new version since 27 Oct, today's game before it frozen under /archive/), and
+# the `next` branch, a copy of the work branch, at /next/ (without its own copy of the archive,
+# which the root already serves). A push runs the workflow file of the branch pushed, so `main` and
+# `next` carry this same file, and a push to either rebuilds both.
 name: Deploy to GitHub Pages
 
 on:
@@ -35,13 +36,13 @@ jobs:
           cache-dependency-path: |
             main/package-lock.json
             next/package-lock.json
-      - name: Build today's game
+      - name: Build the game
         working-directory: main
         run: npm ci && npm run build
-      - name: Build the new version
+      - name: Build the work branch's copy
         working-directory: next
         run: npm ci && npm run build
-      - name: The new version at /next/
+      - name: The work branch's copy at /next/
         run: |
           rm -rf next/dist/archive
           cp -r next/dist main/dist/next

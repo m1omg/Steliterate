@@ -89,6 +89,7 @@ export interface Primary {
   spinMax: number;
   evaporateAt?: number; // black holes: Hawking evaporation (cosmic year)
   rekindle?: number; // extra light from a feeding world or rekindling (era-normalised)
+  exploded?: boolean; // a heavy black dwarf that has gone supernova (deeptime.ts): an iron-cored dwarf is left
 }
 
 export interface StarSystem {
@@ -104,7 +105,8 @@ export interface StarSystem {
   special?: 'home' | 'core' | 'outlier' | 'survivor' | 'slow' | 'sleeper';
   ejected?: boolean; // flung out of the galaxy by dynamical evaporation
   rust?: number; // Hunger infestation 0..1
-  beacon?: boolean; // decoy beacon placed by the player
+  beacon?: boolean; // a decoy beacon burns here
+  beaconBy?: string; // whose it is, who feeds it (a civilization's id; older saves: the player's)
   gone?: boolean; // nothing left (dissolved / evaporated)
 }
 
@@ -154,7 +156,8 @@ export interface Body {
 
 export interface QueueItem {
   uid: string;
-  kind: 'structure' | 'ship';
+  /** A structure, a ship, or the settlement's Passage (passage.ts: key 'passage'). */
+  kind: 'structure' | 'ship' | 'passage' | 'horizon' | 'weave';
   key: string;
   progress: number;
   cost: number;
@@ -184,15 +187,28 @@ export interface YieldBreakdown {
   lines: YieldLine[];
 }
 
+/**
+ * What a settlement is made of (data/forms.ts): matter (baryonic), as every settlement is until the
+ * end of matter; leptonic, re-encoded in electron–positron structures held by fields, for what goes
+ * on after it. The form decides who can live there.
+ */
+export type ColonyForm = 'baryonic' | 'leptonic' | 'horizon' | 'positronium';
+
 export interface Colony {
   id: string;
+  /** The civilization it belongs to (its id in `state.civs`). */
+  owner: string;
   bodyId: string;
   systemId: string;
   name: string;
   founded: number;
+  /** The cosmic year it was founded: another civilization's is seen when that light reaches us (absent in older saves). */
+  foundedAt?: number;
   pops: Record<ThreadId, number>;
   growth: Record<ThreadId, number>;
   cryo: number; // Kin in Cold Sleep
+  /** What it is made of (absent: matter, as every settlement is until the end of matter). */
+  form?: ColonyForm;
   structures: Record<string, number>;
   queue: QueueItem[];
   focus: Focus;
@@ -201,7 +217,14 @@ export interface Colony {
   damage: number; // 0..1 hearth damage from overdrive / attacks
   starving: number; // turns in energy deficit
   flags_rushed?: number; // turn of the last emergency shift
+  flags_drifted?: number; // turn it last drifted to another black hole (horizon.ts)
   last?: YieldBreakdown;
+  /**
+   * Under siege (the combat system, 20 Oct): warships of a civilization at war with its owner hold
+   * its star, with none of its owner's there, and have for `turns` turns (conflict.ts, siegesTurn).
+   * Absent while no one holds it.
+   */
+  siege?: { by: string; turns: number };
 }
 
 export interface Ship {
@@ -209,11 +232,16 @@ export interface Ship {
   hp: number;
 }
 
+/** How a fleet fights (data/tactics.ts): Hold the line, Close in, Stand off, Escort. */
+export type TacticId = 'line' | 'close' | 'standoff' | 'escort';
+
 // fortify: warships dug in to defend where they are; hold: parked on purpose (neither counts as idle)
-export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame' | 'fortify' | 'hold';
+export type FleetOrder = 'idle' | 'move' | 'colonize' | 'survey' | 'tame' | 'fortify' | 'hold' | 'strike';
 
 export interface Fleet {
   id: string;
+  /** The civilization it belongs to (its id in `state.civs`). */
+  owner: string;
   name: string;
   ships: Ship[];
   at: string | null; // system id while stationed
@@ -223,10 +251,22 @@ export interface Fleet {
   distance: number; // ly of current leg
   order: FleetOrder;
   targetBody?: string;
+  /** A Kinetic Lance's target (order 'strike'): the settlement it will strike when it arrives. */
+  targetColony?: string;
   /** Standing orders the fleet carries out by itself (absent in older saves). */
   auto?: 'explore';
+  /** How it fights, in every fight it is in (absent: Hold the line, as every fleet fought before 20 Oct). */
+  tactic?: TacticId;
   /** The last system it made a long-baseline scan from (absent in older saves). */
   scanned?: string;
+  /**
+   * Another civilization's fleet, for what we see of it at the speed of light (others.ts,
+   * fleetSeen): when it set out on its leg, when it came to where it is (or was built there), and
+   * the star its last leg came from. Absent on ours, which we see as they are.
+   */
+  departed?: number;
+  since?: number;
+  cameFrom?: string;
 }
 
 export interface CivStats {
@@ -236,6 +276,8 @@ export interface CivStats {
 }
 
 export interface Civ {
+  /** Its key in `state.civs` (the player's: PLAYER_ID in civs.ts). */
+  id: string;
   name: string;
   homeSystemId: string;
   capitalId: string | null;
@@ -262,6 +304,18 @@ export interface Civ {
   taint: number; // Hunger Taint 0..100
   flags: Record<string, number>;
   stats: CivStats;
+  // What belongs to one civilization alone (13 Oct, the new version: every civilization plays the
+  // same game, each turn under its own perspective, docs/plans/new-version.md)
+  signals: Signal[];
+  forecasts: Forecast[];
+  pending: PendingEvent[];
+  log: LogEntry[];
+  crossing: CrossingReport | null;
+  outcome: Outcome | null;
+  /** Once-only and counted events: id -> times fired. */
+  fired: Record<string, number>;
+  /** Its own random stream (another civilization's; the player's draws are the state's `rng`, as ever). */
+  rng?: number;
 }
 
 // ---------------------------------------------------------------- other minds
@@ -284,7 +338,7 @@ export interface Survivor {
   clock: number; // log10 years
   contact: boolean;
   alive: boolean;
-  fate?: 'faded' | 'saved' | 'absorbed' | 'seized' | 'devoured' | 'transcended';
+  fate?: 'faded' | 'saved' | 'absorbed' | 'seized' | 'devoured' | 'transcended' | 'hungered' | 'conquered' | 'destroyed';
   aidGiven: number;
   lastSent: number; // turn
   forkOf?: ThreadId;
@@ -296,8 +350,12 @@ export interface Survivor {
   tempted?: number;
   /** Energy we beamed to them, still crossing the dark (cosmic years it arrives); `known`: they can tell it came from us. */
   beams?: { at: number; energy: number; known: boolean; plea?: boolean }[];
-  /** What they will hear of us when its light reaches them (cosmic years), and how it will change how they feel. */
-  news?: { at: number; delta: number; what: string; tag?: 'sanctuary' }[];
+  /** What they will hear of us when its light reaches them (cosmic years), and how it will change how they feel (and the Taint of a Hunger act, judge.ts). */
+  news?: { at: number; delta: number; what: string; tag?: 'sanctuary'; taint?: number }[];
+  /** The Taint of ours they have heard of (judge.ts): what they decide by, never our true Taint. */
+  heardTaint?: number;
+  /** The Taint of theirs we have heard of, a civilization of its own (judge.ts). */
+  taintSeen?: number;
   /** Pacts in force between us: the turn each was sealed. */
   pacts?: Partial<Record<PactKind, number>>;
   /** A pact we proposed, crossing to them (cosmic years it arrives), and the accord it cost. */
@@ -313,13 +371,64 @@ export interface Survivor {
   /** Warships we promised against a swarm at one of their stars, when, and whether ours have fought there since. */
   promised?: { systemId: string; turn: number; kept?: boolean };
   /** At war with us: since which turn, and how many turns in a row our warships have held their first star. */
-  war?: { since: number; siege: number };
+  /** A war between us (part 2c): who declared it (our id if absent), for what, and the siege's star and turns. */
+  war?: War;
   /** What they remember of us, newest last: the reasons for how they feel (dealings.ts, feel). */
   memory?: { turn: number; delta: number; what: string }[];
+  /**
+   * What we keep of our dealings with them, turns and counts (util.ts, marks): when they may offer
+   * a trade or a shared work again and how often we refused (trade_next, trade_no, joint_next,
+   * joint_no), a shared work built (joint), raids on us (raid_last, raid_prev, raid_wait), Mutual
+   * Aid paid each way (aid_out, aid_in), the Choir's wish, the Tessellate's breaches, a plea
+   * against the Hunger. (Until part 2a-3 these were the player's flags, named by their id.)
+   */
+  marks?: Record<string, number>;
+  /**
+   * A civilization of its own as its light has left it, a turn at a time (cosmic year, people on
+   * the old scale, health), so that we see it as it was when that light set out (others.ts, asSeen).
+   */
+  seen?: { at: number; pop: number; health: number }[];
 }
 
 /** Mutual Aid, Shared Watch, Open Archives. */
 export type PactKind = 'aid' | 'watch' | 'archives';
+
+/** Two other civilizations' relation (sim/ties.ts): toward us a neighbour's relation is its Survivor record. */
+export interface Tie {
+  /** How each regards the other (−100..100), by its id. */
+  regard: Record<string, number>;
+  /** Pacts in force between them: the turn each was sealed. */
+  pacts?: Partial<Record<PactKind, number>>;
+  /** The pacts between them that we have heard of (their news reached us). */
+  heard?: Partial<Record<PactKind, true>>;
+  /** A pact one of them proposed, crossing to the other (cosmic years), and its answer coming back. */
+  proposal?: { kind: PactKind; from: string; arrives: number; cost: number; answer?: { yes: boolean; arrives: number } };
+  /** Energy beamed between them, crossing the dark: to whom, when it arrives, how much. */
+  beams?: { to: string; at: number; energy: number }[];
+  /** Turns and counts, as our marks (aid_<id>: when that one last sent help). */
+  marks?: Record<string, number>;
+  /** A Hunger act of one of them, crossing to the other (`to`) as light: what it will think of it, and its Taint (judge.ts). */
+  news?: { to: string; at: number; delta: number; taint: number }[];
+  /** The Taint of the other each has heard of, by the hearer's id. */
+  taintHeard?: Record<string, number>;
+  /** A war between them (part 2c). */
+  war?: War;
+}
+
+/** A war between two civilizations (part 2c): since when, the siege's turns and star, who declared it and for what. */
+export interface War {
+  since: number;
+  siege: number;
+  by?: string;
+  cause?: string;
+  at?: string;
+  /** Why another civilization began it (part 2d): the Hunger heard of in them, its own corruption, or desperation. */
+  motive?: 'hunger' | 'corrupted' | 'desperate';
+  /** Settlements taken or destroyed in it by the side that began it. */
+  took?: number;
+  /** Settlements the side that began it has lost in it to the other's counter-attack (the combat system, 20 Oct). */
+  lost?: number;
+}
 
 export interface Mind {
   id: string;
@@ -345,10 +454,15 @@ export interface Swarm {
   tamed: boolean;
   appetite: number;
   /** A part sent after one of our ships (its fleet id): it strikes that ship wherever it finds it
-   * stopped, and once the ship is gone goes back to its swarm (11 Oct). */
+   * stopped, and once the ship is gone goes on to the ship's nearest settlement, or back to its
+   * swarm if its people have none (11 Oct; on to the settlement from 14 Oct). */
   prey?: string;
   /** The swarm a part broke away from (its id): it rejoins it on its way back. */
   nest?: string;
+  /** Whose ship a part was sent after (a civilization's id; older saves: the player's). */
+  preyOwner?: string;
+  /** Who tamed it (a civilization's id; older saves: the player). */
+  tamedBy?: string;
 }
 
 export interface SignalChoice {
@@ -371,12 +485,32 @@ export interface Signal {
   resolved: string | null;
 }
 
+/**
+ * What is on its way from one civilization to another, in the outbox: a message, or what moves
+ * between them (energy, matter, resolve; people, who join or leave its settlements).
+ */
+export interface Outgoing {
+  to: string;
+  signal?: Signal;
+  energy?: number;
+  matter?: number;
+  resolve?: number;
+  /** The Threads' consent given back (a pact proposal declined). */
+  accord?: number;
+  /** Insight, into what it is researching next (Open Archives between others). */
+  insight?: number;
+  people?: { thread: ThreadId; n: number };
+  /** Its game ends (its people faded, came to us, were taken or devoured); `to`: its settlements and ships become that civilization's. */
+  end?: { ending: string; to?: string };
+}
+
 export interface Forecast {
   uid: string;
   kind: string;
   title: string;
   text: string;
   dueYears: number; // cosmic year of the event (Infinity = open)
+  dueEta?: number; // in deep time, where the year is too large to hold: its η (the HUD counts turns from it)
   systemId?: string;
   bodyId?: string;
   severity: 'info' | 'warn' | 'danger' | 'boon';
@@ -428,12 +562,35 @@ export interface GameSettings {
   protonFate: ProtonFate;
   civName: string;
   homeName: string;
+  /**
+   * The neighbours as they were before the new version: simulated lightly, with no civilization
+   * of their own (for checks that must not drift with the civilizations, and the harness's
+   * comparisons). Absent: each is a civilization playing the same game (others.ts).
+   */
+  civsAsleep?: boolean;
 }
 
 export interface Battle {
   systemId: string;
   turn: number;
   text: string;
+  /** A battle between civilizations (the combat system, 20 Oct): each side, as it fought this turn. */
+  sides?: BattleSide[];
+}
+
+/** One civilization's side of a turn of battle at a star. */
+export interface BattleSide {
+  owner: string;
+  /** Its fleets there, by name, and each one's tactic. */
+  fleets: { name: string; tactic: TacticId }[];
+  /** Its ships there as the battle began, and its settlements' fire. */
+  ships: number;
+  settlement: number;
+  /** The fire it put out, and what reached its own hulls. */
+  dealt: number;
+  taken: number;
+  /** The ships it lost, by class. */
+  lost: Record<string, number>;
 }
 
 export interface GameState {
@@ -456,20 +613,32 @@ export interface GameState {
   bodies: Record<string, Body>;
   colonies: Record<string, Colony>;
   fleets: Record<string, Fleet>;
+  /** Every civilization, by id. */
+  civs: Record<string, Civ>;
+  /** The player's civilization's id. */
+  player: string;
+  /**
+   * The civilization whose turn or view it is: `civs[player]`, but for while another plays its
+   * part of a turn. A pointer, not saved: JSON leaves it out and a load points it again (civs.ts).
+   */
   civ: Civ;
   survivors: Record<string, Survivor>;
   minds: Record<string, Mind>;
   swarms: Record<string, Swarm>;
-  signals: Signal[];
-  forecasts: Forecast[];
-  pending: PendingEvent[];
-  log: LogEntry[];
   battles: Battle[];
   nextId: number;
-  crossing: CrossingReport | null;
-  outcome: Outcome | null;
+  /** Facts about the universe itself (each civilization's own are in its `flags`). */
   flags: Record<string, number>;
-  fired: Record<string, number>;
+  /**
+   * What one civilization sends another in its part of a turn, held until every civilization has
+   * had its part (civs.ts, deliver): no one hears of it sooner, and none writes to another's own.
+   * Empty between turns.
+   */
+  outbox?: Outgoing[];
+  /** Between the other civilizations: each pair's tie (sim/ties.ts), by `a|b` (their ids in order). */
+  ties?: Record<string, Tie>;
+  /** What we will hear of the others' dealings with each other, when its light reaches our capital (ties.ts). */
+  tidings?: { at: number; text: string; systemId?: string; tie?: string; kind?: PactKind; taintOf?: string; taint?: number }[];
   /** Save format version (absent in the first published saves: version 1). */
   saveVersion?: number;
 }

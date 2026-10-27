@@ -1,16 +1,16 @@
-import { SHIP_BY_ID } from '../data/ships';
+import { SHIP_BY_ID, isWarship } from '../data/ships';
 import { residentsOf } from './homes';
 import { STRUCTURE_BY_ID } from '../data/structures';
-import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId } from '../types';
+import type { Body, Colony, Fleet, GameState, StarSystem, ThreadId, Vec3 } from '../types';
 import { THREADS } from '../types';
 import { formatDistance } from '../eras';
 import { boilingAway, frozenHard, tooColdForOpenAir } from '../physics';
 import { habitabilityOf } from './terraform';
-import { THAW_ROOM, scorched, stepTurns, thawed } from './flare';
+import { THAW_ROOM, clockCiv, scorched, stepTurns, thawed } from './flare';
 import { computeMods, type Mods } from './mods';
 import { ANOMALIES } from '../data/events';
-import { colonies, distLy, eraIndex, log, swarmSeenAt, uid, withRng } from './util';
-import { calendarEra } from '../fate';
+import { allColonies, allFleets, colonies, distLy, eraIndex, fleets, log, logTo, ownFleet, swarmSeenAt, uid, withRng } from './util';
+import { calendarEra, matterGone } from '../fate';
 
 // No faster-than-light travel. Fleets advance speed × turn length light-years per turn.
 // Early on a 10 ly hop takes several turns; later a whole province fits into one.
@@ -32,7 +32,7 @@ export function launchCost(state: GameState, f: Fleet, ly: number, mods: Mods): 
  * walks the Tide forward instead of dividing by today's turn length), and in cosmic years of
  * flight, which no pace changes: distance ÷ speed, never faster than light.
  */
-export function travelEstimate(state: GameState, ly: number, mods: Mods, pace = state.civ.pace): { turns: number; years: number } {
+export function travelEstimate(state: GameState, ly: number, mods: Mods, pace = clockCiv(state).pace): { turns: number; years: number } {
   const years = ly > 0 ? ly / mods.speed : 0;
   if (ly <= 0) return { turns: 1, years };
   let covered = 0;
@@ -53,6 +53,7 @@ export function travelTurnsEstimate(state: GameState, ly: number, mods: Mods): n
 export function newFleet(state: GameState, systemId: string, ships: string[], name?: string): Fleet {
   const f: Fleet = {
     id: uid(state, 'f'),
+    owner: state.civ.id,
     name: name ?? fleetName(state, ships),
     ships: ships.map((cls) => ({ cls, hp: SHIP_BY_ID[cls]?.hp ?? 5 })),
     at: systemId,
@@ -62,21 +63,23 @@ export function newFleet(state: GameState, systemId: string, ships: string[], na
     distance: 0,
     order: 'idle',
   };
+  // (another civilization's: we see it once the light of its making reaches us)
+  if (state.player && f.owner !== state.player) f.since = state.years;
   state.fleets[f.id] = f;
   return f;
 }
 
 function fleetName(state: GameState, ships: string[]): string {
   const first = SHIP_BY_ID[ships[0]]?.name ?? 'Fleet';
-  const n = Object.values(state.fleets).filter((f) => f.ships[0]?.cls === ships[0]).length + 1;
+  const n = fleets(state).filter((f) => f.ships[0]?.cls === ships[0]).length + 1;
   return `${first} ${n}`;
 }
 
 /** Order a fleet toward a system. Returns an error string or null. */
 export function orderMove(state: GameState, fleetId: string, to: string, order: Fleet['order'] = 'move', targetBody?: string): string | null {
-  const f = state.fleets[fleetId];
+  const f = ownFleet(state, fleetId);
   if (!f || !f.at) return 'That fleet is already under way.';
-  if (f.at === to && order !== 'colonize' && order !== 'tame') return 'Already there.';
+  if (f.at === to && order !== 'colonize' && order !== 'tame' && order !== 'strike') return 'Already there.';
   if (f.at !== to && f.ships.some((x) => SHIP_BY_ID[x.cls]?.inSystem)) return 'A System Lighter cannot leave its star.';
   const mods = computeMods(state);
   const a = state.systems[f.at];
@@ -93,6 +96,8 @@ export function orderMove(state: GameState, fleetId: string, to: string, order: 
   f.distance = ly;
   f.order = order;
   f.targetBody = targetBody;
+  // (another civilization's: we see it set out once the light of its leaving reaches us)
+  if (f.owner !== state.player && f.from !== to) f.departed = state.years;
   if (f.from === to) {
     // acting in place (settling a body in the same system)
     f.at = to;
@@ -101,24 +106,54 @@ export function orderMove(state: GameState, fleetId: string, to: string, order: 
   return null;
 }
 
-export function advanceFleets(state: GameState, L: number, mods: Mods) {
-  for (const f of Object.values(state.fleets)) {
+/** A Kinetic Lance's speed, as a share of light's, whatever its civilization's ships can do. */
+export const LANCE_SPEED = 0.99;
+
+/** Whether a fleet is a Kinetic Lance alone, flying at LANCE_SPEED. */
+export function isLance(f: Fleet): boolean {
+  return f.ships.length > 0 && f.ships.every((s) => SHIP_BY_ID[s.cls]?.lance);
+}
+
+/** The stretch a fleet flew this turn, from where it was to where it is now (true light-years). */
+export interface Flown {
+  f: Fleet;
+  a: Vec3;
+  b: Vec3;
+}
+
+const along = (p: Vec3, q: Vec3, t: number): Vec3 => ({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t });
+
+/** Moves every fleet under way, and returns the stretches flown (for what they see on the way). */
+export function advanceFleets(state: GameState, L: number, mods: Mods): Flown[] {
+  const flown: Flown[] = [];
+  for (const f of fleets(state)) {
     if (!f.to || f.at) continue;
-    const step = isFinite(L) ? mods.speed * L : Infinity;
+    const step = isFinite(L) ? (isLance(f) ? Math.max(mods.speed, LANCE_SPEED) : mods.speed) * L : Infinity;
+    const t0 = f.traveled;
     f.traveled = Math.min(f.distance, f.traveled + step);
+    const p = f.from ? state.systems[f.from]?.phys : undefined;
+    const q = state.systems[f.to]?.phys;
+    if (p && q && f.distance > 0) flown.push({ f, a: along(p, q, t0 / f.distance), b: along(p, q, f.traveled / f.distance) });
     if (f.traveled >= f.distance) {
       f.at = f.to;
       arrive(state, f);
     }
   }
+  return flown;
 }
 
 function arrive(state: GameState, f: Fleet) {
   const sys = state.systems[f.at!];
+  if (f.owner !== state.player) {
+    f.since = state.years;
+    if (f.from && f.from !== f.at) f.cameFrom = f.from;
+  }
   f.from = null;
   f.to = null;
   f.traveled = 0;
   f.distance = 0;
+  // a Kinetic Lance does not stop: it strikes, with every other battle of the turn (conflict.ts)
+  if (f.order === 'strike') return;
   // any ship charts the system it reaches (probes are just cheap, fast to build and far-sighted)
   if (state.civ.known[sys.id] !== 2) survey(state, sys.id);
   if (f.order === 'colonize' && f.targetBody) {
@@ -134,19 +169,22 @@ function arrive(state: GameState, f: Fleet) {
  * probes survey, so a warship could be parked at a star it never charted; this catches those up.
  */
 export function surveyWhereStationed(state: GameState) {
-  for (const f of Object.values(state.fleets)) {
-    if (f.at && state.systems[f.at] && state.civ.known[f.at] !== 2) survey(state, f.at);
+  for (const f of fleets(state)) {
+    // (a Kinetic Lance does not stop where it strikes)
+    if (f.at && f.order !== 'strike' && state.systems[f.at] && state.civ.known[f.at] !== 2) survey(state, f.at);
   }
 }
 
 export function survey(state: GameState, systemId: string) {
   const sys = state.systems[systemId];
   state.civ.known[systemId] = 2;
-  for (const bid of sys.bodies) {
+  // the ruins, the sleepers and the finds are the player's story: another's survey charts the star
+  const mine = state.civ.id === state.player;
+  for (const bid of mine ? sys.bodies : []) {
     const b = state.bodies[bid];
     if (b.relic && b.relic.state === 'hidden' && !b.relic.flowed && !b.dissolved) {
       b.relic.state = 'found';
-      state.pending.push({ uid: uid(state, 'ev'), defId: `relic_${b.relic.kind}`, data: { bodyId: b.id, systemId } });
+      state.civ.pending.push({ uid: uid(state, 'ev'), defId: `relic_${b.relic.kind}`, data: { bodyId: b.id, systemId } });
     }
   }
   log(state, `Surveyed ${sys.name}.`, 'info', systemId);
@@ -154,23 +192,23 @@ export function survey(state: GameState, systemId: string) {
     log(state, `A living world at ${sys.name}: ${b.name}, ${Math.round(b.habitability * b.vitality * 100)}% habitable, room for ${naturalKinRoom(b, state)} Kin without domes.`, 'good', systemId);
   }
   // a survey sometimes turns up something remarkable (at most one find per survey)
-  withRng(state, (rng) => {
+  if (mine) withRng(state, (rng) => {
     if (!rng.chance(0.3)) return;
     const found = new Set(ANOMALIES.map((a) => a.id));
     // (not a world already falling into its star: what was there to find is coming apart)
     const worlds = sys.bodies.map((id) => state.bodies[id]).filter((b) => b && !b.dissolved && !b.feeding && !b.traits.some((t) => found.has(t)));
     const options: { b: Body; id: string }[] = [];
-    for (const b of worlds) for (const a of ANOMALIES) if ((state.fired[`anom_${a.id}`] ?? 0) < 2 && a.fits(state, b)) options.push({ b, id: a.id });
+    for (const b of worlds) for (const a of ANOMALIES) if ((state.civ.fired[`anom_${a.id}`] ?? 0) < 2 && a.fits(state, b)) options.push({ b, id: a.id });
     if (!options.length) return;
     const pick = rng.pick(options);
     pick.b.traits.push(pick.id);
-    state.fired[`anom_${pick.id}`] = (state.fired[`anom_${pick.id}`] ?? 0) + 1;
-    state.pending.push({ uid: uid(state, 'ev'), defId: `anom_${pick.id}`, data: { bodyId: pick.b.id, systemId } });
+    state.civ.fired[`anom_${pick.id}`] = (state.civ.fired[`anom_${pick.id}`] ?? 0) + 1;
+    state.civ.pending.push({ uid: uid(state, 'ev'), defId: `anom_${pick.id}`, data: { bodyId: pick.b.id, systemId } });
   });
 }
 
 export function canSettle(state: GameState, b: Body, thread: ThreadId): string | null {
-  if (b.colonyId) return 'Already settled.';
+  if (b.colonyId && !othersDeep(state, b)) return 'Already settled.';
   if (b.dissolved) return 'Nothing is left of it.';
   const boil = boilingAway(state, b);
   if (boil) return boil === 'swallowed' ? 'Its star is swelling over it: it will be swallowed as this turn ends.' : 'Its new star will boil it away as this turn ends.';
@@ -184,8 +222,10 @@ export function canSettle(state: GameState, b: Body, thread: ThreadId): string |
 }
 
 function settle(state: GameState, f: Fleet, bodyId: string): string | null {
-  const b = state.bodies[bodyId];
+  let b = state.bodies[bodyId];
   if (!b || b.systemId !== f.at) return 'The target is not here.';
+  // another's Deep: our own habitats beside theirs
+  if (othersDeep(state, b)) b = deepFor(state, state.systems[b.systemId]) ?? b;
   const idx = f.ships.findIndex((s) => SHIP_BY_ID[s.cls]?.settles);
   if (idx < 0) return 'No settlers aboard.';
   const def = SHIP_BY_ID[f.ships[idx].cls];
@@ -199,13 +239,42 @@ function settle(state: GameState, f: Fleet, bodyId: string): string | null {
   return null;
 }
 
+/**
+ * A civilization's own Deep in a system (its orbital habitats, or a vault at a hole): the one it
+ * holds, else a free one, else a new one beside the others', since each builds its own. Null if
+ * the system has none. (13 Oct: before the new version a system had one Deep, and whoever came
+ * there joined whoever held it.)
+ */
+export function deepFor(state: GameState, sys: StarSystem, owner = state.civ.id): Body | null {
+  const deeps = sys.bodies.map((id) => state.bodies[id]).filter((b): b is Body => !!b && b.kind === 'deep' && !b.dissolved);
+  if (!deeps.length) return null;
+  const own = deeps.find((b) => b.colonyId && state.colonies[b.colonyId]?.owner === owner);
+  if (own) return own;
+  const free = deeps.find((b) => !b.colonyId || !state.colonies[b.colonyId]);
+  if (free) return free;
+  const base = deeps[0];
+  const b: Body = { ...structuredClone(base), id: `${base.id}.${owner}`, colonyId: null };
+  delete b.relic;
+  delete b.lore;
+  state.bodies[b.id] = b;
+  sys.bodies.push(b.id);
+  return b;
+}
+
+/** A Deep held by another civilization: settling there builds our own beside it (deepFor). */
+function othersDeep(state: GameState, b: Body): boolean {
+  return b.kind === 'deep' && !!b.colonyId && !!state.colonies[b.colonyId] && state.colonies[b.colonyId].owner !== state.civ.id;
+}
+
 export function createColony(state: GameState, b: Body, pops: Partial<Record<ThreadId, number>>): Colony {
   const c: Colony = {
     id: uid(state, 'c'),
+    owner: state.civ.id,
     bodyId: b.id,
     systemId: b.systemId,
     name: b.name,
     founded: state.turn,
+    foundedAt: state.years,
     pops: Object.fromEntries(THREADS.map((t) => [t, pops[t] ?? 0])) as Record<ThreadId, number>,
     growth: Object.fromEntries(THREADS.map((t) => [t, 0])) as Record<ThreadId, number>,
     cryo: 0,
@@ -216,6 +285,8 @@ export function createColony(state: GameState, b: Body, pops: Partial<Record<Thr
     damage: 0,
     starving: 0,
   };
+  // (after the end of matter there is nothing else to be)
+  if (matterGone(state)) c.form = 'leptonic';
   state.colonies[c.id] = c;
   b.colonyId = c.id;
   state.civ.known[b.systemId] = 2;
@@ -227,28 +298,52 @@ export function createColony(state: GameState, b: Body, pops: Partial<Record<Thr
   return c;
 }
 
+/** A settlement is gone: its civilization loses its capital if it was that, and hears why. */
 export function destroyColony(state: GameState, c: Colony, reason: string) {
   const b = state.bodies[c.bodyId];
   if (b) b.colonyId = null;
   delete state.colonies[c.id];
-  if (state.civ.capitalId === c.id) state.civ.capitalId = null;
-  log(state, `${c.name} is lost: ${reason}`, 'bad', c.systemId);
+  const owner = state.civs[c.owner] ?? state.civ;
+  if (owner.capitalId === c.id) owner.capitalId = null;
+  logTo(state, owner, `${c.name} is lost: ${reason}`, 'bad', c.systemId);
 }
 
-/** Systems within detection range of any settlement or fleet become known. */
 /** Past this, even a ship's long-baseline scan picks nothing out (ly). */
 const SCAN_REACH = 60000;
 /** A ship scans for new stars only once no known star this close is still uncharted (ly). */
 const SCAN_LOCAL = 2000;
 
+/** How far a fleet sees, stopped or under way: as far as a settlement, a survey ship three times as far, a Picket twice. */
+function eyesOf(f: Fleet, mods: Mods): number {
+  return mods.detect * Math.max(canSurvey(f) ? 3 : 1, ...f.ships.map((s) => SHIP_BY_ID[s.cls]?.eyes ?? 1));
+}
+
+/** How far a point lies from the stretch from a to b (ly). */
+function fromStretch(s: Vec3, a: Vec3, b: Vec3): number {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+  const len2 = dx * dx + dy * dy + dz * dz;
+  const t = len2 > 0 ? Math.min(1, Math.max(0, ((s.x - a.x) * dx + (s.y - a.y) * dy + (s.z - a.z) * dz) / len2)) : 0;
+  return Math.hypot(s.x - (a.x + dx * t), s.y - (a.y + dy * t), s.z - (a.z + dz * t));
+}
+
 /**
- * What we can see. Settlements see as far as research allows; a ship sees from wherever it is
- * (a survey ship three times as far). And a ship at the edge of what is known (no uncharted
- * star it knows of within SCAN_LOCAL) takes a long-baseline look, once per system, and picks
- * out the nearest stars no one has seen yet (a survey ship three, any other ship one), so
- * exploring can always go on, even across the gulfs between clusters. The far outliers in the
- * void stay hidden.
+ * The nearest stars no one has seen yet from a point, for a long-baseline look: the far outliers
+ * in the void stay hidden, and past SCAN_REACH nothing is picked out.
  */
+function nearestUnseen(state: GameState, here: Vec3, n: number): { s: StarSystem; ly: number }[] {
+  return Object.values(state.systems)
+    .filter((s) => !state.civ.known[s.id] && !s.gone && s.special !== 'outlier')
+    .map((s) => ({ s, ly: Math.hypot(s.phys.x - here.x, s.phys.y - here.y, s.phys.z - here.z) }))
+    .filter((x) => x.ly <= SCAN_REACH)
+    .sort((a, b) => a.ly - b.ly)
+    .slice(0, n);
+}
+
+/** Whether a star we know of but have not charted lies within SCAN_LOCAL of a point. */
+function unchartedNear(state: GameState, here: Vec3): boolean {
+  return Object.values(state.systems).some((s) => state.civ.known[s.id] === 1 && !s.gone && Math.hypot(s.phys.x - here.x, s.phys.y - here.y, s.phys.z - here.z) <= SCAN_LOCAL);
+}
+
 /**
  * The eyes we chart stars with (updateDetection) and watch the Hunger with (sight.ts): our
  * settlements, the stars our Shared Watch partners watch, and our ships stopped at a star.
@@ -261,40 +356,109 @@ export function watchEyes(state: GameState, mods: Mods): { sys: StarSystem; rang
       .filter((sv) => sv.alive && sv.pacts?.watch !== undefined)
       .flatMap((sv) => sv.systems.map((id) => ({ sys: state.systems[id], range: mods.detect })))
       .filter((e) => !!e.sys),
-    ...Object.values(state.fleets)
+    ...fleets(state)
       .filter((f) => f.at)
-      .map((f) => ({ sys: state.systems[f.at!], range: mods.detect * (canSurvey(f) ? 3 : 1) })),
+      .map((f) => ({ sys: state.systems[f.at!], range: eyesOf(f, mods) })),
   ];
 }
 
-export function updateDetection(state: GameState, mods: Mods) {
+/**
+ * What we can see. Settlements see as far as research allows; a ship sees from wherever it is
+ * (a survey ship three times as far), and under way it sees, with the same eyes, every star near
+ * the stretch it flew this turn (`flown`, from advanceFleets). A ship at the edge of what is known
+ * (no uncharted star it knows of within SCAN_LOCAL) takes a long-baseline look, once per system,
+ * and picks out the nearest stars no one has seen yet (a survey ship three, any other ship one),
+ * so exploring can always go on, even across the gulfs between clusters; a survey ship under way
+ * takes one a turn. Seen is only seen: charting still needs a stop. The far outliers in the void
+ * stay hidden.
+ */
+export function updateDetection(state: GameState, mods: Mods, flown: Flown[] = []) {
   const eyes = watchEyes(state, mods);
   for (const s of Object.values(state.systems)) {
     if (state.civ.known[s.id]) continue;
     if (eyes.some((e) => distLy(e.sys, s) <= e.range)) state.civ.known[s.id] = 1;
   }
-  for (const f of Object.values(state.fleets)) {
+  // under way (part 1b): what lay near the way, and a survey ship's look from where it is now
+  // (a Kinetic Lance has no eyes; a ship that has stopped this turn looked from its star, above)
+  const seen: StarSystem[] = [];
+  for (const { f, a, b } of flown) {
+    if (isLance(f)) continue;
+    const range = eyesOf(f, mods);
+    for (const s of Object.values(state.systems)) {
+      if (state.civ.known[s.id] || s.gone || s.special === 'outlier') continue;
+      if (fromStretch(s.phys, a, b) <= range) {
+        state.civ.known[s.id] = 1;
+        seen.push(s);
+      }
+    }
+    if (f.at || !canSurvey(f) || unchartedNear(state, b)) continue;
+    for (const x of nearestUnseen(state, b, 3)) {
+      state.civ.known[x.s.id] = 1;
+      seen.push(x.s);
+    }
+  }
+  if (seen.length)
+    log(state, `Under way, our ships pick out ${seen.length === 1 ? 'a star' : `${seen.length} stars`} no one had seen: ${seen.slice(0, 4).map((s) => s.name).join(', ')}${seen.length > 4 ? ` and ${seen.length - 4} more` : ''}.`, 'info', seen[0].id);
+  for (const f of fleets(state)) {
     if (!f.at || f.scanned === f.at) continue;
     const here = state.systems[f.at];
     // only from the edge of what is known: while an uncharted star lies close by, look there first
-    if (Object.values(state.systems).some((s) => state.civ.known[s.id] === 1 && !s.gone && distLy(here, s) <= SCAN_LOCAL)) continue;
+    if (unchartedNear(state, here.phys)) continue;
     f.scanned = f.at;
-    const found = Object.values(state.systems)
-      .filter((s) => !state.civ.known[s.id] && !s.gone && s.special !== 'outlier')
-      .map((s) => ({ s, ly: distLy(here, s) }))
-      .filter((x) => x.ly <= SCAN_REACH)
-      .sort((a, b) => a.ly - b.ly)
-      .slice(0, canSurvey(f) ? 3 : 1);
+    const found = nearestUnseen(state, here.phys, canSurvey(f) ? 3 : 1);
     for (const x of found) state.civ.known[x.s.id] = 1;
     if (found.length)
       log(state, `From ${here.name}, ${f.name} picks out ${found.length === 1 ? 'a distant star' : `${found.length} distant stars`}: ${found.map((x) => `${x.s.name} (${formatDistance(x.ly)})`).join(', ')}.`, 'info', here.id);
   }
 }
 
-export function signatureOf(state: GameState, systemId: string): number {
+/**
+ * What the active civilization's warships cost it a turn (part 2c): each class its own upkeep, by
+ * `upkeepShare`, the Tide turns the turn is charged for (upkeepShare, flare.ts: like a structure's,
+ * a turn slower than the Tide costs as much more as it is longer, a quicker one a whole turn's),
+ * and asleep a tenth.
+ */
+export function fleetUpkeep(state: GameState, upkeepShare: number): number {
+  let u = 0;
+  for (const f of fleets(state)) for (const s of f.ships) u += SHIP_BY_ID[s.cls]?.upkeep ?? 0;
+  return u * upkeepShare * (state.civ.dormant ? 0.1 : 1);
+}
+
+/** How many warships the active civilization keeps, for the upkeep's line. */
+export function warshipCount(state: GameState): number {
+  let n = 0;
+  for (const f of fleets(state)) for (const s of f.ships) if (SHIP_BY_ID[s.cls]?.upkeep) n++;
+  return n;
+}
+
+/** The chance a civilization's ships stopped at a star (the active one's, unless another is named) turn a raid or a Kinetic Lance away from it: each screen a chance of its own. */
+export function screenAt(state: GameState, systemId: string, owner = state.civ.id): number {
+  let through = 1;
+  for (const f of allFleets(state)) if (f.owner === owner && f.at === systemId) for (const s of f.ships) through *= 1 - (SHIP_BY_ID[s.cls]?.screen ?? 0);
+  return 1 - through;
+}
+
+/** The share of a ship's hull a Shipyard mends in a turn, at a star where its owner has one. */
+export const REPAIR_SHARE = 0.1;
+
+/** Ships stopped where their civilization has a Shipyard are mended, a little each turn (part 2c). */
+export function repairFleets(state: GameState) {
+  const yards = new Set(colonies(state).filter((c) => (c.structures.shipyard ?? 0) > 0).map((c) => c.systemId));
+  if (!yards.size) return;
+  for (const f of fleets(state)) {
+    if (!f.at || !yards.has(f.at)) continue;
+    for (const s of f.ships) {
+      const max = SHIP_BY_ID[s.cls]?.hp ?? s.hp;
+      if (s.hp < max) s.hp = Math.min(max, s.hp + max * REPAIR_SHARE);
+    }
+  }
+}
+
+/** How warm a civilization's settlements at this star look to the Hunger (the active one's, unless `civId`). */
+export function signatureOf(state: GameState, systemId: string, civId = state.civ.id): number {
   let sig = 0;
-  for (const c of colonies(state)) {
-    if (c.systemId !== systemId) continue;
+  for (const c of allColonies(state)) {
+    if (c.systemId !== systemId || c.owner !== civId) continue;
     for (const [id, n] of Object.entries(c.structures)) sig += (STRUCTURE_BY_ID[id]?.signature ?? 0) * n;
     sig += (c.pops.kin + c.pops.chorus) * 0.3;
     if (c.overdrive) sig += 4;
@@ -304,7 +468,7 @@ export function signatureOf(state: GameState, systemId: string): number {
 
 /** Warships: anything that can fight. */
 export function isWarFleet(f: Fleet): boolean {
-  return f.ships.some((x) => (SHIP_BY_ID[x.cls]?.attack ?? 0) > 0 && !SHIP_BY_ID[x.cls]?.settles);
+  return f.ships.some((x) => isWarship(x.cls));
 }
 
 /** Stationed with nothing to do: the fleets the game should ask about. */
@@ -325,8 +489,8 @@ export function canSurvey(f: Fleet): boolean {
  * already bound for. When nothing is left they report back and wait for orders.
  */
 export function autoExplore(state: GameState, mods: Mods) {
-  const claimed = new Set(Object.values(state.fleets).map((f) => f.to).filter((x): x is string => !!x));
-  for (const f of Object.values(state.fleets)) {
+  const claimed = new Set(fleets(state).map((f) => f.to).filter((x): x is string => !!x));
+  for (const f of fleets(state)) {
     if (f.auto !== 'explore' || !f.at || f.to) continue;
     if (!canSurvey(f)) {
       f.auto = undefined;

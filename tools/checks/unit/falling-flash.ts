@@ -34,7 +34,7 @@ import { Rng } from '../../../src/game/rng';
 import type { Body, BodyKind, GameState, Primary, StarSystem } from '../../../src/game/types';
 import { check, done, loadSave, near } from '../lib';
 
-const fresh = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const fresh = () => newGame({ seed: 1000, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 /** Into the Degenerate Age, at these years. */
 const at = (s: GameState, years: number) => {
   s.era = 'degenerate';
@@ -210,7 +210,7 @@ const giantCase = (deepShield: boolean) => {
   const c1 = settle(s, world(s, near1, 'barren', 1, 1), { burst_catcher: 1 });
   const c2 = settle(s, world(s, near2, 'barren', 1, 1), { burst_catcher: 1 });
   updateForecasts(s);
-  const fc = s.forecasts.find((x) => x.kind === 'flash' && x.bodyId === giant.id);
+  const fc = s.civ.forecasts.find((x) => x.kind === 'flash' && x.bodyId === giant.id);
   const deepPeople = cs.deep.pops.kin + cs.deep.pops.echoes;
   const r = step(s, date);
   return { s, sys, ws, cs, c1, c2, r, fc, deepPeople };
@@ -312,9 +312,9 @@ const giantCase = (deepShield: boolean) => {
   const unread = fresh();
   const uc = Object.values(unread.colonies).find((c) => c.systemId === unread.civ.homeSystemId)!;
   check(structureCheck(unread, uc, STRUCTURE_BY_ID.shadow_shield) === 'Not yet researched.', 'without Orbital Industry, no Shadow Shield');
-  const old = loadSave('98139af-seed1000-turn121-last-star-out.json.gz');
+  const old = loadSave('b1fc6a7-seed1000-turn61-next.json.gz');
   check(!rubbleGame(old), 'a game begun before 20 Oct keeps today’s rule');
-  const oc = Object.values(old.colonies)[0];
+  const oc = Object.values(old.colonies).find((c) => c.owner === old.civ.id)!;
   old.civ.techs.push('subterranean_cities', 'orbital_industry');
   old.era = 'degenerate';
   check(structureCheck(old, oc, STRUCTURE_BY_ID.shadow_shield) === 'Not in this game.' && !buildableStructures(old, oc).some((x) => x.def.id === 'shadow_shield' || x.def.id === 'flash_shelter'), 'and has no shelters to build');

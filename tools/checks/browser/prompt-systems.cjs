@@ -10,8 +10,10 @@ run(async () => {
     // one autoplayed turn picks research (an open research prompt would hide the ship prompt)
     window.__stel.endTurns(1);
     const s = window.__stel.state();
-    for (const x of Object.values(s.fleets)) { x.auto = undefined; }
-    const f = Object.values(s.fleets).find((x) => x.at && x.ships.some((y) => y.cls === 'probe')) ?? Object.values(s.fleets).find((x) => x.at);
+    // ours only: the others' fleets are in the same map since the new version (part 2a-2)
+    const ours = Object.values(s.fleets).filter((x) => x.owner === s.player);
+    for (const x of ours) { x.auto = undefined; }
+    const f = ours.find((x) => x.at && x.ships.some((y) => y.cls === 'probe')) ?? ours.find((x) => x.at);
     const here = s.systems[f.at];
     const near = Object.values(s.systems).filter((x) => x.id !== here.id && s.civ.known[x.id]).map((x) => ({ x, d: Math.hypot(x.pos.x - here.pos.x, x.pos.y - here.pos.y, x.pos.z - here.pos.z) })).sort((a, b) => a.d - b.d)[0].x;
     window.__stel.orderFleet(f.id, near.id, 'survey');
@@ -30,9 +32,21 @@ run(async () => {
     await page.keyboard.press('Escape');
     await page.click('button.endturn').catch(() => {});
     await page.waitForTimeout(900);
-    // research done: pick the next, or its prompt would hide the ship's
-    const rp = await page.$('.rp-option');
-    if (rp) { await rp.click().catch(() => {}); await page.waitForTimeout(400); }
+    // research done: pick the next, or its prompt would hide the ship's (a pick that stored
+    // insight already covers is learnt at once, and the prompt stays up for the next)
+    for (let k = 0; k < 8; k++) {
+      const rp = await page.$('.research-prompt:not(.ship-prompt) .rp-option');
+      if (!rp) break;
+      await rp.click().catch(() => {});
+      await page.waitForTimeout(300);
+    }
+    // another of our ships may be asking first: later for it
+    for (let k = 0; k < 4; k++) {
+      const other = await page.evaluate((name) => { const sp = document.querySelector('.ship-prompt'); return !!sp && !sp.querySelector('.rp-title')?.textContent.includes(name); }, sent.name);
+      if (!other) break;
+      await page.click('.ship-prompt button[aria-label="Later"]').catch(() => {});
+      await page.waitForTimeout(300);
+    }
     prompt = await page.evaluate((name) => !!document.querySelector('.ship-prompt') && document.querySelector('.ship-prompt').textContent.includes(name), sent.name);
     const dbg = await page.evaluate((id) => { const s = window.__stel.state(); const f = s.fleets[id]; return { turn: s.turn, at: f?.at, to: f?.to, order: f?.order, auto: f?.auto, research: s.civ.researching, modal: document.querySelector('.modal')?.textContent?.slice(0, 60) ?? null, sp: document.querySelector('.ship-prompt')?.textContent?.slice(0, 60) ?? null, rp: !!document.querySelector('.research-prompt:not(.ship-prompt)') }; }, sent.id);
     console.log('dbg', JSON.stringify(dbg));

@@ -21,7 +21,7 @@ run(async () => {
     window.__stel.endTurns(10);
     const s = window.__stel.state();
     if (!s.civ.techs.includes('terraforming')) s.civ.techs.push('terraforming');
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     s.swarms = {};
     s.civ.matter = 500;
     return Object.values(s.bodies)
@@ -37,7 +37,7 @@ run(async () => {
       const b = s.bodies[id];
       for (const [cid, c] of Object.entries(s.colonies)) if (cid === 'c_tf') { s.bodies[c.bodyId].colonyId = null; delete s.colonies[cid]; }
       s.colonies.c_tf = {
-        id: 'c_tf', bodyId: id, systemId: b.systemId, name: b.name, founded: s.turn,
+        id: 'c_tf', owner: s.player, bodyId: id, systemId: b.systemId, name: b.name, founded: s.turn,
         pops: { kin: 2, echoes: 0, chorus: 0, lattice: 0, coldminds: 0 }, growth: { kin: 0, echoes: 0, chorus: 0, lattice: 0, coldminds: 0 },
         cryo: 0, structures: {}, queue: [], focus: 'balanced', overdrive: false, damage: 0, starving: 0,
       };

@@ -18,14 +18,14 @@ const reach = (seed: number) => {
   // as a game begun before 19 Oct: a world still bound to its hole at η 40 had long since fallen
   // in otherwise (fall-in.ts), and this is about the hole's own end
   delete g.flags.all_fall;
-  for (let t = 0; t < 900 && !g.outcome && !(calendarEra(g) === 'blackhole' && g.eraTurn >= 3); t++) {
+  for (let t = 0; t < 900 && !g.civ.outcome && !(calendarEra(g) === 'blackhole' && g.eraTurn >= 3); t++) {
     autoPlay(g, 'competent');
     endTurn(g);
   }
   return g;
 };
 let s = reach(2360862);
-for (let k = 1; k <= 12 && !(calendarEra(s) === 'blackhole' && !s.outcome); k++) s = reach(1000 + k * 7919);
+for (let k = 1; k <= 12 && !(calendarEra(s) === 'blackhole' && !s.civ.outcome); k++) s = reach(1000 + k * 7919);
 console.log(`  turn ${s.turn}, ${s.era}, η ${s.eta.toFixed(1)}, fate ${s.fate}`);
 const holes = Object.values(s.systems).filter((x) => x.primary.kind === 'black_hole' && !x.gone);
 const settledAt = (id: string) => Object.values(s.colonies).some((c) => c.systemId === id);
@@ -51,9 +51,11 @@ const before = colonyTurn(s, c, ctx(), 1e9).y.lines.map((l) => `${l.label} ${(l.
 console.log(`  before: ${before.join(', ')}`);
 withWorld.primary.evaporateAt = s.years * (1 + 1e-12);
 empty.primary.evaporateAt = s.years * (1 + 1e-12);
-s.pending.length = 0;
+s.civ.pending.length = 0;
 s.civ.energy = 10;
-// nothing else finishes this turn, so the storage change is the vault's alone
+// nothing else finishes this turn, so the storage change is the vault's alone, and no swarm
+// strikes anywhere (a strike can strip a structure: hunger.ts), so what changes is the hole's doing
+for (const id of Object.keys(s.swarms)) delete s.swarms[id];
 for (const x of Object.values(s.colonies)) x.queue = [];
 const structs = JSON.stringify(c.structures);
 endTurn(s);
@@ -64,8 +66,8 @@ check(withWorld.primary.kind === 'void' && !withWorld.gone, `its system stays, i
 check(world.rogue === true && withWorld.bodies.every((id) => { const b = s.bodies[id]; return !b || b.dissolved || b.kind === 'deep' || b.rogue; }), 'its worlds drift loose (rogue)');
 check(withWorld.primary.spin === 0 && !withWorld.primary.rekindle, 'no spin and no glow are left there');
 check(!!empty.gone, `a hole with nothing left around it is simply gone (${empty.name})`);
-check(s.log.some((l) => /Burst Catchers at .* caught/.test(l.text)), 'its Burst Catchers caught the final burst');
-check(s.pending.some((e) => e.defId === 'final_burst'), 'the Last Burst event is waiting');
+check(s.civ.log.some((l) => /Burst Catchers at .* caught/.test(l.text)), 'its Burst Catchers caught the final burst');
+check(s.civ.pending.some((e) => e.defId === 'final_burst'), 'the Last Burst event is waiting');
 const cap1 = reserveCapacity(s, computeMods(s));
 check(Math.abs(cap0 - cap1 - 400 * mods.reserveMult) < 1e-9, `storage: ${cap0} -> ${cap1} (the Horizon Vault's spin is gone; the rings hold)`);
 const after = colonyTurn(s, cc, ctx(), 1e9).y.lines;
@@ -76,9 +78,9 @@ check((!pen || (pen.energy ?? 0) <= 0) && (!haw || (haw.energy ?? 0) <= 0), 'the
 const t = deserialize(JSON.stringify(s))!;
 check(!!t.colonies[c.id] && t.systems[withWorld.id].primary.kind === 'void' && t.bodies[world.id].rogue === true, 'it all saves and loads');
 // play on to the end: nothing breaks
-for (let g = 0; g < 900 && !s.outcome; g++) {
+for (let g = 0; g < 900 && !s.civ.outcome; g++) {
   autoPlay(s, 'competent');
   endTurn(s);
 }
-check(!!s.outcome, `the game plays on to its end: ${s.outcome?.kind} "${s.outcome?.ending}" at turn ${s.turn}`);
+check(!!s.civ.outcome, `the game plays on to its end: ${s.civ.outcome?.kind} "${s.civ.outcome?.ending}" at turn ${s.turn}`);
 done('EVAP');

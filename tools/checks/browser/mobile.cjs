@@ -184,7 +184,7 @@ run(async () => {
     if (upright) {
       // from a button or a list, the sheet opens at the size last set; the handle steps it up;
       // dragging the map lowers it again
-      await page.evaluate(() => { const g = window.__stel.state(); window.__stel.select('body', Object.values(g.colonies)[0].bodyId); });
+      await page.evaluate(() => { const g = window.__stel.state(); window.__stel.select('body', Object.values(g.colonies).find((c) => c.owner === g.player).bodyId); });
       await page.waitForTimeout(1200);
       const s1 = await page.evaluate(() => document.querySelector('.drawer')?.className ?? '');
       check(/\bs1\b/.test(s1), `${name}: chosen from elsewhere, the sheet opens at half (${s1})`);
@@ -201,13 +201,13 @@ run(async () => {
       await page.waitForTimeout(500);
       const s0 = await page.evaluate(() => document.querySelector('.drawer')?.className ?? '');
       check(/\bs0\b/.test(s0), `${name}: dragging the map lowers the sheet to small`);
-      await page.evaluate(() => { const hp = JSON.parse(localStorage.getItem('steliterate.hud') || '{}'); return hp.sheet; }).then((v) => check(v === 1, `${name}: the size set with the handle is remembered (${v})`));
+      await page.evaluate(() => { const hp = JSON.parse(localStorage.getItem('steliterate2.hud') || '{}'); return hp.sheet; }).then((v) => check(v === 1, `${name}: the size set with the handle is remembered (${v})`));
     }
 
     // Choose on map, by touch: the first tap shows the trip, Send sends
     const probe = await page.evaluate(() => {
       const g = window.__stel.state();
-      const f = Object.values(g.fleets).find((x) => x.at && x.ships.some((s) => s.cls === 'probe'));
+      const f = Object.values(g.fleets).find((x) => x.owner === g.player && x.at && x.ships.some((s) => s.cls === 'probe'));
       window.__stel.select('fleet', f.id);
       window.__stel.engine().showGalaxy(f.at, 60, true);
       return f.id;

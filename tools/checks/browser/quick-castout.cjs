@@ -9,7 +9,7 @@ run(async () => {
   const at = await page.evaluate(() => {
     const s = window.__stel.state();
     for (let i = 0; i < 60 && (s.era !== 'degenerate' || s.years < 2e15); i++) window.__stel.endTurns(3);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     delete s.civ.flags.star_until; delete s.civ.flags.star_step; delete s.civ.flags.star_next;
     const A = Object.values(s.systems).find((x) => x.primary.kind === 'brown_dwarf' && !x.gone && !x.ejected);
     A.primary.kind = 'collision_star'; A.primary.mass = 0.1; A.primary.bornAt = s.years; A.primary.diesAt = s.years + 6e12;
@@ -19,7 +19,7 @@ run(async () => {
     // an ember, cast out half a decade of years ago
     const E = Object.values(s.systems).find((x) => x.primary.kind === 'white_dwarf' && x.primary.halo && !x.gone && s.civ.known[x.id]);
     E.ejected = true; E.primary.haloLeft = s.years / Math.pow(10, 0.5);
-    s.pending.push({ uid: 'ev_cast', defId: 'cast_out', data: { systemId: E.id } });
+    s.civ.pending.push({ uid: 'ev_cast', defId: 'cast_out', data: { systemId: E.id } });
     window.__stel.refresh();
     return { A: A.name, E: E.id, Ename: E.name };
   });

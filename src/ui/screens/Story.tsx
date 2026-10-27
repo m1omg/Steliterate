@@ -5,7 +5,7 @@ import { EVENT_BY_ID, choiceHint, choiceShown } from '../../game/data/events';
 import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
 import { ageIntro, ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
-import { threadTotals, totalPops } from '../../game/sim/util';
+import { fleets, threadTotals, totalPops } from '../../game/sim/util';
 import type { Body, GameState, PendingEvent } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { THREAD_DEFS } from '../../game/data/threads';
@@ -58,7 +58,7 @@ function eventSystem(s: GameState, p: PendingEvent): string | null {
   const d = p.data;
   const home = Object.values(s.bodies).find((b) => b.traits.includes('homeworld'));
   // the derelict ark was found by one of our probes: wherever a survey ship is
-  const probe = Object.values(s.fleets).find((f) => f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey));
+  const probe = fleets(s).find((f) => f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey));
   const id =
     (typeof d.systemId === 'string' && d.systemId) ||
     (typeof d.bodyId === 'string' && s.bodies[d.bodyId]?.systemId) ||
@@ -94,9 +94,9 @@ export function worldFinds(s: GameState, b: Body): { defId: string; title: strin
     .map((id) => {
       const def = EVENT_BY_ID[id];
       let choice = b.lore?.[id] ?? null;
-      if (!choice && !s.pending.some((p) => p.defId === id && p.data.bodyId === b.id)) {
+      if (!choice && !s.civ.pending.some((p) => p.defId === id && p.data.bodyId === b.id)) {
         // older games did not keep it with the world: look for it in the Record
-        const e = s.log.find((l) => l.kind === 'event' && l.text.startsWith(`${def.title}: `));
+        const e = s.civ.log.find((l) => l.kind === 'event' && l.text.startsWith(`${def.title}: `));
         if (e) choice = e.text.slice(def.title.length + 2).replace(/\.$/, '');
       }
       return { defId: id, title: def.title, choice };
@@ -120,7 +120,7 @@ export function LoreModal({ s }: { s: GameState }) {
     text = '…';
   }
   const find = worldFinds(s, b).find((f) => f.defId === v.defId);
-  const pending = s.pending.some((p) => p.defId === v.defId && p.data.bodyId === b.id);
+  const pending = s.civ.pending.some((p) => p.defId === v.defId && p.data.bodyId === b.id);
   const close = () => (loreView.value = null);
   return (
     <div class="modal-wrap" onClick={(e) => e.target === e.currentTarget && close()}>
@@ -147,7 +147,7 @@ export function LoreModal({ s }: { s: GameState }) {
 export function EventModal({ s }: { s: GameState }) {
   void rev.value; // mutable game state: re-render on every change
   const result = eventResult.value;
-  const top = s.pending[0];
+  const top = s.civ.pending[0];
   // an event waits while a survey reveal flies through a system (24 Oct, the player: "the planet
   // exploration popup occurs while it's showing all the planets"): the flight's caption already
   // names what was found on each world, and the cards come after it, or once it is skipped
@@ -172,7 +172,7 @@ export function EventModal({ s }: { s: GameState }) {
       </ModalFrame>
     );
   }
-  const p = s.pending[0];
+  const p = s.civ.pending[0];
   if (!p) return null;
   const def = EVENT_BY_ID[p.defId];
   if (!def) return null;
@@ -239,12 +239,17 @@ export function EventModal({ s }: { s: GameState }) {
 
 export function EraIntro({ s }: { s: GameState }) {
   const era = ERA_BY_ID[s.era];
+  // its title takes the focus, as every window's does
+  const title = useRef<HTMLHeadingElement>(null);
+  useFocusOnOpen(title, s.era);
   return (
     <div class="crossing" role="dialog" aria-modal="true" aria-label={era.name}>
       <div class="crossing-art" style={{ backgroundImage: `url(art/${s.era}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{era.numeral} · {era.science}</div>
-        <h1>{era.name}</h1>
+        <h1 ref={title} tabIndex={-1}>
+          {era.name}
+        </h1>
         <p class="intro">{ageIntro(s.era, fateOf(s))}</p>
         <p class="dim" style={{ fontSize: '14.5px', maxWidth: '60ch' }}>
           η {formatEta(s.eta, s.era)}: {formatYears(s.years, s.eta)} since the Big Bang. Keep your people alive through what is coming. Every turn covers more time than the last.
@@ -266,7 +271,9 @@ export function EraIntro({ s }: { s: GameState }) {
 }
 
 export function CrossingScreen({ s }: { s: GameState }) {
-  const r = s.crossing;
+  const r = s.civ.crossing;
+  const title = useRef<HTMLHeadingElement>(null);
+  useFocusOnOpen(title, r?.title ?? r?.to);
   if (!r) return null;
   const to = ERA_BY_ID[r.to];
   const from = ERA_BY_ID[r.from];
@@ -275,7 +282,9 @@ export function CrossingScreen({ s }: { s: GameState }) {
       <div class="crossing-art" style={{ backgroundImage: `url(art/${r.to}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{r.from === r.to ? from.name : `The end of ${from.name}${r.title ? ` · ${r.title}` : ''}`}</div>
-        <h1>{r.from === r.to && r.title ? r.title : to.name}</h1>
+        <h1 ref={title} tabIndex={-1}>
+          {r.from === r.to && r.title ? r.title : to.name}
+        </h1>
         <p class="intro">{r.intro ?? to.intro}</p>
         <div class="row wrap" style={{ gap: '18px', justifyContent: 'center' }}>
           <div>
@@ -302,8 +311,8 @@ export function CrossingScreen({ s }: { s: GameState }) {
           class="btn primary"
           style={{ minWidth: '220px', minHeight: '44px' }}
           onClick={() => {
-            s.crossing = null;
-            modal.value = s.outcome ? { kind: 'outcome' } : null;
+            s.civ.crossing = null;
+            modal.value = s.civ.outcome ? { kind: 'outcome' } : null;
             music.setEra(s.era);
             sfx('click');
             bump();
@@ -320,10 +329,13 @@ const DEFEAT_TEXT: Record<string, string> = {
   Silence: 'The last of you went quiet. The settlements cooled, the archives stopped answering, and the light of your worlds kept travelling outward for a while after there was no one left to send it.',
   'The Will Fails': 'You did not run out of energy. You ran out of reasons. One by one the Threads chose to stop, and the reserve sat full and unused in the dark.',
   'The Fade': 'Every cycle in the dark cost a little of who you were. At the end, the pattern was too thin to hold. Something still runs where you used to be, but it is not you.',
+  Conquered: 'The last of your settlements fell in a war. Some of your people live on among those who took them, counted as theirs now. Whatever you meant to become in the dark, you will not become it.',
 };
 
 export function OutcomeScreen({ s }: { s: GameState }) {
-  const o = s.outcome;
+  const o = s.civ.outcome;
+  const title = useRef<HTMLHeadingElement>(null);
+  useFocusOnOpen(title, o?.ending);
   if (!o) return null;
   const work = WORKS.find((w) => w.ending === o.ending);
   const epilogue = work?.epilogue ?? (o.kind === 'dark' ? DARK_ENDING.epilogue : o.kind === 'endurance' ? ENDURANCE_ENDING.epilogue : DEFEAT_TEXT[o.ending] ?? '');
@@ -335,7 +347,9 @@ export function OutcomeScreen({ s }: { s: GameState }) {
       <div class="crossing-art" style={{ backgroundImage: `url(art/${o.kind === 'dark' ? 'hunger' : s.era}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{head} · turn {o.turn} · <span class="greek">η</span> {formatEta(o.eta, s.era)}</div>
-        <h1 class={o.kind === 'defeat' || o.kind === 'dark' ? 'bad' : ''}>{o.ending}</h1>
+        <h1 ref={title} tabIndex={-1} class={o.kind === 'defeat' || o.kind === 'dark' ? 'bad' : ''}>
+          {o.ending}
+        </h1>
         <p class="intro">{epilogue}</p>
         <div class="lines panel" style={{ padding: '12px 16px', width: '100%' }}>
           <div class="dim">
@@ -343,8 +357,8 @@ export function OutcomeScreen({ s }: { s: GameState }) {
             {totalPops(s) > 0 ? `: ${THREADS.filter((t) => totals[t] > 0).map((t) => `${totals[t]} ${THREAD_DEFS[t].name}`).join(', ')}` : ''}.
           </div>
           {fates.map((f) => (
-            <div key={f.id} class={f.fate === 'saved' || f.fate === 'absorbed' ? 'good' : f.fate === 'seized' || f.fate === 'devoured' ? 'bad' : 'dim'}>
-              {f.name}: {f.alive ? 'still out there' : f.fate === 'saved' ? 'saved' : f.fate === 'absorbed' ? 'lives on within you' : f.fate === 'seized' ? 'taken by force' : f.fate === 'devoured' ? 'devoured' : f.fate === 'transcended' ? 'went beyond' : 'faded'}
+            <div key={f.id} class={f.fate === 'saved' || f.fate === 'absorbed' ? 'good' : f.fate === 'seized' || f.fate === 'devoured' || f.fate === 'destroyed' ? 'bad' : 'dim'}>
+              {f.name}: {f.alive ? 'still out there' : f.fate === 'saved' ? 'saved' : f.fate === 'absorbed' ? 'lives on within you' : f.fate === 'seized' ? 'taken by force' : f.fate === 'devoured' ? 'devoured' : f.fate === 'transcended' ? 'went beyond' : f.fate === 'hungered' ? 'became the Hunger' : f.fate === 'destroyed' ? 'destroyed by you' : f.fate === 'conquered' ? 'conquered by another' : 'faded'}
             </div>
           ))}
         </div>

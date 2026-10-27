@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { SHIP_BY_ID } from '../../game/data/ships';
-import { colonies } from '../../game/sim/util';
+import { colonies, fleets } from '../../game/sim/util';
 import type { GameState } from '../../game/types';
 import { uiFactor } from '../Tip';
 import { Icon } from '../Icon';
@@ -9,7 +9,7 @@ import { sfx } from '../../audio/sfx';
 import { useFocusPrompt } from '../a11y';
 
 // The guide: a short run of steps over the first turns. The step lives in the save
-// (flags.tut), so it survives a reload; deleting the flag ends the guide.
+// (civ.flags.tut), so it survives a reload; deleting the flag ends the guide.
 
 interface Step {
   title: string;
@@ -62,7 +62,7 @@ const STEPS: Step[] = [
     title: 'Send out the probes',
     text: 'You have two survey probes. Open Fleets (F), choose a probe and pick a nearby star from its list. Until a probe surveys a system, you only see its star.',
     target: '.rail > button:nth-child(3)',
-    done: (s) => Object.values(s.fleets).some((f) => !!f.to && f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey)),
+    done: (s) => fleets(s).some((f) => !!f.to && f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey)),
   },
   {
     title: 'End the turn',
@@ -95,19 +95,19 @@ const STEPS: Step[] = [
 
 function setStep(n: number | null) {
   act((g) => {
-    if (n === null || n >= STEPS.length) delete g.flags.tut;
-    else g.flags.tut = n;
+    if (n === null || n >= STEPS.length) delete g.civ.flags.tut;
+    else g.civ.flags.tut = n;
   });
 }
 
 export function startTutorial(g: GameState) {
-  g.flags.tut = 0;
+  g.civ.flags.tut = 0;
 }
 
 export function Tutorial({ s }: { s: GameState }) {
   void rev.value;
   void selection.value;
-  const step = s.flags.tut;
+  const step = s.civ.flags.tut;
   const base = step !== undefined ? STEPS[step] : undefined;
   const cur = base?.phone && isPhone() ? { ...base, target: base.phone.target ?? base.target, text: base.phone.text } : base;
   const ring = useRef<HTMLDivElement>(null);

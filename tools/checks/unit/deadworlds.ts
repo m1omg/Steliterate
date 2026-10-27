@@ -59,9 +59,9 @@ const free = (s: GameState) => (id: string) => !s.bodies[id].colonyId && s.bodie
   const s = fresh();
   const home = Object.values(s.bodies).find((b) => b.traits.includes('homeworld'))!;
   home.vitality = 0.001;
-  const n = s.log.length;
+  const n = s.civ.log.length;
   endTurn(s);
-  const said = s.log.slice(n).map((e) => e.text).find((t) => t.startsWith(`${home.name} has died.`)) ?? '';
+  const said = s.civ.log.slice(n).map((e) => e.text).find((t) => t.startsWith(`${home.name} has died.`)) ?? '';
   const cl = bodyClimate(s, home);
   check(home.vitality === 0 && home.kind === 'ice' && /star still keeps a sea open on its day side/.test(said) && !/frozen/.test(said), `${home.name} dies of its decline under a burning star: "${said}"`);
   check(/open sea on the day side/.test(waterState(home, cl)), `its water: "${waterState(home, cl)}" (${Math.round(cl.night!)}–${Math.round(cl.day!)} K)`);

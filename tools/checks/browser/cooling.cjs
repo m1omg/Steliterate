@@ -10,7 +10,7 @@ run(async () => {
     // η 17, well into the Degenerate Age: at η 16 a white dwarf born late from a red dwarf can
     // still honestly be above a kelvin (0.09 M☉, 1.4 K at η 16.4, seen 11 Oct)
     for (let i = 0; i < 60 && (s.era !== 'degenerate' || s.eta < 17); i++) window.__stel.endTurns(3);
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     const free = (x) => !x.gone && !Object.values(s.colonies).some((c) => c.systemId === x.id) && x.bodies.some((id) => s.bodies[id] && s.bodies[id].kind !== 'deep' && !s.bodies[id].dissolved);
     const cold = Object.values(s.systems).find((x) => free(x) && (x.primary.kind === 'black_dwarf' || (x.primary.kind === 'white_dwarf' && !x.primary.halo)) && !x.primary.rekindle);
     const hole = Object.values(s.systems).find((x) => !x.gone && x.primary.kind === 'black_hole');

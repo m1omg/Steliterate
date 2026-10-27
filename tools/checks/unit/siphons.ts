@@ -45,14 +45,14 @@ near('a cast-out ember still dims by our own clock', emberShare(left, Math.pow(1
   const before = sourceLight(s, sys, s.years, s.turnLength).light;
   s.civ.techs.push('halo_siphons');
   const r = round(s);
-  check(r.civ.flags.halo_drawn === undefined && haloDrawn(r) === 0, 'an old save with Halo Siphons researched loads with nothing drawn');
+  check(r.flags.halo_drawn === undefined && haloDrawn(r) === 0, 'an old save with Halo Siphons researched loads with nothing drawn');
   check(sourceLight(r, r.systems[c.systemId], r.years, r.turnLength).light === before, 'and its ember gives the same light as before the update');
   const y0 = r.years;
   endTurn(r);
   near('one turn with the siphons running draws exactly that turn’s years', haloDrawn(r), r.years - y0);
   const t = loadSave(SAVE);
   for (let i = 0; i < 3; i++) endTurn(t);
-  check(t.civ.flags.halo_drawn === undefined, 'a game without the siphons never draws (three turns)');
+  check(t.flags.halo_drawn === undefined, 'a game without the siphons never draws (three turns)');
 }
 
 // ---------------------------------------------------------------- shutting them
@@ -76,12 +76,12 @@ function withRequest(): { s: GameState; uid: string } {
   s.minds.dark.understanding = 75;
   updateMinds(s, 0, computeMods(s));
   deliverSignals(s);
-  const sig = s.signals.find((x) => x.kind === 'dark_reveal2')!;
+  const sig = s.civ.signals.find((x) => x.kind === 'dark_reveal2')!;
   return { s, uid: sig.uid };
 }
 {
   const { s, uid } = withRequest();
-  const sig = s.signals.find((x) => x.uid === uid)!;
+  const sig = s.civ.signals.find((x) => x.uid === uid)!;
   check(!!sig && sig.arrivedTurn !== null && sig.resolved === null, 'their request has arrived, open');
   s.civ.matter = 1000;
   s.civ.energy = 1000;
@@ -118,7 +118,7 @@ function withRequest(): { s: GameState; uid: string } {
 
 // ---------------------------------------------------------------- what the Unlit do about it
 {
-  const moved = (s: GameState) => s.log.filter((l) => /invisible mass passed through|Something unseen pulled/.test(l.text)).length;
+  const moved = (s: GameState) => s.civ.log.filter((l) => /invisible mass passed through|Something unseen pulled/.test(l.text)).length;
   const run = (shut: boolean, hostile: boolean) => {
     const s = loadSave(SAVE);
     s.civ.techs.push('halo_siphons');
@@ -147,26 +147,26 @@ function withRequest(): { s: GameState; uid: string } {
     s.turn++;
     deliverSignals(s);
   }
-  const sig = s.signals.find((x) => x.uid === uid)!;
+  const sig = s.civ.signals.find((x) => x.uid === uid)!;
   check(sig.resolved === null, 'their request is still open ten turns on');
   check(astro.resolved === 'lapsed', 'another message with a choice still lapses after 8 turns');
   sig.resolved = 'lapsed';
   const r = round(s);
-  check(r.signals.find((x) => x.uid === uid)!.resolved === null, 'a request of theirs that lapsed before opens again as the save loads');
-  check(r.signals.find((x) => x.uid === astro.uid)!.resolved === 'lapsed', 'other lapsed messages stay lapsed');
+  check(r.civ.signals.find((x) => x.uid === uid)!.resolved === null, 'a request of theirs that lapsed before opens again as the save loads');
+  check(r.civ.signals.find((x) => x.uid === astro.uid)!.resolved === 'lapsed', 'other lapsed messages stay lapsed');
   for (let i = 0; i < 200; i++) sendSignal(r, { from: 'astronomers', kind: 'noise', distanceLy: 0, title: 'Noise', text: '' });
   deliverSignals(r);
-  check(r.signals.length === 161 && r.signals.some((x) => x.uid === uid && x.resolved === null), `160 newer messages do not push out their open request (${r.signals.length} kept)`);
-  r.signals.find((x) => x.uid === uid)!.resolved = 'refuse';
+  check(r.civ.signals.length === 161 && r.civ.signals.some((x) => x.uid === uid && x.resolved === null), `160 newer messages do not push out their open request (${r.civ.signals.length} kept)`);
+  r.civ.signals.find((x) => x.uid === uid)!.resolved = 'refuse';
   deliverSignals(r);
-  check(r.signals.length === 160, 'answered, it goes the way of the others (160)');
+  check(r.civ.signals.length === 160, 'answered, it goes the way of the others (160)');
 }
 
 // ---------------------------------------------------------------- dates shown
 {
   const s = loadSave(SAVE);
   updateForecasts(s);
-  const f = s.forecasts.find((x) => x.kind === 'embers')!;
+  const f = s.civ.forecasts.find((x) => x.kind === 'embers')!;
   check(!!f && f.dueYears === 1e22 && f.text === 'The dark-matter halo is being used up. White dwarfs will cool toward black dwarfs by η 25.', 'no siphons: the embers forecast is as before');
   check(JSON.stringify(milestonesFor('decay')) === JSON.stringify(milestonesFor('decay', undefined)), 'no siphons: the milestones are as before');
   const dim = EVENT_BY_ID.embers_dim.choices[0];
@@ -175,12 +175,12 @@ function withRequest(): { s: GameState; uid: string } {
   near('running: the embers are out by (10^25 + now) / 2', haloReachesYears(s, 25), (1e25 + s.years) / 2);
   near('that is η 24.7', embersOutEta(s), Math.log10(5e24 + s.years / 2), 1e-12);
   updateForecasts(s);
-  const g = s.forecasts.find((x) => x.kind === 'embers')!;
+  const g = s.civ.forecasts.find((x) => x.kind === 'embers')!;
   check(/faster while our Halo Siphons run/.test(g.text) && /η 24\.7/.test(g.text), `running: the forecast says so (“${g.text}”)`);
   const m = milestonesFor('decay', { at: embersOutEta(s), running: true }).find((x) => x.label === 'Embers fade')!;
   check(Math.abs(m.at - 24.699) < 0.01 && /bringing it sooner/.test(m.detail), 'running: the Chronometer’s Embers fade moves to η 24.7');
   check(/η 24\.7, sooner while our Halo Siphons run/.test(choiceHint(dim, s, {})), 'running: so does the fading embers’ hint');
-  s.civ.flags.halo_drawn = 1e23;
+  s.flags.halo_drawn = 1e23;
   s.civ.flags.siphons_shut = s.turn;
   near('shut with 10^23 years drawn: the end comes that much sooner, and no more', haloReachesYears(s, 25), 1e25 - 1e23);
 }

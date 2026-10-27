@@ -1,3 +1,4 @@
+import { deliver } from '../civs';
 import { formatYears } from '../eras';
 import type { GameState, Signal, SignalChoice, ThreadId } from '../types';
 import { THREADS } from '../types';
@@ -8,9 +9,13 @@ import { log, threadTotals, uid } from './util';
 // years old when it arrives, and its sender may be gone. Contact also needs minds to think
 // at comparable speeds: a mind a thousand times slower is geology; a thousand times faster, noise.
 
+/**
+ * A message on its way, its light crossing `distanceLy`: to the civilization whose turn or view it
+ * is, or to `to` (through the outbox, civs.ts).
+ */
 export function sendSignal(
   state: GameState,
-  s: { from: string; kind: string; title: string; text: string; distanceLy: number; data?: Record<string, number | string>; choices?: SignalChoice[] },
+  s: { from: string; kind: string; title: string; text: string; distanceLy: number; data?: Record<string, number | string>; choices?: SignalChoice[]; to?: string },
 ): Signal {
   const sig: Signal = {
     uid: uid(state, 'sg'),
@@ -28,14 +33,14 @@ export function sendSignal(
   if (!isFinite(state.years) || s.distanceLy <= 0) {
     sig.arriveYears = state.years;
   }
-  state.signals.push(sig);
+  deliver(state, s.to ?? state.civ.id, sig);
   return sig;
 }
 
 /** Mark messages whose light has reached you. Returns the newly arrived ones. */
 export function deliverSignals(state: GameState): Signal[] {
   const out: Signal[] = [];
-  for (const s of state.signals) {
+  for (const s of state.civ.signals) {
     if (s.arrivedTurn !== null) continue;
     if (!isFinite(state.years) || state.years >= s.arriveYears) {
       s.arrivedTurn = state.turn;
@@ -46,14 +51,14 @@ export function deliverSignals(state: GameState): Signal[] {
     }
   }
   // old unanswered messages lapse (the Unlit's wait for an answer)
-  for (const s of state.signals) {
+  for (const s of state.civ.signals) {
     if (s.arrivedTurn !== null && !s.resolved && state.turn - s.arrivedTurn > 8 && !waitsForAnswer(s)) s.resolved = 'lapsed';
   }
   // the oldest go, except an Unlit message still waiting for its answer
-  if (state.signals.length > 160) {
-    const cut = state.signals.length - 160;
-    const keep = state.signals.slice(0, cut).filter((s) => waitsForAnswer(s) && !s.resolved);
-    state.signals.splice(0, cut, ...keep);
+  if (state.civ.signals.length > 160) {
+    const cut = state.civ.signals.length - 160;
+    const keep = state.civ.signals.slice(0, cut).filter((s) => waitsForAnswer(s) && !s.resolved);
+    state.civ.signals.splice(0, cut, ...keep);
   }
   return out;
 }

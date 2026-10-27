@@ -14,8 +14,8 @@ const at = (eta: number, drawn = 0): GameState => {
   const s = loadSave(SAVE);
   s.years = Math.pow(10, eta);
   s.eta = eta;
-  if (drawn > 0) s.civ.flags.halo_drawn = drawn;
-  else delete s.civ.flags.halo_drawn;
+  if (drawn > 0) s.flags.halo_drawn = drawn;
+  else delete s.flags.halo_drawn;
   return s;
 };
 const offered = (s: GameState) => ev.bind!(s, rng) !== null;

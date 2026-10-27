@@ -1,12 +1,18 @@
-// Save compatibility: load saves written by earlier versions, check that they migrate, and play
-// each to the end of time with the autoplayer. Old saves must always load.
+// Save compatibility. Two corpora in tools/saves/:
+// - saves from the build before the new version (13 Oct): the player's path must refuse each one
+//   and say where it plays on (`fromOlderBuild`), while the checks' legacy path still migrates it
+//   and plays it to the end of time with the autoplayer (they are the checks' fixtures);
+//   tools/saves/551fb1a-seed24757-turn71.json.gz is from the first published version (551fb1a):
+//   seed 24757, the competent autoplayer, 71 turns;
+// - the new version's own (`*-next.json.gz`, from 14 Oct, when it went up at /next/): the player's
+//   path must load each one, migrated to this version, and play it to the end of time. Since then
+//   "Saves are sacred" holds for them: add one when saved state changes shape.
+// What this version writes must load again, as a save code and a file.
 // Usage: npm run savecompat [-- file...]   (default: every save in tools/saves/; JSON or save codes, .gz allowed)
-// tools/saves/551fb1a-seed24757-turn71.json.gz is from the first published version (551fb1a):
-// seed 24757, the competent autoplayer, 71 turns. When SAVE_VERSION goes up, add a save from the old version.
 
 import { autoPlay } from '../src/game/auto';
 import { formatEta } from '../src/game/eras';
-import { exportCode, importCode, readSave, saveFile, SAVE_VERSION } from '../src/game/save';
+import { exportCode, fromOlderBuild, importCode, readSave, saveFile, SAVE_VERSION } from '../src/game/save';
 import { endTurn } from '../src/game/sim/turn';
 import { totalPops } from '../src/game/sim/util';
 
@@ -27,17 +33,24 @@ const read = (t: string | URL) => {
 let failures = 0;
 for (const t of targets) {
   const name = String(t).split('/').pop();
-  const state = readSave(read(t));
+  const text = read(t);
+  const older = fromOlderBuild(text);
+  const state = readSave(text, older);
   if (!state) {
     failures++;
     console.log(`FAIL ${name}: not a readable save`);
     continue;
   }
   const problems: string[] = [];
+  // the player's path: an older build's save refused, and known for what it is; one of the new
+  // version's own loaded (the state above came from that path)
+  if (older && readSave(text) !== null) problems.push('the new version loads it for the player; it should refuse a save from the older build');
+  if (/-next\./.test(name ?? '') && older) problems.push('a save of the new version taken for one from the older build');
+  if (!/-next\./.test(name ?? '') && !older) problems.push('not recognised as a save from the older build');
   if (state.saveVersion !== SAVE_VERSION) problems.push(`saveVersion ${state.saveVersion} after migrate, expected ${SAVE_VERSION}`);
   const from = state.turn;
   let guard = 0;
-  while (!state.outcome && guard++ < 1200) {
+  while (!state.civ.outcome && guard++ < 1200) {
     autoPlay(state, 'competent');
     endTurn(state);
     const civ = state.civ;
@@ -50,8 +63,8 @@ for (const t of targets) {
       if (readSave(saveFile(state).text)?.turn !== state.turn) problems.push(`save file round trip failed at turn ${state.turn}`);
     }
   }
-  if (!state.outcome) problems.push(`unfinished after ${guard} turns`);
-  const end = state.outcome ? `${state.outcome.kind.toUpperCase()} "${state.outcome.ending}"` : 'unfinished';
+  if (!state.civ.outcome) problems.push(`unfinished after ${guard} turns`);
+  const end = state.civ.outcome ? `${state.civ.outcome.kind.toUpperCase()} "${state.civ.outcome.ending}"` : 'unfinished';
   console.log(`${problems.length ? 'FAIL' : 'ok  '} ${name}: turn ${from} → ${end} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}), pops ${totalPops(state)}`);
   for (const p of problems.slice(0, 8)) console.log(`  ${p}`);
   if (problems.length) failures++;

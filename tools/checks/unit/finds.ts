@@ -21,7 +21,7 @@ import { endTurn } from '../../../src/game/sim/turn';
 import type { Body, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
 
-const game = (seed: number) => newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' }) as GameState;
+const game = (seed: number) => newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true }) as GameState;
 const vent = ANOMALIES.find((a) => a.id === 'vent_life')!;
 const resonance = ANOMALIES.find((a) => a.id === 'resonance')!;
 const FOUND = new Set(ANOMALIES.map((a) => a.id));
@@ -33,10 +33,10 @@ const water = (s: GameState, b: Body) => {
 /** A find queued as the survey queues one. */
 const find = (s: GameState, b: Body, id: string) => {
   b.traits.push(id);
-  s.fired[`anom_${id}`] = (s.fired[`anom_${id}`] ?? 0) + 1;
-  s.pending.push({ uid: `ev_${id}_${b.id}`, defId: `anom_${id}`, data: { bodyId: b.id, systemId: b.systemId } });
+  s.civ.fired[`anom_${id}`] = (s.civ.fired[`anom_${id}`] ?? 0) + 1;
+  s.civ.pending.push({ uid: `ev_${id}_${b.id}`, defId: `anom_${id}`, data: { bodyId: b.id, systemId: b.systemId } });
 };
-const pendingFind = (s: GameState, b: Body, id: string) => s.pending.some((p) => p.defId === `anom_${id}` && p.data.bodyId === b.id);
+const pendingFind = (s: GameState, b: Body, id: string) => s.civ.pending.some((p) => p.defId === `anom_${id}` && p.data.bodyId === b.id);
 
 // forty galaxies: the Drifts, and the worlds around stars
 let drifts = 0;
@@ -115,18 +115,18 @@ check(starKept > 100 && threeAndDeep > 0, `around stars it fits ${starKept} worl
   const real = sys.bodies.map((id) => s.bodies[id]).filter((b) => b.kind !== 'deep');
   const falling = new Set(real.slice(1).map((b) => b.id));
   for (const b of real.slice(1)) b.feeding = { start: s.years, tau: 1e9, base: 0, model: 'feed', revealed: true };
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   let about = 0;
   let aboutFalling = 0;
   for (let i = 0; i < 80; i++) {
     survey(s, sys.id);
-    for (const p of s.pending.filter((x) => x.defId.startsWith('anom_'))) {
+    for (const p of s.civ.pending.filter((x) => x.defId.startsWith('anom_'))) {
       about++;
       if (falling.has(String(p.data.bodyId))) aboutFalling++;
     }
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     for (const id of sys.bodies) s.bodies[id].traits = s.bodies[id].traits.filter((t) => !FOUND.has(t));
-    for (const k of Object.keys(s.fired)) if (k.startsWith('anom_')) delete s.fired[k];
+    for (const k of Object.keys(s.civ.fired)) if (k.startsWith('anom_')) delete s.civ.fired[k];
   }
   check(about > 10 && aboutFalling === 0, `eighty surveys of ${sys.name}, ${falling.size} of its ${real.length} worlds falling into its star: ${about} finds, ${aboutFalling} of them about a falling world`);
 }
@@ -134,10 +134,10 @@ check(starKept > 100 && threeAndDeep > 0, `around stars it fits ${starKept} worl
 // a find about a world the universe changed is dropped; the rest stay, in order
 {
   const s = game(3000);
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   const oceans = Object.values(s.bodies).filter((b) => vent.fits(s, b) && !starless(s, b)).slice(0, 4);
   const [torn, loose, gone, kept] = oceans;
-  s.pending.push({ uid: 'ev_other', defId: 'world_falls', data: { bodyId: torn.id } });
+  s.civ.pending.push({ uid: 'ev_other', defId: 'world_falls', data: { bodyId: torn.id } });
   for (const b of oceans) find(s, b, 'vent_life');
   const lens = Object.values(s.bodies).find((b) => b.kind !== 'deep' && !oceans.includes(b))!;
   find(s, lens, 'lens');
@@ -145,15 +145,15 @@ check(starKept > 100 && threeAndDeep > 0, `around stars it fits ${starKept} worl
   loose.rogue = true;
   gone.dissolved = true;
   pruneFinds(s);
-  check(s.pending.map((p) => p.uid).join() === `ev_other,ev_vent_life_${kept.id},ev_lens_${lens.id}`, `finds about a world falling, flung loose or gone are dropped; the rest stay, in order (${s.pending.map((p) => p.defId).join(', ')})`);
+  check(s.civ.pending.map((p) => p.uid).join() === `ev_other,ev_vent_life_${kept.id},ev_lens_${lens.id}`, `finds about a world falling, flung loose or gone are dropped; the rest stay, in order (${s.civ.pending.map((p) => p.defId).join(', ')})`);
   check(![torn, loose, gone].some((b) => b.traits.includes('vent_life')) && kept.traits.includes('vent_life') && lens.traits.includes('lens'), 'the dropped finds’ marks are taken off their worlds');
-  check(s.fired.anom_vent_life === 1 && s.fired.anom_lens === 1, `and counted as not made (vent life ${s.fired.anom_vent_life}, lens ${s.fired.anom_lens})`);
+  check(s.civ.fired.anom_vent_life === 1 && s.civ.fired.anom_lens === 1, `and counted as not made (vent life ${s.civ.fired.anom_vent_life}, lens ${s.civ.fired.anom_lens})`);
 }
 
 // in a whole turn: a find about a world that reaches its dead star's tidal limit within the turn
 {
   const s = game(1000);
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   const home = s.systems[s.civ.homeSystemId];
   Object.assign(home.primary, { kind: 'white_dwarf', mass: 0.6, lum: 0.02, halo: false });
   delete home.primary.blueAt;
@@ -163,8 +163,8 @@ check(starKept > 100 && threeAndDeep > 0, `around stars it fits ${starKept} worl
   find(s, ocean, 'vent_life');
   ocean.inspiralAt = s.years + s.turnLength * 0.05;
   endTurn(s);
-  const left = s.pending.filter((p) => p.defId === 'anom_vent_life').length;
-  check(fitted && !!ocean.feeding && !pendingFind(s, ocean, 'vent_life') && !ocean.traits.includes('vent_life') && (s.fired.anom_vent_life ?? 0) === left, `${ocean.name}, found as the turn began, reached its white dwarf's tidal limit within it: the find is gone with it (${ocean.kind}, ${left} other finds of vent life waiting)`);
+  const left = s.civ.pending.filter((p) => p.defId === 'anom_vent_life').length;
+  check(fitted && !!ocean.feeding && !pendingFind(s, ocean, 'vent_life') && !ocean.traits.includes('vent_life') && (s.civ.fired.anom_vent_life ?? 0) === left, `${ocean.name}, found as the turn began, reached its white dwarf's tidal limit within it: the find is gone with it (${ocean.kind}, ${left} other finds of vent life waiting)`);
 }
 
 done('FINDS');

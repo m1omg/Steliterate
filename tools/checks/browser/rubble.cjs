@@ -17,7 +17,7 @@ run(async () => {
     delete home.primary.whiteAt;
     const inner = home.bodies.map((id) => s.bodies[id]).find((b) => b.kind === 'barren' && !b.colonyId);
     inner.inspiralAt = s.years + s.turnLength * 0.05;
-    s.pending.length = 0;
+    s.civ.pending.length = 0;
     window.__stel.refresh();
     return { home: home.id, inner: inner.id, name: inner.name };
   });
@@ -26,7 +26,7 @@ run(async () => {
     page.evaluate((id) => {
       const e = window.__stel.engine();
       const p = e.system.planets.find((x) => x.body.id === id);
-      return { view: e.view, found: !!p, belt: !!p && !p.mat && !!p.mesh.isInstancedMesh && p.mesh.count > 0, planet: !!p?.mat };
+      return { view: e.view, found: !!p, belt: !!p && !p.mat && (p.mesh.userData.belt ?? 0) > 0, planet: !!p?.mat };
     }, id);
   let d = { view: 'galaxy' };
   for (let i = 0; i < 40 && d.view !== 'system'; i++) {
@@ -39,7 +39,7 @@ run(async () => {
   await page.waitForTimeout(1500);
   // (whatever the turn brought up, out of the way)
   await page.evaluate(() => {
-    window.__stel.state().pending.length = 0;
+    window.__stel.state().civ.pending.length = 0;
     window.__stel.refresh();
   });
   await page.waitForTimeout(800);

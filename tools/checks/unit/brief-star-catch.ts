@@ -21,7 +21,7 @@ function turn(s: GameState, from: number, to: number): { gain: number; caught: s
   const notes = evolveUniverse(s, from, to, () => 0.5);
   handleNotes(s, notes);
   const n = notes.find((x) => x.kind === 'burnout' && x.briefJ);
-  return { gain: s.civ.energy - before, caught: s.log.slice(-3).find((l) => l.text.startsWith('Burst Catchers'))?.text ?? null, brief: n?.briefJ };
+  return { gain: s.civ.energy - before, caught: s.civ.log.slice(-3).find((l) => l.text.startsWith('Burst Catchers'))?.text ?? null, brief: n?.briefJ };
 }
 
 // in its own system: two catchers, all of it each (a collision star of a trillion years in a turn

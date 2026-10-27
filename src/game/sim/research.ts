@@ -1,7 +1,8 @@
 import { TECH_BY_ID, TECHS, type TechDef } from '../data/techs';
 import type { GameState } from '../types';
 import { queueEvent } from './events';
-import { hasTech, log, protonFateKnown } from './util';
+import { capital, hasTech, log, protonFateKnown } from './util';
+import { hungerAct } from './judge';
 import { ageReached, fateOf } from '../fate';
 
 export function techCost(state: GameState, id: string): number {
@@ -18,12 +19,13 @@ export function techCost(state: GameState, id: string): number {
 }
 
 export function techVisible(state: GameState, def: TechDef): boolean {
-  if (def.needsStable || def.needsDecay || def.needsCurvature) {
+  if (def.needsStable || def.needsDecay || def.needsCurvature || def.needsUnstable) {
     if (!protonFateKnown(state)) return false;
     const fate = fateOf(state);
     if (def.needsStable && fate !== 'stable') return false;
     if (def.needsDecay && fate !== 'decay') return false;
     if (def.needsCurvature && fate !== 'curvature') return false;
+    if (def.needsUnstable && fate === 'stable') return false;
   }
   return true;
 }
@@ -57,7 +59,8 @@ export function completeTech(state: GameState, id: string, how: 'research' | 'st
   civ.techs.push(id);
   delete civ.research[id];
   if (civ.researching === id) civ.researching = null;
-  if (def.taint) civ.taint = Math.min(100, civ.taint + def.taint);
+  // a Hunger technology is a Hunger act (judge.ts): its Taint ours at once, and heard of
+  if (def.taint) hungerAct(state, civ.id, def.taint, capital(state)?.systemId ?? civ.homeSystemId, `took up ${def.name}`);
   const name = def.name;
   log(state, how === 'surplus' ? `With insight to spare, the scholars worked out ${name} on their own.` : how === 'stored' ? `Research complete: ${name}, at once, from stored insight.` : `Research complete: ${name}.`, 'good');
   if (id === 'proton_question') queueEvent(state, 'proton_answer');

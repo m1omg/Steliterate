@@ -13,6 +13,7 @@ import { generateWorld } from '../../../src/game/gen';
 import { DEFAULT_SETTINGS, newGame } from '../../../src/game/newGame';
 import { LIFE_LIMIT_K, SURFACE_LIFE, bodyClimate, decayWarmth, frozenFromTheStart, primaryLuminosity, steamWorld, waterFromTheStart } from '../../../src/game/physics';
 import { calendarEra } from '../../../src/game/fate';
+import { heavyDwarfs } from '../../../src/game/sim/deeptime';
 import { scorched } from '../../../src/game/sim/flare';
 import { endTurn } from '../../../src/game/sim/turn';
 import type { Body, GameState, StarSystem } from '../../../src/game/types';
@@ -33,6 +34,7 @@ const same = (a: Body, b: Body) => JSON.stringify({ ...a, colonyId: null }) === 
   for (const seed of [1000, 2000, 3000, 4000, 5000, 6000]) {
     const opts = { seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable' } as const;
     const pre = generateWorld({ ...DEFAULT_SETTINGS, ...opts });
+    heavyDwarfs(pre);
     frozenFromTheStart(pre);
     waterFromTheStart(pre);
     const s = newGame(opts);
@@ -94,9 +96,9 @@ const same = (a: Body, b: Body) => JSON.stringify({ ...a, colonyId: null }) === 
   check(steamWorld(s, steam) && steam.vitality > 0, `${steam.name}, with life under its ice, made a steam world (${Math.round(bodyClimate(s, steam).mean)} K)`);
   check(!steamWorld(s, twilight) && !scorched(s, twilight) && c.day! >= 373 && c.night! < 273, `${twilight.name}, in a flare: its day side ${Math.round(c.day!)} K, its night side ${Math.round(c.night!)} K under ice`);
   const was = twilight.vitality;
-  const logged = s.log.length;
+  const logged = s.civ.log.length;
   endTurn(s);
-  const said = s.log.slice(logged - 1).some((e) => e.text === `Nothing lives on ${steam.name} now: its seas have boiled into a sky of steam.`);
+  const said = s.civ.log.slice(logged - 1).some((e) => e.text === `Nothing lives on ${steam.name} now: its seas have boiled into a sky of steam.`);
   check(s.bodies[steam.id].vitality === 0 && said, `the turn ends: nothing lives on ${steam.name}, and the Record says so`);
   check(s.bodies[twilight.id].vitality === was, `${twilight.name} keeps its life (${Math.round(was * 100)}%) under its night-side ice`);
 }

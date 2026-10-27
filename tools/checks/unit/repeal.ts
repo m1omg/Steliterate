@@ -16,7 +16,7 @@ const fresh = (): GameState => {
   s.civ.accord = 500;
   s.civ.dissent = 20;
   for (const t of Object.keys(s.civ.standing) as (keyof typeof s.civ.standing)[]) s.civ.standing[t] = 50;
-  s.pending.length = 0;
+  s.civ.pending.length = 0;
   return s;
 };
 
