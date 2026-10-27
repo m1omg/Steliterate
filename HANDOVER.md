@@ -207,7 +207,7 @@ last.
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
   | As of | PR m1omg/Steliterate#50 (a star's state wherever the Systems window names its kind, 27 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-XlE8rx1K.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | Live script | `index-CV_2U7Jl.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order
