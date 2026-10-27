@@ -4440,3 +4440,8 @@ Oct, PR m1omg/Steliterate#44) was shown only in the Star types tab.
   light's label on the tip; nothing where the kind says all there is (a red dwarf burning).
 - Display only: no rule changed. Check: `browser/star-types` (a settlement at a white dwarf: its
   header in Our settlements and its line in Surveyed worlds say what Star types says).
+- **`browser/music-route` waits for the film to begin.** It failed in this container on every
+  build back to `8783e38` (24 Oct), where it had passed: while a film's reel is prepared a slow
+  page runs no timer, the music's fade included, and the check looked 2.5 s after the film was
+  asked for, still before it. The music does fall silent and pause before the film begins (100 ms
+  after the reel is ready, here); the check now looks once the film has begun.
