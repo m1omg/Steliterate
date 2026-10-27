@@ -4445,3 +4445,6 @@ Oct, PR m1omg/Steliterate#44) was shown only in the Star types tab.
   page runs no timer, the music's fade included, and the check looked 2.5 s after the film was
   asked for, still before it. The music does fall silent and pause before the film begins (100 ms
   after the reel is ready, here); the check now looks once the film has begun.
+- **`browser/survey-reveal` waits as long for its view switches** as it already did for the frames
+  before them: in software rendering the first two took 45 s and 37 s here (its wait was 20 s), the
+  later ones 3 to 7 s; with the longer wait it passes in full.

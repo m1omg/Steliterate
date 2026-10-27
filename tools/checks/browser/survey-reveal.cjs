@@ -206,13 +206,14 @@ run(async () => {
     const s = window.__stel.state();
     return Object.values(s.systems).find((x) => x.id !== id && s.civ.known[x.id] === 2 && x.bodies.length > 1 && !x.gone)?.id ?? null;
   }, target.id);
-  // (into a system, the view switched: it may be the one already shown, so wait for the switch itself)
+  // (into a system, the view switched: it may be the one already shown, so wait for the switch itself;
+  // in software the first two took 45 s and 37 s on 27 Oct, behind the frames above, so as long a wait)
   const enter = async (id) => {
     await page.evaluate((x) => window.__stel.engine().showSystem(x), id);
     await page.waitForFunction((x) => {
       const e = window.__stel.engine();
       return !e.pendingSwitch && e.view === 'system' && e.system.systemId === x;
-    }, id, { timeout: 20000, polling: 50 });
+    }, id, { timeout: 300000, polling: 50 });
     await page.waitForTimeout(150);
   };
   await page.evaluate(([a, b]) => window.__stel.engine().markForReveal(window.__stel.state(), [a, b].filter(Boolean)), [target.id, other]);
