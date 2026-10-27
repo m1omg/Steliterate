@@ -319,6 +319,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
       </ModalFrame>
     );
   const p = project(s);
+  const L = turnStep(s).turnLength;
   const bySystem = new Map<string, Colony[]>();
   for (const c of colonies(s)) {
     const list = bySystem.get(c.systemId) ?? [];
@@ -371,6 +372,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
             <h3 class="row" style={{ gap: '4px' }}>
               <span class="grow">
                 {sys.name} <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>{PRIMARY_NAME[sys.primary.kind]}</span>
+                <StateChip s={s} sys={sys} L={L} style={{ textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }} />
               </span>
               {sort && (
                 <span class="mono sys-sum" style={{ letterSpacing: 0, fontSize: '13px' }} data-tip={`${sortName} each turn from our settlements at ${sys.name}`}>
@@ -460,6 +462,7 @@ function AfarList({ s, send }: { s: GameState; send?: Fleet }) {
     .map((sys) => ({ sys, ly: distLy(from, sys) }))
     .sort((a, b) => a.ly - b.ly);
   if (!rows.length) return <p class="dim">Every star on our map is surveyed.</p>;
+  const L = turnStep(s).turnLength;
   return (
     <div class="list">
       {rows.map(({ sys, ly }) => (
@@ -467,6 +470,7 @@ function AfarList({ s, send }: { s: GameState; send?: Fleet }) {
           <Icon name={primaryIcon(sys.primary.kind)} />
           <span class="grow">
             {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
+            <StateChip s={s} sys={sys} L={L} />
             {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
             {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip={SWARM_TIP}>swarm</span>}
             {nestSeenAt(s, sys.id) && <span class="chip" style={{ marginLeft: '6px' }} data-tip={NEST_TIP}>nest asleep</span>}
@@ -628,6 +632,20 @@ function starState(s: GameState, sys: StarSystem, L: number): { word: string; la
   return null;
 }
 
+/**
+ * A star's state as a chip, its light's label on the tip, wherever the window names a star's kind
+ * (27 Oct, the player, on Our settlements: "still no ember/cooling description etc or where is
+ * it?"); nothing where its kind says all there is.
+ */
+function StateChip({ s, sys, L, style }: { s: GameState; sys: StarSystem; L: number; style?: Record<string, string | number> }) {
+  const state = starState(s, sys, L);
+  return state ? (
+    <span class={`chip ${state.tone}`} style={{ marginLeft: '6px', ...style }} data-tip={state.label}>
+      {state.word}
+    </span>
+  ) : null;
+}
+
 /** The kind of star the Star types tab shows, kept while the window is closed and opened again. */
 const starKind = signal<PrimaryKind | null>(null);
 /** What the Star types tab is sorted by: the nearest first, or a measure, the best first. */
@@ -679,17 +697,12 @@ function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
         {rows.map(({ sys, ly, sites }) => {
           const known = s.civ.known[sys.id] ?? 0;
           const worlds = worldsOf(sys);
-          const state = starState(s, sys, L);
           return (
             <div key={sys.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} {...pressable(() => goToSystem(sys.id))}>
               <Icon name={primaryIcon(sys.primary.kind)} />
               <span class="grow">
                 {sys.name}
-                {state && (
-                  <span class={`chip ${state.tone}`} style={chipGap} data-tip={state.label}>
-                    {state.word}
-                  </span>
-                )}
+                <StateChip s={s} sys={sys} L={L} />
                 {ours.has(sys.id) && <span class="chip neon" style={chipGap}>settled</span>}
                 {known < 2 && <span class="chip warn" style={chipGap}>not surveyed</span>}
                 {isBeacon(s, sys) && <span class="chip boon" style={chipGap} data-tip={BEACON_TIP}>collision star</span>}
@@ -782,6 +795,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
   const marked: Need | null = sort === 'hab' || sort === 'room' ? 'kin' : (MIND_SORT[sort] as Need | undefined) ?? null;
   const best = bestOf(bySystem ? systems.map((x) => x.sites) : rows.map((r) => r.sites));
   const dist = (ly: number) => <span class={`mark${sort === 'near' ? ' sorted' : ''}`}>{formatDistance(ly)}</span>;
+  const L = turnStep(s).turnLength;
   const sorts: [WorldSort, string, string][] = [
     ['hab', 'Habitable', 'Best for Kin: habitability × vitality'],
     ['room', 'Room', 'Most room for Kin without domes'],
@@ -823,6 +837,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
             <div key={sys.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} {...pressable(() => goToSystem(sys.id))}>
               <span class="grow">
                 {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
+                <StateChip s={s} sys={sys} L={L} />
                 {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                 {settled && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
                 {finds.map((t) => (

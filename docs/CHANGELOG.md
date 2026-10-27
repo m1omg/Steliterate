@@ -4427,3 +4427,34 @@ The player, 27 Oct, with a screenshot: "but i have 30 matter...", a build of 30 
   energy, `queueBuild`, `actions.ts`).
 - Display only: no rule changed. Check: `unit/held-matter`. Validated: tsc and the build clean,
   all 97 unit checks, the browser checks `lowvision`, `translate` and `build-kinds`.
+
+## A star's state wherever the Systems window names its kind (27 Oct)
+
+The player, 27 Oct, with a screenshot of Our settlements ("ANUIL White dwarf", "OREISHES Black
+dwarf"): "still no ember/cooling description etc or where is it?" A star's state in a word (26
+Oct, PR m1omg/Steliterate#44) was shown only in the Star types tab.
+
+- **Now it follows the star's kind wherever the window names it:** each system's header in Our
+  settlements, and each star's line in Surveyed worlds (Systems) and Seen from afar. One chip for
+  all four (`StateChip`, `src/ui/screens/Lists.tsx`), the words of `starState` as before, its
+  light's label on the tip; nothing where the kind says all there is (a red dwarf burning).
+- Display only: no rule changed. Check: `browser/star-types` (a settlement at a white dwarf: its
+  header in Our settlements and its line in Surveyed worlds say what Star types says).
+- **`browser/music-route` waits for the film to begin.** It failed in this container on every
+  build back to `8783e38` (24 Oct), where it had passed: while a film's reel is prepared a slow
+  page runs no timer, the music's fade included, and the check looked 2.5 s after the film was
+  asked for, still before it. The music does fall silent and pause before the film begins (100 ms
+  after the reel is ready, here); the check now looks once the film has begun.
+- **`browser/survey-reveal` waits as long for its view switches** as it already did for the frames
+  before them: in software rendering the first two took 45 s and 37 s here (its wait was 20 s), the
+  later ones 3 to 7 s; with the longer wait it passes in full.
+- **`browser/films` holds at any frame rate.** Here frames came 17 ms apart, and two of its steps
+  had taken slow frames for granted: the overlays' trial (the game tries the canvas only when
+  frames are over 45 ms apart, so at full speed none is right), and its voices "by its second
+  second" (the film's own clock was at 12 s when the check counted them: 44 of 119, as due). Now
+  at full speed it checks the overlays stay on the page untried, and the voices by the film's clock:
+  fewer than all so far, more a few seconds on (44 by 12.0 s, 54 by 15.7 s).
+- **Validated:** tsc and the build clean; the playtest; savecompat on its 9 saves; all 97 unit
+  checks; every browser check, `films`, `music-route` and `survey-reveal` with the fixes above.
+  `turn-slices` failed twice (a 293 ms wait, its bound 100) right after the films' heavy runs, then
+  passed ten runs in ten, as `main`'s build does (38 to 91 ms on both).

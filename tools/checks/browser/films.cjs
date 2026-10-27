@@ -83,24 +83,27 @@ run(async () => {
   });
   check(steps.frames >= 10 && steps.repeats === 0 && steps.mid < 0.004, `its time moves with the page's, frame by frame (${steps.repeats} repeated of ${steps.frames}; off by ${(steps.mid * 1000).toFixed(1)} ms at the median)`);
   // the vignette and the grain are layers of the page over the frame, under its words; with frames
-  // as slow as here (a compositor without the graphics chip), it tried them in the canvas and kept
-  // the quicker way
+  // slow (over 45 ms apart: a compositor without the graphics chip), it tried them in the canvas and
+  // kept the quicker way; at full speed it tries nothing and keeps them on the page (27 Oct: frames
+  // came 17 ms apart in this container, and the check had taken slow frames for granted)
   const lay = await page.evaluate(() => {
     const kids = [...document.querySelector('.film-screen').children];
     return { order: kids.map((x) => x.className.split(' ')[0]).join(' '), shown: !document.querySelector('.film-grain').hidden, trial: window.__stel.filmOverlays() };
   });
   check(/film-canvas film-vignette film-grain film-text/.test(lay.order), `the vignette and the grain lie over the frame, under its words (${lay.order})`);
   const tr = lay.trial;
-  check(!!tr && tr.kept === (tr.canvas < tr.page * 0.9 ? 'canvas' : 'page') && lay.shown === (tr.kept === 'page'), `slow, it tried them in the canvas and kept the quicker way (${tr ? `${Math.round(tr.page)} ms a frame as layers, ${Math.round(tr.canvas)} in the canvas: ${tr.kept}` : 'no trial'})`);
+  if (pace.gap > 45) check(!!tr && tr.kept === (tr.canvas < tr.page * 0.9 ? 'canvas' : 'page') && lay.shown === (tr.kept === 'page'), `slow, it tried them in the canvas and kept the quicker way (${tr ? `${Math.round(tr.page)} ms a frame as layers, ${Math.round(tr.canvas)} in the canvas: ${tr.kept}` : 'no trial'})`);
+  else check(!tr && lay.shown, `at full speed (${Math.round(pace.gap)} ms a frame) it keeps them on the page, untried (${tr ? 'tried' : 'no trial'})`);
   // the music is silent and paused under it (it had only stepped back, and played on under the films)
   const under = await page.evaluate(() => {
     const m = window.__stel.music();
     const L = m.layer;
-    return { holding: m.holding, duck: window.__stel.audio()?.duck.gain.value ?? 0, vol: L?.track?.el.volume ?? 0, playing: !!L?.track && !L.track.el.paused, voices: window.__voices };
+    return { holding: m.holding, duck: window.__stel.audio()?.duck.gain.value ?? 0, vol: L?.track?.el.volume ?? 0, playing: !!L?.track && !L.track.el.paused, voices: window.__voices, t: window.__stel.filmTimes().at(-1)?.[0] ?? 0 };
   });
   check(under.holding && under.duck < 0.02 && under.vol < 0.01 && !under.playing, `the music is silent and paused under the film (gain ${under.duck.toFixed(3)}, volume ${under.vol.toFixed(3)}, a recording ${under.playing ? 'still playing' : 'paused'})`);
-  // its voices come as they are due: two seconds in, those of its first seconds only (all at once were 119)
-  check(under.voices <= 40 && under.voices > 0, `its sound makes its voices as they come: ${under.voices} by its second second, of the 119 it makes`);
+  // its voices come as they are due, not all at once (all at once were 119): fewer than all of them
+  // so far, and more a few seconds on (27 Oct: read by the film's own clock, which can be well past
+  // its second second by now on a page that starts it before this sees it begin)
   // the narration comes in as it plays (the Long Dusk's first line at beat 2.5, 1.7 s in; the film's
   // first frame can take 2 to 3 s here while its paintings are made, so wait for it, up to 10 s)
   let later = [];
@@ -109,6 +112,9 @@ run(async () => {
     later = await page.evaluate(() => [...document.querySelectorAll('.film-screen .film-line.narration')].filter((x) => !x.hidden && Number(x.style.opacity) > 0.05).map((x) => x.textContent));
   }
   check(later.length >= 1, `the narration comes in as it plays (${later.join(' | ')})`);
+  await page.waitForFunction((t) => (window.__stel.filmTimes().at(-1)?.[0] ?? 0) > t + 3, under.t, { timeout: 20000, polling: 100 }).catch(() => {});
+  const on = await page.evaluate(() => ({ voices: window.__voices, t: window.__stel.filmTimes().at(-1)?.[0] ?? 0 }));
+  check(under.voices > 0 && under.voices < 119 && on.voices > under.voices, `its sound makes its voices as they come: ${under.voices} by ${under.t.toFixed(1)} s, ${on.voices} by ${on.t.toFixed(1)} s, of the 119 it makes`);
   await page.keyboard.press('Enter');
   await page.waitForTimeout(600);
   const after = await page.evaluate(() => ({ film: !!document.querySelector('.film-screen'), intro: !!document.querySelector('.crossing[role="dialog"]'), turn: window.__stel.state()?.turn }));

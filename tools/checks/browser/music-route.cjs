@@ -94,7 +94,10 @@ run(async () => {
     window.__stel.films(true);
     window.__stel.playFilm('dusk');
   });
-  await page.waitForTimeout(2500);
+  // (once the film has begun: while its reel is prepared a slow page runs no timer, the fade's
+  // included, and a fixed wait could look before it, 27 Oct)
+  await page.waitForFunction(() => document.querySelector('.film-screen') && !document.querySelector('.film-wait'), null, { timeout: 30000 });
+  await page.waitForTimeout(1000);
   const e = await look(page);
   check(e.vol < 0.01 && e.paused === true, `under a film it is silent and paused (volume ${e.vol.toFixed(3)})`);
   const wetUnder = await page.evaluate(() => window.__stel.audio().wetDuck.gain.value);

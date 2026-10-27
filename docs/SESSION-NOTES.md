@@ -68,6 +68,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     by hand: auto-explore never picks the outliers), and "i cannot use my current saves w the
     main?" (the games played at `/next/` are at the main address too, the same browser storage;
     only the old game's play on at `/archive/2026-10-27/`).
+  - Then (27 Oct): PR m1omg/Steliterate#50 (live script `index-CV_2U7Jl.js`): "still no
+    ember/cooling description etc or where is it?", with a screenshot of Our settlements; the
+    star's state (26 Oct) had been only in Star types, and now follows the star's kind in every
+    tab that names it. Before it the player asked for a loose description of the game, for
+    ChatGPT to rebuild it as an experiment, one with the GPT image generator and one with Krea
+    (given in chat; not in the repo).
   - Before (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
     effect on its chip's tip; live script `index-D13F5Go2.js`), and `/next/` at the same with the
     Supernova film (`eb70648`, live script `index-CczYHvun.js`). Before them (26 Oct, evening):
