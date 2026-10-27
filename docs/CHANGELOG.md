@@ -4448,3 +4448,13 @@ Oct, PR m1omg/Steliterate#44) was shown only in the Star types tab.
 - **`browser/survey-reveal` waits as long for its view switches** as it already did for the frames
   before them: in software rendering the first two took 45 s and 37 s here (its wait was 20 s), the
   later ones 3 to 7 s; with the longer wait it passes in full.
+- **`browser/films` holds at any frame rate.** Here frames came 17 ms apart, and two of its steps
+  had taken slow frames for granted: the overlays' trial (the game tries the canvas only when
+  frames are over 45 ms apart, so at full speed none is right), and its voices "by its second
+  second" (the film's own clock was at 12 s when the check counted them: 44 of 119, as due). Now
+  at full speed it checks the overlays stay on the page untried, and the voices by the film's clock:
+  fewer than all so far, more a few seconds on (44 by 12.0 s, 54 by 15.7 s).
+- **Validated:** tsc and the build clean; the playtest; savecompat on its 9 saves; all 97 unit
+  checks; every browser check, `films`, `music-route` and `survey-reveal` with the fixes above.
+  `turn-slices` failed twice (a 293 ms wait, its bound 100) right after the films' heavy runs, then
+  passed ten runs in ten, as `main`'s build does (38 to 91 ms on both).
