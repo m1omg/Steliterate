@@ -6,6 +6,14 @@ export function n0(x: number): string {
   return Math.round(x).toLocaleString('en-US');
 }
 
+/**
+ * An amount we hold, as the top bar shows it: rounded down, so the figure never promises more than
+ * there is (27 Oct, the player: "but i have 30 matter", with 29.6, and a build that needs 30).
+ */
+export function held(x: number): string {
+  return n0(x >= 0 ? Math.floor(x) : x);
+}
+
 export function n1(x: number): string {
   if (!isFinite(x)) return '∞';
   if (Math.abs(x) >= 100) return n0(x);

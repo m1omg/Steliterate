@@ -2,7 +2,7 @@ import { TECH_BY_ID } from '../../game/data/techs';
 import { techCost } from '../../game/sim/research';
 import type { Projection } from '../../game/sim/projection';
 import type { GameState } from '../../game/types';
-import { n0, n1, pct, signed } from '../fmt';
+import { held, n0, n1, pct, signed } from '../fmt';
 import { Icon } from '../Icon';
 import { modal, rev } from '../store';
 import { pressable } from '../a11y';
@@ -29,7 +29,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
   const research = civ.researching ? TECH_BY_ID[civ.researching] : null;
   const rProg = research ? (civ.research[research.id] ?? 0) / techCost(s, research.id) : 0;
   const eTip = [
-    `Energy reserve ${n0(civ.energy)} / ${n0(cap)}`,
+    `Energy reserve ${held(civ.energy)} / ${n0(cap)}`,
     `Next turn: +${n1(p.energyIn)} captured, −${n1(p.energyOut)} upkeep`,
     ...Object.entries(p.perColony).map(([id, t]) => `${s.colonies[id]?.name}: ${signed(t.y.energy - t.y.energyUpkeep)}`),
     litBeacons(s).length ? `Decoy beacons (${litBeacons(s).length}): ${signed(-beaconUpkeep(s) * p.ctx.paceFactor)}` : '',
@@ -45,7 +45,7 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         <Icon name="energy" size="lg" cls="accent" />
         <div class="col" style={{ gap: '2px' }}>
           <div class="row" style={{ gap: '6px' }}>
-            <span class="v phos">{n0(civ.energy)}</span>
+            <span class="v phos">{held(civ.energy)}</span>
             <span class={`d mono ${eNet >= 0 ? 'good' : 'bad'}`}>{signed(eNet)}</span>
           </div>
           <Gauge v={civ.energy} max={cap} cls={eNet < 0 && civ.energy < cap * 0.2 ? 'bad' : ''} />
@@ -53,9 +53,9 @@ export function Resources({ s, p }: { s: GameState; p: Projection }) {
         <span class="l">Energy</span>
       </div>
       {!gone && (
-        <div class="res" data-tip={`Matter ${n0(civ.matter)}\nNext turn: +${n1(p.matterIn)} mined, −${n1(p.matterOut)} used\nDeposits run out as you mine them.`}>
+        <div class="res" data-tip={`Matter ${n1(civ.matter)}\nNext turn: +${n1(p.matterIn)} mined, −${n1(p.matterOut)} used\nDeposits run out as you mine them.`}>
           <Icon name="matter" size="lg" />
-          <span class="v phos">{n0(civ.matter)}</span>
+          <span class="v phos">{held(civ.matter)}</span>
           <span class={`d mono ${mNet >= 0 ? 'good' : 'bad'}`}>{signed(mNet)}</span>
           <span class="l">Matter</span>
         </div>
