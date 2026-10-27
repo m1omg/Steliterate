@@ -156,10 +156,20 @@ word", then the player's list of 16 Oct, then the falling worlds.
   the game, `FilmArgs.heartMass`). The cut before: `src/film/saved/lasthorizon-v1.ts`, its cues in
   its header. CHANGELOG, "The Last Horizon opens with the Heart's going".
 
+- **The switch** (27 Oct, the player: "Switch main to /next/"): PR m1omg/Steliterate#46
+  (`8a0d2ad`), from `next`, merged with a merge commit, put the new version at the main address.
+  Today's game is frozen as it was, at `/archive/2026-10-27/` (`public/archive/2026-10-27/`, built
+  from `0279db1` in a clean worktree, its own `public/archive/` removed first), with today's
+  storage keys, so every game saved at the main address before the switch plays on there; the new
+  version's title screen and Load point there (`OLDER_BUILD`, `src/keys.ts`). The 13 Oct copy
+  stays. CHANGELOG, "The switch".
+  - **How batches go live now:** a PR from the work branch into `main`, merged with a merge commit
+    (open and merge it yourself, as always), and the work branch copied to `next`, which stays a
+    mirror at `/next/`. No more ports to today's game, no `claude/promises-main`, no `-s ours`.
+  - Wait for a running Pages run before pushing again (`cancel-in-progress`).
+
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
-("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest). `main` keeps
-today's game until the player says to switch to the new version (which now has the combat
-system; today's game does not).
+("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
 
 **The player's usage** ran out twice on 19 Oct (the weekly limit, then the five-hour one). They
 pause and come back. Work in batches that end validated and pushed, and keep messages short.
@@ -179,18 +189,16 @@ last.
   - `src/audio` the music and sounds, `src/ui` the interface;
   - `tools/` the harness (`sim.ts`), the playtest, savecompat and the checks (`tools/checks/unit`,
     `tools/checks/browser`).
-- **Two versions, both live** (Pages builds both on a push to `main` or `next`):
+- **Since the switch (27 Oct), one game, and two frozen copies of the one before** (Pages builds
+  `main` and `next` on a push to either):
 
-  | | Today's game | The new version |
-  |---|---|---|
-  | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ |
-  | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` |
-  | As of | PR m1omg/Steliterate#45 (`0279db1`, each building's real effect, 26 Oct) | `dda8ab8` (26 Oct, the same, the Supernova film and the Heart in the Last Horizon), and its notes |
-  | Live script | `index-D13F5Go2.js` | `index-CczYHvun.js` |
-  | Saves | `steliterate.` keys | `steliterate2.` keys (their own) |
-
-- **The backup:** today's game as of 13 Oct, frozen and playable, at
-  https://m1omg.github.io/Steliterate/archive/2026-10-13/ (`public/archive/`, never edit it).
+  | | The game (the new version) | Its mirror | Today's game, frozen |
+  |---|---|---|---|
+  | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
+  | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
+  | As of | PR m1omg/Steliterate#46 (`8a0d2ad`, the switch, 27 Oct) | `fe16fc5`, and its notes | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-DspRFv2h.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order
 

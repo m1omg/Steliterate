@@ -51,7 +51,14 @@ appropriate MD files so I can continue there." A session on the other account st
 clone, with none of this session's scratch files, uploads or memory: everything is in these files.
 
 - **Live:** https://m1omg.github.io/Steliterate/, built by GitHub Pages from `main`.
-  - Now (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
+  - Now (27 Oct): **the new version is the game at the main address** ("Switch main to /next/"):
+    PR m1omg/Steliterate#46 (`8a0d2ad`, live script `index-DspRFv2h.js`); `/next/` mirrors the
+    work branch. Today's game is frozen at `/archive/2026-10-27/` (`0279db1`, `index-D13F5Go2.js`,
+    today's storage keys, so the player's games from before play on there), beside the 13 Oct
+    copy. From now on a batch goes live by a PR from the work branch into `main`; no more ports.
+    Earlier the same day the player was sent 1080p videos of the Last Horizon (with the Heart) and
+    the Supernova film ("Make a high resolution rendering, please").
+  - Before (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
     effect on its chip's tip; live script `index-D13F5Go2.js`), and `/next/` at the same with the
     Supernova film (`eb70648`, live script `index-CczYHvun.js`). Before them (26 Oct, evening):
     `main` as of PR m1omg/Steliterate#44 (`133b568`, storage notes that
