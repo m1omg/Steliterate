@@ -4486,3 +4486,10 @@ governor to". The plan, approved: a settlement handed a governor picks its own b
 - **Saves:** `Colony.governor` is optional (no version bump); a kind this game does not know is
   dropped on load; a settlement that changes hands loses its governor.
 - Only the player sets one: the autoplayer and other civilizations build as before.
+
+## Our settlements say which are leptonic (27 Oct)
+
+The player, with a screenshot of Our settlements in the Black Hole Age: "should show which
+settlements are leptonic pls". Each settlement not of matter has a chip by its name, as on its own
+panel: leptonic, horizon or positronium, what that form is on its tip. Display only. Check:
+`browser/star-types` (a leptonic settlement says so, those of matter nothing).

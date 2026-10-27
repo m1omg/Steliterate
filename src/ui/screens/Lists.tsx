@@ -17,11 +17,12 @@ import { orderFleet } from '../../game/sim/actions';
 import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
-import { colonies, distLy, fleets, governed, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { colonies, distLy, fleets, formOf, governed, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
 import { nestSeenAt, swarmSight } from '../../game/sim/sight';
 import { atWar } from '../../game/sim/war';
 import { PROMISE_TURNS } from '../../game/sim/claims';
 import { governorName, isIdle } from '../../game/sim/governor';
+import { FORMS } from '../../game/data/forms';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, Survivor, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, signed, solarMass } from '../fmt';
@@ -399,6 +400,12 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                     <span class="grow">
                       {c.name}
                       {s.civ.capitalId === c.id && <span class="chip neon" style={{ marginLeft: '6px' }}>capital</span>}
+                      {/* what it is made of, where not matter (27 Oct, the player: "should show which settlements are leptonic pls") */}
+                      {formOf(c) !== 'baryonic' && (
+                        <span class="chip form-chip" style={{ marginLeft: '6px' }} data-tip={FORMS[formOf(c)].desc}>
+                          {FORMS[formOf(c)].name.toLowerCase()}
+                        </span>
+                      )}
                       {c.starving > 0 && <span class="chip danger" style={{ marginLeft: '6px' }}>starving</span>}
                       <div class="faint" style={{ fontSize: '12.5px' }}>
                         {bodyKindName(s, b)} ·{' '}

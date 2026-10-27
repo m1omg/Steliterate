@@ -78,7 +78,7 @@ run(async () => {
     const sys = Object.values(s.systems).find((x) => x.name === name);
     const body = sys.bodies.map((id) => s.bodies[id]).find((b) => b && b.kind !== 'deep' && !b.colonyId);
     const cap = s.colonies[s.civ.capitalId];
-    s.colonies.check_wd = { ...structuredClone(cap), id: 'check_wd', name: `${sys.name} test`, systemId: sys.id, bodyId: body.id, queue: [] };
+    s.colonies.check_wd = { ...structuredClone(cap), id: 'check_wd', name: `${sys.name} test`, systemId: sys.id, bodyId: body.id, queue: [], form: 'leptonic' };
     body.colonyId = 'check_wd';
     s.civ.known[sys.id] = 2;
     window.__stel.refresh();
@@ -93,6 +93,13 @@ run(async () => {
   }, wd);
   console.log(`  Our settlements: ${head?.text}`);
   check(!!head && head.state === whites[0].state && head.tip === whites[0].tip && head.transform === 'none', `Our settlements: ${wd}’s header says how its star is (${head?.state}), as Star types does, in lower case`);
+  // and each settlement not of matter says what it is made of (27 Oct, the player: "should show which
+  // settlements are leptonic pls"), the capital nothing
+  const forms = await page.evaluate(() =>
+    Object.fromEntries([...document.querySelectorAll('.modal .settlement-row')].map((r) => [r.querySelector('.grow')?.firstChild?.textContent?.trim(), r.querySelector('.form-chip')?.textContent.trim() ?? null])),
+  );
+  console.log(`  forms: ${JSON.stringify(forms)}`);
+  check(forms[`${wd} test`] === 'leptonic' && Object.entries(forms).filter(([n]) => n !== `${wd} test`).every(([, f]) => f === null), 'Our settlements: the leptonic one says so, the others of matter nothing');
   await ck.shot('star-state-settlements.png');
   await page.locator('.modal button', { hasText: 'Surveyed worlds' }).click();
   await page.waitForTimeout(400);
