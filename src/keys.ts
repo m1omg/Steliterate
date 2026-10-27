@@ -14,8 +14,8 @@ export const OLD_SAVE_KEYS = ['steliterate.save.v1', 'steliterate.autosave.v1', 
 export const OLD_SETTINGS_KEY = 'steliterate.settings';
 export const OLD_HUD_KEY = 'steliterate.hud';
 
-/** The build before the new version, frozen and playable. */
-export const OLDER_BUILD = 'https://m1omg.github.io/Steliterate/archive/2026-10-13/';
+/** The build before the new version, frozen and playable: as it was when the main address switched to the new version (27 Oct; its 13 Oct copy is at archive/2026-10-13/). */
+export const OLDER_BUILD = 'https://m1omg.github.io/Steliterate/archive/2026-10-27/';
 
 /** Whether this browser still keeps games from the build before the new version. */
 export function hasOldGames(): boolean {

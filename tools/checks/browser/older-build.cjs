@@ -10,7 +10,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { check, start, finish, run } = require('../lib.cjs');
 
-const OLDER_BUILD = 'https://m1omg.github.io/Steliterate/archive/2026-10-13/';
+const OLDER_BUILD = 'https://m1omg.github.io/Steliterate/archive/2026-10-27/';
 
 run(async () => {
   const ck = await start('older-build');

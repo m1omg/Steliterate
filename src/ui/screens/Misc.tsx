@@ -426,7 +426,7 @@ async function importSave(onSlots?: () => void) {
 
 /** A game saved before the new version: that build keeps it, and plays it. */
 const OLDER_SAVE = 'That game is from the older build, before the new version. It plays on there, with your other games from then.';
-const olderBuildAction = { label: 'Open it', tip: 'The older build, as it was on 13 Oct, in a new tab.', run: () => { window.open(OLDER_BUILD, '_blank', 'noopener'); } };
+const olderBuildAction = { label: 'Open it', tip: 'The older build, as it was on 27 Oct, in a new tab.', run: () => { window.open(OLDER_BUILD, '_blank', 'noopener'); } };
 
 const ERA_SHORT: Record<string, string> = { dusk: 'the Long Dusk', degenerate: 'the Degenerate Age', blackhole: 'the Black Hole Age', dark: 'the Dark' };
 

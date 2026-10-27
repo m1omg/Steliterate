@@ -80,7 +80,7 @@ export function MainMenu() {
         </div>
         {hasOldGames() && (
           <p class="menu-older">
-            Your games from before the new version play on in the older build, as it was on 13 Oct.{' '}
+            Your games from before the new version play on in the older build, as it was on 27 Oct.{' '}
             <a href={OLDER_BUILD} target="_blank" rel="noopener">
               Open the older build
             </a>

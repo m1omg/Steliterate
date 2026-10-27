@@ -4386,3 +4386,32 @@ that crossing now opens with it.
 - **Checks:** `unit/heart-mass` (the film is told the Heart's mass, before and after it goes; the
   Heart is the last hole); `browser/films` draws every film (the stable fate's cut drawn by hand
   too, at 1280×720 and 390×844). A video of the new cut was sent to the player.
+
+## The switch: the new version at the main address (27 Oct)
+
+The player, 27 Oct: "Switch main to /next/". The new version, built since 13 Oct on
+`claude/epic-wozniak-lyhulf` and up at `/next/` since 14 Oct, becomes the game at
+https://m1omg.github.io/Steliterate/, by a PR from `next` into `main` merged with a merge commit (it
+merges cleanly: every PR into `main` was merged back into the work branch with `-s ours`).
+
+- **Today's game, frozen as it is now,** at https://m1omg.github.io/Steliterate/archive/2026-10-27/:
+  the build of PR m1omg/Steliterate#45's merge commit `0279db1` (`npm run build` in a clean
+  worktree of that commit, its own `public/archive/` removed first so the copy does not nest; its
+  script is the live one's, `index-D13F5Go2.js`), committed as plain files under
+  `public/archive/2026-10-27/`. It keeps today's storage keys, so it opens every game saved at the
+  main address until the switch: checked locally, a game played there and reloaded continues at
+  the same turn. Its source, without Git:
+  https://github.com/m1omg/Steliterate/archive/0279db195275c2aecb48ec1fa9e04288364b3d5c.zip. The
+  13 Oct copy stays, at `/archive/2026-10-13/`.
+- **The new version points there:** `OLDER_BUILD` (`src/keys.ts`) is the 27 Oct copy, and the title
+  screen and Load's "Open it" say "as it was on 27 Oct". Its own games keep their own keys
+  (`steliterate2.`), so the games played at `/next/` are at the main address too, and today's games
+  stay in the browser for the frozen copy.
+- **The workflow** builds as before (`main` at the root, `next` at `/next/`, a mirror of the work
+  branch from now on); only its words changed.
+- **No rule changed.** Validated: tsc and the build clean; all 96 unit checks; savecompat on its 9
+  saves; the playtest; the browser checks `older-build` (the link), `films`, `a11y`, `lowvision`
+  and `translate`; by hand in `vite preview`, the 27 Oct copy loads with no error and no missing
+  file, plays and resumes its autosave, the root's title screen links to it, and the 13 Oct copy
+  still loads. (`films` failed once on its frame-rate step while the playtest ran beside it, frames
+  300 ms apart, and passed alone.)
