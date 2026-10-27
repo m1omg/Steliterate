@@ -4458,3 +4458,31 @@ Oct, PR m1omg/Steliterate#44) was shown only in the Star types tab.
   checks; every browser check, `films`, `music-route` and `survey-reveal` with the fixes above.
   `turn-slices` failed twice (a 293 ms wait, its bound 100) right after the films' heavy runs, then
   passed ten runs in ten, as `main`'s build does (38 to 91 ms on both).
+
+## The governor (27 Oct)
+
+The player, 27 Oct: "add a governor like in alpha centauri to set a focus on building buildings of
+a certain category pls", then "allow me to mark different worlds in system view to set the
+governor to". The plan, approved: a settlement handed a governor picks its own builds of one kind.
+
+- **What it does** (`src/game/sim/governor.ts`): whenever the settlement's queue is empty it
+  queues the structure of its kind (the build list's nine: Energy, Storage, Matter, Industry,
+  Insight, Accord, People, World, Defence) that gives this settlement the most for what it costs,
+  by the build list's own numbers (`structureEffect`: the economy run with and without one more;
+  People by the room, Storage by the reserve, World and Defence the cheapest), never one that adds
+  nothing here. It keeps 10 matter in store (20 energy once matter is gone): short of that it waits,
+  and says for what, while the settlement does its spare work. It queues at once when set, before
+  the turn's industry, as soon as a build finishes in the turn (so the industry left goes into the
+  next), and once the turn's income is in if it was waiting. Not while we sleep; what the player
+  queues comes first. With nothing of its kind worth building it says so, and the settlement is
+  idle again.
+- **Where it is set:** in a system's panel, our settlements in its Worlds list have tick boxes
+  (and Mark all); a Governor row under the list sets every marked one at once, Off or a kind, and
+  each governed row shows its kind. A settlement's Build tab has the same choice, with what the
+  governor does next. Our settlements in the Systems window say "governor: Energy"; a governed
+  settlement is not counted idle. The Manual says how it works.
+- **Kinds:** a Search Foundry is now under Insight and a Protocol Registry under Accord, by what
+  their search makes (they were under People).
+- **Saves:** `Colony.governor` is optional (no version bump); a kind this game does not know is
+  dropped on load; a settlement that changes hands loses its governor.
+- Only the player sets one: the autoplayer and other civilizations build as before.

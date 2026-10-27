@@ -1513,6 +1513,25 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   a building of that kind per point of industry (Foundry 3 industry, Archive Spire 3 insight,
   Mine 3 matter, Solar Arrays 4 energy, Commons 0.3 resolve). Applied in `applyIndustry`
   (`turn.ts`); Study's insight joins the turn's research.
+- **`src/game/sim/governor.ts`** (27 Oct): `Colony.governor?: StructureKind` (optional, no save
+  bump; `migrate` drops a kind it does not know; cleared when a settlement changes hands).
+  - `governorChoice(state, c, ctx)`: of `buildableStructures` of its kind (`structureKind`), the
+    most by `worth` (yield via `structureEffect`; People the room; Storage the reserve × Deep
+    Storage; World and Defence 1 each, so the cheapest) per cost (industry + matter + energy ÷
+    `MATTER_AS_ENERGY`), above 0.05; the first we can pay for keeping `GOVERNOR_KEEPS` (10 matter,
+    20 energy); else `why` ("waiting for 20 matter for a Geothermal Tap", or "nothing more of X
+    worth building here", `none`). Not while `civ.dormant`.
+  - `governorQueue` queues it (`queueBuild`) and keeps `civ.flags[govNoneKey(id)]`: 1 nothing
+    worth building, 2 waiting to pay, absent queued. `governed` (util.ts: not idle) and
+    `governorBuilds` (the forecast leaves out spare work) read it; `isIdle` is the one idle test
+    (the HUD's to-do chip, Our settlements).
+  - Called in `applyIndustry` (`turn.ts`) before the turn's industry and after each build finishes
+    in it, and at the end of the economy step for one still empty (income in); `setGovernor`
+    (the UI) queues at once.
+  - UI (`Drawer.tsx`): `GovernorPicker` (class `governor-picker`, not `kind-chips`, which the
+    build-list checks look for), `GovernorSection` in the Build tab, the tick boxes (`.world-mark`)
+    and `.governor-bar` under `SystemPanel`'s Worlds list (marks kept per star in component
+    state), `.governor-chip` on a governed row. Checks: `unit/governor`, `browser/governor`.
 - **Charters (`src/game/sim/actions.ts`):** `charterAvailable` (the book holds 5 light laws, 9
   with the Assembly of Threads; dark ones take no room), `enactCharter`, and since 2 Oct
   `repealAvailable` / `repealCharter`: a repeal costs the law's Accord again, subtracts its
