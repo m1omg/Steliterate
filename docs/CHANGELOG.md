@@ -4415,3 +4415,15 @@ merges cleanly: every PR into `main` was merged back into the work branch with `
   file, plays and resumes its autosave, the root's title screen links to it, and the 13 Oct copy
   still loads. (`films` failed once on its frame-rate step while the playtest ran beside it, frames
   300 ms apart, and passed alone.)
+
+## Matter shown as we hold it (27 Oct)
+
+The player, 27 Oct, with a screenshot: "but i have 30 matter...", a build of 30 matter refused with
+"Needs 30 matter." The top bar rounded amounts to the nearest whole number, so 29.6 showed as 30.
+
+- **The top bar rounds what we hold down** (`held`, `src/ui/fmt.ts`): energy and matter never show
+  more than there is; the matter's tip gives it to a tenth.
+- **A build we cannot pay for says what we have:** "Needs 30 matter; we have 29.6." (the same for
+  energy, `queueBuild`, `actions.ts`).
+- Display only: no rule changed. Check: `unit/held-matter`. Validated: tsc and the build clean,
+  all 97 unit checks, the browser checks `lowvision`, `translate` and `build-kinds`.

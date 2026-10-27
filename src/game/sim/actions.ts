@@ -140,8 +140,9 @@ export function queueBuild(state: GameState, colonyId: string, kind: 'structure'
     if (s.crew && c.pops.kin < s.crew + 1) return `Needs at least ${s.crew + 1} Kin here: ${s.crew} of them will go.`;
   }
   const cost = buildCost(state, def, kind === 'ship');
-  if (state.civ.matter < cost.matter) return `Needs ${cost.matter} matter.`;
-  if (state.civ.energy < cost.energy) return `Needs ${cost.energy} energy.`;
+  // (with what we have, to a tenth: 29.6 is not 30)
+  if (state.civ.matter < cost.matter) return `Needs ${cost.matter} matter; we have ${Math.floor(state.civ.matter * 10) / 10}.`;
+  if (state.civ.energy < cost.energy) return `Needs ${cost.energy} energy; we have ${Math.floor(state.civ.energy * 10) / 10}.`;
   if (c.queue.length >= 6) return 'The queue is full.';
   state.civ.matter -= cost.matter;
   state.civ.energy -= cost.energy;
