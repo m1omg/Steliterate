@@ -1,6 +1,6 @@
 import { CHARTER_BY_ID } from './data/charters';
 import { SHIP_BY_ID } from './data/ships';
-import { STRUCTURE_BY_ID } from './data/structures';
+import { STRUCTURE_BY_ID, STRUCTURE_KINDS } from './data/structures';
 import { TECH_BY_ID } from './data/techs';
 import { defaultWater } from './gen';
 import { distinctNames } from './names';
@@ -150,6 +150,7 @@ export function migrate(s: GameState): GameState {
     c.structures ??= {};
     c.queue ??= [];
     for (const k of Object.keys(c.structures)) if (!STRUCTURE_BY_ID[k]) delete c.structures[k];
+    if (c.governor && !STRUCTURE_KINDS.some((k) => k.id === c.governor)) delete c.governor;
     c.queue = c.queue.filter((q) => (q.kind === 'ship' ? SHIP_BY_ID[q.key] : q.kind === 'passage' || q.kind === 'horizon' || q.kind === 'weave' ? true : STRUCTURE_BY_ID[q.key]));
   }
   for (const f of Object.values(s.fleets)) {

@@ -577,9 +577,16 @@ html.cine:not(.lv) .hud > :not(.reveal-card), html.cine:not(.lv) .toasts, html.c
 .kind-defence { --kind: #e5634a; }
 .kind-icon { display: inline-flex; color: var(--kind); margin-right: 5px; vertical-align: -1px; }
 .kind-icon .icon { width: 12px; height: 12px; }
-.kind-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-.kind-chips .btn { gap: 3px; min-height: 21px; padding: 0 6px; font-size: 12px; }
-.kind-chips .btn .icon { width: 12px; height: 12px; color: var(--kind, currentColor); }
+.kind-chips, .governor-picker { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.kind-chips .btn, .governor-picker .btn { gap: 3px; min-height: 21px; padding: 0 6px; font-size: 12px; }
+.kind-chips .btn .icon, .governor-picker .btn .icon { width: 12px; height: 12px; color: var(--kind, currentColor); }
+/* the governor (27 Oct): the marks on our settlements in a system's Worlds list, its row, its chip */
+.world-mark { display: inline-flex; align-items: center; margin-right: 6px; cursor: pointer; }
+.world-mark input { width: 15px; height: 15px; margin: 0; accent-color: var(--neon); cursor: pointer; }
+.governor-bar .governor-picker { margin: 6px 0 0; }
+.governor-picker { margin-bottom: 0; }
+.governor-chip { gap: 3px; }
+.governor-chip .icon { width: 11px; height: 11px; color: var(--kind, currentColor); }
 .build-group { display: flex; align-items: center; gap: 6px; padding: 8px 8px 3px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-dim); border-bottom: 1px solid color-mix(in srgb, var(--kind) 35%, transparent); cursor: default; }
 .build-group:first-child { padding-top: 0; }
 .build-group .icon { width: 12px; height: 12px; color: var(--kind); }
@@ -854,8 +861,9 @@ html.lv .btn.primary, html.lv .btn.on { box-shadow: inset 0 -3px 0 var(--accent-
 html.lv.kbd :focus-visible { outline: 3px solid #fff; outline-offset: -3px; box-shadow: inset 0 0 0 6px #000; }
 html.lv [tabindex='-1']:focus, html.lv.kbd [tabindex='-1']:focus-visible { outline: 2px dashed var(--accent-soft); outline-offset: 0; box-shadow: none; }
 /* longer words (a translation, the plainer face) wrap instead of being cut off */
-html.lv .chip, html.lv .res, html.lv .build-cost, html.lv .endturn small, html.lv .todo-chip, html.lv .kind-chips .btn, html.lv .pace .opts .btn, html.lv .mark, html.lv .targeting .target-est { white-space: normal; }
-html.lv .pace .opts .btn, html.lv .kind-chips .btn, html.lv .todo-chip { min-height: 28px; height: auto; }
+html.lv .chip, html.lv .res, html.lv .build-cost, html.lv .endturn small, html.lv .todo-chip, html.lv .kind-chips .btn, html.lv .governor-picker .btn, html.lv .pace .opts .btn, html.lv .mark, html.lv .targeting .target-est { white-space: normal; }
+html.lv .pace .opts .btn, html.lv .kind-chips .btn, html.lv .governor-picker .btn, html.lv .todo-chip { min-height: 28px; height: auto; }
+html.lv .world-mark input { width: 20px; height: 20px; }
 
 /* the column */
 html.lv .hud { display: flex; flex-direction: column; gap: 6px; position: absolute; top: 0; bottom: 0; right: 0; width: min(420px, 100%); padding: 8px 8px 24px; overflow-y: auto; overflow-x: hidden; background: var(--void); border-left: 2px solid var(--line-3); scrollbar-color: var(--line-3) var(--panel-2); z-index: 3; }

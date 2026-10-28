@@ -5,6 +5,7 @@ import { computeMods } from '../../game/sim/mods';
 import { project, type Projection } from '../../game/sim/projection';
 import { setDormant, setPace, longSleep } from '../../game/sim/actions';
 import { colonies, fleets, hasTech, ownColony } from '../../game/sim/util';
+import { isIdle } from '../../game/sim/governor';
 import type { Fleet, GameState } from '../../game/types';
 import { signed } from '../fmt';
 import { Icon } from '../Icon';
@@ -503,8 +504,8 @@ function ThermalLegend() {
   );
 }
 
-/** Settlements with nothing queued and no work chosen for when nothing is (such a settlement only recycles). */
-const idleColonies = (s: GameState) => colonies(s).filter((c) => c.queue.length === 0 && !c.spare);
+/** Settlements with nothing queued, no governor with something to build, and no work chosen for when nothing is (such a settlement only recycles). */
+const idleColonies = (s: GameState) => colonies(s).filter((c) => isIdle(s, c));
 const readySettlers = (s: GameState) => fleets(s).filter((f) => f.at && f.order === 'idle' && f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
 const idleShips = (s: GameState) => fleets(s).filter((f) => isIdleFleet(f) && !f.ships.some((x) => SHIP_BY_ID[x.cls]?.settles));
 const unansweredSignals = (s: GameState) => s.civ.signals.filter((x) => x.arrivedTurn !== null && !x.resolved && x.choices.length).length;
@@ -520,7 +521,7 @@ function todoItems(s: GameState): { text: string; tip: string; go: () => void }[
   if (idle.length)
     todo.push({
       text: `${idle.length} idle settlement${idle.length > 1 ? 's' : ''}`,
-      tip: `${idle.map((c) => c.name).join(', ')}\nNothing queued, and nothing chosen to work on instead: their spare industry is only recycled into matter. In a settlement’s Build tab, queue something or choose what it works on when nothing is queued.`,
+      tip: `${idle.map((c) => c.name).join(', ')}\nNothing queued, and nothing chosen to work on instead: their spare industry is only recycled into matter. In a settlement’s Build tab, queue something, hand it to a governor, or choose what it works on when nothing is queued.`,
       go: () => {
         if (idle.length > 1) {
           modal.value = { kind: 'settlements' };

@@ -223,3 +223,20 @@ export function temperament(state: GameState, id: string): Temperament {
 export function marks(sv: Survivor): Record<string, number> {
   return (sv.marks ??= {});
 }
+
+/**
+ * The civ.flags key for what a settlement's governor last found (sim/governor.ts): 1, nothing worth
+ * building (its queue empty, it is idle); 2, waiting for the matter or energy to pay for its pick
+ * (its spare work goes on meanwhile); absent, it has one queued.
+ */
+export const govNoneKey = (colonyId: string) => `gov_none_${colonyId}`;
+
+/** A governor keeps this settlement from idling: one is set, with something to build or to wait for. */
+export function governed(state: GameState, c: Colony): boolean {
+  return !!c.governor && state.civ.flags[govNoneKey(c.id)] !== 1;
+}
+
+/** A governor will spend this settlement's spare industry on its next build (none to wait for). */
+export function governorBuilds(state: GameState, c: Colony): boolean {
+  return !!c.governor && !state.civ.flags[govNoneKey(c.id)];
+}

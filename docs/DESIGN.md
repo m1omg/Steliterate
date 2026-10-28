@@ -173,6 +173,16 @@ range, **standing** (0 to 100) and a rotating **demand**.
   conserved; dead collectors are a mine of it.
 * **Insight** drives research and the Great Works; **Accord** buys Charters; **Industry**
   drives each settlement's build queue.
+* **The governor** (27 Oct, the player, from Alpha Centauri): a settlement handed one picks its own
+  builds of one kind (the build list's nine: Energy, Storage, Matter, Industry, Insight, Accord,
+  People, World, Defence). Whenever its queue is empty it queues the structure of that kind that
+  gives it the most for what it costs, by the build list's own numbers (the economy run with and
+  without one more), never one that adds nothing, keeping 10 matter (20 energy once matter is gone)
+  in store; at once when set, before the turn's industry, as soon as a build finishes in it, and
+  once the turn's income is in if it was waiting to pay. Not while we sleep; what the player queues
+  comes first. Set in a settlement's Build tab, or for several at once from a system's Worlds list,
+  where our settlements are ticked (`sim/governor.ts`). The player's only: other civilizations
+  build by their own autoplayer.
 * Housing costs upkeep only for the share of it that is lived in.
 * **Research draws power.** While a project or Great Work runs, the labs cost 2% of insight
   in energy each turn. Research can be paused: the draw stops, and half of each turn's

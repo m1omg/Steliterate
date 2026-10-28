@@ -17,15 +17,18 @@ import { orderFleet } from '../../game/sim/actions';
 import { DWARF_COLD_AT } from '../../game/physics';
 import { project } from '../../game/sim/projection';
 import { starClock, turnStep, turnsUntilAll, turnsUntilYears } from '../../game/sim/flare';
-import { colonies, distLy, fleets, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
+import { colonies, distLy, fleets, formOf, governed, ownColony, popsOf, swarmSeenAt } from '../../game/sim/util';
 import { nestSeenAt, swarmSight } from '../../game/sim/sight';
 import { atWar } from '../../game/sim/war';
 import { PROMISE_TURNS } from '../../game/sim/claims';
+import { governorName, isIdle } from '../../game/sim/governor';
+import { FORMS } from '../../game/data/forms';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, Survivor, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
+import { FormWorkChip } from '../FormWorkChip';
 import { act, engine, game, hoverStar, modal, notify, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
@@ -391,16 +394,32 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                     class="list-item settlement-row"
                     {...pressable(() => {
                       // an idle settlement opens where it can be given something to do
-                      if (!c.queue.length && !c.spare) openBuildFor.value = c.id;
+                      if (isIdle(s, c)) openBuildFor.value = c.id;
                       goToColony(c);
                     })}
                   >
                     <span class="grow">
                       {c.name}
                       {s.civ.capitalId === c.id && <span class="chip neon" style={{ marginLeft: '6px' }}>capital</span>}
+                      {/* what it is made of, where not matter (27 Oct, the player: "should show which settlements are leptonic pls") */}
+                      {formOf(c) !== 'baryonic' && (
+                        <span class="chip form-chip" style={{ marginLeft: '6px' }} data-tip={FORMS[formOf(c)].desc}>
+                          {FORMS[formOf(c)].name.toLowerCase()}
+                        </span>
+                      )}
+                      <FormWorkChip c={c} industry={y?.industry ?? 0} />
                       {c.starving > 0 && <span class="chip danger" style={{ marginLeft: '6px' }}>starving</span>}
                       <div class="faint" style={{ fontSize: '12.5px' }}>
-                        {bodyKindName(s, b)} · {c.queue.length ? `building ${c.queue.length}` : c.spare ? `working: ${spareChoices(s).find((x) => x.id === c.spare)?.name.toLowerCase()}` : <span class="warn">idle</span>}
+                        {bodyKindName(s, b)} ·{' '}
+                        {c.queue.length ? (
+                          `building ${c.queue.length}${c.governor ? ` · governor: ${governorName(c.governor)}` : ''}`
+                        ) : governed(s, c) ? (
+                          `governor: ${governorName(c.governor!)}, waiting to pay`
+                        ) : c.spare ? (
+                          `working: ${spareChoices(s).find((x) => x.id === c.spare)?.name.toLowerCase()}${c.governor ? ` (governor: no ${governorName(c.governor).toLowerCase()} worth building)` : ''}`
+                        ) : (
+                          <span class="warn">{c.governor ? `idle: no ${governorName(c.governor).toLowerCase()} worth building` : 'idle'}</span>
+                        )}
                       </div>
                     </span>
                     <span class="row" style={{ gap: '6px', fontSize: '13.5px' }}>

@@ -149,8 +149,10 @@ export function flushOutbox(state: GameState): void {
 function endNow(state: GameState, civ: Civ, ending: string, to?: string) {
   civ.outcome ??= { kind: 'defeat', ending, turn: state.turn, eta: state.eta };
   for (const c of coloniesOf(state, civ.id)) {
-    if (to && state.civs[to]) c.owner = to;
-    else {
+    if (to && state.civs[to]) {
+      c.owner = to;
+      delete c.governor;
+    } else {
       const b = state.bodies[c.bodyId];
       if (b) b.colonyId = null;
       delete state.colonies[c.id];
