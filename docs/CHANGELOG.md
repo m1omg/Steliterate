@@ -4505,3 +4505,6 @@ writing into a hole's horizon, weaving into the positronium) has a chip by its n
 in the Systems window's Our settlements and in a system's Worlds list; its tip says how far along
 it is and about how many turns more at that settlement's industry (`FormWorkChip`,
 `src/ui/FormWorkChip.tsx`). Display only. Checks: `browser/star-types`, `browser/governor`.
+- **Validated** (the governor, the leptonic chip and this, one build, `index-nTaXRU5K.js`): tsc and
+  the build clean; the playtest; savecompat on its 9 saves; all 98 unit checks; all 73 browser
+  checks; the harness as above.
