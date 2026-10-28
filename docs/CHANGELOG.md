@@ -4496,3 +4496,12 @@ The player, with a screenshot of Our settlements in the Black Hole Age: "should 
 settlements are leptonic pls". Each settlement not of matter has a chip by its name, as on its own
 panel: leptonic, horizon or positronium, what that form is on its tip. Display only. Check:
 `browser/star-types` (a leptonic settlement says so, those of matter nothing).
+
+## Which settlements are making the Passage (28 Oct)
+
+The player: "can you also make the system view shows systems that are inprogress of the leptonic
+Passage?" A settlement with a change of form in its queue (the Passage onto leptonic substrate,
+writing into a hole's horizon, weaving into the positronium) has a chip by its name, "Passage 33%",
+in the Systems window's Our settlements and in a system's Worlds list; its tip says how far along
+it is and about how many turns more at that settlement's industry (`FormWorkChip`,
+`src/ui/FormWorkChip.tsx`). Display only. Checks: `browser/star-types`, `browser/governor`.

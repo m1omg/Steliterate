@@ -81,6 +81,8 @@ run(async () => {
     s.colonies.check_wd = { ...structuredClone(cap), id: 'check_wd', name: `${sys.name} test`, systemId: sys.id, bodyId: body.id, queue: [], form: 'leptonic' };
     body.colonyId = 'check_wd';
     s.civ.known[sys.id] = 2;
+    // and the capital a third of the way through the Passage
+    cap.queue = [{ uid: 'q-check-passage', kind: 'passage', key: 'passage', progress: 30, cost: 90, paid: { matter: 0, energy: 0 } }];
     window.__stel.refresh();
     return sys.name;
   }, whites[0].name);
@@ -100,6 +102,13 @@ run(async () => {
   );
   console.log(`  forms: ${JSON.stringify(forms)}`);
   check(forms[`${wd} test`] === 'leptonic' && Object.entries(forms).filter(([n]) => n !== `${wd} test`).every(([, f]) => f === null), 'Our settlements: the leptonic one says so, the others of matter nothing');
+  // a settlement making the Passage says how far along it is (28 Oct, the player: "make the system
+  // view shows systems that are inprogress of the leptonic Passage")
+  const passing = await page.evaluate(() =>
+    [...document.querySelectorAll('.modal .settlement-row')].flatMap((r) => [...r.querySelectorAll('.form-work')].map((x) => ({ name: r.querySelector('.grow')?.firstChild?.textContent?.trim(), text: x.textContent.trim(), tip: x.getAttribute('data-tip') }))),
+  );
+  console.log(`  under way: ${JSON.stringify(passing)}`);
+  check(passing.length === 1 && passing[0].text === 'Passage 33%' && /^The Passage under way: 33% done, (about \d+ turns? more|stalled)/.test(passing[0].tip), `Our settlements: the one making the Passage says so (${passing[0]?.name}: ${passing[0]?.text})`);
   await ck.shot('star-state-settlements.png');
   await page.locator('.modal button', { hasText: 'Surveyed worlds' }).click();
   await page.waitForTimeout(400);

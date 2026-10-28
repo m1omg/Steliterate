@@ -28,6 +28,7 @@ import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
 import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
+import { FormWorkChip } from '../FormWorkChip';
 import { act, engine, game, hoverStar, modal, notify, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
 import { ModalFrame } from './Frame';
@@ -406,6 +407,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                           {FORMS[formOf(c)].name.toLowerCase()}
                         </span>
                       )}
+                      <FormWorkChip c={c} industry={y?.industry ?? 0} />
                       {c.starving > 0 && <span class="chip danger" style={{ marginLeft: '6px' }}>starving</span>}
                       <div class="faint" style={{ fontSize: '12.5px' }}>
                         {bodyKindName(s, b)} ·{' '}

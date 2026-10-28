@@ -185,7 +185,8 @@ word", then the player's list of 16 Oct, then the falling worlds.
   once from a system's Worlds list (tick boxes, Mark all, a Governor row). `sim/governor.ts`;
   DEV-NOTES says where the rest lives. The harness is unchanged game for game (183 / 78 / 104).
   Checks: `unit/governor`, `browser/governor`. With it, Our settlements say which are leptonic
-  (the player: "should show which settlements are leptonic pls").
+  (the player: "should show which settlements are leptonic pls"), and which are making the
+  Passage, as does a system's Worlds list ("Passage 33%", `FormWorkChip`; 28 Oct).
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).

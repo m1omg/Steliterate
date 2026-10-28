@@ -90,5 +90,16 @@ run(async () => {
   await page.waitForTimeout(400);
   const gone = await page.evaluate((capId) => window.__stel.state().colonies[capId].governor ?? null, sys.cap);
   check(gone === null, 'Off, by the keyboard, takes the governor back');
+  // the Worlds list says which settlement is making the Passage (28 Oct, the player)
+  await page.evaluate((id) => {
+    const s = window.__stel.state();
+    s.colonies.check_gov.queue = [{ uid: 'q-check-passage', kind: 'passage', key: 'passage', progress: 45, cost: 90, paid: { matter: 0, energy: 0 } }];
+    window.__stel.select('system', id);
+    window.__stel.refresh();
+  }, sys.id);
+  await page.waitForTimeout(800);
+  const passage = await page.evaluate(() => [...document.querySelectorAll('.drawer .form-work')].map((x) => x.textContent.trim()));
+  check(passage.length === 1 && passage[0] === 'Passage 50%', `the system's Worlds list shows the settlement making the Passage (${passage.join(', ')})`);
+  await ck.shot('governor-passage.png');
   await finish('GOVERNOR', ck);
 });

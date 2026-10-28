@@ -67,6 +67,7 @@ import type { IconName } from '../icons';
 import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
 import { act, engine, following, hudPrefs, isPhone, notify, openBuildFor, rev, selection, setHudPrefs, sheetHint, sheetSize, targeting, view } from '../store';
 import { uiFactor } from '../Tip';
+import { FormWorkChip } from '../FormWorkChip';
 import { RAID_COOLDOWN, raidForce, raidTarget } from '../../game/sim/survivors';
 import { pickOnMap, pivotToSystem, sendFromSystems } from '../screens/Lists';
 import { loreView } from '../screens/Story';
@@ -367,6 +368,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                       <Icon name={bodyIcon(b.kind)} cls={c ? 'neon' : hab >= LIVING_WORLD ? 'boon' : ''} />
                       <span class="grow">
                         {c ? c.name : b.name} <span class="faint" style={{ fontSize: '12.5px' }}>{bodyKindName(s, b)}</span>
+                        {c && <FormWorkChip c={c} industry={p.perColony[c.id]?.y.industry ?? 0} />}
                         {c?.governor && (
                           <span class={`chip governor-chip kind-${c.governor}`} style={{ marginLeft: '6px' }} data-tip={`Governor: ${governorName(c.governor)}. ${governorLine(s, c)}`}>
                             <Icon name={KIND_ICON[c.governor]} /> {governorName(c.governor)}
