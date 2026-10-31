@@ -127,6 +127,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     check) and ending with `finish()`. Screenshots go to `playtest-shots/checks/<name>/`, or the
     folder given as the second argument. `ck.phone(w, h, query)` opens a page with a touchscreen
     (`mobile` uses it; CDP `Input.dispatchTouchEvent` for long presses and drags).
+    A screenshot of the map can take about 12 s in a slow container (31 Oct), as long as a toast
+    with a button lasts and long enough for a reveal's camera to fly on: take it after the moment
+    a check tests, or wait for that moment again after it (`survey-look`, `survey-reveal`).
   - **The game's fonts in this container:** the headless browser cannot reach Google Fonts
     (the proxy's certificate), so text is measured in fallback faces, which are wider. With
     `STEL_FONTS=<dir>`, `lib.cjs` serves them from a local copy. Make one with curl, which checks

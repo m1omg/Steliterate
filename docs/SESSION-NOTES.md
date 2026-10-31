@@ -85,10 +85,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     Leptonic Substrate, and why a drift always went to The Wanderer. Wrote them a loose description
     of the game for ChatGPT, in three versions (GPT images, Krea, and one insisting on crafted 3D and
     usability), given in chat, not in the repo; they said the game is "as addicting as civ v".
-    Then PR m1omg/Steliterate#52: Fortify one or all, the black hole of our choice, Hide
-    unavailable; answered that no ship can be built after the end of matter, and offered a choice
-    for the ships that outlast it (they are matter too). They chose a Leptonic Shipyard and the
-    Leptonic Wraith, in the same PR.
+    Then PR m1omg/Steliterate#52 (live script `index-BymdCuCG.js`): Fortify one or all, the black
+    hole of our choice, Hide unavailable; answered that no ship can be built after the end of
+    matter, and offered a choice for the ships that outlast it (they are matter too). They chose a
+    Leptonic Shipyard and the Leptonic Wraith, in the same PR. In its validation a screenshot of
+    the map took about 12 s, as long as a toast with a button lasts: `browser/survey-look` and
+    `browser/survey-reveal` now wait for their moment after a screenshot, not before.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

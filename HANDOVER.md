@@ -229,7 +229,7 @@ last.
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
   | As of | PR m1omg/Steliterate#52 (Fortify one, the hole of our choice, Hide unavailable, the Leptonic Wraith, 31 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-nTaXRU5K.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | Live script | `index-BymdCuCG.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order

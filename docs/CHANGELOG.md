@@ -4552,3 +4552,12 @@ player hide buildings that are unavailable to build".
   Black Hole Age save in `tools/saves/`). The autoplayer builds neither. Checks:
   `unit/leptonic-yard`, `browser/wraith`.
 - The Manual says all of it.
+- **Validated** (one build, `index-BymdCuCG.js`): tsc and the build clean; the playtest; savecompat
+  on its 9 saves; all 100 unit checks; all 76 browser checks. Three checks were mended, not the
+  game: `browser/horizon` for the drift section's new wording, and `browser/survey-look` and
+  `browser/survey-reveal`, whose screenshots (about 12 s each in this container, as long as a toast
+  with a button lasts) let the moment they test go by; `survey-look` failed the same way against
+  the live build of PR m1omg/Steliterate#51. The harness: game for game as before (183 of 300
+  survive, 78 victories, a Degenerate Age of 104 turns; by fate decay 108 / 148, stable 33 / 81,
+  curvature 42 / 71): the autoplayer builds neither the yard nor the Wraith, and drifts and
+  fortifies as before.
