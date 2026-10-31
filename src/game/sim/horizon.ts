@@ -8,7 +8,7 @@
 
 import type { Colony, GameState, StarSystem } from '../types';
 import type { ActionResult } from './actions';
-import { holeFailing, leaveHole, leaveTarget, protocolsMult } from './crossing';
+import { driftChoices, holeFailing, leaveHole, leaveTarget, protocolsMult } from './crossing';
 import { distLy, formOf, hasTech, log, ownColony, popsOf, uid } from './util';
 
 /** Energy a drift to another hole costs, for each structure the settlement takes with it (at least DRIFT_MIN). */
@@ -22,36 +22,36 @@ export interface DriftTerms {
   energy: number;
 }
 
-/** What drifting to another hole would take, and where it would go. */
-export function driftTerms(state: GameState, c: Colony): DriftTerms {
-  const target = leaveTarget(state, c);
+/** What drifting to another hole would take, and where it would go: `targetId` if it is one it could go to, else the game's own choice. */
+export function driftTerms(state: GameState, c: Colony, targetId?: string): DriftTerms {
+  const target = targetId ? (driftChoices(state, c).find((x) => x.sys.id === targetId)?.sys ?? null) : leaveTarget(state, c);
   const n = Object.values(c.structures).reduce((a, x) => a + (x ?? 0), 0);
   return { target, ly: target ? distLy(state.systems[c.systemId], target) : 0, energy: Math.max(DRIFT_MIN, DRIFT_ENERGY * n) };
 }
 
 /** Why this settlement cannot drift to another hole now, or null if it can. */
-export function driftCheck(state: GameState, c: Colony): string | null {
+export function driftCheck(state: GameState, c: Colony, targetId?: string): string | null {
   if (formOf(c) === 'horizon') return 'Written into its hole’s horizon, it is bound to it.';
   if (formOf(c) === 'positronium') return 'Woven through the positronium, it is everywhere at once: it has no hole to leave.';
   if (formOf(c) !== 'leptonic') return 'Only a leptonic settlement can drift between the black holes.';
   if (c.flags_drifted === state.turn) return 'It has drifted once this turn.';
-  const t = driftTerms(state, c);
-  if (!t.target) return 'No other black hole we could reach has spin to give and years to last.';
+  const t = driftTerms(state, c, targetId);
+  if (!t.target) return targetId ? 'It cannot drift there.' : 'No other black hole we could reach has spin to give and years to last.';
   if (state.civ.energy < t.energy) return `Needs ${t.energy} energy.`;
   return null;
 }
 
-/** Drift to another hole (`leaveTarget`): the energy paid now; it joins our vault there if there is one. */
-export function driftToAnotherHole(state: GameState, colonyId: string): ActionResult {
+/** Drift to another hole, `targetId` (the player's choice) or else the game's (`leaveTarget`): the energy paid now; it joins our vault there if there is one. */
+export function driftToAnotherHole(state: GameState, colonyId: string, targetId?: string): ActionResult {
   const c = ownColony(state, colonyId);
   if (!c) return 'No such settlement.';
-  const err = driftCheck(state, c);
+  const err = driftCheck(state, c, targetId);
   if (err) return err;
-  const t = driftTerms(state, c);
+  const t = driftTerms(state, c, targetId);
   const from = state.systems[c.systemId].name;
   state.civ.energy -= t.energy;
   const name = c.name;
-  const at = leaveHole(state, c);
+  const at = leaveHole(state, c, t.target);
   if (!at) return 'It could not leave.';
   at.flags_drifted = state.turn;
   state.civ.flags.drifts = (state.civ.flags.drifts ?? 0) + 1;

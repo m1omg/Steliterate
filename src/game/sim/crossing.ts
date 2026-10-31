@@ -39,7 +39,7 @@ function hasStarlessSource(state: GameState, c: Colony): boolean {
 export const SPENT_SPIN = 20;
 
 /** The black holes not yet evaporated: after matter, the only sources left. */
-function holesLeft(state: GameState): StarSystem[] {
+export function holesLeft(state: GameState): StarSystem[] {
   return Object.values(state.systems).filter((s) => (s.primary.kind === 'black_hole' || s.primary.kind === 'smbh') && !s.gone);
 }
 
@@ -66,13 +66,50 @@ export function holeFailing(state: GameState, sys: StarSystem): boolean {
 function holeFor(state: GameState, c: Colony, holes: StarSystem[], leaving = false): StarSystem | null {
   const here = state.systems[c.systemId];
   const atHole = here.primary.kind === 'black_hole' || here.primary.kind === 'smbh';
-  const fits = (h: StarSystem) => {
-    const host = ourDeepAt(state, h, c.owner);
-    return !host || formOf(host) === formOf(c);
-  };
+  const fits = (h: StarSystem) => fitsAt(state, c, h);
   const near = holes.filter(fits).sort((a, b) => Math.hypot(a.phys.x - here.phys.x, a.phys.y - here.phys.y, a.phys.z - here.phys.z) - Math.hypot(b.phys.x - here.phys.x, b.phys.y - here.phys.y, b.phys.z - here.phys.z));
   if (leaving) return near.filter((h) => h.id !== here.id && h.primary.spin >= LEAVE_SPIN && !holeFailing(state, h)).sort((a, b) => b.primary.spin - a.primary.spin)[0] ?? null;
   return atHole && fits(here) ? here : (near.find((h) => h.primary.spin >= SPENT_SPIN) ?? near[0] ?? null);
+}
+
+/** Whether a settlement can go to this hole: it has no vault of ours there, or one of its own form (it joins it). */
+function fitsAt(state: GameState, c: Colony, h: StarSystem): boolean {
+  const host = ourDeepAt(state, h, c.owner);
+  return !host || formOf(host) === formOf(c);
+}
+
+/** A hole a leptonic settlement could drift to, with what it has to give (`driftChoices`). */
+export interface DriftChoice {
+  sys: StarSystem;
+  /** Its spin to give, and the years until it evaporates (Infinity if it will not in this universe's time). */
+  spin: number;
+  lasts: number;
+  /** A vault of ours is there: it would join it. */
+  ours: boolean;
+  /** The one the game would choose (`leaveTarget`): the most spin to give of those that will last. */
+  recommended: boolean;
+  /** Why it is a poor choice, or null: drained of spin, little left, or soon to evaporate. */
+  poor: string | null;
+}
+
+/**
+ * Every hole a leptonic settlement could drift to, for the player to choose (31 Oct, the player:
+ * "let me choose the hole but with recommendations and spin/lifetime statistics"): every black hole
+ * left but its own, where it would fit; the game's own choice first, then the most spin to give.
+ */
+export function driftChoices(state: GameState, c: Colony): DriftChoice[] {
+  if (formOf(c) !== 'leptonic') return [];
+  const here = state.systems[c.systemId];
+  const best = leaveTarget(state, c);
+  return holesLeft(state)
+    .filter((h) => h.id !== here.id && fitsAt(state, c, h))
+    .map((h): DriftChoice => {
+      const p = h.primary;
+      const lasts = p.evaporateAt ? Math.max(0, p.evaporateAt - state.years) : Infinity;
+      const poor = p.spin < SPENT_SPIN ? 'drained: next to no spin left' : p.spin < LEAVE_SPIN ? 'little spin left' : holeFailing(state, h) ? 'it will soon evaporate' : null;
+      return { sys: h, spin: p.spin, lasts, ours: !!ourDeepAt(state, h, c.owner), recommended: h.id === best?.id, poor };
+    })
+    .sort((a, b) => Number(b.recommended) - Number(a.recommended) || b.spin - a.spin);
 }
 
 /** Into the Deep at this hole: its own civilization's vault there, if it has one, beside any other's. Returns where it is now. */
@@ -116,9 +153,8 @@ export function leaveTarget(state: GameState, c: Colony): StarSystem | null {
   return formOf(c) === 'leptonic' ? holeFor(state, c, holesLeft(state), true) : null;
 }
 
-/** It leaves its hole for `leaveTarget`'s, with a harvester for the new hole's spin if we know how. Returns where it is now. */
-export function leaveHole(state: GameState, c: Colony): Colony | null {
-  const target = leaveTarget(state, c);
+/** It leaves its hole for `target` (the player's choice) or else `leaveTarget`'s, with a harvester for the new hole's spin if we know how. Returns where it is now. */
+export function leaveHole(state: GameState, c: Colony, target = leaveTarget(state, c)): Colony | null {
   if (!target) return null;
   const at = moveToHole(state, c, target);
   harvesterFor(state, at);
