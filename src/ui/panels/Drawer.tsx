@@ -45,7 +45,8 @@ import { SPENT_SPIN, driftChoices, holeFailing, type DriftChoice } from '../../g
 import { beginHorizon, driftCheck, driftTerms, driftToAnotherHole, horizonCheck, horizonTerms } from '../../game/sim/horizon';
 import { POSITRONIUM_DECAY, beginWeave, leaveWeave, leaveWeaveCheck, leaveWeaveCost, positroniumHere, turnsToDecay, weaveCheck, weaveTerms } from '../../game/sim/positronium';
 import { spareYield, type SpareYield } from '../../game/sim/spare';
-import { GOVERNOR_KEEPS, governorChoice, governorName, setGovernor } from '../../game/sim/governor';
+import { governorChoice, setGovernor } from '../../game/sim/governor';
+import { GOVERNOR_TIP, GovernorChip, GovernorPicker, KIND_ICON, governorLine } from '../Governor';
 import { canSettle, launchCost } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
@@ -369,11 +370,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
                       <span class="grow">
                         {c ? c.name : b.name} <span class="faint" style={{ fontSize: '12.5px' }}>{bodyKindName(s, b)}</span>
                         {c && <FormWorkChip c={c} industry={p.perColony[c.id]?.y.industry ?? 0} />}
-                        {c?.governor && (
-                          <span class={`chip governor-chip kind-${c.governor}`} style={{ marginLeft: '6px' }} data-tip={`Governor: ${governorName(c.governor)}. ${governorLine(s, c)}`}>
-                            <Icon name={KIND_ICON[c.governor]} /> {governorName(c.governor)}
-                          </span>
-                        )}
+                        {c && <GovernorChip s={s} c={c} />}
                       </span>
                       {b.relic && b.relic.state !== 'hidden' && <Icon name="relic" cls={b.relic.flowed ? '' : 'accent'} />}
                       {survivor && survivorHome?.id === b.id && (
@@ -1511,8 +1508,6 @@ function selectFleet(f: Fleet) {
   engine()?.select(f.id);
 }
 
-/** The icon for each kind of structure; its colour comes from `.kind-<kind>` in styles.css. */
-const KIND_ICON: Record<StructureKind, IconName> = { energy: 'energy', storage: 'reserve', matter: 'matter', industry: 'industry', insight: 'insight', accord: 'accord', people: 'kin', world: 'planet', defence: 'shield' };
 /** What taking one apart gives back, and what it costs: "+20 matter back, for 6 energy". */
 function dismantleBack(t: { matter: number; energy: number; cost: number }): string {
   const back = t.matter ? `+${t.matter} matter back` : t.energy ? `+${t.energy} energy back` : 'nothing comes back';
@@ -1722,38 +1717,6 @@ function SpareChoice({ s, c, industry, energyMade }: { s: GameState; c: Colony; 
       {c.queue.length > 0 && <div class="faint" style={{ fontSize: '12.5px', marginTop: '4px' }}>Starts once the queue is done.</div>}
     </div>
   );
-}
-
-const GOVERNOR_TIP = `A governor chooses this settlement’s builds: whenever its queue is empty, it queues the structure of one kind that gives it the most for what it costs, here and now, keeping ${GOVERNOR_KEEPS.matter} matter in store. What you queue comes first; it waits for the queue to empty. Off: you choose.`;
-
-/**
- * Off, or one of the build list's kinds: the governor's choice (27 Oct, the player: "add a governor
- * like in alpha centauri to set a focus on building buildings of a certain category"). `value`
- * 'mixed' where the settlements it sets differ.
- */
-function GovernorPicker({ value, onPick, label }: { value: StructureKind | null | 'mixed'; onPick: (k: StructureKind | null) => void; label: string }) {
-  return (
-    <div class="governor-picker" role="group" aria-label={label}>
-      <button class={`btn small ${value === null ? 'primary' : ''}`} aria-pressed={value === null} data-tip="No governor: you choose what is built" onClick={() => onPick(null)}>
-        Off
-      </button>
-      {STRUCTURE_KINDS.map((k) => (
-        <button key={k.id} class={`btn small kind-${k.id} ${value === k.id ? 'primary' : ''}`} aria-pressed={value === k.id} data-tip={`${k.name}: ${k.tip}
-Whenever the queue is empty, the governor queues the ${k.name.toLowerCase()} structure worth the most here for what it costs.`} onClick={() => onPick(k.id)}>
-          <Icon name={KIND_ICON[k.id]} /> {k.name}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** What a settlement's governor does next, in words. */
-function governorLine(s: GameState, c: Colony): string {
-  if (!c.governor) return '';
-  const name = governorName(c.governor);
-  if (c.queue.length) return `Once the queue is done, the governor builds ${name}.`;
-  const g = governorChoice(s, c, project(s).ctx);
-  return g.pick ? `Next: ${structureLabel(g.pick.id, s.systems[c.systemId], formOf(c)).name}, at the turn’s start.` : `The governor builds ${name}: ${g.why}.`;
 }
 
 /** The settlement's governor: Off, or the kind it builds whenever the queue is empty. */
