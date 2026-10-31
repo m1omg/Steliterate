@@ -1531,10 +1531,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   - Called in `applyIndustry` (`turn.ts`) before the turn's industry and after each build finishes
     in it, and at the end of the economy step for one still empty (income in); `setGovernor`
     (the UI) queues at once.
-  - UI (`Drawer.tsx`): `GovernorPicker` (class `governor-picker`, not `kind-chips`, which the
-    build-list checks look for), `GovernorSection` in the Build tab, the tick boxes (`.world-mark`)
-    and `.governor-bar` under `SystemPanel`'s Worlds list (marks kept per star in component
-    state), `.governor-chip` on a governed row. Checks: `unit/governor`, `browser/governor`.
+  - UI: `GovernorPicker` (class `governor-picker`, not `kind-chips`, which the build-list checks
+    look for), `GovernorChip`, `governorLine`, `KIND_ICON` and `GOVERNOR_TIP` live in
+    `src/ui/Governor.tsx` (31 Oct). `Drawer.tsx`: `GovernorSection` in the Build tab, the tick
+    boxes (`.world-mark`) and `.governor-bar` under `SystemPanel`'s Worlds list (marks kept per
+    star in component state). `Lists.tsx`, Our settlements (31 Oct): a tick box per settlement and
+    one at each system's name, Mark all, and `.settlements-governor` (sticky) over the list, the
+    marks in the module signal `govMarks`. Checks: `unit/governor`, `browser/governor`,
+    `browser/governor-systems`.
 - **The hole a leptonic settlement drifts to** (31 Oct): `driftChoices(state, c)` (`crossing.ts`)
   lists every hole left but its own that it fits (`fitsAt`: no vault of ours there, or one of its
   form), `recommended` the game's own (`leaveTarget`), `poor` why not; `driftTerms`, `driftCheck` and
@@ -1550,6 +1554,22 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   none. `repairFleets` mends each kind at its own yard. A new ship hull needs its `FleetLook`, a
   `HULL` entry, `WAR_HULLS` for a warship, `lookRole`, and `public/art/ships/<look>.png` (256 px,
   bow up); the Wraith's is drawn by `tools/draw-wraith.cjs`.
+- **Events and technology** (31 Oct): `EventDef.tech` (any one of them known, or it never joins the
+  random pool), `EventDef.weigh` (its pool weight from what `bind` found: the comet's, 4 for each
+  star of ours up to four), `EventChoice.tech` (greyed out without it; `choiceHint` appends "Needs
+  X."). Every place that asks whether a choice can be taken calls `choiceOk` (`resolveEvent`, the
+  event window in `Story.tsx`, `planEvents` in `auto.ts`): never test `c.ok` alone. What an event
+  needs besides a technology (a ship there, a structure) its `bind` asks; what a choice needs, its
+  `ok`, with the reason in its hint. The comet: `cometSystems`, `cometMeans` ('ships' can haul,
+  'yard' sends tugs, 'probe' meets but hauls nothing), `cometHaul`, `cometWorld` in
+  `data/events.ts`; an older save's comet (no `systemId`) falls through the home system. A
+  `run: (s) => energy(s, n)` that returns the number is a type error beside other choices: give it
+  a block body. Checks: `unit/event-tech`, `browser/event-tech`.
+- **A message from a sender gone since** (31 Oct): `REACHES` in `survivors.ts` names, for each kind
+  of neighbour's message, the answer that reaches them; `goneAnswer` refuses it once they are gone
+  (the Signals window greys it out with the reason) and `resolveSurvivorSignal` closes the others
+  with no effect. A new kind of message that sends, takes or promises something goes in
+  `REACHES`. Check: `unit/gone-answers`.
 - **Charters (`src/game/sim/actions.ts`):** `charterAvailable` (the book holds 5 light laws, 9
   with the Assembly of Threads; dark ones take no room), `enactCharter`, and since 2 Oct
   `repealAvailable` / `repealCharter`: a repeal costs the law's Accord again, subtracts its
