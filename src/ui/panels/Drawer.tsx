@@ -21,7 +21,7 @@ import {
   orderFleet,
   setAutoExplore,
   setTactic,
-  standFleet,
+  fortifyOne, standFleet,
   storm,
   placeBeacon,
   putOutBeacon,
@@ -1944,6 +1944,15 @@ ${tacticNote(tacticOf(f))}`}>{tacticOf(f).name.toLowerCase()}</span>}
                 <button class="btn small" data-tip="Stand down: it waits for orders again." onClick={() => act((g) => standFleet(g, f.id, 'idle')) && sfx('click')}>
                   Stand down
                 </button>
+              ) : isWarFleet(f) && f.ships.length > 1 ? (
+                <>
+                  <button class="btn small primary" data-tip={`Dig in one warship here, the one in the best repair: it leaves this fleet as a fleet of its own and counts ${FORTIFY_BONUS}× against ships and swarms in this system (an Aegis 3×; not while standing off). The other ${f.ships.length - 1} wait for orders.`} onClick={() => act((g) => fortifyOne(g, f.id)) && sfx('build')}>
+                    <Icon name="shield" /> Fortify one
+                  </button>
+                  <button class="btn small" data-tip={`Dig in all ${f.ships.length} here: they count ${FORTIFY_BONUS}× against ships and swarms in this system (an Aegis 3×; not while standing off), turn raiders away from the capital, and stop asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
+                    <Icon name="shield" /> Fortify all {f.ships.length}
+                  </button>
+                </>
               ) : isWarFleet(f) ? (
                 <button class="btn small primary" data-tip={`Dig in here: counts ${FORTIFY_BONUS}× against ships and swarms in this system (an Aegis 3×; not while standing off), turns raiders away from the capital, and stops asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
                   <Icon name="shield" /> Fortify

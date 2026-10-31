@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import { SHIP_BY_ID, fleetLook } from '../../game/data/ships';
-import { orderFleet, setAutoExplore, standFleet } from '../../game/sim/actions';
+import { orderFleet, setAutoExplore, fortifyOne, standFleet } from '../../game/sim/actions';
 import { canSurvey, isIdleFleet, isWarFleet } from '../../game/sim/fleets';
 import { TRIP_TIP, tripLabel } from '../trip';
 import { computeMods } from '../../game/sim/mods';
@@ -120,7 +120,16 @@ function ShipCard({ s, f }: { s: GameState; f: Fleet }) {
             <Icon name="survey" /> Auto-explore
           </button>
         )}
-        {war ? (
+        {war && f.ships.length > 1 ? (
+          <>
+            <button class="btn small primary" data-tip={`Dig in one warship here, the one in the best repair, as a fleet of its own; the other ${f.ships.length - 1} still wait for orders.`} onClick={() => act((g) => fortifyOne(g, f.id)) && sfx('select')}>
+              <Icon name="shield" /> Fortify one
+            </button>
+            <button class="btn small" data-tip={`Dig in all ${f.ships.length} here: stronger defence, and they stop asking.`} onClick={() => choose((g) => standFleet(g, f.id, 'fortify'))}>
+              <Icon name="shield" /> Fortify all {f.ships.length}
+            </button>
+          </>
+        ) : war ? (
           <button class="btn small primary" data-tip="Dig in here: stronger defence, and it stops asking." onClick={() => choose((g) => standFleet(g, f.id, 'fortify'))}>
             <Icon name="shield" /> Fortify here
           </button>

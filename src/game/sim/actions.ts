@@ -16,7 +16,7 @@ import { positroniumComes, positroniumGone, positroniumHere } from './positroniu
 import { ironAge } from './deeptime';
 import { workCost, workRequirementMet } from './endings';
 import { resolveEvent } from './events';
-import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
+import { autoExplore, canSurvey, isWarFleet, newFleet, orderMove } from './fleets';
 import { absorbSwarm, attackSwarm, drawSwarmTo, tameSwarm } from './hunger';
 import { BEACON_COST, beaconOwner } from './beacons';
 import { gesture, resolveMindSignal } from './minds';
@@ -673,4 +673,25 @@ export function standFleet(state: GameState, fleetId: string, order: 'fortify' |
   f.auto = undefined;
   if (order === 'fortify') log(state, `${f.name} has fortified ${state.systems[f.at]?.name ?? 'its station'}.`, 'info', f.at);
   return null;
+}
+
+/**
+ * Fortify one warship of a fleet stationed here, not the whole fleet (31 Oct, the player: "selecting
+ * (1) ship to fortify, currently fortifies ALL ships in system. perhaps separate buttons for singular
+ * versus total fortification"): the warship in the best repair leaves the fleet as a fleet of its
+ * own, keeps its tactic, and digs in; the rest wait for orders. (Ships built at a star join an idle
+ * fleet of their class there, queue.ts, so several builds make one fleet.)
+ */
+export function fortifyOne(state: GameState, fleetId: string): ActionResult {
+  const f = ownFleet(state, fleetId);
+  if (!f || !f.at) return 'Only a fleet that has arrived can do that.';
+  if (!isWarFleet(f)) return 'Only warships can fortify.';
+  if (f.ships.length < 2) return standFleet(state, fleetId, 'fortify');
+  const health = (x: { cls: string; hp: number }) => x.hp / (SHIP_BY_ID[x.cls]?.hp ?? 5);
+  const i = f.ships.reduce((best, x, j) => (isWarship(x.cls) && (best < 0 || health(x) > health(f.ships[best])) ? j : best), -1);
+  const [ship] = f.ships.splice(i, 1);
+  const one = newFleet(state, f.at, [ship.cls]);
+  one.ships = [ship];
+  if (f.tactic) one.tactic = f.tactic;
+  return standFleet(state, one.id, 'fortify');
 }
