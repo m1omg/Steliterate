@@ -35,7 +35,8 @@ run(async () => {
   }
   check(!!toast, `a Survey complete toast appeared (${toast?.text ?? 'none'})`);
   check(toast?.button?.endsWith('Look'), `it carries a Look button (${toast?.button})`);
-  await ck.shot('survey-toast.png');
+  // Look at once: a toast with a button lasts 12 s, and a screenshot of the map can take as long
+  // in a slow container (31 Oct), so the toast's own picture would come too late to click it
   await page.locator('.toast', { hasText: 'Survey complete' }).locator('.toast-act').click();
   // the camera flies there first: wait for the system view (up to ten seconds)
   let after = null;
