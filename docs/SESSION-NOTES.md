@@ -80,6 +80,14 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     governor to"; and "should show which settlements are leptonic pls" (a chip in Our
     settlements). On their screenshot of Our settlements the black dwarfs showed no state chip:
     their page was from before PR #50 went live (a black dwarf reads "cold"); told them to reload.
+  - Then (28 to 31 Oct): answered what becomes of stored matter at the end of matter (gone with it,
+    not turned into energy; building is paid in energy after), what the Passage is for beside
+    Leptonic Substrate, and why a drift always went to The Wanderer. Wrote them a loose description
+    of the game for ChatGPT, in three versions (GPT images, Krea, and one insisting on crafted 3D and
+    usability), given in chat, not in the repo; they said the game is "as addicting as civ v".
+    Then PR m1omg/Steliterate#52: Fortify one or all, the black hole of our choice, Hide
+    unavailable; answered that no ship can be built after the end of matter, and offered a choice
+    for the ships that outlast it (they are matter too).
   - Before (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
     effect on its chip's tip; live script `index-D13F5Go2.js`), and `/next/` at the same with the
     Supernova film (`eb70648`, live script `index-CczYHvun.js`). Before them (26 Oct, evening):

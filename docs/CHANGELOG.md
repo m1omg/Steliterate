@@ -4508,3 +4508,29 @@ it is and about how many turns more at that settlement's industry (`FormWorkChip
 - **Validated** (the governor, the leptonic chip and this, one build, `index-nTaXRU5K.js`): tsc and
   the build clean; the playtest; savecompat on its 9 saves; all 98 unit checks; all 73 browser
   checks; the harness as above.
+
+## Fortify one or all, the black hole of our choice, and the build list without the unavailable (31 Oct)
+
+The player, 31 Oct, with a screenshot: "selecting (1) ship to fortify, currently fortifies ALL ships
+in system. perhaps separate buttons for singular versus total fortification"; "yes pls, let me
+choose the hole but with recommendations and spin/lifetime statistics" (after asking why a drift
+always went to The Wanderer: the game chose the hole with the most spin to give); "also pls let the
+player hide buildings that are unavailable to build".
+
+- **Fortify one or all.** Warships built at a star join an idle fleet of their class there
+  (`queue.ts`), so several builds make one fleet, and Fortify dug them all in. A fleet of several
+  now has Fortify one (`fortifyOne`, `actions.ts`: the warship in the best repair leaves as a fleet
+  of its own, its damage and the fleet's tactic kept, and digs in; the rest wait for orders) and
+  Fortify all, in its panel and in the awaiting-orders card. Check: `unit/fortify-one`.
+- **The black hole of our choice.** A leptonic settlement's drift section lists every hole it could
+  go to (`driftChoices`, `crossing.ts`: every hole left but its own where it would fit): the game's
+  own choice first, marked recommended (the most spin to give of those that will last), then by
+  spin; each with its spin, how long it lasts (in turns where they can be counted), how far, our
+  vault there, and why a poor one is poor (drained, little spin, soon to evaporate). It drifts to the
+  one chosen (`driftToAnotherHole(state, id, target)`), asked once more; the autoplayer and the
+  drifts after a crossing still take the game's own. Checks: `unit/leave-hole`,
+  `browser/drift-choice`.
+- **Hide unavailable** in the Build tab leaves out what cannot be built at that settlement now
+  (structures and ships), says how many, and is remembered between sessions (`hudPrefs`); Show
+  unavailable brings them back, each with why. Check: `browser/hide-unbuildable`.
+- The Manual says all three.

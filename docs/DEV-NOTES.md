@@ -1532,6 +1532,14 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     build-list checks look for), `GovernorSection` in the Build tab, the tick boxes (`.world-mark`)
     and `.governor-bar` under `SystemPanel`'s Worlds list (marks kept per star in component
     state), `.governor-chip` on a governed row. Checks: `unit/governor`, `browser/governor`.
+- **The hole a leptonic settlement drifts to** (31 Oct): `driftChoices(state, c)` (`crossing.ts`)
+  lists every hole left but its own that it fits (`fitsAt`: no vault of ours there, or one of its
+  form), `recommended` the game's own (`leaveTarget`), `poor` why not; `driftTerms`, `driftCheck` and
+  `driftToAnotherHole` take an optional target id, `leaveHole` an optional target. Without one,
+  everything goes where it went before (the autoplayer, `horizonGone`, the crossing's drift).
+- **Fortify one** (31 Oct): `fortifyOne(state, fleetId)` (`actions.ts`) splits the warship in the
+  best repair off as a fleet of its own (`newFleet`, the ship object kept, the tactic copied) and
+  fortifies it; a fleet of one is fortified whole.
 - **Charters (`src/game/sim/actions.ts`):** `charterAvailable` (the book holds 5 light laws, 9
   with the Assembly of Threads; dark ones take no room), `enactCharter`, and since 2 Oct
   `repealAvailable` / `repealCharter`: a repeal costs the law's Accord again, subtracts its
