@@ -199,6 +199,19 @@ word", then the player's list of 16 Oct, then the falling worlds.
   both in the same PR (`lepton_shipyard`, `wraith`, `shipCheck`; the hull drawn by
   `tools/draw-wraith.cjs`). Then "check for other unimplemented things too": the audit's list is
   in SESSION-NOTES (31 Oct).
+- **Answers that cannot reach the gone, stored matter in the report, the governor in the Systems
+  window, events unlocked by technology** (31 Oct, PR m1omg/Steliterate#53): from the audit, the
+  player chose the gone senders' answers (`goneAnswer`: what would reach them is greyed out, the
+  rest closes the message and does nothing) and the crossing report's line for stored matter
+  lost. "Please add a governor-setter into the Systems menu": tick boxes in Our settlements
+  (`src/ui/Governor.tsx` holds the shared controls). And "The types of random Events should be
+  unlocked by technology. (how does one harvest a comet without ships in-systems or an orbital
+  shipyard?)": `EventDef.tech`, `EventChoice.tech`, `choiceOk`; the comet falls through any system
+  of ours once Volatile Shepherding or Orbital Industry is known, more often the more systems,
+  shepherded or mined only where our ships or a Shipyard can haul it (a probe meets it, hauls
+  nothing), studied anywhere. The player answered four questions on it (SESSION-NOTES, 31 Oct):
+  nature stays ungated; of the finds, the shard, the hole's light and the foil need technology,
+  mining and quarrying not.
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
@@ -228,8 +241,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#52 (Fortify one, the hole of our choice, Hide unavailable, the Leptonic Wraith, 31 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-BymdCuCG.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#53 (gone senders' answers, stored matter, the governor in the Systems window, events by technology, 31 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-CHw5-wl7.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order

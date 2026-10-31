@@ -51,8 +51,10 @@ and the work branch is copied to `next` as before; `claude/promises-main` and th
 merges are done with. So far: PR m1omg/Steliterate#47, `261443a`, the switch's notes, and PR
 m1omg/Steliterate#48, `139d697`, matter shown as we hold it, PR m1omg/Steliterate#50, `1a181c9`,
 a star's state wherever the Systems window names its kind, and PR m1omg/Steliterate#51,
-`00d98dd`, the governor (27 Oct), and PR m1omg/Steliterate#52, Fortify one, the black hole of our
-choice, Hide unavailable and the Leptonic Wraith (31 Oct).
+`00d98dd`, the governor (27 Oct), and PR m1omg/Steliterate#52, `d479d67`, Fortify one, the black
+hole of our choice, Hide unavailable and the Leptonic Wraith (31 Oct), and PR m1omg/Steliterate#53,
+answers that cannot reach the gone, stored matter in the report, the governor in the Systems window
+and events unlocked by technology (31 Oct).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -183,4 +185,6 @@ battles fought out, tactics, neighbours who fight back): the same, our outcome t
 games (Harsh in all 300); wars are rare there, so a forced war measures it (`tools/sim.ts 300
 standard warlike --war=40`): 160 / 56, where the old rules gave 121 / 47. Open air only above
 −14.9 °C and a rush that finishes at once (24 Oct): 184 / 79 / 104; by fate decay 108 / 148,
-stable 33 / 81, curvature 43 / 71; Harsh 141 / 51 / 97, within the noise.
+stable 33 / 81, curvature 43 / 71; Harsh 141 / 51 / 97, within the noise. Events unlocked by technology (31 Oct,
+PR m1omg/Steliterate#53; the comet through any system of ours): 192 / 73 / 97; by fate decay 106 /
+148, stable 34 / 81, curvature 52 / 71; every game re-rolled, within the noise.

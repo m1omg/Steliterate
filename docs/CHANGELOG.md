@@ -4561,3 +4561,52 @@ player hide buildings that are unavailable to build".
   survive, 78 victories, a Degenerate Age of 104 turns; by fate decay 108 / 148, stable 33 / 81,
   curvature 42 / 71): the autoplayer builds neither the yard nor the Wraith, and drifts and
   fortifies as before.
+
+## Answers that cannot reach the gone, stored matter in the report, the governor in the Systems window, and events unlocked by technology (31 Oct)
+
+The player's word on the audit of the same day, and two more requests.
+
+- **A message from a neighbour gone since it was sent** (the player: "the bug: answering a message
+  from a civilization that’s already gone still has effects"). An answer that would reach them
+  (aid, taking in their refugees, a shared work, a trade, letting Echoes go to the Choir, a
+  promise, a pact) cannot be given: the Signals window greys it out and says why. Any other
+  answer closes the message and does nothing: no one is left to take offence. Before, their
+  refugees still came with +3 resolve, a shared work still cost 60 matter, a trade still cost and
+  delivered its notes, and refusing the Choir still cost the Echoes' standing (`goneAnswer`,
+  `survivors.ts`). Check: `unit/gone-answers`.
+- **Stored matter at the end of matter**: the crossing report says how much matter our stores
+  held, gone with the rest, and that from then on we build with energy (before, the store was
+  emptied without a word). Check: `unit/end-of-matter`.
+- **The governor from the Systems window** (the player: "Please add a governor-setter into the
+  Systems menu"). In Our settlements each settlement has a tick box, each system one at its name
+  for every settlement of ours there, and Mark all; a Governor row over the list, kept in sight as
+  it scrolls, sets every marked one at once. The controls are shared with the Build tab and a
+  system's Worlds list (`src/ui/Governor.tsx`). Check: `browser/governor-systems`.
+- **Events unlocked by technology** (the player: "The types of random Events should be unlocked by
+  technology. (how does one harvest a comet without ships in-systems or an orbital shipyard?)",
+  "with the comet the event should happen in player owned systems more often imo", and, asked,
+  "keep it but they should fall through no shipyard systems too but player in that case can only
+  get research benefits"; of a probe, "It should be able to meet but not haul it"; of the finds,
+  keep the shard, the hole and the foil, not the mining or quarrying; nature "Stay ungated").
+  - An event can need a technology to come at all, and a choice one to be taken: without it the
+    choice is greyed out and says what it needs (`EventDef.tech`, `EventChoice.tech`, `choiceOk`).
+  - **A wandering comet** comes once we know Volatile Shepherding or Orbital Industry, through any
+    system of ours, 4 in the pool for each up to four (before: 3, through the home system only).
+    Shepherding its ices onto a living world of ours there (Volatile Shepherding) or mining it
+    (Orbital Industry, 40 matter) needs our ships there or a Shipyard's tugs to haul it; a survey
+    probe can meet it, not haul it. It can always be studied: 40 insight where a ship of ours
+    meets it, 20 from afar. An older save's comet falls through the home system.
+  - The derelict ark is found only by a survey ship of ours; bringing its sleepers home needs
+    Fusion Drives, its salvage Orbital Industry. The Prophet of Stillness preaches only once there
+    is Cold Sleep; the whispers at the horizon are heard only at a Hawking Collector of ours;
+    drilling deeper as the mantle settles needs Mantle Stimulation.
+  - Finds: salvaging sail foil needs Orbital Industry, catching an interstellar shard Fusion
+    Drives, catching a primordial hole's last light Orbital Collectors; each can still be studied.
+  - Nature stays as it was: a superflare, the last rain, the sea freezing or the mantle settling
+    comes whatever we know.
+  Checks: `unit/event-tech`, `browser/event-tech`.
+- The Manual says all of it.
+- **The harness** (300 standard competent): 192 of 300 survive, 73 victories, a Degenerate Age of 97
+  turns; by fate decay 106 / 148, stable 34 / 81, curvature 52 / 71 (before: 183 / 78 / 104; 108,
+  33 and 42). Every game re-rolled (the random events draw their dice differently now), and the
+  outcome is the same in 134 of 300: within the noise.
