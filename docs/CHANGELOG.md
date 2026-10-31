@@ -4508,3 +4508,56 @@ it is and about how many turns more at that settlement's industry (`FormWorkChip
 - **Validated** (the governor, the leptonic chip and this, one build, `index-nTaXRU5K.js`): tsc and
   the build clean; the playtest; savecompat on its 9 saves; all 98 unit checks; all 73 browser
   checks; the harness as above.
+
+## Fortify one or all, the black hole of our choice, Hide unavailable, and the Leptonic Wraith (31 Oct)
+
+The player, 31 Oct, with a screenshot: "selecting (1) ship to fortify, currently fortifies ALL ships
+in system. perhaps separate buttons for singular versus total fortification"; "yes pls, let me
+choose the hole but with recommendations and spin/lifetime statistics" (after asking why a drift
+always went to The Wanderer: the game chose the hole with the most spin to give); "also pls let the
+player hide buildings that are unavailable to build".
+
+- **Fortify one or all.** Warships built at a star join an idle fleet of their class there
+  (`queue.ts`), so several builds make one fleet, and Fortify dug them all in. A fleet of several
+  now has Fortify one (`fortifyOne`, `actions.ts`: the warship in the best repair leaves as a fleet
+  of its own, its damage and the fleet's tactic kept, and digs in; the rest wait for orders) and
+  Fortify all, in its panel and in the awaiting-orders card. Check: `unit/fortify-one`.
+- **The black hole of our choice.** A leptonic settlement's drift section lists every hole it could
+  go to (`driftChoices`, `crossing.ts`: every hole left but its own where it would fit): the game's
+  own choice first, marked recommended (the most spin to give of those that will last), then by
+  spin; each with its spin, how long it lasts (in turns where they can be counted), how far, our
+  vault there, and why a poor one is poor (drained, little spin, soon to evaporate). It drifts to the
+  one chosen (`driftToAnotherHole(state, id, target)`), asked once more; the autoplayer and the
+  drifts after a crossing still take the game's own. Checks: `unit/leave-hole`,
+  `browser/drift-choice`.
+- **Hide unavailable** in the Build tab leaves out what cannot be built at that settlement now
+  (structures and ships), says how many, and is remembered between sessions (`hudPrefs`); Show
+  unavailable brings them back, each with why. Check: `browser/hide-unbuildable`.
+- **The Leptonic Shipyard and the Leptonic Wraith** (the player: "add a leptonic shipyard pls also
+  i think there was a wraith/phantom ship for leptonic era already? apply it so it applies for
+  existing saves too but doesnt break em"; asked first what ships can be built after the end of
+  matter: none, the Shipyard having no leptonic form). The Wraith was in the new version's plan
+  (2c: the only warship once matter is gone, drawn in code as a field) and never built. Now:
+  - a **Leptonic Shipyard** (`lepton_shipyard`, Leptonic Computation, 60 industry and 30 matter,
+    under Industry), built only by a leptonic settlement (`leptonicOnly`);
+  - there, **Leptonic Wraiths** (`wraith`: attack 5, hull 16, upkeep 0.3, screen 0.3; 90
+    industry, 30 matter, or 45 energy once matter is gone), mended at their yard
+    (`repairFleets`);
+  - a settlement of matter builds neither, and a leptonic one no ship of matter (`shipCheck`,
+    `actions.ts`); ships of matter already built stay in service after the end of matter, as
+    before (a bend, said to the player);
+  - its hull drawn in code as a ship of fields, as leptonic settlements are on the map
+    (`tools/draw-wraith.cjs`, `public/art/ships/wraith.png`).
+  Data only, no new saved field: an older save's leptonic settlement can build it at once (the
+  Black Hole Age save in `tools/saves/`). The autoplayer builds neither. Checks:
+  `unit/leptonic-yard`, `browser/wraith`.
+- The Manual says all of it.
+- **Validated** (one build, `index-BymdCuCG.js`): tsc and the build clean; the playtest; savecompat
+  on its 9 saves; all 100 unit checks; all 76 browser checks. Three checks were mended, not the
+  game: `browser/horizon` for the drift section's new wording, and `browser/survey-look` and
+  `browser/survey-reveal`, whose screenshots (about 12 s each in this container, as long as a toast
+  with a button lasts) let the moment they test go by; `survey-look` failed the same way against
+  the live build of PR m1omg/Steliterate#51. The harness: game for game as before (183 of 300
+  survive, 78 victories, a Degenerate Age of 104 turns; by fate decay 108 / 148, stable 33 / 81,
+  curvature 42 / 71): the autoplayer builds neither the yard nor the Wraith, and drifts and
+  fortifies as before.

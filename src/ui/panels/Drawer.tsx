@@ -21,7 +21,7 @@ import {
   orderFleet,
   setAutoExplore,
   setTactic,
-  standFleet,
+  fortifyOne, standFleet,
   storm,
   placeBeacon,
   putOutBeacon,
@@ -41,7 +41,7 @@ import {
 import { PASSAGE_OUTPUT, capacity } from '../../game/sim/economy';
 import { beginPassage, endForeseen, passageCheck, passageTerms, turnsToEndOfMatter } from '../../game/sim/passage';
 import { turnsToCollapse } from '../../game/sim/deeptime';
-import { SPENT_SPIN, holeFailing } from '../../game/sim/crossing';
+import { SPENT_SPIN, driftChoices, holeFailing, type DriftChoice } from '../../game/sim/crossing';
 import { beginHorizon, driftCheck, driftTerms, driftToAnotherHole, horizonCheck, horizonTerms } from '../../game/sim/horizon';
 import { POSITRONIUM_DECAY, beginWeave, leaveWeave, leaveWeaveCheck, leaveWeaveCost, positroniumHere, turnsToDecay, weaveCheck, weaveTerms } from '../../game/sim/positronium';
 import { spareYield, type SpareYield } from '../../game/sim/spare';
@@ -1004,20 +1004,26 @@ function PassageSection({ s, c }: { s: GameState; c: Colony }) {
 }
 
 /**
- * Leaving a black hole (horizon.ts): a leptonic settlement drifts to the hole with the most spin to
- * give and years to last. Shown where it is leptonic and its hole is failing it, or it is at none;
- * asks once more.
+ * Leaving a black hole (horizon.ts): a leptonic settlement drifts to the hole the player chooses
+ * (31 Oct, the player: "let me choose the hole but with recommendations and spin/lifetime
+ * statistics"): every hole it could go to, the game's own choice first and marked (the most spin to
+ * give of those that will last), each with its spin, how long it will last, how far it is and
+ * whether a vault of ours is there; poor choices say why. Shown where it is leptonic and its hole is
+ * failing it, or it is at none; asks once more.
  */
 function DriftSection({ s, c }: { s: GameState; c: Colony }) {
   void rev.value; // mutable game state: re-render on every change
   const [sure, setSure] = useState(false);
+  const [picked, setPicked] = useState<string | null>(null);
   if (formOf(c) !== 'leptonic') return null;
   const sys = s.systems[c.systemId];
   // (only where its hole is failing it, or there is none: from a healthy hole it would go to a poorer one)
   const failing = holeFailing(s, sys);
   if (!failing) return null;
-  const t = driftTerms(s, c);
-  const why = driftCheck(s, c);
+  const choices = driftChoices(s, c);
+  const chosen = choices.find((x) => x.sys.id === picked) ?? choices.find((x) => x.recommended) ?? choices[0];
+  const t = driftTerms(s, c, chosen?.sys.id);
+  const why = chosen ? driftCheck(s, c, chosen.sys.id) : 'No black hole left to go to.';
   const p = sys.primary;
   const atHole = p.kind === 'black_hole' || p.kind === 'smbh';
   const state =
@@ -1030,27 +1036,72 @@ function DriftSection({ s, c }: { s: GameState; c: Colony }) {
           : failing
             ? 'Its black hole will soon evaporate.'
             : '';
+  const lasts = (x: DriftChoice) => {
+    if (!isFinite(x.lasts)) return 'lasts beyond reckoning';
+    // (in turns where they can be counted: not from an age whose turns will never reach it)
+    const n = x.sys.primary.evaporateAt ? turnsUntilYears(s, x.sys.primary.evaporateAt) : Infinity;
+    return `lasts ${formatYears(x.lasts)}${isFinite(n) ? ` (${n} turn${n === 1 ? '' : 's'})` : ''}`;
+  };
   return (
     <div class="section drift">
       <h3>{atHole ? 'Another black hole' : 'To a black hole'}</h3>
       <p class="dim">
         {state ? `${state} ` : ''}
-        {t.target
-          ? `It can drift to ${t.target.name}, ${Math.round(t.ly)} ly away, with ${Math.round(t.target.primary.spin)} spin to give, taking all it has, for ${t.energy} energy.`
-          : 'No other black hole we could reach has spin to give and years to last.'}
+        {choices.length
+          ? `Choose a hole to drift to, taking all it has, for ${t.energy} energy. Recommended: the most spin to give of those that will last; any is within a turn’s reach.`
+          : 'No other black hole is left to go to.'}
       </p>
-      {t.target && (
+      {choices.length > 0 && (
+        <div class="list drift-choices" role="group" aria-label="Black holes to drift to">
+          {choices.map((x) => {
+            const on = x.sys.id === chosen?.sys.id;
+            return (
+              <div
+                key={x.sys.id}
+                class={`list-item ${on ? 'active' : ''}`}
+                aria-pressed={on}
+                {...pressable(() => {
+                  setPicked(x.sys.id);
+                  setSure(false);
+                  sfx('click');
+                })}
+              >
+                <span class="grow">
+                  {x.sys.name}
+                  {x.recommended && (
+                    <span class="chip neon" style={{ marginLeft: '6px' }} data-tip="The game’s own choice: the most spin to give of the holes that will last">
+                      recommended
+                    </span>
+                  )}
+                  {x.ours && (
+                    <span class="chip" style={{ marginLeft: '6px' }} data-tip="A vault of ours is there: it would join it, and share its spin">
+                      our vault
+                    </span>
+                  )}
+                  {x.poor && <span class="chip warn" style={{ marginLeft: '6px' }}>{x.poor}</span>}
+                  <div class="faint mono" style={{ fontSize: '12.5px' }}>
+                    spin {n0(x.spin)} · {lasts(x)} · {formatDistance(distLy(sys, x.sys))}
+                  </div>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {chosen && (
         <button
           class={`btn small ${sure ? 'danger' : ''} ${why ? 'disabled' : ''}`}
-          data-tip={why ?? 'It joins our vault there, if we have one.'}
+          style={{ marginTop: '6px' }}
+          data-tip={why ?? (chosen.ours ? `It joins our vault at ${chosen.sys.name}.` : `It settles in ${chosen.sys.name}’s Deep.`)}
           onClick={() => {
             if (why) return;
             if (!sure) return setSure(true);
             setSure(false);
-            if (act((g) => driftToAnotherHole(g, c.id))) sfx('click');
+            setPicked(null);
+            if (act((g) => driftToAnotherHole(g, c.id, chosen.sys.id))) sfx('click');
           }}
         >
-          {sure ? `Really drift to ${t.target.name}? (click again)` : `Drift to ${t.target.name}`}
+          {sure ? `Really drift to ${chosen.sys.name}? (click again)` : `Drift to ${chosen.sys.name}`}
         </button>
       )}
     </div>
@@ -1492,10 +1543,15 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
   let acc = 0;
   const ctx = project(s).ctx;
   type Item = { id: string; name: string; desc: string; error: string | null | undefined; cost: ReturnType<typeof buildCost>; count: number; fx?: BuildEffect; sk?: StructureKind };
-  const list: Item[] =
+  const all: Item[] =
     kind === 'structure'
       ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId], formOf(c)), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx), sk: structureKind(x.def) }))
       : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: `${x.def.desc} ${shipNote(x.def)}`, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
+  // what cannot be built here now can be left out (31 Oct, the player: "let the player hide
+  // buildings that are unavailable to build"), remembered between sessions
+  const hide = !!hudPrefs.value.hideUnbuildable;
+  const unbuildable = all.filter((x) => x.error).length;
+  const list = hide ? all.filter((x) => !x.error) : all;
   // structures come grouped by kind, and can be narrowed to one kind
   const present = STRUCTURE_KINDS.filter((k) => list.some((x) => x.sk === k.id));
   const only = kind === 'structure' && buildKind.value !== 'all' && present.some((k) => k.id === buildKind.value) ? buildKind.value : null;
@@ -1563,6 +1619,20 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
             ))}
           </div>
         )}
+        <div class="row wrap" style={{ gap: '4px', marginBottom: '6px' }}>
+          <button
+            class={`btn small ghost hide-unbuildable ${hide ? 'on' : ''}`}
+            aria-pressed={hide}
+            data-tip={hide ? `Show the ${unbuildable} that cannot be built here now, each with why` : 'Leave out what cannot be built here now (each says why while it is shown). Remembered.'}
+            onClick={() => {
+              setHudPrefs({ hideUnbuildable: !hide });
+              sfx('click');
+            }}
+          >
+            {hide ? `Show unavailable (${unbuildable})` : `Hide unavailable${unbuildable ? ` (${unbuildable})` : ''}`}
+          </button>
+        </div>
+        {hide && !list.length && <p class="dim">Nothing {kind === 'structure' ? 'of this' : 'of these'} can be built here now. Show the unavailable to see why.</p>}
         <div class="list-head">
           <span>{kind === 'structure' ? 'Click to queue · what one more adds here, per turn' : 'Click to queue'}</span>
           <span>Cost</span>
@@ -1944,6 +2014,15 @@ ${tacticNote(tacticOf(f))}`}>{tacticOf(f).name.toLowerCase()}</span>}
                 <button class="btn small" data-tip="Stand down: it waits for orders again." onClick={() => act((g) => standFleet(g, f.id, 'idle')) && sfx('click')}>
                   Stand down
                 </button>
+              ) : isWarFleet(f) && f.ships.length > 1 ? (
+                <>
+                  <button class="btn small primary" data-tip={`Dig in one warship here, the one in the best repair: it leaves this fleet as a fleet of its own and counts ${FORTIFY_BONUS}× against ships and swarms in this system (an Aegis 3×; not while standing off). The other ${f.ships.length - 1} wait for orders.`} onClick={() => act((g) => fortifyOne(g, f.id)) && sfx('build')}>
+                    <Icon name="shield" /> Fortify one
+                  </button>
+                  <button class="btn small" data-tip={`Dig in all ${f.ships.length} here: they count ${FORTIFY_BONUS}× against ships and swarms in this system (an Aegis 3×; not while standing off), turn raiders away from the capital, and stop asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
+                    <Icon name="shield" /> Fortify all {f.ships.length}
+                  </button>
+                </>
               ) : isWarFleet(f) ? (
                 <button class="btn small primary" data-tip={`Dig in here: counts ${FORTIFY_BONUS}× against ships and swarms in this system (an Aegis 3×; not while standing off), turns raiders away from the capital, and stops asking for orders.`} onClick={() => act((g) => standFleet(g, f.id, 'fortify')) && sfx('build')}>
                   <Icon name="shield" /> Fortify

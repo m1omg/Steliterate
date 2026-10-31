@@ -223,6 +223,8 @@ export interface HudPrefs {
   viewMode: number;
   /** On a phone: the selection's sheet as last set with its handle (0 small, 1 half, 2 full). */
   sheet?: 0 | 1 | 2;
+  /** The build list leaves out what cannot be built at that settlement now (31 Oct, the player). */
+  hideUnbuildable?: boolean;
 }
 function loadHudPrefs(): HudPrefs {
   const d: HudPrefs = { forecasts: true, feed: true, orbitsPaused: false, eventPivot: true, viewMode: 0 };

@@ -130,6 +130,9 @@ run(async () => {
     const m = (document.querySelector('.reveal-card .eyebrow')?.textContent ?? '').match(/(\d+) of (\d+)/);
     return m ? [+m[1], +m[2]] : null;
   });
+  // (at a world again: the screenshot above can take 12 s in a slow container, and the camera may
+  // have flown on meanwhile; in a flight, Space only cuts the next world's while short, 31 Oct)
+  await atWorld();
   const before = await place();
   if (before && before[0] < before[1] - 1) {
     await page.keyboard.press('Space');

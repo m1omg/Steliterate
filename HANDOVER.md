@@ -187,6 +187,18 @@ word", then the player's list of 16 Oct, then the falling worlds.
   Checks: `unit/governor`, `browser/governor`. With it, Our settlements say which are leptonic
   (the player: "should show which settlements are leptonic pls"), and which are making the
   Passage, as does a system's Worlds list ("Passage 33%", `FormWorkChip`; 28 Oct).
+- **Fortify one or all, the black hole of our choice, Hide unavailable** (31 Oct, PR
+  m1omg/Steliterate#52): a fleet of several warships has Fortify one (`fortifyOne`) and Fortify
+  all; a leptonic settlement's drift section lists every hole it could go to with spin, lifetime
+  and distance, the game's own choice marked recommended (`driftChoices`); the Build tab can hide
+  what cannot be built there (`hudPrefs.hideUnbuildable`). The autoplayer's drift is unchanged.
+  Answered the same day: no ship can be built after the end of matter (the Shipyard has no
+  leptonic form, and a leptonic settlement builds only what has one); ships built before stay in
+  service, which the game does not take away (they are matter too: a bend, offered to the player).
+  They chose a Leptonic Shipyard, and the Leptonic Wraith the plan had promised and never built:
+  both in the same PR (`lepton_shipyard`, `wraith`, `shipCheck`; the hull drawn by
+  `tools/draw-wraith.cjs`). Then "check for other unimplemented things too": the audit's list is
+  in SESSION-NOTES (31 Oct).
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
@@ -216,8 +228,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#51 (the governor, 27 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-nTaXRU5K.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#52 (Fortify one, the hole of our choice, Hide unavailable, the Leptonic Wraith, 31 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-BymdCuCG.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order

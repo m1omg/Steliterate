@@ -16,7 +16,7 @@ import { positroniumComes, positroniumGone, positroniumHere } from './positroniu
 import { ironAge } from './deeptime';
 import { workCost, workRequirementMet } from './endings';
 import { resolveEvent } from './events';
-import { autoExplore, canSurvey, isWarFleet, orderMove } from './fleets';
+import { autoExplore, canSurvey, isWarFleet, newFleet, orderMove } from './fleets';
 import { absorbSwarm, attackSwarm, drawSwarmTo, tameSwarm } from './hunger';
 import { BEACON_COST, beaconOwner } from './beacons';
 import { gesture, resolveMindSignal } from './minds';
@@ -62,8 +62,9 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   const form = FORMS[formOf(c)];
   const onlyKin = (d.cap && Object.keys(d.cap).every((t) => !form.lives.includes(t as ThreadId))) || (d.cryoCap && !form.sleepers) || (d.enables === 'upload' && !form.lives.includes('kin'));
   if (onlyKin) return `Kin are made of matter: a ${form.name.toLowerCase()} settlement has no room for them.`;
-  // and a leptonic settlement builds only what has a leptonic form (passage.ts)
+  // and a leptonic settlement builds only what has a leptonic form (passage.ts); what is woven of fields, only it
   if (formOf(c) !== 'baryonic' && !inLeptonicForm(d)) return `Made of matter: a ${formOf(c)} settlement cannot build it.`;
+  if (d.leptonicOnly && formOf(c) !== 'leptonic') return 'Woven of fields: only a leptonic settlement can build it.';
   // nets for the widest atoms (positronium.ts): of fields, once they have formed, and not after they decay
   if (d.energy?.mode === 'positronium') {
     if (formOf(c) === 'baryonic') return 'Strung of fields: only a settlement no longer made of matter can build it.';
@@ -117,12 +118,27 @@ export function buildableStructures(state: GameState, c: Colony): { def: Structu
     .filter((x) => x.error !== 'Not yet researched.' && x.error !== 'Not in this age.' && x.error !== NOT_IN_THIS_GAME);
 }
 
+/**
+ * Why this settlement cannot build this ship, or null: the ships of matter at a Shipyard, by a
+ * settlement of matter; the ships of fields (the Leptonic Wraith) at a Leptonic Shipyard, by a
+ * leptonic one (31 Oct); a settlement written into a horizon or woven through the positronium
+ * builds none.
+ */
+export function shipCheck(c: Colony, def: ShipDef): string | null {
+  const form = formOf(c);
+  if (def.leptonic) {
+    if (form !== 'leptonic') return 'Woven of fields: only a leptonic settlement with a Leptonic Shipyard can build it.';
+    if (!((c.structures.lepton_shipyard ?? 0) > 0)) return 'Needs a Leptonic Shipyard.';
+    return null;
+  }
+  if (form !== 'baryonic') return `Made of matter: a ${form} settlement cannot build it${form === 'leptonic' ? ' (a Leptonic Shipyard builds Wraiths)' : ''}.`;
+  if (!((c.structures.shipyard ?? 0) > 0)) return 'Needs a Shipyard.';
+  if (def.crew && c.pops.kin < def.crew + 1) return `Needs at least ${def.crew + 1} Kin here.`;
+  return null;
+}
+
 export function buildableShips(state: GameState, c: Colony): { def: ShipDef; error: string | null }[] {
-  const hasYard = (c.structures.shipyard ?? 0) > 0;
-  return SHIPS.filter((s) => !s.tech || hasTech(state, s.tech)).map((def) => ({
-    def,
-    error: !hasYard ? 'Needs a Shipyard.' : def.crew && c.pops.kin < def.crew + 1 ? `Needs at least ${def.crew + 1} Kin here.` : null,
-  }));
+  return SHIPS.filter((s) => !s.tech || hasTech(state, s.tech)).map((def) => ({ def, error: shipCheck(c, def) }));
 }
 
 export function queueBuild(state: GameState, colonyId: string, kind: 'structure' | 'ship', key: string): ActionResult {
@@ -134,10 +150,10 @@ export function queueBuild(state: GameState, colonyId: string, kind: 'structure'
     const err = structureCheck(state, c, def as StructureDef);
     if (err) return err;
   } else {
-    if (!((c.structures.shipyard ?? 0) > 0)) return 'Needs a Shipyard.';
     const s = def as ShipDef;
     if (s.tech && !hasTech(state, s.tech)) return 'Not yet researched.';
-    if (s.crew && c.pops.kin < s.crew + 1) return `Needs at least ${s.crew + 1} Kin here: ${s.crew} of them will go.`;
+    const err = shipCheck(c, s);
+    if (err) return s.crew && /Kin here/.test(err) ? `Needs at least ${s.crew + 1} Kin here: ${s.crew} of them will go.` : err;
   }
   const cost = buildCost(state, def, kind === 'ship');
   // (with what we have, to a tenth: 29.6 is not 30)
@@ -673,4 +689,25 @@ export function standFleet(state: GameState, fleetId: string, order: 'fortify' |
   f.auto = undefined;
   if (order === 'fortify') log(state, `${f.name} has fortified ${state.systems[f.at]?.name ?? 'its station'}.`, 'info', f.at);
   return null;
+}
+
+/**
+ * Fortify one warship of a fleet stationed here, not the whole fleet (31 Oct, the player: "selecting
+ * (1) ship to fortify, currently fortifies ALL ships in system. perhaps separate buttons for singular
+ * versus total fortification"): the warship in the best repair leaves the fleet as a fleet of its
+ * own, keeps its tactic, and digs in; the rest wait for orders. (Ships built at a star join an idle
+ * fleet of their class there, queue.ts, so several builds make one fleet.)
+ */
+export function fortifyOne(state: GameState, fleetId: string): ActionResult {
+  const f = ownFleet(state, fleetId);
+  if (!f || !f.at) return 'Only a fleet that has arrived can do that.';
+  if (!isWarFleet(f)) return 'Only warships can fortify.';
+  if (f.ships.length < 2) return standFleet(state, fleetId, 'fortify');
+  const health = (x: { cls: string; hp: number }) => x.hp / (SHIP_BY_ID[x.cls]?.hp ?? 5);
+  const i = f.ships.reduce((best, x, j) => (isWarship(x.cls) && (best < 0 || health(x) > health(f.ships[best])) ? j : best), -1);
+  const [ship] = f.ships.splice(i, 1);
+  const one = newFleet(state, f.at, [ship.cls]);
+  one.ships = [ship];
+  if (f.tactic) one.tactic = f.tactic;
+  return standFleet(state, one.id, 'fortify');
 }

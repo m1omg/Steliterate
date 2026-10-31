@@ -6,7 +6,7 @@
 // Catchers wait for the final burst.
 import { autoPlay } from '../../../src/game/auto';
 import { newGame } from '../../../src/game/newGame';
-import { LEAVE_SPIN, holeFailing, runCrossing } from '../../../src/game/sim/crossing';
+import { LEAVE_SPIN, driftChoices, holeFailing, runCrossing } from '../../../src/game/sim/crossing';
 import { createColony, deepFor } from '../../../src/game/sim/fleets';
 import { DRIFT_ENERGY, DRIFT_MIN, driftCheck, driftTerms, driftToAnotherHole } from '../../../src/game/sim/horizon';
 import { computeMods } from '../../../src/game/sim/mods';
@@ -90,6 +90,25 @@ function after(): { s: GameState; v: Colony } {
   check(driftCheck(s, c) === null && !!t.target && isHole(t.target), `a leptonic settlement on a world can drift to a hole (to ${t.target?.name})`);
   driftToAnotherHole(s, c.id);
   check(isHole(s.systems[c.systemId]) && s.bodies[c.bodyId]?.kind === 'deep' && (c.structures.reserve_vault ?? 0) === 1 && (c.structures.penrose_harvester ?? 0) === 1, 'into its Deep, with what it had and a harvester for the hole');
+}
+
+// the player chooses the hole (31 Oct, the player: "let me choose the hole but with recommendations
+// and spin/lifetime statistics"): every other hole it fits, the game's own choice first and marked,
+// each with its spin and years left; it drifts to the one chosen, not only the recommended one
+{
+  const { s, v } = after();
+  const from = s.systems[v.systemId];
+  from.primary.spin = 0;
+  const choices = driftChoices(s, v);
+  const holes = Object.values(s.systems).filter((x) => isHole(x) && !x.gone && x.id !== from.id);
+  console.log(`  choices: ${choices.map((x) => `${x.sys.name}${x.recommended ? '*' : ''} spin ${Math.round(x.spin)}${x.poor ? ` (${x.poor})` : ''}`).join('; ')}`);
+  check(choices.length === holes.length && choices[0].recommended && choices[0].sys.id === driftTerms(s, v).target?.id && choices.filter((x) => x.recommended).length === 1, `every other hole is offered (${choices.length}), the game's own choice first and the only one marked`);
+  check(choices.slice(1).every((x, i, a) => i === 0 || a[i - 1].spin >= x.spin) && choices.every((x) => x.lasts > 0), 'the rest by spin to give, each with the years it has left');
+  const other = choices.find((x) => !x.recommended);
+  if (other) {
+    check(driftCheck(s, v, 'nowhere') === 'It cannot drift there.', 'a hole it cannot go to is refused');
+    check(driftToAnotherHole(s, v.id, other.sys.id) === null && v.systemId === other.sys.id, `it drifts to the one chosen (${other.sys.name}), not the recommended one`);
+  } else check(false, 'a second hole to choose');
 }
 
 // the autoplayer leaves a hole drained or gone; it stays for a final burst its catchers will bank
