@@ -65,6 +65,10 @@ export interface StructureDef {
   terraform?: 'mirrors' | 'works' | 'seeding'; // terraforming (sim/terraform.ts): its rules and effects live there
   /** Only in a game where falling worlds break up and giants flash (a game begun since 20 Oct: rubbleGame, physics.ts). */
   rubble?: boolean;
+  /** Ships are built here (a Shipyard; a Leptonic Shipyard for the ships of fields, data/ships.ts). */
+  yard?: 'matter' | 'leptonic';
+  /** Only a leptonic settlement can build it (what is woven of fields, not re-encoded from matter). */
+  leptonicOnly?: boolean;
 }
 
 /** The worlds terraforming can work on: rock and ice, not gas giants, belts or the Deep. */
@@ -81,7 +85,7 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'night_shelter', name: 'Night-side Shelters', desc: 'Emergency habitats cut into the rock of the night side while the star flares, cooled by great radiator fins. Cramped and loud, but alive. Only while a star is in its last flare.', era: 'dusk', cost: 20, matter: 10, max: 4, primaries: ['blue_dwarf'], cap: { kin: 3 }, upkeep: 0.6, signature: 0.3 }),
   S({ id: 'archive_spire', name: 'Archive Spire', desc: 'Observatory, library and argument hall in one tower.', era: 'dusk', cost: 40, matter: 10, max: 2, insight: 3, signature: 0.5 }),
   S({ id: 'commons', name: 'The Commons', desc: 'Where people gather to decide how to go on.', era: 'dusk', cost: 35, matter: 5, max: 1, accord: 1, resolve: 0.3, signature: 0.5 }),
-  S({ id: 'shipyard', name: 'Shipyard', desc: 'Slips, cranes and a long queue of repairs.', era: 'dusk', cost: 40, matter: 20, max: 1, industry: 1, signature: 1 }),
+  S({ id: 'shipyard', name: 'Shipyard', desc: 'Slips, cranes and a long queue of repairs.', era: 'dusk', cost: 40, matter: 20, max: 1, industry: 1, signature: 1, yard: 'matter' }),
   S({ id: 'reserve_vault', name: 'Energy Vault', desc: 'Superconducting rings holding charge against lean years.', era: 'dusk', tech: 'energy_storage', cost: 40, matter: 20, max: 4, reserveCap: 80, signature: 0.3, leptonic: { name: 'Field Store', desc: 'Energy held in the magnetic fields of electron–positron currents, which outlast ordinary matter.' } }),
   S({ id: 'foundry', name: 'Orbital Foundry', desc: 'Furnaces in orbit, fed by the belts.', era: 'dusk', tech: 'orbital_industry', cost: 50, matter: 20, max: 2, industry: 3, signature: 1 }),
   S({ id: 'mag_shield', name: 'Magnetic Shield', desc: 'A superconducting loop at the inner Lagrange point, standing in for a dead dynamo.', era: 'dusk', tech: 'magnetospherics', cost: 80, matter: 30, max: 1, habitable: true, declineMult: 0.4, upkeep: 1, signature: 1 }),
@@ -126,6 +130,8 @@ export const STRUCTURES: StructureDef[] = [
   S({ id: 'decay_harvester', name: 'Decay Harvester', desc: 'Collects the faint heat of protons decaying inside dead stars.', era: 'degenerate', tech: 'baryon_decay_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['white_dwarf', 'black_dwarf', 'neutron_star', 'brown_dwarf'], energy: { mode: 'decay', amount: 4 }, signature: 1 }),
   S({ id: 'curvature_collector', name: 'Curvature Collector', desc: 'Catches the particles that space, curved tight around a neutron star, makes from its mass.', era: 'degenerate', tech: 'curvature_harvest', cost: 80, matter: 30, max: 2, bodies: ['deep'], primaries: ['neutron_star'], energy: { mode: 'curvature', amount: 4 }, signature: 1 }),
   S({ id: 'lepton_substrate', name: 'Leptonic Substrate', desc: 'Speculative: minds re-encoded in electron–positron structures that will outlast ordinary matter.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 70, max: 3, decayProof: true, cap: { echoes: 4, coldminds: 4, lattice: 2 }, signature: 1 }),
+  // (31 Oct, the player: "add a leptonic shipyard pls": the Leptonic Wraith of the new version's plan, built at last)
+  S({ id: 'lepton_shipyard', name: 'Leptonic Shipyard', desc: 'Speculative: slips of electron–positron structure held in fields, where Leptonic Wraiths are woven and mended. Only a leptonic settlement can build one; the ships of matter are built at a Shipyard of matter, and none once matter is gone.', era: 'degenerate', tech: 'leptonic_computation', cost: 60, matter: 30, max: 1, leptonic: {}, leptonicOnly: true, yard: 'leptonic', signature: 1 }),
   S({ id: 'lepton_confluence', name: 'Leptonic Confluence', desc: 'Speculative: a Confluence Node re-encoded in electron–positron structures, where minds merge. The Chorus has room nowhere else once ordinary matter is gone.', era: 'degenerate', tech: 'leptonic_computation', cost: 110, matter: 60, max: 3, decayProof: true, cap: { chorus: 3 }, enables: 'merge', upkeep: 0.5, signature: 1 }),
   S({ id: 'superconducting_ring', name: 'Deep Storage Ring', desc: 'Giant, patient batteries for the long nights between sources.', era: 'degenerate', tech: 'deep_storage', cost: 70, matter: 40, max: 3, reserveCap: 150, burstCap: 100, signature: 0.3, leptonic: { name: 'Deep Field Store', desc: 'Long, patient currents of electrons and positrons, holding energy, and the flashes of bursts, in their fields.' } }),
 
@@ -200,7 +206,7 @@ export function structureKind(d: StructureDef): StructureKind {
   if (d.reserveCap || d.burstCap) return 'storage';
   if (d.insight) return 'insight';
   if (d.accord || d.resolve) return 'accord';
-  if (d.industry) return 'industry';
+  if (d.industry || d.yard) return 'industry';
   if (d.defense) return 'defence';
   if (d.warms || d.declineMult !== undefined || d.coreHeatBonus || d.vitalityOnce || d.terraform) return 'world';
   return 'people'; // room, cold sleep, conversions, continuity

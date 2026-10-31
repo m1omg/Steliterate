@@ -441,13 +441,15 @@ export function screenAt(state: GameState, systemId: string, owner = state.civ.i
 /** The share of a ship's hull a Shipyard mends in a turn, at a star where its owner has one. */
 export const REPAIR_SHARE = 0.1;
 
-/** Ships stopped where their civilization has a Shipyard are mended, a little each turn (part 2c). */
+/** Ships stopped where their civilization has a Shipyard are mended, a little each turn (part 2c): the ships of fields at a Leptonic Shipyard (31 Oct). */
 export function repairFleets(state: GameState) {
   const yards = new Set(colonies(state).filter((c) => (c.structures.shipyard ?? 0) > 0).map((c) => c.systemId));
-  if (!yards.size) return;
+  const fieldYards = new Set(colonies(state).filter((c) => (c.structures.lepton_shipyard ?? 0) > 0).map((c) => c.systemId));
+  if (!yards.size && !fieldYards.size) return;
   for (const f of fleets(state)) {
-    if (!f.at || !yards.has(f.at)) continue;
+    if (!f.at) continue;
     for (const s of f.ships) {
+      if (!(SHIP_BY_ID[s.cls]?.leptonic ? fieldYards : yards).has(f.at)) continue;
       const max = SHIP_BY_ID[s.cls]?.hp ?? s.hp;
       if (s.hp < max) s.hp = Math.min(max, s.hp + max * REPAIR_SHARE);
     }

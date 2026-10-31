@@ -32,6 +32,8 @@ export interface ShipDef {
   tames?: boolean;
   inSystem?: boolean; // cannot leave its star
   crew?: number; // Kin drawn from the settlement that builds it
+  /** Woven of fields at a Leptonic Shipyard, by a leptonic settlement: the only ships it can build, and the only ones built once matter is gone. */
+  leptonic?: boolean;
 }
 
 export const SHIPS: ShipDef[] = [
@@ -47,6 +49,8 @@ export const SHIPS: ShipDef[] = [
   { id: 'breacher', name: 'Breacher', desc: 'A siege hull: shaped charges, mining rigs and a heavy prow, to break a settlement’s defences. Without one, a settlement behind a Defence Grid or a Bastion Shell cannot be stormed.', tech: 'aegis_lattices', cost: 120, matter: 50, mass: 8, attack: 1, vs: { settlements: 10, ships: 2 }, hp: 20, upkeep: 0.6, breaches: true },
   { id: 'lance', name: 'Kinetic Lance', desc: 'A mass driven at nearly the speed of light: a strike at a settlement, once, stopped only by the screens of ships waiting there. Everyone hears of it, and it spends the galaxy’s free energy. One in flight at a time.', tech: 'relativistic_arks', cost: 200, matter: 120, mass: 20, attack: 0, hp: 1, upkeep: 0.2, lance: true },
   { id: 'aegis', name: 'Aegis', desc: 'A heavy picket built around a salvaged reactor, at its strongest dug in.', tech: 'aegis_lattices', cost: 110, matter: 40, mass: 8, attack: 8, hp: 30, upkeep: 0.8, screen: 0.3, dugIn: 3 },
+  // (31 Oct, the player: "add a leptonic shipyard pls also i think there was a wraith/phantom ship for leptonic era already?": in the plan, not built until now)
+  { id: 'wraith', name: 'Leptonic Wraith', desc: 'Speculative: a warship of electron–positron structure held in fields, woven at a Leptonic Shipyard. The only warship that can be made once matter is gone, and it outlasts matter.', tech: 'leptonic_computation', cost: 90, matter: 30, mass: 2, attack: 5, hp: 16, upkeep: 0.3, screen: 0.3, leptonic: true },
   { id: 'tender', name: 'Swarm Tender', desc: 'Broadcasts the dead makers’ command language to calm a swarm.', tech: 'command_language', cost: 70, matter: 20, mass: 3, attack: 0, hp: 8, tames: true },
 ];
 
@@ -94,7 +98,7 @@ export function isWarship(cls: string): boolean {
 }
 
 /** A painted hull in public/art/ships/<look>.png (the Ark is 'settler', the Warden 'war'). */
-export type FleetLook = 'settler' | 'probe' | 'war' | 'other' | 'lighter' | 'seedcore' | 'spore' | 'vaultship' | 'aegis' | 'tender' | 'picket' | 'breacher' | 'hunter' | 'lance';
+export type FleetLook = 'settler' | 'probe' | 'war' | 'other' | 'lighter' | 'seedcore' | 'spore' | 'vaultship' | 'aegis' | 'tender' | 'picket' | 'breacher' | 'hunter' | 'lance' | 'wraith';
 
 const HULL: Record<string, FleetLook> = {
   ark: 'settler',
@@ -109,10 +113,11 @@ const HULL: Record<string, FleetLook> = {
   breacher: 'breacher',
   hunter: 'hunter',
   lance: 'lance',
+  wraith: 'wraith',
 };
 
 /** The warships' hulls, heaviest first: a fleet wears the first it carries. */
-const WAR_HULLS = ['aegis', 'breacher', 'hunter', 'warden', 'picket'];
+const WAR_HULLS = ['aegis', 'breacher', 'hunter', 'wraith', 'warden', 'picket'];
 
 /** Which painted hull stands for a fleet on the map and in the lists: its heaviest warship, else its first settler, else its tender. */
 export function fleetLook(classes: string[]): FleetLook {
@@ -129,6 +134,6 @@ export function fleetLook(classes: string[]): FleetLook {
 
 /** What a hull is for, which sets the colour of its glow on the map. */
 export function lookRole(look: FleetLook): 'war' | 'settler' | 'other' {
-  if (look === 'war' || look === 'aegis' || look === 'picket' || look === 'breacher' || look === 'hunter' || look === 'lance') return 'war';
+  if (look === 'war' || look === 'aegis' || look === 'picket' || look === 'breacher' || look === 'hunter' || look === 'lance' || look === 'wraith') return 'war';
   return look === 'settler' || look === 'lighter' || look === 'seedcore' || look === 'spore' || look === 'vaultship' ? 'settler' : 'other';
 }
