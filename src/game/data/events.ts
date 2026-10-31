@@ -1,6 +1,6 @@
 import type { Rng } from '../rng';
-import type { Body, Colony, EraId, GameState, ThreadId } from '../types';
-import { capital, colonies, formOf, hasCharter, hasTech, log, popsOf, threadTotals, uid } from '../sim/util';
+import type { Body, Colony, EraId, GameState, StarSystem, ThreadId } from '../types';
+import { capital, colonies, fleets, formOf, hasCharter, hasTech, log, popsOf, threadTotals, uid } from '../sim/util';
 import { welcomeEchoes } from '../sim/archive';
 import { FLARE_TURNS, SCORCH_K, SHELTER_CAP, SHELTER_MATTER, STAR_TURNS, digShelters, effectivePace, keepTimeWithFlare, keepTimeWithStar, sheltersNeeded, starClock, starClockOffer, starClockTerms, turnsUntilYears } from '../sim/flare';
 import { eta, formatYears, stepTime, sup } from '../eras';
@@ -14,6 +14,8 @@ import { destroyColony } from '../sim/fleets';
 import { capacity } from '../sim/economy';
 import { computeMods } from '../sim/mods';
 import { leaveWeave, leaveWeaveCost } from '../sim/positronium';
+import { TECH_BY_ID } from './techs';
+import { SHIP_BY_ID } from './ships';
 
 // Narrative events. Many are moral: triage, sacrifice, trust. Effects are small and legible;
 // the text carries the weight.
@@ -27,7 +29,17 @@ export interface EventChoice {
   ok?: (s: GameState, d: EventData) => boolean;
   /** Whether it is offered at all (absent: always). One not offered is not shown greyed out, as one that is not `ok` is: it is not there, and cannot be chosen (choiceShown). */
   shown?: (s: GameState, d: EventData) => boolean;
+  /**
+   * The technology it needs (31 Oct, the player: "The types of random Events should be unlocked by
+   * technology"): without it, it is greyed out, and its hint says what it needs (choiceOk).
+   */
+  tech?: string;
   run: (s: GameState, d: EventData, rng: Rng) => string | void;
+}
+
+/** Can this choice be taken now: its technology known, and whatever else it asks (`ok`)? */
+export function choiceOk(c: EventChoice, s: GameState, d: EventData): boolean {
+  return (!c.tech || hasTech(s, c.tech)) && (!c.ok || c.ok(s, d));
 }
 
 /** Is this choice offered now? */
@@ -52,7 +64,16 @@ export interface EventDef {
    * player's.
    */
   scope?: 'everyone';
+  /**
+   * At random it comes only once one of these technologies is known (31 Oct, the player: "The
+   * types of random Events should be unlocked by technology. (how does one harvest a comet without
+   * ships in-systems or an orbital shipyard?)"). What it needs besides, a ship there say, its
+   * `bind` asks.
+   */
+  tech?: string[];
   bind?: (s: GameState, rng: Rng) => EventData | null;
+  /** Its weight in the random pool at this moment, from what `bind` found (absent: `weight`). */
+  weigh?: (s: GameState, d: EventData) => number;
   text: (s: GameState, d: EventData) => string;
   choices: EventChoice[];
 }
@@ -84,7 +105,9 @@ function shelterNote(r: { built: number; missing: number }): string {
 
 /** A choice's hint as it reads now (some depend on the moment, such as a price). */
 export function choiceHint(c: EventChoice, s: GameState, d: EventData): string {
-  return typeof c.hint === 'function' ? c.hint(s, d) : (c.hint ?? '');
+  const h = typeof c.hint === 'function' ? c.hint(s, d) : (c.hint ?? '');
+  // (a technology it needs and we lack: said last, so the hint says what it would do and why not now)
+  return c.tech && !hasTech(s, c.tech) ? `${h ? `${h} ` : ''}Needs ${TECH_BY_ID[c.tech]?.name ?? c.tech}.` : h;
 }
 
 const TENFOLDS = ['', 'ten', 'a hundred', 'a thousand', 'ten thousand', 'a hundred thousand', 'a million', 'ten million', 'a hundred million', 'a billion', 'ten billion', 'a hundred billion', 'a trillion', 'ten trillion', 'a hundred trillion', 'a quadrillion'];
@@ -235,6 +258,42 @@ function livingHomeworld(s: GameState): Body | undefined {
   const hw = homeworld(s);
   return hw && !hw.dissolved && hw.vitality > 0 && SURFACE_LIFE.includes(hw.kind) ? hw : undefined;
 }
+/** Our systems, where a comet can fall through (31 Oct, the player: "they should fall through no shipyard systems too"). */
+function cometSystems(s: GameState): StarSystem[] {
+  return [...new Set(colonies(s).map((c) => c.systemId))].map((id) => s.systems[id]).filter((sys) => !!sys && !sys.gone);
+}
+/**
+ * How we meet a comet at a star (31 Oct, the player: "how does one harvest a comet without ships
+ * in-systems or an orbital shipyard?", and of a probe: "It should be able to meet but not haul
+ * it"): our ships there, that can haul it; tugs from a Shipyard there; a survey probe, that can
+ * meet it but haul nothing; or nothing, and we only watch it pass.
+ */
+function cometMeans(s: GameState, sys: StarSystem): 'ships' | 'yard' | 'probe' | null {
+  const here = fleets(s).filter((f) => f.at === sys.id && f.ships.length > 0);
+  if (here.some((f) => f.ships.some((x) => !SHIP_BY_ID[x.cls]?.survey))) return 'ships';
+  if (colonies(s).some((c) => c.systemId === sys.id && (c.structures.shipyard ?? 0) > 0)) return 'yard';
+  return here.length ? 'probe' : null;
+}
+/** Can we haul the comet there (to shepherd or mine it): our ships, or a Shipyard's tugs? */
+const cometHaul = (s: GameState, d: EventData) => {
+  const sys = cometSys(s, d);
+  const by = sys ? cometMeans(s, sys) : null;
+  return by === 'ships' || by === 'yard';
+};
+const HAUL_NEEDS = 'Needs our ships (not a probe) or a Shipyard there to haul it.';
+/** The comet's star (one from an older save fell through the home system). */
+function cometSys(s: GameState, d: EventData): StarSystem | undefined {
+  const hw = homeworld(s);
+  return s.systems[String(d.systemId)] ?? (hw ? s.systems[hw.systemId] : undefined) ?? s.systems[s.civ.homeSystemId];
+}
+/** A living world of ours there that a comet's ices can be shepherded onto: the homeworld first. */
+function cometWorld(s: GameState, d: EventData): Body | undefined {
+  const sys = cometSys(s, d);
+  if (!sys) return undefined;
+  const ours = new Set(colonies(s).map((c) => c.bodyId));
+  const living = sys.bodies.map((id) => s.bodies[id]).filter((b): b is Body => !!b && ours.has(b.id) && !b.dissolved && b.vitality > 0 && SURFACE_LIFE.includes(b.kind));
+  return living.find((b) => b.traits.includes('homeworld')) ?? living[0];
+}
 function colonyById(s: GameState, d: EventData): Colony | undefined {
   return s.colonies[String(d.colonyId)];
 }
@@ -383,7 +442,7 @@ export const EVENTS: EventDef[] = [
     },
     text: () => 'Deep sensors registered a slow shudder: a whole layer of the mantle has crystallised. The geothermal taps are running cooler.',
     choices: [
-      { label: 'Drill deeper', hint: 'Matter −20; core heat recovers a little.', run: (s) => { matter(s, -20); const hw = homeworld(s); if (hw) hw.coreHeat = Math.min(1, hw.coreHeat + 0.05); } },
+      { label: 'Drill deeper', hint: 'Matter −20; core heat recovers a little.', tech: 'deep_mantle', run: (s) => { matter(s, -20); const hw = homeworld(s); if (hw) hw.coreHeat = Math.min(1, hw.coreHeat + 0.05); } },
       { label: 'Accept it', hint: 'Core heat −0.08.', run: (s) => { const hw = homeworld(s); if (hw) hw.coreHeat = Math.max(0, hw.coreHeat - 0.08); } },
     ],
   },
@@ -396,10 +455,13 @@ export const EVENTS: EventDef[] = [
     eras: ['dusk', 'degenerate'],
     weight: 3,
     once: true,
+    // found by one of our survey ships; bringing them home takes ships that can carry them, and
+    // taking it apart foundries in orbit (31 Oct)
+    bind: (s) => (fleets(s).some((f) => f.ships.some((x) => SHIP_BY_ID[x.cls]?.survey)) ? {} : null),
     text: () => 'A probe found an ark drifting between stars. It is older than our species and its engines are cold. Inside, in racks of failing cryo berths, something is still alive.',
     choices: [
-      { label: 'Wake them and bring them home', hint: '+2 Kin at the capital. Resolve +3. They are strangers.', run: (s) => { const c = capital(s); if (c) c.pops.kin += 2; res(s, 3); stand(s, 'kin', -1); } },
-      { label: 'Salvage the ship', hint: 'Matter +60. Resolve −2.', run: (s) => { matter(s, 60); res(s, -2); } },
+      { label: 'Wake them and bring them home', hint: '+2 Kin at the capital. Resolve +3. They are strangers.', tech: 'fusion_drives', run: (s) => { const c = capital(s); if (c) c.pops.kin += 2; res(s, 3); stand(s, 'kin', -1); } },
+      { label: 'Salvage the ship', hint: 'Matter +60. Resolve −2.', tech: 'orbital_industry', run: (s) => { matter(s, 60); res(s, -2); } },
       { label: 'Leave them sleeping', hint: 'Nothing changes.', run: () => {} },
     ],
   },
@@ -409,11 +471,58 @@ export const EVENTS: EventDef[] = [
     art: 'dusk',
     plate: 'comet',
     eras: ['dusk'],
-    weight: 3,
-    text: () => 'A long-period comet is falling through the home system, full of ices from the old outer dark.',
+    weight: 4,
+    // (31 Oct, the player: "how does one harvest a comet without ships in-systems or an orbital
+    // shipyard?", "with the comet the event should happen in player owned systems more often imo",
+    // and "they should fall through no shipyard systems too but player in that case can only get
+    // research benefits"): once we know Volatile Shepherding or Orbital Industry, at any star of
+    // ours, the more of them the more often (before: only the home system, whatever we had). It can
+    // be shepherded or mined only where our ships or a Shipyard's tugs can haul it; anywhere it can
+    // be studied, closer where any ship of ours, a probe too, meets it.
+    tech: ['comet_shepherding', 'orbital_industry'],
+    bind: (s, rng) => {
+      const at = cometSystems(s);
+      return at.length ? { systemId: rng.pick(at).id, n: at.length } : null;
+    },
+    weigh: (_s, d) => 4 * Math.min(4, Number(d.n ?? 1)),
+    text: (s, d) => {
+      const sys = cometSys(s, d);
+      const by = sys ? cometMeans(s, sys) : null;
+      const meet =
+        by === 'ships' ? ' Our ships there can meet it, and haul it.'
+        : by === 'yard' ? ' The Shipyard there can send tugs to meet it.'
+        : by === 'probe' ? ' Our probe there can meet it, but not haul it.'
+        : ' We have nothing there to meet it with: we can watch it pass, and learn what we can.';
+      return `A long-period comet is falling through ${sys?.name ?? 'the home system'}, full of ices from the old outer dark.${meet}`;
+    },
     choices: [
-      { label: 'Shepherd it to the homeworld', hint: 'Energy −20, homeworld vitality +5% (while it has life to keep).', ok: (s) => !!livingHomeworld(s)?.colonyId, run: (s) => { energy(s, -20); const hw = livingHomeworld(s); if (hw) hw.vitality = Math.min(1, hw.vitality + 0.05); } },
-      { label: 'Mine it', hint: 'Matter +40.', run: (s) => { matter(s, 40); } },
+      {
+        label: 'Shepherd it onto our world there',
+        hint: (s, d) => {
+          const w = cometWorld(s, d);
+          const what = w ? `Energy −20, vitality +5% on ${w.name}.` : 'Energy −20, vitality +5% on a living world of ours there: none there has life to keep.';
+          return cometHaul(s, d) ? what : `${what} ${HAUL_NEEDS}`;
+        },
+        tech: 'comet_shepherding',
+        ok: (s, d) => cometHaul(s, d) && !!cometWorld(s, d),
+        run: (s, d) => {
+          energy(s, -20);
+          const w = cometWorld(s, d);
+          if (w) w.vitality = Math.min(1, w.vitality + 0.05);
+        },
+      },
+      { label: 'Mine it', hint: (s, d) => (cometHaul(s, d) ? 'Matter +40.' : `Matter +40. ${HAUL_NEEDS}`), tech: 'orbital_industry', ok: (s, d) => cometHaul(s, d), run: (s) => { matter(s, 40); } },
+      {
+        label: 'Study it',
+        hint: (s, d) => {
+          const sys = cometSys(s, d);
+          return sys && cometMeans(s, sys) ? 'Insight +40: our ships meet it and sample its ices.' : 'Insight +20: watched from afar.';
+        },
+        run: (s, d) => {
+          const sys = cometSys(s, d);
+          insight(s, sys && cometMeans(s, sys) ? 40 : 20);
+        },
+      },
     ],
   },
   {
@@ -425,6 +534,8 @@ export const EVENTS: EventDef[] = [
     eras: ['dusk', 'degenerate'],
     weight: 3,
     once: true,
+    // (sleep in the vaults is a thing one can preach once there is Cold Sleep, 31 Oct)
+    tech: ['cold_sleep'],
     text: () => 'A preacher is drawing crowds: we should all go to sleep, forever, in the vaults, and stop spending the future on the present. Thousands have signed the petition.',
     choices: [
       { label: 'Let the idea spread', hint: 'Coldminds and Echoes standing +5, Kin −3. You can slow one step further than research allows (pace).', run: (s) => { stand(s, 'coldminds', 5); stand(s, 'echoes', 5); stand(s, 'kin', -3); s.civ.flags.stillness = 1; } },
@@ -942,6 +1053,8 @@ export const EVENTS: EventDef[] = [
     eras: ['blackhole'],
     weight: 3,
     once: true,
+    // (heard only where we tend a Hawking Collector, 31 Oct)
+    bind: (s) => (colonies(s).some((c) => (c.structures.hawking_collector ?? 0) > 0) ? {} : null),
     text: () => 'Coldminds tending a Hawking collector report a structure in the noise, too regular to be random and too faint to be sure of. Some say it is information coming back out of the hole. Some say it is our own loneliness looking for a face.',
     choices: [
       { label: 'Listen longer', hint: 'Insight +120, Energy −20.', run: (s) => { insight(s, 120); energy(s, -20); } },
@@ -1188,7 +1301,7 @@ export const ANOMALIES: AnomalyDef[] = [
       text: (s, d) =>
         `In the belt of ${sysOf(s, bodyById(s, d)!)?.name} the survey found a point of gamma-ray light with no surface at all: about ${finishingHole(s.years)}, a black hole about the size of an atomic nucleus. Only a hole formed in the first second of the universe could be this small, and a hole this small should be finishing its Hawking evaporation about now, brightening as it shrinks. Primordial black holes were only ever a hypothesis. (Speculative physics.)`,
       choices: [
-        { label: 'Catch its last light', hint: 'Energy +120, once. It is nearly gone.', run: (s) => energy(s, 120) },
+        { label: 'Catch its last light', hint: 'Energy +120, once. It is nearly gone.', tech: 'orbital_collectors', run: (s) => { energy(s, 120); } },
         { label: 'Measure it as it dies', hint: 'Insight +90: Hawking radiation, observed directly.', run: (s) => insight(s, 90) },
       ],
     },
@@ -1204,7 +1317,7 @@ export const ANOMALIES: AnomalyDef[] = [
         `An elongated shard of rock is crossing ${sysOf(s, bodyById(s, d)!)?.name} on a hyperbolic path: it is not bound to this star. Its isotopes say it was thrown out of some other star's disk before the ancestral galaxies merged, and it has been falling between stars ever since.`,
       choices: [
         { label: 'Study it as it passes', hint: 'Insight +40.', run: (s) => insight(s, 40) },
-        { label: 'Catch it', hint: 'Energy −20, Matter +55.', ok: (s) => s.civ.energy >= 20, run: (s) => { energy(s, -20); matter(s, 55); } },
+        { label: 'Catch it', hint: 'Energy −20, Matter +55.', tech: 'fusion_drives', ok: (s) => s.civ.energy >= 20, run: (s) => { energy(s, -20); matter(s, 55); } },
       ],
     },
   },
@@ -1233,7 +1346,7 @@ export const ANOMALIES: AnomalyDef[] = [
       text: (s, d) =>
         `The ground of ${bodyById(s, d)?.name} is paved with glass: layer on layer of rock melted by superflares when its star was young and violent, trillions of years ago. Each layer dates an outburst.`,
       choices: [
-        { label: 'Quarry the glass', hint: 'Matter +40.', run: (s) => matter(s, 40) },
+        { label: 'Quarry the glass', hint: 'Matter +40.', run: (s) => { matter(s, 40); } },
         { label: 'Read the flare record', hint: 'Insight +25, and our astronomers learn to see flares coming.', run: (s) => { insight(s, 25); s.civ.flags.flare_warning = 1; } },
       ],
     },
@@ -1286,7 +1399,7 @@ export const ANOMALIES: AnomalyDef[] = [
         `In the dark beyond ${bodyById(s, d)?.name}: hundreds of lightsails, each a few square kilometres of metal foil, the probes of someone who crossed between stars on starlight. Their cores are dead. The star charts etched into their frames are not.`,
       choices: [
         { label: 'Read the charts', hint: 'Insight +70.', run: (s) => insight(s, 70) },
-        { label: 'Salvage the foil', hint: 'Matter +60.', run: (s) => matter(s, 60) },
+        { label: 'Salvage the foil', hint: 'Matter +60.', tech: 'orbital_industry', run: (s) => { matter(s, 60); } },
       ],
     },
   },
