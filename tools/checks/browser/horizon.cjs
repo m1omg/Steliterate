@@ -31,7 +31,7 @@ run(async () => {
   const drift = page.locator('.drawer .section.drift');
   check((await drift.count()) === 1, 'a leptonic settlement on a world is offered a black hole');
   const dt = (await drift.textContent()) ?? '';
-  check(/To a black hole/.test(dt) && /Away from the black holes nothing it is made of gathers energy\./.test(dt) && /It can drift to .+, \d+ ly away, with \d+ spin to give, taking all it has, for \d+ energy\./.test(dt), `it says why, where, how far and for how much (${dt.slice(0, 150)}…)`);
+  check(/To a black hole/.test(dt) && /Away from the black holes nothing it is made of gathers energy\./.test(dt) && /Choose a hole to drift to, taking all it has, for \d+ energy\./.test(dt) && /spin [\d,.k]+ · lasts .+? · [\d,.]+ [kM]?ly/.test(dt), `it says why, where, how far and for how much (${dt.slice(0, 400)}…)`);
   const db = drift.locator('button').first();
   check(/^Drift to /.test(((await db.textContent()) ?? '').trim()), 'with a button to drift');
   await db.click();
