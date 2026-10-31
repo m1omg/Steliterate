@@ -10,7 +10,7 @@ import { HEARD_CEILING, JUST_CAUSE_AT, SANCTION_AT, shuns } from '../../game/sim
 import { assaultForce, assaultOdds, besieged, holdOf, walled, warFront } from '../../game/sim/conflict';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
 import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
-import { ASK_COOLDOWN, askBlocked, inStep, reachBy, talkSpan } from '../../game/sim/survivors';
+import { ASK_COOLDOWN, askBlocked, goneAnswer, inStep, reachBy, talkSpan } from '../../game/sim/survivors';
 import { canConverse, stepGap, voiceClock, voiceRange, voiceThread } from '../../game/sim/signals';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { SANCTUARY_TRUST } from '../../game/sim/refuge';
@@ -100,15 +100,19 @@ function Message({ s, sig }: { s: GameState; sig: Signal }) {
       </div>
       <div class="msg-title">{sig.title}</div>
       <div class="flavor" style={{ color: 'var(--ink)' }}>{sig.text}</div>
-      {sv && !sv.alive && open && <div class="warn" style={{ fontSize: '13.5px', marginTop: '4px' }}>By the time this reached us, they were already gone.</div>}
+      {sv && !sv.alive && open && <div class="warn" style={{ fontSize: '13.5px', marginTop: '4px' }}>By the time this reached us, they were already gone: nothing we answer can reach them now.</div>}
       {open && (
         <div class="row wrap" style={{ gap: '6px', marginTop: '8px' }}>
-          {sig.choices.map((c) => (
-            <button key={c.id} class="btn choice" onClick={() => act((g) => answerSignal(g, sig.uid, c.id)) && sfx('select')}>
-              <span>{c.label}</span>
-              {c.hint && <span class="h">{c.hint}</span>}
-            </button>
-          ))}
+          {sig.choices.map((c) => {
+            // (an answer that would reach a sender gone since cannot be given: goneAnswer)
+            const gone = goneAnswer(s, sig, c.id);
+            return (
+              <button key={c.id} class="btn choice" disabled={!!gone} data-tip={gone ?? undefined} onClick={() => act((g) => answerSignal(g, sig.uid, c.id)) && sfx('select')}>
+                <span>{c.label}</span>
+                {(gone ?? c.hint) && <span class="h">{gone ?? c.hint}</span>}
+              </button>
+            );
+          })}
         </div>
       )}
       {open && sig.kind === 'dark_reveal2' && siphonsRunning(s) && <ShutSiphons s={s} />}
