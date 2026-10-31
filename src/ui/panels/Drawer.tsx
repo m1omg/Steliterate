@@ -1543,10 +1543,15 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
   let acc = 0;
   const ctx = project(s).ctx;
   type Item = { id: string; name: string; desc: string; error: string | null | undefined; cost: ReturnType<typeof buildCost>; count: number; fx?: BuildEffect; sk?: StructureKind };
-  const list: Item[] =
+  const all: Item[] =
     kind === 'structure'
       ? buildableStructures(s, c).map((x) => ({ id: x.def.id, ...structureLabel(x.def.id, s.systems[c.systemId], formOf(c)), error: x.error, cost: buildCost(s, x.def, false), count: c.structures[x.def.id] ?? 0, fx: structureEffect(s, c, x.def.id, ctx), sk: structureKind(x.def) }))
       : buildableShips(s, c).map((x) => ({ id: x.def.id, name: x.def.name, desc: `${x.def.desc} ${shipNote(x.def)}`, error: x.error, cost: buildCost(s, x.def, true), count: 0 }));
+  // what cannot be built here now can be left out (31 Oct, the player: "let the player hide
+  // buildings that are unavailable to build"), remembered between sessions
+  const hide = !!hudPrefs.value.hideUnbuildable;
+  const unbuildable = all.filter((x) => x.error).length;
+  const list = hide ? all.filter((x) => !x.error) : all;
   // structures come grouped by kind, and can be narrowed to one kind
   const present = STRUCTURE_KINDS.filter((k) => list.some((x) => x.sk === k.id));
   const only = kind === 'structure' && buildKind.value !== 'all' && present.some((k) => k.id === buildKind.value) ? buildKind.value : null;
@@ -1614,6 +1619,20 @@ function BuildTab({ s, c, industry, energyMade }: { s: GameState; c: Colony; ind
             ))}
           </div>
         )}
+        <div class="row wrap" style={{ gap: '4px', marginBottom: '6px' }}>
+          <button
+            class={`btn small ghost hide-unbuildable ${hide ? 'on' : ''}`}
+            aria-pressed={hide}
+            data-tip={hide ? `Show the ${unbuildable} that cannot be built here now, each with why` : 'Leave out what cannot be built here now (each says why while it is shown). Remembered.'}
+            onClick={() => {
+              setHudPrefs({ hideUnbuildable: !hide });
+              sfx('click');
+            }}
+          >
+            {hide ? `Show unavailable (${unbuildable})` : `Hide unavailable${unbuildable ? ` (${unbuildable})` : ''}`}
+          </button>
+        </div>
+        {hide && !list.length && <p class="dim">Nothing {kind === 'structure' ? 'of this' : 'of these'} can be built here now. Show the unavailable to see why.</p>}
         <div class="list-head">
           <span>{kind === 'structure' ? 'Click to queue · what one more adds here, per turn' : 'Click to queue'}</span>
           <span>Cost</span>
