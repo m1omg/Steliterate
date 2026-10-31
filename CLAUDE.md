@@ -52,7 +52,7 @@ merges are done with. So far: PR m1omg/Steliterate#47, `261443a`, the switch's n
 m1omg/Steliterate#48, `139d697`, matter shown as we hold it, PR m1omg/Steliterate#50, `1a181c9`,
 a star's state wherever the Systems window names its kind, and PR m1omg/Steliterate#51,
 `00d98dd`, the governor (27 Oct), and PR m1omg/Steliterate#52, Fortify one, the black hole of our
-choice and Hide unavailable (31 Oct).
+choice, Hide unavailable and the Leptonic Wraith (31 Oct).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.

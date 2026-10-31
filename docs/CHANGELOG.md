@@ -4509,7 +4509,7 @@ it is and about how many turns more at that settlement's industry (`FormWorkChip
   the build clean; the playtest; savecompat on its 9 saves; all 98 unit checks; all 73 browser
   checks; the harness as above.
 
-## Fortify one or all, the black hole of our choice, and the build list without the unavailable (31 Oct)
+## Fortify one or all, the black hole of our choice, Hide unavailable, and the Leptonic Wraith (31 Oct)
 
 The player, 31 Oct, with a screenshot: "selecting (1) ship to fortify, currently fortifies ALL ships
 in system. perhaps separate buttons for singular versus total fortification"; "yes pls, let me
@@ -4533,4 +4533,22 @@ player hide buildings that are unavailable to build".
 - **Hide unavailable** in the Build tab leaves out what cannot be built at that settlement now
   (structures and ships), says how many, and is remembered between sessions (`hudPrefs`); Show
   unavailable brings them back, each with why. Check: `browser/hide-unbuildable`.
-- The Manual says all three.
+- **The Leptonic Shipyard and the Leptonic Wraith** (the player: "add a leptonic shipyard pls also
+  i think there was a wraith/phantom ship for leptonic era already? apply it so it applies for
+  existing saves too but doesnt break em"; asked first what ships can be built after the end of
+  matter: none, the Shipyard having no leptonic form). The Wraith was in the new version's plan
+  (2c: the only warship once matter is gone, drawn in code as a field) and never built. Now:
+  - a **Leptonic Shipyard** (`lepton_shipyard`, Leptonic Computation, 60 industry and 30 matter,
+    under Industry), built only by a leptonic settlement (`leptonicOnly`);
+  - there, **Leptonic Wraiths** (`wraith`: attack 5, hull 16, upkeep 0.3, screen 0.3; 90
+    industry, 30 matter, or 45 energy once matter is gone), mended at their yard
+    (`repairFleets`);
+  - a settlement of matter builds neither, and a leptonic one no ship of matter (`shipCheck`,
+    `actions.ts`); ships of matter already built stay in service after the end of matter, as
+    before (a bend, said to the player);
+  - its hull drawn in code as a ship of fields, as leptonic settlements are on the map
+    (`tools/draw-wraith.cjs`, `public/art/ships/wraith.png`).
+  Data only, no new saved field: an older save's leptonic settlement can build it at once (the
+  Black Hole Age save in `tools/saves/`). The autoplayer builds neither. Checks:
+  `unit/leptonic-yard`, `browser/wraith`.
+- The Manual says all of it.

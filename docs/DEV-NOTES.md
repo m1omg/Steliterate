@@ -1540,6 +1540,13 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - **Fortify one** (31 Oct): `fortifyOne(state, fleetId)` (`actions.ts`) splits the warship in the
   best repair off as a fleet of its own (`newFleet`, the ship object kept, the tactic copied) and
   fortifies it; a fleet of one is fortified whole.
+- **Ships by form** (31 Oct): `shipCheck(c, def)` (`actions.ts`) is the one rule for where a ship
+  is built, for the build list and `queueBuild`: ships of matter at a Shipyard (`yard: 'matter'`)
+  by a settlement of matter; `ShipDef.leptonic` ships (the Leptonic Wraith) at a Leptonic Shipyard
+  (`yard: 'leptonic'`, `leptonicOnly`) by a leptonic one; a horizon or positronium settlement builds
+  none. `repairFleets` mends each kind at its own yard. A new ship hull needs its `FleetLook`, a
+  `HULL` entry, `WAR_HULLS` for a warship, `lookRole`, and `public/art/ships/<look>.png` (256 px,
+  bow up); the Wraith's is drawn by `tools/draw-wraith.cjs`.
 - **Charters (`src/game/sim/actions.ts`):** `charterAvailable` (the book holds 5 light laws, 9
   with the Assembly of Threads; dark ones take no room), `enactCharter`, and since 2 Oct
   `repealAvailable` / `repealCharter`: a repeal costs the law's Accord again, subtracts its

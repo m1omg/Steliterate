@@ -87,7 +87,31 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     usability), given in chat, not in the repo; they said the game is "as addicting as civ v".
     Then PR m1omg/Steliterate#52: Fortify one or all, the black hole of our choice, Hide
     unavailable; answered that no ship can be built after the end of matter, and offered a choice
-    for the ships that outlast it (they are matter too).
+    for the ships that outlast it (they are matter too). They chose a Leptonic Shipyard and the
+    Leptonic Wraith, in the same PR.
+  - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
+    plans and these notes, each checked in the code:
+    - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",
+      plan 2c); a slow-crossfade version of the films for players who ask for reduced motion (plan
+      Part 4: films are only off by default for them); the four answers that misbehave when their
+      civilization is already gone (plan 2a said to fix them; refugees still arrive with +3
+      resolve, a shared work still costs 60 matter, a trade still costs and delivers notes, the
+      Choir's wish still costs standing: `resolveSurvivorSignal` tests that the record exists, not
+      that it is alive);
+    - offered for later: a battle fought by hand, focus fire on a chosen ship, a retreat threshold
+      in a tactic (combat plan); read-aloud, moving the camera from the keyboard, reduced motion
+      for camera flights (the friend's word on the magnifier mode);
+    - offered, no answer: pulsar beams in line with real pulsars or a stated bend; Burst Catchers
+      in neighbouring systems banking a share of a burst at η 68; a rogue world's Coldminds at
+      half upkeep; the two rogue-world bends; the neighbours' new-star rules and the Last Star; a
+      line in the crossing report for the stored matter lost at the end of matter;
+    - discuss first: a Lattice rework, deeper diplomacy, tidal locking by locking time, the
+      flare's step at `blueAt`, the helium stars' single set of numbers, collectors after the
+      Stelliferous era; and the Slovak translation, planned and not started;
+    - done since they were noted: aid travels as a beam (`beamEnergy`), the positronium line in the
+      Codex (PR #28); declined: a 60 fps cap. The plan's checks `same-rules`, `simultaneous`,
+      `war-costs`, `reserve-after-matter`, `civ-card` and `war-ui` were folded into others
+      (`civ-turns`, `combat`, `conquest`, `end-of-matter`, `neighbours`, `war`).
   - Before (26 Oct, late): `main` as of PR m1omg/Steliterate#45 (`0279db1`, each building's real
     effect on its chip's tip; live script `index-D13F5Go2.js`), and `/next/` at the same with the
     Supernova film (`eb70648`, live script `index-CczYHvun.js`). Before them (26 Oct, evening):
