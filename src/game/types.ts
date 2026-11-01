@@ -2,7 +2,7 @@
 
 import type { StructureKind } from './data/structures';
 
-export type EraId = 'dusk' | 'degenerate' | 'blackhole' | 'dark';
+export type EraId = 'interregnum' | 'dusk' | 'degenerate' | 'blackhole' | 'dark';
 export type ThreadId = 'kin' | 'echoes' | 'chorus' | 'lattice' | 'coldminds';
 export type Focus = 'balanced' | 'energy' | 'matter' | 'industry' | 'insight' | 'accord';
 /** What a settlement does with industry it has nothing to build with (see sim/spare.ts). */
@@ -31,7 +31,14 @@ export type PrimaryKind =
   | 'helium_giant'
   | 'dark_star'
   | 'rogue'
-  | 'void';
+  | 'void'
+  // the Twilight Interregnum only (interregnum.ts): a dense knot of the galaxy's gas where a star
+  // will form, and a star of the last star formation brighter than a red dwarf
+  | 'nebula'
+  | 'young_star';
+
+/** A young star's spectral class: orange (K), yellow (G), white (F, A) or a blue giant (B). */
+export type StarClass = 'K' | 'G' | 'F' | 'A' | 'B';
 
 export type BodyKind =
   | 'eyeball'
@@ -92,6 +99,15 @@ export interface Primary {
   evaporateAt?: number; // black holes: Hawking evaporation (cosmic year)
   rekindle?: number; // extra light from a feeding world or rekindling (era-normalised)
   exploded?: boolean; // a heavy black dwarf that has gone supernova (deeptime.ts): an iron-cored dwarf is left
+  /** (young_star) its spectral class */
+  cls?: StarClass;
+  /**
+   * (nebula) the star it will light as, at `bornAt`; (young_star) what it leaves, at `diesAt`:
+   * a white dwarf, a neutron star or a black hole (the Twilight Interregnum: interregnum.ts)
+   */
+  future?: Primary;
+  /** (white and brown dwarfs) when it formed, where the Twilight Interregnum set it (physics.ts formedAt) */
+  formed?: number;
 }
 
 export interface StarSystem {
@@ -110,6 +126,11 @@ export interface StarSystem {
   beacon?: boolean; // a decoy beacon burns here
   beaconBy?: string; // whose it is, who feeds it (a civilization's id; older saves: the player's)
   gone?: boolean; // nothing left (dissolved / evaporated)
+  /**
+   * Worlds not yet formed (the Twilight Interregnum): a nebula's, which form with its star, or
+   * those that come with a star's remnant. Kept whole here, out of `state.bodies`, until then.
+   */
+  unformed?: Body[];
 }
 
 export interface Relic {
@@ -572,6 +593,12 @@ export interface GameSettings {
    * comparisons). Absent: each is a civilization playing the same game (others.ts).
    */
   civsAsleep?: boolean;
+  /**
+   * Begun in the Twilight Interregnum, at 10¹² years (1 Nov, the player's "prequel mode"): the
+   * galaxy rewound to then (interregnum.ts), an age of its own before the Dusk. Offered at the
+   * /next/ address only (src/channel.ts). Absent: begun in the Dusk, as every game before.
+   */
+  interregnum?: boolean;
 }
 
 export interface Battle {

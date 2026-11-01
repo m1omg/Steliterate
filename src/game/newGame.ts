@@ -1,4 +1,5 @@
 import { generateWorld } from './gen';
+import { interregnumPass } from './interregnum';
 import { heavyDwarfs } from './sim/deeptime';
 import { frozenFromTheStart, waterFromTheStart } from './physics';
 import { createColony, newFleet } from './sim/fleets';
@@ -25,6 +26,8 @@ export function newGame(partial: Partial<GameSettings> = {}): GameState {
   const state = generateWorld(settings);
   // a few dwarfs born heavy enough to explode one day (deeptime.ts): no draw, before the passes that read temperatures
   heavyDwarfs(state);
+  // a game begun in the Twilight Interregnum: the same galaxy, rewound to 10¹² years (its own draws)
+  if (settings.interregnum) interregnumPass(state);
   frozenFromTheStart(state);
   waterFromTheStart(state);
   scorchedFromTheStart(state);
@@ -40,7 +43,8 @@ export function newGame(partial: Partial<GameSettings> = {}): GameState {
   newFleet(state, home.id, ['warden'], 'Vigil').order = 'hold';
   // the others: each a civilization playing the same game (others.ts), unless asleep as they were
   if (!settings.civsAsleep) for (const sv of Object.values(state.survivors)) foundCiv(state, sv);
-  log(state, `${settings.civName}. ${hw.name}, the last living world of ${home.name}. The long dusk begins.`, 'era');
+  if (settings.interregnum) log(state, `${settings.civName}. ${hw.name}, a young world of ${home.name}, whose star will not last. The Twilight Interregnum begins.`, 'era');
+  else log(state, `${settings.civName}. ${hw.name}, the last living world of ${home.name}. The long dusk begins.`, 'era');
   updateForecasts(state);
   state.saveVersion = SAVE_VERSION;
   return state;

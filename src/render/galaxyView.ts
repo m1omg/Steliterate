@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { gasLeft } from '../game/interregnum';
 import { fleetLook, type FleetLook } from '../game/data/ships';
 import { brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, shownKind } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
@@ -22,12 +23,13 @@ const DUST_VERT = /* glsl */ `
   uniform float uTime;
   uniform float uScale;
   uniform float uBright;
+  uniform float uTwinkle;
   varying vec3 vColor;
   varying float vAlpha;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
-    float tw = 0.85 + 0.15 * sin(uTime * (0.3 + aSeed * 0.9) + aSeed * 40.0);
+    float tw = 1.0 - uTwinkle + uTwinkle * sin(uTime * (0.3 + aSeed * 0.9) + aSeed * 40.0);
     gl_PointSize = clamp(aSize * uScale / -mv.z, 0.6, 22.0);
     vColor = aColor;
     vAlpha = uBright * tw * clamp(aSize * uScale / -mv.z, 0.25, 1.0);
@@ -241,6 +243,8 @@ export class GalaxyView {
   private heartGlow: THREE.Sprite;
   /** The galaxy's own light: soft glows, each its size, how flattened its shape is, and how bright at most. */
   private glows: { sprite: THREE.Sprite; size: number; flat: number; base: number; color: THREE.Color }[] = [];
+  /** The Twilight Interregnum's nebulae on the map: a soft rose cloud at each we know of, fading with the gas. */
+  private nebulae = new Map<string, THREE.Sprite>();
   private glowBright = 1;
   private look = new THREE.Vector3();
   private territory: THREE.Points | null = null;
@@ -263,7 +267,7 @@ export class GalaxyView {
     this.dustMat = new THREE.ShaderMaterial({
       vertexShader: DUST_VERT,
       fragmentShader: DUST_FRAG,
-      uniforms: { uTime: { value: 0 }, uScale: { value: 300 }, uBright: { value: 1 }, uTint: { value: new THREE.Color(1, 1, 1) } },
+      uniforms: { uTime: { value: 0 }, uScale: { value: 300 }, uBright: { value: 1 }, uTwinkle: { value: 0.15 }, uTint: { value: new THREE.Color(1, 1, 1) } },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -415,6 +419,35 @@ export class GalaxyView {
   }
 
   /**
+   * The Twilight Interregnum's nebulae (interregnum.ts): a soft rose cloud on each, the more opaque
+   * the more gas is left; gone as each lights as its star. Every one, known or not: glowing gas is
+   * seen across a galaxy, as the Heart is (its star, and its worlds, are what a survey finds).
+   */
+  private syncNebulae(state: GameState, gas: number) {
+    const want = new Set(Object.values(state.systems).filter((x) => x.primary.kind === 'nebula' && !x.gone).map((x) => x.id));
+    for (const [id, sp] of this.nebulae) {
+      if (want.has(id)) continue;
+      this.group.remove(sp);
+      sp.material.dispose();
+      this.nebulae.delete(id);
+    }
+    for (const id of want) {
+      let sp = this.nebulae.get(id);
+      if (!sp) {
+        const sys = state.systems[id];
+        const tint = (hashSeed(id) % 1000) / 1000;
+        sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: new THREE.Color('#d9668f').lerp(new THREE.Color('#6f86e0'), tint * 0.45), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
+        sp.position.set(sys.pos.x, sys.pos.y, sys.pos.z);
+        sp.userData.size = 12 + 10 * ((hashSeed(`${id}:n`) % 1000) / 1000);
+        sp.renderOrder = -1;
+        this.group.add(sp);
+        this.nebulae.set(id, sp);
+      }
+      sp.userData.base = 0.16 + 0.34 * gas;
+    }
+  }
+
+  /**
    * The galaxy's own light (15 Oct): the glow of its billions of red dwarfs too faint to be seen one
    * by one, warm, in the shapes the stars above trace: the shared envelope and its brighter middle,
    * each ancestral galaxy's remnant, the streams, the globular clusters. It took the place of a
@@ -490,12 +523,21 @@ export class GalaxyView {
     // brightness of the old stellar population by era
     const liveRed = Object.values(state.systems).filter((s) => s.primary.kind === 'red_dwarf' || s.primary.kind === 'blue_dwarf').length;
     const totalRed = Math.max(1, (state.flags.red_total ??= liveRed));
+    // (the Twilight Interregnum is brighter and livelier than the Dusk: more and heavier red dwarfs,
+    // young stars and glowing gas, half again as bright while the gas lasts, the stars twinkling more;
+    // then dim as its old stars go out, until the last are born)
+    const inter = state.era === 'interregnum';
+    const gas = inter ? gasLeft(state.years) : 0;
     const bright =
-      state.era === 'dusk' ? 0.12 + 0.88 * (liveRed / totalRed) : state.era === 'degenerate' ? 0.1 : state.era === 'blackhole' ? 0.018 : 0.0;
+      state.era === 'dusk' || inter ? (0.12 + 0.88 * Math.min(inter ? 1 : Infinity, liveRed / totalRed)) * (1 + 0.6 * gas) : state.era === 'degenerate' ? 0.1 : state.era === 'blackhole' ? 0.018 : 0.0;
+    this.dustMat.uniforms.uTwinkle.value = inter ? 0.15 + 0.2 * gas : 0.15;
+    this.syncNebulae(state, gas);
     // enhanced and thermal views keep the old population faintly visible even when it is dark
     this.dustMat.uniforms.uBright.value = this.viewMode === 1 ? Math.max(bright, 0.28) : this.viewMode === 2 ? Math.max(bright, 0.14) : bright;
-    this.dustMat.uniforms.uTint.value.set(state.era === 'dusk' ? '#ffffff' : state.era === 'degenerate' ? '#9fb8ff' : '#8c86b8');
-    this.heartGlow.material.opacity = state.era === 'dusk' ? 0.35 : state.era === 'degenerate' ? 0.16 : state.era === 'blackhole' ? 0.06 : 0;
+    this.dustMat.uniforms.uTint.value.set(state.era === 'dusk' || inter ? '#ffffff' : state.era === 'degenerate' ? '#9fb8ff' : '#8c86b8');
+    // (and its stars brighter still while the gas lasts: younger, heavier and more of them)
+    if (inter) (this.dustMat.uniforms.uTint.value as THREE.Color).multiplyScalar(1 + 0.45 * gas);
+    this.heartGlow.material.opacity = state.era === 'interregnum' ? 0.45 : state.era === 'dusk' ? 0.35 : state.era === 'degenerate' ? 0.16 : state.era === 'blackhole' ? 0.06 : 0;
     // the galaxy's own light dims as its stars go out, in their tint (in natural light whatever the
     // view: the enhanced and thermal views keep the stars drawn faintly visible, not a glow there is none of)
     this.glowBright = bright;
@@ -780,6 +822,13 @@ export class GalaxyView {
       x.sprite.material.opacity = x.base * this.glowBright * far;
       x.sprite.visible = x.sprite.material.opacity > 0.0005;
     }
+    // the nebulae: plainest among the stars, fainter from afar, where the galaxy's glow takes over
+    // (larger from afar, so the galaxy's gas still shows across it)
+    for (const n of this.nebulae.values()) {
+      const size = (n.userData.size as number) * (1 + 2.2 * far);
+      n.scale.set(size, size * 0.8, 1);
+      n.material.opacity = (n.userData.base as number) * (1 - 0.35 * far);
+    }
     this.dustMat.uniforms.uTime.value = t;
     this.nodeMat.uniforms.uTime.value = t;
     this.swarmMat.uniforms.uTime.value = t;
@@ -840,6 +889,11 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   const k = shownKind(s.primary, state.years);
   if (k === 'black_hole' || k === 'smbh') return [0.62, 0.52, 1.0];
   if (k === 'void' || k === 'rogue') return [0.35, 0.36, 0.42];
+  // a nebula (the Twilight Interregnum): the rose of hydrogen glowing in the light of stars near it, dimmer as the gas thins
+  if (k === 'nebula') {
+    const g = 0.45 + 0.55 * gasLeft(state.years);
+    return [0.86 * g, 0.42 * g, 0.62 * g];
+  }
   const tK = primaryTemperature(s.primary, state.years, calendarEra(state), 0, 0, haloDrawn(state));
   const cold = [0.3, 0.3, 0.34];
   const toward = (c: number[], e: number): [number, number, number] => [cold[0] + (c[0] - cold[0]) * e, cold[1] + (c[1] - cold[1]) * e, cold[2] + (c[2] - cold[2]) * e];
@@ -880,6 +934,10 @@ function nodeSize(s: StarSystem, state: GameState): number {
     case 'blue_dwarf':
     case 'helium_star':
       return 8;
+    case 'young_star':
+      return s.primary.cls === 'B' ? 10 : s.primary.cls === 'A' || s.primary.cls === 'F' ? 8.5 : 7.5;
+    case 'nebula':
+      return 9;
     case 'red_dwarf':
     case 'collision_star':
       return 6;

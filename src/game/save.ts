@@ -12,12 +12,19 @@ import type { GameState, War } from './types';
 import { BATTLE_MEMORY } from './sim/conflict';
 import { PLAYER_ID, assertPlayerView, linkCivs } from './civs';
 import { STORE } from '../keys';
+import { PREVIEW } from '../channel';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
 // full or blocked (private windows, previews), and the game must still run.
 
 const KEY = `${STORE}save`;
 const AUTO = `${STORE}autosave`;
+// A game begun in the Twilight Interregnum keeps its quick save and autosave apart (1 Nov): it is
+// played at /next/ only, and both addresses share this browser's storage, so it must never take
+// the place of the main address's own. Which of the two was saved last, for Continue at /next/.
+const KEY_I = `${STORE}save.interregnum`;
+const AUTO_I = `${STORE}autosave.interregnum`;
+const LAST = (auto: boolean) => `${STORE}${auto ? 'autosave' : 'save'}.last`;
 
 function ls(): Storage | null {
   try {
@@ -217,29 +224,42 @@ export function saveGame(state: GameState, auto = false): boolean {
   const store = ls();
   if (!store) return false;
   try {
-    store.setItem(auto ? AUTO : KEY, serialize(state));
+    const inter = !!state.settings.interregnum;
+    store.setItem(inter ? (auto ? AUTO_I : KEY_I) : auto ? AUTO : KEY, serialize(state));
+    store.setItem(LAST(auto), inter ? 'interregnum' : 'dusk');
     return true;
   } catch {
     return false;
   }
 }
 
-export function loadGame(auto = false): GameState | null {
+/**
+ * Where the quick save (or the autosave) to load is kept: the main address's own; at /next/
+ * (`preview`), whichever was saved last, a game begun in the Twilight Interregnum or not.
+ */
+function keyToLoad(store: Storage, auto: boolean, preview: boolean): string {
+  const own = auto ? AUTO : KEY;
+  const inter = auto ? AUTO_I : KEY_I;
+  if (!preview || !store.getItem(inter)) return own;
+  return store.getItem(LAST(auto)) === 'interregnum' || !store.getItem(own) ? inter : own;
+}
+
+export function loadGame(auto = false, preview = PREVIEW): GameState | null {
   const store = ls();
   if (!store) return null;
   try {
-    const t = store.getItem(auto ? AUTO : KEY);
+    const t = store.getItem(keyToLoad(store, auto, preview));
     return t ? deserialize(t) : null;
   } catch {
     return null;
   }
 }
 
-export function hasSave(auto = false): boolean {
+export function hasSave(auto = false, preview = PREVIEW): boolean {
   const store = ls();
   if (!store) return false;
   try {
-    return !!store.getItem(auto ? AUTO : KEY);
+    return !!store.getItem(keyToLoad(store, auto, preview));
   } catch {
     return false;
   }
@@ -276,9 +296,17 @@ export interface SlotInfo {
   era: string;
   savedAt: number; // ms since 1970
   bytes: number;
+  /** A game begun in the Twilight Interregnum: listed at /next/ only (1 Nov). */
+  interregnum?: boolean;
 }
 
-export function listSlots(): SlotInfo[] {
+/** The slots this address lists: at the main address, none begun in the Twilight Interregnum. */
+export function listSlots(preview = PREVIEW): SlotInfo[] {
+  return allSlots().filter((x) => preview || !x.interregnum);
+}
+
+/** Every slot, whichever address it belongs to. */
+function allSlots(): SlotInfo[] {
   const store = ls();
   if (!store) return [];
   try {
@@ -320,8 +348,8 @@ export async function saveToSlot(state: GameState, name: string, id?: string, sa
   try {
     const data = await pack(serialize(state));
     store.setItem(slotKey(slotId), data);
-    const info: SlotInfo = { id: slotId, name: name.trim() || `Turn ${state.turn}`, civ: state.settings.civName, turn: state.turn, era: state.era, savedAt, bytes: data.length };
-    writeIndex([info, ...listSlots().filter((x) => x.id !== slotId)]);
+    const info: SlotInfo = { id: slotId, name: name.trim() || `Turn ${state.turn}`, civ: state.settings.civName, turn: state.turn, era: state.era, savedAt, bytes: data.length, ...(state.settings.interregnum ? { interregnum: true } : {}) };
+    writeIndex([info, ...allSlots().filter((x) => x.id !== slotId)]);
     return info;
   } catch {
     return 'The browser’s storage is full. Delete a slot or two, or export this game to a file.';
@@ -340,7 +368,7 @@ export async function loadSlot(id: string): Promise<GameState | null> {
 export function deleteSlot(id: string) {
   try {
     ls()?.removeItem(slotKey(id));
-    writeIndex(listSlots().filter((x) => x.id !== id));
+    writeIndex(allSlots().filter((x) => x.id !== id));
   } catch {
     /* storage may be unavailable */
   }
@@ -375,7 +403,7 @@ export async function exportAllSaves(): Promise<{ name: string; text: string; co
   if (!store) return null;
   const now = new Date();
   const saves: BundledSave[] = [];
-  for (const x of listSlots()) {
+  for (const x of allSlots()) {
     try {
       const stored = store.getItem(slotKey(x.id));
       if (stored) saves.push({ from: 'slot', name: x.name, savedAt: x.savedAt, game: JSON.parse(await unpack(stored)) });
@@ -383,7 +411,7 @@ export async function exportAllSaves(): Promise<{ name: string; text: string; co
       /* a slot that cannot be read is left out */
     }
   }
-  for (const [from, key, name] of [['quick', KEY, 'Quick save'], ['auto', AUTO, 'Autosave']] as const) {
+  for (const [from, key, name] of [['quick', KEY, 'Quick save'], ['auto', AUTO, 'Autosave'], ['quick', KEY_I, 'Quick save (Twilight Interregnum)'], ['auto', AUTO_I, 'Autosave (Twilight Interregnum)']] as const) {
     try {
       const text = store.getItem(key);
       if (text) saves.push({ from, name, savedAt: now.getTime(), game: JSON.parse(text) });
@@ -429,7 +457,7 @@ export async function importSaveBundle(saves: BundledSave[]): Promise<{ added: n
     }
     const name = b.from === 'slot' ? String(b.name) : `${b.name}: ${g.settings.civName}, turn ${g.turn}`;
     const savedAt = Number.isFinite(b.savedAt) ? b.savedAt : Date.now();
-    if (listSlots().some((x) => x.name === name && x.turn === g.turn && x.savedAt === savedAt)) {
+    if (allSlots().some((x) => x.name === name && x.turn === g.turn && x.savedAt === savedAt)) {
       skipped++;
       continue;
     }

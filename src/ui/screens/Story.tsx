@@ -6,7 +6,7 @@ import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
 import { ageIntro, ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
 import { fleets, threadTotals, totalPops } from '../../game/sim/util';
-import type { Body, GameState, PendingEvent } from '../../game/types';
+import type { Body, EraId, GameState, PendingEvent } from '../../game/types';
 import { THREADS } from '../../game/types';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { music } from '../../audio/music';
@@ -237,6 +237,9 @@ export function EventModal({ s }: { s: GameState }) {
   );
 }
 
+/** An age's painting: the Twilight Interregnum has none of its own, and shows the Dusk's. */
+const ageArt = (era: EraId) => (era === 'interregnum' ? 'dusk' : era);
+
 export function EraIntro({ s }: { s: GameState }) {
   const era = ERA_BY_ID[s.era];
   // its title takes the focus, as every window's does
@@ -244,13 +247,13 @@ export function EraIntro({ s }: { s: GameState }) {
   useFocusOnOpen(title, s.era);
   return (
     <div class="crossing" role="dialog" aria-modal="true" aria-label={era.name}>
-      <div class="crossing-art" style={{ backgroundImage: `url(art/${s.era}.webp)` }} />
+      <div class="crossing-art" style={{ backgroundImage: `url(art/${ageArt(s.era)}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{era.numeral} · {era.science}</div>
         <h1 ref={title} tabIndex={-1}>
           {era.name}
         </h1>
-        <p class="intro">{ageIntro(s.era, fateOf(s))}</p>
+        <p class="intro">{ageIntro(s.era, fateOf(s), !!s.settings.interregnum)}</p>
         <p class="dim" style={{ fontSize: '14.5px', maxWidth: '60ch' }}>
           η {formatEta(s.eta, s.era)}: {formatYears(s.years, s.eta)} since the Big Bang. Keep your people alive through what is coming. Every turn covers more time than the last.
         </p>
@@ -344,7 +347,7 @@ export function OutcomeScreen({ s }: { s: GameState }) {
   const head = o.kind === 'victory' ? 'An ending' : o.kind === 'dark' ? 'The dark ending' : o.kind === 'endurance' ? 'Endurance' : 'The end';
   return (
     <div class="crossing" role="dialog" aria-modal="true" aria-label={o.ending}>
-      <div class="crossing-art" style={{ backgroundImage: `url(art/${o.kind === 'dark' ? 'hunger' : s.era}.webp)` }} />
+      <div class="crossing-art" style={{ backgroundImage: `url(art/${o.kind === 'dark' ? 'hunger' : ageArt(s.era)}.webp)` }} />
       <div class="crossing-body">
         <div class="from">{head} · turn {o.turn} · <span class="greek">η</span> {formatEta(o.eta, s.era)}</div>
         <h1 ref={title} tabIndex={-1} class={o.kind === 'defeat' || o.kind === 'dark' ? 'bad' : ''}>

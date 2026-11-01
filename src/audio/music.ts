@@ -31,7 +31,7 @@ const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
 
 const x16 = (s: string) => s.split('').map((c) => (c === 'x' ? 1 : c === 'o' ? 0.55 : 0));
 
-const STYLES: Record<EraId | 'menu' | 'outcome', Style> = {
+const STYLES: Record<Exclude<EraId, 'interregnum'> | 'menu' | 'outcome', Style> = {
   menu: {
     bpm: 74,
     root: 57,
@@ -209,7 +209,7 @@ class Music {
   private introsPlayed = new Set<StyleKey>();
   private prefs: Record<string, boolean> = {};
   private overture = true;
-  private era: EraId = 'dusk';
+  private era: Exclude<EraId, 'interregnum'> = 'dusk';
   private mood: Mood = 'menu';
   private step = 0;
   private next = 0;
@@ -238,7 +238,9 @@ class Music {
     });
   }
 
-  setEra(era: EraId) {
+  setEra(age: EraId) {
+    // the Twilight Interregnum plays the Dusk's music (1 Nov, the player's choice)
+    const era = age === 'interregnum' ? 'dusk' : age;
     if (era === this.era && this.mood !== 'menu' && this.mood !== 'outcome') return;
     this.era = era;
     if (this.mood === 'menu' || this.mood === 'outcome') this.mood = 'calm';

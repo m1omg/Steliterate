@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { gasLeft } from '../game/interregnum';
 import { bodyClimate, brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, seaBand, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
@@ -257,7 +258,7 @@ export class SystemView {
     this.systemId = systemId;
     const sys = state.systems[systemId];
     this.group.add(this.stars);
-    (this.stars.material as THREE.PointsMaterial).opacity = state.era === 'dusk' ? 0.8 : state.era === 'degenerate' ? 0.35 : state.era === 'blackhole' ? 0.12 : 0.03;
+    (this.stars.material as THREE.PointsMaterial).opacity = state.era === 'interregnum' ? 1 : state.era === 'dusk' ? 0.8 : state.era === 'degenerate' ? 0.35 : state.era === 'blackhole' ? 0.12 : 0.03;
     this.group.add(this.selRing);
     this.group.add(this.pulse);
     this.group.add(this.dust);
@@ -364,6 +365,25 @@ export class SystemView {
         addStar(8, new THREE.Color('#ffcfa0'), 0.6, 0, 1.6);
         addGlow(70, new THREE.Color('#ffb98a'), 1.2);
         break;
+      case 'young_star': {
+        // the Twilight Interregnum's young stars: larger and brighter the hotter their class
+        const c = p.cls ?? 'G';
+        const r = c === 'B' ? 9 : c === 'A' ? 7.2 : c === 'F' ? 6.6 : c === 'G' ? 6 : 5.6;
+        const shine = c === 'B' ? 2.4 : c === 'A' ? 1.9 : c === 'F' ? 1.6 : c === 'G' ? 1.35 : 1.1;
+        addStar(r, col, 0.8, 0, shine);
+        addGlow(r * 9, col, 0.6 + 0.4 * shine);
+        break;
+      }
+      case 'nebula': {
+        // a knot of the galaxy's gas, glowing faintly rose and blue: no star yet, and no worlds
+        const g = 0.35 + 0.65 * gasLeft(state.years);
+        addGlow(170, new THREE.Color('#c25a86'), 0.42 * g);
+        addGlow(110, new THREE.Color('#5d7fd6'), 0.28 * g);
+        addGlow(46, new THREE.Color('#e8a2b8'), 0.3 * g);
+        this.primaryRadius = 1;
+        this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: 8 });
+        break;
+      }
       case 'white_dwarf':
         if (iron || p.exploded) {
           // everything fused to iron by tunnelling (or the iron core a black dwarf supernova left): a cold, faintly metallic sphere

@@ -13,6 +13,7 @@ import { FLOW_DORMANT, FLOW_WATCH, flowing, keeping } from './flow';
 import { thinShare } from './thinning';
 import { netYield } from './positronium';
 import { ironAge } from './deeptime';
+import { gasLeft, nebulaNear } from '../interregnum';
 
 export interface TurnContext {
   years: number; // start of the coming turn
@@ -296,6 +297,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     let mt = 0;
     if (d.matterYield) mt += d.matterYield * n * body.richness * gfeMatter;
     if (d.hydrogenYield) mt += d.hydrogenYield * n * body.hydrogen * gfeMatter;
+    // the Twilight Interregnum's Gas Scoop: the galaxy's gas, while a nebula is within reach
+    if (d.gasYield) mt += d.gasYield * n * gasLeft(ctx.years) * (nebulaNear(state, state.systems[c.systemId]) ? 1 : 0) * gfeMatter;
     if (d.lift && !away) mt += d.lift * n * gfeMatter;
     if (mt) {
       // only its own focus touches matter: the others leave it as it was; in the Thinning there

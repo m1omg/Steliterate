@@ -2,7 +2,7 @@ import { EVENT_BY_ID, choiceHint, choiceOk, choiceShown } from './data/events';
 import { STRUCTURE_BY_ID, type EnergyMode } from './data/structures';
 import { TECHS } from './data/techs';
 import { WORK_BY_ID } from './data/works';
-import { ERA_BY_ID, logTurnLength, stepTime } from './eras';
+import { ERA_BY_ID, logTurnLength, stepTime, turnsUntil } from './eras';
 import { clockCiv, effectivePace, livedShare, paceMatters, starClockTerms, turnStep, turnsUntilYears, upkeepShare } from './sim/flare';
 import { emberShare, haloDrawn, sourceLight, vitalityLoss } from './physics';
 import {
@@ -482,7 +482,7 @@ export const WAY_WORK: Record<SurvivorWay, string | null> = {
 
 const TECH_PRIORITY = [
   'energy_storage', 'magnetospherics', 'the_long_record', 'orbital_collectors', 'survey_optics', 'mind_substrate', 'fusion_drives', 'hardy_lineages',
-  'subterranean_cities', 'orbital_industry', 'fusion', 'upload', 'cold_sleep', 'slow_instancing', 'ember_harvest', 'orbital_defense', 'dyson_swarms',
+  'subterranean_cities', 'orbital_industry', 'interstellar_scooping', 'fusion', 'upload', 'cold_sleep', 'slow_instancing', 'ember_harvest', 'orbital_defense', 'dyson_swarms',
   'last_light_protocols', 'reversible_logic', 'hibernation_protocols', 'deep_listening', 'hunger_studies', 'magnetic_sails', 'comet_shepherding', 'assembly_of_threads',
   'horizon_physics', 'accretion_engines', 'proton_question', 'deep_mantle', 'catalyzed_drives', 'mind_merging', 'halo_dynamics', 'pulsar_braking', 'hunger_lures', 'terraforming',
   // degenerate
@@ -741,6 +741,22 @@ function planWeave(state: GameState) {
   for (const c of colonies(state)) if (weaveCheck(state, c) === null && beginWeave(state, c.id) === null) c.queue.unshift(c.queue.pop()!);
 }
 
+/**
+ * The Twilight Interregnum: will this system's star leave the main sequence (or a young one die)
+ * within `within` of the Tide's turns, or has its light already gone? The autoplayer prepares a
+ * settlement there as it does for the Last Light: starless power, cold sleep, its Kin frozen as the
+ * light goes out (planBuilds, planPeople), and it settles where the light will last (settleScore).
+ */
+export function starEnding(state: GameState, sysId: string, within = 6): boolean {
+  if (state.era !== 'interregnum') return false;
+  const p = state.systems[sysId]?.primary;
+  if (!p) return false;
+  if (p.kind === 'blue_dwarf') return true;
+  const at = p.kind === 'red_dwarf' ? p.blueAt : p.kind === 'young_star' ? p.diesAt : undefined;
+  if (at === undefined) return false;
+  return at <= state.years || turnsUntil(calendarEra(state), state.years, at, state.settings.length, 0, within + 1) <= within;
+}
+
 function planBuilds(state: GameState) {
   const civ = state.civ;
   const mods = computeMods(state);
@@ -845,10 +861,18 @@ function planBuilds(state: GameState) {
       if (swarmThreat(state, c.systemId)) plan.unshift('defense_grid');
     }
     if (way !== 'lattice' && hasTech(state, 'cold_computation') && c.pops.coldminds >= capc.coldminds - 1) plan.unshift('cold_vault');
-    if (lateDusk && c.pops.kin > 0) plan.push('cryo_hall');
+    // (in the Twilight Interregnum, as this settlement's own star nears its end: interregnum.ts)
+    const ending = starEnding(state, c.systemId, 8);
+    // its starless power first, before anything else, and a cold hall for its Kin
+    if (ending) {
+      const want = ['fusion_plant', 'geothermal_tap', 'cryo_hall', 'gas_scoop'].filter((id) => (id !== 'cryo_hall' || c.pops.kin > 0) && !c.queue.some((q) => q.key === id));
+      if (tryBuild(state, c, want) && c.queue.length > 1) c.queue.unshift(c.queue.pop()!);
+    }
+    if ((lateDusk || ending) && c.pops.kin > 0) plan.push('cryo_hall');
     if (calendarEra(state) === 'dusk' && state.eta > 13.985) plan.push('ember_collector', 'infrared_shroud', 'fusion_plant', 'accretion_engine', 'reserve_vault');
+    else if (ending) plan.push('ember_collector', 'infrared_shroud', 'fusion_plant', 'geothermal_tap', 'accretion_engine', 'reserve_vault');
     if (civ.energy > cap * 0.8) plan.push('reserve_vault', 'superconducting_ring', 'horizon_vault', 'burst_catcher');
-    if (civ.matter < 80) plan.push('mine', 'hydrogen_skimmer', 'brown_siphon');
+    if (civ.matter < 80) plan.push('mine', 'hydrogen_skimmer', 'gas_scoop', 'brown_siphon');
     if (t.echoes > 0 && hasTech(state, 'upload')) plan.push('upload_clinic');
     if (way !== 'lattice' && hasTech(state, 'cold_computation')) plan.push('cold_vault');
     if (Object.values(state.swarms).some((s) => !s.tamed && s.awake)) plan.push('defense_grid');
@@ -868,6 +892,8 @@ function settleScore(state: GameState, b: Body, thread: ThreadId): number {
   const light = sourceLight(state, sys, state.years, 0).light;
   let s = light * 3 + b.richness * 0.5;
   if (thread === 'kin') s += b.habitability * 4 * (0.3 + b.vitality);
+  // the Twilight Interregnum: a star near its end is a poor place to move to
+  if (starEnding(state, sys.id, 10)) s *= 0.3;
   if (calendarEra(state) === 'degenerate' && (sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh')) s += 3;
   if (calendarEra(state) === 'degenerate' && emberShare(sys.primary, state.years, haloDrawn(state)) > 0) s += 2;
   // late in the Dusk, look ahead: dark-matter embers and black holes will be all that is left
@@ -1054,6 +1080,8 @@ function planThreads(state: GameState) {
       if (echoStrain > 0.5 && c.pops.echoes > 0) convert(state, c.id, 'cool');
       // (another civilization keeps two awake to keep each settlement)
       if (calendarEra(state) === 'dusk' && state.eta > 13.995 && c.pops.kin > (way ? 2 : 0)) convert(state, c.id, 'freeze');
+      // the Twilight Interregnum: its own star's light going out, as the Last Light's would
+      if (starEnding(state, c.systemId, 1) && c.pops.kin > (way ? 2 : 0)) convert(state, c.id, 'freeze');
       // the Chorus gathers its Echoes, two to each merged mind, keeping a few to grow from;
       // the sleepers sleep, all but those two
       if (way === 'chorus' && c.pops.echoes >= 4) convert(state, c.id, 'merge');
@@ -1317,6 +1345,35 @@ function planDarkSleep(state: GameState) {
   longSleep(state, DARK_SLEEP_FOR);
 }
 
+/**
+ * The Twilight Interregnum's dark end (interregnum.ts): once the light of every settlement's star
+ * has gone, or goes within the turn, and the reserve would not last to the Last Gas at the rate it
+ * is going, sleep through it, as a player would: a dormant turn's upkeep is a tenth, and what comes
+ * in still comes in. The Long Sleep where Hibernation Protocols allow it, else dormancy turn by
+ * turn. A star lit again at one of ours wakes it; so does the Last Gas (crossing.ts).
+ */
+function planInterregnumSleep(state: GameState) {
+  const civ = state.civ;
+  if (state.era !== 'interregnum') return;
+  const cs = colonies(state);
+  if (!cs.length) return;
+  const lit = cs.some((c) => !starEnding(state, c.systemId, 1) && lightAt(state, c) > 0.3);
+  if (lit) {
+    if (civ.dormant && civ.flags.ir_slept) {
+      setDormant(state, false);
+      delete civ.flags.ir_slept;
+    }
+    return;
+  }
+  const net = civ.flags.last_energy_net ?? 0;
+  if (civ.dormant || net >= 0) return;
+  const left = turnsUntil(calendarEra(state), state.years, ERA_BY_ID.dusk.startYears, state.settings.length, 0, 40);
+  if (civ.energy >= -net * left) return;
+  if (hasTech(state, 'hibernation_protocols')) longSleep(state, Math.min(20, left));
+  else setDormant(state, true);
+  civ.flags.ir_slept = 1;
+}
+
 function planWorks(state: GameState) {
   const civ = state.civ;
   if (civ.work) return;
@@ -1362,6 +1419,7 @@ export function autoPlay(state: GameState, strategy: Strategy) {
   planPace(state);
   planWorks(state);
   planDarkSleep(state);
+  planInterregnumSleep(state);
   planDefence(state, strategy === 'warlike');
   if (strategy === 'warlike') planWar(state);
 }

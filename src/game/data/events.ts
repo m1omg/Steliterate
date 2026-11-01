@@ -126,7 +126,7 @@ function newStarTimingCore(s: GameState, d: EventData): string {
   const sys = s.systems[String(d.systemId)];
   const p = sys?.primary;
   if (!sys || !p?.diesAt) return '';
-  if (sys.gone || p.diesAt <= s.years || (p.kind !== 'collision_star' && p.kind !== 'helium_star' && p.kind !== 'helium_giant' && p.kind !== 'dark_star')) return ' It has already burned out: in this age a turn can outlast a whole star.';
+  if (sys.gone || p.diesAt <= s.years || (p.kind !== 'collision_star' && p.kind !== 'helium_star' && p.kind !== 'helium_giant' && p.kind !== 'dark_star' && p.kind !== 'young_star')) return ' It has already burned out: in this age a turn can outlast a whole star.';
   const gift = p.kind === 'dark_star';
   // (two figures: this late a few hundred years is below what the calendar can tell apart)
   const left = formatYears(Number((p.diesAt - s.years).toPrecision(2)));
@@ -685,6 +685,101 @@ export const EVENTS: EventDef[] = [
     choices: [
       { label: 'Hear the warning', hint: 'Resolve +3. Taint −5.', run: (s) => { res(s, 3); taint(s, -5); } },
       { label: 'Hear the promise', hint: 'Insight +80. Taint +5.', run: (s) => { insight(s, 80); taint(s, 5, 'heard the Hunger’s promise'); } },
+    ],
+  },
+
+  // ============================================================ the Twilight Interregnum
+  {
+    // its opening (turn 3, in place of The Dynamo Falters): our star is one of the heavier, older red dwarfs
+    id: 'old_sun',
+    title: 'An Old Sun',
+    art: 'dusk',
+    eras: ['interregnum'],
+    once: true,
+    text: (s) => {
+      const sys = s.systems[s.civ.homeSystemId];
+      const p = sys?.primary;
+      const left = p?.blueAt !== undefined && p.blueAt > s.years ? formatYears(Number((p.blueAt - s.years).toPrecision(2))) : 'very little time';
+      return `The astronomers have finished their measure of ${sys?.name ?? 'our star'}. It is a red dwarf of ${(p?.mass ?? 0.22).toFixed(2)} Suns, heavier than most, and old: it was born when the galaxy was young, and has burned for nearly a trillion years. In about ${left} the hydrogen in its core will run out. It will flare blue, hotter and brighter than it has ever been, scorch its worlds for a few billion years, and collapse into a white dwarf. That is longer than our Record, longer than anything we have ever planned for. It is not forever.`;
+    },
+    choices: [
+      { label: 'Begin the long preparation', hint: 'Research toward Controlled Fusion jumps ahead: power that needs no sun. Resolve +2.', run: (s) => { s.civ.research.fusion = (s.civ.research.fusion ?? 0) + 30; if (!s.civ.researching) s.civ.researching = 'fusion'; res(s, 2); } },
+      { label: 'Measure the other stars', hint: 'Insight +30. Our forecasts will name each red dwarf of our reach as its end draws near.', run: (s) => { insight(s, 30); } },
+      { label: 'Leave it to the far future', hint: 'Resolve +4, Dissent +2.', run: (s) => { res(s, 4); dis(s, 2); } },
+    ],
+  },
+  {
+    // turn 7, in place of Counting the Dark
+    id: 'star_census',
+    title: 'Counting the Stars',
+    art: 'dusk',
+    eras: ['interregnum'],
+    once: true,
+    text: () =>
+      'The observatory published its census. Nearly every star in our sky is a red dwarf, and most are almost as old as the galaxy. Between them hang dark knots of gas where new stars are still forming, fewer with every age; here and there burns a young star, orange or yellow, far brighter than ours and far shorter-lived. Beyond the galaxy there is nothing at all: no other galaxy, not even the faint afterglow of the beginning. For the first time the whole sky is being counted as something that changes.',
+    choices: [
+      { label: 'Publish it plainly', hint: 'Insight +40, Resolve −1.', run: (s) => { insight(s, 40); res(s, -1); } },
+      { label: 'Publish it with wonder', hint: 'Resolve +3, Dissent −2.', run: (s) => { res(s, 3); dis(s, -2); } },
+    ],
+  },
+  {
+    id: 'young_star_lit',
+    title: 'A Young Star',
+    art: 'dusk',
+    text: (s, d) => {
+      const sys = s.systems[String(d.systemId)];
+      const p = sys?.primary;
+      const cls = p?.kind === 'young_star' ? p.cls ?? 'G' : 'G';
+      const what =
+        cls === 'B'
+          ? 'a blue giant, ten or twenty times the Sun’s mass and thousands of times its light. It will burn through its fuel in a few tens of millions of years and die as a supernova.'
+          : cls === 'A' || cls === 'F'
+            ? 'a white star, heavier than the Sun and many times brighter, rare this late: almost all the gas left makes only small, dim stars.'
+            : `a${cls === 'K' ? 'n orange' : ' yellow'} dwarf, ${cls === 'K' ? 'smaller than the Sun but far brighter than any red dwarf' : 'a star like the Sun'}.`;
+      return `A knot of gas in ${sys?.name ?? 'a nebula'} collapsed, and a young star has lit there: ${what}${newStarTiming(s, d)} ${newStarClose(s, d)}`;
+    },
+    choices: [
+      {
+        label: 'Keep time with it',
+        hint: (s, d) => (starClockTerms(s, s.systems[String(d.systemId)]).possible ? `Its system is charted, and our turns follow the star. ${keepTimeHint(s, d)}` : keepTimeHint(s, d)),
+        ok: (s, d) => starClockOffer(s, s.systems[String(d.systemId)]),
+        run: (s, d) => {
+          s.civ.known[String(d.systemId)] = 2;
+          return keepTimeNote(s, d);
+        },
+      },
+      { label: 'Study it', hint: `Insight +${STAR_INSIGHT}: a star caught as it forms. Resolve +${STAR_RESOLVE}: a new light. ${STAR_WORLDS}`, run: (s, d) => studyStar(s, d) },
+    ],
+  },
+  {
+    id: 'blue_giant_dies',
+    title: 'A Supernova',
+    art: 'degenerate',
+    plate: 'supernova',
+    text: (s, d) => {
+      const sys = s.systems[String(d.systemId)];
+      const left = sys?.primary.kind === 'black_hole' ? 'a black hole' : 'a neutron star, spinning hundreds of times a second';
+      const hurt = Number(d.hurt ?? 0);
+      return `The blue giant at ${sys?.name ?? 'a distant star'} has run out of fuel. Its core collapsed in less than a second and the star tore itself apart: for a few weeks it outshone everything else in the galaxy. It has left ${left}.${hurt > 0 ? ` Its radiation reached ${hurt === 1 ? 'one of our living worlds' : `${hurt} of our living worlds`}, and stripped some of their air: Flash Shelters would have kept them.` : ''} Its light lit up shapes in the dark our instruments had never seen.`;
+    },
+    choices: [{ label: 'Chart everything it showed us', hint: 'Insight +80; nearby systems revealed.', run: (s, d) => { insight(s, 80); const c = s.systems[String(d.systemId)]; if (c) for (const o of Object.values(s.systems)) if (Math.hypot(o.phys.x - c.phys.x, o.phys.y - c.phys.y, o.phys.z - c.phys.z) < 20000) s.civ.known[o.id] = Math.max(s.civ.known[o.id] ?? 0, 1) as 1 | 2; } }],
+  },
+  {
+    id: 'nebula_chemistry',
+    title: 'Cold Chemistry',
+    art: 'dusk',
+    eras: ['interregnum'],
+    once: true,
+    weight: 3,
+    bind: (s, rng) => {
+      const near = Object.values(s.systems).filter((x) => x.primary.kind === 'nebula' && (s.civ.known[x.id] ?? 0) >= 1);
+      return near.length ? { systemId: rng.pick(near).id } : null;
+    },
+    text: (s, d) =>
+      `The spectrographs turned on the nebula ${s.systems[String(d.systemId)]?.name} found it rich: water ice on its dust, methanol, formaldehyde, the simplest sugars. The chemistry every living world begins with is still being made out there, in the cold between the stars, a trillion years on.`,
+    choices: [
+      { label: 'Study it', hint: 'Insight +50.', run: (s) => { insight(s, 50); } },
+      { label: 'Tell everyone', hint: 'Resolve +3, Kin standing +2.', run: (s) => { res(s, 3); stand(s, 'kin', 2); } },
     ],
   },
 

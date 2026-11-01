@@ -16,6 +16,12 @@ export function queueEvent(state: GameState, defId: string, data: Record<string,
   if (def.once) state.civ.fired[defId] = state.turn;
 }
 
+/**
+ * The Dusk's events the Twilight Interregnum does not share: a young world's core is not freezing
+ * yet. Its other events it does share (its calendar is the Dusk's); its own name it alone.
+ */
+const DUSK_ONLY = new Set(['dynamo_fails', 'first_night', 'mantle_settles']);
+
 /** Maybe fire one random event from the pool this turn. */
 export function rollRandomEvent(state: GameState) {
   if (state.civ.pending.length > 1) return;
@@ -24,7 +30,7 @@ export function rollRandomEvent(state: GameState) {
     const pool: { id: string; w: number; data: Record<string, string | number> }[] = [];
     for (const e of EVENTS) {
       if (!e.weight || !forThisCiv(state, e)) continue;
-      if (e.eras && !e.eras.includes(state.era)) continue;
+      if (e.eras && !e.eras.includes(state.era) && !(state.era === 'interregnum' && e.eras.includes('dusk') && !DUSK_ONLY.has(e.id))) continue;
       if (e.once && state.civ.fired[e.id]) continue;
       if ((state.civ.fired[`last_${e.id}`] ?? -99) > state.turn - 12) continue;
       // (only once we know a technology it needs: EventDef.tech)

@@ -15,7 +15,7 @@ import { Engine } from './render/engine';
 import type { Pickable } from './render/galaxyView';
 import { App } from './ui/App';
 import { PLAIN_MAX_SCALE, act, applyUiScale, bump, cycleViewMode, following, hoverStar, engine, game, hudPrefs, isPhone, lvFolded, mapHover, modal, notify, phoneMore, playFilm, saveSettings, screen, selection, revealing, revealsOn, setEngine, setFilmOverride, setRevealOverride, setViewMode, settings, sheetHint, sheetSize, targeting, toggleOrbits, touchInput, view } from './ui/store';
-import { PRIMARY_NAME, bodyKindName } from './ui/labels';
+import { bodyKindName, primaryName } from './ui/labels';
 import { doEndTurn, lastTurn, setSlowSlices } from './ui/turnflow';
 import { startLoaded } from './ui/screens/Misc';
 import { sendPicked } from './ui/screens/Lists';
@@ -56,7 +56,7 @@ function hoverName(p: Pickable): string {
     const sys = g.systems[p.id];
     if (!sys) return '';
     const ours = colonies(g).some((c) => c.systemId === sys.id);
-    return `${sys.name} · ${PRIMARY_NAME[sys.primary.kind]}${ours ? ' · ours' : g.civ.known[sys.id] === 2 ? '' : ' · not surveyed'}`;
+    return `${sys.name} · ${primaryName(sys.primary)}${ours ? ' · ours' : g.civ.known[sys.id] === 2 ? '' : ' · not surveyed'}`;
   }
   if (p.kind === 'fleet') {
     const f = g.fleets[p.id];

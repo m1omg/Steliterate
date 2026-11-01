@@ -5,6 +5,8 @@ export interface CodexEntry {
   id: string;
   title: string;
   body: string[];
+  /** Shown only where the Twilight Interregnum is offered (src/channel.ts), or in a game begun in it. */
+  preview?: boolean;
 }
 
 export const CODEX: CodexEntry[] = [
@@ -33,6 +35,19 @@ export const CODEX: CodexEntry[] = [
       'Your civilization is made of Threads: the Kin (the original people), Echoes (uploads), the Chorus (merged minds), the Lattice (self-maintaining processes) and Coldminds (minds held near absolute zero).',
       'Each kind of mind lives at its own clock. When a turn is much longer than a Thread’s clock, that Thread has to stay awake through the whole span, and its upkeep climbs: this is tempo strain. When a turn is much shorter than a slow mind’s clock, it idles and produces little.',
       'Freeman Dyson (1979) argued that a mind which keeps slowing its thinking, and hibernates between bursts, could have an unlimited number of thoughts on a finite energy budget. Krauss & Starkman (2000) disputed it: with accelerating expansion, and quantum limits on memory, eternal thought is probably impossible. The game lets you try. Its Continuity is that argument in game form: a pattern stays intact only while its errors are corrected, and erasing a bit costs at least kT ln 2 (Landauer 1961), even at the coldest the universe will ever be, the faint glow of its horizon. So with the reserve empty nothing can be corrected and the pattern frays fast, while a sleeping mind risks less. How fast it frays is the game’s own number.',
+    ],
+  },
+  {
+    id: 'interregnum',
+    title: '0. The Twilight Interregnum',
+    preview: true,
+    body: [
+      'A game can begin earlier, at 10¹² years (η 12), some ninety trillion years before the Long Dusk: the Twilight Interregnum, offered for now at the preview address only. It lasts about 60 turns at Standard. Then comes the Last Gas, and the Long Dusk begins as it always has, its turns again a few decades long.',
+      'By a trillion years our galaxy is alone. The Local Group merged into one elliptical long ago, every other galaxy has crossed the cosmic horizon, and the afterglow of the beginning, stretched past the plasma frequency of the galaxy’s own gas, can no longer be seen from inside it (Krauss & Scherrer 2007). Astronomers born now could never learn that the universe had a beginning.',
+      'Most of its stars are red dwarfs, and most of those are almost as old as the galaxy. A red dwarf lives about a trillion years at a quarter of the Sun’s mass and about twelve trillion at 0.08 (Laughlin, Bodenheimer & Adams 1997; Adams et al. 2004), so every one that shines as the age begins goes out within it, the heaviest first: each flares blue, then collapses into a white dwarf. Yours is one of the heavier ones, about a fifth of the Sun’s mass, and it goes out a little over three-quarters of the way through the age. By η 13.1 even the smallest of them is gone.',
+      'The gas: star formation fades about tenfold for every tenfold of time (Laughlin). The nebulae on the map are the densest knots of what is left. The Dusk’s small red dwarfs, the last stars there will be, are born from them near the end of the age, and their worlds form with them. Between the old stars’ deaths and the last stars’ births the galaxy is dim: the interregnum of the age’s name. A Gas Scoop brings in hydrogen from a nebula within 25 light-years while there is gas to bring. A bend: Adams & Laughlin expect the gas to run out within one to ten trillion years, with only collisions of brown dwarfs making stars after that. The game lets the last of it go into stars until η 14, as its Dusk always has.',
+      'A few young stars burn among the red dwarfs: orange and yellow dwarfs (K, G), and rarer white stars (F, A), about as rare as the Degenerate Age’s collision stars. Each swells into a red giant at the end of its life, sheds its outer layers and leaves a white dwarf (a bend: the game does it at once). One or two blue giants (B) still burn as the age begins. They explode as supernovae within a few tens of millions of years, leaving a neutron star or a black hole. Within about 30 light-years their radiation strips the air of living worlds (Gehrels et al. 2003), unless a Flash Shelter keeps life underground. Their light to collectors is compressed, as a helium star’s is: a Sun is as bright as a thousand red dwarfs, but a yellow dwarf gives about four times what one does.',
+      'The dead stars are younger, and so warmer, by the same cooling laws as ever. The worlds are younger too: their cores hotter, their magnetic fields still strong.',
     ],
   },
   {

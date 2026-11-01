@@ -19,6 +19,7 @@ export function techCost(state: GameState, id: string): number {
 }
 
 export function techVisible(state: GameState, def: TechDef): boolean {
+  if (def.interregnumOnly && !state.settings.interregnum) return false;
   if (def.needsStable || def.needsDecay || def.needsCurvature || def.needsUnstable) {
     if (!protonFateKnown(state)) return false;
     const fate = fateOf(state);

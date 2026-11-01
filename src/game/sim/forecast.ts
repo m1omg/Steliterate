@@ -1,5 +1,5 @@
 import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
-import { BROWN_FADE_ETA, SURFACE_LIFE, boilingAway, fallsInAt, flashBoils, flashMelts, flashShelterFor, flashSheltered, giantFlash, giantWorld, meltLineAU, rubbleGame, takesWorldsIn, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
+import { BROWN_FADE_ETA, SUPERNOVA_LY, SURFACE_LIFE, boilingAway, fallsInAt, flashBoils, flashMelts, flashShelterFor, flashSheltered, giantFlash, giantWorld, meltLineAU, rubbleGame, takesWorldsIn, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
 import { colonies, formOf, hasCharter, hasTech, inItsSystem, protonFateKnown } from './util';
@@ -68,6 +68,17 @@ export function updateForecasts(state: GameState) {
       severity: ch.what.includes('brightens') ? 'boon' : 'danger',
     };
     if (tideTurnsTo(state, ch.at, horizon) <= horizon) add(f);
+  }
+
+  // the Twilight Interregnum: a blue giant near us will explode (physics.ts interregnumStars)
+  if (state.era === 'interregnum') {
+    const ours = colonies(state).map((c) => state.systems[c.systemId]);
+    for (const sys of Object.values(state.systems)) {
+      const p = sys.primary;
+      if (p.kind !== 'young_star' || p.cls !== 'B' || p.diesAt === undefined || p.diesAt <= years) continue;
+      if (!ours.some((o) => Math.hypot(o.phys.x - sys.phys.x, o.phys.y - sys.phys.y, o.phys.z - sys.phys.z) <= SUPERNOVA_LY)) continue;
+      add({ kind: 'star', title: `${sys.name} will explode`, text: `In about ${formatYears(p.diesAt - years)} its blue giant runs out of fuel and explodes as a supernova. Settlements in its system will be lost; within ${SUPERNOVA_LY} light-years its radiation will strip some of the air of every living world without a Flash Shelter.`, dueYears: p.diesAt, systemId: sys.id, severity: 'danger' }, `sn:${sys.id}`);
+    }
   }
 
   // worlds that will fall into their stars: around a star that takes its worlds in now (a dead
@@ -191,8 +202,9 @@ export function updateForecasts(state: GameState) {
     else if (fate === 'stable') add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars, the last things warm of their own accord, cool below the faint glow of the black holes. Nothing dissolves: matter endures, frozen, and gives nothing back. From then on only the black holes are sources, and Kin will need warmth no star can give.', dueYears: Math.pow(10, DEGENERATE_END.stable), severity: 'warn' });
     else add({ kind: 'crossing', title: 'The Last Warmth', text: 'The neutron stars burst, one after another, at a tenth of a Sun: whatever is settled at one is lost, unless it is on a world flung loose from it long before, far away by then. Burst Catchers in other systems bank a share of the flash, the more the nearer they are. After that only the black holes are warm, and space goes on unmaking the rest: the dwarfs fade by η 85, worlds by η 90.', dueYears: Math.pow(10, DEGENERATE_END.curvature), severity: 'danger' });
   } else if (state.era !== 'dark') {
-    const titles: Record<string, string> = { dusk: 'The Last Light', blackhole: 'The Last Horizon' };
+    const titles: Record<string, string> = { interregnum: 'The Last Gas', dusk: 'The Last Light', blackhole: 'The Last Horizon' };
     const texts: Record<string, string> = {
+      interregnum: 'The last of the galaxy’s gas goes into stars, and no star will form from gas again: the smallest red dwarfs, born last, are all that will shine through the Long Dusk. Nothing is destroyed. Gas Scoops will have nothing left to fetch.',
       dusk: 'Every remaining star leaves the main sequence. Whatever depends on starlight must be ready to do without it.',
       blackhole: 'The last black holes evaporate. After this there are no more sources.',
     };

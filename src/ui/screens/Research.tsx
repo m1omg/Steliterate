@@ -95,7 +95,7 @@ export function ResearchModal({ s }: { s: GameState }) {
                     const prog = s.civ.research[t.id] ?? 0;
                     // a project for another fate of matter: a question mark until the Proton
                     // Question is answered, and then gone (it does not exist in this universe)
-                    if (!visible && protonFateKnown(s)) return null;
+                    if (!visible && (protonFateKnown(s) || (t.interregnumOnly && !s.settings.interregnum))) return null;
                     if (!visible)
                       return (
                         <div key={t.id} class="tech locked" data-tip="Depends on whether protons decay. Research the Proton Question to find out.">
