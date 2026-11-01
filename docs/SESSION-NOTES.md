@@ -135,6 +135,11 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     taste: a pulsing analog sequencer, a metallic clank in an uneven pulse and a gliding lead,
     mostly in the darker films; none of the original's melodies or its exact beat. The three
     videos rendered for them: the Interregnum's, the Supernova's and the Dusk's.
+    In the same batch: "Long flow should not be in the forecast from game start when its not really
+    relevant yet" (a game begun with the fate chosen listed it from turn 1; now within the
+    forecasts' horizon). And a question, answered: what affects nebulae (they light on their own
+    clock; nothing of ours changes them; the Gas Scoop needs one within 25 ly; Cold Chemistry needs
+    one known; a nebula has no worlds, not even a Deep, until its star lights).
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

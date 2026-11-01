@@ -4765,5 +4765,10 @@ energy to the cutscene nusic, not a full style overwhelm, just a bit". No rule c
   `browser/films` reads how many voices the Dusk's music makes from its score (it was a number
   written in the check, 119), measures five films' music for clipping and loudness
   (`__stel.cueLevels`), and begins a game in the Interregnum to see its film play first.
+- **The Long Flow's forecast only once it is near** (the player: "Long flow should not be in the
+  forecast from game start when its not really relevant yet"). A game begun with the fate of matter
+  chosen (stable or curvature) listed it from turn 1, at η 14, for η 65. Now it stands once it is
+  within the forecasts' horizon (40 Tide turns; 60 in the Dusk's calendar), as a star's change does
+  (`forecast.ts`); `unit/flow` checks both. Display only: nothing in the rules reads the forecasts.
 - Games unchanged: 20 standard competent games begun in the Dusk, and 20 begun in the
   Interregnum, the same as the last batch's, game for game.

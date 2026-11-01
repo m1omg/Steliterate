@@ -225,8 +225,11 @@ export function updateForecasts(state: GameState) {
     }
   }
 
-  // the Long Flow, if matter lasts that long: whatever no one is awake to mend flows away
-  if (known && flowAhead(state)) add({ kind: 'flow', title: 'The Long Flow', text: 'From about 10⁶⁵ years even iron flows, its atoms tunnelling out of place: whatever no one is awake to mend runs into smooth lumps. A settlement with no one awake loses a structure a turn, Cryo Halls last, their sleepers with them; minds that think more slowly than the flow keep watchers awake, at half again their upkeep; ruins no one is digging are lost.', dueYears: Math.pow(10, FLOW_ETA), severity: 'warn' });
+  // the Long Flow, if matter lasts that long: whatever no one is awake to mend flows away (1 Nov,
+  // the player: "Long flow should not be in the forecast from game start when its not really
+  // relevant yet": a game begun with the fate of matter chosen showed it from turn 1, at η 14, for
+  // η 65; now, as a star's change is, once it is within the forecasts' horizon)
+  if (known && flowAhead(state) && tideTurnsTo(state, Math.pow(10, FLOW_ETA), horizon) <= horizon) add({ kind: 'flow', title: 'The Long Flow', text: 'From about 10⁶⁵ years even iron flows, its atoms tunnelling out of place: whatever no one is awake to mend runs into smooth lumps. A settlement with no one awake loses a structure a turn, Cryo Halls last, their sleepers with them; minds that think more slowly than the flow keep watchers awake, at half again their upkeep; ruins no one is digging are lost.', dueYears: Math.pow(10, FLOW_ETA), severity: 'warn' });
   if (flowing(state) || (known && flowAhead(state))) {
     const step = turnStep(state);
     const logL = logTurnLength(step);
