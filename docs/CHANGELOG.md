@@ -4700,3 +4700,7 @@ at the main address.
   victories, a Degenerate Age of 101 turns, the Interregnum 73 turns on average (its star clocks
   and sleep among them); by fate decay 126 / 148, stable 19 / 81, curvature 41 / 71. Neighbours
   lost by turn 80: 8% (3% in a game begun in the Dusk).
+- **Validated** (one build, `index-C2wy549U.js`): tsc and the build clean; the playtest; savecompat on
+  its 10 saves (the Interregnum's at turn 48 among them, played to the end); all 106 unit checks;
+  all 79 browser checks. Ordinary games: the galaxy's hash for two seeds as before, and all 300 of
+  the harness's games the same.
