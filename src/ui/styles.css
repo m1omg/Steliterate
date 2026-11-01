@@ -584,6 +584,8 @@ html.cine:not(.lv) .hud > :not(.reveal-card), html.cine:not(.lv) .toasts, html.c
 .world-mark { display: inline-flex; align-items: center; margin-right: 6px; cursor: pointer; }
 .world-mark input { width: 15px; height: 15px; margin: 0; accent-color: var(--neon); cursor: pointer; }
 .governor-bar .governor-picker { margin: 6px 0 0; }
+/* in Our settlements it stays in sight while the list scrolls under it (31 Oct) */
+.settlements-governor { position: sticky; top: 0; z-index: 2; margin: 0 0 6px; padding: 6px 4px; background: var(--panel-solid); border-bottom: 1px solid var(--line); }
 .governor-picker { margin-bottom: 0; }
 .governor-chip { gap: 3px; }
 .governor-chip .icon { width: 11px; height: 11px; color: var(--kind, currentColor); }

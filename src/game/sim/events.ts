@@ -1,6 +1,6 @@
-import { ANOMALY_BY_ID, EVENT_BY_ID, EVENTS, choiceShown } from '../data/events';
+import { ANOMALY_BY_ID, EVENT_BY_ID, EVENTS, choiceOk, choiceShown } from '../data/events';
 import type { GameState } from '../types';
-import { log, uid, withRng } from './util';
+import { hasTech, log, uid, withRng } from './util';
 
 /** Whether an event can happen to the civilization whose turn it is (EventDef.scope). */
 function forThisCiv(state: GameState, def: { scope?: 'everyone' }): boolean {
@@ -27,9 +27,11 @@ export function rollRandomEvent(state: GameState) {
       if (e.eras && !e.eras.includes(state.era)) continue;
       if (e.once && state.civ.fired[e.id]) continue;
       if ((state.civ.fired[`last_${e.id}`] ?? -99) > state.turn - 12) continue;
+      // (only once we know a technology it needs: EventDef.tech)
+      if (e.tech && !e.tech.some((t) => hasTech(state, t))) continue;
       const data = e.bind ? e.bind(state, rng) : {};
       if (!data) continue;
-      pool.push({ id: e.id, w: e.weight, data });
+      pool.push({ id: e.id, w: e.weigh ? e.weigh(state, data) : e.weight, data });
     }
     if (!pool.length) return;
     const pick = rng.weighted(pool, (p) => p.w);
@@ -67,7 +69,7 @@ export function resolveEvent(state: GameState, eventUid: string, choiceIndex: nu
   }
   const choice = def.choices[choiceIndex];
   if (!choice || !choiceShown(choice, state, p.data)) return { ok: false, text: 'No such choice.' };
-  if (choice.ok && !choice.ok(state, p.data)) return { ok: false, text: 'That is not possible now.' };
+  if (!choiceOk(choice, state, p.data)) return { ok: false, text: 'That is not possible now.' };
   const out = withRng(state, (rng) => choice.run(state, p.data, rng));
   state.civ.pending.splice(idx, 1);
   // name the star the event was about, and let the entry show it

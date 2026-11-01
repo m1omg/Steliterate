@@ -490,11 +490,45 @@ function firstWords(sv: Survivor): string {
   }
 }
 
+/**
+ * The answer in each of a neighbour's messages that would reach them: send to them, take their
+ * people in, build or trade with them, keep a promise or a pact with them.
+ */
+const REACHES: Record<string, { choice: string; why: string }> = {
+  aid: { choice: 'give', why: 'there is no one left to send it to' },
+  refugees: { choice: 'accept', why: 'their refugees went with them' },
+  exodus: { choice: 'take', why: 'they went dark before our answer could reach them' },
+  choir_wish: { choice: 'let', why: 'there is no one left to go to' },
+  swarm_plea: { choice: 'promise', why: 'there is no one left to promise' },
+  pact_offer: { choice: 'accept', why: 'there is no one left to keep it with' },
+  joint: { choice: 'join', why: 'there is no one left to build it with' },
+  trade: { choice: 'trade', why: 'there is no one left to trade with' },
+};
+
+/**
+ * Why an answer cannot be given because its sender is gone (null if it can). Its other answers
+ * close the message and do nothing: there is no one left to take offence, or to remember (31 Oct;
+ * before, refugees still came, a shared work and a trade still cost, and refusing the Choir still
+ * cost the Echoes' standing).
+ */
+export function goneAnswer(state: GameState, sig: { kind: string; from: string }, choice: string): string | null {
+  const r = REACHES[sig.kind];
+  if (!r || state.survivors[sig.from]?.alive) return null;
+  return choice === r.choice ? `They are gone: ${r.why}.` : null;
+}
+
 export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: string): string | null {
   const sig = state.civ.signals.find((s) => s.uid === sigUid);
   if (!sig || sig.resolved) return 'Already answered.';
   const sv = state.survivors[sig.from];
   const civ = state.civ;
+  // a message from a neighbour gone since it was sent: only what does not reach them, and it does nothing
+  if (REACHES[sig.kind] && !sv?.alive) {
+    const why = goneAnswer(state, sig, choice);
+    if (why) return why;
+    sig.resolved = choice;
+    return null;
+  }
   switch (sig.kind) {
     case 'aid': {
       const ask = Number(sig.data.ask);

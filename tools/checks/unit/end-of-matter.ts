@@ -9,6 +9,8 @@
 // - The forecast promises nothing to those merely living around black holes; the protocols say
 //   what they do; the Bastion Shell is built only at a black hole.
 // - The Migration goes to the nearest black hole with spin left, not to one drained of it.
+// - The matter in our stores goes with the rest, and the report says how much (31 Oct, the
+//   player asked; before, it was emptied without a word).
 import { newGame } from '../../../src/game/newGame';
 import { STRUCTURE_BY_ID } from '../../../src/game/data/structures';
 import { TECH_BY_ID } from '../../../src/game/data/techs';
@@ -42,6 +44,7 @@ town.pops = pops({ kin: 5, echoes: 10, coldminds: 4, chorus: 3 });
 town.structures = { habitat_dome: 2, substrate_core: 3, confluence_node: 1 };
 s.civ.capitalId = vault.id;
 s.civ.energy = 5000;
+s.civ.matter = 237.6;
 const mods = computeMods(s);
 const before = totalPops(s);
 const r = runCrossing(s, [s.player], { [s.player]: mods })[s.player];
@@ -57,6 +60,7 @@ const lost = before - totalPops(s);
 const said = Number(text.match(/(\d+) of our people dissolved/)?.[1] ?? NaN);
 check(said === lost && lost === 4 + (5 + 10 - carried.echoes + 4 - carried.coldminds + 3), `every loss counted once: the report says ${said}, and ${before} − ${totalPops(s)} = ${lost}`);
 check(new RegExp(`${carried.echoes + carried.coldminds} minds were carried onto leptonic substrate`).test(text), 'and says how many were carried');
+check(s.civ.matter === 0 && /The 237 matter in our stores dissolved with the rest: none of it could be kept/.test(text), `the matter in our stores goes with it, and the report says how much (${text.split('\n').find((l) => /in our stores/.test(l)) ?? 'no line'})`);
 const keep = reserveCapacity(s, computeMods(s));
 check(s.civ.energy <= keep + 1e-9 && /What held our reserve was matter too: it can hold \d+ energy now, and \d+ had nowhere to go\./.test(text), `the reserve: what no longer fits is gone at once, and said (${Math.round(s.civ.energy)} of ${Math.round(keep)})`);
 check(popsOf(vault) > 0, 'and the vault lives on');

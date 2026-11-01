@@ -24,7 +24,8 @@ run(async () => {
   for (let i = 0; i < 12 && !prompt; i++) {
     // close whatever is open, then end the turn
     for (let k = 0; k < 4; k++) {
-      const cont = await page.$('.modal button:has-text("Continue"), .modal .btn.choice');
+      // (a choice that needs a technology we lack is greyed out: the first that can be taken, 31 Oct)
+      const cont = await page.$('.modal button:has-text("Continue"), .modal .btn.choice:not([disabled])');
       if (!cont) break;
       await cont.click().catch(() => {});
       await page.waitForTimeout(250);

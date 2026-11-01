@@ -21,7 +21,8 @@ import { colonies, distLy, fleets, formOf, governed, ownColony, popsOf, swarmSee
 import { nestSeenAt, swarmSight } from '../../game/sim/sight';
 import { atWar } from '../../game/sim/war';
 import { PROMISE_TURNS } from '../../game/sim/claims';
-import { governorName, isIdle } from '../../game/sim/governor';
+import { governorName, isIdle, setGovernor } from '../../game/sim/governor';
+import { GOVERNOR_TIP, GovernorPicker } from '../Governor';
 import { FORMS } from '../../game/data/forms';
 import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, Survivor, ThreadId } from '../../game/types';
 import { THREADS } from '../../game/types';
@@ -225,6 +226,12 @@ function sortBy(key: YieldKey) {
 }
 
 /**
+ * The settlements marked in Our settlements to be given a governor (31 Oct, the player: "Please add
+ * a governor-setter into the Systems menu"), kept while the game is open, as the system panel's.
+ */
+const govMarks = signal<string[]>([]);
+
+/**
  * The Systems window: our settlements, every surveyed world, and in the Degenerate Age the
  * collision stars. The open tab lives in the modal itself, so S and W open (and close) the right one.
  * Opened from a ship (`send`), every star in it can be its destination.
@@ -341,9 +348,40 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
   const groups = [...bySystem.entries()].map(([sid, cs]) => [sid, sort ? [...cs].sort((a, b) => (valueOf(a) - valueOf(b)) * sort.dir) : cs] as const);
   if (sort) groups.sort((a, b) => (sumOf(a[1]) - sumOf(b[1])) * sort.dir);
   const sortName = sort ? YIELDS.find((x) => x.key === sort.key)!.name : '';
+  // the marks, and the governor they are given (a whole system's by the box at its name)
+  const ourIds = colonies(s).map((c) => c.id);
+  const marked = govMarks.value.filter((id) => ourIds.includes(id));
+  const setMarked = (ids: string[]) => (govMarks.value = ids);
+  const markAll = (ids: string[], on: boolean) => setMarked(on ? [...marked.filter((x) => !ids.includes(x)), ...ids] : marked.filter((x) => !ids.includes(x)));
+  const markedGov = marked.map((id) => s.colonies[id]?.governor ?? null);
+  const govValue = markedGov.every((g) => g === markedGov[0]) ? markedGov[0] : 'mixed';
   return (
     <ModalFrame title="Systems" eyebrow={`Our settlements: ${colonies(s).length} in ${bySystem.size} system${bySystem.size === 1 ? '' : 's'} · ${total} people`} icon="colony" narrow>
       {tabs}
+      {bySystem.size > 0 && (
+        <div class="governor-bar settlements-governor">
+          <div class="row" style={{ gap: '6px', fontSize: '12.5px' }}>
+            <span class="grow faint" data-tip={GOVERNOR_TIP}>
+              {marked.length ? `${marked.length} marked: give ${marked.length > 1 ? 'them' : 'it'} a governor` : 'Mark settlements to give them a governor: one by one, or a whole system by the box at its name'}
+            </span>
+            {ourIds.length > 1 && (
+              <button class="btn ghost small mark-all" onClick={() => setMarked(marked.length === ourIds.length ? [] : ourIds)}>
+                {marked.length === ourIds.length ? 'Unmark all' : 'Mark all'}
+              </button>
+            )}
+          </div>
+          {marked.length > 0 && (
+            <GovernorPicker
+              value={govValue}
+              label="Governor of the marked settlements"
+              onPick={(k) => {
+                if (act((g) => setGovernor(g, marked, k))) sfx('click');
+                setMarked([]);
+              }}
+            />
+          )}
+        </div>
+      )}
       {bySystem.size > 0 && (
         <div class="yield-heads">
           <span class="grow faint">Each turn{sort ? ` · by ${sortName.toLowerCase()}, ${sort.dir < 0 ? 'most' : 'least'} first` : ''}</span>
@@ -373,6 +411,9 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
         return (
           <div key={sid} class="section" style={{ marginTop: '6px' }}>
             <h3 class="row" style={{ gap: '4px' }}>
+              <label class="world-mark" data-tip={`Mark every settlement of ours at ${sys.name} to give them a governor`}>
+                <input type="checkbox" checked={cs.every((c) => marked.includes(c.id))} aria-label={`Mark every settlement at ${sys.name}`} onChange={(e) => markAll(cs.map((c) => c.id), (e.target as HTMLInputElement).checked)} />
+              </label>
               <span class="grow">
                 {sys.name} <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>{PRIMARY_NAME[sys.primary.kind]}</span>
                 <StateChip s={s} sys={sys} L={L} style={{ textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }} />
@@ -398,6 +439,9 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                       goToColony(c);
                     })}
                   >
+                    <label class="world-mark" data-tip={`Mark ${c.name} to give it a governor`} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                      <input type="checkbox" checked={marked.includes(c.id)} aria-label={`Mark ${c.name}`} onChange={(e) => markAll([c.id], (e.target as HTMLInputElement).checked)} />
+                    </label>
                     <span class="grow">
                       {c.name}
                       {s.civ.capitalId === c.id && <span class="chip neon" style={{ marginLeft: '6px' }}>capital</span>}

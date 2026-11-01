@@ -91,6 +91,20 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     Leptonic Shipyard and the Leptonic Wraith, in the same PR. In its validation a screenshot of
     the map took about 12 s, as long as a toast with a button lasts: `browser/survey-look` and
     `browser/survey-reveal` now wait for their moment after a screenshot, not before.
+  - Then (31 Oct): PR m1omg/Steliterate#53 (live script `index-CHw5-wl7.js`). From the audit the
+    player chose "A report line: when matter ends, the crossing report would also say how much
+    stored matter was lost and the bug: answering a message from a civilization that’s already
+    gone still has effects"; then "Please add a governor-setter into the Systems menu", and from a
+    picture of a list of theirs: "The types of random Events should be unlocked by technology.
+    (how does one harvest a comet without ships in-systems or an orbital shipyard?)", and "with the
+    comet the event should happen in player owned systems more often imo". Asked four questions
+    (they said "regarding the events feel free to ask questions"), they answered: the comet's
+    rate as proposed (4 for each system of ours, up to four), "but they should fall through no
+    shipyard systems too but player in that case can only get research benefits"; of the finds,
+    keep the shard (Fusion Drives), the hole's light (Orbital Collectors) and the foil's salvage
+    (Orbital Industry), not mining a diamond mantle or quarrying flare glass; nature "Stay
+    ungated"; a probe "should be able to meet but not haul it" (it meets it, for more insight
+    when studied, and cannot shepherd or mine it).
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",
@@ -98,15 +112,16 @@ clone, with none of this session's scratch files, uploads or memory: everything 
       Part 4: films are only off by default for them); the four answers that misbehave when their
       civilization is already gone (plan 2a said to fix them; refugees still arrive with +3
       resolve, a shared work still costs 60 matter, a trade still costs and delivers notes, the
-      Choir's wish still costs standing: `resolveSurvivorSignal` tests that the record exists, not
-      that it is alive);
+      Choir's wish still costs standing: `resolveSurvivorSignal` tested that the record exists, not
+      that it is alive; done 31 Oct, PR m1omg/Steliterate#53, `goneAnswer`);
     - offered for later: a battle fought by hand, focus fire on a chosen ship, a retreat threshold
       in a tactic (combat plan); read-aloud, moving the camera from the keyboard, reduced motion
       for camera flights (the friend's word on the magnifier mode);
     - offered, no answer: pulsar beams in line with real pulsars or a stated bend; Burst Catchers
       in neighbouring systems banking a share of a burst at η 68; a rogue world's Coldminds at
-      half upkeep; the two rogue-world bends; the neighbours' new-star rules and the Last Star; a
-      line in the crossing report for the stored matter lost at the end of matter;
+      half upkeep; the two rogue-world bends; the neighbours' new-star rules and the Last Star; (a
+      line in the crossing report for the stored matter lost at the end of matter: done 31 Oct, PR
+      m1omg/Steliterate#53);
     - discuss first: a Lattice rework, deeper diplomacy, tidal locking by locking time, the
       flare's step at `blueAt`, the helium stars' single set of numbers, collectors after the
       Stelliferous era; and the Slovak translation, planned and not started;

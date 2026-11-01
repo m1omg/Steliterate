@@ -469,6 +469,10 @@ function leftOnSubstrate(state: GameState, mods: Mods, lines: CrossingReport['li
   if (moved) lines.push({ text: `The Migration: ${moved} leptonic vault(s) fell toward the nearest black holes, the only sources left.`, kind: 'info' });
   if (saved) lines.push({ text: `${saved} minds were carried onto leptonic substrate before their homes ${how === 'decayed' ? 'dissolved' : 'evaporated'}.`, kind: 'good' });
   lines.push({ text: lost > 0 ? `${lost} of our people ${how === 'decayed' ? 'dissolved' : 'evaporated'} with the matter they were made of.` : 'No one was lost.', kind: lost > 0 ? 'bad' : 'good' });
+  // the stores were matter too: what they held goes as the rest does, not into energy we can keep
+  // (31 Oct, the player asked; before, it was emptied without a word)
+  const stored = Math.floor(state.civ.matter);
+  if (stored > 0) lines.push({ text: `The ${stored} matter in our stores ${how === 'decayed' ? 'dissolved' : 'evaporated'} with the rest: none of it could be kept, and from now on we build with energy alone.`, kind: 'bad' });
   state.civ.matter = 0;
 }
 
