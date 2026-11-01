@@ -140,6 +140,17 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     forecasts' horizon). And a question, answered: what affects nebulae (they light on their own
     clock; nothing of ours changes them; the Gas Scoop needs one within 25 ly; Cold Chemistry needs
     one known; a nebula has no worlds, not even a Deep, until its star lights).
+    Merged 1 Nov as `5b84cbc`, live at both addresses (`index-BdC7hWfs.js`).
+  - Then (1 Nov): PR m1omg/Steliterate#56, **stars that brighten as they age**. The player asked
+    whether a Thread's standing matters once it is gone (it does not: no demand, no dissent, no
+    fork; standing weighs on dissent by the Thread's share), and wanted a friend's warning only for
+    a large Thread: "25% please". Then: "can you somehow add two features and test them without
+    having to wait like 2 hours? … the stars should show their lifetime. Second, Both stars and
+    black holes should brighten during their evolution …". Answers: a Sun-like star's red giant
+    "should swallow" the worlds inside it; the stars brighten "according to theory"; black holes
+    already gave more power as they shrank, but the shown Hawking temperature never changed ("fix
+    that"), and they should look brighter when they glow visibly (only in their last moments: the
+    turn of the burst). The browser checks now run in three lanes and the harness in four parts.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

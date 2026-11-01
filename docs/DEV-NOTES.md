@@ -43,8 +43,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      try one in the browser, gunzip it and paste the JSON into Load / import → "Load from a save
      code".
    - Checks: `npm run check` (unit checks, about 15 s) and, with `vite preview` running,
-     `npm run check:browser -- http://localhost:4173/` (browser checks, about 10 min). Both must
-     end with "ALL CHECKS PASSED". See Test hooks and scripts.
+     `npm run check:browser -- http://localhost:4173/ --lanes=3` (browser checks: 79 since 1 Nov,
+     some 80 minutes one at a time, about 30 three at a time on four cores). Both must end with
+     "ALL CHECKS PASSED". See Test hooks and scripts. The harness splits too: four
+     `tools/sim.ts 75 … --from=0` (75, 150, 225) at once give 300 games in about 2.5 minutes.
 3. **Commit and go live:**
    - Commit with the attribution lines and `git push -u origin <the session's work branch>`.
    - Open a PR from that branch into `main` and merge it with a merge commit (never squash or
@@ -142,8 +144,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
       curl -sS "$u" -o "$D/files/$(echo "$u" | sed 's#https://fonts.gstatic.com/##; s#/#_#g')"; done
     ```
     `mobile` measures the rail's names only when the fonts are there (it says so otherwise).
-  - `run.mjs unit|browser|all [url] [out] [names…]` runs them (unit checks several at a time,
-    browser checks one at a time) and prints a summary; `npm run check` and
+  - `run.mjs unit|browser|all [url] [out] [names…] [--lanes=N]` runs them (unit checks several
+    at a time, browser checks one at a time, or N at once) and prints a summary; `npm run check` and
     `npm run check:browser` call it. Name some to run only those:
     `node tools/checks/run.mjs unit clock evap`.
   - **Profiling as a phone** (13 Oct): Playwright with `viewport` 390×844, `deviceScaleFactor` 3,
@@ -1609,6 +1611,20 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   its nebula; the H–R shot's new stars are drawn on the main sequence from a second `Population`'s
   masses (not aged: at η 12 to 12.6 a star born in the shot would be gone before the next frame),
   fewer as the gas thins.
+- **Stars that brighten as they age (1 Nov, `src/game/stellar.ts`):** pure functions of a primary
+  and the year, nothing stored and no draw. `redBrightening` (a red dwarf toward its blue flare,
+  1 at the game's start or its birth, rising as u² to `redRise`, at most 3×), `youngStage` (a
+  young star's L, T and radius: ×2.5 on the main sequence, then a giant to `GIANT[cls].tip`),
+  `giantReach`, `youngLife`, `hawkingK`/`holeMassNow`. physics.ts reads them in
+  `primaryLuminosity` (climate: the full rise), `sourceLight` (collectors: a red dwarf's square
+  root, a young star's fourth root, averaged over the turn), `ownTemperature`,
+  `nextStellarChange` (a young star's giant first) and `interregnumStars` (a giant swallows the
+  worlds inside its reach: 'boiled' notes with `swallowed`, so a settlement evacuates as under a
+  helium giant). Keep every game's start unchanged: anything counted from the start must be 1
+  there (`unit/stellar` checks it; compare `newGame` hashes for Dusk and Interregnum seeds with
+  the commit before, as done 1 Nov). `forecast.ts`: a giant reaching one of our worlds this turn,
+  and the warning for a Thread of `STANDING_WARN_SHARE` (25%) or more below `STANDING_WARN` (25).
+  `labels.ts starLife` gives the Lifetime row (Drawer) and Star types' "next stage in …".
 - **The films' music (1 Nov):** `src/film/score.ts` has no sound in it. A `Score` is a film's key
   (`tonic`, `mode` from `MODES`), its `cuts` (beats, each starting a scene; they need not all be
   scene starts) with a chord degree for each (`chords`), the title's chord (`title`), a `motif`

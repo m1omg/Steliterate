@@ -601,8 +601,17 @@ stop them from talking.
   Rel. Grav. 39, 1545); a supernova stripping living worlds' air within about 25 to 50 ly (Gehrels
   et al. 2003, ApJ 585, 1169). Bends, said in the Codex: the gas goes into stars until η 14 (Adams
   & Laughlin expect it gone within 10¹² to 10¹³ years, collisions of brown dwarfs making stars
-  after); a young star's giant phase is at once; the bright stars' light is compressed, as a helium
-  star's is.
+  after); a young star's giant phase was at once until 1 Nov (now its last tenth or so: below); the
+  bright stars' light is compressed, as a helium star's is.
+* Stars brightening as they age (1 Nov): a red dwarf grows several times brighter and hotter
+  toward its blue flare (Laughlin, Bodenheimer & Adams 1997); a Sun-like star brightens on its main
+  sequence (about 0.7 to 1.8 L☉ for the Sun) and swells into a red giant of some thousands of Suns
+  and 0.6 to 1 AU (the Sun's tip about 2,500 L☉, 170 R☉); a black hole's Hawking temperature goes
+  as 1/M, its mass as (1 − t/t_evap)^⅓ (Hawking 1974; Page 1976). Bends: the brightening is counted
+  from each game's start (the star was brightening before); collectors take the square root of a
+  red dwarf's rise and the fourth root of a young star's (the game's light units are compressed);
+  the helium flash, horizontal branch and AGB are folded into one rise; the giant's mass loss does
+  not widen its worlds' orbits.
 * Laughlin, Bodenheimer & Adams (1997), *The end of the main sequence*, ApJ 482, 420: a red
   dwarf's last flare. A 0.10 M☉ star peaks near 5,800 K and about 1% of the Sun's light and
   shrinks; heavier ones swell, 1.6 times by 0.16 M☉ at about 0.27 L☉; the bluest, near 8,600 K,

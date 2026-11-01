@@ -4772,3 +4772,54 @@ energy to the cutscene nusic, not a full style overwhelm, just a bit". No rule c
   (`forecast.ts`); `unit/flow` checks both. Display only: nothing in the rules reads the forecasts.
 - Games unchanged: 20 standard competent games begun in the Dusk, and 20 begun in the
   Interregnum, the same as the last batch's, game for game.
+
+## Stars that brighten as they age, black holes hotter as they shrink, lifetimes shown, and a warning for a large Thread (1 Nov)
+
+The player: "the stars should show their lifetime. Second, Both stars and black holes should
+brighten during their evolution. Red dwarfs towards blue dwarfs, and in the interregnum, the higher
+mass stars should also behave according to physics. Like, so there should be brightening red
+giants and so on, this should increase their energy yeilds But also, of course, habitability …
+And black holes should also brighten as they decay, as they do in real life." Asked, a red giant
+swallows the worlds inside it; the stars brighten "according to theory"; and the black holes' shown
+Hawking temperature, which never changed, should rise ("visibly brighter when it happens"). With
+it, a friend's suggestion as the player put it: a warning when a Thread's standing gets too low,
+"only … if they form a significant fraction of the population": 25%.
+
+- **Red dwarfs brighten toward their blue flare** (`src/game/stellar.ts`; Laughlin, Bodenheimer &
+  Adams 1997): from each game's start, or its birth if the game saw it born, a red dwarf's light
+  rises as the square of the time gone toward its flare, to the geometric middle of its
+  main-sequence light and its flare's peak, at most 3× (a 0.1 M☉ dwarf: about 3×, 2,820 K to
+  3,700 K). Its worlds warm by the fourth root (our world in a Dusk game: 298 K at the start, about
+  390 K by the flare); collectors take the square root of the rise (×1.7), as the blue flare's own
+  light is compressed. Every game's start is as it was (`newGame` gives the same state for four
+  Dusk and four Interregnum seeds as the build before).
+- **The Interregnum's young stars live their lives:** ×2.5 brighter on the main sequence (the Sun:
+  0.7 to 1.8 L☉), then in their last tenth or so a subgiant and a red giant climbing to some
+  thousands of Suns at 3,400 K (a G star: 2,500 L☉, about 0.67 AU across); a blue giant becomes a
+  red supergiant before it explodes. Worlds inside the giant are swallowed (a settlement there
+  evacuates, three in four to the Deep, as under a helium giant), worlds beyond warmed (one at 3×
+  its reach: 79 K to 470 K). Collectors take the fourth root of the rise, as the classes' light is
+  compressed. The forecasts say when a star of ours will swell (and how far), and a world of ours
+  its giant reaches this turn. A star the galaxy begins with already in its last tenth starts to
+  swell at the game's start.
+- **Black holes:** the Hawking temperature shown rises as the hole's mass falls (T ∝ 1/M, the mass
+  as (1 − t/t_evap)^⅓): ten times hotter by the last thousandth of its life (it was computed from
+  the mass it was made with). It glows visibly only in its last moments, so in the turn of its
+  final burst the map and the system view draw it white-hot. Its Hawking power to collectors
+  already rose as it shrank (`hawkingLight`, as 1/M²).
+- **Lifetimes:** the system panel's Lifetime row (its stage, the next, and when: "main sequence ·
+  blue flare in …", in turns too); Star types adds each star's next stage and when, and lists the
+  Interregnum's young stars and nebulae (it had no button for them). The map and the system view
+  draw giants swollen and redder and brightening red dwarfs a little larger and less red.
+- **A warning for a large Thread** (`forecast.ts`): a Thread that is a quarter or more of our
+  awake people, below 25 standing ("… think poorly of us"), or talking of leaving ("… are talking
+  of leaving", with the turns left before it forks). A smaller Thread never warns (its standing
+  weighs on dissent by its share), nor one with no one awake (it has no effect at all).
+- The Codex says it (the Twilight Interregnum's young stars, the Long Dusk's red dwarfs, black
+  holes); its old line "a bend: the game does it at once" for the giant phase is gone.
+- Checks: `unit/stellar`; `unit/ladder` holds a red dwarf's brightening equal where it compares
+  yields across the ages. `run.mjs --lanes=N` runs N browser checks at once.
+- **The harness** (300 standard competent games, run in four parallel parts): 181 survive, 69
+  victories, a Degenerate Age of 95 turns (192 / 73 / 97 before); by fate decay 103 / 148, stable
+  31 / 81, curvature 47 / 71. Harsh: 158 / 34 / 93 (the same 300 before: 158 / 43 / 92). Begun in
+  the Interregnum: 183 / 80 / 102, 297 reaching the Dusk (186 / 80 / 101, 296). Within the noise.

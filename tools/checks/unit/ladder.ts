@@ -358,6 +358,9 @@ const at = (s: GameState, era: EraId, years: number, eta = Math.log10(years)) =>
   const hearth = (g: GameState) => colonyTurn(g, g.colonies[id], project(g).ctx, g.civ.matter).y.lines.find((l) => l.label.startsWith('Hearth'))!.energy!;
   const before = hearth(s);
   const late = at(copyState(s), 'degenerate', 1e16);
+  // (since 1 Nov a red dwarf brightens toward its blue flare, stellar.ts: its flare put off here, so
+  // its light is the same as at the start and only the yield's factor differs)
+  late.systems[late.colonies[id].systemId].primary.blueAt = 1e40;
   const after = hearth(late);
   check(lateYield(s) === 1 && lateYield(late) === LATE_YIELD && LATE_YIELD > 1 && rel(after, before * LATE_YIELD) < 1e-12, `the capital’s Hearth gives ${before.toFixed(2)} energy a turn in the Dusk, ${after.toFixed(2)} by the same light after the Last Light (×${LATE_YIELD})`);
   // and where to settle says what a settlement there would make: the estimate's Hearth is the settlement's own
