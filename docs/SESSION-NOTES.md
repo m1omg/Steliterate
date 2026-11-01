@@ -105,7 +105,7 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     (Orbital Industry), not mining a diamond mantle or quarrying flare glass; nature "Stay
     ungated"; a probe "should be able to meet but not haul it" (it meets it, for more insight
     when studied, and cannot shepherd or mine it).
-  - Then (1 Nov): PR m1omg/Steliterate#54, **the Twilight Interregnum**. The player: "For the next
+  - Then (1 Nov): PR m1omg/Steliterate#54 (`32a9c40`, live script `index-C2wy549U.js`; checked live: the Begin choice at /next/, none at the main address), **the Twilight Interregnum**. The player: "For the next
     and only for the next version, not for the main one, let's make a sort of a prequel mode where
     you start earlier, from 1e12 years in the future. It would basically preserve the game as it
     is, except it would start even earlier … It would again try to reflect the real physical
