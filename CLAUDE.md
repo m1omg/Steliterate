@@ -55,7 +55,9 @@ a star's state wherever the Systems window names its kind, and PR m1omg/Steliter
 hole of our choice, Hide unavailable and the Leptonic Wraith (31 Oct), and PR m1omg/Steliterate#53,
 answers that cannot reach the gone, stored matter in the report, the governor in the Systems window
 and events unlocked by technology (31 Oct), and PR m1omg/Steliterate#54, the Twilight Interregnum, a
-game begun at 10¹² years, offered at /next/ only (`src/channel.ts`; 1 Nov).
+game begun at 10¹² years, offered at /next/ only (`src/channel.ts`; 1 Nov), and PR
+m1omg/Steliterate#55, its intro film and every film's music rewritten, each its own score
+(`src/film/score.ts`), with a bit of Terminator 1's synth (1 Nov).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.

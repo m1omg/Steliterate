@@ -63,7 +63,7 @@ export function FilmScreen({ id, args, then }: { id: FilmId; args?: FilmArgs; th
         let clock: FilmClock = elapsedClock();
         if (a && a.ctx.state === 'running') {
           const at = a.ctx.currentTime + 0.1;
-          voice = playCue(id, a.ctx, a.film, at, args?.fate);
+          voice = playCue(id, a.ctx, a.film, at, args?.fate, settings.value.quality);
           clock = audioClock(a.ctx, at);
         }
         player.play(clock);

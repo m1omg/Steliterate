@@ -4704,3 +4704,71 @@ at the main address.
   its 10 saves (the Interregnum's at turn 48 among them, played to the end); all 106 unit checks;
   all 79 browser checks. Ordinary games: the galaxy's hash for two seeds as before, and all 300 of
   the harness's games the same.
+
+## An intro for the Twilight Interregnum, and a score of its own for every film (1 Nov)
+
+The player: "Make an intro for Twilight interregnum also please improve the music in the vids and
+dont use the same melody for every vid"; asked, "Rewrite the synth", the intro "Warm, a little
+wistful", and all four shots offered (the galaxy alone; stars dying, stars born; a nebula and a
+young star; our star and our world). Then: "You can add a bit of Terminator 1 synth soundtrack
+energy to the cutscene nusic, not a full style overwhelm, just a bit". No rule changed.
+
+- **The Twilight Interregnum's film** (`src/film/interregnum.ts`, Reel 0): 76 beats at 90 (51 s),
+  ten shots. A sky still full of stars, denser and warmer than the Dusk's, a rose band of gas
+  across it; into the band and out to the galaxy, the last faint galaxies beyond it slipping away
+  and the afterglow of the beginning fading; the galaxy close, brighter and younger than in the
+  Dusk, flecked with gas still making stars; the Hertzsprung–Russell diagram from η 12 to 12.6,
+  the heavier red dwarfs going first (blue, then white dwarfs) while a crop of new stars holds on
+  the main sequence, thinning as the gas does; a nebula (`paintNebula`, `paint.ts`), a dark knot of
+  it lighting as a young star, a blue giant beyond; that young star up close, the disc of dust it
+  formed from round it; ours, a red dwarf of 0.20 M☉, a third of its hydrogen left; our world,
+  young, its seas open, auroras over its poles (a young core, a strong field), its cities lit on
+  its night side; the title, "Age 0 · the Stelliferous Era". The words are the age's own
+  introduction. A game begun in the Interregnum plays it before those words (it had none); Films
+  seen lists it only where the Interregnum is offered (/next/) or in such a game.
+- The introduction said our star was "a quarter of the Sun’s mass"; since the home star became 0.19
+  to 0.22 M☉ it says "about a fifth" (`INTERREGNUM.intro`).
+- **The films' music, rewritten.** Until now every film had one pattern (`reelCue`): a drone, a
+  sine bell on each cut stepping down nearly the same notes in every film, a pad, the reel's tick.
+  Now `src/film/score.ts` composes each film's music as plain events and `cue.ts` plays them:
+  - each film its own key and mode (Ionian to Phrygian, harmonic minor, whole tones), a chord for
+    each scene on the film's own cuts and a chord of its own colour under the title, a melody of
+    its own stated and varied over the scenes (sequenced, moved an octave, losing its last notes,
+    a second motif, a minor melody turned major), arpeggios, a bass on the cut and each bar, a
+    drone in the darker ones, and how loud each scene is;
+  - the instruments, all oscillators, filters and noise: warm, dark and glass pads, a choir (saws
+    through vowel formants, with vibrato), flute, horn, a glassy lead, one voice, harp, bass,
+    bell, drone, kick, tom and shaker, the reel's tick on each bar, and the Supernova's and the
+    Last Horizon's chirp, heartbeat and detonation as before; a room for them (a convolver, its
+    response 2.5 s of noise dying away, darker as it goes);
+  - **a bit of Terminator 1's synth energy**: an analog sequencer's bass (two saws through a
+    resonant filter snapping shut on each note), a metallic clank (two frequency-modulated pairs,
+    into a large room) struck in uneven groups (3, 3, 3, 2, 2 sixteenths and the like), and a
+    detuned saw-and-square lead that glides between its notes. In the darker films most: the
+    Supernova (the sequence tightening with the chirp, the clank to the detonation), the Last
+    Light, the Great Decay, the Last Horizon and the Hunger; a touch in the Interregnum's, the
+    Dusk's, the Last Warmth's, the Great Evaporation's and four endings; none in five endings. The
+    melodies are the game's own;
+  - the endings each have their own melody, and where an ending's shape suggests it the music
+    follows it;
+  - at the high quality setting at most about fifty oscillators sound at once; below it (a
+    tablet's medium, by default) the lighter instruments, at most thirty; at low, no room either.
+    `playCue` takes the quality from the settings.
+  - Levels, rendered offline (`tools/cue-levels.mjs`, peak / loudness in dBFS), near the old
+    films' (−17.4 to −18.0): Interregnum −5.0 / −19.0, Dusk −3.6 / −19.2, Last Light −3.5 / −18.7,
+    Supernova −2.3 / −18.7, Great Decay −4.6 / −20.1, Last Warmth −3.5 / −19.1, Great Evaporation
+    −6.3 / −19.4, Last Horizon −2.9 / −19.0 (its stable cut −3.6 / −18.8), the endings −2.8 to
+    −6.4 / −16.1 to −20.2. `tools/cue-levels.mjs --stems` gives each instrument's own.
+- Checks: `unit/film-scores` (every film scored and timed as its film; no two melodies alike by
+  their first steps; melodies in their modes; every cut accented on its beat; every note on the
+  grid and within the film; voices bounded; the synth's drive where it belongs and only a touch);
+  `browser/films` reads how many voices the Dusk's music makes from its score (it was a number
+  written in the check, 119), measures five films' music for clipping and loudness
+  (`__stel.cueLevels`), and begins a game in the Interregnum to see its film play first.
+- **The Long Flow's forecast only once it is near** (the player: "Long flow should not be in the
+  forecast from game start when its not really relevant yet"). A game begun with the fate of matter
+  chosen (stable or curvature) listed it from turn 1, at η 14, for η 65. Now it stands once it is
+  within the forecasts' horizon (40 Tide turns; 60 in the Dusk's calendar), as a star's change does
+  (`forecast.ts`); `unit/flow` checks both. Display only: nothing in the rules reads the forecasts.
+- Games unchanged: 20 standard competent games begun in the Dusk, and 20 begun in the
+  Interregnum, the same as the last batch's, game for game.

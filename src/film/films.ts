@@ -5,6 +5,7 @@ import { blackHoleAge2 } from './blackhole';
 import { GREAT_EVAPORATION2, LAST_HORIZON2 } from './dark';
 import { DUSK2 } from './dusk';
 import { ENDINGS2 } from './endings';
+import { INTERREGNUM_FILM } from './interregnum';
 import { LAST_LIGHT2 } from './lastlight';
 import { SUPERNOVA2 } from './supernova';
 
@@ -18,6 +19,7 @@ import { SUPERNOVA2 } from './supernova';
 
 export type FilmQuality = 'low' | 'medium' | 'high';
 export type FilmId =
+  | 'interregnum'
   | 'dusk'
   | 'last_light'
   | 'supernova'
@@ -100,6 +102,7 @@ export interface FilmDef {
 export const filmLength = (f: FilmDef) => (f.beats * 60) / f.bpm;
 
 export const FILMS: Record<FilmId, FilmDef> = {
+  interregnum: INTERREGNUM_FILM,
   dusk: DUSK2,
   last_light: LAST_LIGHT2,
   supernova: SUPERNOVA2,

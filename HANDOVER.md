@@ -213,7 +213,7 @@ word", then the player's list of 16 Oct, then the falling worlds.
   nature stays ungated; of the finds, the shard, the hole's light and the foil need technology,
   mining and quarrying not.
 
-- **The Twilight Interregnum** (1 Nov, PR m1omg/Steliterate#54; at /next/ only): "a sort of a
+- **The Twilight Interregnum** (1 Nov, PR m1omg/Steliterate#54, `32a9c40`, live script `index-C2wy549U.js`; at /next/ only): "a sort of a
   prequel mode where you start earlier, from 1e12 years", "For the next and only for the next
   version, not for the main one"; the player named it, asked that it be optional, and that its
   galaxy look "livelier and brighter than the dusk one". An age before the Dusk, 10¹² to 9 × 10¹³
@@ -224,6 +224,15 @@ word", then the player's list of 16 Oct, then the falling worlds.
   `src/channel.ts`), and its saves are kept apart and hidden at the main address. Games begun in
   the Dusk are unchanged, all 300 of the harness's. The interview's answers are in SESSION-NOTES
   (1 Nov); DEV-NOTES has where it lives and its traps.
+
+- **An intro for the Interregnum, and the films' music rewritten** (1 Nov, PR m1omg/Steliterate#55):
+  "Make an intro for Twilight interregnum also please improve the music in the vids and dont use the
+  same melody for every vid", then "a bit of Terminator 1 synth soundtrack energy … not a full style
+  overwhelm, just a bit". The Interregnum's film, Reel 0 (`src/film/interregnum.ts`), plays as such
+  a game begins. Every film's music is now composed in `src/film/score.ts` (its own key, mode,
+  melody, chords, arpeggios, bass and instruments) and played by `cue.ts` (new instruments and a
+  reverb; an analog sequencer, a metallic clank in an uneven pulse and a gliding lead in the darker
+  films). No rule changed. DEV-NOTES ("The films' music") says how to write a score and measure it.
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
@@ -253,8 +262,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#53 (gone senders' answers, stored matter, the governor in the Systems window, events by technology, 31 Oct) | the same | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-CHw5-wl7.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#54 (the Twilight Interregnum, offered at /next/ only, 1 Nov), `32a9c40` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-C2wy549U.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order

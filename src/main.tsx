@@ -29,6 +29,7 @@ import { colonies, ownColony } from './game/sim/util';
 import { hashSeed } from './game/rng';
 import { FILMS, type FilmArgs, type FilmId, type FilmQuality } from './film/films';
 import { FilmPlayer, askPainter } from './film/player';
+import { cueOscillators, renderCue } from './film/cue';
 import type { PaintJob } from './film/paintWorker';
 
 const stage = document.getElementById('stage')!;
@@ -473,6 +474,21 @@ window.__stel = {
   music: () => music,
   /** The sound's graph (the films' check: the music's gain under a film). */
   audio: () => audio(),
+  /** How many oscillators a film's music makes in all, at the quality the settings ask for (the films' check counts them as they come). */
+  cueOscillators: (id: FilmId, fate?: string) => cueOscillators(id, fate, settings.value.quality),
+  /** A film's music rendered offline, measured: its peak and its loudness (RMS), in dBFS, and its length (s). */
+  async cueLevels(id: FilmId, fate?: string) {
+    const secs = (FILMS[id].beats * 60) / FILMS[id].bpm + 1.5;
+    const b = await renderCue(id, secs, 24000, fate);
+    let sum = 0;
+    let peak = 0;
+    for (let c = 0; c < b.numberOfChannels; c++)
+      for (const x of b.getChannelData(c)) {
+        sum += x * x;
+        peak = Math.max(peak, Math.abs(x));
+      }
+    return { peak: 20 * Math.log10(peak || 1e-9), rms: 20 * Math.log10(Math.sqrt(sum / (b.length * b.numberOfChannels)) || 1e-9), secs: b.length / 24000 };
+  },
   /** Set the music's and the sounds' volumes, 0..1, as the settings' sliders do (for this page only). */
   setVolumes: (m: number, s: number) => setVolumes(m, s),
   /** Play one of the interface's sounds. */

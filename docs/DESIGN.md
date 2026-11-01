@@ -302,7 +302,9 @@ and one or two blue giants (supernovae within tens of millions of years) burn am
 thins by the logarithm of time, and Gas Scoops bring it in near a nebula. Between the old stars'
 deaths (η ≈ 13.1) and the last stars' births (η ≈ 13.9) the galaxy is dim: the interregnum of its
 name. **The Last Gas** hands over to the Dusk, destroying nothing; the Dusk and every age after it
-play as ever.
+play as ever. Such a game opens with a film of its own (Reel 0, warm and a little wistful): the
+galaxy alone, the last other galaxies and the afterglow fading; the heavier red dwarfs going and
+new stars forming; a nebula lighting a young star; our star and our young world.
 
 ---
 
@@ -522,7 +524,12 @@ stop them from talking.
   game ends, every frame drawn by code on one canvas from its moment alone. Each is a few composed
   scenes cut on the beat: painted stars, worlds and holes, diagrams that ink themselves in, slow
   camera moves, what is too cold to see by its faint heat, and the physics labelled with whose it
-  is; the game's own words as text over it, and a cue made as it plays. A system just charted is
+  is; the game's own words as text over it, and a cue made as it plays. Since 1 Nov each film's
+  music is its own (`src/film/score.ts`): its key and mode, a melody of its own stated and varied
+  over its scenes, chords on its cuts, arpeggios, a bass, its instruments (pads, a choir, flute,
+  horn, harp, bell and others, built from oscillators and noise, in a room of their own), with a
+  bit of Terminator 1's synth energy (the player's words) in the darker ones: an analog
+  sequencer's bass, a metallic clank in an uneven pulse, a gliding lead. A system just charted is
   shown by a flight of the camera (**the survey reveal**; since 21 Oct as the player pictured it,
   from Endless Space 2): a ring of light leaves the star, then the camera flies to each world in
   turn, close and half in its star's light, while a line of light sweeps it from a silhouette to

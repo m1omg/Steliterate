@@ -4,7 +4,9 @@
 // their sleepers with them, until it is gone; leptonic structures never flow; one awake keeper
 // keeps everything. Minds that all think slower than the flow keep watchers awake at half again
 // their upkeep; sleeping costs 0.3 of upkeep, not 0.1, unless The Long Watch; sleeping neighbours
-// fade twice as fast. With protons decaying there is no flow: matter is gone long before.
+// fade twice as fast. With protons decaying there is no flow: matter is gone long before. Its
+// forecast stands only once it is within the forecasts' horizon (1 Nov: a game begun with the fate
+// chosen showed it from turn 1).
 // (In games whose neighbours sleep, civsAsleep: a sleeping neighbour fading is the neighbours'
 // light simulation; unit/others checks the neighbours as civilizations of their own.)
 import { autoPlay } from '../../../src/game/auto';
@@ -17,6 +19,7 @@ import { turnStep } from '../../../src/game/sim/flare';
 import { livedShare } from '../../../src/game/sim/flare';
 import { updateSurvivors } from '../../../src/game/sim/survivors';
 import { FLOW_ETA, flowing, keeping } from '../../../src/game/sim/flow';
+import { updateForecasts } from '../../../src/game/sim/forecast';
 import { logTurnLength } from '../../../src/game/eras';
 import type { Body, Colony, GameState } from '../../../src/game/types';
 import { check, done } from '../lib';
@@ -49,6 +52,13 @@ let seed = 1000;
 let s = toFlow(seed);
 while (s.civ.outcome && seed < 1009) s = toFlow(++seed);
 check(!s.civ.outcome && s.eta < FLOW_ETA && s.flags.flowed === undefined, `stable, η ${s.eta.toFixed(1)}: the flow has not come (seed ${seed})`);
+// its forecast: not from the start of a game begun with the fate chosen, but once it is near
+{
+  const fresh = newGame({ seed, length: 'standard', survivors: 3, difficulty: 'standard', protonFate: 'stable', civsAsleep: true });
+  updateForecasts(fresh);
+  updateForecasts(s);
+  check(!fresh.civ.forecasts.some((f) => f.kind === 'flow') && s.civ.forecasts.some((f) => f.kind === 'flow'), `the Long Flow is forecast at η ${s.eta.toFixed(1)}, not at the start of a game begun stable (η ${fresh.eta.toFixed(1)})`);
+}
 s.civ.pending.length = 0;
 // with the Tide (the autoplayer may have slowed down, and a slow turn here outlasts the flow)
 s.civ.pace = 0;
