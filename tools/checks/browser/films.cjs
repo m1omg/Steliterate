@@ -11,7 +11,10 @@
 // the page's, frame by frame (not in the audio clock's steps), and its vignette and grain are
 // layers of the page, or in the canvas where that draws quicker. The project check (15 Oct): the
 // grain in the canvas holds still when asked, as the page's does, and a film the painter thread
-// cannot lay out it says so, for the page to paint.
+// cannot lay out it says so, for the page to paint. The films' music (1 Nov, its own score for each
+// film): its voices counted from the score, not a number written here; rendered offline, no film's
+// sound clips and each is about as loud as the others; and a game begun in the Twilight
+// Interregnum plays that age's own film before its words.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('films', { films: true });
@@ -101,9 +104,10 @@ run(async () => {
     return { holding: m.holding, duck: window.__stel.audio()?.duck.gain.value ?? 0, vol: L?.track?.el.volume ?? 0, playing: !!L?.track && !L.track.el.paused, voices: window.__voices, t: window.__stel.filmTimes().at(-1)?.[0] ?? 0 };
   });
   check(under.holding && under.duck < 0.02 && under.vol < 0.01 && !under.playing, `the music is silent and paused under the film (gain ${under.duck.toFixed(3)}, volume ${under.vol.toFixed(3)}, a recording ${under.playing ? 'still playing' : 'paused'})`);
-  // its voices come as they are due, not all at once (all at once were 119): fewer than all of them
-  // so far, and more a few seconds on (27 Oct: read by the film's own clock, which can be well past
-  // its second second by now on a page that starts it before this sees it begin)
+  // its voices come as they are due, not all at once: fewer than all of them so far, and more a few
+  // seconds on (27 Oct: read by the film's own clock, which can be well past its second second by
+  // now on a page that starts it before this sees it begin; 1 Nov: how many it makes in all is read
+  // from its score, at the quality the settings ask for)
   // the narration comes in as it plays (the Long Dusk's first line at beat 2.5, 1.7 s in; the film's
   // first frame can take 2 to 3 s here while its paintings are made, so wait for it, up to 10 s)
   let later = [];
@@ -113,8 +117,8 @@ run(async () => {
   }
   check(later.length >= 1, `the narration comes in as it plays (${later.join(' | ')})`);
   await page.waitForFunction((t) => (window.__stel.filmTimes().at(-1)?.[0] ?? 0) > t + 3, under.t, { timeout: 20000, polling: 100 }).catch(() => {});
-  const on = await page.evaluate(() => ({ voices: window.__voices, t: window.__stel.filmTimes().at(-1)?.[0] ?? 0 }));
-  check(under.voices > 0 && under.voices < 119 && on.voices > under.voices, `its sound makes its voices as they come: ${under.voices} by ${under.t.toFixed(1)} s, ${on.voices} by ${on.t.toFixed(1)} s, of the 119 it makes`);
+  const on = await page.evaluate(() => ({ voices: window.__voices, t: window.__stel.filmTimes().at(-1)?.[0] ?? 0, all: window.__stel.cueOscillators('dusk') }));
+  check(under.voices > 0 && under.voices < on.all && on.voices > under.voices, `its sound makes its voices as they come: ${under.voices} by ${under.t.toFixed(1)} s, ${on.voices} by ${on.t.toFixed(1)} s, of the ${on.all} it makes`);
   await page.keyboard.press('Enter');
   await page.waitForTimeout(600);
   const after = await page.evaluate(() => ({ film: !!document.querySelector('.film-screen'), intro: !!document.querySelector('.crossing[role="dialog"]'), turn: window.__stel.state()?.turn }));
@@ -203,5 +207,31 @@ run(async () => {
   await page.waitForTimeout(900);
   const off = await page.evaluate(() => ({ film: !!document.querySelector('.film-screen'), intro: !!document.querySelector('.crossing[role="dialog"]') }));
   check(!off.film && off.intro, 'with films off a new game goes straight to the introduction');
+  // the music, rendered offline: no film's clips, and each is about as loud as the others (the
+  // Supernova's and the Last Horizon's detonations peak highest)
+  const levels = [];
+  for (const id of ['interregnum', 'dusk', 'supernova', 'end_hunger', 'end_silence']) levels.push([id, await page.evaluate((x) => window.__stel.cueLevels(x), id)]);
+  check(
+    levels.every(([, l]) => l.peak < -0.1 && l.rms > -23 && l.rms < -15),
+    `the films' music neither clips nor strays in loudness: ${levels.map(([id, l]) => `${id} peak ${l.peak.toFixed(1)}, RMS ${l.rms.toFixed(1)} dBFS`).join('; ')}`,
+  );
+  // a game begun in the Twilight Interregnum: that age's own film, then its words
+  await page.reload();
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.__stel.films(true));
+  await page.locator('.menu .btn', { hasText: /^New game$/ }).click();
+  await page.waitForTimeout(500);
+  await page.locator('.field', { hasText: /^Begin/ }).locator('.btn', { hasText: 'In the Twilight Interregnum' }).click();
+  await page.locator('.btn', { hasText: /^Begin$/ }).first().click();
+  const inter = await page
+    .waitForFunction(() => document.querySelector('.film-screen')?.getAttribute('aria-label') ?? '', null, { timeout: 20000, polling: 100 })
+    .then((h) => h.jsonValue(), () => '');
+  await page.waitForTimeout(2500);
+  await ck.shot('film-interregnum.png');
+  const words = await page.evaluate(() => [...document.querySelectorAll('.film-screen .film-line')].filter((x) => !x.hidden).map((x) => x.textContent).join(' | '));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(800);
+  const then = await page.evaluate(() => document.querySelector('.crossing[role="dialog"]')?.textContent ?? '');
+  check(inter === 'Film: The Twilight Interregnum' && /REEL 0/.test(words) && /The Twilight Interregnum/.test(then) && /about a fifth of the Sun’s mass/.test(then), `a game begun in the Twilight Interregnum plays its own film (${inter}: ${words.slice(0, 60)}), then its words`);
   await finish('FILMS', ck);
 });

@@ -1063,3 +1063,79 @@ export function paintLens(bg: HTMLCanvasElement, x: number, y: number, rs: numbe
     return out;
   });
 }
+
+// ------------------------------------------------------------------ a nebula
+
+/**
+ * A star-forming nebula, `w` × `h`: glowing hydrogen (rose, its Hα) and, where young stars light
+ * it, bluer gas (doubly ionised oxygen, and dust scattering their light), in billows bent out of
+ * noise; dark lanes and globules of dust across it; a few stars already born in it. Densest round
+ * `knot` (fractions of the frame), where a star is about to form. Painted small and laid on
+ * smooth, the stars sharp over it.
+ */
+export function paintNebula(w: number, h: number, o: { seed: number; n: number; scale: number; knot: readonly [number, number] }): Lazy<HTMLCanvasElement> {
+  return new Lazy(function* () {
+    const cv = canvas(w, h);
+    const g = cv.getContext('2d')!;
+    const sw = Math.max(32, Math.round(w / 4));
+    const sh = Math.max(32, Math.round(h / 4));
+    const small = canvas(sw, sh);
+    const sg = small.getContext('2d')!;
+    const img = sg.createImageData(sw, sh);
+    const gas = new Perlin(o.seed);
+    const warp = new Perlin(o.seed + 3);
+    const dust = new Perlin(o.seed + 7);
+    const asp = w / h;
+    const [kx, ky] = o.knot;
+    for (let j = 0; j < sh; j++) {
+      for (let i = 0; i < sw; i++) {
+        const x = (i / sw) * asp;
+        const y = j / sh;
+        const wx = x + 0.35 * warp.fbm(x * 2.2, y * 2.2, 0.3, 4);
+        const wy = y + 0.35 * warp.fbm(x * 2.2 + 7, y * 2.2, 0.3, 4);
+        // the gas: billows, brighter toward the knot and the middle, fading out before the edges
+        const d2 = (x - kx * asp) ** 2 + (y - ky) ** 2;
+        const edge = smooth(0, 0.22, Math.min(i / sw, 1 - i / sw, j / sh, 1 - j / sh) * 2);
+        const bill = clamp01(gas.fbm(wx * 3, wy * 3, 1.1, 6) * 0.9 + 0.45);
+        const dense = (Math.pow(bill, 1.8) + 0.9 * Math.exp(-d2 / 0.03)) * edge;
+        // the blue where the young stars' light falls: one side of it
+        const blue = smooth(-0.2, 0.5, warp.fbm(wx * 1.3 + 3, wy * 1.3 - 2, 2.2, 3) + (kx * asp - x) * 0.6);
+        // the dust: dark lanes, and a dark globule at the knot until it lights
+        const lane = smooth(0.08, 0.32, dust.fbm(wx * 5, wy * 5, 3.3, 5)) * 0.85;
+        const glob = Math.exp(-d2 / 0.0016) * 0.75;
+        const v = dense * (1 - lane) * (1 - glob);
+        const k = (j * sw + i) * 4;
+        img.data[k] = 255 * mix(1, 0.42, blue * 0.8);
+        img.data[k + 1] = 255 * mix(0.36, 0.62, blue);
+        img.data[k + 2] = 255 * mix(0.46, 1, blue);
+        img.data[k + 3] = Math.min(255, 255 * v * 0.7);
+      }
+      if (j % 16 === 15) yield;
+    }
+    sg.putImageData(img, 0, 0);
+    g.imageSmoothingEnabled = true;
+    g.drawImage(small, 0, 0, w, h);
+    // the stars already born in it: young, many blue-white, clustered toward the gas
+    const rng = new Rng(o.seed + 11);
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < o.n; i++) {
+      const near = rng.chance(0.6);
+      const x = near ? (kx + (rng.next() + rng.next() - 1) * 0.35) * w : rng.next() * w;
+      const y = near ? (ky + (rng.next() + rng.next() - 1) * 0.35) * h : rng.next() * h;
+      const b = Math.pow(rng.next(), 4);
+      const T = rng.chance(0.35) ? rng.range(8000, 20000) : rng.range(3200, 6500);
+      const r = (0.7 + b * 4) * o.scale;
+      if (r < 1.3) {
+        g.fillStyle = css(kelvin(T), 0.3 + b * 2);
+        g.fillRect(x, y, Math.max(1, o.scale), Math.max(1, o.scale));
+      } else {
+        const s = dotSprite(r * 2.2);
+        g.globalAlpha = Math.min(1, 0.4 + b * 1.4);
+        g.drawImage(tint(s, kelvin(T)), x - s.width / 2, y - s.height / 2);
+        g.globalAlpha = 1;
+      }
+      if (i % 400 === 399) yield;
+    }
+    return cv;
+  });
+}

@@ -111,7 +111,7 @@ export const INTERREGNUM: EraDef = {
   accentSoft: '#ffd89c',
   neon: '#6fe0b4',
   intro:
-    'A trillion years after the first light, our galaxy is alone. Every other galaxy has slipped past the horizon, and the afterglow of the beginning has faded beyond any instrument. Most of its stars are red dwarfs, and the oldest of them are coming to the end of their fuel, the heaviest first; the gas to make new ones is thinning. Your world circles one of the heavier ones, a quarter of the Sun’s mass, near the end of its life. It will not see the next trillion years.',
+    'A trillion years after the first light, our galaxy is alone. Every other galaxy has slipped past the horizon, and the afterglow of the beginning has faded beyond any instrument. Most of its stars are red dwarfs, and the oldest of them are coming to the end of their fuel, the heaviest first; the gas to make new ones is thinning. Your world circles one of the heavier ones, about a fifth of the Sun’s mass, near the end of its life. It will not see the next trillion years.',
 };
 
 export const ERA_BY_ID: Record<EraId, EraDef> = Object.fromEntries([INTERREGNUM, ...ERAS].map((e) => [e.id, e])) as Record<EraId, EraDef>;

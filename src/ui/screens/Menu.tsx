@@ -118,9 +118,8 @@ export function Setup() {
     const g = newGame(st);
     if (guide) startTutorial(g);
     startLoaded(g);
-    // the Long Dusk's film, then the age's own words; the Twilight Interregnum has its words only
-    if (g.settings.interregnum) modal.value = { kind: 'era_intro' };
-    else playFilm('dusk', { kind: 'era_intro' });
+    // the age's film (the Long Dusk's, or the Twilight Interregnum's), then its own words
+    playFilm(g.settings.interregnum ? 'interregnum' : 'dusk', { kind: 'era_intro' });
   };
   return (
     <div class="menu">

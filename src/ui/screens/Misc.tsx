@@ -126,7 +126,8 @@ function FilmsSeen() {
       ) : (
         <div class="col" style={{ gap: '6px' }}>
           {(Object.keys(FILMS) as FilmId[])
-            .filter((id) => seen.includes(id))
+            // (the Twilight Interregnum's only where it is offered, or in a game begun in it)
+            .filter((id) => seen.includes(id) && (id !== 'interregnum' || PREVIEW || !!game.value?.settings.interregnum))
             .map((id) => (
               <button key={id} class="btn" onClick={() => (modal.value = { kind: 'film', id, args: { fate: game.value ? fateOf(game.value) : undefined, heartMass: heartMassOf(game.value) }, then: { kind: 'codex', topic: 'films' } })}>
                 <Icon name="system" /> {FILMS[id].name}
