@@ -1,7 +1,8 @@
 import { ANOMALIES } from '../game/data/events';
 import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, boilingAway, isStarLike, steamWorld } from '../game/physics';
 import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
-import type { Body, BodyKind, Focus, GameState, PrimaryKind, SpareWork, StarSystem } from '../game/types';
+import type { Body, BodyKind, Focus, GameState, Primary, PrimaryKind, SpareWork, StarSystem } from '../game/types';
+import { youngStarName } from '../game/interregnum';
 import { SPARE_RATE, TEND_SHARE, salvageIsMatter } from '../game/sim/spare';
 import type { IconName } from './icons';
 import { kelvin } from './fmt';
@@ -22,13 +23,22 @@ export const PRIMARY_NAME: Record<PrimaryKind, string> = {
   dark_star: 'The Last Star',
   rogue: 'Starless',
   void: 'No star left',
+  nebula: 'Nebula',
+  young_star: 'Young star',
 };
+
+/** A star's name by its kind, and a young star's by its class too: "Yellow dwarf (G)". */
+export function primaryName(p: Primary): string {
+  return p.kind === 'young_star' ? youngStarName(p) : PRIMARY_NAME[p.kind];
+}
 
 export function primaryIcon(k: PrimaryKind): IconName {
   switch (k) {
     case 'red_dwarf':
     case 'collision_star':
       return 'red_dwarf';
+    case 'young_star':
+      return 'white_dwarf';
     case 'blue_dwarf':
     case 'white_dwarf':
     case 'black_dwarf':

@@ -22,6 +22,10 @@ interface Step {
   done?: (s: GameState) => boolean;
 }
 
+/** The guide's first words in a game begun in the Twilight Interregnum. */
+const INTERREGNUM_OPENING =
+  'You lead a people on a young world, ninety trillion years before the end of the age of stars. Your star is old, and it will not last; in time no star will. The universe itself is the enemy: stars go out, matter decays, black holes evaporate. Your aim is to keep going for as long as anything can. This guide covers the first turns; you can end it at any time.';
+
 const STEPS: Step[] = [
   {
     title: 'The end of the universe',
@@ -109,7 +113,9 @@ export function Tutorial({ s }: { s: GameState }) {
   void selection.value;
   const step = s.civ.flags.tut;
   const base = step !== undefined ? STEPS[step] : undefined;
-  const cur = base?.phone && isPhone() ? { ...base, target: base.phone.target ?? base.target, text: base.phone.text } : base;
+  const shown = base?.phone && isPhone() ? { ...base, target: base.phone.target ?? base.target, text: base.phone.text } : base;
+  // a game begun in the Twilight Interregnum: its own first words (the rest of the guide is the same)
+  const cur = shown && step === 0 && s.settings.interregnum ? { ...shown, text: INTERREGNUM_OPENING } : shown;
   const ring = useRef<HTMLDivElement>(null);
   // the magnifier mode: each step takes the focus as it shows
   const head = useRef<HTMLDivElement>(null);

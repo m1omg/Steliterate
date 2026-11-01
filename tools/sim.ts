@@ -1,6 +1,7 @@
 // Headless balance harness: autoplay whole games and report how far each strategy gets.
 declare const process: { argv: string[] };
-// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [--asleep] [--war=N] [-v]
+// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [--asleep] [--war=N] [--interregnum] [-v]
+// --interregnum: games begun in the Twilight Interregnum, at 10¹² years (interregnum.ts).
 // Game g uses seed 1000 + g·7919; --from=N starts at game N, so runs can be split and run in parallel.
 // --asleep: the neighbours as they were before the new version, simulated lightly (civsAsleep).
 // --war=N: at turn N we go to war on our nearest neighbour that plays a game of its own, cause or
@@ -40,6 +41,7 @@ const verbose = process.argv.includes('-v');
 const from = Number(process.argv.find((a) => a.startsWith('--from='))?.slice(7) ?? 0);
 const asleep = process.argv.includes('--asleep');
 const warAt = Number(process.argv.find((a) => a.startsWith('--war='))?.slice(6) ?? 0);
+const interregnum = process.argv.includes('--interregnum');
 
 for (const strategy of strategies) {
   console.log(`\n=== ${strategy} · ${length} ===`);
@@ -47,7 +49,7 @@ for (const strategy of strategies) {
     const seed = 1000 + g * 7919;
     const difficulty = (process.argv.find((a) => a.startsWith('--diff='))?.slice(7) ?? 'standard') as 'gentle' | 'standard' | 'harsh';
     const protonFate = (process.argv.find((a) => a.startsWith('--fate='))?.slice(7) ?? 'unknown') as ProtonFate;
-    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate, ...(asleep ? { civsAsleep: true } : {}) });
+    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate, ...(asleep ? { civsAsleep: true } : {}), ...(interregnum ? { interregnum: true } : {}) });
     const eraTurns: Record<string, number> = {};
     let crossings = '';
     const t0 = Date.now();

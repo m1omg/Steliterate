@@ -28,7 +28,7 @@ import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, Survivor,
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
-import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
+import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, NEST_TIP, SWARM_TIP, primaryName } from '../labels';
 import { FormWorkChip } from '../FormWorkChip';
 import { act, engine, game, hoverStar, modal, notify, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
@@ -415,7 +415,7 @@ export function SystemsModal({ s, tab, send }: { s: GameState; tab?: SystemsTab;
                 <input type="checkbox" checked={cs.every((c) => marked.includes(c.id))} aria-label={`Mark every settlement at ${sys.name}`} onChange={(e) => markAll(cs.map((c) => c.id), (e.target as HTMLInputElement).checked)} />
               </label>
               <span class="grow">
-                {sys.name} <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>{PRIMARY_NAME[sys.primary.kind]}</span>
+                {sys.name} <span class="faint" style={{ letterSpacing: 0, textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }}>{primaryName(sys.primary)}</span>
                 <StateChip s={s} sys={sys} L={L} style={{ textTransform: 'none', fontFamily: 'var(--f-ui)', fontWeight: 400 }} />
               </span>
               {sort && (
@@ -532,7 +532,7 @@ function AfarList({ s, send }: { s: GameState; send?: Fleet }) {
         <div key={sys.id} class="list-item world-row" {...pressable(() => goToSystem(sys.id))}>
           <Icon name={primaryIcon(sys.primary.kind)} />
           <span class="grow">
-            {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
+            {sys.name} <span class="faint">{primaryName(sys.primary)}</span>
             <StateChip s={s} sys={sys} L={L} />
             {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
             {swarmSeenAt(s, sys.id) && <span class="chip danger" style={{ marginLeft: '6px' }} data-tip={SWARM_TIP}>swarm</span>}
@@ -676,7 +676,8 @@ function starState(s: GameState, sys: StarSystem, L: number): { word: string; la
   const k = sys.primary.kind;
   const say = (word: string, tone = '') => ({ word, label, tone });
   if (/rekindled|raining onto it/.test(label)) return say('rekindled', 'good');
-  if (k === 'collision_star' || k === 'helium_star' || k === 'helium_giant' || k === 'dark_star') {
+  if (k === 'nebula') return say('forming', 'good');
+  if (k === 'collision_star' || k === 'helium_star' || k === 'helium_giant' || k === 'dark_star' || k === 'young_star') {
     const dies = sys.primary.diesAt ?? Infinity;
     return dies <= s.years ? say('out') : isFinite(L) && dies <= s.years + L ? say('goes out this turn', 'warn') : say('burning', 'good');
   }
@@ -899,7 +900,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
           {systems.map(({ sys, ly, worlds, best: top, room, living, settled, finds, sites }) => (
             <div key={sys.id} class="list-item world-row" style={{ flexWrap: 'wrap' }} {...pressable(() => goToSystem(sys.id))}>
               <span class="grow">
-                {sys.name} <span class="faint">{PRIMARY_NAME[sys.primary.kind]}</span>
+                {sys.name} <span class="faint">{primaryName(sys.primary)}</span>
                 <StateChip s={s} sys={sys} L={L} />
                 {isBeacon(s, sys) && <span class="chip boon" style={{ marginLeft: '6px' }} data-tip={BEACON_TIP}>collision star</span>}
                 {settled && <span class="chip neon" style={{ marginLeft: '6px' }}>settled</span>}
@@ -936,7 +937,7 @@ function WorldsList({ s, send }: { s: GameState; send?: Fleet }) {
                 ))}
                 <div class="faint" style={{ fontSize: '12.5px' }}>
                   {sys.name}
-                  {sort === 'type' ? ` (${PRIMARY_NAME[sys.primary.kind]})` : ''} · {dist(ly)}
+                  {sort === 'type' ? ` (${primaryName(sys.primary)})` : ''} · {dist(ly)}
                   {c ? ` · ${c.day !== undefined && kelvin(c.night!) !== kelvin(c.day) ? `${kelvin(c.night!)} to ${kelvin(c.day)}` : kelvin(c.mean)}` : ''}
                   {b.water !== undefined && b.kind !== 'gas_giant' ? ` · ${Math.round(b.water * 100)}% water` : ''}
                 </div>
@@ -1058,7 +1059,7 @@ function BeaconsList({ s, send }: { s: GameState; send?: Fleet }) {
   const ours = new Set(colonies(s).map((c) => c.systemId));
   const L = turnStep(s).turnLength;
   const stars = newStarsOnMap(s);
-  const kindOf = (sys: StarSystem) => (sys.primary.kind === 'collision_star' ? null : <span class="faint"> · {PRIMARY_NAME[sys.primary.kind]}</span>);
+  const kindOf = (sys: StarSystem) => (sys.primary.kind === 'collision_star' ? null : <span class="faint"> · {primaryName(sys.primary)}</span>);
   const burning = stars
     .filter((x) => newStarLit(s, x))
     .map((sys) => {

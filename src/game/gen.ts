@@ -167,7 +167,7 @@ interface BodyTemplate {
   massEarth: number;
 }
 
-function bodyTemplates(rng: Rng, primary: Primary): BodyTemplate[] {
+export function bodyTemplates(rng: Rng, primary: Primary): BodyTemplate[] {
   const out: BodyTemplate[] = [];
   const add = (kind: BodyKind, aAU: number, massEarth: number) => out.push({ kind, aAU, massEarth });
   switch (primary.kind) {
@@ -230,7 +230,7 @@ function bodyTemplates(rng: Rng, primary: Primary): BodyTemplate[] {
   return out;
 }
 
-function massFor(rng: Rng, kind: BodyKind): number {
+export function massFor(rng: Rng, kind: BodyKind): number {
   switch (kind) {
     case 'gas_giant':
       return rng.range(60, 400);
@@ -251,7 +251,7 @@ function massFor(rng: Rng, kind: BodyKind): number {
   }
 }
 
-function displaySize(kind: BodyKind, massEarth: number): number {
+export function displaySize(kind: BodyKind, massEarth: number): number {
   switch (kind) {
     case 'gas_giant':
       return 3.4 + Math.min(1.4, massEarth / 300);
@@ -266,7 +266,7 @@ function displaySize(kind: BodyKind, massEarth: number): number {
   }
 }
 
-function bodyStats(rng: Rng, kind: BodyKind): Pick<Body, 'habitability' | 'vitality' | 'decline' | 'coreHeat' | 'richness' | 'hydrogen' | 'water'> {
+export function bodyStats(rng: Rng, kind: BodyKind): Pick<Body, 'habitability' | 'vitality' | 'decline' | 'coreHeat' | 'richness' | 'hydrogen' | 'water'> {
   const s = { habitability: 0, vitality: 0, decline: 0, coreHeat: 0, richness: 1, hydrogen: 0, water: 0 };
   switch (kind) {
     case 'eyeball':

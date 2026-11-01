@@ -281,7 +281,7 @@ export class Engine {
     const era = ERA_BY_ID[state.era];
     this.galaxy.setPalette(era.accent, era.neon);
     this.system.neon.set(era.neon);
-    this.tintGoal.set(state.era === 'dusk' ? '#fff0e2' : state.era === 'degenerate' ? '#e6eeff' : state.era === 'blackhole' ? '#ece6ff' : '#e2e4e8');
+    this.tintGoal.set(state.era === 'interregnum' ? '#fff3dc' : state.era === 'dusk' ? '#fff0e2' : state.era === 'degenerate' ? '#e6eeff' : state.era === 'blackhole' ? '#ece6ff' : '#e2e4e8');
     this.post.finish.uniforms.uGrain.value = this.grain();
     this.galaxy.sync(state, this.now);
     if (this.view === 'system' && this.system.systemId) {

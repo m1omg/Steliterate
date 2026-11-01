@@ -1,6 +1,7 @@
 import { STRUCTURE_BY_ID } from './data/structures';
 import { defaultWater, hawkingTime, inspiralTime } from './gen';
-import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarSystem } from './types';
+import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarClass, StarSystem } from './types';
+import { YOUNG_CLASSES, formWorlds, formsAtBirth, youngStarName } from './interregnum';
 import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from './fate';
 import { ERA_BY_ID, tideTurnsAt } from './eras';
 import { hashSeed } from './rng';
@@ -133,6 +134,8 @@ const logBetween = ([lo, hi]: [number, number], v: number) => Math.pow(10, Math.
  * own, so with no random draw: the same in any game, and generation draws as it always did.
  */
 export function formedAt(p: Primary): number {
+  // where the Twilight Interregnum set it (interregnum.ts): a game begun at 10¹² years
+  if (p.formed !== undefined) return p.formed;
   const u = (hashSeed(`formed:${p.kind === 'brown_dwarf' ? 'bd' : 'wd'}:${p.mass}`) % 1000003) / 1000003;
   const start = ERA_BY_ID.dusk.startYears;
   if (u < YOUNG_SHARE) return start - logBetween(p.kind === 'brown_dwarf' ? YOUNG_BROWN_AGES : YOUNG_WHITE_AGES, u / YOUNG_SHARE);
@@ -409,6 +412,11 @@ export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0
       return 6500;
     case 'dark_star':
       return 4200;
+    case 'young_star':
+      return YOUNG_CLASSES[p.cls ?? 'G'].k;
+    case 'nebula':
+      // a dense, dark knot of molecular gas, about 10 K inside (warmer at its edges, in starlight)
+      return 12;
     case 'white_dwarf':
     case 'black_dwarf':
       // its own cooling (one law in every age); dark matter falling into it while the halo lasts,
@@ -551,6 +559,20 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       const light = era === 'dusk' ? 0.1 : era === 'degenerate' ? 0.25 * pulsarBeam(era, years) * (0.4 + 0.6 * gfe) : 0;
       return { light, label: light > 0 ? 'Neutron star, slowly spinning down' : 'Neutron star, spun down and cold', temperatureK: primaryTemperature(p, years, era, decay, curvatureWarmth(state), drawn), alive: null };
     }
+    case 'nebula':
+      return { light: 0, label: p.future?.kind === 'young_star' ? 'Nebula: a dense knot of the galaxy’s gas, collapsing toward a bright young star' : 'Nebula: a dense knot of the galaxy’s gas, where a star will form', temperatureK: primaryTemperature(p, years, era, 0, 0, drawn), alive: null };
+    case 'young_star': {
+      // a star of the last star formation, brighter than any red dwarf (in the Dusk's units,
+      // compressed as a helium star's are): its share of the turn, as a new star's
+      const born = p.bornAt ?? -Infinity;
+      const dies = p.diesAt ?? Infinity;
+      const overlap = Math.max(0, Math.min(dies, years + L) - Math.max(born, years));
+      const flash = state.civ?.flags.star_flash === dies && dies > years;
+      const frac = flash ? 1 : L > 0 ? Math.min(1, overlap / L) : 1;
+      const name = youngStarName(p);
+      const label = p.cls === 'B' ? `${name}: a massive young star, burning through its fuel in a few tens of millions of years` : p.cls === 'F' || p.cls === 'A' ? `${name}: a young star, bright and brief, rare this late` : `${name}: a young star of the last star formation`;
+      return { light: p.lum * frac, label, temperatureK: primaryTemperature(p, years, era, 0, 0, drawn), alive: [Math.max(born, 0), dies] };
+    }
     case 'dark_star': {
       const born = p.bornAt ?? years;
       const dies = p.diesAt ?? years;
@@ -642,8 +664,18 @@ export interface EvolutionNote {
     | 'faded'
     | 'blackdwarf_sn'
     | 'collapse'
-    | 'flash';
+    | 'flash'
+    // the Twilight Interregnum: a star lit from a nebula; a young star's death, or a blue giant's
+    | 'born'
+    | 'young_death'
+    | 'core_collapse';
   bodyId?: string;
+  /** (born) when it lit */
+  bornAt?: number;
+  /** (young_death, core_collapse) the young star's class */
+  cls?: StarClass;
+  /** (core_collapse) the living worlds whose air its radiation stripped */
+  hurt?: string[];
   /** (boiled) inside a giant's own radius, rather than boiled by its light */
   swallowed?: boolean;
   /** (evaporated) the worlds the hole still held until its final burst set them loose */
@@ -673,6 +705,66 @@ function briefStarLight(p: Primary, turn: number): number | undefined {
   return life > 0 && life < turn ? NEW_STAR_SUNS[p.kind] * SUN_W * life * YEAR_S : undefined;
 }
 
+/**
+ * How far a supernova's radiation strips the air of living worlds (light-years): within about 25 to
+ * 50 ly one would thin even the Earth's ozone badly (Gehrels et al. 2003, ApJ 585, 1169; Brunton
+ * et al. 2023, ApJ 947, 42, with its X-rays out to some 150 ly).
+ */
+export const SUPERNOVA_LY = 30;
+
+/**
+ * The Twilight Interregnum's stars (interregnum.ts), between `from` and `to`. A nebula lights as
+ * its star at `bornAt`, with its worlds (its young star's close worlds wait for its white dwarf, a
+ * blue giant's for its remnant). A young star leaves its remnant at `diesAt`: an orange, yellow or
+ * white one swells into a giant, sheds its outer layers and leaves a white dwarf (a bend: at once;
+ * its worlds are far enough out to come through), and its close worlds come in; a blue giant
+ * explodes, a supernova, leaving a neutron star or a black hole with its worlds. Both can fall in
+ * one long turn, the star then lit and gone within it: all its light a flash for Burst Catchers.
+ */
+function interregnumStars(state: GameState, sys: StarSystem, from: number, to: number, notes: EvolutionNote[]) {
+  const formed: Body[] = [];
+  const p0 = sys.primary;
+  if (p0.kind === 'nebula' && p0.future && p0.bornAt !== undefined && to >= p0.bornAt) {
+    const star = p0.future;
+    sys.primary = star;
+    formed.push(...formWorlds(state, sys, formsAtBirth(star)));
+    // what we knew of a cloud says nothing of the worlds now forming in it
+    for (const v of Object.values(state.civs)) if (v.known[sys.id] === 2) v.known[sys.id] = 1;
+    notes.push({ systemId: sys.id, kind: 'born', bornAt: p0.bornAt, ...(star.kind === 'young_star' ? { cls: star.cls ?? 'G' } : {}) });
+    // (counted for The Last Gas's report: crossing.ts)
+    if (star.kind !== 'brown_dwarf') state.flags.ir_born = (state.flags.ir_born ?? 0) + 1;
+  }
+  const p = sys.primary;
+  if (p.kind === 'young_star' && p.future && p.diesAt !== undefined && to >= p.diesAt) {
+    const born = Math.max(from, p.bornAt ?? from);
+    const life = p.diesAt - born;
+    const briefJ = life > 0 && life < to - from ? YOUNG_CLASSES[p.cls ?? 'G'].suns * SUN_W * life * YEAR_S : undefined;
+    const cls = p.cls ?? 'G';
+    sys.primary = p.future;
+    formed.push(...formWorlds(state, sys));
+    // a supernova's radiation strips some of the air of every living world within SUPERNOVA_LY, but
+    // where a settlement's Flash Shelter (or its like) keeps its people and its life underground
+    const hurt: string[] = [];
+    if (cls === 'B') {
+      for (const b of Object.values(state.bodies)) {
+        const at = state.systems[b.systemId];
+        if (!at || b.dissolved || b.vitality <= 0 || !SURFACE_LIFE.includes(b.kind)) continue;
+        if (Math.hypot(at.phys.x - sys.phys.x, at.phys.y - sys.phys.y, at.phys.z - sys.phys.z) > SUPERNOVA_LY) continue;
+        const c = b.colonyId ? state.colonies[b.colonyId] : undefined;
+        if (c && flashSheltered(c, b)) continue;
+        b.vitality = Math.max(0.02, b.vitality - 0.3);
+        hurt.push(b.id);
+      }
+    }
+    notes.push({ systemId: sys.id, kind: cls === 'B' ? 'core_collapse' : 'young_death', cls, dies: p.diesAt, ...(briefJ ? { briefJ } : {}), ...(hurt.length ? { hurt } : {}) });
+    state.flags.ir_died = (state.flags.ir_died ?? 0) + 1;
+  }
+  if (formed.length) {
+    frozenFromTheStart(state, formed);
+    waterFromTheStart(state, formed);
+  }
+}
+
 /** Advance every primary and body to cosmic year `to` (from `from`). Returns what happened. */
 export function evolveUniverse(state: GameState, from: number, to: number, rand: () => number): EvolutionNote[] {
   const notes: EvolutionNote[] = [];
@@ -681,6 +773,8 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
   const systems = Object.values(state.systems);
   for (const sys of systems) {
     if (sys.gone) continue;
+    // the Twilight Interregnum: a nebula's star lights, a young star dies (as often as one turn holds)
+    if (sys.primary.kind === 'nebula' || sys.primary.kind === 'young_star') interregnumStars(state, sys, from, to, notes);
     const p = sys.primary;
     // an ember outside the galaxy has left its halo (cast out before this was kept, or by other means)
     if (sys.ejected && p.halo && p.kind === 'white_dwarf' && p.haloLeft === undefined) p.haloLeft = from;
@@ -690,6 +784,7 @@ export function evolveUniverse(state: GameState, from: number, to: number, rand:
       notes.push({ systemId: sys.id, kind: 'blue' });
     }
     if (p.kind === 'blue_dwarf' && p.whiteAt && to >= p.whiteAt) {
+      if (state.era === 'interregnum') state.flags.ir_died = (state.flags.ir_died ?? 0) + 1;
       p.kind = 'white_dwarf';
       p.mass = Math.max(0.08, p.mass * 0.95);
       p.halo = rand() < 0.6;
@@ -1259,11 +1354,13 @@ export function nextStellarChange(sys: StarSystem, years: number): { at: number;
   if (p.kind === 'blue_dwarf' && p.whiteAt && p.whiteAt > years) return { at: p.whiteAt, what: 'collapses into a white dwarf' };
   if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant' || p.kind === 'dark_star') && p.diesAt && p.diesAt > years) return { at: p.diesAt, what: 'burns out' };
   if ((p.kind === 'black_hole' || p.kind === 'smbh') && p.evaporateAt && p.evaporateAt > years) return { at: p.evaporateAt, what: 'evaporates in a final burst of Hawking radiation' };
+  if (p.kind === 'nebula' && p.bornAt !== undefined && p.bornAt > years) return { at: p.bornAt, what: p.future?.kind === 'young_star' ? 'collapses into a bright young star' : p.future?.kind === 'brown_dwarf' ? 'collapses into a brown dwarf' : 'collapses into a new star' };
+  if (p.kind === 'young_star' && p.diesAt !== undefined && p.diesAt > years) return { at: p.diesAt, what: p.cls === 'B' ? 'explodes as a supernova' : 'swells into a red giant and collapses into a white dwarf' };
   return null;
 }
 
 export function isStarLike(p: Primary): boolean {
-  return ['red_dwarf', 'blue_dwarf', 'collision_star', 'helium_star', 'helium_giant', 'dark_star'].includes(p.kind);
+  return ['red_dwarf', 'blue_dwarf', 'collision_star', 'helium_star', 'helium_giant', 'dark_star', 'young_star'].includes(p.kind);
 }
 
 export function bodyIsGone(b: Body): boolean {
@@ -1295,6 +1392,8 @@ export function primaryLuminosity(p: Primary, years: number, era: EraId, decay =
       return NEW_STAR_LUM[p.kind];
     case 'dark_star':
       return 1;
+    case 'young_star':
+      return YOUNG_CLASSES[p.cls ?? 'G'].suns;
     case 'white_dwarf':
     case 'black_dwarf': {
       // by its warmth; an ember at least by the dark matter it burns (about 4 × 10^-12 L☉ while
@@ -1411,7 +1510,8 @@ export function vitalityLoss(state: GameState, b: Body, c: Colony | undefined = 
     if (c.overdrive) mult *= 1.3;
   }
   // (the Dusk wears worlds out faster as it goes on: by its Tide turns, so whatever the pace, since 20 Oct)
-  const accel = calendarEra(state) === 'dusk' ? Math.min(3, 1 + tideTurnsAt('dusk', state.years, state.eta, state.settings.length) * 0.02) : 3;
+  // (but not in the Twilight Interregnum: its worlds are young, and only begin to wear)
+  const accel = state.era === 'interregnum' ? 1 : calendarEra(state) === 'dusk' ? Math.min(3, 1 + tideTurnsAt('dusk', state.years, state.eta, state.settings.length) * 0.02) : 3;
   const decline = c && b.decline > 0 ? b.decline * mult * accel : 0;
   const cold = () => {
     const cl = bodyClimate(state, b);
@@ -1461,13 +1561,13 @@ export const WATER_RICH = 0.5;
  * instead). Deterministic and after generation, so the galaxy's random draws, and everything else
  * in it, stay as they were; the home system keeps its fixed layout.
  */
-export function waterFromTheStart(state: GameState): { rich: number; dried: number; trapped: number } {
+export function waterFromTheStart(state: GameState, bodies: Body[] = Object.values(state.bodies)): { rich: number; dried: number; trapped: number } {
   let rich = 0;
   let dried = 0;
   let trapped = 0;
   const era = calendarEra(state);
   const decay = decayWarmth(state);
-  for (const b of Object.values(state.bodies)) {
+  for (const b of bodies) {
     if (b.kind !== 'ice' && b.kind !== 'ocean_ice') continue;
     const sys = state.systems[b.systemId];
     if (!sys || sys.special === 'home') continue;
@@ -1547,9 +1647,9 @@ export function steamWorld(state: GameState, b: Body): boolean {
  * what they are: dead ice, or bare rock. Deterministic and after generation, so the galaxy's
  * random draws, and everything else in it, stay as they were.
  */
-export function frozenFromTheStart(state: GameState): number {
+export function frozenFromTheStart(state: GameState, bodies: Body[] = Object.values(state.bodies)): number {
   let n = 0;
-  for (const b of Object.values(state.bodies)) {
+  for (const b of bodies) {
     if (!SURFACE_LIFE.includes(b.kind) || b.vitality <= 0 || b.traits.includes('homeworld')) continue;
     const c = bodyClimate(state, b);
     if ((c.day ?? c.mean) >= FROZEN_K) continue;

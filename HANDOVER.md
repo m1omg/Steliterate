@@ -213,6 +213,18 @@ word", then the player's list of 16 Oct, then the falling worlds.
   nature stays ungated; of the finds, the shard, the hole's light and the foil need technology,
   mining and quarrying not.
 
+- **The Twilight Interregnum** (1 Nov, PR m1omg/Steliterate#54; at /next/ only): "a sort of a
+  prequel mode where you start earlier, from 1e12 years", "For the next and only for the next
+  version, not for the main one"; the player named it, asked that it be optional, and that its
+  galaxy look "livelier and brighter than the dusk one". An age before the Dusk, 10¹² to 9 × 10¹³
+  years, about 60 turns; the same galaxy rewound (`src/game/interregnum.ts`): our home around a
+  heavier red dwarf that dies near turn 46 to 50, the Dusk's red dwarfs nebulae born at the very
+  end, young bright stars and blue giants, the gas thinning (Gas Scoops); The Last Gas hands over
+  to the Dusk as ever. The code is the same at both addresses; only /next/ offers it (`PREVIEW`,
+  `src/channel.ts`), and its saves are kept apart and hidden at the main address. Games begun in
+  the Dusk are unchanged, all 300 of the harness's. The interview's answers are in SESSION-NOTES
+  (1 Nov); DEV-NOTES has where it lives and its traps.
+
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
 

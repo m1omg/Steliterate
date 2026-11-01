@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { music, PIECES, pieceOn, TRACK_CHOICES, type Piece, type TrackKey } from '../../audio/music';
 import { ERA_BY_ID } from '../../game/eras';
+import { PREVIEW } from '../../channel';
 import { deleteSlot, exportAllSaves, exportCode, fromOlderBuild, hasSave, importSaveBundle, listSlots, loadGame, loadSlot, readSave, readSaveBundle, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
 import { OLDER_BUILD } from '../../keys';
 import { offerFile, pickTextFile } from '../download';
@@ -67,7 +68,11 @@ export function LogModal({ s }: { s: GameState }) {
 
 export function CodexModal({ topic }: { topic?: string }) {
   const [cur, setCur] = useState(topic ?? MANUAL[0].id);
-  const all = [...MANUAL, ...CODEX];
+  // (the Twilight Interregnum's pages where it is offered, or in a game begun in it)
+  const shown = PREVIEW || !!game.value?.settings.interregnum;
+  const manual = MANUAL.filter((c) => !c.preview || shown);
+  const codex = CODEX.filter((c) => !c.preview || shown);
+  const all = [...manual, ...codex];
   const entry = all.find((c) => c.id === cur) ?? MANUAL[0];
   const isManual = MANUAL.includes(entry);
   const group = (label: string, list: typeof CODEX) => (
@@ -84,8 +89,8 @@ export function CodexModal({ topic }: { topic?: string }) {
     <ModalFrame title="Codex" eyebrow="How to play, and how the end of the universe works" icon="info">
       <div class="codex">
         <nav class="codex-nav">
-          {group('How to play', MANUAL)}
-          {group('The science', CODEX)}
+          {group('How to play', manual)}
+          {group('The science', codex)}
           <div class="eyebrow codex-group">Films</div>
           <button class={`btn small ${cur === 'films' ? 'primary' : 'ghost'}`} onClick={() => setCur('films')}>
             Films seen
@@ -419,10 +424,16 @@ async function importSave(onSlots?: () => void) {
     return;
   }
   const g = readSave(text);
-  if (g) startLoaded(g);
+  if (g && previewOnly(g)) notify(PREVIEW_SAVE, 'bad', previewAction);
+  else if (g) startLoaded(g);
   else if (fromOlderBuild(text)) notify(OLDER_SAVE, 'bad', olderBuildAction);
   else notify('That file is not a Steliterate save.', 'bad');
 }
+
+/** A game begun in the Twilight Interregnum is played at /next/ only (channel.ts): not here. */
+const previewOnly = (g: GameState) => !!g.settings.interregnum && !PREVIEW;
+const PREVIEW_SAVE = 'That game began in the Twilight Interregnum, which is played at the preview address only.';
+const previewAction = { label: 'Open it', tip: 'The preview address, in a new tab.', run: () => { window.open('https://m1omg.github.io/Steliterate/next/', '_blank', 'noopener'); } };
 
 /** A game saved before the new version: that build keeps it, and plays it. */
 const OLDER_SAVE = 'That game is from the older build, before the new version. It plays on there, with your other games from then.';
@@ -613,7 +624,8 @@ export function SaveModal({ s }: { s: GameState | null }) {
             disabled={!importText.trim()}
             onClick={() => {
               const g = readSave(importText);
-              if (g) startLoaded(g);
+              if (g && previewOnly(g)) notify(PREVIEW_SAVE, 'bad', previewAction);
+              else if (g) startLoaded(g);
               else if (fromOlderBuild(importText)) notify(OLDER_SAVE, 'bad', olderBuildAction);
               else notify('That code could not be read.', 'bad');
             }}

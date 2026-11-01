@@ -53,6 +53,8 @@ export function matterGone(state: GameState): boolean {
  * fate (if protons decay, the age turns with it).
  */
 export function calendarEra(state: GameState): EraId {
+  // the Twilight Interregnum keeps the Dusk's calendar: its physics, units and research (eras.ts)
+  if (state.era === 'interregnum') return 'dusk';
   if (state.era === 'dusk' || state.era === 'dark' || fateOf(state) === 'decay') return state.era;
   return state.years < ERA_BY_ID.blackhole.startYears ? 'degenerate' : 'blackhole';
 }

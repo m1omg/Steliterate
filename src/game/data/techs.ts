@@ -42,6 +42,8 @@ export interface TechDef {
   needsDecay?: boolean; // only if protons decay
   needsCurvature?: boolean; // only if curvature radiation is unmaking matter
   needsUnstable?: boolean; // only if matter does not last (protons decay, or curvature radiation unmakes it)
+  /** Only in a game begun in the Twilight Interregnum (interregnum.ts): in any other it does not exist. */
+  interregnumOnly?: boolean;
 }
 
 const T = (t: TechDef) => t;
@@ -75,6 +77,7 @@ export const TECHS: TechDef[] = [
   // harvest
   T({ id: 'energy_storage', name: 'Superconducting Storage', era: 'dusk', field: 'harvest', cost: 40, requires: [], desc: 'Hold energy against lean years. Unlocks Energy Vaults.' }),
   T({ id: 'orbital_collectors', name: 'Orbital Collectors', era: 'dusk', field: 'harvest', cost: 55, requires: [], desc: 'Mirror-sails in close orbit. Unlocks Orbital Collectors.' }),
+  T({ id: 'interstellar_scooping', name: 'Interstellar Scooping', era: 'dusk', field: 'harvest', cost: 50, requires: [], interregnumOnly: true, desc: 'Magnetic scoops kilometres wide, flown through a nebula’s gas and back: hydrogen while the galaxy still has gas to make stars with. Unlocks the Gas Scoop.' }),
   T({ id: 'fusion', name: 'Controlled Fusion', era: 'dusk', field: 'harvest', cost: 80, requires: [], desc: 'Burn hydrogen from the giants. Unlocks Fusion Plants and Hydrogen Skimmers.' }),
   T({ id: 'dyson_swarms', name: 'Dyson Swarms', era: 'dusk', field: 'harvest', cost: 230, requires: ['orbital_collectors'], desc: 'Wrap a star in collectors. Enormous yield, and visible across the reach, including to the Hunger.' }),
   T({ id: 'stellar_lifting', name: 'Stellar Lifting', era: 'dusk', field: 'harvest', cost: 280, requires: ['dyson_swarms'], desc: 'Pull matter out of stars. Quick wealth that permanently drains the galaxy’s free energy.' }),
@@ -143,4 +146,4 @@ export function techDesc(s: { flags: Record<string, number | undefined> }, t: Te
   return (s.flags.rubble && t.rubbleDesc) || t.desc;
 }
 
-export const ERA_COST_SCALE: Record<EraId, number> = { dusk: 1, degenerate: 1, blackhole: 1, dark: 1 };
+export const ERA_COST_SCALE: Record<EraId, number> = { interregnum: 1, dusk: 1, degenerate: 1, blackhole: 1, dark: 1 };

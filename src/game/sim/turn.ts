@@ -723,8 +723,10 @@ function signalsAndEvents(state: GameState): Signal[] {
       else if (hasCharter(state, 'salvage_the_dead')) civ.matter += gain * 0.5;
     }
   }
-  if (state.turn === 3) queueEvent(state, 'dynamo_fails');
-  if (state.turn === 7) queueEvent(state, 'first_night');
+  // the openings: in the Twilight Interregnum, our old star and a sky still full of stars
+  const inter = state.era === 'interregnum';
+  if (state.turn === 3) queueEvent(state, inter ? 'old_sun' : 'dynamo_fails');
+  if (state.turn === 7) queueEvent(state, inter ? 'star_census' : 'first_night');
   if ((state.flags.hunger_woke ?? 0) > 0 && !state.civ.fired.rust_in_the_belt) {
     // our surveyors found it: say where (the woken swarm nearest the capital), and chart that star
     const capSys = state.systems[state.colonies[state.civ.capitalId ?? '']?.systemId ?? state.civ.homeSystemId];
@@ -758,6 +760,8 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
   const own = (id: string | null | undefined) => (id && state.colonies[id]?.owner === state.civ.id ? state.colonies[id] : undefined);
   // the deep dark's flashes this turn, and falling worlds', for the Burst Catchers (catchFlashes)
   const flashes: Flashed[] = [];
+  // the stars lit from nebulae this turn where we can see (the Twilight Interregnum), told in one line
+  const bornHere: string[] = [];
   // a new star whose clock we kept was lived in full in its light: no flash to bank from it (the
   // clock is the player's, and is cleared only after the notes: clearStarClock)
   const keptTimeWith = (dies: number | undefined) => dies !== undefined && state.civ.id === state.player && (state.civ.flags.star_flash ?? state.civ.flags.star_until) === dies;
@@ -800,6 +804,34 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'a supernova');
         queueEvent(state, 'supernova', { systemId: sys.id });
         break;
+      // ---- the Twilight Interregnum's stars (physics.ts interregnumStars)
+      case 'born': {
+        if (n.cls) {
+          // a bright young star: seen from anywhere in the galaxy, and offered as a new star is
+          known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
+          queueEvent(state, 'young_star_lit', { systemId: sys.id });
+        } else if (seen) bornHere.push(sys.name);
+        break;
+      }
+      case 'young_death': {
+        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ), own: true });
+        if (!seen && !mine) break;
+        const cold = colonies(state)
+          .filter((c) => c.systemId === sys.id)
+          .map((c) => state.bodies[c.bodyId])
+          .filter((b) => b && sunGone(state, b) && !lampsOver(state, b));
+        const warn = cold.length ? ` Whatever lives on ${cold.map((b) => b.name).join(' and ')} will freeze as it fades, unless Orbital Lamps keep it warm.` : '';
+        log(state, `The young star at ${sys.name} has run its course: it swelled into a red giant, shed its outer layers as a glowing shell of gas, and collapsed into a white dwarf.${warn}`, mine ? 'bad' : 'info', sys.id);
+        break;
+      }
+      case 'core_collapse': {
+        if (n.briefJ && !keptTimeWith(n.dies)) flashes.push({ sys, reach: flashReach(n.briefJ), own: true });
+        for (const c of colonies(state)) if (c.systemId === sys.id) destroyColony(state, c, 'a supernova');
+        const ours = (n.hurt ?? []).filter((id) => own(state.bodies[id]?.colonyId)).length;
+        known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
+        queueEvent(state, 'blue_giant_dies', { systemId: sys.id, hurt: ours });
+        break;
+      }
       case 'burnout':
         if (seen) log(state, `The star at ${sys.name} has burned out.`, mine ? 'bad' : 'info', sys.id);
         // a new star that lit and went out within this turn: a flash for the Burst Catchers (26 Oct)
@@ -954,6 +986,10 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         }
         break;
     }
+  }
+  if (bornHere.length) {
+    const names = bornHere.length > 3 ? `${bornHere.length} nebulae we know, ${bornHere.slice(0, 2).join(', ')} among them,` : bornHere.length === 1 ? `the nebula ${bornHere[0]}` : `the nebulae ${bornHere.slice(0, -1).join(', ')} and ${bornHere[bornHere.length - 1]}`;
+    log(state, `New stars have lit in ${names}: small red dwarfs and brown dwarfs, born from the galaxy’s gas, their worlds forming around them.`, 'info');
   }
   if (flashes.length) catchFlashes(state, flashes);
 }

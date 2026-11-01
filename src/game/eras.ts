@@ -88,10 +88,53 @@ export const ERAS: EraDef[] = [
   },
 ];
 
-export const ERA_BY_ID: Record<EraId, EraDef> = Object.fromEntries(ERAS.map((e) => [e.id, e])) as Record<EraId, EraDef>;
+/**
+ * The Twilight Interregnum (1 Nov, the player: "a sort of a prequel mode where you start earlier,
+ * from 1e12 years"; they named it): an age before the Dusk, played only in a game begun in it
+ * (`settings.interregnum`, offered at the /next/ address alone, src/channel.ts). It stands apart
+ * from ERAS, so no other age's index moves and a game begun in the Dusk never meets it: its index
+ * is −1, nextEra gives the Dusk, and erasOf lists it first only for such a game. Its calendar is
+ * the Dusk's (calendarEra, fate.ts): the same physics, units, research and structures, with a Tide
+ * of its own before 9 × 10¹³ years (eraAt, below).
+ */
+export const INTERREGNUM: EraDef = {
+  id: 'interregnum',
+  index: -1,
+  numeral: '0',
+  name: 'The Twilight Interregnum',
+  science: 'Stelliferous Era',
+  startYears: 1e12,
+  endEta: Math.log10(9e13),
+  l0: 40,
+  growth: { brief: 1.9, standard: 1.6, vast: 1.4 },
+  accent: '#f2b65a',
+  accentSoft: '#ffd89c',
+  neon: '#6fe0b4',
+  intro:
+    'A trillion years after the first light, our galaxy is alone. Every other galaxy has slipped past the horizon, and the afterglow of the beginning has faded beyond any instrument. Most of its stars are red dwarfs, and the oldest of them are coming to the end of their fuel, the heaviest first; the gas to make new ones is thinning. Your world circles one of the heavier ones, a quarter of the Sun’s mass, near the end of its life. It will not see the next trillion years.',
+};
+
+export const ERA_BY_ID: Record<EraId, EraDef> = Object.fromEntries([INTERREGNUM, ...ERAS].map((e) => [e.id, e])) as Record<EraId, EraDef>;
+
+/** The ages a game passes through: the Twilight Interregnum first for a game begun in it. */
+export function erasOf(interregnum: boolean | undefined): EraDef[] {
+  return interregnum ? [INTERREGNUM, ...ERAS] : ERAS;
+}
+
+/**
+ * Whose Tide a date keeps: the Interregnum's before the Dusk begins (its calendar is the Dusk's, so
+ * the Dusk's age with an earlier date), the age's own otherwise. A game begun in the Dusk never has
+ * such a date, so for it nothing changes.
+ */
+function eraAt(era: EraId, years: number): EraDef {
+  if (era === 'interregnum' || (era === 'dusk' && years < ERA_BY_ID.dusk.startYears)) return INTERREGNUM;
+  return ERA_BY_ID[era];
+}
 
 /** An age's intro, for the fate of matter: the Black Hole Age (and, for stable matter, the Dark) reads differently by fate. */
-export function ageIntro(era: EraId, fate: Fate): string {
+export function ageIntro(era: EraId, fate: Fate, interregnum = false): string {
+  if (era === 'dusk' && interregnum)
+    return 'Ninety trillion years after the first light, the galaxy’s gas is spent. The stars we were born under are dead, every one: the old red dwarfs flared and went out long ago, and the bright young stars burned through their lives in what was, to us, a season. What still shines was born last, from the last of the gas: the smallest red dwarfs, and they too are near the end of their fuel. Their worlds are already old. The Long Dusk begins.';
   if (era === 'blackhole' && fate === 'stable')
     return 'The protons held, and nothing marked the moment: the neutron stars, the last things warm of their own accord, have cooled below the faint glow of the black holes. For the whole life of the universe the holes were the coldest things in it; now they are the warmest. Matter endures, cold and dark, slowly tunnelling toward iron, and the dead stars and worlds are fuel now, not sources. The holes spin, and they very slowly evaporate. Whatever you are now, you live around them.';
   if (era === 'blackhole' && fate === 'curvature')
@@ -103,6 +146,7 @@ export function ageIntro(era: EraId, fate: Fate): string {
 
 /** The name of the crossing out of an age: the Degenerate Age ends in the Great Decay if protons decay, otherwise at the Last Warmth. */
 export function crossingName(from: EraId, fate: Fate): string {
+  if (from === 'interregnum') return 'The Last Gas';
   if (from === 'dusk') return 'The Last Light';
   if (from === 'degenerate') return fate === 'decay' ? 'The Great Decay' : 'The Last Warmth';
   if (from === 'blackhole') return 'The Last Horizon';
@@ -110,6 +154,7 @@ export function crossingName(from: EraId, fate: Fate): string {
 }
 
 export function nextEra(id: EraId): EraId | null {
+  if (id === 'interregnum') return 'dusk';
   const i = ERA_BY_ID[id].index;
   return i < ERAS.length - 1 ? ERAS[i + 1].id : null;
 }
@@ -120,7 +165,7 @@ export function eta(years: number): number {
 
 /** The natural turn length (years) at a given moment of an era, before pace. */
 export function tideLength(era: EraId, years: number, length: EpochLength): number {
-  const d = ERA_BY_ID[era];
+  const d = eraAt(era, years);
   if (era === 'dark') return Infinity;
   const elapsed = Math.max(0, years - d.startYears);
   return d.l0 + (d.growth[length] - 1) * elapsed;
@@ -142,7 +187,7 @@ function darkLambdaFactor(lambda: number, length: EpochLength): number {
  * 10 at Slow ×10 (since 20 Oct; the player, 16 Oct: "Quick 10x is not Quick 10x").
  */
 export function tideTurnsAt(era: EraId, years: number, etaNow: number, length: EpochLength): number {
-  const d = ERA_BY_ID[era];
+  const d = eraAt(era, years);
   if (era === 'dark') return Math.sqrt(Math.max(0, Math.log(Math.max(Math.log10(Math.max(etaNow, 100)), 2) / 2)) / d.growth[length]);
   const g = d.growth[length];
   const u0 = d.l0 / (g - 1);
@@ -177,7 +222,7 @@ export function paceShare(era: EraId, pace: number): number {
 export function stepTime(era: EraId, years: number, etaNow: number, pace: number, length: EpochLength): TimeStep {
   const share = paceShare(era, pace);
   if (era !== 'dark') {
-    const g = ERA_BY_ID[era].growth[length];
+    const g = eraAt(era, years).growth[length];
     // (the Tide itself exactly as it always was)
     const L = tideLength(era, years, length) * (share === 1 ? 1 : (Math.pow(g, share) - 1) / (g - 1));
     const y = years + L;
@@ -282,7 +327,7 @@ export function formatYearsShort(y: number, etaHint?: number): string {
 /** η with enough precision to move visibly in each era. */
 export function formatEta(e: number, era: EraId): string {
   if (e >= 1e4) return `10${sup(Math.log10(e).toFixed(2))}`;
-  const digits = era === 'dusk' ? 4 : era === 'degenerate' ? 2 : era === 'blackhole' ? 1 : 1;
+  const digits = era === 'dusk' || era === 'interregnum' ? 4 : era === 'degenerate' ? 2 : era === 'blackhole' ? 1 : 1;
   return e.toFixed(digits);
 }
 
@@ -368,6 +413,14 @@ export function milestonesFor(fate: Fate | null, embersOut?: { at: number; runni
     : COMMON_MILESTONES;
   return [...common, ...FATE_MILESTONES[fate ?? 'unknown']].sort((a, b) => a.at - b.at);
 }
+
+/** The Twilight Interregnum's milestones, on the main ruler of a game begun in it. */
+export const INTERREGNUM_MILESTONES: Milestone[] = [
+  { at: 12.2, label: 'Heavy red dwarfs dying', detail: 'The oldest red dwarfs of about a quarter of the Sun’s mass leave the main sequence now, the heaviest first: each flares blue for a few billion years, then collapses to a white dwarf (Laughlin, Bodenheimer & Adams 1997).' },
+  { at: 13.1, label: 'The old red dwarfs gone', detail: 'Even the smallest red dwarf that shone at a trillion years has gone out by now (about 12 trillion years at 0.08 Suns). Only stars born since still shine.' },
+  { at: 13.9, label: 'The last stars born', detail: 'The last of the gas collapses into the smallest red dwarfs: the stars of the Long Dusk.' },
+  { at: INTERREGNUM.endEta, label: 'The Last Gas', detail: 'The galaxy’s gas is spent, and no star will form from gas again. The Long Dusk begins.' },
+];
 
 /** Today's milestones with the fate unknown (kept for anything that lists them all). */
 export const MILESTONES: Milestone[] = milestonesFor(null);

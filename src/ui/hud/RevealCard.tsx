@@ -8,7 +8,7 @@ import type { Body, GameState } from '../../game/types';
 import { sfx } from '../../audio/sfx';
 import { kelvin } from '../fmt';
 import { Icon } from '../Icon';
-import { PRIMARY_NAME, bodyKindName } from '../labels';
+import { bodyKindName, primaryName } from '../labels';
 import { NEEDS, type Need } from '../siteStrip';
 import { engine, modal, rev, revealing, settings } from '../store';
 import { Plate, eventResult, loreView, worldFinds } from '../screens/Story';
@@ -107,7 +107,7 @@ export function RevealCard({ s }: { s: GameState }) {
           <div class="rc-name">{sys.name}</div>
           <div class="rc-lines">
             <div class="rc-line" style={{ '--i': 0 }}>
-              {PRIMARY_NAME[sys.primary.kind]} · {worlds} to chart
+              {primaryName(sys.primary)} · {worlds} to chart
             </div>
           </div>
         </div>

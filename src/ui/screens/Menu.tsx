@@ -8,6 +8,7 @@ import { sfx } from '../../audio/sfx';
 import { modal, playFilm, screen, settings } from '../store';
 import { startTutorial } from '../hud/Tutorial';
 import { startLoaded } from './Misc';
+import { PREVIEW } from '../../channel';
 
 const reducedMotion = () => {
   try {
@@ -117,8 +118,9 @@ export function Setup() {
     const g = newGame(st);
     if (guide) startTutorial(g);
     startLoaded(g);
-    // the Long Dusk's film, then the age's own words
-    playFilm('dusk', { kind: 'era_intro' });
+    // the Long Dusk's film, then the age's own words; the Twilight Interregnum has its words only
+    if (g.settings.interregnum) modal.value = { kind: 'era_intro' };
+    else playFilm('dusk', { kind: 'era_intro' });
   };
   return (
     <div class="menu">
@@ -126,14 +128,27 @@ export function Setup() {
       <div class="menu-side" style={{ maxWidth: '560px' }}>
         <div>
           <div class="eyebrow">New game</div>
-          <h1 class="title" style={{ fontSize: 'clamp(36px, 5vw, 56px)' }}>The Long Dusk</h1>
+          <h1 class="title" style={{ fontSize: 'clamp(36px, 5vw, 56px)' }}>{st.interregnum ? 'The Twilight Interregnum' : 'The Long Dusk'}</h1>
         </div>
+        {PREVIEW && (
+          <div class="field">
+            <label>Begin</label>
+            <Seg<number>
+              value={st.interregnum ? 1 : 0}
+              options={[
+                { id: 0, name: 'At the Long Dusk', tip: '9 × 10¹³ years: the last red dwarfs near the end of their fuel, your world dying. The game as it has always begun.' },
+                { id: 1, name: 'In the Twilight Interregnum', tip: '10¹² years, ninety trillion years earlier (a preview, played at this address only): a galaxy of old red dwarfs, gas and a few young bright stars. Your star is one of the heavier red dwarfs, and it will die within the age. About 60 turns at Standard, then the Long Dusk and every age after it.' },
+              ]}
+              onPick={(v) => set({ interregnum: v === 1 ? true : undefined })}
+            />
+          </div>
+        )}
         <div class="field">
           <label for="civ-name">Your people</label>
           <input id="civ-name" value={st.civName} maxLength={40} onInput={(e) => set({ civName: (e.target as HTMLInputElement).value })} />
         </div>
         <div class="field">
-          <label for="home-name">Your dying world</label>
+          <label for="home-name">{st.interregnum ? 'Your world' : 'Your dying world'}</label>
           <input id="home-name" value={st.homeName} maxLength={24} onInput={(e) => set({ homeName: (e.target as HTMLInputElement).value })} />
         </div>
         <div class="field">

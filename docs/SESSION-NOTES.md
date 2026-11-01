@@ -105,6 +105,24 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     (Orbital Industry), not mining a diamond mantle or quarrying flare glass; nature "Stay
     ungated"; a probe "should be able to meet but not haul it" (it meets it, for more insight
     when studied, and cannot shepherd or mine it).
+  - Then (1 Nov): PR m1omg/Steliterate#54, **the Twilight Interregnum**. The player: "For the next
+    and only for the next version, not for the main one, let's make a sort of a prequel mode where
+    you start earlier, from 1e12 years in the future. It would basically preserve the game as it
+    is, except it would start even earlier … It would again try to reflect the real physical
+    environment of the era. Feel free to interview me about it." Their answers: the Kin begin
+    around a heavier red dwarf that dies within the age, the Dusk's own red dwarfs born late from
+    the last gas ("Heavier star that dies"); about 60 turns; all four pieces of the physics
+    (heavier stars dying, gas and new stars, young bright stars, warmer dead stars and younger
+    worlds), with "some rare even brighter than yellow dwarf stars if plausible … as rare as
+    collision stars are in the degenerate era"; saves hidden at the main address; the neighbours
+    start with us; the Dusk's music; no compensation for the head start ("it's the reward"); a
+    crossing with a report. They named it ("The Twilight Interregnum comes to mind"), and asked
+    "twilight interregnum mode should be optional" (it is: the Dusk the default) and "make sure the
+    twilight galaxy looks livelier and brighter than the dusk one". Two changes from what I told
+    them, said in the PR: the home keeps its system, worlds and names around the heavier star
+    (rather than a separate star lighting later); and the home star dies near turn 46 to 50, not 40
+    to 44 (0.19 to 0.22 M☉), because the autoplayer, ours and the neighbours', could not live
+    through it so early. The autoplayer also sleeps through the dim end of the age.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

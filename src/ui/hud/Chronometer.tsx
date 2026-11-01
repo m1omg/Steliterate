@@ -1,4 +1,4 @@
-import { ERA_BY_ID, ERAS, deepMilestonesFor, formatEta, formatYears, formatYearsShort, milestonesFor } from '../../game/eras';
+import { ERA_BY_ID, INTERREGNUM, INTERREGNUM_MILESTONES, deepMilestonesFor, erasOf, formatEta, formatYears, formatYearsShort, milestonesFor } from '../../game/eras';
 import { DEGENERATE_END, fateKnown, fateOf } from '../../game/fate';
 import { embersOutEta, haloMoved, siphonsRunning } from '../../game/physics';
 import type { EraId, GameState } from '../../game/types';
@@ -11,10 +11,18 @@ import { useLayoutEffect, useRef } from 'preact/hooks';
 // The whole remaining life of the universe on one instrument strip. Each age gets a segment;
 // inside it, time is scaled so that the present moves visibly.
 
-const SEG: Record<EraId, [number, number]> = { dusk: [0, 0.22], degenerate: [0.22, 0.5], blackhole: [0.5, 0.78], dark: [0.78, 1] };
+const SEG_DUSK: Record<EraId, [number, number]> = { interregnum: [0, 0], dusk: [0, 0.22], degenerate: [0.22, 0.5], blackhole: [0.5, 0.78], dark: [0.78, 1] };
+/** A game begun in the Twilight Interregnum: its age first, the others a little narrower. */
+const SEG_INTERREGNUM: Record<EraId, [number, number]> = { interregnum: [0, 0.16], dusk: [0.16, 0.32], degenerate: [0.32, 0.56], blackhole: [0.56, 0.79], dark: [0.79, 1] };
 
-/** Position (0..1) of a moment on the ruler for the era-segmented scale. */
-export function rulerPos(years: number, eta: number): number {
+/** Position (0..1) of a moment on the ruler for the era-segmented scale (`interregnum`: a game begun in it). */
+export function rulerPos(years: number, eta: number, interregnum = false): number {
+  const SEG = interregnum ? SEG_INTERREGNUM : SEG_DUSK;
+  if (interregnum && years < ERA_BY_ID.dusk.startYears) {
+    const elapsed = Math.max(0, years - INTERREGNUM.startYears);
+    const u = Math.log10(40 + elapsed) / Math.log10(ERA_BY_ID.dusk.startYears - INTERREGNUM.startYears);
+    return SEG.interregnum[0] + (SEG.interregnum[1] - SEG.interregnum[0]) * clamp01((u - 0.12) / 0.88);
+  }
   if (eta < 14.0001) {
     const elapsed = Math.max(0, years - ERA_BY_ID.dusk.startYears);
     const u = Math.log10(40 + elapsed) / Math.log10(1e13);
@@ -43,21 +51,24 @@ export function Chronometer({ s, nextYears }: { s: GameState; nextYears: number 
   void rev.value;
   const era = ERA_BY_ID[s.era];
   const deep = s.era === 'dark';
-  const now = deep ? deepPos(s.eta) : rulerPos(s.years, s.eta);
+  const inter = !!s.settings.interregnum;
+  const SEG = inter ? SEG_INTERREGNUM : SEG_DUSK;
+  const now = deep ? deepPos(s.eta) : rulerPos(s.years, s.eta, inter);
   const pins = s.civ.forecasts
     .filter((f) => isFinite(f.dueYears))
-    .map((f) => ({ f, x: deep ? deepPos(Math.log10(Math.max(1, f.dueYears))) : rulerPos(f.dueYears, Math.log10(Math.max(1, f.dueYears))) }))
+    .map((f) => ({ f, x: deep ? deepPos(Math.log10(Math.max(1, f.dueYears))) : rulerPos(f.dueYears, Math.log10(Math.max(1, f.dueYears)), inter) }))
     .filter((p) => p.x > now - 0.001);
   // the fate of matter decides where the Degenerate Age ends: until it is known, the timeline
   // shows the stretch it might end in, and every date that depends on it, as questions
   const fate = fateKnown(s) ? fateOf(s) : null;
-  const milestones = deep ? deepMilestonesFor(fate).map((m) => ({ ...m, x: deepPos(Math.pow(10, m.at)) })) : milestonesFor(fate, haloMoved(s) ? { at: embersOutEta(s), running: siphonsRunning(s) } : undefined).map((m) => ({ ...m, x: rulerPos(Math.pow(10, m.at), m.at) }));
-  const at = (e: number) => rulerPos(Math.pow(10, e), e);
+  const main = milestonesFor(fate, haloMoved(s) ? { at: embersOutEta(s), running: siphonsRunning(s) } : undefined);
+  const milestones = deep ? deepMilestonesFor(fate).map((m) => ({ ...m, x: deepPos(Math.pow(10, m.at)) })) : (inter ? [...INTERREGNUM_MILESTONES, ...main] : main).map((m) => ({ ...m, x: rulerPos(Math.pow(10, m.at), m.at, inter) }));
+  const at = (e: number) => rulerPos(Math.pow(10, e), e, inter);
   const split = at(fate ? DEGENERATE_END[fate] : DEGENERATE_END.stable);
   const unsure: [number, number] | null = fate ? null : [at(DEGENERATE_END.stable), at(DEGENERATE_END.curvature)];
-  const band: Record<EraId, [number, number]> = { dusk: SEG.dusk, degenerate: [SEG.degenerate[0], split], blackhole: [unsure ? unsure[1] : split, SEG.blackhole[1]], dark: SEG.dark };
+  const band: Record<EraId, [number, number]> = { interregnum: SEG.interregnum, dusk: SEG.dusk, degenerate: [SEG.degenerate[0], split], blackhole: [unsure ? unsure[1] : split, SEG.blackhole[1]], dark: SEG.dark };
   const turnSpan = isFinite(s.turnLength) ? formatYears(s.turnLength) : formatYears(Infinity, s.eta);
-  const age = s.era === 'dusk' ? `${formatYears(s.years)} since the Big Bang` : formatYears(s.years, s.eta);
+  const age = s.era === 'dusk' || s.era === 'interregnum' ? `${formatYears(s.years)} since the Big Bang` : formatYears(s.years, s.eta);
   const short = (y: number) => (isFinite(y) ? formatYearsShort(y) : 'deep time');
   const more = phoneMore.value;
   // (where it ends, for the resources under it on a phone: Hud.tsx sets it too, on any resize)
@@ -95,12 +106,12 @@ export function Chronometer({ s, nextYears }: { s: GameState; nextYears: number 
           {era.numeral} · {era.science.toUpperCase()}
         </div>
         <div class="name">{era.name}</div>
-        <div class="sci">Turn {s.turn} · {s.era === 'dusk' ? `${formatYearsShort(s.years - era.startYears)} into the Dusk` : `turn ${s.eraTurn + 1} of this age`}</div>
+        <div class="sci">Turn {s.turn} · {s.era === 'dusk' ? `${formatYearsShort(s.years - era.startYears)} into the Dusk` : s.era === 'interregnum' ? `${formatYearsShort(s.years - era.startYears)} into the Interregnum` : `turn ${s.eraTurn + 1} of this age`}</div>
       </div>
       <div class="ruler" aria-label="Chronometer: the remaining life of the universe">
         <svg viewBox="0 0 1000 46" preserveAspectRatio="none">
           {!deep &&
-            ERAS.map((e) => {
+            erasOf(inter).map((e) => {
               const [a, b] = band[e.id];
               const cur = e.id === s.era;
               return (
@@ -138,7 +149,7 @@ export function Chronometer({ s, nextYears }: { s: GameState; nextYears: number 
         </svg>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           {!deep &&
-            ERAS.map((e) => (
+            erasOf(inter).map((e) => (
               <div key={e.id} class="eyebrow" style={{ position: 'absolute', left: `${band[e.id][0] * 100}%`, top: '-2px', fontSize: '11px', color: e.id === s.era ? 'var(--accent-soft)' : undefined }}>
                 {e.numeral} {e.science.replace(' Era', '')}
               </div>

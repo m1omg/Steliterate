@@ -195,7 +195,7 @@ const STAR_STEP_MIN = 1e-13;
 
 function isNewStar(sys: StarSystem): boolean {
   const k = sys.primary.kind;
-  return k === 'collision_star' || k === 'helium_star' || k === 'helium_giant' || k === 'dark_star';
+  return k === 'collision_star' || k === 'helium_star' || k === 'helium_giant' || k === 'dark_star' || k === 'young_star';
 }
 
 /**
@@ -205,7 +205,8 @@ function isNewStar(sys: StarSystem): boolean {
  */
 function starClockEra(state: GameState): boolean {
   const era = calendarEra(state);
-  return era === 'degenerate' || era === 'blackhole';
+  // (and the Twilight Interregnum's, whose young stars burn briefly in its long late turns)
+  return era === 'degenerate' || era === 'blackhole' || state.era === 'interregnum';
 }
 
 export interface StarTerms {
@@ -253,7 +254,7 @@ export function starClockTerms(state: GameState, sys: StarSystem | undefined): S
   const none: StarTerms = { possible: false, brief: false, orders: 0, cost: 0, after: null, why: 'gone', from: state.years, floor: false, flash: false, flashUntil: 0 };
   const p = sys?.primary;
   if (!sys || !p || sys.gone || !isNewStar(sys)) return none;
-  if (calendarEra(state) !== 'degenerate' && !(p.kind === 'dark_star' && starClockEra(state))) return none;
+  if (calendarEra(state) !== 'degenerate' && !(p.kind === 'dark_star' && starClockEra(state)) && !(p.kind === 'young_star' && state.era === 'interregnum')) return none;
   if (!p.diesAt || p.diesAt <= state.years) return none;
   const f = clockCiv(state).flags;
   let from = state.years;

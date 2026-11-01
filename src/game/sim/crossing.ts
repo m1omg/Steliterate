@@ -6,7 +6,7 @@ import { TECH_BY_ID } from '../data/techs';
 import { THREAD_DEFS } from '../data/threads';
 import type { Colony, CrossingReport, EraId, GameState, StarSystem } from '../types';
 import { THREADS } from '../types';
-import { evaporateHole } from '../physics';
+import { evaporateHole, isStarLike } from '../physics';
 import { capacity, reserveCapacity } from './economy';
 import { deepFor, destroyColony } from './fleets';
 import { starGoneEarly } from './flare';
@@ -507,7 +507,25 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
   const lines: Reports = Object.fromEntries(ids.map((id) => [id, []]));
   const had = before(state, ids);
 
-  if (from === 'dusk') {
+  if (from === 'interregnum') {
+    // ---------------------------------------------------------------- The Last Gas
+    // (the Twilight Interregnum's end: the last of the galaxy's gas has gone into stars. Nothing is
+    // destroyed; the report tells what the age did, and where each civilization lives now)
+    const died = state.flags.ir_died ?? 0;
+    const born = state.flags.ir_born ?? 0;
+    toAll(lines, { text: 'The last of the galaxy’s gas has gone into stars. No star will form from gas again: what shines now is all that will, and every one of them is a small red dwarf.', kind: 'info' });
+    toAll(lines, { text: `Over the Interregnum ${died} star${died === 1 ? '' : 's'} we could see went out, the old red dwarfs and the bright young stars, and ${born} were born.`, kind: 'info' });
+    eachCiv(state, ids, (id) => {
+      const home = state.systems[state.civ.homeSystemId];
+      if (home && !isStarLike(home.primary)) lines[id].push({ text: `${home.name}, the star we were born under, is a white dwarf now, cooling.`, kind: 'info' });
+      const scoops = colonies(state).reduce((n, c) => n + (c.structures.gas_scoop ?? 0), 0);
+      if (scoops) lines[id].push({ text: `Our Gas Scoop${scoops === 1 ? ' has' : 's have'} nothing left to fetch.`, kind: 'bad' });
+      const cs = colonies(state);
+      const stars = new Set(cs.map((c) => c.systemId)).size;
+      const lit = new Set(cs.filter((c) => isStarLike(state.systems[c.systemId]?.primary ?? { kind: 'void', mass: 0, lum: 0, spin: 0, spinMax: 0 })).map((c) => c.systemId)).size;
+      if (cs.length) lines[id].push({ text: `We live in ${cs.length} settlement${cs.length === 1 ? '' : 's'} at ${stars} star${stars === 1 ? '' : 's'}${lit < stars ? `, ${lit === 0 ? 'none' : lit} of them still shining` : ', every one still shining'}.`, kind: lit > 0 ? 'good' : 'bad' });
+    });
+  } else if (from === 'dusk') {
     // ---------------------------------------------------------------- The Last Light
     let converted = 0;
     withRng(state, (rng) => {
@@ -655,7 +673,7 @@ export function runCrossing(state: GameState, ids: readonly string[], mods: Reco
       from,
       to,
       title: crossingName(from, fateOf(state)),
-      intro: ageIntro(to, fateOf(state)),
+      intro: ageIntro(to, fateOf(state), !!state.settings.interregnum),
       lines: lines[id],
       popsBefore: had[id].pops,
       popsAfter: totalPops(state),

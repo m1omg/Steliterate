@@ -290,6 +290,20 @@ unknown; experiments only give a lower limit around 10^34 years.
 sequence, a world reaching its dead star's tidal limit, galactic evaporation, the embers
 fading, proton decay, black holes evaporating, a swarm on its way, the free-energy trend.
 
+**0. The Twilight Interregnum** (1 Nov; a game begun in it, offered at /next/ only:
+`src/channel.ts`). An age before the Dusk, from 10¹² years (η 12) to 9 × 10¹³: 45 / 60 / 82 turns
+from 40-year turns, its calendar the Dusk's, its own Tide (`eras.ts`). The galaxy is the seed's
+Dusk galaxy rewound (`src/game/interregnum.ts`), with draws of its own so every Dusk seed is
+unchanged. Every red dwarf shining at 10¹² years goes out within the age, the heaviest first (a
+red dwarf lives 10¹² years at 0.25 M☉, about 1.2 × 10¹³ at 0.08), among them our own, one of the
+heavier (0.19 to 0.22 M☉), near turn 46 to 50; the Dusk's small red dwarfs are nebulae, born one
+life before they flare, at the very end; a few young orange and yellow dwarfs, rarer white stars
+and one or two blue giants (supernovae within tens of millions of years) burn among them; the gas
+thins by the logarithm of time, and Gas Scoops bring it in near a nebula. Between the old stars'
+deaths (η ≈ 13.1) and the last stars' births (η ≈ 13.9) the galaxy is dim: the interregnum of its
+name. **The Last Gas** hands over to the Dusk, destroying nothing; the Dusk and every age after it
+play as ever.
+
 ---
 
 ## 7. Planetary fates
@@ -573,6 +587,15 @@ stop them from talking.
   world falling into a dead star warms it to 50 to 110 K (about 10^15 to 10^16 W of accretion).
   Proton decay, if protons decay: a white dwarf near 0.05 K, a neutron star near 1.5 K. The
   floor is the de Sitter horizon's temperature, ħH/2πk = 2.2×10^-30 K at 56 km/s/Mpc.
+* The Twilight Interregnum (1 Nov): red dwarf lifetimes, 10¹² years at 0.25 M☉ and about
+  1.2 × 10¹³ at 0.08 (Laughlin, Bodenheimer & Adams 1997; Adams et al. 2004; our power law between,
+  `redDwarfLife`); star formation fading about tenfold per tenfold of time (Laughlin); the galaxy
+  alone, the microwave background no longer seen from inside it (Krauss & Scherrer 2007, Gen.
+  Rel. Grav. 39, 1545); a supernova stripping living worlds' air within about 25 to 50 ly (Gehrels
+  et al. 2003, ApJ 585, 1169). Bends, said in the Codex: the gas goes into stars until η 14 (Adams
+  & Laughlin expect it gone within 10¹² to 10¹³ years, collisions of brown dwarfs making stars
+  after); a young star's giant phase is at once; the bright stars' light is compressed, as a helium
+  star's is.
 * Laughlin, Bodenheimer & Adams (1997), *The end of the main sequence*, ApJ 482, 420: a red
   dwarf's last flare. A 0.10 M☉ star peaks near 5,800 K and about 1% of the Sun's light and
   shrinks; heavier ones swell, 1.6 times by 0.16 M☉ at about 0.27 L☉; the bluest, near 8,600 K,

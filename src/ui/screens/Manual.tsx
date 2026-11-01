@@ -14,6 +14,16 @@ export const MANUAL: CodexEntry[] = [
     ],
   },
   {
+    id: 'm-interregnum',
+    title: 'Beginning in the Twilight Interregnum',
+    preview: true,
+    body: [
+      'At the preview address, New Game can begin ninety trillion years earlier, at 10¹² years: the Twilight Interregnum. It lasts about 60 turns at Standard, then the Long Dusk and every age after it play as ever. The Codex’s page on it says what the galaxy is like then.',
+      'Your star is one of the heavier red dwarfs, and it will flare blue and go out about three-quarters of the way through the age: the forecasts warn you. Prepare as for the Last Light (power that needs no star, Cryo Halls, minds that need little), or move to a star that will last longer. Late in the age every old red dwarf is gone and the galaxy is dim until the last stars are born; sleeping through it costs a tenth of the upkeep.',
+      'New stars light from nebulae, the young bright ones briefly: as with the Degenerate Age’s new stars, you can keep time with one, or catch its flash. A blue giant within 30 light-years of a living world will strip some of its air when it explodes, unless a Flash Shelter keeps its life underground. Interstellar Scooping brings in hydrogen from a nebula with a Gas Scoop while the gas lasts. The age ends at the Last Gas, which destroys nothing.',
+    ],
+  },
+  {
     id: 'm-time',
     title: 'Turns, time and pace',
     body: [

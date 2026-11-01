@@ -65,7 +65,7 @@ import { THREADS } from '../../game/types';
 import { kelvin, mult, n0, n1, pct, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { FOCUS, spareChoices, PRIMARY_NAME, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, NEST_TIP, SWARM_TIP } from '../labels';
+import { FOCUS, spareChoices, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, NEST_TIP, SWARM_TIP, primaryName } from '../labels';
 import { act, engine, following, hudPrefs, isPhone, notify, openBuildFor, rev, selection, setHudPrefs, sheetHint, sheetSize, targeting, view } from '../store';
 import { uiFactor } from '../Tip';
 import { FormWorkChip } from '../FormWorkChip';
@@ -325,7 +325,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
         <div class="eyebrow">{province?.name ?? 'The Coalescence'}{sys.ejected ? ' · cast out into the void' : ''}</div>
         <h2>{sys.name}</h2>
         <div class="row wrap" style={{ marginTop: '6px' }}>
-          <span class="chip"><Icon name={primaryIcon(sys.primary.kind)} /> {PRIMARY_NAME[sys.primary.kind]}</span>
+          <span class="chip"><Icon name={primaryIcon(sys.primary.kind)} /> {primaryName(sys.primary)}</span>
           {known < 2 && <span class="chip warn">{known === 1 ? 'not surveyed' : 'unknown'}</span>}
           {(sys.rust ?? 0) > 0.05 && <span class="chip danger" data-tip={rustTip(s, sys)}>rust {pct(sys.rust ?? 0)}</span>}
           {sys.beacon && (

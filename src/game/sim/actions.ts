@@ -1,6 +1,7 @@
 import { CHARTER_BY_ID, CHARTERS } from '../data/charters';
 import { SHIP_BY_ID, SHIPS, isWarship, type ShipDef } from '../data/ships';
 import { formatYears } from '../eras';
+import { DUSK_START, GAS_SCOOP_LY, nebulaNear } from '../interregnum';
 import { STRUCTURE_BY_ID, STRUCTURES, dismantledKey, enabledAt, hasOnceEffect, inLeptonicForm, structureLabel, type StructureDef } from '../data/structures';
 import { FORMS } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
@@ -44,6 +45,7 @@ const NOT_IN_THIS_GAME = 'Not in this game.';
 
 export function structureCheck(state: GameState, c: Colony, d: StructureDef): string | null {
   if (d.rubble && !rubbleGame(state)) return NOT_IN_THIS_GAME;
+  if (d.interregnumOnly && !state.settings.interregnum) return NOT_IN_THIS_GAME;
   if (d.tech && !hasTech(state, d.tech)) return 'Not yet researched.';
   if (!ageReached(state, d.era)) return 'Not in this age.';
   const b = state.bodies[c.bodyId];
@@ -58,6 +60,7 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return 'Needs a different kind of star or remnant.';
   if (d.notAt?.includes(sys.primary.kind)) return sys.primary.kind === 'brown_dwarf' ? 'A brown dwarf’s light is too faint and too red for these: Infrared Shrouds gather it.' : 'Gathers nothing from this kind of star.';
   if (d.habitable && b.habitability < 0.3) return 'Only on a living world.';
+  if (d.gasYield && !nebulaNear(state, sys)) return state.years >= DUSK_START ? 'The galaxy’s gas is spent: there is nothing left to scoop.' : `Needs a nebula within ${GAS_SCOOP_LY} light-years.`;
   // who can live here (data/forms.ts): nothing that only houses Kin, or puts them to sleep, or uploads them
   const form = FORMS[formOf(c)];
   const onlyKin = (d.cap && Object.keys(d.cap).every((t) => !form.lives.includes(t as ThreadId))) || (d.cryoCap && !form.sleepers) || (d.enables === 'upload' && !form.lives.includes('kin'));
