@@ -225,6 +225,15 @@ word", then the player's list of 16 Oct, then the falling worlds.
   the Dusk are unchanged, all 300 of the harness's. The interview's answers are in SESSION-NOTES
   (1 Nov); DEV-NOTES has where it lives and its traps.
 
+- **An intro for the Interregnum, and the films' music rewritten** (1 Nov, PR m1omg/Steliterate#55):
+  "Make an intro for Twilight interregnum also please improve the music in the vids and dont use the
+  same melody for every vid", then "a bit of Terminator 1 synth soundtrack energy … not a full style
+  overwhelm, just a bit". The Interregnum's film, Reel 0 (`src/film/interregnum.ts`), plays as such
+  a game begins. Every film's music is now composed in `src/film/score.ts` (its own key, mode,
+  melody, chords, arpeggios, bass and instruments) and played by `cue.ts` (new instruments and a
+  reverb; an analog sequencer, a metallic clank in an uneven pulse and a gliding lead in the darker
+  films). No rule changed. DEV-NOTES ("The films' music") says how to write a score and measure it.
+
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
 

@@ -1604,6 +1604,44 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     two seeds (from the build before), and the harness must give every one of 300 games as before.
   Checks: `unit/interregnum-clock`, `-galaxy`, `-evolution`, `-saves`; `browser/interregnum`;
   `tools/saves/39f855c-seed1000-turn48-interregnum-next.json.gz`; `tools/sim.ts --interregnum`.
+  Its film (`src/film/interregnum.ts`, 1 Nov) plays as such a game begins (`Menu.tsx`); `FilmsSeen`
+  (`Misc.tsx`) lists it only with `PREVIEW` or in such a game. `paintNebula` (`paint.ts`) paints
+  its nebula; the H–R shot's new stars are drawn on the main sequence from a second `Population`'s
+  masses (not aged: at η 12 to 12.6 a star born in the shot would be gone before the next frame),
+  fewer as the gas thins.
+- **The films' music (1 Nov):** `src/film/score.ts` has no sound in it. A `Score` is a film's key
+  (`tonic`, `mode` from `MODES`), its `cuts` (beats, each starting a scene; they need not all be
+  scene starts) with a chord degree for each (`chords`), the title's chord (`title`), a `motif`
+  (and `motif2`) in scale degrees and `melody`, the statements of it (`at`, `shift`, `octave`,
+  `drop` its last notes, `voice`, `amp`, `major`, `alt`), `lead` and `pads` (which voice when),
+  `arps` (from, to, step, a pattern of chord tones, voice, octave), `bass`, `drone`, `pulse`
+  (kick, tom, shaker or metal, on a grid, `groups` for an uneven one, `skip`), `dyn` (each scene's
+  loudness), and the Supernova's and the Last Horizon's `chirp`, `thumps` and `boom`. `compose()`
+  turns it into `ScoreEvent`s (beat, voice, pitches, length, loudness); `cue.ts` plays each
+  (`PLAY[voice]`) at its time, scheduled 3 s ahead (`playCue`) or all at once (`renderCue`).
+  - A new film needs a score in `SCORES` (the type makes it), timed as the film (`bpm`, `beats`,
+    `titleAt`), its cuts on the film's own. A film whose cuts differ by the fate gets a
+    `FATE_SCORES` entry (`id:fate`).
+  - A new instrument: a `Voice` in `score.ts`, its oscillators in `OSCILLATORS` (full and below
+    high quality: `mostAtOnce` and the films check count from these, so `cue.ts` must make exactly
+    these), its ring in `TAIL`, its level in `LEVEL` and room in `WET` (`cue.ts`), its `Play`.
+  - Quality: below `'high'` (a touch device's default is medium) the lighter instruments (`low`
+    in `Out`); at `'low'` no room. `playCue` takes it from the settings (`Film.tsx`).
+  - Levels: `node tools/cue-levels.mjs [film...] [--fate=stable] [--stems]` renders each film's
+    music in the export page and prints its peak and RMS (dBFS), `--stems` each instrument alone.
+    Keep peaks below about −2 dBFS (`browser/films` fails one above −0.1) and loudness near −19.
+  - `unit/film-scores` holds the rules: no two films' melodies alike by their first three steps
+    (a new film needs a motif of its own: the check names the clash), notes in the mode unless
+    `off` (a chromatic step, a raised third), every cut accented, every note on a quarter-beat grid
+    from the start or a cut and inside the film, at most 56 oscillators at once (32 below high),
+    the sequencer and the clank in the darker films and none of the synth in at least four.
+  - Hooks: `__stel.cueOscillators(id, fate)` (in all, at the settings' quality),
+    `__stel.cueLevels(id, fate)` (offline, peak and RMS).
+  - Traps: the export page (`film.html`) hangs on a film id `FILMS` lacks, so `cue-levels`
+    cannot measure a score before its film exists; `pkill -f "vite preview"` inside a Bash call
+    kills that call's own shell (its command line contains the pattern); a preview server run in
+    the background stops at its time limit (30 minutes by default): give it a long one before the
+    browser checks, or they fail midway with "no server".
 - **A message from a sender gone since** (31 Oct): `REACHES` in `survivors.ts` names, for each kind
   of neighbour's message, the answer that reaches them; `goneAnswer` refuses it once they are gone
   (the Signals window greys it out with the reason) and `resolveSurvivorSignal` closes the others
@@ -1703,8 +1741,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   a beat grid, corners, labels, timecode, narration, title card) whose `setup(w, h, quality,
   args)` lays it out once and returns `draw(c, t)` and `text(t)`: pure in `t`, so never keep state
   between frames (`browser/films` compares a frame reached at 30 and at 144 frames a second).
-  `FilmArgs` carries the fate and η. `cue.ts` schedules each film's sound from `SPECS` on any
-  `BaseAudioContext` (`renderCue` for the videos). `player.ts` (`FilmPlayer`) draws on one canvas
+  `FilmArgs` carries the fate and η. Each film's music is composed in `score.ts` (`SCORES`,
+  `FATE_SCORES`) and played by `cue.ts` on any `BaseAudioContext` (`renderCue` for the videos);
+  see "The films' music" below. `player.ts` (`FilmPlayer`) draws on one canvas
   and keeps the words as DOM (`.film-line`, styles at the end of `styles.css`, larger under
   `html.lv`). `ui/screens/Film.tsx` mounts it on `document.body` (outside `#ui`'s zoom), stops
   the engine, ducks the music (`duckMusic`, the `duck` gain in `core.ts`) and plays the cue on

@@ -123,6 +123,18 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     (rather than a separate star lighting later); and the home star dies near turn 46 to 50, not 40
     to 44 (0.19 to 0.22 M☉), because the autoplayer, ours and the neighbours', could not live
     through it so early. The autoplayer also sleeps through the dim end of the age.
+  - Then (1 Nov): PR m1omg/Steliterate#55, **an intro for the Twilight Interregnum and a score of
+    its own for every film**. The player, after seeing the stable cut of the Last Horizon: "Make an
+    intro for Twilight interregnum also please improve the music in the vids and dont use the same
+    melody for every vid". Asked, they chose "Rewrite the synth" (over gentler fixes to the old
+    one), "Warm, a little wistful" for the intro, and all four shots offered: the galaxy alone;
+    stars dying, stars born; a nebula and a young star; our star and our world. Mid-way they wrote
+    "You can add a bit of Terminator 1 synth soundtrack energy to the cutscene nusic, not a full
+    style overwhelm, just a bit" (sent before the summary of a long session, which dropped it; then
+    "You totally ignored that Terminator 1 synth music bit": it was taken up at once). Their
+    taste: a pulsing analog sequencer, a metallic clank in an uneven pulse and a gliding lead,
+    mostly in the darker films; none of the original's melodies or its exact beat. The three
+    videos rendered for them: the Interregnum's, the Supernova's and the Dusk's.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",
