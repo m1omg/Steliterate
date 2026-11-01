@@ -21,7 +21,7 @@ import { spareYield, type SpareYield } from './spare';
 import { finishQueued } from './queue';
 import { governorQueue } from './governor';
 import { coolAccord } from './accord';
-import { MATTER_AS_ENERGY, capacity, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type TurnContext } from './economy';
+import { MATTER_AS_ENERGY, capacity, clockShare, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type TurnContext } from './economy';
 import { checkEndings, workCost } from './endings';
 import { pruneFinds, queueEvent, rollRandomEvent } from './events';
 import { advanceFleets, autoExplore, createColony, deepFor, destroyColony, fleetUpkeep, repairFleets, surveyWhereStationed, updateDetection } from './fleets';
@@ -527,7 +527,7 @@ function economy(state: GameState, t: CivTurn) {
   }
   eIn += jointIncome(state) * ctx.paceFactor;
   eOut += fleetUpkeep(state, upkeepOf(ctx));
-  eOut += researchDraw(state, insight);
+  eOut += researchDraw(state, insight) * clockShare(ctx);
   accord -= latticeAlienation(state, mods);
   civ.energy += eIn - eOut;
   // decoy beacons burn only while we feed them

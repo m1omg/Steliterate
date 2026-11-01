@@ -4886,6 +4886,25 @@ it, a friend's suggestion as the player put it: a warning when a Thread's standi
   (30 accord, ×1.6 for each pact in force or on its way), and agreeing asked today's. The hint is
   worked out as the message is drawn (`liveHint`), saying what we have when it is short; a shared
   work's yield "now" likewise.
-- Checks: `unit/save-room`, `unit/thin-gas`, `unit/orbits-drawn`, `unit/live-hint`; `browser/save-room`,
+- **Flare turns cost people for their time too** (the player, keeping time with Kekoth's flare in a
+  game begun in the Twilight Interregnum: "No light to draw on right now? what?"; their save is in
+  `tools/saves/`). Each of a flare's six turns covered 620 million years, 0.2% of a Tide turn
+  there, and paid for that time only (since 20 Oct), so every building gathered next to nothing
+  and the build list called it "No light to collect here right now", under a star blazing five
+  times brighter; and the 18 Kin still cost their whole upkeep each turn, 51 energy against 0.4
+  gathered. Asked, they chose "People cost for the time too": in a turn a clock, a flare or the
+  age's end cuts short, people's upkeep and the labs' draw are for the time it covers, as the
+  machines' already were (`clockShare`); their work stays a whole turn's, so the six turns are six
+  to build and prepare, as the flare's event promised. Any other turn is as before (a quick pace
+  still costs its people a whole turn each). The build list and a built one's tip now say "A short
+  turn: we keep time with Kekoth's flare. It covers 620 million years, 0.2% of a Tide turn, and
+  gathers for that time only: +0.01 energy now, +5.7 over a Tide turn". In their game the flare's
+  six turns now take 76 energy to 51, 21 of it the Mutual Aid pact's beam; they cost about 300
+  before.
+- **The harness** (300 standard competent games, four parts): 181 survive, 69 victories, a
+  Degenerate Age of 102 turns (181 / 69 / 95 before); by fate decay 109 / 148, stable 30 / 81,
+  curvature 42 / 71. Harsh: 148 / 29 / 92 (158 / 34 / 93). Begun in the Interregnum: 186 / 74 /
+  109, 297 reaching the Dusk (183 / 80 / 102, 297). Within the noise.
+- Checks: `unit/save-room`, `unit/thin-gas`, `unit/orbits-drawn`, `unit/live-hint`, `unit/flare-turns`; `browser/save-room`,
   `browser/reveal-first`; `browser/interregnum` (a few nebulae drawn, thin gas, the cloud),
   `browser/research-fate` (the column's name).

@@ -1,9 +1,9 @@
 import { formatYears, logTurnLength } from '../eras';
-import { effectivePace, livedShare, turnStep, upkeepShare } from './flare';
+import { effectivePace, flareClock, livedShare, turnStep, upkeepShare } from './flare';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
-import { capacity, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type ColonyTurn, type TurnContext } from './economy';
+import { capacity, clockShare, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type ColonyTurn, type TurnContext } from './economy';
 import { BURST_CATCH } from './crossing';
 import { computeMods, strainFor, type Strain } from './mods';
 import { researchDraw } from './research';
@@ -87,7 +87,7 @@ export function project(state: GameState, paceOverride?: number): Projection {
   p.energyOut += beaconUpkeep(state) * ctx.paceFactor;
   p.energyOut += fleetUpkeep(state, upkeepOf(ctx));
   p.accord -= latticeAlienation(state, mods);
-  p.researchDraw = researchDraw(state, p.insight);
+  p.researchDraw = researchDraw(state, p.insight) * clockShare(ctx);
   p.energyOut += p.researchDraw;
   for (const t of THREADS) p.strain[t] = strainFor(t, logL, mods, Math.log10(ctx.paceFactor));
   return p;
@@ -121,6 +121,28 @@ function noLight(state: GameState, c: Colony, ctx: TurnContext): string {
 }
 
 /**
+ * Why an energy structure gathers next to nothing this turn. A turn shorter than a Tide turn (one a
+ * flare's clock sets, the last of an age, a quick pace) gathers only for the time it covers, so a
+ * collector under a blazing star can make next to nothing in it (1 Nov, the player, under Kekoth's
+ * flare: "No light to draw on right now? what?"): say so, with what it gathers over a whole Tide
+ * turn. Else there is truly nothing to gather.
+ */
+function littleEnergy(state: GameState, c: Colony, less: Colony, more: Colony, mode: string, ctx: TurnContext): string {
+  if (ctx.paceFactor < 1) {
+    const whole: TurnContext = { ...ctx, paceFactor: 1 };
+    const tide = colonyTurn(state, more, whole, state.civ.matter).y.energy - colonyTurn(state, less, whole, state.civ.matter).y.energy;
+    if (tide >= 0.05) {
+      const pct = ctx.paceFactor * 100;
+      const share = pct >= 1 ? `${Math.round(pct)}%` : `${pct.toPrecision(1)}%`;
+      const f = flareClock(state);
+      const why = f ? `: we keep time with ${f.system}’s flare` : '';
+      return `A short turn${why}. It covers ${formatYears(ctx.L)}, ${share} of a Tide turn, and gathers for that time only: +${(tide * ctx.paceFactor).toFixed(2)} energy now, +${tide.toFixed(1)} over a Tide turn`;
+    }
+  }
+  return mode === 'light' ? noLight(state, c, ctx) : 'Nothing for it to draw on here right now';
+}
+
+/**
  * What one more of a structure would change at this settlement next turn: the economy run
  * with and without it, so the numbers include this world's light, heat, richness, focus and pace.
  */
@@ -135,7 +157,7 @@ export function structureEffect(state: GameState, c: Colony, id: string, ctx: Tu
   for (const k of [...THREADS, 'cryo'] as const) if (capB[k] !== capA[k]) room[k] = capB[k] - capA[k];
   const notes: string[] = [];
   const e = b.energy - b.energyUpkeep - (a.energy - a.energyUpkeep);
-  if (d.energy && b.energy - a.energy < 0.05) notes.push(d.energy.mode === 'light' ? noLight(state, c, ctx) : 'Nothing for it to draw on here right now');
+  if (d.energy && b.energy - a.energy < 0.05) notes.push(littleEnergy(state, c, c, more, d.energy.mode, ctx));
   notes.push(...standingNotes(state, c, more, id, ctx, 1, false));
   return { energy: e, matter: b.matter - b.matterUpkeep - (a.matter - a.matterUpkeep), industry: b.industry - a.industry, insight: b.insight - a.insight, accord: b.accord - a.accord, room, notes };
 }
@@ -210,7 +232,7 @@ export function builtEffect(state: GameState, c: Colony, id: string, ctx: TurnCo
   const head = `${n > 1 ? `${n}× ` : ''}${d.name}: `;
   let why = b.lines.find((l) => l.label.startsWith(head))?.label.slice(head.length);
   const made = fx.matter > 0.05 || fx.industry > 0.05 || fx.insight > 0.05 || fx.accord > 0.05 || b.energy - a.energy > 0.05;
-  if (!why && d.energy && b.energy - a.energy < 0.05) why = d.energy.mode === 'light' ? noLight(state, c, ctx) : 'nothing for it to draw on here right now';
+  if (!why && d.energy && b.energy - a.energy < 0.05) why = littleEnergy(state, c, less, c, d.energy.mode, ctx);
   const idle = !!why && !made && !Object.keys(room).length;
   return { ...fx, room, notes, ...(idle ? { why: why!.charAt(0).toLowerCase() + why!.slice(1) } : {}), idle };
 }

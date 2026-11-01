@@ -27,6 +27,16 @@ export interface TurnContext {
 /** What a turn's machines, sleepers and fleets cost, in Tide turns (TurnContext.upkeepShare). */
 export const upkeepOf = (ctx: TurnContext): number => ctx.upkeepShare ?? Math.max(1, ctx.paceFactor);
 
+/**
+ * What a turn a clock, a flare or the age's end cuts short costs in people's upkeep and the labs'
+ * draw: the Tide turns it covers, as it pays (1 Nov, the player, keeping time with a flare: "No light
+ * to draw on right now? what?", their 18 Kin costing 51 energy a turn while its 620 million years
+ * gathered 0.4; asked, "People cost for the time too"). Their work stays a whole turn's: a flare's
+ * six turns are six turns to build and prepare. Any other turn: 1, as before (a quick pace still
+ * costs its people a whole turn each).
+ */
+export const clockShare = (ctx: TurnContext): number => Math.min(1, upkeepOf(ctx));
+
 export type Capacity = Record<ThreadId, number> & { cryo: number };
 
 /**
@@ -169,6 +179,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
   // machines and sleepers run for the whole of a slowed turn; only minds can slow themselves down
   // (a turn a clock, a flare or the age's end cuts short costs for the time it covers: upkeepShare)
   const slowTime = upkeepOf(ctx);
+  // (and its people's upkeep, for a turn a clock cuts short: clockShare)
+  const peopleTime = clockShare(ctx);
   // after matter, what the Lattice mended with matter it mends with energy
   const noMatter = matterGone(state);
   // written into a hole's horizon, minds live in its time: a tenth of their upkeep, a quarter of
@@ -190,8 +202,8 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
     const ind = n * d.industry * o;
     const ins = n * d.insight * o;
     const acc = n * d.accord * o;
-    let eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1) * upMul;
-    let mUp = n * d.matterUpkeep * upkeepScale * upMul;
+    let eUp = n * d.energyUpkeep * s.upkeepMul * ctx.mods.upkeep[t] * upkeepScale * watch * (t === 'coldminds' && darkSky ? 0.5 : 1) * upMul * peopleTime;
+    let mUp = n * d.matterUpkeep * upkeepScale * upMul * peopleTime;
     const mended = noMatter && mUp > 0;
     if (mended) {
       eUp += mUp * MATTER_AS_ENERGY;

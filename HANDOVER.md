@@ -245,6 +245,16 @@ word", then the player's list of 16 Oct, then the falling worlds.
   validation took about an hour instead of two. Live at both addresses as `4865f2e`, script
   `index-DkGIjP_M.js`.
 
+- **Room for saves, thin gas, nebulae up close, worlds drawn apart, the reveal before the events,
+  a pact's price and flare turns** (1 Nov, PR m1omg/Steliterate#57): save slots in IndexedDB
+  (`slotdb.ts`) and Export and delete all saves; new Interregnum games begin with few nebulae (thin
+  gas, `Primary.condenseAt`); a nebula up close is a cloud (`nebulaCloud.ts`); the research grid's
+  first column is the Stelliferous Age; Burns until a precise date; drawn orbits spaced
+  (`orbits.ts`); an event waits for a survey reveal, and Settings, Open charted systems; a pact
+  offer's price as it is now; and in a turn a flare's clock cuts short people cost for its time too
+  (`clockShare`; the player's save in `tools/saves/`). A rule change: the harness within the noise.
+  Live at both addresses as `@MERGE@`, script `@SCRIPT@`.
+
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
 
@@ -273,9 +283,9 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#56 (stars that brighten, 1 Nov), `4865f2e` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-DkGIjP_M.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
-  | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
+  | As of | PR m1omg/Steliterate#57 (room for saves, thin gas, flare turns, 1 Nov), `@MERGE@` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `@SCRIPT@` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | Saves | `steliterate2.` keys (their own; slots' data in IndexedDB `steliterate2` since 1 Nov) | the same | `steliterate.` keys |
 
 ## 2. Read in this order
 
