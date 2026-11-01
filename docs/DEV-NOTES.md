@@ -1565,6 +1565,45 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   `data/events.ts`; an older save's comet (no `systemId`) falls through the home system. A
   `run: (s) => energy(s, n)` that returns the number is a type error beside other choices: give it
   a block body. Checks: `unit/event-tech`, `browser/event-tech`.
+- **The Twilight Interregnum** (1 Nov; CHANGELOG, "The Twilight Interregnum"): a game begun at
+  10¹² years, `settings.interregnum`.
+  - Offered where `PREVIEW` (`src/channel.ts`) is true: a path with `/next/`, or localhost and
+    127.0.0.1 for the checks; `?main` turns it off. To make it public, return true there. Saves
+    (`save.ts`): `KEY_I`/`AUTO_I` keep its quick save and autosave apart, `LAST(auto)` which was saved
+    last (`keyToLoad`); `listSlots(preview)` hides its slots (`SlotInfo.interregnum`); internally
+    `allSlots()` (never `listSlots()` where the index is rewritten); `previewOnly` in `Misc.tsx`
+    refuses its file at the main address.
+  - The age (`eras.ts`): `INTERREGNUM`, outside `ERAS`, index −1; `erasOf(interregnum)` for lists
+    (the Chronometer); `nextEra('interregnum')` is the Dusk. `calendarEra` gives `'dusk'` while
+    `state.era` is `'interregnum'`, so every `calendarEra(state) === 'dusk'` rule applies in it;
+    `eraAt` gives the Interregnum's Tide to `tideLength`/`tideTurnsAt`/`stepTime` for the Dusk's
+    calendar before 9 × 10¹³ years. A check of the age the player sees (`state.era === 'dusk'`)
+    does not: art (`ageArt` in `Story.tsx`), the views (`galaxyView`, `systemView`, `engine` tint),
+    music (`music.setEra` maps it to the Dusk's), the event pool (`DUSK_ONLY` in `sim/events.ts`),
+    the openings (`turn.ts`: An Old Sun, Counting the Stars).
+  - The galaxy (`interregnum.ts interregnumPass`, from `newGame` after `heavyDwarfs`, before the
+    start passes): its own stream, `hashSeed(seed + ':interregnum')`. Kinds `nebula` (with
+    `primary.future` and `bornAt`) and `young_star` (`cls`, `diesAt`, `future`: its remnant);
+    `Primary.formed` stands in for `formedAt`'s hash. Unformed worlds are whole `Body` objects in
+    `sys.unformed`, not in `state.bodies`, so no loop over the bodies meets them; `formWorlds`
+    brings them in (`formsAtBirth`: a young star's close worlds wait for its white dwarf, a blue
+    giant's for its remnant), and `frozenFromTheStart`/`waterFromTheStart` take a list of bodies for
+    them. `nameShining` gives a shining star a name of its own in place of the Dusk's catalogue.
+  - As it goes: `interregnumStars` (physics.ts), at the top of `evolveUniverse`'s loop; notes
+    `born` (with `cls` for a young star), `young_death`, `core_collapse` (with `hurt`) in
+    `handleNotes`; `flags.ir_born`/`ir_died` for The Last Gas (`crossing.ts`). Light in
+    `sourceLight` (the young star's share of the turn, as a new star's), `primaryLuminosity`,
+    `ownTemperature`; `isNewStar` (flare.ts) takes `young_star`, and `starClockEra` the
+    Interregnum. `gasLeft`, `nebulaNear`, `GAS_SCOOP_LY`; `gasYield` in the economy;
+    `interregnumOnly` on a tech or structure hides it in any other game (`techVisible`,
+    `structureCheck`, the research grid). `SUPERNOVA_LY` and the forecast in `forecast.ts`.
+  - The autoplayer: `starEnding` (a settlement's star leaving the main sequence within N Tide
+    turns), its builds, Kin frozen as the light goes, `settleScore`, `planInterregnumSleep`. The
+    late-Dusk build list is left as it was: a change there changes every game begun in the Dusk.
+  - Keep games begun in the Dusk unchanged: `unit/interregnum-galaxy` checks the galaxy's hash for
+    two seeds (from the build before), and the harness must give every one of 300 games as before.
+  Checks: `unit/interregnum-clock`, `-galaxy`, `-evolution`, `-saves`; `browser/interregnum`;
+  `tools/saves/39f855c-seed1000-turn48-interregnum-next.json.gz`; `tools/sim.ts --interregnum`.
 - **A message from a sender gone since** (31 Oct): `REACHES` in `survivors.ts` names, for each kind
   of neighbour's message, the answer that reaches them; `goneAnswer` refuses it once they are gone
   (the Signals window greys it out with the reason) and `resolveSurvivorSignal` closes the others
@@ -2174,3 +2213,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | ice worlds by starlight (8 Oct) | 135 | new galaxies turn ice worlds that are not frozen into bare rock (about 15 a galaxy); 60 victories, Degenerate Age 70 turns; 900 games 426 / 184 / 68 (434 / 183 / 70 before), within the noise: 108 of 900 games play out as before, and the outcomes that change go both ways (116 endurance → defeat, 104 back; 50 defeat → victory, 46 back). By fate: decay 168 / 450, stable 170 / 239, curvature 88 / 211 |
 | every measure in the settle lists; yields; twilight seas (8 Oct) | 147 | display only: all 300 games identical to the terraforming run, line for line |
 | terraforming; type, music, rings (7 Oct) | 147 | 59 victories, Degenerate Age 71 turns; 900 games 434 / 183 / 70 (437 / 183 / 69 before); by fate decay 173 / 450, stable 162 / 239, curvature 99 / 211. The autoplayer researches Terraforming last among the Dusk's projects and builds none (its Kin live on living worlds, which gain nothing; in 60 games it researched it in 59, median turn 84, and built it in 0). Variants, 900: the tech there but never chosen 436 / 180 / 70 (a new project moves games through the cheapest-project picks); researched right after Volatile Shepherding 424 / 166 / 69 (the detour delays the projects that win); terraforming every Kin world it can, as early as it can, 423 / 166 / 68, still none built |
+| the Twilight Interregnum, a game begun at 10¹² years (1 Nov; at /next/ only) | 192 | games begun in the Dusk: all 300 the same as before, 73 victories, Degenerate Age 97 turns; by fate decay 106 / 148, stable 34 / 81, curvature 52 / 71. Begun in the Interregnum (`--interregnum`): 296 of 300 reach the Dusk, 186 survive, 80 victories, Degenerate Age 101 turns, the Interregnum 73 turns; by fate decay 126 / 148, stable 19 / 81, curvature 41 / 71 |

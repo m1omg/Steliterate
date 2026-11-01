@@ -54,7 +54,8 @@ a star's state wherever the Systems window names its kind, and PR m1omg/Steliter
 `00d98dd`, the governor (27 Oct), and PR m1omg/Steliterate#52, `d479d67`, Fortify one, the black
 hole of our choice, Hide unavailable and the Leptonic Wraith (31 Oct), and PR m1omg/Steliterate#53,
 answers that cannot reach the gone, stored matter in the report, the governor in the Systems window
-and events unlocked by technology (31 Oct).
+and events unlocked by technology (31 Oct), and PR m1omg/Steliterate#54, the Twilight Interregnum, a
+game begun at 10¹² years, offered at /next/ only (`src/channel.ts`; 1 Nov).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -187,4 +188,7 @@ standard warlike --war=40`): 160 / 56, where the old rules gave 121 / 47. Open a
 −14.9 °C and a rush that finishes at once (24 Oct): 184 / 79 / 104; by fate decay 108 / 148,
 stable 33 / 81, curvature 43 / 71; Harsh 141 / 51 / 97, within the noise. Events unlocked by technology (31 Oct,
 PR m1omg/Steliterate#53; the comet through any system of ours): 192 / 73 / 97; by fate decay 106 /
-148, stable 34 / 81, curvature 52 / 71; every game re-rolled, within the noise.
+148, stable 34 / 81, curvature 52 / 71; every game re-rolled, within the noise. The Twilight
+Interregnum (1 Nov, PR m1omg/Steliterate#54): games begun in the Dusk the same in all 300; begun in
+it (`--interregnum`), 296 of 300 reach the Dusk, 186 / 80 / 101; by fate decay 126 / 148, stable
+19 / 81, curvature 41 / 71.

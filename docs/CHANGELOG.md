@@ -4614,3 +4614,89 @@ The player's word on the audit of the same day, and two more requests.
   its 9 saves; all 102 unit checks; all 78 browser checks. `browser/prompt-systems` answered each
   event by its first choice, which can now be greyed out (a settling mantle's Drill deeper, without
   Mantle Stimulation): it waited on it until it gave up; it now takes the first that can be taken.
+
+## The Twilight Interregnum: a game begun at 10¹² years, at /next/ only (1 Nov)
+
+The player: "For the next and only for the next version, not for the main one, let's make a sort
+of a prequel mode where you start earlier, from 1e12 years in the future. It would basically
+preserve the game as it is, except it would start even earlier … then it would progress into the
+regular dusk and all the following eras. It would again try to reflect the real physical
+environment of the era." They named it ("The Twilight Interregnum comes to mind"), asked that it be
+optional, and, as it took shape, "make sure the twilight galaxy looks livelier and brighter than
+the dusk one". The interview's answers: a heavier home star that dies within the age; about 60
+turns; every piece of the physics offered (heavier stars dying, gas and new stars, young bright
+stars, "some rare even brighter than yellow dwarf stars if plausible … as rare as collision stars
+are in the degenerate era", warmer dead stars and younger worlds); the neighbours start with us;
+the Dusk's music; no compensation for the head start; a crossing with a report; its saves hidden
+at the main address.
+
+- **Where it shows** (`src/channel.ts`): New Game's Begin choice, At the Long Dusk (the default)
+  or In the Twilight Interregnum, at /next/ only (and on a local server, for the checks; `?main`
+  shows what the main address shows). The code is the same at both addresses; making it public is
+  one line. Its quick save and autosave are kept apart (`steliterate2.save.interregnum`,
+  `….autosave.interregnum`), so it never takes the place of the main address's; Continue at
+  /next/ takes whichever was saved last. Its slots are listed at /next/ only; a file of it imported
+  at the main address is refused, with the way to /next/. Export all saves keeps every one.
+- **The age** (`eras.ts`): 0 · The Twilight Interregnum, Stelliferous Era, from 10¹² to 9 × 10¹³
+  years: 45 / 60 / 82 turns at Brief / Standard / Vast, from 40-year turns growing ×1.9 / 1.6 / 1.4.
+  It stands apart from `ERAS` (index −1), so no other age's index moved; its calendar is the
+  Dusk's (`calendarEra`), so the Dusk's physics, units, research, structures and charters apply,
+  with a Tide of its own before 9 × 10¹³ years. Its last turn stops there: **The Last Gas**, a
+  crossing that destroys nothing and reports the stars that went out and were born, the gas spent,
+  our old star, and where we live. Then the Long Dusk begins as ever, its Tide again from 40 years,
+  with its own words for a game begun before it. Its music is the Dusk's; its accent a warm gold;
+  its painting the Dusk's.
+- **The galaxy at 10¹² years** (`src/game/interregnum.ts`): the same galaxy as the seed gives at
+  the Dusk, rewound with draws of its own (so every Dusk seed is as it was: the galaxy's hash is
+  unchanged, `unit/interregnum-galaxy`).
+  - Our home and each neighbour's: the same system, worlds and names, around a heavier, older red
+    dwarf (0.19 to 0.22 M☉) that flares blue near turn 46 to 50 of 60 and collapses to a white
+    dwarf; its worlds widened by √ of its light, so each keeps the light it was made for; our world
+    young (its core hot, no failing dynamo, a healthy world's decline). The Tessellate's brown
+    dwarf stays one.
+  - The Dusk's red dwarfs are **nebulae**, dense knots of the galaxy's gas, lit one life before
+    they flare (7.8 to 8.9 × 10¹³ years), their worlds forming with them (`StarSystem.unformed`,
+    out of `state.bodies` until then).
+  - The Dusk's white dwarfs, as they were: one in five a white dwarf already (younger and warmer by
+    the same cooling laws); most an **old red dwarf** going out within the age, the heaviest first
+    (a red dwarf lives 10¹² years at 0.25 M☉, about 1.2 × 10¹³ at 0.08: Laughlin, Bodenheimer &
+    Adams 1997; Adams et al. 2004), with close worlds of their own; one in six born later from a
+    nebula; a few **young orange or yellow dwarfs**; rarer **white stars** (F, A), about as rare as
+    the Degenerate Age's collision stars. One or two **blue giants** burn at the start, now and
+    then one is born later. Every star that shines in the age has a name of its own (not the
+    Dusk's catalogue). Brown dwarfs formed later are nebulae until then.
+- **As it goes** (`physics.ts interregnumStars`): a nebula lights with its worlds; a red dwarf
+  takes the existing blue flare and white collapse; a young star leaves its white dwarf (its giant
+  phase at once, a bend), its close worlds coming in then; a blue giant explodes, leaving its
+  neutron star or black hole: settlements there are lost, and within 30 ly (Gehrels et al. 2003)
+  living worlds lose some of their air unless a Flash Shelter or its like keeps their life
+  underground. A young star brief beside its turn is a new star: we can keep time with it or catch
+  its flash, and Burst Catchers bank it. Light in the Dusk's units, compressed for the bright ones
+  as a helium star's is (K 3, G 4, F 6, A 9, B 14; a red dwarf 0.75 to 2.1). The forecasts name
+  our star's end, a young star's, and a blue giant within 30 ly of us; the age's end is The Last
+  Gas.
+- **The gas** (`gasLeft`): from all of it at 10¹² years to none at the Last Gas, by the logarithm of
+  time. **Interstellar Scooping** (50, harvest) and the **Gas Scoop**: 4 matter a turn × the gas
+  left, at a settlement within 25 ly of a nebula; neither exists in a game begun in the Dusk.
+- **Events**: An Old Sun (turn 3, our star's measure, in place of The Dynamo Falters), Counting the
+  Stars (turn 7), A Young Star, A Supernova (a blue giant's), Cold Chemistry; the Dusk's pool but
+  for the failing dynamo and the settling mantle.
+- **The map**: the Interregnum's galaxy half again as bright as the Dusk's at its start, its stars
+  twinkling more, dimming as its old stars go out and its gas thins, until the last are born; its
+  nebulae soft rose clouds, seen from anywhere; young stars coloured and sized by class in both
+  views. The Chronometer begins with the age's own segment and milestones (heavy red dwarfs dying,
+  the old red dwarfs gone, the last stars born, The Last Gas).
+- **The autoplayer**: as its star's end nears it builds power that needs no star and Cryo Halls,
+  freezes its Kin as the light goes out, settles where the light will last, scoops gas, and sleeps
+  through the dim end of the age when its reserve would not last to the Last Gas.
+- The Codex (0. The Twilight Interregnum) and the Manual (Beginning in the Twilight Interregnum)
+  say all of it, shown where it is offered or in a game begun in it; the guide has its own first
+  words.
+- Checks: `unit/interregnum-clock`, `unit/interregnum-galaxy`, `unit/interregnum-evolution`,
+  `unit/interregnum-saves`, `browser/interregnum`; a save at turn 48 in `tools/saves/`.
+- **The harness**: 300 standard competent games begun in the Dusk come out the same in all 300 as
+  before (192 / 73 / 97; by fate decay 106 / 148, stable 34 / 81, curvature 52 / 71). Begun in the
+  Interregnum (`tools/sim.ts --interregnum`): 296 of 300 reach the Dusk, 186 survive, 80
+  victories, a Degenerate Age of 101 turns, the Interregnum 73 turns on average (its star clocks
+  and sleep among them); by fate decay 126 / 148, stable 19 / 81, curvature 41 / 71. Neighbours
+  lost by turn 80: 8% (3% in a game begun in the Dusk).
