@@ -4818,7 +4818,8 @@ it, a friend's suggestion as the player put it: a warning when a Thread's standi
 - The Codex says it (the Twilight Interregnum's young stars, the Long Dusk's red dwarfs, black
   holes); its old line "a bend: the game does it at once" for the giant phase is gone.
 - Checks: `unit/stellar`; `unit/ladder` holds a red dwarf's brightening equal where it compares
-  yields across the ages. `run.mjs --lanes=N` runs N browser checks at once.
+  yields across the ages. `run.mjs --lanes=N` runs N browser checks at once, those that time
+  frames or animations (`lanes: alone`: films, survey-reveal) alone after the others.
 - **The harness** (300 standard competent games, run in four parallel parts): 181 survive, 69
   victories, a Degenerate Age of 95 turns (192 / 73 / 97 before); by fate decay 103 / 148, stable
   31 / 81, curvature 47 / 71. Harsh: 158 / 34 / 93 (the same 300 before: 158 / 43 / 92). Begun in

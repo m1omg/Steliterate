@@ -7,7 +7,7 @@
 // (1 Nov: one at a time they took some 80 minutes; three lanes on four cores, about 30). Each check ends with `TAG OK` or
 // `TAG FAILED (n)` and sets its exit code; a run with every check passing ends `ALL CHECKS PASSED`.
 import { spawn } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,6 +32,11 @@ if (mode === 'browser' || mode === 'all') for (const c of pick('browser', '.cjs'
 if (!jobs.length) {
   console.log(`No checks to run (mode ${mode}${only.length ? `, names ${only.join(' ')}` : ''}).`);
   process.exit(1);
+}
+
+/** A browser check that must run alone (it times frames or animations): `lanes: alone` in its file. */
+function alone(job) {
+  return /lanes: alone/.test(readFileSync(job.file, 'utf8').slice(0, 4000));
 }
 
 function runOne(job) {
@@ -64,7 +69,11 @@ async function lane(list, width) {
 
 const results = [
   ...(await lane(jobs.filter((j) => j.lane === 'unit'), Math.max(1, cpus().length - 1))),
-  ...(await lane(jobs.filter((j) => j.lane === 'browser'), lanes)),
+  // (a check that times frames or animations runs alone, after the others: marked `lanes: alone`
+  // in its file. 1 Nov: three lanes at once left films' frames and the survey reveal's steps
+  // too slow for what they measure)
+  ...(await lane(jobs.filter((j) => j.lane === 'browser' && !(lanes > 1 && alone(j))), lanes)),
+  ...(lanes > 1 ? await lane(jobs.filter((j) => j.lane === 'browser' && alone(j)), 1) : []),
 ];
 const failed = results.filter((r) => r.code !== 0);
 for (const r of failed) {

@@ -145,7 +145,10 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     ```
     `mobile` measures the rail's names only when the fonts are there (it says so otherwise).
   - `run.mjs unit|browser|all [url] [out] [names…] [--lanes=N]` runs them (unit checks several
-    at a time, browser checks one at a time, or N at once) and prints a summary; `npm run check` and
+    at a time, browser checks one at a time, or N at once) and prints a summary. A check that
+    times frames or animations says `lanes: alone` in its first lines (films, survey-reveal) and
+    runs by itself after the others: in three lanes on 1 Nov the films' frames came 33 ms apart
+    and the survey reveal's steps lagged, and both failed, where alone they pass; `npm run check` and
     `npm run check:browser` call it. Name some to run only those:
     `node tools/checks/run.mjs unit clock evap`.
   - **Profiling as a phone** (13 Oct): Playwright with `viewport` 390×844, `deviceScaleFactor` 3,
