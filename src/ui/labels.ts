@@ -3,7 +3,7 @@ import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, boilingAway, isStarLike, n
 import { GIANT, youngStage } from '../game/stellar';
 import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
 import type { Body, BodyKind, Focus, GameState, Primary, PrimaryKind, SpareWork, StarSystem } from '../game/types';
-import { youngStarName } from '../game/interregnum';
+import { thinGas, youngStarName } from '../game/interregnum';
 import { SPARE_RATE, TEND_SHARE, salvageIsMatter } from '../game/sim/spare';
 import type { IconName } from './icons';
 import { kelvin } from './fmt';
@@ -30,6 +30,7 @@ export const PRIMARY_NAME: Record<PrimaryKind, string> = {
 
 /** A star's name by its kind, and a young star's by its class too: "Yellow dwarf (G)". */
 export function primaryName(p: Primary): string {
+  if (thinGas(p)) return 'Thin gas';
   return p.kind === 'young_star' ? youngStarName(p) : PRIMARY_NAME[p.kind];
 }
 
@@ -330,7 +331,9 @@ export function starLife(s: GameState, sys: StarSystem): { now: string; next: st
             ? GIANT[p.cls ?? 'G'].name.toLowerCase()
             : 'main sequence'
           : p.kind === 'nebula'
-            ? 'collapsing'
+            ? thinGas(p)
+              ? 'thin gas'
+              : 'collapsing'
             : p.kind === 'black_hole' || p.kind === 'smbh'
               ? 'evaporating'
               : 'burning';
@@ -346,7 +349,9 @@ export function starLife(s: GameState, sys: StarSystem): { now: string; next: st
               : 'white dwarf'
             : GIANT[p.cls ?? 'G'].name.toLowerCase()
           : p.kind === 'nebula'
-            ? 'lights'
+            ? thinGas(p)
+              ? 'gathers into a nebula'
+              : 'lights'
             : p.kind === 'black_hole' || p.kind === 'smbh'
               ? 'final burst'
               : 'burns out';

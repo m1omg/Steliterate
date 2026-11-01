@@ -12,7 +12,7 @@ import { THREAD_DEFS } from '../../game/data/threads';
 import { music } from '../../audio/music';
 import { sfx } from '../../audio/sfx';
 import { n0 } from '../fmt';
-import { bump, engine, hudPrefs, modal, rev, revealing, screen, selection, setHudPrefs } from '../store';
+import { bump, engine, hudPrefs, modal, rev, revealing, screen, selection, setHudPrefs, view } from '../store';
 import { pivotToSystem } from './Lists';
 import { Icon } from '../Icon';
 import { ModalFrame } from './Frame';
@@ -151,7 +151,12 @@ export function EventModal({ s }: { s: GameState }) {
   // an event waits while a survey reveal flies through a system (24 Oct, the player: "the planet
   // exploration popup occurs while it's showing all the planets"): the flight's caption already
   // names what was found on each world, and the cards come after it, or once it is skipped
-  const flying = !!revealing.value;
+  // and while one is about to begin: an event about a system just charted lets its reveal play first
+  // (1 Nov, the player: "make sure that the exploration occurs first and then the event slide"),
+  // as does a system opened as the turn ends (Settings: Open charted systems)
+  const sysTop = top && !result ? eventSystem(s, top) : null;
+  const revealFirst = !!sysTop && !!s.systems[sysTop] && !s.systems[sysTop].gone && hudPrefs.value.eventPivot && view.value === 'system' && !!engine()?.revealWaiting(sysTop);
+  const flying = !!revealing.value || !!engine()?.revealAhead || revealFirst;
   // each event takes focus on its title (never a choice: a stray Enter must not choose)
   const head = useRef<HTMLHeadingElement>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -160,7 +165,7 @@ export function EventModal({ s }: { s: GameState }) {
   // as an event about a star opens, the view swings there behind it (not during a flight, which
   // has the camera: once it is over the view is in that system already)
   useEffect(() => {
-    if (!top || eventResult.value || !hudPrefs.value.eventPivot || revealing.peek()) return;
+    if (!top || eventResult.value || !hudPrefs.value.eventPivot || revealing.peek() || (engine()?.revealAhead && !revealFirst)) return;
     const id = eventSystem(s, top);
     if (id) showEventStar(s, id);
   }, [top?.uid]);

@@ -1,3 +1,4 @@
+import { thinGas } from '../../game/interregnum';
 import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { siteValue } from '../../game/sim/sites';
@@ -676,7 +677,7 @@ function starState(s: GameState, sys: StarSystem, L: number): { word: string; la
   const k = sys.primary.kind;
   const say = (word: string, tone = '') => ({ word, label, tone });
   if (/rekindled|raining onto it/.test(label)) return say('rekindled', 'good');
-  if (k === 'nebula') return say('forming', 'good');
+  if (k === 'nebula') return thinGas(sys.primary) ? say('thin gas') : say('forming', 'good');
   if (k === 'collision_star' || k === 'helium_star' || k === 'helium_giant' || k === 'dark_star' || k === 'young_star') {
     const dies = sys.primary.diesAt ?? Infinity;
     return dies <= s.years ? say('out') : isFinite(L) && dies <= s.years + L ? say('goes out this turn', 'warn') : say('burning', 'good');

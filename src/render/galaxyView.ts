@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { gasLeft } from '../game/interregnum';
+import { gasLeft, thinGas } from '../game/interregnum';
 import { fleetLook, type FleetLook } from '../game/data/ships';
 import { brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, shownKind } from '../game/physics';
 import { thermalRGB } from './shaders/bodies';
@@ -423,10 +423,11 @@ export class GalaxyView {
   /**
    * The Twilight Interregnum's nebulae (interregnum.ts): a soft rose cloud on each, the more opaque
    * the more gas is left; gone as each lights as its star. Every one, known or not: glowing gas is
-   * seen across a galaxy, as the Heart is (its star, and its worlds, are what a survey finds).
+   * seen across a galaxy, as the Heart is (its star, and its worlds, are what a survey finds). Thin
+   * gas, not yet gathered (interregnum.ts thinGas), has none: a dim point only.
    */
   private syncNebulae(state: GameState, gas: number) {
-    const want = new Set(Object.values(state.systems).filter((x) => x.primary.kind === 'nebula' && !x.gone).map((x) => x.id));
+    const want = new Set(Object.values(state.systems).filter((x) => x.primary.kind === 'nebula' && !thinGas(x.primary) && !x.gone).map((x) => x.id));
     for (const [id, sp] of this.nebulae) {
       if (want.has(id)) continue;
       this.group.remove(sp);
@@ -893,6 +894,8 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   if ((k === 'black_hole' || k === 'smbh') && lastTurn(s, state)) return [1.25, 1.25, 1.35];
   if (k === 'black_hole' || k === 'smbh') return [0.62, 0.52, 1.0];
   if (k === 'void' || k === 'rogue') return [0.35, 0.36, 0.42];
+  // thin gas, not yet gathered into a nebula: a dim, cold point
+  if (k === 'nebula' && thinGas(s.primary)) return [0.3, 0.32, 0.4];
   // a nebula (the Twilight Interregnum): the rose of hydrogen glowing in the light of stars near it, dimmer as the gas thins
   if (k === 'nebula') {
     const g = 0.45 + 0.55 * gasLeft(state.years);
@@ -941,6 +944,7 @@ function nodeSize(s: StarSystem, state: GameState): number {
   if (k === 'young_star') return (s.primary.cls === 'B' ? 10 : s.primary.cls === 'A' || s.primary.cls === 'F' ? 8.5 : 7.5) * (1 + 0.6 * youngStage(s.primary, state.years).giant);
   if (k === 'red_dwarf') return 6 * (1 + 0.15 * Math.min(1, (redBrightening(s.primary, state.years) - 1) / 2));
   if ((k === 'black_hole' || k === 'smbh') && lastTurn(s, state)) return 11;
+  if (k === 'nebula' && thinGas(s.primary)) return 3.5;
   switch (k) {
     case 'smbh':
       return 11;

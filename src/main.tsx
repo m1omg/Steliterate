@@ -6,7 +6,7 @@ import { newGame } from './game/newGame';
 import { orderFleet } from './game/sim/actions';
 import { endTurn } from './game/sim/turn';
 import { autoPlay } from './game/auto';
-import { exportCode, importCode, loadGame, saveGame } from './game/save';
+import { exportCode, importCode, loadGame, moveSlotsToDb, saveGame } from './game/save';
 import type { GameState } from './game/types';
 import { audio, installUnlock, setVolumes } from './audio/core';
 import { music } from './audio/music';
@@ -194,6 +194,8 @@ window.addEventListener('resize', () => applyUiScale(settings.value.uiScale));
 
 // Sound: allowed only after the first gesture.
 installUnlock();
+// the save slots kept in localStorage before 1 Nov, moved into IndexedDB (each read back before its old copy goes)
+void moveSlotsToDb();
 setVolumes(settings.value.music, settings.value.sfx);
 music.setPlaylist(settings.value.playlist, settings.value.overture);
 music.start();

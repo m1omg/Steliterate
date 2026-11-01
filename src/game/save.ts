@@ -13,6 +13,7 @@ import { BATTLE_MEMORY } from './sim/conflict';
 import { PLAYER_ID, assertPlayerView, linkCivs } from './civs';
 import { STORE } from '../keys';
 import { PREVIEW } from '../channel';
+import { dbDelete, dbGet, dbPut } from './slotdb';
 
 // Saves live in this browser only. Every access is guarded: storage can be missing,
 // full or blocked (private windows, previews), and the game must still run.
@@ -283,10 +284,25 @@ export function importCode(code: string, legacy = false): GameState | null {
   }
 }
 
-// ---- save slots: as many named saves as the browser will hold, kept gzipped where it can
+// ---- save slots: as many named saves as the browser will hold, kept gzipped where it can. Since
+// 1 Nov their data lives in IndexedDB (slotdb.ts: a share of the device's free space), where
+// localStorage gave about 5 MiB to every address of m1omg.github.io together; where IndexedDB is
+// missing or blocked, in localStorage as before. Their index stays in localStorage (small, read at
+// once), and a slot from before is read where it is until `moveSlotsToDb` moves it.
 
 const SLOT_INDEX = `${STORE}slots`;
 const slotKey = (id: string) => `${STORE}slot.${id}`;
+
+/** A slot's stored data, wherever it is kept: IndexedDB, else localStorage (a slot from before, or where there is no IndexedDB). */
+async function slotData(id: string): Promise<string | null> {
+  const db = await dbGet(id);
+  if (db !== null) return db;
+  try {
+    return ls()?.getItem(slotKey(id)) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export interface SlotInfo {
   id: string;
@@ -347,7 +363,9 @@ export async function saveToSlot(state: GameState, name: string, id?: string, sa
   const slotId = id ?? `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
   try {
     const data = await pack(serialize(state));
-    store.setItem(slotKey(slotId), data);
+    // IndexedDB first (room to spare); localStorage where it cannot be had (and no copy left behind there)
+    if (await dbPut(slotId, data)) store.removeItem(slotKey(slotId));
+    else store.setItem(slotKey(slotId), data);
     const info: SlotInfo = { id: slotId, name: name.trim() || `Turn ${state.turn}`, civ: state.settings.civName, turn: state.turn, era: state.era, savedAt, bytes: data.length, ...(state.settings.interregnum ? { interregnum: true } : {}) };
     writeIndex([info, ...allSlots().filter((x) => x.id !== slotId)]);
     return info;
@@ -358,7 +376,7 @@ export async function saveToSlot(state: GameState, name: string, id?: string, sa
 
 export async function loadSlot(id: string): Promise<GameState | null> {
   try {
-    const stored = ls()?.getItem(slotKey(id));
+    const stored = await slotData(id);
     return stored ? deserialize(await unpack(stored)) : null;
   } catch {
     return null;
@@ -372,6 +390,102 @@ export function deleteSlot(id: string) {
   } catch {
     /* storage may be unavailable */
   }
+  void dbDelete(id);
+}
+
+/**
+ * Move the slots still kept in localStorage into IndexedDB (1 Nov), never losing one: each is
+ * written there, read back and compared, and only then removed from localStorage; one that cannot
+ * be moved stays where it is, and loads from there. Resolves how many moved.
+ */
+export async function moveSlotsToDb(): Promise<number> {
+  const store = ls();
+  if (!store) return 0;
+  let moved = 0;
+  for (const x of allSlots()) {
+    let stored: string | null = null;
+    try {
+      stored = store.getItem(slotKey(x.id));
+    } catch {
+      stored = null;
+    }
+    if (!stored) continue;
+    if (!(await dbPut(x.id, stored)) || (await dbGet(x.id)) !== stored) continue;
+    try {
+      store.removeItem(slotKey(x.id));
+      moved++;
+    } catch {
+      /* it stays in both: harmless */
+    }
+  }
+  return moved;
+}
+
+/** The quick save's and the autosave's keys this address uses: at /next/ the Twilight Interregnum's too. */
+const ownKeys = (preview: boolean) => (preview ? [KEY, AUTO, KEY_I, AUTO_I] : [KEY, AUTO]);
+
+/** How many saves this address lists: its slots, its quick save and its autosave (those there are). */
+export function savesListed(preview = PREVIEW): number {
+  const store = ls();
+  let n = listSlots(preview).length;
+  for (const k of ownKeys(preview)) {
+    try {
+      if (store?.getItem(k)) n++;
+    } catch {
+      /* none */
+    }
+  }
+  return n;
+}
+
+/** How many saves this browser keeps that this address does not list: at the main address, a game begun in the Twilight Interregnum's slots, quick save and autosave. */
+export function savesKeptElsewhere(preview = PREVIEW): number {
+  if (preview) return 0;
+  const store = ls();
+  let n = allSlots().filter((x) => x.interregnum).length;
+  for (const k of [KEY_I, AUTO_I]) {
+    try {
+      if (store?.getItem(k)) n++;
+    } catch {
+      /* none */
+    }
+  }
+  return n;
+}
+
+/**
+ * Delete every save this address lists (1 Nov, the player: "a button to delete and export all
+ * saves"; asked, "Only what this address lists"): its slots, its quick save and its autosave. At
+ * the main address a game begun in the Twilight Interregnum, which only /next/ lists, is kept; the
+ * archived builds' games and the settings are never touched. Resolves how many were deleted.
+ */
+export function deleteAllSaves(preview = PREVIEW): number {
+  const store = ls();
+  if (!store) return 0;
+  let n = 0;
+  for (const x of listSlots(preview)) {
+    deleteSlot(x.id);
+    n++;
+  }
+  for (const k of ownKeys(preview)) {
+    try {
+      if (store.getItem(k)) {
+        store.removeItem(k);
+        n++;
+      }
+    } catch {
+      /* storage may be unavailable */
+    }
+  }
+  // (at /next/ which of the two was saved last means nothing once both are gone)
+  if (preview)
+    for (const k of [LAST(false), LAST(true)])
+      try {
+        store.removeItem(k);
+      } catch {
+        /* as above */
+      }
+  return n;
 }
 
 // ---- every save at once (12 Oct, the player: "let me export all the saves from the browser, not
@@ -405,7 +519,7 @@ export async function exportAllSaves(): Promise<{ name: string; text: string; co
   const saves: BundledSave[] = [];
   for (const x of allSlots()) {
     try {
-      const stored = store.getItem(slotKey(x.id));
+      const stored = await slotData(x.id);
       if (stored) saves.push({ from: 'slot', name: x.name, savedAt: x.savedAt, game: JSON.parse(await unpack(stored)) });
     } catch {
       /* a slot that cannot be read is left out */

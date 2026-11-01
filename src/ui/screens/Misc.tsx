@@ -1,8 +1,9 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { music, PIECES, pieceOn, TRACK_CHOICES, type Piece, type TrackKey } from '../../audio/music';
 import { ERA_BY_ID } from '../../game/eras';
 import { PREVIEW } from '../../channel';
-import { deleteSlot, exportAllSaves, exportCode, fromOlderBuild, hasSave, importSaveBundle, listSlots, loadGame, loadSlot, readSave, readSaveBundle, saveFile, saveGame, saveToSlot, type SlotInfo } from '../../game/save';
+import { deleteAllSaves, deleteSlot, exportAllSaves, exportCode, fromOlderBuild, hasSave, importSaveBundle, listSlots, loadGame, loadSlot, readSave, readSaveBundle, saveFile, saveGame, saveToSlot, savesKeptElsewhere, savesListed, type SlotInfo } from '../../game/save';
+import { dbAvailable } from '../../game/slotdb';
 import { OLDER_BUILD } from '../../keys';
 import { offerFile, pickTextFile } from '../download';
 import type { GameState, LogEntry } from '../../game/types';
@@ -228,7 +229,21 @@ export function SettingsModal() {
             </button>
           </div>
           <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
-            Looking into a system your ships have just charted, the camera flies to each of its worlds in turn, a caption naming each with what the survey found there, then pulls back to the whole system. Next, Space or a click goes on to the next world; Skip, Enter or Escape shows them all at once. Off to begin with where the system asks for less motion.
+            Looking into a system your ships have just charted, the camera flies to each of its worlds in turn, a caption naming each with what the survey found there, then pulls back to the whole system. Next, Space or a click goes on to the next world; Skip, Enter or Escape shows them all at once. Off to begin with where the system asks for less motion. The turn’s events wait until it is over.
+          </div>
+        </div>
+        <div class="field">
+          <label>Open charted systems</label>
+          <div class="seg">
+            <button class={`btn small ${st.openSurveyed ? 'primary' : ''}`} aria-pressed={!!st.openSurveyed} onClick={() => set({ openSurveyed: true })}>
+              At once
+            </button>
+            <button class={`btn small ${!st.openSurveyed ? 'primary' : ''}`} aria-pressed={!st.openSurveyed} onClick={() => set({ openSurveyed: false })}>
+              With Look
+            </button>
+          </div>
+          <div class="faint" style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.45 }}>
+            At once: as a turn ends with a system newly charted, the view goes into it by itself (the first, if there are several), with its survey reveal when reveals are on. With Look: it waits for Look on the message, as before.
           </div>
         </div>
         <div class="field">
@@ -406,6 +421,19 @@ async function exportAll() {
   else if (r === 'failed') notify('This browser would not save the file. Export the saves one at a time, or use save codes.', 'bad');
 }
 
+/**
+ * Every save into one file, then (once the browser has it) the question whether to delete those
+ * this address lists (1 Nov, the player: "a button to delete and export all saves"). A plain
+ * link's download cannot say it landed, so nothing is deleted until the player says so.
+ */
+async function exportThenAsk(ask: (x: { file: string; n: number }) => void) {
+  const f = await exportAllSaves();
+  if (!f) return notify('There are no saves in this browser to export.', 'bad');
+  const r = await offerFile(f.name, f.text);
+  if (r === 'saved') ask({ file: f.name, n: savesListed() });
+  else notify(r === 'declined' ? 'The file was not saved, so nothing was deleted.' : 'This browser would not save the file, so nothing was deleted.', 'bad');
+}
+
 /** One game (it loads), or a file of all saves (each comes in as a slot; `onSlots` then refreshes the list). */
 async function importSave(onSlots?: () => void) {
   const text = await pickTextFile('.json,.txt,application/json,text/plain');
@@ -454,6 +482,20 @@ function SaveSlots({ s }: { s: GameState | null }) {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busySlot, setBusySlot] = useState(false);
   const refresh = () => setSlots(listSlots());
+  // how much room the slots have (1 Nov, the player: "why is there maximum capacity for browser
+  // saves?"): IndexedDB's share of the device's free space, or localStorage's 5 MB where it is not to be had
+  const [db, setDb] = useState<boolean | null>(null);
+  const [quota, setQuota] = useState<number | null>(null);
+  useEffect(() => {
+    void dbAvailable().then(setDb);
+    void navigator.storage?.estimate?.().then((e) => setQuota(e.quota ?? null), () => setQuota(null));
+  }, []);
+  const kb = slots.reduce((a, x) => a + x.bytes, 0) / 1024;
+  const used = kb < 1024 ? `${Math.max(slots.length ? 1 : 0, Math.round(kb))} KB` : `${(kb / 1024).toFixed(1)} MB`;
+  const roomTip =
+    db === false
+      ? 'This browser will not give the game its database storage here, so the slots share localStorage: about 5 MB for every save of this site together (the main address, the preview and the archived builds).'
+      : `Slots are kept in the browser’s database storage (IndexedDB), whose room is a share of this device’s free space${quota ? `: about ${quota >= 1e9 ? `${(quota / 1e9).toFixed(0)} GB` : `${Math.round(quota / 1e6)} MB`} for this site` : ''}. The quick save and the autosave are kept apart, in the browser’s smaller store.`;
   const defaultName = s ? `${s.settings.civName} · turn ${s.turn}` : '';
   const save = async (id?: string, over?: string) => {
     if (!s || busySlot) return;
@@ -472,6 +514,9 @@ function SaveSlots({ s }: { s: GameState | null }) {
   return (
     <div class="section" style={{ marginTop: 0 }}>
       <h3>Save slots</h3>
+      <p class="faint save-room" style={{ fontSize: '12.5px', margin: '0 0 8px' }} data-tip={roomTip}>
+        {slots.length} slot{slots.length === 1 ? '' : 's'}, {used}. Room: {db === false ? 'about 5 MB for every save of this site' : 'a share of this device’s free space'}.
+      </p>
       {s && (
         <div class="row" style={{ gap: '6px', marginBottom: '8px' }}>
           <input class="grow" aria-label="Name of the new save" placeholder={defaultName} value={name} maxLength={60} onInput={(e) => setName((e.target as HTMLInputElement).value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
@@ -533,6 +578,9 @@ export function SaveModal({ s }: { s: GameState | null }) {
   // the slot list reads storage as it mounts: a new key after an import reads it again
   const [slotsKey, setSlotsKey] = useState(0);
   const anySaves = listSlots().length > 0 || hasSave() || hasSave(true);
+  // Export and delete all saves: the file first, then this question
+  const [clearing, setClearing] = useState<{ file: string; n: number } | null>(null);
+  const kept = savesKeptElsewhere();
   return (
     <ModalFrame title="Save and load" icon="save" narrow>
       <div class="col" style={{ gap: '12px' }}>
@@ -587,7 +635,38 @@ export function SaveModal({ s }: { s: GameState | null }) {
           <button class="btn" onClick={() => importSave(() => setSlotsKey((k) => k + 1))} data-tip="Open a save file exported from this or another device: one game, which loads, or a file of all saves, each of which comes in as a slot.">
             Import save file…
           </button>
+          <button
+            class="btn"
+            disabled={!anySaves || !!clearing}
+            onClick={() => exportThenAsk(setClearing)}
+            data-tip={`Download every save in one file, as Export all saves does; then, once you say the file is safe, delete the saves listed here${kept ? ` (a game begun in the Twilight Interregnum, which only the preview address lists, is kept)` : ''}.`}
+          >
+            Export and delete all saves
+          </button>
         </div>
+        {clearing && (
+          <div class="row wrap save-clear" role="group" aria-label="Delete the saves" style={{ gap: '6px', alignItems: 'center' }}>
+            <span class="grow warn" style={{ fontSize: '13.5px' }}>
+              The file {clearing.file} is downloading. Once it is safe, delete the {clearing.n} save{clearing.n === 1 ? '' : 's'} listed here?
+              {kept > 0 && <span class="faint"> The {kept} of a game begun in the Twilight Interregnum stay: the preview address lists them.</span>}
+            </span>
+            <button
+              class="btn small danger"
+              onClick={() => {
+                const n = deleteAllSaves();
+                setClearing(null);
+                setSlotsKey((k) => k + 1);
+                sfx('click');
+                notify(`Deleted ${n} save${n === 1 ? '' : 's'}; the file has them all.`, 'good');
+              }}
+            >
+              Delete them
+            </button>
+            <button class="btn small ghost" onClick={() => setClearing(null)}>
+              Keep them
+            </button>
+          </div>
+        )}
         {!s && (hasSave() || hasSave(true)) && (
           <div class="row wrap" style={{ gap: '6px' }}>
             <button class="btn small" disabled={!hasSave()} onClick={() => exportSave(loadGame())}>

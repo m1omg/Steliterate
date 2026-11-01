@@ -106,6 +106,11 @@ export interface Primary {
    * a white dwarf, a neutron star or a black hole (the Twilight Interregnum: interregnum.ts)
    */
   future?: Primary;
+  /**
+   * (nebula, games begun since 1 Nov) until this year its gas is thin and dark, gathering: a
+   * nebula seen as one only from then (interregnum.ts thinGas); deleted as it gathers (physics.ts)
+   */
+  condenseAt?: number;
   /** (white and brown dwarfs) when it formed, where the Twilight Interregnum set it (physics.ts formedAt) */
   formed?: number;
 }

@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { gasLeft } from '../game/interregnum';
+import { CONDENSE_FACTOR, gasLeft, thinGas } from '../game/interregnum';
+import { cloudOverlay, cloudScale, nebulaCloud } from './nebulaCloud';
+import { drawnOrbits, ringed } from './orbits';
 import { bodyClimate, brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, seaBand, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
 import { survivorWorld } from '../game/sim/homes';
@@ -166,6 +168,38 @@ export class SystemView {
   private orbitTime = 0;
   orbitsPaused = false;
   primaryRadius = 5;
+  /** A nebula's cloud, drawn alone into its own buffer each frame (prerender), and the quad that lays it over the scene. */
+  private cloudScene = new THREE.Scene();
+  private cloud: THREE.Mesh | null = null;
+  private cloudTarget: THREE.WebGLRenderTarget | null = null;
+  private cloudQuad: THREE.Mesh | null = null;
+  private clearWas = new THREE.Color();
+
+  /** Before the frame (Engine): a nebula's cloud into its buffer, at a fraction of the screen's resolution. */
+  prerender(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+    if (!this.cloud || !this.cloudQuad) return;
+    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    const k = cloudScale(this.quality);
+    const w = Math.max(1, Math.round(size.x * k));
+    const h = Math.max(1, Math.round(size.y * k));
+    if (!this.cloudTarget) this.cloudTarget = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthBuffer: false });
+    else if (this.cloudTarget.width !== w || this.cloudTarget.height !== h) this.cloudTarget.setSize(w, h);
+    const u = (this.cloudQuad.material as THREE.ShaderMaterial).uniforms;
+    u.uTex.value = this.cloudTarget.texture;
+    u.uTexel.value.set(1 / w, 1 / h);
+    const was = renderer.getRenderTarget();
+    const alpha = renderer.getClearAlpha();
+    renderer.getClearColor(this.clearWas);
+    renderer.setRenderTarget(this.cloudTarget);
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear(true, false, false);
+    renderer.render(this.cloudScene, camera);
+    renderer.setRenderTarget(was);
+    renderer.setClearColor(this.clearWas, alpha);
+  }
+
+  /** Each world's drawn orbit radius this build (orbits.ts). */
+  private orbits = new Map<string, number>();
   /** How far back the camera stands to see the whole system: further for one with cold worlds far out. */
   frameDistance(): number {
     const far = this.planets.reduce((m, p) => (p.body.rogue ? m : Math.max(m, p.radius)), 0);
@@ -211,6 +245,8 @@ export class SystemView {
 
   constructor() {
     this.stars = backgroundStars();
+    // (first of the see-through things, so a nebula's cloud, drawn next, can hide them behind its dust)
+    this.stars.renderOrder = -2;
     this.selRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.03, 96), new THREE.MeshBasicMaterial({ color: SELECT.clone(), transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
     this.selRing.visible = false;
     this.pulse = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 160), new THREE.MeshBasicMaterial({ color: this.neon.clone(), transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -227,7 +263,15 @@ export class SystemView {
   }
 
   private clear() {
+    if (this.cloud) {
+      this.cloudScene.remove(this.cloud);
+      this.cloud.geometry.dispose();
+      (this.cloud.material as THREE.Material).dispose();
+      this.cloud = null;
+    }
     this.group.traverse((o) => {
+      // (the cloud's quad is kept for the next nebula)
+      if (o === this.cloudQuad) return;
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();
       const mat = m.material as THREE.Material | THREE.Material[] | undefined;
@@ -294,6 +338,8 @@ export class SystemView {
     THIN.value = thinShare(state);
     this.look.thin = THIN.value;
     const iron = ironAge(state);
+    // where each world is drawn: pushed out where its drawing would meet its neighbour's (orbits.ts)
+    this.orbits = drawnOrbits((surveyed ? sys.bodies : []).map((id) => state.bodies[id]).filter((b): b is Body => !!b && !b.dissolved), this.primaryRadius);
     for (const bid of surveyed ? sys.bodies : []) {
       const b = state.bodies[bid];
       if (!b || b.dissolved) continue;
@@ -383,11 +429,18 @@ export class SystemView {
         break;
       }
       case 'nebula': {
-        // a knot of the galaxy's gas, glowing faintly rose and blue: no star yet, and no worlds
-        const g = 0.35 + 0.65 * gasLeft(state.years);
-        addGlow(170, new THREE.Color('#c25a86'), 0.42 * g);
-        addGlow(110, new THREE.Color('#5d7fd6'), 0.28 * g);
-        addGlow(46, new THREE.Color('#e8a2b8'), 0.3 * g);
+        // a cloud of the galaxy's gas, up close (nebulaCloud.ts): filaments, a dark core where its star
+        // is forming, a dull red glow in it as the birth nears; thin gas, not yet gathered, a sparse grey veil
+        const born = p.bornAt ?? state.years;
+        const from = born / CONDENSE_FACTOR;
+        const progress = born > from ? Math.max(0, Math.min(1, Math.log(Math.max(state.years, from) / from) / Math.log(born / from))) : 1;
+        const cloud = nebulaCloud({ radius: 34, seed: hashSeed(sys.id) % 997, quality: this.quality, thin: thinGas(p), gas: gasLeft(state.years), birth: THREE.MathUtils.smoothstep(progress, 0.5, 1) });
+        // (drawn into a buffer of its own, at a fraction of the screen's resolution: prerender)
+        this.cloudScene.add(cloud.mesh);
+        this.cloud = cloud.mesh;
+        this.cloudQuad ??= cloudOverlay();
+        this.group.add(this.cloudQuad);
+        this.glowMats.push(cloud.mat);
         this.primaryRadius = 1;
         this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: 8 });
         break;
@@ -578,7 +631,7 @@ export class SystemView {
 
   private buildBody(state: GameState, sys: StarSystem, b: Body, light: { color: THREE.Color; power: number }, settled: boolean, sv?: Survivor, theirForm?: ColonyForm, iron = false) {
     const pivot = new THREE.Object3D();
-    const orbitR = b.rogue ? b.orbit * 2.6 + 30 : b.orbit + this.primaryRadius * 1.5;
+    const orbitR = b.rogue ? b.orbit * 2.6 + 30 : (this.orbits.get(b.id) ?? b.orbit + this.primaryRadius * 1.5);
     const size = b.size;
     let mesh: THREE.Mesh;
     let mat: THREE.ShaderMaterial | null = null;
@@ -649,7 +702,7 @@ export class SystemView {
     mesh.position.set(orbitR, 0, 0);
     pivot.add(mesh);
     const extra: THREE.Object3D[] = [];
-    if (b.kind === 'gas_giant' && hashSeed(b.id) % 3 === 0) {
+    if (ringed(b)) {
       const ringM = new THREE.Mesh(new THREE.RingGeometry(size * 1.4, size * 2.2, 96), new THREE.MeshBasicMaterial({ color: '#8b7a6a', transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }));
       ringM.rotation.x = -Math.PI / 2 + 0.3;
       mesh.add(ringM);

@@ -2045,6 +2045,50 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `.pace` panel: a panel's chamfered clip-path cuts off whatever pokes out of it); the guide's
     steps can carry `phone: { target, text }`.
 
+- **Room for saves** (1 Nov; CHANGELOG, "Room for saves …"): `slotdb.ts` wraps IndexedDB (database
+  `steliterate2`, store `slots`, key the slot id, value the packed string `pack()` makes); every
+  call resolves `null`/`false` where it is missing or blocked (Node, some private windows), so the
+  checks in Node take the old way. `save.ts`: `saveToSlot` puts a slot's data there first, else in
+  `localStorage`; `slotData` reads IndexedDB, then `localStorage`; `deleteSlot` removes both;
+  `moveSlotsToDb` (`main.tsx`, at load) moves old slots, removing the old copy only once read back
+  equal. The slots' index (`steliterate2.slots`), the quick save and the autosave stay in
+  `localStorage` (Continue and Load read them at once). `deleteAllSaves(preview)` deletes what an
+  address lists (`savesListed`): at the main address the Interregnum's slots and `KEY_I`/`AUTO_I`
+  stay (`savesKeptElsewhere`). Trap: every address on m1omg.github.io shares one origin, so one
+  IndexedDB and one `localStorage` (about 5 MiB) for the main address, /next/ and the archived
+  builds. Checks `unit/save-room` (the fallback), `browser/save-room` (IndexedDB, the move, the
+  button at `?main` and /next/).
+- **Thin gas** (1 Nov): `Primary.condenseAt` (optional, set by `interregnum.ts nebulaUntil` at
+  generation as `bornAt / CONDENSE_FACTOR` when that is after the start, no random draw), deleted
+  by `interregnumStars` (physics.ts) as the years pass it. `thinGas(p)` is the test everywhere:
+  `primaryName` ("Thin gas"), `starLife`, `sourceLight`'s label, `primaryTemperature` (40 K),
+  `nextStellarChange` ("gathers into a nebula"), the map (`syncNebulae` leaves it out; `nodeColor`,
+  `nodeSize`), `starState` in Lists, `nebula_chemistry`'s bind. `nebulaNear` (the Gas Scoop) counts
+  it. A game begun before has no field: every nebula as it was. Check `unit/thin-gas` (with the
+  Interregnum's hashes, the field set aside).
+- **A nebula up close** (1 Nov): `render/nebulaCloud.ts`. `noiseTexture` bakes a tileable RGBA 3D
+  texture once (R: three octaves of Perlin noise, G/B/A: one each, for the warp and the colour);
+  `nebulaCloud` is a back-faced sphere whose shader marches the ray through it (`STEPS` by quality)
+  and writes its light and its opacity; `systemView` keeps it in `cloudScene`, draws it in
+  `prerender` (called by the engine before the composer) into `cloudTarget` at `cloudScale` of the
+  drawing buffer, and `cloudOverlay`, a quad at the far plane, renderOrder −1, lays it over the
+  background stars (renderOrder −2) with premultiplied blending, so a solid thing in front hides
+  it. `tools/lab/nebula.html` (with `npx vite --port 5174`) draws six seeds at once, as the game
+  tone-maps them, in under two seconds: a quick way to tune it.
+- **Worlds drawn apart** (1 Nov): `render/orbits.ts` `drawnOrbits` (by `drawnReach`: rings
+  2.2× a gas giant's size, a belt 3, else 1.5×), set by `build` before the worlds are drawn and read
+  by `buildBody`; `ringed` is the one test of whether a gas giant has rings. Display only. Check
+  `unit/orbits-drawn`.
+- **The reveal before the events, and Open charted systems** (1 Nov): `engine.revealWaiting(id)`
+  (charted, not yet looked into, reveals on) and `engine.revealAhead` (the view is fading over to a
+  system that will play one). `EventModal` waits while either holds for its event's system
+  (`revealFirst`, when the event pivot would enter it) and lets its pivot start the reveal; the
+  slide follows. `settings.openSurveyed` (Settings, Open charted systems): `turnflow.ts` goes into
+  the first system charted that turn when no report has the screen. Check `browser/reveal-first`.
+- `formatDate(at, now)` (`eras.ts`): a date after the Big Bang with as many digits as tell it from
+  now (the Drawer's Burns until). The research grid names its first column "The Stelliferous Age"
+  (`Research.tsx`; the age itself is still `ERAS[0]`, the Long Dusk).
+
 ## Music tooling
 
 - **The Canon:** `tools/music/canon.py` renders the arrangement to WAV with numpy and scipy.

@@ -10,7 +10,7 @@ import { HEARD_CEILING, JUST_CAUSE_AT, SANCTION_AT, shuns } from '../../game/sim
 import { assaultForce, assaultOdds, besieged, holdOf, walled, warFront } from '../../game/sim/conflict';
 import { PACT_KINDS, PACTS, hasPact, pactBlocked, pactCost } from '../../game/sim/pacts';
 import { PROMISE_TURNS, starsSeen } from '../../game/sim/claims';
-import { ASK_COOLDOWN, askBlocked, goneAnswer, inStep, reachBy, talkSpan } from '../../game/sim/survivors';
+import { ASK_COOLDOWN, askBlocked, goneAnswer, inStep, liveHint, reachBy, talkSpan } from '../../game/sim/survivors';
 import { canConverse, stepGap, voiceClock, voiceRange, voiceThread } from '../../game/sim/signals';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { SANCTUARY_TRUST } from '../../game/sim/refuge';
@@ -106,10 +106,12 @@ function Message({ s, sig }: { s: GameState; sig: Signal }) {
           {sig.choices.map((c) => {
             // (an answer that would reach a sender gone since cannot be given: goneAnswer)
             const gone = goneAnswer(s, sig, c.id);
+            // (a price or a yield as it is now, not as it was when the message came: liveHint)
+            const hint = gone ?? liveHint(s, sig, c.id) ?? c.hint;
             return (
               <button key={c.id} class="btn choice" disabled={!!gone} data-tip={gone ?? undefined} onClick={() => act((g) => answerSignal(g, sig.uid, c.id)) && sfx('select')}>
                 <span>{c.label}</span>
-                {(gone ?? c.hint) && <span class="h">{gone ?? c.hint}</span>}
+                {hint && <span class="h">{hint}</span>}
               </button>
             );
           })}

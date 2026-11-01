@@ -225,6 +225,14 @@ export async function doEndTurn() {
     modal.value = report;
     sfx(report.entries.some((e) => e.tone === 'bad') ? 'bad' : 'good');
   }
+  // a system just charted, opened at once (Settings: Open charted systems; 1 Nov, the player): its
+  // survey reveal first, when reveals are on, and the turn's events after it (EventModal); not
+  // under a report, which has the screen
+  else if (surveyed.length && settings.value.openSurveyed && !modal.value) {
+    const sys = s.systems[surveyed[0]];
+    selection.value = { kind: 'system', id: sys.id };
+    pivotToSystem(sys.id, true);
+  }
 }
 
 /** Fights not yet reported: one turn's, or a Long Sleep's, until it ends (doEndTurn). */
