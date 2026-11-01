@@ -4824,3 +4824,7 @@ it, a friend's suggestion as the player put it: a warning when a Thread's standi
   victories, a Degenerate Age of 95 turns (192 / 73 / 97 before); by fate decay 103 / 148, stable
   31 / 81, curvature 47 / 71. Harsh: 158 / 34 / 93 (the same 300 before: 158 / 43 / 92). Begun in
   the Interregnum: 183 / 80 / 102, 297 reaching the Dusk (186 / 80 / 101, 296). Within the noise.
+- **Validated** (`index-DkGIjP_M.js`): tsc and the build clean; the playtest; savecompat on its
+  10 saves; all 108 unit checks; all 79 browser checks (76 in three lanes on the build before the
+  Codex's words, films and survey-reveal alone, and the seven that read the Codex or time frames
+  alone on the final build). A batch's validation: about an hour, the harness 2.5 minutes a run.
