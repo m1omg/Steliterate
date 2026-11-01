@@ -1,3 +1,4 @@
+// (lanes: alone: it times frames and animations, so run.mjs --lanes runs it by itself, after the others)
 // Browser check: the survey reveal (the new version, part 4; since 21 Oct a flight of the camera,
 // as the player pictured it from Endless Space 2). A probe completes a survey through the real End
 // Turn; Look opens the system, and at first there is only the star: its worlds hidden from the

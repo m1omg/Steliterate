@@ -1,5 +1,6 @@
 import { ANOMALIES } from '../game/data/events';
-import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, boilingAway, isStarLike, steamWorld } from '../game/physics';
+import { FROZEN_K, LAVA_K, SURFACE_LIFE, bodyClimate, boilingAway, isStarLike, nextStellarChange, steamWorld } from '../game/physics';
+import { GIANT, youngStage } from '../game/stellar';
 import { SCORCH_K, THAW_ROOM, thawed } from '../game/sim/flare';
 import type { Body, BodyKind, Focus, GameState, Primary, PrimaryKind, SpareWork, StarSystem } from '../game/types';
 import { youngStarName } from '../game/interregnum';
@@ -307,4 +308,47 @@ export const SWARM_TIP = 'A swarm is feeding there. It goes for most ships that 
 /** A pace's name, as the Pace panel's buttons give it. */
 export function paceName(p: number): string {
   return p === 0 ? 'the Tide' : p > 0 ? `Quick ×${10 ** p}` : `Slow ×${10 ** -p}`;
+}
+
+/**
+ * A star's present stage and what comes next, in a few words (1 Nov, the player: "the stars should
+ * show their lifetime"): its stage, the next one, and when it comes (years). Null for what has no
+ * next stage (a dead star cooling, the starless).
+ */
+export function starLife(s: GameState, sys: StarSystem): { now: string; next: string; at: number } | null {
+  const p = sys.primary;
+  const ch = nextStellarChange(sys, s.years);
+  if (!ch) return null;
+  const giant = p.kind === 'young_star' && youngStage(p, s.years).giant > 0;
+  const now =
+    p.kind === 'red_dwarf'
+      ? 'main sequence'
+      : p.kind === 'blue_dwarf'
+        ? 'blue flare'
+        : p.kind === 'young_star'
+          ? giant
+            ? GIANT[p.cls ?? 'G'].name.toLowerCase()
+            : 'main sequence'
+          : p.kind === 'nebula'
+            ? 'collapsing'
+            : p.kind === 'black_hole' || p.kind === 'smbh'
+              ? 'evaporating'
+              : 'burning';
+  const next =
+    p.kind === 'red_dwarf'
+      ? 'blue flare'
+      : p.kind === 'blue_dwarf'
+        ? 'white dwarf'
+        : p.kind === 'young_star'
+          ? giant
+            ? p.cls === 'B'
+              ? 'supernova'
+              : 'white dwarf'
+            : GIANT[p.cls ?? 'G'].name.toLowerCase()
+          : p.kind === 'nebula'
+            ? 'lights'
+            : p.kind === 'black_hole' || p.kind === 'smbh'
+              ? 'final burst'
+              : 'burns out';
+  return { now, next, at: ch.at };
 }

@@ -233,6 +233,16 @@ word", then the player's list of 16 Oct, then the falling worlds.
   melody, chords, arpeggios, bass and instruments) and played by `cue.ts` (new instruments and a
   reverb; an analog sequencer, a metallic clank in an uneven pulse and a gliding lead in the darker
   films). No rule changed. DEV-NOTES ("The films' music") says how to write a score and measure it.
+  Live at both addresses as `5b84cbc`, script `index-BdC7hWfs.js`.
+
+- **Stars that brighten, black holes hotter as they shrink, lifetimes, a warning for a large Thread**
+  (1 Nov, PR m1omg/Steliterate#56, `src/game/stellar.ts`): red dwarfs brighten toward their blue
+  flare (at most 3×, from each game's start), the Interregnum's young stars brighten and swell into
+  red giants that swallow the worlds inside them, the Hawking temperature rises as 1/M, each star's
+  lifetime in the system panel and Star types, and a forecast when a Thread of 25% or more of our
+  people falls below 25 standing. A rule change: the harness within the noise (CHANGELOG). The
+  browser checks now run three at a time (`--lanes=3`), the harness in four parts: a batch's
+  validation took about 40 minutes instead of two hours.
 
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
@@ -262,8 +272,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#54 (the Twilight Interregnum, offered at /next/ only, 1 Nov), `32a9c40` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-C2wy549U.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#55 (the Interregnum's film and the films' music, 1 Nov), `5b84cbc` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-BdC7hWfs.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own) | the same | `steliterate.` keys |
 
 ## 2. Read in this order

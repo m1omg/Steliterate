@@ -5,7 +5,7 @@ import { STRUCTURE_BY_ID, STRUCTURE_KINDS, enabledAt, structureKind, structureLa
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
 import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
-import { FROZEN_K, ICE_MELTS_K, frozenHard, tooColdForOpenAir, WATER_RICH, fallsInAt, giantWorld, rubbleGame, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, lightUnitSuns, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
+import { FROZEN_K, ICE_MELTS_K, frozenHard, tooColdForOpenAir, WATER_RICH, fallsInAt, giantWorld, rubbleGame, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, lightUnitSuns, nextStellarChange, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
   absorb,
@@ -65,7 +65,7 @@ import { THREADS } from '../../game/types';
 import { kelvin, mult, n0, n1, pct, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
 import type { IconName } from '../icons';
-import { FOCUS, spareChoices, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, NEST_TIP, SWARM_TIP, primaryName } from '../labels';
+import { FOCUS, spareChoices, TRAIT_NAME, WAY_NAME, wayArt, bodyIcon, primaryIcon, bodyKindName, bodyKindNote, deepNote, isBeacon, BEACON_TIP, NEST_TIP, SWARM_TIP, primaryName, starLife } from '../labels';
 import { act, engine, following, hudPrefs, isPhone, notify, openBuildFor, rev, selection, setHudPrefs, sheetHint, sheetSize, targeting, view } from '../store';
 import { uiFactor } from '../Tip';
 import { FormWorkChip } from '../FormWorkChip';
@@ -460,6 +460,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
               </dd>
             </>
           )}
+          <LifeRow s={s} sys={sys} />
           {src.alive && (
             <>
               <dt>{src.alive[1] > s.years ? 'Burns until' : 'Burnt out at'}</dt>
@@ -677,6 +678,24 @@ function shownTraits(s: GameState, b: Body): string[] {
 }
 
 /** When a black hole has evaporated: what is settled there drifts on, with nothing left there to draw on. */
+/** A star's lifetime on its present stage: what comes next, and when (1 Nov, the player: "the stars should show their lifetime"; a hole's is its Evaporates row). */
+function LifeRow({ s, sys }: { s: GameState; sys: StarSystem }) {
+  const life = starLife(s, sys);
+  if (!life || sys.primary.kind === 'black_hole' || sys.primary.kind === 'smbh') return null;
+  const ch = nextStellarChange(sys, s.years);
+  const turns = turnsUntilYears(s, life.at);
+  const tip = `Now: ${life.now}. Next: it ${ch?.what ?? life.next}, in about ${formatYears(life.at - s.years)}${turns <= 1 ? ', during this turn' : isFinite(turns) ? ` (${turns} turns at this pace)` : ''}.`;
+  return (
+    <>
+      <dt data-tip={tip}>Lifetime</dt>
+      <dd class={`mono ${turns <= 1 ? 'warn' : ''}`} data-tip={tip}>
+        {life.now} · {life.next} in {formatYears(life.at - s.years)}
+        {turns <= 1 ? ', this turn' : isFinite(turns) ? ` · ${turns} turns` : ''}
+      </dd>
+    </>
+  );
+}
+
 function EvaporatesRow({ s, at }: { s: GameState; at: number }) {
   const turns = turnsUntilYears(s, at);
   const tip = `When its Hawking radiation has carried off all its mass: about 2×10⁶⁷ years for a hole of one Sun, a thousand times longer for ten, the lightest first. ${

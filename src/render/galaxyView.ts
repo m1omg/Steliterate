@@ -12,6 +12,8 @@ import { calendarEra, matterGone } from '../game/fate';
 import { allFleets, colonies, fleets, formOf } from '../game/sim/util';
 import { fleetSeen } from '../game/sim/others';
 import { asleep, readsSwarms, swarmSight } from '../game/sim/sight';
+import { turnStep } from '../game/sim/flare';
+import { redBrightening, youngStage } from '../game/stellar';
 
 // The Coalescence seen from outside: layered star populations of the ancestral galaxies,
 // dimming era by era, with every known system as a node you can pick.
@@ -887,6 +889,8 @@ export function coolDwarfShine(T: number): number {
 function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   // (a new star already out shows as the cold dwarf it is becoming)
   const k = shownKind(s.primary, state.years);
+  // a hole in its last turn burns white-hot before it is gone (stellar.ts)
+  if ((k === 'black_hole' || k === 'smbh') && lastTurn(s, state)) return [1.25, 1.25, 1.35];
   if (k === 'black_hole' || k === 'smbh') return [0.62, 0.52, 1.0];
   if (k === 'void' || k === 'rogue') return [0.35, 0.36, 0.42];
   // a nebula (the Twilight Interregnum): the rose of hydrogen glowing in the light of stars near it, dimmer as the gas thins
@@ -924,8 +928,20 @@ function nodeColor(s: StarSystem, state: GameState): [number, number, number] {
   return [r * boost, g * boost, b * boost];
 }
 
+/** A black hole whose final burst falls within the coming turn. */
+function lastTurn(s: StarSystem, state: GameState): boolean {
+  const at = s.primary.evaporateAt;
+  const L = turnStep(state).turnLength;
+  return !!at && at > state.years && isFinite(L) && at <= state.years + L;
+}
+
 function nodeSize(s: StarSystem, state: GameState): number {
-  switch (shownKind(s.primary, state.years)) {
+  // (a giant swells, a brightening red dwarf grows a little, a hole in its last turn flares: stellar.ts)
+  const k = shownKind(s.primary, state.years);
+  if (k === 'young_star') return (s.primary.cls === 'B' ? 10 : s.primary.cls === 'A' || s.primary.cls === 'F' ? 8.5 : 7.5) * (1 + 0.6 * youngStage(s.primary, state.years).giant);
+  if (k === 'red_dwarf') return 6 * (1 + 0.15 * Math.min(1, (redBrightening(s.primary, state.years) - 1) / 2));
+  if ((k === 'black_hole' || k === 'smbh') && lastTurn(s, state)) return 11;
+  switch (k) {
     case 'smbh':
       return 11;
     case 'helium_giant':
@@ -934,11 +950,8 @@ function nodeSize(s: StarSystem, state: GameState): number {
     case 'blue_dwarf':
     case 'helium_star':
       return 8;
-    case 'young_star':
-      return s.primary.cls === 'B' ? 10 : s.primary.cls === 'A' || s.primary.cls === 'F' ? 8.5 : 7.5;
     case 'nebula':
       return 9;
-    case 'red_dwarf':
     case 'collision_star':
       return 6;
     case 'black_hole':

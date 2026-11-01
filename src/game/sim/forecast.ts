@@ -2,7 +2,7 @@ import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
 import { BROWN_FADE_ETA, SUPERNOVA_LY, SURFACE_LIFE, boilingAway, fallsInAt, flashBoils, flashMelts, flashShelterFor, flashSheltered, giantFlash, giantWorld, meltLineAU, rubbleGame, takesWorldsIn, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
 import { turnStep, turnsUntilYears } from './flare';
-import { colonies, formOf, hasCharter, hasTech, inItsSystem, protonFateKnown } from './util';
+import { colonies, formOf, hasCharter, hasTech, inItsSystem, protonFateKnown, threadTotals } from './util';
 import { readsSwarms, swarmArrives, swarmSight } from './sight';
 import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
 import { computeMods } from './mods';
@@ -12,6 +12,9 @@ import { thinShare, thinning, thinningFrom } from './thinning';
 import { POSITRONIUM_DECAY, positroniumHere } from './positronium';
 import { COLLAPSE_FROM, IRON_ETA, collapsing, darkTurnsAtTide, ironAge, supernovaEta, willExplode } from './deeptime';
 import { STRUCTURE_BY_ID } from '../data/structures';
+import { GIANT, giantReach, youngLife } from '../stellar';
+import { THREAD_DEFS } from '../data/threads';
+import { THREADS } from '../types';
 
 // Forecasts: the astronomers' warnings. Every great change is visible in advance; the
 // question is whether you can prepare in time.
@@ -38,6 +41,10 @@ function stillOfMatter(state: GameState): string {
   return [bare.length ? `Still made of matter, with nothing to go on: ${names(bare)}.` : '', kept.length ? `Made of matter around what will go on (Leptonic Substrate, a Bastion Shell): ${names(kept)}; only the Passage keeps all of it.` : ''].filter(Boolean).join(' ');
 }
 
+/** A Thread this share of our people or more is warned about when its standing falls below STANDING_WARN (the player, 1 Nov: "25% please"). */
+export const STANDING_WARN_SHARE = 0.25;
+export const STANDING_WARN = 25;
+
 export function updateForecasts(state: GameState) {
   const out: Forecast[] = [];
   const add = (f: Omit<Forecast, 'uid'>, key?: string) => out.push({ ...f, uid: key ?? `${f.kind}:${f.systemId ?? ''}:${f.bodyId ?? ''}` });
@@ -62,7 +69,9 @@ export function updateForecasts(state: GameState) {
       title: `${sys.name} ${ch.what}`,
       text: ch.what.includes('brightens')
         ? `In about ${formatYears(ch.at - years)}. For a few billion years it will be over a hundred times brighter, hot enough to boil the seas of its worlds.`
-        : `In about ${formatYears(ch.at - years)}.${then}`,
+        : ch.what.includes('swells into a red')
+          ? `In about ${formatYears(ch.at - years)}. Over its last ${formatYears(Math.max(0, (sys.primary.diesAt ?? ch.at) - ch.at))} it swells and brightens to some ${GIANT[sys.primary.cls ?? 'G'].tip.toLocaleString('en-US')} times the Sun’s light, out to about ${giantReach(sys.primary, youngLife(sys.primary).dies).toFixed(1)} AU: worlds inside it are swallowed (three in four of the people there get off to the Deep), worlds near it scorched, cold worlds further out warmed while it lasts.`
+          : `In about ${formatYears(ch.at - years)}.${then}`,
       dueYears: ch.at,
       systemId: sid,
       severity: ch.what.includes('brightens') ? 'boon' : 'danger',
@@ -176,9 +185,12 @@ export function updateForecasts(state: GameState) {
   // worlds of ours a new star will boil away (or its giant swallow) as this turn ends
   for (const c of colonies(state)) {
     const b = state.bodies[c.bodyId];
-    const boil = b ? boilingAway(state, b) : null;
-    if (!b || !boil) continue;
     const L = turnStep(state).turnLength;
+    // (or a young star swelling into a giant that reaches it this turn: stellar.ts)
+    const host = b ? state.systems[b.systemId]?.primary : undefined;
+    const giant = !!b && !!host && host.kind === 'young_star' && b.kind !== 'deep' && !b.rogue && b.orbitAU > 0 && giantReach(host, years + (isFinite(L) ? L : 0)) >= b.orbitAU;
+    const boil = b ? (giant ? 'swallowed' : boilingAway(state, b)) : null;
+    if (!b || !boil) continue;
     add({
       kind: 'boil',
       title: boil === 'swallowed' ? `${b.name} will be swallowed by its star` : `${b.name} will boil away`,
@@ -222,6 +234,38 @@ export function updateForecasts(state: GameState) {
       const lost = colonies(state).some((c) => c.systemId === sid && inItsSystem(state, c));
       if (k === 'neutron_star') add({ kind: 'burst', title: `${sys.name} will burst`, text: lost ? 'Its neutron star, its mass given to the curvature of space, will burst at a tenth of a Sun: our settlements in its Deep and on the worlds it holds will be lost with it. Move what can be moved.' : 'Its neutron star, its mass given to the curvature of space, will burst at a tenth of a Sun. Our settlements here are on worlds flung loose from it long ago, far away by now, and safe.', dueYears: Math.pow(10, at), systemId: sid, severity: lost ? 'danger' : 'info' });
       else add({ kind: 'fade', title: `${sys.name} will fade`, text: 'Space is turning its dwarf’s mass into particles; when it is gone its worlds drift loose, and our settlements stay, with nothing there to warm them.', dueYears: Math.pow(10, at), systemId: sid, severity: 'warn' });
+    }
+  }
+
+  // a Thread that thinks poorly of us and is a quarter or more of our people (1 Nov, a friend of the
+  // player's: a warning when a group's standing gets too low; the player: "only … if they form a
+  // significant fraction of the population", and "25% please"). A small or absent Thread never
+  // warns: its standing weighs on dissent by its share, and one with no one awake has no effect
+  // at all (society.ts). Below 15, with dissent above 45, it talks of leaving; three turns of that
+  // and it forks away with the settlements where it is the majority.
+  {
+    const totals = threadTotals(state);
+    const all = THREADS.reduce((a, t) => a + totals[t], 0);
+    const civ = state.civ;
+    for (const t of THREADS) {
+      const d = THREAD_DEFS[t];
+      if (t === 'lattice' || !d.conscious || all <= 0) continue;
+      const share = totals[t] / all;
+      if (share < STANDING_WARN_SHARE) continue;
+      const st = civ.standing[t];
+      const talking = civ.lowStanding[t] > 0;
+      if (!talking && st >= STANDING_WARN) continue;
+      const left = Math.max(1, 3 - civ.lowStanding[t]);
+      const L = turnStep(state).turnLength;
+      add({
+        kind: 'fork',
+        title: talking ? `${d.name} are talking of leaving` : `${d.name} think poorly of us`,
+        text: talking
+          ? `Their standing is ${Math.round(st)} and dissent ${Math.round(civ.dissent)}: in ${left} turn${left === 1 ? '' : 's'}, if it stays so, they fork away, taking the settlements where they are the majority. They are ${Math.round(share * 100)}% of our people. Meet their demand, give them a hearing (the Accord), or calm the dissent.`
+          : `Their standing is ${Math.round(st)}, and they are ${Math.round(share * 100)}% of our people, so their discontent weighs on dissent. Below 15, with dissent above 45, they will start talking of leaving. Meet their demand or give them a hearing (the Accord).`,
+        dueYears: talking && isFinite(L) ? years + L * left : Infinity,
+        severity: talking ? 'danger' : 'warn',
+      }, `fork:${t}`);
     }
   }
 

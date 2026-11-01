@@ -56,8 +56,12 @@ hole of our choice, Hide unavailable and the Leptonic Wraith (31 Oct), and PR m1
 answers that cannot reach the gone, stored matter in the report, the governor in the Systems window
 and events unlocked by technology (31 Oct), and PR m1omg/Steliterate#54, the Twilight Interregnum, a
 game begun at 10¹² years, offered at /next/ only (`src/channel.ts`; 1 Nov), and PR
-m1omg/Steliterate#55, its intro film and every film's music rewritten, each its own score
-(`src/film/score.ts`), with a bit of Terminator 1's synth (1 Nov).
+m1omg/Steliterate#55, `5b84cbc`, its intro film and every film's music rewritten, each its own
+score (`src/film/score.ts`), with a bit of Terminator 1's synth, and the Long Flow's forecast only
+when near (1 Nov), and PR m1omg/Steliterate#56, stars that brighten as they age (red dwarfs toward
+their blue flare, the Interregnum's young stars into red giants that swallow worlds), black holes'
+Hawking temperature rising as they shrink, each star's lifetime shown, and a warning when a Thread
+of a quarter of our people or more thinks poorly of us (`src/game/stellar.ts`; 1 Nov).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -134,8 +138,9 @@ npx vite preview --port 4173             # in the background; leave it running
 node tools/playtest.cjs http://localhost:4173/ <dir outside the repo>   # "ALL CHECKS PASSED"
 npm run savecompat                       # "SAVE COMPAT OK"
 npm run check                            # unit checks in tools/checks/unit: "ALL CHECKS PASSED"
-npm run check:browser -- http://localhost:4173/   # browser checks in tools/checks/browser
+npm run check:browser -- http://localhost:4173/ --lanes=3   # browser checks, three at once (~30 min)
 npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; count in DEV-NOTES
+# (the harness splits: four runs of 75 with --from=0, 75, 150, 225 in parallel take 2.5 min)
 ```
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
@@ -193,4 +198,6 @@ PR m1omg/Steliterate#53; the comet through any system of ours): 192 / 73 / 97; b
 148, stable 34 / 81, curvature 52 / 71; every game re-rolled, within the noise. The Twilight
 Interregnum (1 Nov, PR m1omg/Steliterate#54): games begun in the Dusk the same in all 300; begun in
 it (`--interregnum`), 296 of 300 reach the Dusk, 186 / 80 / 101; by fate decay 126 / 148, stable
-19 / 81, curvature 41 / 71.
+19 / 81, curvature 41 / 71. Stars that brighten (1 Nov, PR m1omg/Steliterate#56): 181 / 69 / 95;
+by fate decay 103 / 148, stable 31 / 81, curvature 47 / 71; Harsh 158 / 34 / 93 (the same 300 before
+it: 158 / 43 / 92); begun in the Interregnum 183 / 80 / 102, 297 reaching the Dusk; within the noise.

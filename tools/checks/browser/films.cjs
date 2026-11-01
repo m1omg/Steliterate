@@ -1,3 +1,4 @@
+// (lanes: alone: it times frames and animations, so run.mjs --lanes runs it by itself, after the others)
 // Browser check: the films (the new version, part 4). Beginning a game plays the Long Dusk's film
 // before the age's own words: full screen, its words real text over the canvas, a Skip button with
 // the focus; skipped, the age's introduction follows. The Codex keeps the films seen, to play
