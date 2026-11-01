@@ -3,7 +3,8 @@
 // (an argument starting with http is the url, one with a slash the screenshot folder, any other a
 // check to run, by name: node tools/checks/run.mjs unit clock evap)
 // npm run check runs the unit checks; npm run check:browser the browser checks, against a served
-// build (npm run build && npx vite preview --port 4173). Each check ends with `TAG OK` or
+// build (npm run build && npx vite preview --port 4173). --lanes=N runs N browser checks at once
+// (1 Nov: one at a time they took some 80 minutes; three lanes on four cores, about 30). Each check ends with `TAG OK` or
 // `TAG FAILED (n)` and sets its exit code; a run with every check passing ends `ALL CHECKS PASSED`.
 import { spawn } from 'node:child_process';
 import { readdirSync } from 'node:fs';
@@ -16,7 +17,8 @@ const root = join(here, '..', '..');
 const [mode = 'unit', ...rest] = process.argv.slice(2);
 const url = rest.find((a) => /^https?:/.test(a)) ?? 'http://localhost:4173/';
 const out = rest.find((a) => !/^https?:/.test(a) && a.includes('/')) ?? 'playtest-shots/checks';
-const only = rest.filter((a) => !/^https?:/.test(a) && !a.includes('/'));
+const lanes = Math.max(1, Number(rest.find((a) => a.startsWith('--lanes='))?.slice(8)) || 1);
+const only = rest.filter((a) => !/^https?:/.test(a) && !a.includes('/') && !a.startsWith('--'));
 const pick = (dir, ext) =>
   readdirSync(join(here, dir))
     .filter((f) => f.endsWith(ext) && (!only.length || only.includes(f.slice(0, -ext.length))))
@@ -43,7 +45,7 @@ function runOne(job) {
   });
 }
 
-// unit checks run several at a time; browser checks one at a time (each drives a browser)
+// unit checks run several at a time; browser checks one at a time (each drives a browser), or --lanes=N at once
 async function lane(list, width) {
   const results = [];
   let next = 0;
@@ -62,7 +64,7 @@ async function lane(list, width) {
 
 const results = [
   ...(await lane(jobs.filter((j) => j.lane === 'unit'), Math.max(1, cpus().length - 1))),
-  ...(await lane(jobs.filter((j) => j.lane === 'browser'), 1)),
+  ...(await lane(jobs.filter((j) => j.lane === 'browser'), lanes)),
 ];
 const failed = results.filter((r) => r.code !== 0);
 for (const r of failed) {

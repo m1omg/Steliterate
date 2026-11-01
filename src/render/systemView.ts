@@ -15,6 +15,8 @@ import { fleetSeen, settlementSeen } from '../game/sim/others';
 import { positroniumHere } from '../game/sim/positronium';
 import { thinShare } from '../game/sim/thinning';
 import { ironAge } from '../game/sim/deeptime';
+import { turnStep } from '../game/sim/flare';
+import { redBrightening, youngStage } from '../game/stellar';
 import { ERA_BY_ID } from '../game/eras';
 import type { Quality } from './engine';
 import { fieldCage, fieldLattice, positroniumVeil, type FieldStyle } from './fields';
@@ -157,7 +159,7 @@ export class SystemView {
   /** The quality setting (Engine.setQuality): how many filaments, motes and ellipses, and whether colour may go past white for the bloom. */
   quality: Quality = 'high';
   /** What the last build drew of what is not matter, and of matter thinning or turned to iron (for the checks). */
-  look = { fields: 0, segments: 0, motes: 0, loops: 0, cages: 0, writ: 0, veil: 0, thin: 0, iron: 0 };
+  look = { fields: 0, segments: 0, motes: 0, loops: 0, cages: 0, writ: 0, veil: 0, thin: 0, iron: 0, burst: 0 };
   private stars: THREE.Points;
   private time = 0;
   /** Orbital clock: stands still while orbits are paused (the stars keep burning on `time`). */
@@ -246,7 +248,7 @@ export class SystemView {
     this.sleepLights = [];
     this.fieldMats = [];
     this.fieldSpin = [];
-    this.look = { fields: 0, segments: 0, motes: 0, loops: 0, cages: 0, writ: 0, veil: 0, thin: 0, iron: 0 };
+    this.look = { fields: 0, segments: 0, motes: 0, loops: 0, cages: 0, writ: 0, veil: 0, thin: 0, iron: 0, burst: 0 };
     this.fleets = new THREE.Group();
     this.starMat = null;
   }
@@ -345,10 +347,14 @@ export class SystemView {
     const kind = shownKind(p, state.years);
     switch (kind) {
       case 'red_dwarf':
-      case 'collision_star':
-        addStar(5, col.clone().lerp(new THREE.Color('#ff4a14'), 0.55), 1.0, 0, 0.68);
-        addGlow(34, col.clone().lerp(new THREE.Color('#ff5a1c'), 0.4), 0.55);
+      case 'collision_star': {
+        // (brightening toward its blue flare: a little larger in the glow, brighter and less red)
+        const rise = kind === 'red_dwarf' ? redBrightening(p, state.years) : 1;
+        const lift = Math.min(1, (rise - 1) / 2);
+        addStar(5, col.clone().lerp(new THREE.Color('#ff4a14'), 0.55 * (1 - 0.5 * lift)), 1.0, 0, 0.68 * Math.pow(rise, 0.35));
+        addGlow(34 * (1 + 0.35 * lift), col.clone().lerp(new THREE.Color('#ff5a1c'), 0.4 * (1 - 0.5 * lift)), 0.55 * Math.pow(rise, 0.4));
         break;
+      }
       case 'blue_dwarf':
         addStar(5.4, col, 0.55, 0, 0.9);
         addGlow(42, col, 0.6);
@@ -368,9 +374,11 @@ export class SystemView {
       case 'young_star': {
         // the Twilight Interregnum's young stars: larger and brighter the hotter their class
         const c = p.cls ?? 'G';
-        const r = c === 'B' ? 9 : c === 'A' ? 7.2 : c === 'F' ? 6.6 : c === 'G' ? 6 : 5.6;
-        const shine = c === 'B' ? 2.4 : c === 'A' ? 1.9 : c === 'F' ? 1.6 : c === 'G' ? 1.35 : 1.1;
-        addStar(r, col, 0.8, 0, shine);
+        // (swelling into a giant: up to three times its size here, redder, its glow wider and brighter)
+        const giant = youngStage(p, state.years).giant;
+        const r = (c === 'B' ? 9 : c === 'A' ? 7.2 : c === 'F' ? 6.6 : c === 'G' ? 6 : 5.6) * (1 + 2 * giant);
+        const shine = (c === 'B' ? 2.4 : c === 'A' ? 1.9 : c === 'F' ? 1.6 : c === 'G' ? 1.35 : 1.1) * (1 + giant);
+        addStar(r, col, 0.8 + 0.4 * giant, 0, shine);
         addGlow(r * 9, col, 0.6 + 0.4 * shine);
         break;
       }
@@ -431,6 +439,14 @@ export class SystemView {
         this.primaryRadius = r;
         this.pickables.push({ kind: 'system', id: sys.id, pos: new THREE.Vector3(), radius: r });
         const ringGlow = addGlow(r * 6, new THREE.Color('#ffd2a8'), 0.0, 0, 1.0);
+        // its last turn: its Hawking glow is visible only in its final moments (stellar.ts), which
+        // fall within this turn: it is drawn burning white-hot, as it will before it is gone
+        const L = turnStep(state).turnLength;
+        if (p.evaporateAt && p.evaporateAt > state.years && isFinite(L) && p.evaporateAt <= state.years + L) {
+          addGlow(r * 16, new THREE.Color('#dfe8ff'), 1.4);
+          addGlow(r * 5, new THREE.Color('#ffffff'), 1.6);
+          this.look.burst = 1;
+        }
         // minds written into the horizon ride the photon ring: ours in the age's neon, another's in its colour
         const writ = this.horizonWriters(state, sys);
         if (writ) {

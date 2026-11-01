@@ -28,7 +28,7 @@ import type { Body, Colony, Fleet, GameState, PrimaryKind, StarSystem, Survivor,
 import { THREADS } from '../../game/types';
 import { kelvin, mult, n1, signed, solarMass } from '../fmt';
 import { Icon } from '../Icon';
-import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, NEST_TIP, SWARM_TIP, primaryName } from '../labels';
+import { PRIMARY_NAME, TRAIT_NAME, bodyKindName, isBeacon, primaryIcon, spareChoices, BEACON_TIP, NEST_TIP, SWARM_TIP, primaryName, starLife } from '../labels';
 import { FormWorkChip } from '../FormWorkChip';
 import { act, engine, game, hoverStar, modal, notify, openBuildFor, rev, selection, settings, targeting, view, type SystemsTab } from '../store';
 import { sfx } from '../../audio/sfx';
@@ -774,6 +774,11 @@ function StarsList({ s, send }: { s: GameState; send?: Fleet }) {
                 {nestSeenAt(s, sys.id) && <span class="chip" style={chipGap} data-tip={NEST_TIP}>nest asleep</span>}
                 <div class="faint" style={{ fontSize: '12.5px' }}>
                   {known === 2 ? (worlds ? `${worlds} world${worlds === 1 ? '' : 's'}` : 'only its Deep') : 'worlds not charted'} · {formatDistance(ly)} from {from.name}
+                  {(() => {
+                    // its lifetime (1 Nov, the player: "the stars should show their lifetime")
+                    const life = starLife(s, sys);
+                    return life ? ` · ${life.next} in ${formatYearsShort(life.at - s.years)}` : '';
+                  })()}
                 </div>
               </span>
               {send && <SendButton s={s} f={send} sys={sys} />}
@@ -794,7 +799,8 @@ export function goToSystem(id: string) {
 
 type WorldSort = 'hab' | 'near' | 'room' | 'name' | 'type' | 'echoes' | 'lattice' | 'coldminds';
 /** The kinds of star in the order the Type sort lists them: the holes, the dead stars, the living, the starless. */
-const TYPE_ORDER: PrimaryKind[] = ['smbh', 'black_hole', 'neutron_star', 'white_dwarf', 'black_dwarf', 'brown_dwarf', 'red_dwarf', 'blue_dwarf', 'collision_star', 'helium_star', 'helium_giant', 'dark_star', 'rogue', 'void'];
+// (the Twilight Interregnum's young stars and nebulae too: until 1 Nov the Star types tab had no button for them)
+const TYPE_ORDER: PrimaryKind[] = ['smbh', 'black_hole', 'neutron_star', 'white_dwarf', 'black_dwarf', 'brown_dwarf', 'red_dwarf', 'blue_dwarf', 'young_star', 'nebula', 'collision_star', 'helium_star', 'helium_giant', 'dark_star', 'rogue', 'void'];
 const typeRank = (sys: StarSystem) => {
   const i = TYPE_ORDER.indexOf(sys.primary.kind);
   return i < 0 ? TYPE_ORDER.length : i;

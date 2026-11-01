@@ -6,6 +6,7 @@ import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from './fate';
 import { ERA_BY_ID, tideTurnsAt } from './eras';
 import { hashSeed } from './rng';
 import { allColonies, protonFateKnown } from './sim/util';
+import { GIANT, giantReach, hawkingK, redBrightening, redLightOver, youngLife, youngLightOver, youngStage } from './stellar';
 
 // Where the light comes from, era by era. Values are era-normalised "light factors": the
 // share of a structure's nominal capture a source supports per Tide turn. Physical ratios
@@ -400,7 +401,8 @@ export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0
   if (newStarOut(p, years)) return warmth(dwarfCoolingK(p, years - (p.diesAt ?? 0)), fromDecay(DECAY_K.dwarf), curved());
   switch (p.kind) {
     case 'red_dwarf':
-      return 2700 + (p.mass - 0.08) * 6000;
+      // hotter as it brightens toward its flare (its radius about the same: T ∝ L^¼)
+      return (2700 + (p.mass - 0.08) * 6000) * Math.pow(redBrightening(p, years), 0.25);
     case 'blue_dwarf':
       // at the peak of its last flare (a new galaxy's stars carry their own, by mass)
       return p.blueK ?? BLUE_K_OLD;
@@ -413,7 +415,8 @@ export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0
     case 'dark_star':
       return 4200;
     case 'young_star':
-      return YOUNG_CLASSES[p.cls ?? 'G'].k;
+      // its own class's surface on the main sequence, cooling as it swells into a giant
+      return youngStage(p, years).T;
     case 'nebula':
       // a dense, dark knot of molecular gas, about 10 K inside (warmer at its edges, in starlight)
       return 12;
@@ -433,8 +436,9 @@ export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0
       return warmth(NEUTRON_HALO_K * Math.pow(haloShare(years, drawn), 0.25), residual(RESIDUAL.neutron, years), fromDecay(DECAY_K.neutron), CURVATURE_NEUTRON_K * curve);
     case 'black_hole':
     case 'smbh':
-      // Hawking: 6.2 × 10^-8 K for a hole of one Sun, colder the heavier it is
-      return 6.17e-8 / Math.max(1e-6, p.mass);
+      // Hawking: 6.2 × 10^-8 K for a hole of one Sun, colder the heavier it is, hotter as it shrinks
+      // (until 1 Nov from the mass it was made with, so it never changed)
+      return hawkingK(p, years);
     default:
       return 0;
   }
@@ -488,8 +492,12 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
   const decay = decayWarmth(state, years);
   const drawn = haloDrawn(state);
   switch (p.kind) {
-    case 'red_dwarf':
-      return { light: p.lum, label: 'Red dwarf, main sequence', temperatureK: primaryTemperature(p, years, era, 0, 0, drawn), alive: null };
+    case 'red_dwarf': {
+      // brightening toward its blue flare (stellar.ts): its light over the turn
+      const rise = redBrightening(p, years);
+      const label = rise >= 1.05 ? `Red dwarf, brightening toward its blue flare: ${rise.toFixed(1)}× its light at the start` : 'Red dwarf, main sequence';
+      return { light: p.lum * redLightOver(p, years, years + Math.max(0, L)), label, temperatureK: primaryTemperature(p, years, era, 0, 0, drawn), alive: null };
+    }
     case 'blue_dwarf': {
       // a few billion years of flare: a turn that outlasts it gets its share, then a young white dwarf
       const from = p.blueAt ?? years;
@@ -570,8 +578,18 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       const flash = state.civ?.flags.star_flash === dies && dies > years;
       const frac = flash ? 1 : L > 0 ? Math.min(1, overlap / L) : 1;
       const name = youngStarName(p);
-      const label = p.cls === 'B' ? `${name}: a massive young star, burning through its fuel in a few tens of millions of years` : p.cls === 'F' || p.cls === 'A' ? `${name}: a young star, bright and brief, rare this late` : `${name}: a young star of the last star formation`;
-      return { light: p.lum * frac, label, temperatureK: primaryTemperature(p, years, era, 0, 0, drawn), alive: [Math.max(born, 0), dies] };
+      // brightening on the main sequence, then swelling into a giant (stellar.ts): its light where it shines in the turn
+      const stage = youngStage(p, years);
+      const rise = youngLightOver(p, Math.max(born, years), flash ? dies : Math.min(dies, years + Math.max(0, L)));
+      const label =
+        stage.giant > 0
+          ? `${GIANT[p.cls ?? 'G'].name}: what was a ${name.toLowerCase()}, swollen to ${stage.rAU < 0.1 ? stage.rAU.toFixed(2) : stage.rAU.toFixed(1)} AU and ${Math.round(stage.L).toLocaleString('en-US')} times the Sun’s light`
+          : p.cls === 'B'
+            ? `${name}: a massive young star, burning through its fuel in a few tens of millions of years`
+            : p.cls === 'F' || p.cls === 'A'
+              ? `${name}: a young star, bright and brief, rare this late`
+              : `${name}: a young star of the last star formation`;
+      return { light: p.lum * frac * rise, label, temperatureK: primaryTemperature(p, years, era, 0, 0, drawn), alive: [Math.max(born, 0), dies] };
     }
     case 'dark_star': {
       const born = p.bornAt ?? years;
@@ -735,6 +753,17 @@ function interregnumStars(state: GameState, sys: StarSystem, from: number, to: n
     if (star.kind !== 'brown_dwarf') state.flags.ir_born = (state.flags.ir_born ?? 0) + 1;
   }
   const p = sys.primary;
+  // a young star swelling into a giant swallows the worlds inside it (stellar.ts; the player: "it
+  // should swallow them"); a settlement there evacuates as under a helium giant (turn.ts)
+  const reach = p.kind === 'young_star' ? giantReach(p, to) : 0;
+  if (reach > 0) {
+    for (const bid of sys.bodies) {
+      const b = state.bodies[bid];
+      if (!b || b.kind === 'deep' || b.dissolved || b.rogue || b.feeding || !(b.orbitAU > 0) || b.orbitAU > reach) continue;
+      b.dissolved = true;
+      notes.push({ systemId: sys.id, kind: 'boiled', bodyId: b.id, swallowed: true });
+    }
+  }
   if (p.kind === 'young_star' && p.future && p.diesAt !== undefined && to >= p.diesAt) {
     const born = Math.max(from, p.bornAt ?? from);
     const life = p.diesAt - born;
@@ -1355,7 +1384,11 @@ export function nextStellarChange(sys: StarSystem, years: number): { at: number;
   if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant' || p.kind === 'dark_star') && p.diesAt && p.diesAt > years) return { at: p.diesAt, what: 'burns out' };
   if ((p.kind === 'black_hole' || p.kind === 'smbh') && p.evaporateAt && p.evaporateAt > years) return { at: p.evaporateAt, what: 'evaporates in a final burst of Hawking radiation' };
   if (p.kind === 'nebula' && p.bornAt !== undefined && p.bornAt > years) return { at: p.bornAt, what: p.future?.kind === 'young_star' ? 'collapses into a bright young star' : p.future?.kind === 'brown_dwarf' ? 'collapses into a brown dwarf' : 'collapses into a new star' };
-  if (p.kind === 'young_star' && p.diesAt !== undefined && p.diesAt > years) return { at: p.diesAt, what: p.cls === 'B' ? 'explodes as a supernova' : 'swells into a red giant and collapses into a white dwarf' };
+  if (p.kind === 'young_star' && p.diesAt !== undefined && p.diesAt > years) {
+    const { msEnd } = youngLife(p);
+    if (msEnd > years) return { at: msEnd, what: p.cls === 'B' ? 'swells into a red supergiant' : 'swells into a red giant, swallowing the worlds it reaches' };
+    return { at: p.diesAt, what: p.cls === 'B' ? 'explodes as a supernova' : 'sheds its outer layers and collapses into a white dwarf' };
+  }
   return null;
 }
 
@@ -1381,6 +1414,8 @@ export function primaryLuminosity(p: Primary, years: number, era: EraId, decay =
   if (newStarOut(p, years)) return glow(dwarfRadius(p));
   switch (p.kind) {
     case 'red_dwarf':
+      // lower main sequence, brightening toward its blue flare (stellar.ts)
+      return 0.23 * Math.pow(m, 2.3) * redBrightening(p, years);
     case 'collision_star':
       return 0.23 * Math.pow(m, 2.3); // lower main sequence
     case 'blue_dwarf':
@@ -1393,7 +1428,8 @@ export function primaryLuminosity(p: Primary, years: number, era: EraId, decay =
     case 'dark_star':
       return 1;
     case 'young_star':
-      return YOUNG_CLASSES[p.cls ?? 'G'].suns;
+      // brightening on the main sequence, then a giant (stellar.ts)
+      return youngStage(p, years).L;
     case 'white_dwarf':
     case 'black_dwarf': {
       // by its warmth; an ember at least by the dark matter it burns (about 4 × 10^-12 L☉ while
