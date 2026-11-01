@@ -4610,3 +4610,7 @@ The player's word on the audit of the same day, and two more requests.
   turns; by fate decay 106 / 148, stable 34 / 81, curvature 52 / 71 (before: 183 / 78 / 104; 108,
   33 and 42). Every game re-rolled (the random events draw their dice differently now), and the
   outcome is the same in 134 of 300: within the noise.
+- **Validated** (one build, `index-CHw5-wl7.js`): tsc and the build clean; the playtest; savecompat on
+  its 9 saves; all 102 unit checks; all 78 browser checks. `browser/prompt-systems` answered each
+  event by its first choice, which can now be greyed out (a settling mantle's Drill deeper, without
+  Mantle Stimulation): it waited on it until it gave up; it now takes the first that can be taken.
