@@ -58,7 +58,7 @@ and events unlocked by technology (31 Oct), and PR m1omg/Steliterate#54, the Twi
 game begun at 10¹² years, offered at /next/ only (`src/channel.ts`; 1 Nov), and PR
 m1omg/Steliterate#55, `5b84cbc`, its intro film and every film's music rewritten, each its own
 score (`src/film/score.ts`), with a bit of Terminator 1's synth, and the Long Flow's forecast only
-when near (1 Nov), and PR m1omg/Steliterate#56, stars that brighten as they age (red dwarfs toward
+when near (1 Nov), and PR m1omg/Steliterate#56, `4865f2e`, stars that brighten as they age (red dwarfs toward
 their blue flare, the Interregnum's young stars into red giants that swallow worlds), black holes'
 Hawking temperature rising as they shrink, each star's lifetime shown, and a warning when a Thread
 of a quarter of our people or more thinks poorly of us (`src/game/stellar.ts`; 1 Nov).
