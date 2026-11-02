@@ -153,9 +153,10 @@ run(async () => {
   // the same moment draws the same picture, whatever was drawn before it
   const frames = await page.evaluate(() => {
     const steps = (fps) => Array.from({ length: 2 * fps + 1 }, (_, i) => 3 + i / fps);
-    const a = window.__stel.filmFrames('dusk', steps(30));
-    const b = window.__stel.filmFrames('dusk', steps(144));
-    const again = window.__stel.filmFrames('dusk', [5, 1, 5]);
+    // (small pictures: the frames are compared, not looked at, and full size took 18 s in software)
+    const a = window.__stel.filmFrames('dusk', steps(30), 320, 180);
+    const b = window.__stel.filmFrames('dusk', steps(144), 320, 180);
+    const again = window.__stel.filmFrames('dusk', [5, 1, 5], 320, 180);
     return { a: a[a.length - 1], b: b[b.length - 1], again };
   });
   check(frames.a === frames.b && frames.again[0] === frames.again[2] && frames.again[0] !== frames.again[1], `two seconds at 30 and at 144 frames a second end on the same frame (${frames.a} / ${frames.b}), and a moment drawn twice is the same`);
@@ -163,17 +164,20 @@ run(async () => {
   const all = await page.evaluate(() => Object.keys(window.__stel.filmList()).map((id) => [id, window.__stel.filmFrames(id, [0.2, 4, 9.6], 320, 180).length]));
   check(all.length >= 16 && all.every(([, n]) => n === 3), `all ${all.length} films draw from start to end`);
   // pictures painted in the painter thread draw the same frames as pictures painted on the page
-  const apart = [];
-  for (const [id] of all) {
-    apart.push(
-      await page.evaluate(async (id) => {
-        const times = [0.3, 4, 9.5, 15, 21, 27, 33, 39, 45];
-        const here = window.__stel.filmFrames(id, times, 320, 180, 'medium');
-        const there = await window.__stel.filmFramesApart(id, times, 320, 180, 'medium');
-        return { id, same: here.every((x, i) => x === there.frames[i]), sent: there.sent };
-      }, id),
-    );
-  }
+  // (all 18 at once: each film starts a painter thread of its own, which takes some 4 s to load
+  // here, so one after another this took 86 s in software, 2 Nov; and four moments across each film)
+  const apart = await page.evaluate(
+    (ids) =>
+      Promise.all(
+        ids.map(async (id) => {
+          const times = [0.3, 9.5, 27, 45];
+          const here = window.__stel.filmFrames(id, times, 320, 180, 'medium');
+          const there = await window.__stel.filmFramesApart(id, times, 320, 180, 'medium');
+          return { id, same: here.every((x, i) => x === there.frames[i]), sent: there.sent };
+        }),
+      ),
+    all.map(([id]) => id),
+  );
   const differ = apart.filter((x) => !x.same || x.sent < 1);
   check(!differ.length, `pictures painted in their own thread draw the same frames as on the page, in all ${apart.length} films (${apart.reduce((n, x) => n + x.sent, 0)} pictures sent${differ.length ? `; not in ${differ.map((x) => x.id).join(', ')}` : ''})`);
   // the grain drawn into the frame (a slow device's way) holds still where the system asks for less

@@ -137,14 +137,16 @@ run(async () => {
   const before = await place();
   if (before && before[0] < before[1] - 1) {
     await page.keyboard.press('Space');
-    await page.waitForTimeout(400);
+    // (until the caption moves on, up to 5 s: a frame drawn in software can take longer than 400 ms)
+    const moved = (from) => page.waitForFunction((n) => (document.querySelector('.reveal-card .eyebrow')?.textContent ?? '').match(/(\d+) of/)?.[1] !== String(n), from, { timeout: 5000, polling: 100 }).catch(() => null);
+    await moved(before[0]);
     const after = await place();
     check(!!after && after[0] === before[0] + 1, `Space goes on to the next world (${before?.join(' of ')} → ${after?.join(' of ')})`);
     await atWorld();
     const b2 = await place();
     const box = await page.locator('canvas.stage-canvas').boundingBox();
     await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.6);
-    await page.waitForTimeout(400);
+    await moved(b2?.[0]);
     const a2 = await place();
     check(!!b2 && !!a2 && a2[0] === b2[0] + 1, `and so does a click on the view (${b2?.join(' of ')} → ${a2?.join(' of ')})`);
   } else check(true, `Space and a click: too few worlds here to go on (${before?.join(' of ')}; skipped)`);
@@ -171,10 +173,12 @@ run(async () => {
     e.stop();
     const at = (fps, when) => {
       e.showGalaxy(undefined, undefined, true);
-      for (let i = 0; i < 200 && e.view !== 'galaxy'; i++) e.frame(1 / 60);
+      // (stepped without drawing: the state is what is compared, and hundreds of frames drawn in
+      // software took over three minutes, 2 Nov)
+      for (let i = 0; i < 200 && e.view !== 'galaxy'; i++) e.frame(1 / 60, false);
       e.markForReveal(s, [id]);
       e.showSystem(id);
-      for (let i = 0; i < 400 && !e.revealing; i++) e.frame(1 / fps);
+      for (let i = 0; i < 400 && !e.revealing; i++) e.frame(1 / fps, false);
       const sv = e.system;
       // (the worlds where they were as it began, the same in both runs: the switch into the view
       // comes a frame sooner or later at one rate than at the other, and they keep going round)
@@ -182,7 +186,7 @@ run(async () => {
       sv.orbitTime = 100 + (sv.time - sv.reveal.start);
       const left = when - (sv.time - sv.reveal.start);
       const n = Math.max(1, Math.round(left * fps));
-      for (let i = 0; i < n; i++) e.frame(left / n);
+      for (let i = 0; i < n; i++) e.frame(left / n, false);
       const scans = sv.planets.filter((p) => p.mat).map((p) => Math.round(p.mat.uniforms.uReveal.value * 1e4) / 1e4);
       const hidden = s.systems[id].bodies.filter((b) => sv.hidden(`body:${b}`)).length;
       const t = Math.round((sv.time - sv.reveal.start) * 1e6) / 1e6;
@@ -196,9 +200,9 @@ run(async () => {
   }, target.id);
   check(rate.a2 === rate.b2, `2 s into it, the same at 30 and at 144 frames a second (${rate.a2} / ${rate.b2})`);
   check(rate.a6 === rate.b6, `6 s into it as well (${rate.a6} / ${rate.b6})`);
-  // the browser drawing again: the hundreds of frames stepped by hand are still being drawn in
-  // software, and no animation frame comes until they are (20 Oct: from 8 s to well over 20 s
-  // here, on the build before as well), so the switch below is timed from the fifth one after
+  // the browser drawing again, timed from the fifth animation frame after (until 2 Nov the frames
+  // stepped by hand were drawn too, and no animation frame came until they were: 8 s to well over
+  // 20 s here; stepped without drawing now, this costs next to nothing)
   await page.evaluate(() => {
     window.__frames = 0;
     const f = () => ++window.__frames < 5 && requestAnimationFrame(f);
