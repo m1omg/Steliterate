@@ -6,6 +6,7 @@ import { OrbitRig } from './camera';
 import { GalaxyView, type Pickable } from './galaxyView';
 import { createPost, type PostChain } from './post';
 import { SystemView, type RevealEnd, type RevealStep } from './systemView';
+import { noteRenderer } from './nebulaCloud';
 import { VIEW_MODE } from './shaders/bodies';
 import { calendarEra } from '../game/fate';
 import { allColonies, colonies, ownColony } from '../game/sim/util';
@@ -107,6 +108,8 @@ export class Engine {
     this.renderer.setClearColor('#030306');
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.05;
+    // (a software renderer draws a nebula's cloud at Low's cost: nebulaCloud.ts)
+    noteRenderer(this.renderer);
     host.appendChild(this.renderer.domElement);
     this.renderer.domElement.className = 'stage-canvas';
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 30000);

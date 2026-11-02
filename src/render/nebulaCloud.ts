@@ -225,7 +225,8 @@ export interface NebulaCloudOptions {
 
 /** A nebula's cloud, up close: one mesh, drawn into a buffer of its own at a fraction of the screen's resolution (systemView prerender), then laid over the scene (cloudOverlay). */
 export function nebulaCloud(o: NebulaCloudOptions): { mesh: THREE.Mesh; mat: THREE.ShaderMaterial } {
-  const steps = o.quality === 'low' ? 12 : o.quality === 'medium' ? 18 : 24;
+  // (thin gas is a faint veil: fewer steps do)
+  const steps = o.thin ? 10 : o.quality === 'low' ? 12 : o.quality === 'medium' ? 18 : 24;
   const s = o.seed;
   const glow = 0.35 + 0.65 * o.gas;
   const mat = new THREE.ShaderMaterial({
@@ -258,6 +259,28 @@ export function nebulaCloud(o: NebulaCloudOptions): { mesh: THREE.Mesh; mat: THR
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(o.radius, 48, 32), mat);
   mesh.frustumCulled = false;
   return { mesh, mat };
+}
+
+/** The cloud's buffer is drawn again at least this often (ms) while the camera is still, for the gas's drift. */
+export const CLOUD_REDRAW_MS = 125;
+
+let software = false;
+
+/** Note whether the renderer draws in software (no graphics card: SwiftShader, llvmpipe), once, as the engine starts. */
+export function noteRenderer(renderer: THREE.WebGLRenderer) {
+  try {
+    const gl = renderer.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    software = /swiftshader|llvmpipe|softpipe|software/i.test(name);
+  } catch {
+    software = false;
+  }
+}
+
+/** The quality the cloud is drawn at: the setting's, or Low on a software renderer, where a march through a cloud is slow (the checks run on one). */
+export function cloudQuality(q: Quality): Quality {
+  return software ? 'low' : q;
 }
 
 /** How finely the cloud is drawn: its buffer's share of the screen's width and height. */

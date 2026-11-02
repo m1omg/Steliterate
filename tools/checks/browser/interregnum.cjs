@@ -56,7 +56,8 @@ run(async () => {
     return { bright: g.dustMat.uniforms.uBright.value, tint: g.dustMat.uniforms.uTint.value.r, nebulae: g.nebulae.size };
   });
   check(look.bright * look.tint > 1.5 * duskLook.bright * duskLook.tint && duskLook.nebulae === 0, `its galaxy brighter than the Dusk’s (${(look.bright * look.tint).toFixed(2)} vs ${(duskLook.bright * duskLook.tint).toFixed(2)})`);
-  check(look.nebulae >= 1 && look.nebulae === look.gathered && look.thin > 5 * look.nebulae, `${look.nebulae} nebulae drawn, the gas of ${look.thin} more stars thin and dark, not drawn as clouds`);
+  // (a few, or none at all in some galaxies: about three in a galaxy on average)
+  check(look.nebulae <= 8 && look.nebulae === look.gathered && look.thin > 5 * Math.max(1, look.nebulae), `${look.nebulae} nebulae drawn, the gas of ${look.thin} more stars thin and dark, not drawn as clouds`);
   // a nebula and a young star, up close
   await page.evaluate(() => window.__stel.newGame({ seed: 1000, interregnum: true }));
   await page.waitForTimeout(1200);
@@ -75,19 +76,24 @@ run(async () => {
   for (const [what, id, re] of [['nebula', ids.neb, /Nebula/], ['thin gas', ids.thin, /Thin gas/], ['young star', ids.young, /dwarf \([KG]\)|star \([FA]\)|giant \(B\)/]]) {
     await page.evaluate((x) => window.__stel.select('system', x), id);
     await page.evaluate((x) => window.__stel.engine().showSystem(x), id);
+    // (until the view has faded over to it: slow in a software renderer)
+    await page.waitForFunction((x) => window.__stel.engine().view === 'system' && window.__stel.engine().system.systemId === x, id, { timeout: 60000, polling: 250 });
     await page.waitForTimeout(1500);
     const panel = await page.evaluate(() => document.querySelector('.drawer')?.textContent ?? '');
     check(re.test(panel) && !/WD \d/.test(panel.slice(0, 60)), `a ${what} in the system view, named for what it is (${panel.slice(0, 70)})`);
     if (what !== 'young star') {
       // a cloud, marched through, drawn before the rest of the see-through things
+      // (in a scene of its own, drawn into a buffer, laid over the stars by a quad in the view's group)
       const cloud = await page.evaluate(() => {
-        let found = null;
-        window.__stel.engine().system.group.traverse((o) => {
-          if (o.material?.uniforms?.uNoise) found = { order: o.renderOrder, thin: o.material.uniforms.uCore.value === 0, steps: o.material.defines.STEPS };
+        const v = window.__stel.engine().system;
+        const m = v.cloud;
+        let quad = null;
+        v.group.traverse((o) => {
+          if (o.material?.uniforms?.uTex) quad = o.renderOrder;
         });
-        return found;
+        return m ? { inScene: v.cloudScene.children.includes(m), thin: m.material.uniforms.uCore.value === 0, steps: m.material.defines.STEPS, quad, buffer: v.cloudTarget ? [v.cloudTarget.width, v.cloudTarget.height] : null } : null;
       });
-      check(!!cloud && cloud.order === -1 && cloud.thin === (what === 'thin gas') && cloud.steps >= 12, `drawn as a cloud (${JSON.stringify(cloud)})`);
+      check(!!cloud && cloud.inScene && cloud.quad === -1 && cloud.thin === (what === 'thin gas') && cloud.steps >= 10 && !!cloud.buffer, `drawn as a cloud (${JSON.stringify(cloud)})`);
     }
     await ck.shot(`interregnum-${what.replace(' ', '-')}.png`);
   }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CONDENSE_FACTOR, gasLeft, thinGas } from '../game/interregnum';
-import { cloudOverlay, cloudScale, nebulaCloud } from './nebulaCloud';
+import { CLOUD_REDRAW_MS, cloudOverlay, cloudQuality, cloudScale, nebulaCloud } from './nebulaCloud';
 import { drawnOrbits, ringed } from './orbits';
 import { bodyClimate, brownWarmth, diskLight, emberShare, haloDrawn, primaryTemperature, pulsarBeam, seaBand, shownKind } from '../game/physics';
 import { hashSeed, Rng } from '../game/rng';
@@ -174,19 +174,34 @@ export class SystemView {
   private cloudTarget: THREE.WebGLRenderTarget | null = null;
   private cloudQuad: THREE.Mesh | null = null;
   private clearWas = new THREE.Color();
+  /** What the cloud's buffer last showed: its cloud, the camera's place and when (prerender). */
+  private cloudDrawn: { mesh: THREE.Mesh | null; view: string; at: number } = { mesh: null, view: '', at: 0 };
 
   /** Before the frame (Engine): a nebula's cloud into its buffer, at a fraction of the screen's resolution. */
   prerender(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
     if (!this.cloud || !this.cloudQuad) return;
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-    const k = cloudScale(this.quality);
+    const k = cloudScale(cloudQuality(this.quality));
     const w = Math.max(1, Math.round(size.x * k));
     const h = Math.max(1, Math.round(size.y * k));
-    if (!this.cloudTarget) this.cloudTarget = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthBuffer: false });
-    else if (this.cloudTarget.width !== w || this.cloudTarget.height !== h) this.cloudTarget.setSize(w, h);
+    let fresh = false;
+    if (!this.cloudTarget) {
+      this.cloudTarget = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthBuffer: false });
+      fresh = true;
+    } else if (this.cloudTarget.width !== w || this.cloudTarget.height !== h) {
+      this.cloudTarget.setSize(w, h);
+      fresh = true;
+    }
     const u = (this.cloudQuad.material as THREE.ShaderMaterial).uniforms;
     u.uTex.value = this.cloudTarget.texture;
     u.uTexel.value.set(1 / w, 1 / h);
+    // drawn again only as the camera moves, or a few times a second for the gas's slow drift (on
+    // elapsed time: the same whatever the display's rate), not every frame
+    camera.updateMatrixWorld();
+    const view = camera.matrixWorld.elements.join() + (camera as THREE.PerspectiveCamera).projectionMatrix.elements.join();
+    const now = performance.now();
+    if (!fresh && this.cloud === this.cloudDrawn.mesh && view === this.cloudDrawn.view && now - this.cloudDrawn.at < CLOUD_REDRAW_MS) return;
+    this.cloudDrawn = { mesh: this.cloud, view, at: now };
     const was = renderer.getRenderTarget();
     const alpha = renderer.getClearAlpha();
     renderer.getClearColor(this.clearWas);
@@ -434,7 +449,7 @@ export class SystemView {
         const born = p.bornAt ?? state.years;
         const from = born / CONDENSE_FACTOR;
         const progress = born > from ? Math.max(0, Math.min(1, Math.log(Math.max(state.years, from) / from) / Math.log(born / from))) : 1;
-        const cloud = nebulaCloud({ radius: 34, seed: hashSeed(sys.id) % 997, quality: this.quality, thin: thinGas(p), gas: gasLeft(state.years), birth: THREE.MathUtils.smoothstep(progress, 0.5, 1) });
+        const cloud = nebulaCloud({ radius: 34, seed: hashSeed(sys.id) % 997, quality: cloudQuality(this.quality), thin: thinGas(p), gas: gasLeft(state.years), birth: THREE.MathUtils.smoothstep(progress, 0.5, 1) });
         // (drawn into a buffer of its own, at a fraction of the screen's resolution: prerender)
         this.cloudScene.add(cloud.mesh);
         this.cloud = cloud.mesh;

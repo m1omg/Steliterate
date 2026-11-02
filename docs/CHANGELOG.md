@@ -4862,7 +4862,9 @@ it, a friend's suggestion as the player put it: a warning when a Thread's standi
   of dust, the light from inside reddened; a small dark globule where its star is forming, and as
   the birth nears a dull red glow in it (the protostar, as infrared would show it). It is drawn
   into a buffer of its own at 0.62 of the screen's resolution on High (0.5 Medium, 0.38 Low) and
-  laid over the background stars, which it hides behind its dust.
+  laid over the background stars, which it hides behind its dust; drawn again only as the camera
+  moves, or eight times a second for its drift, and at Low's cost on a software renderer (no
+  graphics card).
 - **The research grid's first column is "I · The Stelliferous Age"** (the player: it is "really the
   Technology … for the Stelliferous Age"), never dimmed: its projects are the Twilight
   Interregnum's as much as the Long Dusk's. A label only: every game.
@@ -4907,4 +4909,9 @@ it, a friend's suggestion as the player put it: a warning when a Thread's standi
   109, 297 reaching the Dusk (183 / 80 / 102, 297). Within the noise.
 - Checks: `unit/save-room`, `unit/thin-gas`, `unit/orbits-drawn`, `unit/live-hint`, `unit/flare-turns`; `browser/save-room`,
   `browser/reveal-first`; `browser/interregnum` (a few nebulae drawn, thin gas, the cloud),
-  `browser/research-fate` (the column's name).
+  `browser/research-fate` (the column's name); `browser/fates` closes a combat report its game now
+  meets before End turn.
+- **Validated** (`index-CYMqytMv.js`): tsc and the build clean; the playtest; savecompat on its 11
+  saves (the player's among them); all 113 unit checks; all 81 browser checks (76 in three lanes;
+  five again alone: three had timed out on a screenshot with two more checks running beside the
+  lanes, and `fates` and `interregnum` after the fixes above).
