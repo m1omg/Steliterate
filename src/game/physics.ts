@@ -1,7 +1,7 @@
 import { STRUCTURE_BY_ID } from './data/structures';
 import { defaultWater, hawkingTime, inspiralTime } from './gen';
 import type { Body, Colony, EraId, GameState, Primary, PrimaryKind, StarClass, StarSystem } from './types';
-import { YOUNG_CLASSES, formWorlds, formsAtBirth, youngStarName } from './interregnum';
+import { YOUNG_CLASSES, formWorlds, formsAtBirth, thinGas, youngStarName } from './interregnum';
 import { MATTER_END, calendarEra, fateKnown, fateOf, matterGone } from './fate';
 import { ERA_BY_ID, tideTurnsAt } from './eras';
 import { hashSeed } from './rng';
@@ -418,6 +418,8 @@ export function ownTemperature(p: Primary, years: number, _era: EraId, decay = 0
       // its own class's surface on the main sequence, cooling as it swells into a giant
       return youngStage(p, years).T;
     case 'nebula':
+      // thin gas, not yet gathered: some tens of K (the cold neutral gas between today's stars is 50 to 100 K, in a brighter galaxy)
+      if (thinGas(p)) return 40;
       // a dense, dark knot of molecular gas, about 10 K inside (warmer at its edges, in starlight)
       return 12;
     case 'white_dwarf':
@@ -568,6 +570,7 @@ export function sourceLight(state: GameState, sys: StarSystem, years: number, L:
       return { light, label: light > 0 ? 'Neutron star, slowly spinning down' : 'Neutron star, spun down and cold', temperatureK: primaryTemperature(p, years, era, decay, curvatureWarmth(state), drawn), alive: null };
     }
     case 'nebula':
+      if (thinGas(p)) return { light: 0, label: 'Thin gas: the galaxy’s cold hydrogen, too sparse to see, gathering where a star will form', temperatureK: primaryTemperature(p, years, era, 0, 0, drawn), alive: null };
       return { light: 0, label: p.future?.kind === 'young_star' ? 'Nebula: a dense knot of the galaxy’s gas, collapsing toward a bright young star' : 'Nebula: a dense knot of the galaxy’s gas, where a star will form', temperatureK: primaryTemperature(p, years, era, 0, 0, drawn), alive: null };
     case 'young_star': {
       // a star of the last star formation, brighter than any red dwarf (in the Dusk's units,
@@ -742,6 +745,8 @@ export const SUPERNOVA_LY = 30;
 function interregnumStars(state: GameState, sys: StarSystem, from: number, to: number, notes: EvolutionNote[]) {
   const formed: Body[] = [];
   const p0 = sys.primary;
+  // its thin gas gathers into a cloud seen as a nebula (interregnum.ts CONDENSE_FACTOR)
+  if (p0.condenseAt !== undefined && to >= p0.condenseAt) delete p0.condenseAt;
   if (p0.kind === 'nebula' && p0.future && p0.bornAt !== undefined && to >= p0.bornAt) {
     const star = p0.future;
     sys.primary = star;
@@ -1383,6 +1388,7 @@ export function nextStellarChange(sys: StarSystem, years: number): { at: number;
   if (p.kind === 'blue_dwarf' && p.whiteAt && p.whiteAt > years) return { at: p.whiteAt, what: 'collapses into a white dwarf' };
   if ((p.kind === 'collision_star' || p.kind === 'helium_star' || p.kind === 'helium_giant' || p.kind === 'dark_star') && p.diesAt && p.diesAt > years) return { at: p.diesAt, what: 'burns out' };
   if ((p.kind === 'black_hole' || p.kind === 'smbh') && p.evaporateAt && p.evaporateAt > years) return { at: p.evaporateAt, what: 'evaporates in a final burst of Hawking radiation' };
+  if (p.kind === 'nebula' && p.condenseAt !== undefined && p.condenseAt > years) return { at: p.condenseAt, what: 'gathers into a nebula, where a star will form' };
   if (p.kind === 'nebula' && p.bornAt !== undefined && p.bornAt > years) return { at: p.bornAt, what: p.future?.kind === 'young_star' ? 'collapses into a bright young star' : p.future?.kind === 'brown_dwarf' ? 'collapses into a brown dwarf' : 'collapses into a new star' };
   if (p.kind === 'young_star' && p.diesAt !== undefined && p.diesAt > years) {
     const { msEnd } = youngLife(p);

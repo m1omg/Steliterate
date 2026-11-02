@@ -76,8 +76,9 @@ export function ResearchModal({ s }: { s: GameState }) {
         <div class="techgrid">
           <div />
           {ERAS.map((e) => (
-            <div key={e.id} class="eh" style={{ opacity: ageReached(s, e.id) ? 1 : 0.45 }}>
-              {e.numeral} · {e.name}
+            // (the first column's projects are the Stelliferous Era's, the Twilight Interregnum's as much as the Long Dusk's: every game begins in it)
+            <div key={e.id} class="eh" style={{ opacity: e.index === 0 || ageReached(s, e.id) ? 1 : 0.45 }}>
+              {e.numeral} · {e.index === 0 ? 'The Stelliferous Age' : e.name}
             </div>
           ))}
           {FIELDS.map((f) => (

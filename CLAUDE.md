@@ -58,10 +58,14 @@ and events unlocked by technology (31 Oct), and PR m1omg/Steliterate#54, the Twi
 game begun at 10¹² years, offered at /next/ only (`src/channel.ts`; 1 Nov), and PR
 m1omg/Steliterate#55, `5b84cbc`, its intro film and every film's music rewritten, each its own
 score (`src/film/score.ts`), with a bit of Terminator 1's synth, and the Long Flow's forecast only
-when near (1 Nov), and PR m1omg/Steliterate#56, stars that brighten as they age (red dwarfs toward
+when near (1 Nov), and PR m1omg/Steliterate#56, `4865f2e`, stars that brighten as they age (red dwarfs toward
 their blue flare, the Interregnum's young stars into red giants that swallow worlds), black holes'
 Hawking temperature rising as they shrink, each star's lifetime shown, and a warning when a Thread
-of a quarter of our people or more thinks poorly of us (`src/game/stellar.ts`; 1 Nov).
+of a quarter of our people or more thinks poorly of us (`src/game/stellar.ts`; 1 Nov), and PR
+m1omg/Steliterate#57, `@MERGE@`, save slots in IndexedDB with Export and delete all saves, few
+nebulae at a new Interregnum game's start (thin gas), a nebula up close as a cloud, the research
+grid's Stelliferous Age, worlds drawn apart, the survey reveal before the events (and Settings,
+Open charted systems), a pact offer's live price, and people costing a flare turn's time only (1 Nov).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
@@ -200,4 +204,7 @@ Interregnum (1 Nov, PR m1omg/Steliterate#54): games begun in the Dusk the same i
 it (`--interregnum`), 296 of 300 reach the Dusk, 186 / 80 / 101; by fate decay 126 / 148, stable
 19 / 81, curvature 41 / 71. Stars that brighten (1 Nov, PR m1omg/Steliterate#56): 181 / 69 / 95;
 by fate decay 103 / 148, stable 31 / 81, curvature 47 / 71; Harsh 158 / 34 / 93 (the same 300 before
-it: 158 / 43 / 92); begun in the Interregnum 183 / 80 / 102, 297 reaching the Dusk; within the noise.
+it: 158 / 43 / 92); begun in the Interregnum 183 / 80 / 102, 297 reaching the Dusk; within the noise. Flare turns
+costing people their time only, and thin gas (1 Nov, PR m1omg/Steliterate#57): 181 / 69 / 102; by
+fate decay 109 / 148, stable 30 / 81, curvature 42 / 71; Harsh 148 / 29 / 92; begun in the
+Interregnum 186 / 74 / 109, 297 reaching the Dusk; within the noise.

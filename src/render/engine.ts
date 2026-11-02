@@ -6,6 +6,7 @@ import { OrbitRig } from './camera';
 import { GalaxyView, type Pickable } from './galaxyView';
 import { createPost, type PostChain } from './post';
 import { SystemView, type RevealEnd, type RevealStep } from './systemView';
+import { noteRenderer } from './nebulaCloud';
 import { VIEW_MODE } from './shaders/bodies';
 import { calendarEra } from '../game/fate';
 import { allColonies, colonies, ownColony } from '../game/sim/util';
@@ -107,6 +108,8 @@ export class Engine {
     this.renderer.setClearColor('#030306');
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.05;
+    // (a software renderer draws a nebula's cloud at Low's cost: nebulaCloud.ts)
+    noteRenderer(this.renderer);
     host.appendChild(this.renderer.domElement);
     this.renderer.domElement.className = 'stage-canvas';
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 30000);
@@ -268,6 +271,8 @@ export class Engine {
     // the rig moves after the scene so a followed planet is centred on this frame's position
     this.rig.update(dt);
     if (this.followed && !this.rig.follow) this.setFollowed(null);
+    // a nebula's cloud, into its own buffer first (systemView)
+    if (this.view === 'system') this.system.prerender(this.renderer, this.camera);
     this.post.composer.render(dt);
     this.updateLabels();
   }
@@ -328,8 +333,11 @@ export class Engine {
       }
       // charted since we last looked: the camera flies to each of its worlds in turn (the one we came
       // to see first, and last again), facing as the view would have
+      this.revealNext = null;
       if (this.toReveal.delete(systemId) && this.state === this.revealGame && (this.events.revealsOn?.() ?? true)) this.system.startReveal(this.state!, focusBodyId, this.rig.goalYaw);
     };
+    // (a reveal ahead, once the view has faded over: the turn's events wait for it)
+    this.revealNext = this.revealWaiting(systemId) ? systemId : null;
     this.fadeTarget = 1;
     this.pendingSwitch = go;
   }
@@ -338,6 +346,18 @@ export class Engine {
   private toReveal = new Set<string>();
   /** The game they were charted in (another game, or the same one loaded again, forgets them). */
   private revealGame: GameState | null = null;
+  /** A system the view is about to enter whose survey reveal will play (until the view has faded over to it). */
+  private revealNext: string | null = null;
+
+  /** Entering this system now would play its survey reveal (it was charted, not yet looked into, and reveals are on). */
+  revealWaiting(systemId: string): boolean {
+    return this.toReveal.has(systemId) && this.state === this.revealGame && (this.events.revealsOn?.() ?? true);
+  }
+
+  /** A survey reveal is about to begin: the view is fading over to a system that will play one. */
+  get revealAhead(): boolean {
+    return this.revealNext !== null;
+  }
 
   /** These systems have just been charted: entering one plays its survey reveal. */
   markForReveal(state: GameState, systemIds: string[]) {
@@ -351,7 +371,10 @@ export class Engine {
   /** Skip the survey reveal playing now (every world at once); `all`, and the ones still waiting too. */
   skipReveal(all = false) {
     this.system.stopReveal('skip');
-    if (all) this.toReveal.clear();
+    if (all) {
+      this.toReveal.clear();
+      this.revealNext = null;
+    }
   }
 
   /** The survey reveal's Next: on to its next world now. */

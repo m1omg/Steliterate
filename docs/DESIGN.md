@@ -297,7 +297,8 @@ Dusk galaxy rewound (`src/game/interregnum.ts`), with draws of its own so every 
 unchanged. Every red dwarf shining at 10¹² years goes out within the age, the heaviest first (a
 red dwarf lives 10¹² years at 0.25 M☉, about 1.2 × 10¹³ at 0.08), among them our own, one of the
 heavier (0.19 to 0.22 M☉), near turn 46 to 50; the Dusk's small red dwarfs are nebulae, born one
-life before they flare, at the very end; a few young orange and yellow dwarfs, rarer white stars
+life before they flare, at the very end (since 1 Nov, in a new game, their gas thin and dark until
+half the galaxy's age at their birth, so only a few nebulae are seen at a trillion years); a few young orange and yellow dwarfs, rarer white stars
 and one or two blue giants (supernovae within tens of millions of years) burn among them; the gas
 thins by the logarithm of time, and Gas Scoops bring it in near a nebula. Between the old stars'
 deaths (η ≈ 13.1) and the last stars' births (η ≈ 13.9) the galaxy is dim: the interregnum of its

@@ -60,7 +60,7 @@ export function structureCheck(state: GameState, c: Colony, d: StructureDef): st
   if (d.primaries && !d.primaries.includes(sys.primary.kind)) return 'Needs a different kind of star or remnant.';
   if (d.notAt?.includes(sys.primary.kind)) return sys.primary.kind === 'brown_dwarf' ? 'A brown dwarf’s light is too faint and too red for these: Infrared Shrouds gather it.' : 'Gathers nothing from this kind of star.';
   if (d.habitable && b.habitability < 0.3) return 'Only on a living world.';
-  if (d.gasYield && !nebulaNear(state, sys)) return state.years >= DUSK_START ? 'The galaxy’s gas is spent: there is nothing left to scoop.' : `Needs a nebula within ${GAS_SCOOP_LY} light-years.`;
+  if (d.gasYield && !nebulaNear(state, sys)) return state.years >= DUSK_START ? 'The galaxy’s gas is spent: there is nothing left to scoop.' : `Needs gas within ${GAS_SCOOP_LY} light-years: a nebula, or the thin gas where a star will form.`;
   // who can live here (data/forms.ts): nothing that only houses Kin, or puts them to sleep, or uploads them
   const form = FORMS[formOf(c)];
   const onlyKin = (d.cap && Object.keys(d.cap).every((t) => !form.lives.includes(t as ThreadId))) || (d.cryoCap && !form.sleepers) || (d.enables === 'upload' && !form.lives.includes('kin'));

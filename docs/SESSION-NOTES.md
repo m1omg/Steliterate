@@ -151,6 +151,31 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     already gave more power as they shrank, but the shown Hawking temperature never changed ("fix
     that"), and they should look brighter when they glow visibly (only in their last moments: the
     turn of the burst). The browser checks now run in three lanes and the harness in four parts.
+  - Then (1 Nov): PR m1omg/Steliterate#57, a batch of the player's asks, most sent while I worked:
+    - "why is there maximum capacity for browser saves? And can you please make a button to delete
+      and export all saves?" (the browser's `localStorage`, about 5 MiB for all of
+      m1omg.github.io). Asked: one button, export then delete; slots into IndexedDB; "Only what
+      this address lists".
+    - "Twilight Interregnum starting point has way too many nebulas … nebulas should be kind of rare
+      and not literally my entire neighborhood", for new games only ("not the already started
+      Twilight Interregnum game which I have"): thin gas until half the galaxy's age at a star's
+      birth.
+    - The nebula up close: "they look absolutely terrible when close up. Just pink points … make
+      them look prettier and more realistic" (a cloud now, tuned in `tools/lab/nebula.html`).
+    - "The Technology tree starts with the Long Dusk … rename it to Stelliferous Age", with "if this
+      won't break saves, please do it for every game" (a label: every game).
+    - "Burns until … make it more precise and clarify that it's after the Big Bang … it should be 1
+      point something" (`formatDate`).
+    - "Some gas giant planets look like they will collide with each other in the system view …
+      Retrospectively too" (drawn orbits spaced, display only).
+    - "the slide opens, but then you get the automatic exploration … make sure that the exploration
+      occurs first and then the event slide, and also create an optional option … to open the
+      system automatically without you clicking on look" (Settings, Open charted systems).
+    - "popup says 77, window 48 accord" (a pact offer kept its first price: now live).
+    - Under Kekoth's flare, in their Interregnum game: "No light to draw on right now? what?", with
+      their save ("Please fix retrospectively too"): a flare's turns covered 0.2% of a Tide turn
+      and paid for it, while 18 Kin cost 51 energy a turn. Asked, "People cost for the time too".
+      Their save is `tools/saves/4865f2e-seed794228454-turn52-flare-interregnum-next.json.gz`.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

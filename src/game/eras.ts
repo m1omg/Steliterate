@@ -311,6 +311,28 @@ export function formatYears(y: number, etaHint?: number): string {
   return `10${sup(eta(y).toFixed(1))} years`;
 }
 
+/**
+ * A date, in years since the Big Bang, with as many digits as tell it from `now` (1 Nov, the
+ * player, of a blue giant's "Burns until 1 trillion years" at 10¹² years: "make it more precise and
+ * clarify that it's after the Big Bang"): "1.000015 trillion years after the Big Bang".
+ */
+export function formatDate(at: number, now: number): string {
+  if (!isFinite(at)) return formatYears(at);
+  const gap = Math.abs(at - now);
+  if (at >= 1e15) {
+    const g = Math.abs(eta(at) - eta(now));
+    let d = 1;
+    while (d < 6 && g < 2 * Math.pow(10, -d)) d++;
+    return `10${sup(eta(at).toFixed(d))} years after the Big Bang`;
+  }
+  if (at < 1e6) return `${formatYears(at)} after the Big Bang`;
+  const [unit, div] = at < 1e9 ? ['million', 1e6] : at < 1e12 ? ['billion', 1e9] : ['trillion', 1e12];
+  // (the last digit shown moves by no more than half the gap)
+  let d = 1;
+  while (d < 9 && gap / div < 2 * Math.pow(10, -d)) d++;
+  return `${num(at / div, d)} ${unit} years after the Big Bang`;
+}
+
 export function formatYearsShort(y: number, etaHint?: number): string {
   if (!isFinite(y)) {
     const e = etaHint ?? Infinity;

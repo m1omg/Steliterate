@@ -1,3 +1,4 @@
+import { thinGas } from '../interregnum';
 import type { Rng } from '../rng';
 import type { Body, Colony, EraId, GameState, StarSystem, ThreadId } from '../types';
 import { capital, colonies, fleets, formOf, hasCharter, hasTech, log, popsOf, threadTotals, uid } from '../sim/util';
@@ -772,7 +773,8 @@ export const EVENTS: EventDef[] = [
     once: true,
     weight: 3,
     bind: (s, rng) => {
-      const near = Object.values(s.systems).filter((x) => x.primary.kind === 'nebula' && (s.civ.known[x.id] ?? 0) >= 1);
+      // (a nebula gathered into a cloud: thin gas is too sparse for its chemistry to be read)
+      const near = Object.values(s.systems).filter((x) => x.primary.kind === 'nebula' && !thinGas(x.primary) && (s.civ.known[x.id] ?? 0) >= 1);
       return near.length ? { systemId: rng.pick(near).id } : null;
     },
     text: (s, d) =>

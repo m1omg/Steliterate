@@ -1,0 +1,56 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#000}</style></head><body>
+<canvas id="c" width="960" height="640"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { nebulaCloud } from '/src/render/nebulaCloud.ts';
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.05;
+// (as the game: each tile drawn linear into a buffer, then tone-mapped into sRGB on the way out)
+const rt = new THREE.WebGLRenderTarget(320, 320, { type: THREE.HalfFloatType });
+const out = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+  uniforms: { tDiffuse: { value: rt.texture }, toneMappingExposure: { value: 1.05 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: 'uniform sampler2D tDiffuse;\nvarying vec2 vUv;\nvoid main(){\n gl_FragColor = texture2D(tDiffuse, vUv);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
+  toneMapped: true,
+}));
+const outScene = new THREE.Scene(); outScene.add(out);
+const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+renderer.setPixelRatio(1);
+renderer.autoClear = false;
+const params = new URLSearchParams(location.search);
+const dist = Number(params.get('d') ?? 74);
+const seeds = (params.get('seeds') ?? '11,222,333,444,555,666').split(',').map(Number);
+const thin = params.has('thin');
+const birth = Number(params.get('birth') ?? 0);
+const cam = new THREE.PerspectiveCamera(50, 320 / 320, 0.1, 30000);
+cam.position.set(0, Math.sin(0.5) * dist, Math.cos(0.5) * dist);
+cam.lookAt(0, 0, 0);
+cam.updateMatrixWorld();
+// background stars
+const pos = [];
+for (let i = 0; i < 3000; i++) { const th = Math.random() * 6.283, ph = Math.acos(Math.random() * 2 - 1); pos.push(1800 * Math.sin(ph) * Math.cos(th), 1800 * Math.cos(ph), 1800 * Math.sin(ph) * Math.sin(th)); }
+const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+const stars = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.5, sizeAttenuation: false, color: '#ffd9b0' }));
+seeds.forEach((seed, i) => {
+  const x = (i % 3) * 320, y = Math.floor(i / 3) * 320;
+  const scene = new THREE.Scene();
+  scene.add(stars.clone());
+  const c = nebulaCloud({ radius: Number(params.get('r') ?? 55), seed, quality: params.get('q') ?? 'high', thin, gas: 1, birth });
+  // laid straight over the stars, as the overlay does
+  c.mat.blending = THREE.CustomBlending;
+  c.mat.blendSrc = THREE.OneFactor; c.mat.blendDst = THREE.OneMinusSrcAlphaFactor;
+  c.mat.transparent = true;
+  c.mat.uniforms.uTime.value = Number(params.get('t') ?? 0);
+  scene.add(c.mesh);
+  renderer.setRenderTarget(rt);
+  renderer.setClearColor(0, 1);
+  renderer.clear();
+  renderer.render(scene, cam);
+  renderer.setRenderTarget(null);
+  renderer.setViewport(x, 640 - 320 - y, 320, 320);
+  renderer.render(outScene, ortho);
+});
+document.title = 'done';
+</script></body></html>

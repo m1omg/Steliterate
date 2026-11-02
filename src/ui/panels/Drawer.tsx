@@ -4,7 +4,7 @@ import { SHIP_BY_ID, attackNote, fleetLook, isWarship, shipNote } from '../../ga
 import { STRUCTURE_BY_ID, STRUCTURE_KINDS, enabledAt, structureKind, structureLabel, type StructureKind } from '../../game/data/structures';
 import { EVENT_BY_ID } from '../../game/data/events';
 import { THREAD_DEFS } from '../../game/data/threads';
-import { formatDistance, formatYears, logTurnLength } from '../../game/eras';
+import { formatDate, formatDistance, formatYears, logTurnLength } from '../../game/eras';
 import { FROZEN_K, ICE_MELTS_K, frozenHard, tooColdForOpenAir, WATER_RICH, fallsInAt, giantWorld, rubbleGame, bodyClimate, boilingAway, buriedOcean, curvatureWarmth, decayWarmth, haloDrawn, insolation, insolationByDistance, lampsOver, lightUnitSuns, nextStellarChange, primaryTemperature, seededLifeUnkept, sourceLight, sunGone, terraformLit, turnsToFreeze, waterState } from '../../game/physics';
 import { SEED_CAP, SEED_RATE, TERRAFORM_CEILING, seedingBlocked, seedingGrowth, terraformSummary } from '../../game/sim/terraform';
 import {
@@ -464,7 +464,7 @@ function SystemPanel({ s, sys }: { s: GameState; sys: StarSystem }) {
           {src.alive && (
             <>
               <dt>{src.alive[1] > s.years ? 'Burns until' : 'Burnt out at'}</dt>
-              <dd class="mono">{formatYears(src.alive[1])}</dd>
+              <dd class="mono">{formatDate(src.alive[1], s.years)}</dd>
             </>
           )}
           <dt>Distance</dt>

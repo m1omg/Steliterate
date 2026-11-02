@@ -2,7 +2,7 @@ import { sourceLight } from '../physics';
 import { isWarship, strength } from '../data/ships';
 import { tacticOf } from '../data/tactics';
 import { THREADS, type Body, type GameState, type PactKind, type Survivor, type ThreadId } from '../types';
-import { acceptOffer, hasPact, theirPacts, weighProposal } from './pacts';
+import { acceptOffer, hasPact, pactCost, theirPacts, weighProposal } from './pacts';
 import { askRefuge, onTheirWay, sanctuaryTrust, takeThemIn } from './refuge';
 import { askAgainstHunger, claimEase, expand, judgePromise, promiseHelp } from './claims';
 import { atWar, inCoalition, raidedUs, seizeBlocked, siegeStrength, stormTarget, warCause, warDefence } from './war';
@@ -515,6 +515,22 @@ export function goneAnswer(state: GameState, sig: { kind: string; from: string }
   const r = REACHES[sig.kind];
   if (!r || state.survivors[sig.from]?.alive) return null;
   return choice === r.choice ? `They are gone: ${r.why}.` : null;
+}
+
+/**
+ * An answer's hint as it stands now, where it names a price or a yield that moves (1 Nov, the player:
+ * "popup says 77, window 48 accord": a pact offer kept the price of the turn it arrived, while each
+ * pact made since had raised it), or null to show the hint the message came with.
+ */
+export function liveHint(state: GameState, sig: { kind: string; from: string }, choice: string): string | null {
+  const sv = state.survivors[sig.from];
+  if (sig.kind === 'pact_offer' && choice === 'accept') {
+    const cost = pactCost(state);
+    const short = state.civ.accord < cost ? `; we have ${Math.floor(state.civ.accord)}` : '';
+    return `The Threads must consent: ${cost} accord now (dearer with every pact)${short}.`;
+  }
+  if (sig.kind === 'joint' && choice === 'join' && sv?.alive) return `+${jointYield(state, sv).toFixed(1)} energy per turn now, from their star’s light: it fades as their star does.`;
+  return null;
 }
 
 export function resolveSurvivorSignal(state: GameState, sigUid: string, choice: string): string | null {

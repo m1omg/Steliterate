@@ -3,7 +3,9 @@
 // "???", saying the Proton Question would tell; once it is known, the projects of the other fates
 // are gone from the grid (they will never exist in this universe), and none is left as "???"
 // with a hint that no longer helps (seen 11 Oct, after the Proton Question). Positronium Weaving
-// (the new version, part 3-5) is there under any fate but stable matter.
+// (the new version, part 3-5) is there under any fate but stable matter. Its first column is the
+// Stelliferous Age (1 Nov, the player: the Dusk's projects are "really the Technology … for the
+// Stelliferous Age").
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('research-fate');
@@ -24,6 +26,9 @@ run(async () => {
     await page.waitForTimeout(500);
   };
   await open();
+  // the first column: the Stelliferous Era's projects, the Interregnum's as much as the Dusk's (1 Nov, the player)
+  const heads = await page.evaluate(() => [...document.querySelectorAll('.techgrid .eh')].map((x) => x.textContent.trim()));
+  check(heads[0] === 'I · The Stelliferous Age' && heads[1] === 'II · The Degenerate Age', `the grid's ages: ${heads.join(' | ')}`);
   const before = await grid();
   // (Decay Harvest, Curvature Harvest, the Garden of Embers, and Positronium Weaving, which needs matter not to last)
   check(before.hidden.length === 4 && before.hidden.every((t) => /Proton Question/.test(t)), `before the fate is known, its projects show as ??? with the hint (${before.hidden.length})`);

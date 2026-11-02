@@ -4828,3 +4828,90 @@ it, a friend's suggestion as the player put it: a warning when a Thread's standi
   10 saves; all 108 unit checks; all 79 browser checks (76 in three lanes on the build before the
   Codex's words, films and survey-reveal alone, and the seven that read the Codex or time frames
   alone on the final build). A batch's validation: about an hour, the harness 2.5 minutes a run.
+
+## Room for saves, thin gas, nebulae up close, worlds drawn apart, and the reveal before the events (1 Nov)
+
+- **Room for saves** (the player: "why is there maximum capacity for browser saves? And can you
+  please make a button to delete and export all saves?"). The game set no limit; the browser
+  does: every save was in `localStorage`, about 5 MiB for the whole of m1omg.github.io (the main
+  address, /next/ and the archived builds share it), some 20 to 30 slots. Asked, they chose:
+  - **Slots in IndexedDB** (`slotdb.ts`), whose room is a share of the device's free space. Their
+    index stays in `localStorage` (the list reads at once); the quick save and the autosave stay
+    there too. A slot kept the old way is moved as the page loads (written, read back, compared,
+    and only then removed), and loads wherever it is; where IndexedDB is missing or blocked a slot
+    is kept as before. The Save window says what the slots take and how much room there is.
+  - **Export and delete all saves:** one button, the file of every save first, then "Delete the N
+    saves listed here?" (Delete them, Keep them). It deletes only what this address lists: at the
+    main address the Twilight Interregnum's saves stay (only /next/ lists them), and the archived
+    builds' games and the settings are never touched.
+- **Thin gas** (the player: "Twilight Interregnum starting point has way too many nebulas … nebulas
+  should be kind of rare and not literally my entire neighborhood"; new games only, the game they
+  have begun keeps its nebulae). A future star's gas is thin and dark until half the galaxy's age at
+  its birth, when it gathers into a nebula (`interregnum.ts` `CONDENSE_FACTOR`, the optional
+  `Primary.condenseAt`, deleted as it gathers): about three nebulae at a trillion years in a galaxy
+  of some sixty future stars (29 in ten new games, one within 30 ly of home), and the last of the
+  gas gathering near the age's end. Thin gas is named so ("Thin gas: the galaxy's cold hydrogen, too
+  sparse to see"), drawn as a dim point on the map and a faint grey veil up close, says when it
+  gathers; a Gas Scoop still draws on it (the gas is there), Cold Chemistry reads only a nebula.
+  The galaxy is otherwise the one it was (the same hashes, the new field set aside). A bend, said
+  in the Codex: a real cloud gathers and collapses in tens of millions of years.
+- **A nebula up close** (the player: "they look absolutely terrible when close up. Just pink
+  points"): where three glows made rays, the system view marches through a cloud (`nebulaCloud.ts`):
+  folded, warped noise baked once into a 64³ texture, its lit skins glowing hydrogen's rose around
+  dark clumps, a little teal where the light is strong and blue where dust scatters it, dark lanes
+  of dust, the light from inside reddened; a small dark globule where its star is forming, and as
+  the birth nears a dull red glow in it (the protostar, as infrared would show it). It is drawn
+  into a buffer of its own at 0.62 of the screen's resolution on High (0.5 Medium, 0.38 Low) and
+  laid over the background stars, which it hides behind its dust; drawn again only as the camera
+  moves, or eight times a second for its drift, and at Low's cost on a software renderer (no
+  graphics card).
+- **The research grid's first column is "I · The Stelliferous Age"** (the player: it is "really the
+  Technology … for the Stelliferous Age"), never dimmed: its projects are the Twilight
+  Interregnum's as much as the Long Dusk's. A label only: every game.
+- **A star's "Burns until" is a date after the Big Bang**, with as many digits as tell it from now
+  (the player, of a blue giant at a trillion years shown burning "until 1 trillion years"):
+  "1.000015 trillion years after the Big Bang" (`formatDate`).
+- **Worlds drawn apart** (the player: "Some gas giant planets look like they will collide with each
+  other in the system view … Retrospectively too"): a world's drawn orbit is pushed out only as far
+  as its drawing (a gas giant up to 4.8 across, rings to 2.2 times that) must be to clear its
+  neighbour's and the star's (`orbits.ts`). Display only, every game: in eight galaxies 139 of 752
+  systems drawn wider, 177 worlds moved out.
+- **The survey reveal before the event** (the player: "the slide opens, but then you get the
+  automatic exploration … make sure that the exploration occurs first and then the event slide"):
+  an event about a system just charted, which swings the view into it, waits while its reveal
+  plays. **Open charted systems** (Settings; "an optional option … for it to open the system
+  automatically without you clicking on look"): At once goes into a newly charted system as the
+  turn ends (its reveal playing when reveals are on, the turn's events after it); With Look, the
+  default, as before.
+- **A pact offer's price as it is now** (the player: "popup says 77, window 48 accord"): an
+  offer's Agree kept the price of the turn it arrived, while each pact made since had raised it
+  (30 accord, ×1.6 for each pact in force or on its way), and agreeing asked today's. The hint is
+  worked out as the message is drawn (`liveHint`), saying what we have when it is short; a shared
+  work's yield "now" likewise.
+- **Flare turns cost people for their time too** (the player, keeping time with Kekoth's flare in a
+  game begun in the Twilight Interregnum: "No light to draw on right now? what?"; their save is in
+  `tools/saves/`). Each of a flare's six turns covered 620 million years, 0.2% of a Tide turn
+  there, and paid for that time only (since 20 Oct), so every building gathered next to nothing
+  and the build list called it "No light to collect here right now", under a star blazing five
+  times brighter; and the 18 Kin still cost their whole upkeep each turn, 51 energy against 0.4
+  gathered. Asked, they chose "People cost for the time too": in a turn a clock, a flare or the
+  age's end cuts short, people's upkeep and the labs' draw are for the time it covers, as the
+  machines' already were (`clockShare`); their work stays a whole turn's, so the six turns are six
+  to build and prepare, as the flare's event promised. Any other turn is as before (a quick pace
+  still costs its people a whole turn each). The build list and a built one's tip now say "A short
+  turn: we keep time with Kekoth's flare. It covers 620 million years, 0.2% of a Tide turn, and
+  gathers for that time only: +0.01 energy now, +5.7 over a Tide turn". In their game the flare's
+  six turns now take 76 energy to 51, 21 of it the Mutual Aid pact's beam; they cost about 300
+  before.
+- **The harness** (300 standard competent games, four parts): 181 survive, 69 victories, a
+  Degenerate Age of 102 turns (181 / 69 / 95 before); by fate decay 109 / 148, stable 30 / 81,
+  curvature 42 / 71. Harsh: 148 / 29 / 92 (158 / 34 / 93). Begun in the Interregnum: 186 / 74 /
+  109, 297 reaching the Dusk (183 / 80 / 102, 297). Within the noise.
+- Checks: `unit/save-room`, `unit/thin-gas`, `unit/orbits-drawn`, `unit/live-hint`, `unit/flare-turns`; `browser/save-room`,
+  `browser/reveal-first`; `browser/interregnum` (a few nebulae drawn, thin gas, the cloud),
+  `browser/research-fate` (the column's name); `browser/fates` closes a combat report its game now
+  meets before End turn.
+- **Validated** (`index-CYMqytMv.js`): tsc and the build clean; the playtest; savecompat on its 11
+  saves (the player's among them); all 113 unit checks; all 81 browser checks (76 in three lanes;
+  five again alone: three had timed out on a screenshot with two more checks running beside the
+  lanes, and `fates` and `interregnum` after the fixes above).

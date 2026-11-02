@@ -91,6 +91,12 @@ run(async () => {
       window.__stel.refresh();
     });
     await page.waitForTimeout(300);
+    // (a combat report the last turn left open is closed, as a player would: 1 Nov, a swarm caught
+    // a ship in seed 48514's game once flare turns cost people their time only)
+    for (let i = 0; i < 3 && (await page.locator('.modal').count()) > 0; i++) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+    }
     const pressed = await page.locator('button.endturn').click({ timeout: 8000 }).then(() => true, () => false);
     if (!pressed) {
       await ck.shot(`stuck-${fate}.png`);

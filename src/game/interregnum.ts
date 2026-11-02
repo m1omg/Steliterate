@@ -102,6 +102,21 @@ export function nebulaNear(state: GameState, sys: StarSystem): StarSystem | null
   return best;
 }
 
+/**
+ * A nebula's gas gathers into a cloud seen as one from half the galaxy's age at its star's birth
+ * (1 Nov, the player: "nebulas should be kind of rare and not literally my entire neighborhood";
+ * games begun since then). Until it gathers it is thin gas: dark, not drawn as a cloud, too sparse
+ * for its chemistry to be read, but there all the same for a Gas Scoop. A bend: a real cloud
+ * gathers and collapses in some tens of millions of years, which at this age would leave almost
+ * none to see; this leaves a few at the start and the last of the gas gathering near the age's end.
+ */
+export const CONDENSE_FACTOR = 2;
+
+/** Is it a nebula's thin gas, not yet gathered into a cloud (a game begun before 1 Nov never has any)? */
+export function thinGas(p: Primary): boolean {
+  return p.kind === 'nebula' && p.condenseAt !== undefined;
+}
+
 /** The last born of a nebula's stars light this long before the Dusk at the latest. */
 const LAST_BIRTH = DUSK_START - 1e12;
 
@@ -166,9 +181,12 @@ export function formsAtBirth(star: Primary): (b: Body) => boolean {
   return (b) => b.kind === 'deep' || b.orbitAU >= 0.1;
 }
 
-/** A system becomes a nebula until `bornAt`, when it lights as `future`; its worlds form with it. */
+/** A system becomes a nebula until `bornAt`, when it lights as `future`; its worlds form with it. Thin gas until it gathers (CONDENSE_FACTOR). */
 function nebulaUntil(state: GameState, sys: StarSystem, bornAt: number, future: Primary) {
   sys.primary = { kind: 'nebula', mass: future.mass, lum: 0, spin: 0, spinMax: 0, bornAt, future };
+  // (thin gas until it gathers, unless it has by now: no random draw)
+  const condenseAt = bornAt / CONDENSE_FACTOR;
+  if (condenseAt > state.years) sys.primary.condenseAt = condenseAt;
   unform(state, sys);
 }
 

@@ -60,6 +60,12 @@ export interface Settings {
   films?: boolean;
   /** The survey reveal (part 4): a system just charted shows its worlds one by one. Unset, as the films. */
   reveals?: boolean;
+  /**
+   * Open a system our ships have just charted as the turn ends, without a click on Look (1 Nov, the
+   * player: "an optional option … even if you don't have the exploration animation on, for it to
+   * open the system automatically"). Unset: off, as before.
+   */
+  openSurveyed?: boolean;
 }
 
 export const game = signal<GameState | null>(null);

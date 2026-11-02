@@ -2045,6 +2045,58 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `.pace` panel: a panel's chamfered clip-path cuts off whatever pokes out of it); the guide's
     steps can carry `phone: { target, text }`.
 
+- **Room for saves** (1 Nov; CHANGELOG, "Room for saves …"): `slotdb.ts` wraps IndexedDB (database
+  `steliterate2`, store `slots`, key the slot id, value the packed string `pack()` makes); every
+  call resolves `null`/`false` where it is missing or blocked (Node, some private windows), so the
+  checks in Node take the old way. `save.ts`: `saveToSlot` puts a slot's data there first, else in
+  `localStorage`; `slotData` reads IndexedDB, then `localStorage`; `deleteSlot` removes both;
+  `moveSlotsToDb` (`main.tsx`, at load) moves old slots, removing the old copy only once read back
+  equal. The slots' index (`steliterate2.slots`), the quick save and the autosave stay in
+  `localStorage` (Continue and Load read them at once). `deleteAllSaves(preview)` deletes what an
+  address lists (`savesListed`): at the main address the Interregnum's slots and `KEY_I`/`AUTO_I`
+  stay (`savesKeptElsewhere`). Trap: every address on m1omg.github.io shares one origin, so one
+  IndexedDB and one `localStorage` (about 5 MiB) for the main address, /next/ and the archived
+  builds. Checks `unit/save-room` (the fallback), `browser/save-room` (IndexedDB, the move, the
+  button at `?main` and /next/).
+- **Thin gas** (1 Nov): `Primary.condenseAt` (optional, set by `interregnum.ts nebulaUntil` at
+  generation as `bornAt / CONDENSE_FACTOR` when that is after the start, no random draw), deleted
+  by `interregnumStars` (physics.ts) as the years pass it. `thinGas(p)` is the test everywhere:
+  `primaryName` ("Thin gas"), `starLife`, `sourceLight`'s label, `primaryTemperature` (40 K),
+  `nextStellarChange` ("gathers into a nebula"), the map (`syncNebulae` leaves it out; `nodeColor`,
+  `nodeSize`), `starState` in Lists, `nebula_chemistry`'s bind. `nebulaNear` (the Gas Scoop) counts
+  it. A game begun before has no field: every nebula as it was. Check `unit/thin-gas` (with the
+  Interregnum's hashes, the field set aside).
+- **A nebula up close** (1 Nov): `render/nebulaCloud.ts`. `noiseTexture` bakes a tileable RGBA 3D
+  texture once (R: three octaves of Perlin noise, G/B/A: one each, for the warp and the colour);
+  `nebulaCloud` is a back-faced sphere whose shader marches the ray through it (`STEPS` by quality)
+  and writes its light and its opacity; `systemView` keeps it in `cloudScene`, draws it in
+  `prerender` (called by the engine before the composer) into `cloudTarget` at `cloudScale` of the
+  drawing buffer, and `cloudOverlay`, a quad at the far plane, renderOrder −1, lays it over the
+  background stars (renderOrder −2) with premultiplied blending, so a solid thing in front hides
+  it. `tools/lab/nebula.html` (with `npx vite --port 5174`) draws six seeds at once, as the game
+  tone-maps them, in under two seconds: a quick way to tune it.
+- **Worlds drawn apart** (1 Nov): `render/orbits.ts` `drawnOrbits` (by `drawnReach`: rings
+  2.2× a gas giant's size, a belt 3, else 1.5×), set by `build` before the worlds are drawn and read
+  by `buildBody`; `ringed` is the one test of whether a gas giant has rings. Display only. Check
+  `unit/orbits-drawn`.
+- **The reveal before the events, and Open charted systems** (1 Nov): `engine.revealWaiting(id)`
+  (charted, not yet looked into, reveals on) and `engine.revealAhead` (the view is fading over to a
+  system that will play one). `EventModal` waits while either holds for its event's system
+  (`revealFirst`, when the event pivot would enter it) and lets its pivot start the reveal; the
+  slide follows. `settings.openSurveyed` (Settings, Open charted systems): `turnflow.ts` goes into
+  the first system charted that turn when no report has the screen. Check `browser/reveal-first`.
+- **Flare turns and people** (1 Nov): `clockShare(ctx)` (`economy.ts`) = `min(1, upkeepOf(ctx))`:
+  below 1 only on a turn a flare's clock or the age's end cuts short; `colonyTurn` takes people's
+  energy and matter upkeep by it, and `endTurn` and `project` the labs' draw (`researchDraw`). A
+  plain turn and a new star's clock keep 1. `projection.ts littleEnergy` words a building's next to
+  nothing on a short turn (with what it gathers over a Tide turn), else "no light" / "nothing to
+  draw on". Check `unit/flare-turns`, on the player's save
+  (`tools/saves/4865f2e-seed794228454-turn52-flare-interregnum-next.json.gz`). A pact offer's
+  Agree is worded live (`liveHint`, survivors.ts; `unit/live-hint`).
+- `formatDate(at, now)` (`eras.ts`): a date after the Big Bang with as many digits as tell it from
+  now (the Drawer's Burns until). The research grid names its first column "The Stelliferous Age"
+  (`Research.tsx`; the age itself is still `ERAS[0]`, the Long Dusk).
+
 ## Music tooling
 
 - **The Canon:** `tools/music/canon.py` renders the arrangement to WAV with numpy and scipy.
@@ -2272,3 +2324,5 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | every measure in the settle lists; yields; twilight seas (8 Oct) | 147 | display only: all 300 games identical to the terraforming run, line for line |
 | terraforming; type, music, rings (7 Oct) | 147 | 59 victories, Degenerate Age 71 turns; 900 games 434 / 183 / 70 (437 / 183 / 69 before); by fate decay 173 / 450, stable 162 / 239, curvature 99 / 211. The autoplayer researches Terraforming last among the Dusk's projects and builds none (its Kin live on living worlds, which gain nothing; in 60 games it researched it in 59, median turn 84, and built it in 0). Variants, 900: the tech there but never chosen 436 / 180 / 70 (a new project moves games through the cheapest-project picks); researched right after Volatile Shepherding 424 / 166 / 69 (the detour delays the projects that win); terraforming every Kin world it can, as early as it can, 423 / 166 / 68, still none built |
 | the Twilight Interregnum, a game begun at 10¹² years (1 Nov; at /next/ only) | 192 | games begun in the Dusk: all 300 the same as before, 73 victories, Degenerate Age 97 turns; by fate decay 106 / 148, stable 34 / 81, curvature 52 / 71. Begun in the Interregnum (`--interregnum`): 296 of 300 reach the Dusk, 186 survive, 80 victories, Degenerate Age 101 turns, the Interregnum 73 turns; by fate decay 126 / 148, stable 19 / 81, curvature 41 / 71 |
+| stars that brighten as they age (1 Nov, PR m1omg/Steliterate#56) | 181 | 69 victories, Degenerate Age 95 turns; by fate decay 103 / 148, stable 31 / 81, curvature 47 / 71; Harsh 158 / 34 / 93; begun in the Interregnum 183 / 80 / 102, 297 reaching the Dusk |
+| flare turns cost people for their time too, thin gas (1 Nov) | 181 | 69 victories, Degenerate Age 102 turns; by fate decay 109 / 148, stable 30 / 81, curvature 42 / 71; Harsh 148 / 29 / 92; begun in the Interregnum 186 / 74 / 109, 297 reaching the Dusk; within the noise |
