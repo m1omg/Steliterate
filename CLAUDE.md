@@ -62,7 +62,7 @@ when near (1 Nov), and PR m1omg/Steliterate#56, `4865f2e`, stars that brighten a
 their blue flare, the Interregnum's young stars into red giants that swallow worlds), black holes'
 Hawking temperature rising as they shrink, each star's lifetime shown, and a warning when a Thread
 of a quarter of our people or more thinks poorly of us (`src/game/stellar.ts`; 1 Nov), and PR
-m1omg/Steliterate#57, `@MERGE@`, save slots in IndexedDB with Export and delete all saves, few
+m1omg/Steliterate#57, `c1234ad`, save slots in IndexedDB with Export and delete all saves, few
 nebulae at a new Interregnum game's start (thin gas), a nebula up close as a cloud, the research
 grid's Stelliferous Age, worlds drawn apart, the survey reveal before the events (and Settings,
 Open charted systems), a pact offer's live price, and people costing a flare turn's time only (1 Nov).
