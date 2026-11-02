@@ -14,7 +14,9 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
    `claude/lucid-newton-30cbpk` alike, and the last push wins: the old live branch now lags
    `main`, so never push an older commit to it. A direct push to a live branch can be refused as
    a production deploy; the PR merge, asked for, is the way. Step 3 has the details.
-2. **Validate:**
+2. **Validate:** (since 2 Nov the full browser suite only for a batch of several changes or one
+   that touches what every check passes through, the engine, the turn, the store; a small, local
+   fix runs the browser checks it touches by name: CLAUDE.md, "Which browser checks")
    - `npx tsc --noEmit -p .`
    - `npm run build`
    - `node tools/playtest.cjs http://localhost:4173/ <shots dir>`, which needs `vite preview`
@@ -1634,7 +1636,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   (and `motif2`) in scale degrees and `melody`, the statements of it (`at`, `shift`, `octave`,
   `drop` its last notes, `voice`, `amp`, `major`, `alt`), `lead` and `pads` (which voice when),
   `arps` (from, to, step, a pattern of chord tones, voice, octave), `bass`, `drone`, `pulse`
-  (kick, tom, shaker or metal, on a grid, `groups` for an uneven one, `skip`), `dyn` (each scene's
+  (kick, snare, tom, shaker or metal, on a grid, `groups` for an uneven one, `skip`), `dyn` (each scene's
   loudness), and the Supernova's and the Last Horizon's `chirp`, `thumps` and `boom`. `compose()`
   turns it into `ScoreEvent`s (beat, voice, pitches, length, loudness); `cue.ts` plays each
   (`PLAY[voice]`) at its time, scheduled 3 s ahead (`playCue`) or all at once (`renderCue`).
@@ -1653,7 +1655,17 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     (a new film needs a motif of its own: the check names the clash), notes in the mode unless
     `off` (a chromatic step, a raised third), every cut accented, every note on a quarter-beat grid
     from the start or a cut and inside the film, at most 56 oscillators at once (32 below high),
-    the sequencer and the clank in the darker films and none of the synth in at least four.
+    the sequencer and the clank in the darker films and none of the synth in at least four; the
+    Twilight Interregnum's and the Long Dusk's synthwave (2 Nov: minor, most of the melody on the
+    `synth`, the sequencer, no harp, flute or horn; the Interregnum's kick and gated `snare` in
+    its middle only, no clank; the Dusk's drone, no drums).
+  - Synthwave (2 Nov, the player: the Interregnum's and the Dusk's music "too unsynthwave, happy
+    etc more like for a fantasy game"): what made them fantasy was a major mode (Mixolydian,
+    Dorian's raised sixth), the flute, horn and harp; synthwave here is Aeolian with the minor's
+    i–VI–III–VII, the gliding `synth` lead, the `seq` in sixteenths over a `seq` root pulse an
+    octave down (octave 0) as the driving bass, detuned `pad`s, and for drums a `kick` on 1 and 3
+    with the `snare` (noise held at half strength 0.17 s then shut: an 80s gated reverb) on 2 and
+    4. `cue-levels`: both films near −18.7 dBFS RMS, peaks −3.8 and −4.3.
   - Hooks: `__stel.cueOscillators(id, fate)` (in all, at the settings' quality),
     `__stel.cueLevels(id, fate)` (offline, peak and RMS).
   - Traps: the export page (`film.html`) hangs on a film id `FILMS` lacks, so `cue-levels`
@@ -2093,6 +2105,16 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   draw on". Check `unit/flare-turns`, on the player's save
   (`tools/saves/4865f2e-seed794228454-turn52-flare-interregnum-next.json.gz`). A pact offer's
   Agree is worded live (`liveHint`, survivors.ts; `unit/live-hint`).
+- **Faster browser checks** (2 Nov; the player chose both, fewer full runs and trimmed checks).
+  The four slowest, timed alone with `STEL_TIMES=1` (`lib.cjs` stamps each line): survey-reveal
+  448 → 117 s (its 30/144 frames-a-second comparison steps the engine with `engine.frame(dt,
+  false)`, which updates without drawing; 1,400 frames drawn in software took over three minutes,
+  and the browser then drew them all before its next frame), films 233 → 162 s (the painter
+  thread's 18 films compared at once: each starts a thread of its own, some 4 s to load here; its
+  frame-rate comparison at 320 × 180), zoom-centre 222 → 154 s (`settle` returns once the camera
+  has stopped at its goal, not always after 3.5 s of the engine's clock, 14 s a step in software),
+  low vision 116 s alone (its 317 s in a full run were the lanes' contention). Survey-reveal's
+  Space and click wait for the caption to move (up to 5 s), not 400 ms (flaky in software).
 - `formatDate(at, now)` (`eras.ts`): a date after the Big Bang with as many digits as tell it from
   now (the Drawer's Burns until). The research grid names its first column "The Stelliferous Age"
   (`Research.tsx`; the age itself is still `ERAS[0]`, the Long Dusk).

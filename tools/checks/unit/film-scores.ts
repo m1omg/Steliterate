@@ -10,7 +10,9 @@
 // - keeps few oscillators sounding at once: at most about fifty at full quality, thirty below it
 //   (a tablet's medium, by default);
 // - has the synth's drive in the darker films (an analog sequencer and a metallic clank), and only
-//   a touch of it: several films have neither.
+//   a touch of it: several films have neither;
+// - the Twilight Interregnum's and the Long Dusk's in synthwave (2 Nov): minor, the analog lead,
+//   the sequencer, no harp, flute or horn; light drums in the Interregnum's middle only.
 import { FILMS, type FilmId } from '../../../src/film/films';
 import { compose, FATE_SCORES, melodyNotes, MODES, mostAtOnce, SCORES, scoreOf, type Score } from '../../../src/film/score';
 import { check, done } from '../lib';
@@ -68,6 +70,27 @@ const dark: FilmId[] = ['supernova', 'last_light', 'great_decay', 'last_horizon'
 const plain = ids.filter((id) => !uses(id, 'seq') && !uses(id, 'metal') && !uses(id, 'synth'));
 check(dark.every((id) => uses(id, 'seq') && uses(id, 'metal')), `the darker films have the sequencer and the clank (${dark.join(', ')})`);
 check(plain.length >= 4 && ids.filter((id) => uses(id, 'metal')).length <= 7, `and only a touch: ${plain.length} films have none of the synth (${plain.join(', ')}), ${ids.filter((id) => uses(id, 'metal')).length} the clank`);
-check(uses('interregnum', 'seq') && uses('interregnum', 'synth') && !uses('interregnum', 'metal'), 'the Twilight Interregnum: a sequence and the synth lead once, warm, no clank');
+// the Twilight Interregnum's and the Long Dusk's synthwave (2 Nov, the player: "too unsynthwave,
+// happy etc more like for a fantasy game"; asked, "Interregnum wistful, Dusk dark", drums for the
+// Interregnum only): minor, the analog lead their melody's voice, the sequencer, none of the
+// fantasy's instruments; the Interregnum's kick and gated snare in its middle only, no clank; the
+// Dusk with a drone and no drums
+const minor = (id: FilmId) => MODES[SCORES[id].mode][2] === 3;
+const fantasy = (id: FilmId) => ['harp', 'flute', 'horn'].filter((v) => uses(id, v));
+const mostlySynth = (id: FilmId) => {
+  const m = compose(SCORES[id]).filter((e) => e.melody);
+  return m.filter((e) => e.v === 'synth').length / m.length;
+};
+const drums = (id: FilmId) => compose(SCORES[id]).filter((e) => e.v === 'kick' || e.v === 'snare');
+const ir = drums('interregnum');
+const irS = SCORES.interregnum;
+check(
+  minor('interregnum') && mostlySynth('interregnum') > 0.6 && uses('interregnum', 'seq') && !fantasy('interregnum').length && !uses('interregnum', 'metal') && ir.some((e) => e.v === 'snare') && ir.every((e) => e.b >= irS.cuts[5] && e.b < irS.cuts[9]),
+  `the Twilight Interregnum: wistful synthwave, ${SCORES.interregnum.mode}, ${Math.round(mostlySynth('interregnum') * 100)}% of its melody on the analog lead, the sequencer, a kick and a gated snare in its middle only (${ir.length} hits), no clank${fantasy('interregnum').length ? `; but ${fantasy('interregnum').join(', ')}` : ', no harp, flute or horn'}`,
+);
+check(
+  minor('dusk') && mostlySynth('dusk') > 0.6 && uses('dusk', 'seq') && uses('dusk', 'drone') && !fantasy('dusk').length && !drums('dusk').length,
+  `the Long Dusk: dark synthwave, ${SCORES.dusk.mode}, ${Math.round(mostlySynth('dusk') * 100)}% of its melody on the analog lead, a drone, the sequencer, no drums${fantasy('dusk').length ? `; but ${fantasy('dusk').join(', ')}` : ', no harp, flute or horn'}`,
+);
 
 done('FILM SCORES');

@@ -52,16 +52,30 @@ async function pickStar(page, not) {
 
 
 /**
- * Let the camera finish moving: wait for `sim` seconds of the engine's own clock (its frames
- * run on elapsed time with dt capped at 0.1 s, so slow software-GL frames stretch real time).
+ * Let the camera finish moving: until it has stopped where it was going (the same place at three
+ * looks in a row, its distance at its goal, half a second of the engine's own clock gone at
+ * least), or `sim` seconds of that clock at most (its frames run on elapsed time with dt capped at
+ * 0.1 s, so slow software-GL frames stretch real time: always waiting the 3.5 s took 14 s a step).
  */
 async function settle(page, sim = 3.5, max = 60000) {
   const t0 = Date.now();
-  const n0 = await page.evaluate(() => window.__stel.engine().now);
+  const look = () =>
+    page.evaluate(() => {
+      const e = window.__stel.engine();
+      return { now: e.now, p: e.camera.position.toArray(), d: e.rig.distance, g: e.rig.goalDistance, t: e.rig.target.distanceTo(e.rig.goalTarget) };
+    });
+  const first = await look();
+  let last = first;
+  let still = 0;
   while (Date.now() - t0 < max) {
     await page.waitForTimeout(150);
-    const n = await page.evaluate(() => window.__stel.engine().now);
-    if (n - n0 >= sim) return;
+    const l = await look();
+    if (l.now - first.now >= sim) return;
+    const moved = Math.hypot(l.p[0] - last.p[0], l.p[1] - last.p[1], l.p[2] - last.p[2]);
+    const quiet = l.now > last.now && moved < 1e-4 * Math.max(1, l.d) && Math.abs(l.d - l.g) < 1e-3 * Math.max(1, l.g) && l.t < 1e-3 * Math.max(1, l.d);
+    still = quiet ? still + 1 : 0;
+    if (still >= 3 && l.now - first.now >= 0.5) return;
+    last = l;
   }
   console.log('    (the engine clock stalled)');
 }

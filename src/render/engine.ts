@@ -234,8 +234,12 @@ export class Engine {
     this.running = false;
   }
 
-  /** Advance everything by dt seconds of real time and draw. Public so tests can drive it. */
-  frame(dt: number) {
+  /**
+   * Advance everything by dt seconds of real time and draw. Public so tests can drive it; `draw`
+   * false steps it without drawing (a check stepping hundreds of frames to compare frame rates
+   * needs the state, not the pictures: drawn in software they took minutes).
+   */
+  frame(dt: number, draw = true) {
     this.now += dt;
     // crossfade between views, time-based
     const k = 1 - Math.exp(-9 * dt);
@@ -272,6 +276,7 @@ export class Engine {
     this.rig.update(dt);
     if (this.followed && !this.rig.follow) this.setFollowed(null);
     // a nebula's cloud, into its own buffer first (systemView)
+    if (!draw) return;
     if (this.view === 'system') this.system.prerender(this.renderer, this.camera);
     this.post.composer.render(dt);
     this.updateLabels();

@@ -62,7 +62,7 @@ when near (1 Nov), and PR m1omg/Steliterate#56, `4865f2e`, stars that brighten a
 their blue flare, the Interregnum's young stars into red giants that swallow worlds), black holes'
 Hawking temperature rising as they shrink, each star's lifetime shown, and a warning when a Thread
 of a quarter of our people or more thinks poorly of us (`src/game/stellar.ts`; 1 Nov), and PR
-m1omg/Steliterate#57, `@MERGE@`, save slots in IndexedDB with Export and delete all saves, few
+m1omg/Steliterate#57, `c1234ad`, save slots in IndexedDB with Export and delete all saves, few
 nebulae at a new Interregnum game's start (thin gas), a nebula up close as a cloud, the research
 grid's Stelliferous Age, worlds drawn apart, the survey reveal before the events (and Settings,
 Open charted systems), a pact offer's live price, and people costing a flare turn's time only (1 Nov).
@@ -142,10 +142,20 @@ npx vite preview --port 4173             # in the background; leave it running
 node tools/playtest.cjs http://localhost:4173/ <dir outside the repo>   # "ALL CHECKS PASSED"
 npm run savecompat                       # "SAVE COMPAT OK"
 npm run check                            # unit checks in tools/checks/unit: "ALL CHECKS PASSED"
-npm run check:browser -- http://localhost:4173/ --lanes=3   # browser checks, three at once (~30 min)
+npm run check:browser -- http://localhost:4173/ --lanes=3   # browser checks, three at once (~45 min)
 npx tsx tools/sim.ts 300 standard competent > sim.txt   # when rules change; count in DEV-NOTES
 # (the harness splits: four runs of 75 with --from=0, 75, 150, 225 in parallel take 2.5 min)
 ```
+
+**Which browser checks** (2 Nov, the player: "Both", to "run the full browser suite less often" and
+"trim the slowest checks"): a small, local fix ships after the browser checks it touches, named
+(`node tools/checks/run.mjs browser http://localhost:4173/ playtest-shots/checks <names...>`, a few
+minutes), with everything else above. The full suite runs for a batch of several changes, or one
+that touches what every check passes through: the engine and its views (`src/render/`), the turn
+(`turn.ts`, `turnflow.ts`), the store, `App.tsx`, the HUD's frame. Run nothing else beside the
+lanes (an extra browser starves them: screenshots time out), and start `vite preview` afresh before
+a full run (a background task stops at two hours). `STEL_TIMES=1` stamps each line of a check with
+its seconds, to see where a slow one spends them.
 
 A new rule or fix gets a check in `tools/checks/` (see DEV-NOTES, Test hooks and scripts).
 

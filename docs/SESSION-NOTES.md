@@ -176,6 +176,13 @@ clone, with none of this session's scratch files, uploads or memory: everything 
       their save ("Please fix retrospectively too"): a flare's turns covered 0.2% of a Tide turn
       and paid for it, while 18 Kin cost 51 energy a turn. Asked, "People cost for the time too".
       Their save is `tools/saves/4865f2e-seed794228454-turn52-flare-interregnum-next.json.gz`.
+  - Then (2 Nov): the browser checks made faster ("Both": fewer full runs, the slowest trimmed;
+    CLAUDE.md, "Which browser checks"); a description of the game for a list of vibe-coded games,
+    in their voice, and a 728 × 90 banner for it (the Dusk galaxy rendered by the game, given in
+    chat). Then "The interregnum and dusk cutscene melodies sound too unsynthwave, happy etc more
+    like for a fantasy game": asked, light drums for the Interregnum only, "Interregnum wistful,
+    Dusk dark". Both rewritten in synthwave (Aeolian, the analog lead, the sequencer, a gated
+    snare in the Interregnum's middle); MP3 previews were sent to them.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

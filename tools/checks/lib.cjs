@@ -19,11 +19,14 @@ const IGNORE = /fonts\.g|ERR_CERT|net::ERR_|GPU stall|Automatic fallback to soft
 const LAUNCH = { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] };
 
 let bad = 0;
+/** With STEL_TIMES=1, each line says when it came (seconds since the check began): where a slow check spends its time. */
+const T0 = Date.now();
+const stamp = () => (process.env.STEL_TIMES ? `[${String(Math.round((Date.now() - T0) / 1000)).padStart(4)} s] ` : '');
 
 /** One check: prints `ok` or `BAD` with what was checked, and counts failures. */
 function check(ok, what) {
   if (!ok) bad++;
-  console.log(`${ok ? 'ok ' : 'BAD'} ${what}`);
+  console.log(`${stamp()}${ok ? 'ok ' : 'BAD'} ${what}`);
   return ok;
 }
 
