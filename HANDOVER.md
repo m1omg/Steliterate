@@ -255,6 +255,13 @@ word", then the player's list of 16 Oct, then the falling worlds.
   (`clockShare`; the player's save in `tools/saves/`). A rule change: the harness within the noise.
   Live at both addresses as `c1234ad`, script `index-CYMqytMv.js`.
 
+- **Synthwave for the Twilight Interregnum's and the Long Dusk's films, faster browser checks**
+  (2 Nov, PR m1omg/Steliterate#58): both films' music rewritten as synthwave (Aeolian, the analog
+  lead, the sequencer; the Interregnum wistful with a kick and a new gated snare in its middle,
+  the Dusk dark and drumless). The browser checks: a small fix runs only those it touches
+  (CLAUDE.md, "Which browser checks"), and the slowest trimmed. Live at both addresses as
+  `bd3eeab`, script `index-CwuzIw_v.js`.
+
 **What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
 ("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
 
@@ -283,8 +290,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#57 (room for saves, thin gas, flare turns, 1 Nov), `c1234ad` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-CYMqytMv.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#58 (synthwave film music, faster checks, 2 Nov), `bd3eeab` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-CwuzIw_v.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own; slots' data in IndexedDB `steliterate2` since 1 Nov) | the same | `steliterate.` keys |
 
 ## 2. Read in this order

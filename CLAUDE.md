@@ -65,7 +65,9 @@ of a quarter of our people or more thinks poorly of us (`src/game/stellar.ts`; 1
 m1omg/Steliterate#57, `c1234ad`, save slots in IndexedDB with Export and delete all saves, few
 nebulae at a new Interregnum game's start (thin gas), a nebula up close as a cloud, the research
 grid's Stelliferous Age, worlds drawn apart, the survey reveal before the events (and Settings,
-Open charted systems), a pact offer's live price, and people costing a flare turn's time only (1 Nov).
+Open charted systems), a pact offer's live price, and people costing a flare turn's time only (1 Nov),
+and PR m1omg/Steliterate#58, `bd3eeab`, synthwave music for the Twilight Interregnum's and the Long
+Dusk's films, and faster browser checks (2 Nov).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.
