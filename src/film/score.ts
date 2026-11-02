@@ -33,6 +33,7 @@ export type Voice =
   | 'drone' // the root and its fifth, very low, held
   // percussion and effects
   | 'kick'
+  | 'snare' // an 80s gated snare: a crack of noise, its room held a moment and then shut
   | 'tom'
   | 'shaker'
   | 'metal' // a metallic clank (two FM pairs), struck in an uneven pulse
@@ -80,6 +81,7 @@ export const OSCILLATORS: Record<Voice, [number, number]> = {
   bell: [4, 3],
   drone: [2, 2],
   kick: [1, 1],
+  snare: [1, 1],
   tom: [1, 1],
   shaker: [0, 0],
   metal: [4, 2],
@@ -108,6 +110,7 @@ export const TAIL: Record<Voice, number> = {
   bell: 2.6,
   drone: 3,
   kick: 0.4,
+  snare: 0.3,
   tom: 0.5,
   shaker: 0.1,
   metal: 0.6,
@@ -225,7 +228,7 @@ export interface Score {
    * a pulse: a voice on a grid of `every` beats, between two beats; with `groups`, struck only at
    * the start of each group of steps (3, 3, 2…: an uneven pulse), the first of a cycle the hardest
    */
-  pulse?: { v: 'kick' | 'tom' | 'shaker' | 'metal'; from: number; to: number; every: number; amp?: number; skip?: number[]; groups?: number[] }[];
+  pulse?: { v: 'kick' | 'snare' | 'tom' | 'shaker' | 'metal'; from: number; to: number; every: number; amp?: number; skip?: number[]; groups?: number[] }[];
   /** how loud each scene is (0..1; default 0.7) */
   dyn?: number[];
   /** the Supernova's and the Last Horizon's own sounds */
@@ -394,47 +397,60 @@ const NOTE = {
 } as const;
 
 export const SCORES: Record<FilmId, Score> = {
-  // The Twilight Interregnum: warm, a little wistful. D Mixolydian, a melody that opens with a
-  // rising sixth, a harp like starlight over a warm pad; a turn to the minor where the old stars go
+  // The Twilight Interregnum: wistful synthwave (2 Nov, the player: the Interregnum's and the Dusk's
+  // music sounded "too unsynthwave, happy etc more like for a fantasy game"; asked, "Interregnum
+  // wistful, Dusk dark", light drums for the Interregnum only). D Aeolian, the minor's i–VI–III–VII,
+  // an analog lead gliding through a melody of long notes and an octave's leap, a sequencer's
+  // sixteenths over a pulsing bass, a kick and a gated snare once the new stars are forming; a
+  // minor ninth under the title. No clank: the warm one.
   interregnum: {
     bpm: 90,
     beats: 76,
     titleAt: 70,
     tonic: NOTE.D3,
-    mode: 'mixolydian',
+    mode: 'aeolian',
     cuts: [0, 5.5, 10.5, 17, 23, 30.5, 37, 43.5, 49, 57, 63.5],
-    chords: [0, 6, 3, 0, 5, 1, 3, 6, 0, 3, 6],
+    chords: [0, 5, 2, 6, 0, 5, 3, 6, 0, 5, 6],
     title: { degree: 0, colour: 'add9' },
-    motif: [[0, 0, 1], [1, 5, 2], [3, 4, 1], [4, 2, 1], [5, 3, 3]],
-    motif2: [[0, 4, 1.5], [1.5, 7, 1.5], [3, 6, 1], [4, 4, 3]],
-    melody: [{ at: 2 }, { at: 11.5, octave: 1, voice: 'lead', amp: 0.8 }, { at: 24, shift: -2, voice: 'flute' }, { at: 31.5, alt: true }, { at: 38, shift: 2, voice: 'synth', amp: 0.85 }, { at: 50, alt: true, voice: 'flute' }, { at: 58 }, { at: 64.5, shift: 3, drop: 2 }],
-    lead: 'flute',
-    pads: [[0, 'pad'], [23, 'glass'], [37, 'pad']],
+    motif: [[0, 0, 1], [1, 4, 1], [2, 7, 2.5], [4.5, 6, 0.5], [5, 4, 1], [6, 5, 2]],
+    motif2: [[0, 2, 1.5], [1.5, 4, 0.5], [2, 5, 2], [4, 4, 1], [5, 3, 1], [6, 2, 2]],
+    melody: [{ at: 2 }, { at: 11.5, octave: 1, voice: 'lead', amp: 0.7 }, { at: 24, alt: true, amp: 0.85 }, { at: 31.5, shift: -2, amp: 0.85 }, { at: 38 }, { at: 50, alt: true }, { at: 58 }, { at: 64.5, shift: 2, drop: 2 }],
+    lead: 'synth',
+    pads: [[0, 'pad'], [23, 'dark'], [37, 'pad']],
     arps: [
-      { from: 0, to: 37, step: 0.5, pattern: [0, 2, 3, 4, 3, 2, 1, 2], voice: 'harp', octave: 2, amp: 0.55 },
-      { from: 37, to: 57, step: 0.25, pattern: [0, 2, 4, 2, 3, 2, 4, 1], voice: 'seq', octave: 1, amp: 0.4 },
-      { from: 57, to: 70, step: 0.5, pattern: [0, 2, 3, 4, 3, 2, 1, 2], voice: 'harp', octave: 2, amp: 0.55 },
+      { from: 5.5, to: 23, step: 0.25, pattern: [0, 2, 3, 4, 3, 2, 4, 1], voice: 'seq', octave: 2, amp: 0.3 },
+      { from: 23, to: 37, step: 0.5, pattern: [0, 2, 4, 2], voice: 'seq', octave: 2, amp: 0.26 },
+      { from: 37, to: 70, step: 0.25, pattern: [0, 2, 3, 4, 3, 2, 4, 1], voice: 'seq', octave: 2, amp: 0.34 },
+      { from: 10.5, to: 70, step: 0.5, pattern: [0, 0, 0, 0, 0, 0, 3, 0], voice: 'seq', octave: 0, amp: 0.38 },
+    ],
+    pulse: [
+      { v: 'kick', from: 36, to: 57, every: 2, amp: 0.55 },
+      { v: 'snare', from: 37, to: 57, every: 2, amp: 0.5 },
+      { v: 'shaker', from: 44, to: 57, every: 0.5, amp: 0.22 },
     ],
     bass: true,
     dyn: [0.45, 0.5, 0.6, 0.6, 0.55, 0.5, 0.65, 0.7, 0.75, 0.85, 0.8],
   },
-  // The Long Dusk: melancholy. E Dorian, a falling melody on a horn, a low choir under the world
+  // The Long Dusk: dark synthwave (2 Nov, the player, as above: "Dusk dark"). E Aeolian, slow dark
+  // chords (i, VI, iv, v, VII), a brassy analog lead swelling and gliding through long notes (a
+  // minor sixth's leap and a fall), the choir's voice once, a drone, a quiet sequencer pulse an
+  // octave down and a slow arpeggio over it; no drums
   dusk: {
     bpm: 90,
     beats: 72,
     titleAt: 66,
     tonic: NOTE.E3,
-    mode: 'dorian',
+    mode: 'aeolian',
     cuts: [0, 6, 10.5, 17, 23, 36, 41, 45.5, 49.5, 55.5, 60.5],
-    chords: [0, 6, 2, 3, 0, 4, 2, 6, 3, 0, 6],
+    chords: [0, 5, 3, 4, 0, 5, 3, 6, 5, 4, 0],
     title: { degree: 0, colour: 'minor' },
-    motif: [[0, 4, 1.5], [1.5, 3, 0.5], [2, 2, 1], [3, 0, 2], [5, -1, 1], [6, 0, 2]],
-    melody: [{ at: 3 }, { at: 18, voice: 'synth', amp: 0.75 }, { at: 37 }, { at: 50, shift: -2, voice: 'voice' }, { at: 61, drop: 2 }],
-    lead: 'horn',
-    pads: [[0, 'pad'], [45.5, 'choir']],
+    motif: [[0, 0, 3], [3, 4, 1], [4, 5, 3], [7, 4, 1], [8, 3, 4]],
+    melody: [{ at: 3 }, { at: 18, voice: 'voice', amp: 0.8 }, { at: 37 }, { at: 49.5, shift: -2, drop: 1 }, { at: 61, drop: 2 }],
+    lead: 'synth',
+    pads: [[0, 'dark'], [23, 'pad'], [45.5, 'choir']],
     arps: [
-      { from: 23, to: 45.5, step: 0.5, pattern: [0, 0, 3, 0, 0, 2, 0, 1], voice: 'seq', octave: 0, amp: 0.45 },
-      { from: 23, to: 45.5, step: 1, pattern: [0, 2, 1, 2], voice: 'harp', octave: 2, amp: 0.35 },
+      { from: 23, to: 60.5, step: 0.5, pattern: [0, 0, 0, 0, 0, 0, 0, 0], voice: 'seq', octave: 0, amp: 0.32 },
+      { from: 36, to: 49.5, step: 1, pattern: [0, 2, 4, 2], voice: 'seq', octave: 2, amp: 0.22 },
     ],
     bass: true,
     drone: true,

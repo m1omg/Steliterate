@@ -80,6 +80,7 @@ const LEVEL: Record<Instrument, number> = {
   bell: 0.18,
   drone: 0.1,
   kick: 0.42,
+  snare: 0.5,
   tom: 0.46,
   shaker: 0.84,
   metal: 0.42,
@@ -105,6 +106,7 @@ const WET: Record<Instrument, number> = {
   bell: 0.5,
   drone: 0.1,
   kick: 0.05,
+  snare: 0.3,
   tom: 0.15,
   shaker: 0.2,
   metal: 0.7,
@@ -470,6 +472,27 @@ const lines: Record<Exclude<Instrument, keyof typeof pads>, Play> = {
     const g = strike(ctx, at, TAIL.kick, e.amp * LEVEL.kick);
     send(ctx, o, g, WET.kick);
     x.connect(g);
+  },
+  // an 80s gated snare: a crack of noise (its body a short falling tone), the room's sound held at
+  // half strength for a moment and then shut, as a noise gate on a big reverb shut it in 1985
+  snare(ctx, o, e, at) {
+    const end = at + TAIL.snare + 0.05;
+    const peak = e.amp * LEVEL.snare;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(peak, at + 0.003);
+    g.gain.exponentialRampToValueAtTime(peak * 0.45, at + 0.05);
+    g.gain.setValueAtTime(peak * 0.45, at + 0.17);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.21);
+    send(ctx, o, panned(ctx, g, -0.08), WET.snare);
+    breath(ctx, o, at, end, 1800, 0.7).connect(g);
+    if (!o.low) breath(ctx, o, at, end, 5200, 1.1).connect(g);
+    const t = osc(ctx, 'triangle', 220, at, at + 0.14);
+    t.frequency.setValueAtTime(220, at);
+    t.frequency.exponentialRampToValueAtTime(165, at + 0.08);
+    const tg = strike(ctx, at, 0.1, peak * 0.7);
+    send(ctx, o, tg, WET.snare * 0.5);
+    t.connect(tg);
   },
   // a tom: a low sine sagging as it dies
   tom(ctx, o, e, at) {

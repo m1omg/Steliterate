@@ -4915,3 +4915,29 @@ it, a friend's suggestion as the player put it: a warning when a Thread's standi
   saves (the player's among them); all 113 unit checks; all 81 browser checks (76 in three lanes;
   five again alone: three had timed out on a screenshot with two more checks running beside the
   lanes, and `fates` and `interregnum` after the fixes above).
+
+## Synthwave for the Twilight Interregnum's and the Long Dusk's films (2 Nov)
+
+The player: "The interregnum and dusk cutscene melodies sound too unsynthwave, happy etc more like
+for a fantasy game. Please correct." Asked, they chose light drums for the Interregnum only, and
+"Interregnum wistful, Dusk dark". What made them fantasy: a major mode (the Interregnum's D
+Mixolydian, the Dusk's Dorian with its raised sixth), a flute and a horn for the melody, harp
+arpeggios.
+- **The Twilight Interregnum:** D Aeolian, the minor's i–VI–III–VII; a new melody of long notes
+  and an octave's leap (D A D′ C A B♭), and a second one, on the gliding analog lead (one statement
+  on the glassy lead, high); the sequencer in sixteenths through the chords over a pulsing root an
+  octave down; detuned saw pads, darker through the dim middle; a kick on 1 and 3 and a new 80s
+  gated snare on 2 and 4 once the new stars are forming (beats 36 to 57), a soft shaker over the
+  last of it; the title on a minor ninth. No clank: the warm one.
+- **The Long Dusk:** E Aeolian, slow dark chords (i, VI, iv, v, VII); a new melody of long held
+  notes, a minor sixth's leap and a fall (E B C B A), on the analog lead, brassy and gliding, the
+  choir's voice once; the drone; a quiet sequencer pulse an octave down and a slow arpeggio over it;
+  dark pads, then the choir; no drums.
+- **The gated snare** (`cue.ts`): a crack of noise and a short falling tone, the room's sound held
+  at half strength for 0.17 s and then shut. The other films keep their scores.
+- Levels (`tools/cue-levels.mjs`): the Interregnum −18.7 dBFS RMS, peak −3.8; the Dusk −18.6, peak
+  −4.3 (the other films near −19). Previews were sent to the player as MP3s.
+- Checks: `unit/film-scores` holds the two films' synthwave (minor, most of the melody on the
+  analog lead, the sequencer, no harp, flute or horn; the Interregnum's drums in its middle only,
+  no clank; the Dusk's drone, no drums).
+

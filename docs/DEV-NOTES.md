@@ -1636,7 +1636,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   (and `motif2`) in scale degrees and `melody`, the statements of it (`at`, `shift`, `octave`,
   `drop` its last notes, `voice`, `amp`, `major`, `alt`), `lead` and `pads` (which voice when),
   `arps` (from, to, step, a pattern of chord tones, voice, octave), `bass`, `drone`, `pulse`
-  (kick, tom, shaker or metal, on a grid, `groups` for an uneven one, `skip`), `dyn` (each scene's
+  (kick, snare, tom, shaker or metal, on a grid, `groups` for an uneven one, `skip`), `dyn` (each scene's
   loudness), and the Supernova's and the Last Horizon's `chirp`, `thumps` and `boom`. `compose()`
   turns it into `ScoreEvent`s (beat, voice, pitches, length, loudness); `cue.ts` plays each
   (`PLAY[voice]`) at its time, scheduled 3 s ahead (`playCue`) or all at once (`renderCue`).
@@ -1655,7 +1655,17 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     (a new film needs a motif of its own: the check names the clash), notes in the mode unless
     `off` (a chromatic step, a raised third), every cut accented, every note on a quarter-beat grid
     from the start or a cut and inside the film, at most 56 oscillators at once (32 below high),
-    the sequencer and the clank in the darker films and none of the synth in at least four.
+    the sequencer and the clank in the darker films and none of the synth in at least four; the
+    Twilight Interregnum's and the Long Dusk's synthwave (2 Nov: minor, most of the melody on the
+    `synth`, the sequencer, no harp, flute or horn; the Interregnum's kick and gated `snare` in
+    its middle only, no clank; the Dusk's drone, no drums).
+  - Synthwave (2 Nov, the player: the Interregnum's and the Dusk's music "too unsynthwave, happy
+    etc more like for a fantasy game"): what made them fantasy was a major mode (Mixolydian,
+    Dorian's raised sixth), the flute, horn and harp; synthwave here is Aeolian with the minor's
+    i–VI–III–VII, the gliding `synth` lead, the `seq` in sixteenths over a `seq` root pulse an
+    octave down (octave 0) as the driving bass, detuned `pad`s, and for drums a `kick` on 1 and 3
+    with the `snare` (noise held at half strength 0.17 s then shut: an 80s gated reverb) on 2 and
+    4. `cue-levels`: both films near −18.7 dBFS RMS, peaks −3.8 and −4.3.
   - Hooks: `__stel.cueOscillators(id, fate)` (in all, at the settings' quality),
     `__stel.cueLevels(id, fate)` (offline, peak and RMS).
   - Traps: the export page (`film.html`) hangs on a film id `FILMS` lacks, so `cue-levels`
