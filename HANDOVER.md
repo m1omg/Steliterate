@@ -1,26 +1,134 @@
 # Handover: picking up Steliterate
 
-For the next Claude instance (a new session, or the player's other account). Rewritten on 16 Oct
-at the player's word ("pls also do a .MD for handover"), after the project check of 15 Oct. It
-replaces the text of 12 Oct, which had been patched many times since. This is the entry point:
-the details stay in the other notes, and every section says where.
+This is for the next Claude instance: a new session, or one on the player's other account. It is
+the entry point; the details are in the other notes, and every section says where.
 
-Spoiler-light, like everything the player may read. The stranger minds and the endings are in
-`docs/spoilers/`, for you only: never repeat them to the player.
+- Refreshed on 2 Nov at the player's word ("update the HANDOVER.md for another handover").
+- Rewritten on 16 Oct ("pls also do a .MD for handover"), after the project check of 15 Oct.
 
-## 0. Start here: the handover of 19 Oct, and what came after (20 Oct)
+Keep it spoiler-light, like everything the player may read. The stranger minds and the endings
+are in `docs/spoilers/`, for you only: never repeat them to the player.
 
-The player ran out of usage late on 19 Oct ("93% of usage is gone right now… I'll be back, don't
-worry") and asked for this: "please put this plan along with updating the handover MD, because I
-will need to continue in another session". Sections 1 to 8 below are from 16 Oct and still hold.
-On 20 Oct a new session (on the other account) picked it up: "Continue my game Steliterate … from
-where the previous session stopped", with three steps in this order: finish "the game keeps its
-word", then the player's list of 16 Oct, then the falling worlds.
+## 0. Start here (2 Nov)
+
+### Where things stand
+- **Live:** the game is at both addresses as PR m1omg/Steliterate#58 (`bd3eeab`, script
+  `index-CwuzIw_v.js`). The addresses are in §1.
+- **Branches:** once this file's own PR is in, `main`, the work branch
+  (`claude/epic-wozniak-lyhulf`) and `next` hold the same files.
+- **Nothing is in flight:** no batch half done, no check running, nothing uncommitted.
+
+### The last thing done (2 Nov)
+- Two films were rendered as MP4s at 1080p and 30 fps, with their new synthwave music, and sent
+  to the player: the Twilight Interregnum's and the Long Dusk's.
+- The other 16 films keep their music of 1 Nov.
+- Rendering those 16 too was offered (about 10 minutes each here). There is no answer yet.
+
+### First steps
+1. `git fetch` every branch and look for work no PR has taken in:
+   `git log origin/main..origin/<branch>`. The player sometimes runs two sessions at once. On
+   2 Nov the only such work is the Godot proposal on `claude/vibrant-edison-svhjtd` (§6).
+2. Run `npm ci`.
+3. Read in the order of §2.
+4. Set up the container as in §7.
+
+### How a batch goes live (since the switch, 27 Oct)
+1. Validate it (CLAUDE.md, "Validate every batch").
+2. Push the work branch, then open a PR into `main` and merge it yourself with a merge commit.
+3. Wait for `main`'s Pages run to finish: the workflow cancels a run in progress.
+4. Run `git push origin claude/epic-wozniak-lyhulf:next`.
+5. Check that both addresses serve the build's `index-*.js`.
+
+A session given a branch of its own starts it from `main`, works there, and copies it to `next`
+the same way (`git push origin <branch>:next`).
+
+### Which browser checks to run
+- **A small, local fix:** only the checks it touches, by name.
+- **The full suite** (about an hour in three lanes): for a batch of several changes, or for one
+  that touches any of:
+  - `src/render/`;
+  - the turn;
+  - the store;
+  - `App.tsx`;
+  - the HUD's frame.
+
+The rule is in CLAUDE.md, "Which browser checks" (2 Nov).
+
+### What to do next
+Ask the player. §6 lists what is waiting on them.
+
+### Their usage
+It runs out at times (twice on 19 Oct); they pause and come back. Work in batches that end
+validated and pushed, and keep messages short and plain.
+
+## 1. What this is
+
+Steliterate is a turn-based survival strategy game at the end of starlight. You keep a
+civilization alive from the last red dwarfs to the Dark Era, each turn covering more time than the
+last.
+
+- **Stack:** Vite 8, TypeScript 7 (strict), Preact with signals, three.js 0.186, Web Audio.
+- **Licence:** GPL-3.0.
+- **Repository:** `m1omg/Steliterate`.
+- **Code:**
+  - `src/game` is the simulation, deterministic and seeded;
+  - `src/render` holds the three.js views, and `src/film` the films;
+  - `src/audio` the music and sounds, `src/ui` the interface;
+  - `tools/` the harness (`sim.ts`), the playtest, savecompat and the checks (`tools/checks/unit`,
+    `tools/checks/browser`).
+- **Since the switch (27 Oct), one game, and two frozen copies of the one before** (Pages builds
+  `main` and `next` on a push to either):
+
+  | | The game (the new version) | Its mirror | The old game, frozen ("today's game" in older notes) |
+  |---|---|---|---|
+  | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
+  | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
+  | As of | PR m1omg/Steliterate#58 (synthwave film music, faster checks, 2 Nov), `bd3eeab` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-CwuzIw_v.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | Saves | `steliterate2.` keys (their own; slots' data in IndexedDB `steliterate2` since 1 Nov) | the same | `steliterate.` keys |
+
+## 2. Read in this order
+
+1. This file.
+2. `CLAUDE.md`, for:
+   - the rules that are easy to break;
+   - the validation list and which browser checks to run;
+   - every PR;
+   - the balance references.
+3. `docs/plans/new-version.md`: the approved plan the game was built to, from 13 Oct (then "the new
+   version").
+4. `docs/SESSION-NOTES.md`:
+   - "How the player likes to work";
+   - "Picking up", which opens with dated entries from 27 Oct to 2 Nov, each decision in the
+     player's words, with the older history after them;
+   - "Open threads and pending decisions".
+5. `docs/DEV-NOTES.md`:
+   - "Workflow for every batch";
+   - "Test hooks and scripts", with "Helpers to recreate in a new container";
+   - "Gotchas";
+   - "Where the newer systems live", and its "The films' music";
+   - "Balance reference".
+6. `docs/CHANGELOG.md`: the last entries (the newest are at the end). Read `docs/DESIGN.md` when a
+   rule's intent matters.
+7. `docs/REPLICATE.md`, only when you need the old game in full:
+   - It describes the game as of PR m1omg/Steliterate#39 (`2d345e4`, 21 Oct). That game is now
+     frozen at `/archive/2026-10-27/`, and PRs #40 to #45 came after the document.
+   - It covers every rule, number and formula read from the code, the interface, the sound, the
+     assets and the checks.
+   - Its last section is sealed: the stranger minds, the Lattice's story and the endings.
+
+## 3. What came since 16 Oct
+
+On 19 Oct the player ran out of usage and asked for "this plan along with updating the handover
+MD, because I will need to continue in another session". On 20 Oct a new session, on the other
+account, picked it up. It finished that plan, `docs/plans/2026-10-19-falling-worlds-and-the-list.md`
+(the player's list of 16 Oct). Each batch since 16 Oct is listed below, oldest first; the CHANGELOG
+has the figures for each.
 
 **Done since 16 Oct:**
 - `docs/REPLICATE.md`: a full spec of today's game, written 16 to 17 Oct, kept up with `main`
-  since (now at PR m1omg/Steliterate#36, `981e0f0`), its notes of where text and code disagreed
-  now the rules.
+  to PR m1omg/Steliterate#39 (`2d345e4`, 21 Oct), its notes of where text and code disagreed now
+  the rules.
 - **"The game keeps its word"** (19 Oct, in both versions at the player's word), live on 20 Oct:
   REPLICATE found places where the game's text promised one thing and the code did another, and
   each was made to keep its promise (the Long Record, Hunger Studies, the Communion Charter,
@@ -262,262 +370,223 @@ word", then the player's list of 16 Oct, then the falling worlds.
   (CLAUDE.md, "Which browser checks"), and the slowest trimmed. Live at both addresses as
   `bd3eeab`, script `index-CwuzIw_v.js`.
 
-**What to do next:** ask the player what comes next; the open threads are in SESSION-NOTES
-("Picking up": the offers of 12 and 13 Oct, the Slovak translation, and the rest).
+## 4. Baselines (2 Nov)
 
-**The player's usage** ran out twice on 19 Oct (the weekly limit, then the five-hour one). They
-pause and come back. Work in batches that end validated and pushed, and keep messages short.
+These are from the last validation of a rule change, PR m1omg/Steliterate#57 (1 Nov). PR #58
+changed only the films' music and the checks. It ran the unit checks and the browser checks it
+touches.
 
-## 1. What this is
+| | The game |
+|---|---|
+| tsc, build | clean |
+| Playtest | passes (30/144 Hz parity) |
+| savecompat | 11 saves (the player's turn-52 flare save among them) |
+| Unit checks | 113 |
+| Browser checks, real fonts | 81 |
+| 300 games (survive / victories / Degenerate Age turns) | 181 / 69 / 102 |
+| By fate | decay 109 / 148, stable 30 / 81, curvature 42 / 71 |
+| 300 at Harsh | 148 / 29 / 92 |
+| 300 begun in the Interregnum | 186 / 74 / 109, 297 of them reaching the Dusk |
+| 900 games | 444 / 160 / 70 (15 Oct, not run since) |
 
-Steliterate is a turn-based survival strategy game at the end of starlight. You keep a
-civilization alive from the last red dwarfs to the Dark Era, each turn covering more time than the
-last.
-
-- **Stack:** Vite 8, TypeScript 7 (strict), Preact with signals, three.js 0.186, Web Audio.
-- **Licence:** GPL-3.0.
-- **Repository:** `m1omg/Steliterate`.
-- **Code:**
-  - `src/game` is the simulation, deterministic and seeded;
-  - `src/render` holds the three.js views, and `src/film` the films;
-  - `src/audio` the music and sounds, `src/ui` the interface;
-  - `tools/` the harness (`sim.ts`), the playtest, savecompat and the checks (`tools/checks/unit`,
-    `tools/checks/browser`).
-- **Since the switch (27 Oct), one game, and two frozen copies of the one before** (Pages builds
-  `main` and `next` on a push to either):
-
-  | | The game (the new version) | Its mirror | Today's game, frozen |
-  |---|---|---|---|
-  | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
-  | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#58 (synthwave film music, faster checks, 2 Nov), `bd3eeab` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-CwuzIw_v.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
-  | Saves | `steliterate2.` keys (their own; slots' data in IndexedDB `steliterate2` since 1 Nov) | the same | `steliterate.` keys |
-
-## 2. Read in this order
-
-1. This file.
-2. `CLAUDE.md`: the rules that are easy to break, the validation list, every PR, and the balance
-   references of both versions.
-3. `docs/plans/new-version.md`: the approved plan the new version was built to.
-4. `docs/SESSION-NOTES.md`:
-   - "How the player likes to work";
-   - "Picking up";
-   - the dated entries, which record every decision in the player's words (the newest are at the
-     end of "Picking up", 15 Oct).
-5. `docs/DEV-NOTES.md`:
-   - "Workflow for every batch";
-   - "Test hooks and scripts", with "Helpers to recreate in a new container";
-   - "Gotchas";
-   - "Where the newer systems live";
-   - "Balance reference".
-6. `docs/CHANGELOG.md`, the last entries (the newest at the end), and `docs/DESIGN.md` when a
-   rule's intent matters.
-7. `docs/REPLICATE.md` (19 Oct), when you need today's game (`main` at `4b92446`) in full: every
-   rule, number and formula read from its code, the interface, the sound, the assets and the
-   checks, written for another agent to rebuild it. Its last section is sealed: the stranger
-   minds, the Lattice's story and the endings.
-
-## 3. Where things stand (16 Oct)
-
-- **The new version is done** and up at `/next/` since 14 Oct. It covers the player's nine-part
-  request of 13 Oct:
-  - the other civilizations playing the same game;
-  - the Hunger in diplomacy;
-  - war and new units;
-  - life after matter, and positronium;
-  - films, and the survey reveal;
-  - young dwarfs, and charting on the way.
-
-  Since then, at the player's word:
-  - harder ("make it harder pls");
-  - the stable fate's late game, made a little softer after;
-  - ships see what they pass;
-  - the dearer Archive;
-  - the hulls and all fifteen event plates;
-  - the films' second cut;
-  - the Degenerate Age's film redone, its first version kept in `src/film/saved/`.
-- **15 Oct, four batches** (CHANGELOG, in order):
-  - **"The films on a tablet"**: pictures painted in a thread of their own, the music silent
-    under the films, a lighter sound.
-  - **"The purple oval"**: the grade's lift of the blacks, gone, and the galaxy's own light in its
-    place. In both versions (`main` by PR m1omg/Steliterate#31).
-  - **"Smoother films in every browser"**: a film keeps time with the sound being heard; its
-    vignette and grain are page layers or drawn in the canvas, whichever the device draws quicker;
-    the recordings play by their own audio element (no `MediaElementSource`); a lighter reverb. The
-    sound went to `main` too, by PR m1omg/Steliterate#32.
-  - **"The project check"** (the player: "compacted twice, please, do a comprehensive project
-    check to compensate"):
-    - everything checked again: the branches, the live builds, every check, and 300 games on each
-      version, all game for game as before;
-    - today's code read again by two reviewers, every finding confirmed in the code first;
-    - six faults fixed, each with a check: a film's clock running on without its sound; the
-      canvas's grain moving under reduced motion; a film the painter thread cannot lay out
-      waiting for ever; a film's sound able to begin after its screen was gone; the synth's echo
-      deaf to the music slider, and a hold cut short; the galaxy's glow in the Dark in the
-      enhanced and thermal views;
-    - three of them in `main` too, by PR m1omg/Steliterate#33.
-- **The switch.** `main` keeps today's game until the player says otherwise ("Not yet", 14 Oct).
-  The switch is a PR from `next` into `main`, merged with a merge commit.
-  - `main` was merged into the work branch after PR #33 (`9e5907b`, `-s ours`: the work branch's
-    tree kept, since `main`'s fixes since the fork were ports of its own).
-  - That PR now merges cleanly.
-- **Not run in Firefox.** There is none in the container; software-drawn Chromium stood in for it.
-  The player said Firefox ran the films "very slow"; their word on it now is the first thing to ask.
-
-## 4. Baselines (20 Oct, after "the game keeps its word")
-
-| | The new version | Today's game (`main`) |
-|---|---|---|
-| tsc, build | clean | clean |
-| Playtest | passes (30/144 Hz parity) | passes |
-| savecompat | 8 saves | 6 saves |
-| Unit checks | 84 | 53 |
-| Browser checks, real fonts | 62 | 54 |
-| 300 games (survive / victories / Degenerate turns) | 156 / 65 / 71 | 160 / 81 / 72 |
-| 300 games at Harsh | 124 / 35 / 66 | 147 / 62 / 68 |
-| 900 games | 444 / 160 / 70 (15 Oct) | 476 / 244 / 71 |
-
-- The new version's 900 by fate (15 Oct): decay 53%, stable 46%, curvature 46%; its 300 on 20
-  Oct: decay 82 / 148, stable 44 / 81, curvature 30 / 71. Today's game's 900 by fate: decay 43%,
-  stable 69%, curvature 56%.
-- With real neighbours, two runs of the same rules can differ by 32 survivors and 37 victories in
-  900. Measure a reshuffle before calling a change of that size a cost.
-- The full history is in CLAUDE.md and DEV-NOTES, "Balance reference".
+- **Noise:** with real neighbours, two runs of the same rules can differ by 32 survivors and 37
+  victories in 900. Measure a reshuffle before calling a change of that size a cost.
+- **The old game, frozen,** is no longer validated. Its last harness run was 228 / 78 / 113 of 300
+  (26 Oct).
+- The full history is in CLAUDE.md and in DEV-NOTES, "Balance reference".
 
 ## 5. The player (m1omg)
 
 The full picture is in SESSION-NOTES, "How the player likes to work".
 
 - **Language.** They are Slovak, and write in English, often by dictation. Read through misheard
-  words ("diploma's screen" meant the diplomacy screen).
-- **They play while you work**, on a PC, a phone and a tablet, in Firefox, Chrome and Vivaldi. A deploy must never break an open game or a save. Each report from play is a bug to
-  confirm in the code before answering.
+  words: "diploma's screen" meant the diplomacy screen.
+- **They play while you work,** on a PC, a phone and a tablet, in Firefox, Chrome and Vivaldi.
+  - A deploy must never break an open game or a save.
+  - Each report from play is a bug: confirm it in the code before answering.
+  - They upload their own saves when something is wrong. "Retrospectively too" means the fix must
+    reach games already begun.
 - **Physics questions** want the mechanism, the numbers and the dates, and every place the game
   bends physics, said plainly. Offer a fix for a bend; don't make one unasked.
 - **Spoiler-light.** Never spoil the Lattice's story or ending, or the stranger minds. Say nothing
-  about an age they have not reached unless asked.
-- **Saves and seeds are sacred.**
-  - Use optional fields only, small counters in `civ.flags`, and `migrate()`.
-  - Generation consumes the RNG exactly as before.
-  - Both versions' saves are covered by `tools/saves/`.
+  about an age they have not reached, unless they ask.
+- **Saves and seeds are sacred:**
+  - optional fields only, small counters in `civ.flags`, and `migrate()`;
+  - generation consumes the RNG exactly as before;
+  - `tools/saves/` covers the game's saves.
 - **Discuss first** before a Lattice rework, deeper diplomacy, or other civilizations beyond what
   was asked. The Unlit's quest line stays word for word: extend it, never reduce it.
 - **"Always. You merge pls."** Once a batch is validated, open the PR into `main` and merge it
-  yourself, with a merge commit. A fix for `main` goes on a branch of its own from `main`
-  (`claude/<topic>-main`), at their word.
-- **Asking.** For a real choice, ask with options, mark one "(Recommended)", and give each a
-  one-line consequence. They answer quickly, often adding a condition in their own words: honour
-  it exactly. They have also said: "please don't ask me questions unless it's something absolutely
-  crucial".
-- **Generated music and films are seen or heard before they go in.** Measure music with
-  `tools/music/movement.py`, then let them listen. Send films as videos, and the endings only when
-  asked.
-- **More than one session at a time.** Before anything else, `git fetch` every branch and look
-  for pushed commits no PR has taken in: `git log origin/main..origin/<branch>`.
+  yourself, with a merge commit. Since the switch, every batch comes from the work branch.
+- **Asking.**
+  - For a real choice, ask with options. Mark one "(Recommended)", and give each a one-line
+    consequence.
+  - They answer quickly, often adding a condition in their own words: honour it exactly.
+  - They have also said: "please don't ask me questions unless it's something absolutely
+    crucial".
+- **Music and films.**
+  - Their taste is dark ambient synthwave.
+  - The films have "a bit of Terminator 1 synth … not a full style overwhelm".
+  - On 2 Nov they found two scores "too unsynthwave, happy … like for a fantasy game". Keep major
+    modes, flutes, horns and harps out of the dark films.
+  - They see or hear generated music and films before these go in. Measure a recorded track with
+    `tools/music/movement.py`, and a film's cue with `tools/cue-levels.mjs`.
+  - Send films as videos, and the endings only when asked.
+- **More than one session at a time.** Before anything else, `git fetch` every branch and look for
+  pushed commits no PR has taken in: `git log origin/main..origin/<branch>`.
 
 ## 6. Waiting for the player, likeliest first
 
 Start none of these without their word.
 
-1. **Firefox now.** How the films and the sound play there after 15 Oct.
-2. **The films' second cut.** Sent as videos: the Long Dusk, the Black Hole Age under decay, and
-   the Degenerate Age twice.
-3. **The switch** from `next` into `main` ("Not yet", 14 Oct).
-4. **Left as they are by the project check**, each the player's choice:
-   - a slow device steps a film's resolution down and never back up, so a slow first few seconds
-     can leave the whole film at half resolution;
-   - a build tool, `source-map-js`, has a reported flaw (a slow parse of a hostile source map). It
-     is used only to build, never shipped, and nothing here reads one.
-5. **Offers of 12 and 13 Oct, no answer yet:**
-   - pulsar beams that last far too long, in line with real pulsars or as a stated bend;
+1. **The other 16 films as videos** (offered 2 Nov). Use `tools/film-render.mjs`, one film at a
+   time. Each takes about 10 minutes at 1080p here.
+2. **Firefox.**
+   - The container has no Firefox; software-drawn Chromium stands in for it.
+   - The player said Firefox ran the films "very slow". That was before the fixes of 15 Oct;
+     how they play there now is not known.
+3. **Offers with no answer** (12 and 13 Oct, and the audit of 31 Oct):
+   - pulsar beams in line with real pulsars, or a stated bend;
+   - Burst Catchers in neighbouring systems banking a share of a burst at η 68;
    - a rogue world's Coldminds at the dark-sky half upkeep;
-   - two rogue-world bends, stated in the Codex or changed (close passes 25 times slower, and
-     evaporation casting out about half);
+   - the two rogue-world bends, stated in the Codex or changed: close passes 25 times slower, and
+     evaporation casting out about half;
    - the neighbours' new-star rules and the Last Star.
-6. **A Slovak translation of our own.** Planned on 10 Oct, not started: a glossary first,
-   side-by-side review sheets, all live at once, about 40,000 words (SESSION-NOTES, "Picking up").
-7. **Krea, in the player's order:** a second Dark track to replace the old drone (the plates are
-   all painted). Measure it and let them hear it before it goes in.
-8. **The friend's word on the magnifier mode** (`?lowvision`). Not built: read-aloud, the camera
-   from the keyboard, reduced motion for camera flights.
-9. **Messages from gone civilizations:** four answers misbehave (SESSION-NOTES). Diplomacy is
-   discuss-first.
-10. **From 11 Oct, each to raise:**
-    - the autoplayer researches Halo Siphons and never shuts them;
-    - ember restraint at a halo dwarf;
-    - only the Unlit's messages wait.
-11. **The discuss-first list** in "Picking up": the Lattice, diplomacy, tidal locking and the
-    rest.
+4. **Planned and approved, not built** (the audit of 31 Oct):
+   - the Lancer and the Penrose Corsair ("deferred, not dropped");
+   - a slow-crossfade version of the films for players who ask for reduced motion.
+
+   **Offered for later:** a battle fought by hand, focus fire on a chosen ship, and a retreat
+   threshold in a tactic.
+5. **Left as they are by the project check** (15 Oct), each the player's choice:
+   - A slow device steps a film's resolution down and never back up. A slow first few seconds can
+     leave the whole film at half resolution.
+   - A build tool, `source-map-js`, has a reported flaw (a slow parse of a hostile source map). It
+     is used only to build and never shipped, and nothing here reads one.
+6. **A Slovak translation of our own.** Planned on 10 Oct, not started. The plan:
+   - a glossary first;
+   - side-by-side review sheets;
+   - everything live at once;
+   - about 40,000 words.
+
+   SESSION-NOTES, "Picking up", has the rest.
+7. **Krea:** a second Dark track to replace the old drone. Measure it and let them hear it before
+   it goes in.
+8. **The friend's word on the magnifier mode** (`?lowvision`). Not built: read-aloud, moving the
+   camera from the keyboard, and reduced motion for camera flights.
+9. **From 11 Oct, each to raise:**
+   - the autoplayer researches Halo Siphons and never shuts them;
+   - ember restraint at a halo dwarf;
+   - only the Unlit's messages wait.
+10. **A Godot proposal** (26 Oct, from another session): `GODOT PROPOSAL 1.MD` on
+    `claude/vibrant-edison-svhjtd`.
+    - It proposes the game as a desktop game in Godot, with better graphics.
+    - It is not approved, nothing is built, and no PR has taken it in.
+    - Read it if the player raises it.
+11. **The discuss-first list** (SESSION-NOTES, "Picking up"):
+    - a Lattice rework;
+    - deeper diplomacy;
+    - tidal locking by locking time;
+    - the flare's step at `blueAt`;
+    - the helium stars' single set of numbers;
+    - collectors after the Stelliferous era.
+
+Done and off this list: the switch (27 Oct), the gone civilizations' answers (PR
+m1omg/Steliterate#53), and the films' second cut, which the films of 1 and 2 Nov overtook.
 
 ## 7. Working in a fresh container
 
 1. Run `npm ci`.
-2. Make the local copy of the game's fonts: the layout checks measure text in the real faces only
+2. Make the local copy of the game's fonts. The layout checks measure text in the real faces only
    with `STEL_FONTS` (DEV-NOTES, "The game's fonts in this container", a curl recipe).
-3. Recreate the helpers from DEV-NOTES in the scratchpad: serve the build for one command, 900
-   games in three slices with the tally by fate, and compare two runs game for game.
-4. **Validate** with the list in CLAUDE.md, in this order:
-   1. tsc and the build;
-   2. `vite preview` on :4173;
-   3. the playtest;
-   4. savecompat;
-   5. `npm run check` (about two minutes);
-   6. `npm run check:browser` with `STEL_FONTS`, about 45 minutes for the 61, with nothing heavy
-      beside it.
+3. Recreate DEV-NOTES' helpers in the scratchpad:
+   - serve the build for one command;
+   - 900 games in three slices, with the tally by fate;
+   - compare two runs game for game.
 
-   For `main`, use a `git worktree` of `origin/main` with `node_modules` symlinked, served on
-   :4174.
-5. **A rules change:** run 300 and 900 games against the previous rules (a worktree of the old
-   commit) and compare game for game. A display-only change must leave all of them identical.
-6. **Go live:**
-   - the new version: push the work branch, then `git push origin claude/epic-wozniak-lyhulf:next`;
-   - `main`: a PR, merged with a merge commit (never squash or rebase: the notes cite commit IDs);
-   - then check that the Pages run succeeded, and that each address serves the `index-*.js` of its
-     build.
-7. **Write it down:** a CHANGELOG entry with the balance figures; DEV-NOTES (systems, checks, a
-   balance row); SESSION-NOTES (the decision in the player's words, and "Picking up"); this file;
-   CLAUDE.md's PR list.
+   The harness also splits in four: four
+   `npx tsx tools/sim.ts 75 standard competent --from=N` (N = 0, 75, 150, 225), run at once, give
+   300 games in about 2.5 minutes.
+4. **Validate** with the list in CLAUDE.md, in this order:
+   1. tsc and the build.
+   2. `vite preview` on :4173, in the background with the longest limit (two hours). Start it
+      afresh before a full browser run.
+   3. The playtest.
+   4. savecompat.
+   5. `npm run check`.
+   6. The browser checks, with `STEL_FONTS`, as "Which browser checks" says (§0):
+      - three lanes (`--lanes=3`);
+      - nothing else running beside them.
+5. **A rules change:** run the harness against the previous rules and compare game for game.
+   - The previous rules: a `git worktree` of the old commit, with `node_modules` symlinked.
+   - Runs: 300 standard, 300 at `--diff=harsh`, and 300 with `--interregnum`.
+   - A display-only change must leave every game identical.
+6. **Go live** as §0 says. PRs and merges go through the GitHub MCP tools, or `gh` where the
+   container has it.
+7. **Films and music:**
+   - `node tools/film-render.mjs <film> <out.mp4> --size=1920x1080 --fps=30 --jpeg --ffmpeg=<path>`
+     renders a film.
+     - It runs on a fixed port (5179), so render one film at a time.
+     - ffmpeg comes from `pip install imageio-ffmpeg`.
+     - Give an absolute output path in the scratchpad.
+   - `node tools/cue-levels.mjs [film…] [--stems]` measures each cue's peak and loudness.
+   - Send the player a preview before shipping.
+8. **Write it down:**
+   - a CHANGELOG entry with the balance figures;
+   - DEV-NOTES: the systems, the checks, a balance row;
+   - SESSION-NOTES: the decision in the player's words, and "Picking up";
+   - this file;
+   - CLAUDE.md's PR list.
 
 ## 8. Traps that cost time
 
 The full list is in DEV-NOTES, "Gotchas".
 
 - **A container restart stops every background run and server without a word.** The working
-  trees survive, the scratchpad too. Check `git status`, the worktrees and the servers first, and
-  run again whatever stopped short. It happened on 15 Oct, mid-suite.
-- **Long runs need a long background limit** (`timeout` 7200000): the browser suite and the
-  preview servers it needs. A background command stops at 30 minutes by default.
-- **`pgrep -f` and `pkill -f` match their own shell.** Find a PID with a pattern that cannot
-  match itself (`ps -eo pid,args | grep "[v]ite.js preview"`), or by its port.
-- **The stop hook** won't let a turn end with uncommitted, untracked or unpushed changes. Keep
-  scratch files outside the clone (a worktree's `node_modules` symlink shows as untracked there:
-  add files by name).
-- **`main` and `next` share one Pages workflow, which builds both.** A push to either rebuilds
-  both addresses: keep the two copies of `.github/workflows/pages.yml` the same. `gh-pages` is the
-  workflow's own deploy branch, and `claude/lucid-newton-30cbpk` is frozen at `fc6c59a`: never push
-  to either.
-- **A fix for `main` lands on the work branch as a merge with `-s ours`** once its PR is in,
-  after checking that `main`'s side holds nothing the work branch lacks. Then the switch keeps
-  merging cleanly.
-- **`main` has fewer test hooks than the new version** (`window.__stel`). A check ported to
-  `main` may need one added there; its `audio()` was added on 15 Oct.
-- **A check about the order of timers, under load:** waits between its steps stretch when the
-  page is busy, and it passes on the very bug it was written for. Make the steps that must come
+  trees survive, and the scratchpad too. Check `git status`, the worktrees and the servers first,
+  and run again whatever stopped short. It happened on 15 Oct, mid-suite.
+- **A background command stops at 30 minutes by default, and two hours at most** (`timeout`
+  7200000).
+  - The preview server stopped at its two hours mid-suite twice on 1 Nov. Every check after that
+    failed at once ("no server").
+  - Start it afresh before a full browser run.
+- **Nothing else beside the lanes.** An extra browser starves them: screenshots time out, and
+  checks fail that pass alone. Before calling a failure real, rerun that check alone.
+- **The software renderer (SwiftShader):**
+  - It can fall below 10 frames a second under load. Checks poll until things settle; they never
+    trust one fixed wait.
+  - It draws the nebula cloud at Low (`cloudQuality`, `src/render/nebulaCloud.ts`).
+  - A shot of a system must wait for `engine.view === 'system'` and for the camera to settle, or
+    it catches the zoom on its way in.
+- **`pgrep -f` and `pkill -f` match their own shell.** Find a PID with a pattern that cannot match
+  itself (`ps -eo pid,args | grep "[v]ite.js preview"`), or by its port.
+- **The stop hook** won't let a turn end with uncommitted, untracked or unpushed changes.
+  - Keep scratch files outside the clone.
+  - A tool given a relative output path writes into the clone: give it a scratchpad path.
+  - A worktree's `node_modules` symlink shows as untracked there: add files by name.
+- **`main` and `next` share one Pages workflow, which builds both.**
+  - A push to either rebuilds both addresses. It cancels a run in progress, so wait for one to
+    finish before pushing the other.
+  - `gh-pages` is the workflow's own deploy branch, and `claude/lucid-newton-30cbpk` is frozen at
+    `fc6c59a`: never push to either.
+  - Never edit `public/archive/`.
+- **Unit checks have no Node types.** A check that reads a file uses `process.getBuiltinModule`,
+  declared as `tools/savecompat.ts` does (see `unit/flare-turns`).
+- **A check about the order of timers, under load:** waits between its steps stretch when the page
+  is busy, and it then passes on the very bug it was written for. Make the steps that must come
   before a timer synchronous, then wait (DEV-NOTES).
-- **The GitHub connector can drop mid-session.** `gh api` through the session's proxy does the
-  same work: PRs, merges, workflow runs.
+- **The GitHub connector can drop mid-session,** and usually comes back within a minute. If it
+  stays away, `gh` (where the container has it) does the same work through the session's proxy:
+  PRs, merges, workflow runs.
 - **`protonFate` is `'decays'`, not `'decay'`.** `tsx` runs a check without type-checking it, so
   run `tsc` too.
-- **Worlds in a late save are often rogue already:** a check that means a bound world sets
-  `rogue: false` first.
+- **Worlds in a late save are often rogue already.** A check that means a bound world sets `rogue:
+  false` first.
 - **An `rm` of a path built from variables** is blocked by a safety check: write `"${VAR:?}"/…`.
-- **The software renderer can fall below 10 frames a second under load.** Checks poll until things
-  settle; they never trust one fixed wait.
 - **Layout checks need the real fonts** (`STEL_FONTS`).
-- **Manual and Codex strings are single-quoted:** write ’ in prose, as a straight `'` breaks the
+- **Manual and Codex strings are single-quoted.** Write ’ in prose: a straight `'` breaks the
   build.
 - **A seeded browser check rides its game's course,** so a rules change can move it. Set the
   situation up rather than hope for it.
-- **The player's own saves are not in the repository** and must not be committed. Ask them to
-  upload one if you need it.
+- **The player's own saves are not in the repository.** Ask them to upload one if you need it.
+  Commit one only as a check's fixture, as was done with the turn-52 flare save (1 Nov).

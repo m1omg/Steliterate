@@ -85,25 +85,9 @@ Oct, with today's storage keys, so the games saved before the switch play on the
 them.
 
 A new session, or the player's other account (since 9 Oct), starts with `HANDOVER.md` (rewritten
-16 Oct):
-where things stand, what to read in which order, the player, the open threads and the traps.
-**Its section 0 (19 and 20 Oct) comes first.** It covers what came after: the batches "the game
-keeps its word", "falling worlds", the list's items 7, 1 and 6, and items 3 to 5 (the pace), live
-in both versions since 20 Oct, which completes the approved plan,
-`docs/plans/2026-10-19-falling-worlds-and-the-list.md` (the player's list of 16 Oct); then the
-combat system (20 Oct, the new version only, `docs/plans/2026-10-20-combat.md`), and the survey
-reveal as a flight of the camera, as in Endless Space 2 (21 Oct, display only; in today's game too
-since PR m1omg/Steliterate#39); then four fixes from the player's screenshots and a rush that
-finishes at once (24 Oct, both versions, PR m1omg/Steliterate#40); then warships' list and attack
-(25 Oct, both versions, PR m1omg/Steliterate#41); then star types, helium stars listed, two Wells
-of one name and a brief star's light (26 Oct, both versions, PR m1omg/Steliterate#42); then Our
-settlements sorted by a yield and Star types by measures (26 Oct, both versions, PR
-m1omg/Steliterate#43); then storage notes, brief stars caught, star states, a combat report and
-scrollable forecasts (26 Oct, both versions, PR m1omg/Steliterate#44); then each building's real
-effect on its chip's tip (26 Oct, both versions, PR m1omg/Steliterate#45) and a film for a game's
-first supernova (the new version only: today's game has no films); then the switch (27 Oct, PR
-m1omg/Steliterate#46): the new version at the main address, today's game frozen at
-`/archive/2026-10-27/`.
+16 Oct, refreshed 2 Nov at the player's word: "update the HANDOVER.md for another handover"):
+where things stand, the first steps, what to read in which order, the player, what waits on them
+and the traps. **Its section 0 (2 Nov) comes first;** its section 3 lists every batch since 16 Oct.
 Then "Picking up" in `docs/SESSION-NOTES.md`: what is live, the first steps, the last
 validation's numbers, and the open threads in full.
 

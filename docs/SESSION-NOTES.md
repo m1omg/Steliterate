@@ -183,6 +183,11 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     like for a fantasy game": asked, light drums for the Interregnum only, "Interregnum wistful,
     Dusk dark". Both rewritten in synthwave (Aeolian, the analog lead, the sequencer, a gated
     snare in the Interregnum's middle); MP3 previews were sent to them.
+  - Then (2 Nov): "Give me all the videos rendered after pls": the Interregnum's and the Dusk's
+    films, with their new music, rendered at 1080p and sent as MP4s; the other 16 offered (about 10
+    minutes each), no answer yet. Then "update the HANDOVER.md for another handover": its section 0
+    rewritten as where things stand on 2 Nov, the baselines, what waits on the player and the traps
+    brought up to date, and the list of batches since 16 Oct kept as its section 3.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",
