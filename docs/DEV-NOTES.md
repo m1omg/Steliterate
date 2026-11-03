@@ -172,6 +172,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   45 minutes now, loses its server partway and every check after that fails at once ("no server").
   Stop it with `pkill -f "vite prev[i]ew"`: the bracket keeps the pattern from matching the shell
   running the command, which a plain `pkill -f "vite preview"` kills along with it.
+- **A tool that starts Vite through `npx` leaves it running** (3 Nov): killing `npx` does not kill
+  its child, which keeps the port (`--strictPort` then fails, or a later tool talks to the old
+  server). `tools/film-render.mjs` and `tools/cue-levels.mjs` start Vite itself
+  (`process.execPath` with `node_modules/vite/bin/vite.js`), so `server.kill()` stops it; a
+  scratch tool should do the same. Look with `ps -eo pid,args | grep "[v]ite --port"`.
 - **The container is ephemeral.** Anything installed with pip is gone next session: numpy,
   scipy, matplotlib, imageio-ffmpeg (ffmpeg binary at
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).

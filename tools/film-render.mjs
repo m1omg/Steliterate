@@ -36,7 +36,8 @@ const homek = opt('homek', '');
 const homelit = process.argv.includes('--homelit');
 const port = 5179;
 
-const server = spawn('npx', ['vite', '--port', String(port), '--strictPort'], { stdio: 'ignore' });
+// (Vite itself, not through npx: killing npx left its Vite running, holding the port, 3 Nov)
+const server = spawn(process.execPath, [new URL('../node_modules/vite/bin/vite.js', import.meta.url).pathname, '--port', String(port), '--strictPort'], { stdio: 'ignore' });
 const stop = () => server.kill();
 process.on('exit', stop);
 try {

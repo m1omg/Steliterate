@@ -568,6 +568,8 @@ The full list is in DEV-NOTES, "Gotchas".
   - It draws the nebula cloud at Low (`cloudQuality`, `src/render/nebulaCloud.ts`).
   - A shot of a system must wait for `engine.view === 'system'` and for the camera to settle, or
     it catches the zoom on its way in.
+- **A tool that starts Vite through `npx` leaves it running** after it is killed, holding its port:
+  the render and levels tools start Vite itself since 3 Nov; do the same in a scratch tool (DEV-NOTES).
 - **`pgrep -f` and `pkill -f` match their own shell.** Find a PID with a pattern that cannot match
   itself (`ps -eo pid,args | grep "[v]ite.js preview"`), or by its port.
 - **The stop hook** won't let a turn end with uncommitted, untracked or unpushed changes.
