@@ -399,6 +399,8 @@ export interface WorldLight {
   air: RGB;
   lights: RGB;
   airThick?: number;
+  /** How much open sea glints in its star's light (default 1; a frozen sea does not: 0). */
+  glint?: number;
   heat?: number;
 }
 
@@ -438,7 +440,7 @@ export class World {
       // the ground's colour under its cloud; the towns' light through the cloud; the glint on open sea
       const cl = cloud[m] / 255;
       const lit = (light[m] / 255) * (1 - cl * 0.7);
-      const gl = sea[m] ? (1 - cl) * 1.4 : 0;
+      const gl = sea[m] ? (1 - cl) * 1.4 * (o.glint ?? 1) : 0;
       for (let c = 0; c < 3; c++) {
         const a = albedo[m * 3 + c] / 255;
         tex[m * 9 + c] = 255 * (a + (white[c] - a) * cl) * o.sun[c];

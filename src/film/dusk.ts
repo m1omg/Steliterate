@@ -3,7 +3,7 @@ import { circlePath, glow, ink, ss, type Ctx, type Pt } from './draw';
 import { camera, landscape, layer, put, reticle, ship, skyRatio } from './kit';
 import type { FilmDef } from './films';
 import { Population, msL, msT } from './hr';
-import { Lazy, World, dotSprite, kelvin, paintElliptical, paintSky, paintStar, paintWorldMap, tint, type RGB } from './paint';
+import { Lazy, World, dotSprite, heatOf, kelvin, paintElliptical, paintSky, paintStar, paintWorldMap, tint, type RGB } from './paint';
 import { ease, note, reel2, timecode, type Moment, type Scene } from './reel';
 
 // The Long Dusk (Age I), second cut, in eleven shots: the embers of the sky, a few going out;
@@ -13,6 +13,15 @@ import { ease, note, reel2, timecode, type Moment, type Scene } from './reel';
 // left; one of them, and a flare off its limb up close; across to the world that circles it,
 // locked to it, its night side's lights, its air streaming off in the star's wind; a ship
 // leaving; the title. The words are the age's own introduction.
+//
+// In a game begun in the Twilight Interregnum (3 Nov, the player: "it shows you having a home world
+// around the red dwarf, even though at that time, if you started at 1 trillion years, your home
+// world would be long gone. You would be living on colony worlds"; FilmArgs.begun), its own cut, on
+// the same beats: the galaxy marks our worlds, the curve where we began; shot 6 is the star we were
+// born under, a white dwarf now, and our first world beside it, the Interregnum film's own world
+// frozen over, both seen by their faint heat; then one of the last red dwarfs and its flare in one
+// shot; across to a world we settled, another than the first, with a colony's few lights. The words
+// are that age's introduction for such a game (ageIntro).
 
 const INK = '#e6dccb';
 const ACC = '#f28a4f';
@@ -58,29 +67,97 @@ export const DUSK2: FilmDef = reel2({ id: 'dusk', name: 'The Long Dusk', bpm: 90
   const star = paintStar(dpx(R4 * 2), starLook);
   const star2 = paintStar(dpx(R4 * 2), { ...starLook, phase: 1 });
   const R5 = S * (land ? 0.27 : 0.3);
+  // (a game begun in the Twilight Interregnum: its own cut)
+  const IR = args.begun === 'interregnum';
   const lights: [number, number][] = [];
   {
-    const rng = new Rng(105);
-    // the settlements, along the cold edge of the day, just inside the night
-    for (let i = 0; i < 14; i++) lights.push([-(1.62 + rng.range(0, 0.45)), rng.range(-1.05, 1.05)]);
+    const rng = new Rng(IR ? 109 : 105);
+    // the settlements, along the cold edge of the day, just inside the night (a colony's few, in the
+    // Interregnum's cut)
+    for (let i = 0; i < (IR ? 6 : 14); i++) lights.push([-(1.62 + rng.range(0, 0.45)), rng.range(-1.05, 1.05)]);
   }
-  const map = paintWorldMap(Math.round(512 * (0.6 + 0.4 * k)), {
-    seed: 106,
-    sea: 0.46,
-    ice: 0.58,
+  const map = paintWorldMap(
+    Math.round(512 * (0.6 + 0.4 * k)),
+    IR
+      ? {
+          // a world we settled: drier and icier than the first, its towns few
+          seed: 108,
+          sea: 0.3,
+          ice: 0.5,
+          locked: true,
+          cloud: 0.22,
+          lights,
+          palette: {
+            deep: [0.03, 0.05, 0.08],
+            shallow: [0.08, 0.15, 0.18],
+            low: [0.3, 0.22, 0.17],
+            high: [0.55, 0.45, 0.37],
+            ice: [0.8, 0.83, 0.87],
+            cloud: [0.85, 0.82, 0.78],
+            air: [1, 0.6, 0.42],
+            lights: [1, 0.85, 0.62],
+          },
+        }
+      : {
+          seed: 106,
+          sea: 0.46,
+          ice: 0.58,
+          locked: true,
+          cloud: 0.3,
+          lights,
+          palette: {
+            deep: [0.02, 0.05, 0.09],
+            shallow: [0.07, 0.18, 0.23],
+            low: [0.25, 0.21, 0.18],
+            high: [0.52, 0.46, 0.4],
+            ice: [0.8, 0.84, 0.88],
+            cloud: [0.85, 0.82, 0.78],
+            air: [1, 0.6, 0.42],
+            lights: [1, 0.85, 0.62],
+          },
+        },
+  );
+  // (the Interregnum's cut) the star we were born under, a white dwarf now, and our first world, the
+  // Interregnum film's own (its map's seed, 213), frozen over: both too cold to see, painted as the
+  // instruments see them, by their faint heat (as the Black Hole Age's films paint what is cold)
+  const RF = S * (land ? 0.24 : 0.27);
+  const RW = S * 0.035;
+  const firstMap = paintWorldMap(Math.round(512 * (0.6 + 0.4 * k)), {
+    seed: 213,
+    sea: 0.6,
+    ice: 0.74,
     locked: true,
-    cloud: 0.3,
-    lights,
+    cloud: 0,
+    // (its seas frozen: the ice a little brighter than the rock, all of it cold)
     palette: {
-      deep: [0.02, 0.05, 0.09],
-      shallow: [0.07, 0.18, 0.23],
-      low: [0.25, 0.21, 0.18],
-      high: [0.52, 0.46, 0.4],
-      ice: [0.8, 0.84, 0.88],
-      cloud: [0.85, 0.82, 0.78],
-      air: [1, 0.6, 0.42],
-      lights: [1, 0.85, 0.62],
+      deep: [0.4, 0.42, 0.46],
+      shallow: [0.44, 0.46, 0.5],
+      low: [0.24, 0.23, 0.25],
+      high: [0.34, 0.33, 0.35],
+      ice: [0.48, 0.5, 0.54],
+      cloud: [0, 0, 0],
+      air: [0, 0, 0],
+      lights: [0, 0, 0],
     },
+  });
+  const firstWorld = new Lazy(function* () {
+    const mp = firstMap.get();
+    yield;
+    const wd = new World(dpx(RF * 2), mp, { light: [-0.25, 0.3, 1], sun: [0.85, 0.82, 0.92], tilt: 0.3, air: [0, 0, 0], lights: [0, 0, 0], airThick: 0, heat: 1.5, glint: 0 });
+    yield;
+    wd.paint(-Math.atan2(0.95, 0.1));
+    return wd;
+  });
+  const dwarfPaint = paintStar(dpx(RW * 2 * 2), { T: 5200, seed: 110, limb: [0.55, 0.3], cells: 18, grain: 0.16 });
+  const dwarfDisc = new Lazy(function* () {
+    const d = dwarfPaint.get();
+    yield;
+    return heatOf(d, 1.05);
+  });
+  // where a settlement of ours is still on the first world: its few lights, on the disc
+  const homeLights = Array.from({ length: args.homeLit ? 4 : 0 }, (_, i) => {
+    const r = new Rng(111 + i);
+    return { a: r.range(2.2, 3.6), d: r.range(0.55, 0.85) };
   });
   const LIGHT: [number, number, number] = [0.96, 0.2, 0.2];
   // (painted at the close-up's size, so the lights stay sharp when the camera comes in)
@@ -174,7 +251,7 @@ export const DUSK2: FilmDef = reel2({ id: 'dusk', name: 'The Long Dusk', bpm: 90
       const z = 1.55 - 0.55 * ease(ss(0, 0.85, m.p));
       return [
         note('g-heart', 'THE HEART', (gx + S * 0.055 * z) / w, (gy - S * 0.035 * z) / h, ss(13, 14, m.b), { tone: 'accent' }),
-        note('g-home', 'HOME', (gx + (home.x - gx) * z + S * 0.03 * z) / w, (gy + (home.y - gy) * z) / h, ss(14.5, 15.5, m.b), { tone: 'ink' }),
+        note('g-home', IR ? 'OUR WORLDS' : 'HOME', (gx + (home.x - gx) * z + S * 0.03 * z) / w, (gy + (home.y - gy) * z) / h, ss(14.5, 15.5, m.b), { tone: 'ink' }),
       ];
     },
   };
@@ -238,6 +315,13 @@ export const DUSK2: FilmDef = reel2({ id: 'dusk', name: 'The Long Dusk', bpm: 90
       c.fill();
       c.restore();
       ink(c, curve, drawn, { width: S * 0.0026, color: ACC, seed: 21, alpha: 0.95 * show });
+      // (the Interregnum's cut) where we began, at 10¹² years
+      const began = IR ? ss(20.6, 21.4, m.b) : 0;
+      if (began > 0) {
+        const x = etaX(12);
+        ink(c, [[x, box.y1], [x, box.y0 + (box.y1 - box.y0) * 0.45]], began, { width: S * 0.0016, color: INK, seed: 23, alpha: 0.55 });
+        glow(c, x, box.y1, S * 0.016, '#f2b65a', 0.6 * began);
+      }
       const at = ss(21.5, 22.3, m.b);
       if (at > 0) {
         const x = etaX(now);
@@ -250,6 +334,7 @@ export const DUSK2: FilmDef = reel2({ id: 'dusk', name: 'The Long Dusk', bpm: 90
         note('sfr', 'STARS BORN · PER YEAR', box.x0 / w, (box.y0 - S * 0.03) / h, ss(17.5, 18.5, m.b), { tone: 'dim' }),
         note('sfr-peak', 'THE GALAXY’S YOUTH', (etaX(9.55) + S * 0.02) / w, (box.y0 + S * 0.02) / h, ss(19.5, 20.5, m.b), { tone: 'ink' }),
         note('now', 'NOW', (etaX(now) - S * 0.012) / w, (box.y0 + (box.y1 - box.y0) * 0.3) / h, ss(22, 22.8, m.b), { tone: 'accent', align: 'r' }),
+        ...(IR ? [note('began', 'WE BEGAN', (etaX(12) - S * 0.012) / w, (box.y0 + (box.y1 - box.y0) * 0.45) / h, ss(20.8, 21.6, m.b), { tone: 'ink', align: 'r' })] : []),
       ];
     },
   };
@@ -340,7 +425,7 @@ export const DUSK2: FilmDef = reel2({ id: 'dusk', name: 'The Long Dusk', bpm: 90
   // ------------------------------------------------------------ 6-8. one of them, a flare up close, across to its world
   const sx = land ? w * 0.56 : w * 0.5;
   const sy = land ? h * 0.5 : h * 0.44;
-  const flare = { a: -0.72, at: 42 };
+  const flare = { a: -0.72, at: IR ? 43.8 : 42 };
   const loops = [0.5, 0.75, 1].map((s, i) => {
     const a0 = flare.a - 0.1 * s - 0.03;
     const a1 = flare.a + 0.1 * s + 0.03;
@@ -439,6 +524,85 @@ export const DUSK2: FilmDef = reel2({ id: 'dusk', name: 'The Long Dusk', bpm: 90
       return [
         note('fl', 'FLARE', 0.5 + (S * 0.16) / w, 0.3, ss(42.5, 43.2, m.b) * (1 - ss(44.8, 45.8, m.b)), { tone: 'accent', size: 'm' }),
         note('fl-b', 'THE STAR’S LIGHT DOUBLED FOR AN HOUR', 0.5 + (S * 0.16) / w, 0.3 + (S * 0.03) / h, ss(43, 43.8, m.b) * (1 - ss(44.8, 45.8, m.b)), { tone: 'dim' }),
+      ];
+    },
+  };
+
+  // ------------------------------------------------------------ 6-7 (the Interregnum's cut): where we began; one of the last red dwarfs
+  // the star we were born under, small and far, and our first world filling the frame beside it
+  const fw = { x: land ? w * 0.6 : w * 0.5, y: land ? h * 0.53 : h * 0.56 };
+  const wdAt = { x: land ? w * 0.24 : w * 0.3, y: land ? h * 0.3 : h * 0.2 };
+  const firstHome: Scene = {
+    from: 36,
+    to: 41.5,
+    enter: 'zoom',
+    fade: 1.5,
+    assets: [firstMap, firstWorld, dwarfPaint, dwarfDisc],
+    draw(c, m) {
+      layer(c, farSky.get(), w, h, M, -w * 0.01 * m.p, 0, 1.2, 0.3);
+      const z = 1 + 0.05 * ease(m.p);
+      camera(c, w * 0.5, h * 0.5, z, 0, 0, () => {
+        // the white dwarf: a point of faint heat, violet
+        glow(c, wdAt.x, wdAt.y, RW * 5, '#7a62b8', 0.18);
+        c.drawImage(dwarfDisc.get(), wdAt.x - RW, wdAt.y - RW, RW * 2, RW * 2);
+        // our first world, by its heat
+        glow(c, fw.x, fw.y, RF * 1.25, '#5a3f8a', 0.1);
+        c.drawImage(firstWorld.get().canvas, fw.x - RF, fw.y - RF, RF * 2, RF * 2);
+        // a settlement of ours still there: its few lights
+        for (const l of homeLights) {
+          const x = fw.x + Math.cos(l.a) * RF * l.d;
+          const y = fw.y + Math.sin(l.a) * RF * l.d;
+          glow(c, x, y, S * 0.012, '#ffb070', 0.5);
+          glow(c, x, y, S * 0.003, '#fff0d8', 0.9);
+        }
+      });
+    },
+    notes(m) {
+      const z = 1 + 0.05 * ease(m.p);
+      const at = (x: number, y: number) => [(w * 0.5 + (x - w * 0.5) * z) / w, (h * 0.5 + (y - h * 0.5) * z) / h] as const;
+      const [dx, dy] = at(wdAt.x + RW * 2.4, wdAt.y - RW * 0.6);
+      const [wx2, wy2] = at(fw.x + RF * (land ? 1.08 : 0.2), fw.y + RF * (land ? 0.55 : 1.12));
+      return [
+        note('f-star', 'OUR FIRST STAR · A WHITE DWARF', dx, dy, ss(36.8, 37.8, m.b), { tone: 'accent', size: 'm' }),
+        note('f-heat', `${args.homeK ? `${Math.round(args.homeK)} K` : 'COLD'} · SEEN BY ITS HEAT`, dx, dy + (S * 0.035) / h, ss(37.3, 38.3, m.b) * 0.9, { tone: 'dim' }),
+        note('f-world', 'OUR FIRST WORLD · FROZEN', wx2, wy2, ss(38.3, 39.3, m.b), { tone: 'ink', align: land ? 'l' : 'c' }),
+        ...(homeLights.length ? [note('f-lit', 'SOME OF US STILL THERE', wx2, wy2 + (S * 0.033) / h, ss(39.2, 40.2, m.b) * 0.9, { tone: 'dim', align: land ? 'l' : 'c' })] : []),
+      ];
+    },
+  };
+  // one of the last red dwarfs, whole, then in on its flare (the first cut's shots 6 and 7 in one)
+  const starThenFlare: Scene = {
+    from: 41,
+    to: 46,
+    enter: 'zoom',
+    fade: 1,
+    assets: [star, star2],
+    draw(c, m) {
+      layer(c, farSky.get(), w, h, M, w * 0.02 * m.p, 0, 1.2, 0.45);
+      const R = R4 * 1.04;
+      const [fx, fy] = flarePoint(R, sx, sy);
+      const u = ease(ss(43.2, 45.4, m.b));
+      camera(c, sx + (fx - sx) * u, sy + (fy - sy) * u, 1 + 1.6 * u, (w * 0.5 - fx) * u, (h * 0.55 - fy) * u, () => drawStar(c, m, sx, sy, R));
+      const lab = 1 - ss(42.9, 43.6, m.b);
+      if (lab > 0) {
+        ink(c, leader(R), ss(41.4, 42.2, m.b), { width: S * 0.0016, color: INK, seed: 45, alpha: 0.7 * lab });
+        const g = gauge(R);
+        ink(c, circlePath(g.x, g.y, g.r, 80, 46, -Math.PI / 2, Math.PI * 1.5), ss(41.8, 42.6, m.b), { width: S * 0.0018, color: INK, seed: 46, alpha: 0.3 * lab });
+        ink(c, circlePath(g.x, g.y, g.r, 30, 47, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.08), ss(42, 42.8, m.b), { width: S * 0.005, color: ACC, seed: 47, alpha: 0.95 * lab });
+      }
+    },
+    notes(m) {
+      const R = R4 * 1.04;
+      const end = leader(R)[2];
+      const g = gauge(R);
+      const lab = 1 - ss(42.9, 43.6, m.b);
+      const inst = ss(41.8, 42.6, m.b) * lab;
+      const fl = ss(44.4, 45, m.b) * (1 - ss(45.6, 46, m.b));
+      return [
+        note('st-a', 'RED DWARF · BORN FROM THE LAST GAS', (end[0] - S * 0.008) / w, (end[1] - S * 0.022) / h, inst, { align: 'r', tone: 'accent', size: 'm' }),
+        note('st-b', '0.09 M☉ · 2,800 K', (end[0] - S * 0.008) / w, (end[1] + S * 0.016) / h, inst * 0.9, { align: 'r' }),
+        note('st-c', 'HYDROGEN LEFT · 8%', (g.x + S * 0.065) / w, g.y / h, ss(42.2, 42.9, m.b) * lab, { tone: 'dim' }),
+        note('fl', 'FLARE', 0.5 + (S * 0.16) / w, 0.3, fl, { tone: 'accent', size: 'm' }),
       ];
     },
   };
@@ -557,6 +721,7 @@ export const DUSK2: FilmDef = reel2({ id: 'dusk', name: 'The Long Dusk', bpm: 90
         note('w-day', 'DAY', (wx + R * 0.62) / w, (wy - R * 1.04) / h, ss(51.5, 52.5, m.b) * 0.9, { tone: 'dim', align: 'c' }),
         note('w-night', 'NIGHT', (wx - R * 0.66) / w, (wy - R * 1.04) / h, ss(52, 53, m.b) * 0.9, { tone: 'dim', align: 'c' }),
         note('w-lock', 'ONE FACE TO ITS STAR', (wx + R * 1.12) / w, (wy + R * 0.5) / h, ss(53, 54, m.b), { tone: 'ink' }),
+        ...(IR ? [note('w-ours', 'A WORLD WE SETTLED', (wx + R * 1.12) / w, (wy - R * 0.55) / h, ss(50.6, 51.6, m.b), { tone: 'accent', size: 'm' })] : []),
       ];
     },
   };
@@ -658,14 +823,24 @@ export const DUSK2: FilmDef = reel2({ id: 'dusk', name: 'The Long Dusk', bpm: 90
     sub: 'Age I · the Late Stelliferous Era',
     titleAt: 66,
     eta: [Math.log10(9.0e13), 13.99],
-    narration: [
-      { from: 2.5, to: 9.5, text: 'Ninety trillion years after the first light,' },
-      { from: 11, to: 22.5, text: 'the galaxy has run out of gas to make new stars.' },
-      { from: 25, to: 35.5, text: 'Only the smallest red dwarfs still burn, and they are near the end of their fuel.' },
-      { from: 37.5, to: 48, text: 'Your world circles one of them.' },
-      { from: 50, to: 60.5, text: 'Its core is cooling and its magnetic field is failing, and the star’s wind has begun to strip the air away.' },
-    ],
-    scenes: [skyWide, intoBand, galaxyShot, graph, hrShot, starWide, flareClose, across, worldWide, lightsClose, leaving],
+    narration: IR
+      ? // (the age's introduction for a game begun in the Twilight Interregnum, ageIntro, in the film's voice)
+        [
+          { from: 2.5, to: 9.5, text: 'Ninety trillion years after the first light,' },
+          { from: 11, to: 22.5, text: 'the galaxy’s gas is spent: no star will form from gas again.' },
+          { from: 25, to: 35.5, text: 'The stars you were born under are dead. What still shines was born last, from the last of the gas.' },
+          { from: 36.3, to: 41.6, text: 'Your first star is a white dwarf now, and your first world is ice.' },
+          { from: 42.2, to: 50, text: 'Your people live on the worlds of the last red dwarfs,' },
+          { from: 51, to: 60.5, text: 'and they too are near the end of their fuel. Their worlds are already old.' },
+        ]
+      : [
+          { from: 2.5, to: 9.5, text: 'Ninety trillion years after the first light,' },
+          { from: 11, to: 22.5, text: 'the galaxy has run out of gas to make new stars.' },
+          { from: 25, to: 35.5, text: 'Only the smallest red dwarfs still burn, and they are near the end of their fuel.' },
+          { from: 37.5, to: 48, text: 'Your world circles one of them.' },
+          { from: 50, to: 60.5, text: 'Its core is cooling and its magnetic field is failing, and the star’s wind has begun to strip the air away.' },
+        ],
+    scenes: IR ? [skyWide, intoBand, galaxyShot, graph, hrShot, firstHome, starThenFlare, across, worldWide, lightsClose, leaving] : [skyWide, intoBand, galaxyShot, graph, hrShot, starWide, flareClose, across, worldWide, lightsClose, leaving],
     card(c, m) {
       layer(c, farSky.get(), w, h, M, 0, 0, 1.0 + 0.04 * m.p, 0.5);
       glow(c, w * 0.5, h * 0.5, S * 0.6, '#ff4a26', 0.08 * (1 - m.p));

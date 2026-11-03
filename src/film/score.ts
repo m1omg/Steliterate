@@ -31,9 +31,14 @@ export type Voice =
   | 'seq' // an analog sequencer's note: a saw through a resonant filter snapping shut
   | 'bell' // a struck bell, the accent on a cut
   | 'drone' // the root and its fifth, very low, held
+  | 'sbass' // a synth bass: a saw and a sine through a resonant low-pass that snaps shut (the rolling bass)
+  | 'stab' // a brassy chord hit, short: synthwave's accent on a cut
   // percussion and effects
-  | 'kick'
+  | 'kick' // an 80s drum machine's: a sine falling fast, with a click
   | 'snare' // an 80s gated snare: a crack of noise, its room held a moment and then shut
+  | 'hat' // a closed hi-hat: a tick of high noise
+  | 'open' // an open hi-hat: high noise, ringing a moment
+  | 'crash' // a crash cymbal: high noise ringing out, into the room
   | 'tom'
   | 'shaker'
   | 'metal' // a metallic clank (two FM pairs), struck in an uneven pulse
@@ -78,10 +83,15 @@ export const OSCILLATORS: Record<Voice, [number, number]> = {
   bass: [2, 1],
   synth: [3, 2],
   seq: [2, 1],
+  sbass: [2, 1],
+  stab: [2, 1],
   bell: [4, 3],
   drone: [2, 2],
   kick: [1, 1],
   snare: [1, 1],
+  hat: [0, 0],
+  open: [0, 0],
+  crash: [0, 0],
   tom: [1, 1],
   shaker: [0, 0],
   metal: [4, 2],
@@ -91,7 +101,7 @@ export const OSCILLATORS: Record<Voice, [number, number]> = {
   swell: [0, 0],
   tick: [0, 0],
 };
-export const PER_NOTE: ReadonlySet<Voice> = new Set<Voice>(['pad', 'dark', 'glass', 'choir']);
+export const PER_NOTE: ReadonlySet<Voice> = new Set<Voice>(['pad', 'dark', 'glass', 'choir', 'stab']);
 
 /** How long (seconds) each voice rings on after its note's length. */
 export const TAIL: Record<Voice, number> = {
@@ -107,10 +117,15 @@ export const TAIL: Record<Voice, number> = {
   bass: 0.7,
   synth: 0.5,
   seq: 0.15,
+  sbass: 0.12,
+  stab: 0.35,
   bell: 2.6,
   drone: 3,
   kick: 0.4,
   snare: 0.3,
+  hat: 0.06,
+  open: 0.32,
+  crash: 2,
   tom: 0.5,
   shaker: 0.1,
   metal: 0.6,
@@ -199,6 +214,33 @@ export interface Arp {
   amp?: number;
 }
 
+/**
+ * A drum machine's part (synthwave, 3 Nov): from a beat to a beat, in bars of four beats from its
+ * start, each drum a pattern of sixteenths ('x' struck, 'o' struck softly, '.' rest), round and round
+ * (sixteen steps a bar; thirty-two, two bars). With a crash on its first beat, a breath of noise
+ * rising into it over `rise` beats, and a fill of toms over its last `fill` beats.
+ */
+export interface Beat {
+  from: number;
+  to: number;
+  kick?: string;
+  snare?: string;
+  hat?: string;
+  open?: string;
+  amp?: number;
+  crash?: boolean;
+  rise?: number;
+  fill?: number;
+}
+
+/** Chords on the bar (synthwave, 3 Nov): from a beat to a beat, a new chord every `every` beats, through `chords` (degrees of the mode) round and round. */
+export interface Prog {
+  from: number;
+  to: number;
+  every: number;
+  chords: number[];
+}
+
 /** A film's score, before it is composed. */
 export interface Score {
   bpm: number;
@@ -222,8 +264,20 @@ export interface Score {
   arps?: Arp[];
   bass?: boolean;
   drone?: boolean;
-  /** the accent on each cut: a bell (default), or the harp */
-  accent?: 'bell' | 'harp';
+  /** the accent on each cut: a bell (default), the harp, or a stab of the chord (and a crash under the title) */
+  accent?: 'bell' | 'harp' | 'stab';
+  /** chords on the bar, in place of each scene's own chord where they run (pads, bass, arpeggios and stabs follow them) */
+  prog?: Prog[];
+  /** a drum machine */
+  beat?: Beat[];
+  /** how deep each kick dips the pads, the basses and the sequencer, as a sidechain does (0..1; cue.ts) */
+  pump?: number;
+  /** a ping-pong echo on the lead, the arpeggio and the stabs, its time in beats (cue.ts) */
+  echo?: number;
+  /** the reel's tick on each bar (default on; a drum machine's hats take its place) */
+  tick?: boolean;
+  /** how loud the whole cue is (default 1; cue.ts), to hold a dense one to the others' loudness */
+  gain?: number;
   /**
    * a pulse: a voice on a grid of `every` beats, between two beats; with `groups`, struck only at
    * the start of each group of steps (3, 3, 2…: an uneven pulse), the first of a cycle the hardest
@@ -242,6 +296,18 @@ function sceneAt(s: Score, b: number): number {
   let i = 0;
   for (let k = 0; k < s.cuts.length; k++) if (b >= s.cuts[k]) i = k;
   return i;
+}
+
+/** The chord (a degree) chords on the bar give a beat, or null where none run. */
+function progAt(s: Score, b: number): number | null {
+  for (const p of s.prog ?? []) if (b >= p.from - 1e-9 && b < p.to - 1e-9) return p.chords[Math.floor((b - p.from) / p.every + 1e-9) % p.chords.length];
+  return null;
+}
+
+/** The chord under a beat: the title's under the title, the chords on the bar where they run, else its scene's own. */
+export function chordAt(s: Score, b: number): number {
+  if (b >= s.titleAt - 1e-9) return s.title.degree;
+  return progAt(s, b) ?? s.chords[sceneAt(s, b)];
 }
 
 /** A triad on a degree of the mode, as semitones above the tonic (root, third, fifth, root an octave up, third up…). */
@@ -309,23 +375,46 @@ export function compose(s: Score): ScoreEvent[] {
   };
   // the drone, under it all until the title
   if (s.drone) add({ b: 0, v: 'drone', hz: [hzOf(T, -24), hzOf(T, -17)], len: end, amp: 0.55 });
-  s.cuts.forEach((c, i) => {
-    const len = sceneEnd(i) - c;
-    const chord = triad(s, s.chords[i], 3);
-    const d = dyn(i);
-    // the scene's chord, in the tonic's octave, below the melody
-    add({ b: c, v: padAt(c), hz: chord.map((x) => hzOf(T, x)), len, amp: 0.55 * d });
-    // the bass: the chord's root an octave down, struck on the cut and again on each bar after it
-    if (s.bass) {
-      const root = hzOf(T, semis(s.mode, s.chords[i]) - 12);
-      for (let b = c; b < c + len - 0.5; b = Math.floor(b / 4) * 4 + 4) add({ b, v: 'bass', hz: [root], len: Math.min(Math.floor(b / 4) * 4 + 4, c + len) - b, amp: (b === c ? 0.75 : 0.55) * d });
+  // the bass: the chord's root an octave down, struck at `c` and again on each bar after it
+  const bass = (c: number, len: number, degree: number, d: number) => {
+    const root = hzOf(T, semis(s.mode, degree) - 12);
+    for (let b = c; b < c + len - 0.5; b = Math.floor(b / 4) * 4 + 4) add({ b, v: 'bass', hz: [root], len: Math.min(Math.floor(b / 4) * 4 + 4, c + len) - b, amp: (b === c ? 0.75 : 0.55) * d });
+  };
+  if (!s.prog && s.accent !== 'stab')
+    s.cuts.forEach((c, i) => {
+      const len = sceneEnd(i) - c;
+      const chord = triad(s, s.chords[i], 3);
+      const d = dyn(i);
+      // the scene's chord, in the tonic's octave, below the melody
+      add({ b: c, v: padAt(c), hz: chord.map((x) => hzOf(T, x)), len, amp: 0.55 * d });
+      if (s.bass) bass(c, len, s.chords[i], d);
+      // the accent on the cut: a tone of its chord, an octave above it
+      const top = semis(s.mode, s.chords[i] + (i % 2 ? 4 : 2)) + 12;
+      add({ b: c, v: s.accent ?? 'bell', hz: [hzOf(T, top)], len: 2, amp: 0.6 + 0.3 * d, cut: true });
+    });
+  else {
+    // chords on the bar (synthwave): a pad (and the bass) for each stretch under one chord, struck
+    // again at each change of chord or of pad; a cut outside them strikes it only if its chord is new
+    const hard = new Set<number>([end, ...s.pads.map(([from]) => from)]);
+    for (const p of s.prog ?? []) {
+      for (let b = p.from; b < p.to - 1e-9; b += p.every) hard.add(b);
+      hard.add(p.to);
     }
-    // the accent on the cut: a tone of its chord, an octave above it
-    const top = semis(s.mode, s.chords[i] + (i % 2 ? 4 : 2)) + 12;
-    add({ b: c, v: s.accent ?? 'bell', hz: [hzOf(T, top)], len: 2, amp: 0.6 + 0.3 * d, cut: true });
-  });
+    const marks = [...new Set([...hard, ...s.cuts.filter((c) => progAt(s, c) === null)])].filter((b) => b >= 0 && b <= end).sort((a, b) => a - b);
+    let start = marks[0];
+    for (const m of marks.slice(1)) {
+      if (m < end && !hard.has(m) && chordAt(s, m) === chordAt(s, start)) continue;
+      const deg = chordAt(s, start);
+      const d = dyn(sceneAt(s, start));
+      add({ b: start, v: padAt(start), hz: triad(s, deg, 3).map((x) => hzOf(T, x)), len: m - start, amp: 0.55 * d });
+      if (s.bass) bass(start, m - start, deg, d);
+      start = m;
+    }
+    // the accent on each cut: a stab of its chord, an octave up
+    s.cuts.forEach((c, i) => add({ b: c, v: 'stab', hz: triad(s, chordAt(s, c), 3).map((x) => hzOf(T, x + 12)), len: 1, amp: 0.6 + 0.3 * dyn(i), cut: true }));
+  }
   // the reel's tick on each bar, until the title
-  for (let b = 0; b < end; b += 4) add({ b, v: 'tick', hz: [0], len: 0.1, amp: 1 });
+  if (s.tick ?? true) for (let b = 0; b < end; b += 4) add({ b, v: 'tick', hz: [0], len: 0.1, amp: 1 });
   // the melody (an analog lead glides into a note that follows straight on from the one before)
   let prev: MelodyNote | null = null;
   for (const m of melodyNotes(s)) {
@@ -335,12 +424,12 @@ export function compose(s: Score): ScoreEvent[] {
     add({ b: m.b, v, hz: [hzOf(T, m.st)], len: m.len, amp: (m.of.amp ?? 1) * (0.6 + 0.4 * dyn(sceneAt(s, m.b))), melody: true, ...(glide ? { from: glide } : {}) });
     prev = m;
   }
-  // arpeggios through each scene's chord
+  // arpeggios through each scene's chord (or the chords on the bar)
   for (const a of s.arps ?? []) {
     let k = 0;
     for (let b = a.from; b < a.to - 1e-6; b += a.step, k++) {
       const i = sceneAt(s, b);
-      const chord = triad(s, s.chords[i], 6);
+      const chord = triad(s, chordAt(s, b), 6);
       const st = chord[a.pattern[k % a.pattern.length] % chord.length] + 12 * ((a.octave ?? 1) - 1);
       add({ b: Math.round(b * 1000) / 1000, v: a.voice ?? 'harp', hz: [hzOf(T, st)], len: Math.max(0.5, a.step * 2), amp: (a.amp ?? 0.7) * (0.5 + 0.5 * dyn(i)) });
     }
@@ -359,6 +448,23 @@ export function compose(s: Score): ScoreEvent[] {
       add({ b: Math.round(b * 1000) / 1000, v: p.v, hz: [hz], len: 0.5, amp: accent * (p.amp ?? 0.6) * (0.5 + 0.5 * dyn(sceneAt(s, b))) });
     }
   }
+  // a drum machine: each drum's pattern of sixteenths, bar after bar; a fill of toms falling in
+  // pitch over its last beats, a crash on its first beat and a breath of noise rising into it
+  const at3 = (b: number) => Math.round(b * 1000) / 1000;
+  for (const p of s.beat ?? []) {
+    const fillFrom = p.fill ? p.to - p.fill : p.to;
+    for (const [v, pat] of [['kick', p.kick], ['snare', p.snare], ['hat', p.hat], ['open', p.open]] as const) {
+      if (!pat) continue;
+      for (let b = p.from, k = 0; b < fillFrom - 1e-6; b += 0.25, k++) {
+        const ch = pat[k % pat.length];
+        if (ch === 'x' || ch === 'o') add({ b: at3(b), v, hz: [0], len: 0.25, amp: (ch === 'x' ? 1 : 0.55) * (p.amp ?? 0.7) * (0.75 + 0.25 * dyn(sceneAt(s, b))) });
+      }
+    }
+    const n = Math.round((p.to - fillFrom) * 4);
+    for (let k = 0; k < n; k++) add({ b: at3(fillFrom + k * 0.25), v: 'tom', hz: [130 * Math.pow(0.5, k / Math.max(1, n - 1))], len: 0.25, amp: (0.6 + 0.4 * (k / Math.max(1, n - 1))) * (p.amp ?? 0.7) });
+    if (p.crash) add({ b: p.from, v: 'crash', hz: [0], len: 1, amp: p.amp ?? 0.7 });
+    if (p.rise) add({ b: p.from - p.rise, v: 'swell', hz: [0], len: p.rise, amp: 0.6 });
+  }
   // the Supernova's and the Last Horizon's own sounds
   if (s.chirp) {
     const [b0, b1, hz0, hz1] = s.chirp;
@@ -374,7 +480,11 @@ export function compose(s: Score): ScoreEvent[] {
   const tc = titleChord(s);
   add({ b: end, v: padAt(end), hz: tc.map((x) => hzOf(T, x)), len: s.beats - end, amp: 0.7 });
   if (s.bass) add({ b: end, v: 'bass', hz: [hzOf(T, tc[0] - 12)], len: s.beats - end, amp: 0.75 });
-  add({ b: end, v: 'bell', hz: [hzOf(T, tc[0] + 12)], len: 3, amp: 0.8, cut: true });
+  if (s.accent === 'stab') {
+    // (synthwave's: a stab of the title's chord and a crash)
+    add({ b: end, v: 'stab', hz: tc.map((x) => hzOf(T, x + 12)), len: 1, amp: 0.8, cut: true });
+    add({ b: end, v: 'crash', hz: [0], len: 2, amp: 0.8 });
+  } else add({ b: end, v: 'bell', hz: [hzOf(T, tc[0] + 12)], len: 3, amp: 0.8, cut: true });
   return ev.sort((a, b) => a.b - b.b);
 }
 
@@ -397,12 +507,15 @@ const NOTE = {
 } as const;
 
 export const SCORES: Record<FilmId, Score> = {
-  // The Twilight Interregnum: wistful synthwave (2 Nov, the player: the Interregnum's and the Dusk's
-  // music sounded "too unsynthwave, happy etc more like for a fantasy game"; asked, "Interregnum
-  // wistful, Dusk dark", light drums for the Interregnum only). D Aeolian, the minor's i–VI–III–VII,
-  // an analog lead gliding through a melody of long notes and an octave's leap, a sequencer's
-  // sixteenths over a pulsing bass, a kick and a gated snare once the new stars are forming; a
-  // minor ninth under the title. No clank: the warm one.
+  // The Twilight Interregnum: synthwave, warm and nostalgic, as The Midnight's or FM-84's are (3 Nov,
+  // the player: "redo the music once more in a more real synthwave style"; asked, a full beat in both
+  // films, "The Midnight / Kavinsky"; before it, 2 Nov, "Interregnum wistful"). D minor, the classic
+  // loop i–VI–III–VII (Dm B♭ F C), a bar each from beat 6, so that its last bar, C, goes home to the
+  // title's D minor; a hook of two bars and its answer on the analog lead, in its echo; a rolling
+  // octave bass and a sixteenth-note arpeggio, pumping with the kick; the drum machine, a kick and
+  // off-beat hats from the galaxy, the full beat (kick, gated snare on 2 and 4, sixteenth hats) from
+  // the H–R diagram, a breakdown without it over the nebula and the young star, the beat again for our
+  // star, our world and our cities; a stab of the chord on every cut, a crash under the title.
   interregnum: {
     bpm: 90,
     beats: 76,
@@ -410,31 +523,54 @@ export const SCORES: Record<FilmId, Score> = {
     tonic: NOTE.D3,
     mode: 'aeolian',
     cuts: [0, 5.5, 10.5, 17, 23, 30.5, 37, 43.5, 49, 57, 63.5],
-    chords: [0, 5, 2, 6, 0, 5, 3, 6, 0, 5, 6],
+    // (only the intro's chord matters: from beat 6 the chords run on the bar)
+    chords: [0, 0, 0, 5, 2, 6, 0, 5, 3, 6, 0],
     title: { degree: 0, colour: 'add9' },
-    motif: [[0, 0, 1], [1, 4, 1], [2, 7, 2.5], [4.5, 6, 0.5], [5, 4, 1], [6, 5, 2]],
-    motif2: [[0, 2, 1.5], [1.5, 4, 0.5], [2, 5, 2], [4, 4, 1], [5, 3, 1], [6, 2, 2]],
-    melody: [{ at: 2 }, { at: 11.5, octave: 1, voice: 'lead', amp: 0.7 }, { at: 24, alt: true, amp: 0.85 }, { at: 31.5, shift: -2, amp: 0.85 }, { at: 38 }, { at: 50, alt: true }, { at: 58 }, { at: 64.5, shift: 2, drop: 2 }],
+    prog: [{ from: 6, to: 70, every: 4, chords: [0, 5, 2, 6] }],
+    motif: [[0, 4, 1.5], [1.5, 3, 0.5], [2, 2, 1], [3, 4, 1], [4, 7, 2], [6, 6, 0.5], [6.5, 5, 0.5], [7, 4, 1]],
+    motif2: [[0, 4, 1.5], [1.5, 3, 0.5], [2, 2, 1], [3, 0, 1], [4, 1, 2], [6, 0, 0.5], [6.5, -1, 0.5], [7, 0, 1]],
+    melody: [
+      { at: 6, amp: 0.7 },
+      { at: 14, alt: true, amp: 0.7 },
+      { at: 22 },
+      { at: 30, alt: true },
+      { at: 38, octave: 1, voice: 'lead', amp: 0.6 },
+      { at: 46, alt: true, octave: 1, voice: 'lead', amp: 0.6 },
+      { at: 54 },
+      { at: 54, octave: 1, voice: 'lead', amp: 0.35 },
+      { at: 62, alt: true },
+    ],
     lead: 'synth',
-    pads: [[0, 'pad'], [23, 'dark'], [37, 'pad']],
+    pads: [[0, 'pad'], [38, 'glass'], [54, 'pad']],
     arps: [
-      { from: 5.5, to: 23, step: 0.25, pattern: [0, 2, 3, 4, 3, 2, 4, 1], voice: 'seq', octave: 2, amp: 0.3 },
-      { from: 23, to: 37, step: 0.5, pattern: [0, 2, 4, 2], voice: 'seq', octave: 2, amp: 0.26 },
-      { from: 37, to: 70, step: 0.25, pattern: [0, 2, 3, 4, 3, 2, 4, 1], voice: 'seq', octave: 2, amp: 0.34 },
-      { from: 10.5, to: 70, step: 0.5, pattern: [0, 0, 0, 0, 0, 0, 3, 0], voice: 'seq', octave: 0, amp: 0.38 },
+      { from: 2, to: 38, step: 0.25, pattern: [0, 1, 2, 3, 4, 3, 2, 1], voice: 'seq', octave: 1, amp: 0.3 },
+      { from: 38, to: 54, step: 0.25, pattern: [0, 2, 4, 5, 4, 2, 3, 1], voice: 'seq', octave: 2, amp: 0.22 },
+      { from: 54, to: 70, step: 0.25, pattern: [0, 1, 2, 3, 4, 3, 2, 1], voice: 'seq', octave: 1, amp: 0.34 },
+      // the rolling bass: each chord's root and its octave, in eighths (quarters in the breakdown)
+      { from: 6, to: 38, step: 0.5, pattern: [0, 3], voice: 'sbass', octave: 0, amp: 0.7 },
+      { from: 38, to: 54, step: 1, pattern: [0], voice: 'sbass', octave: 0, amp: 0.55 },
+      { from: 54, to: 74, step: 0.5, pattern: [0, 3], voice: 'sbass', octave: 0, amp: 0.75 },
     ],
-    pulse: [
-      { v: 'kick', from: 36, to: 57, every: 2, amp: 0.55 },
-      { v: 'snare', from: 37, to: 57, every: 2, amp: 0.5 },
-      { v: 'shaker', from: 44, to: 57, every: 0.5, amp: 0.22 },
+    beat: [
+      { from: 6, to: 22, kick: 'x.......x.......', hat: '..o...o...o...o.', amp: 0.5 },
+      { from: 22, to: 38, kick: 'x.......x.x.....', snare: '....x.......x...', hat: 'xoxoxoxoxoxoxo.o', open: '..............x.', amp: 0.75, crash: true, rise: 2 },
+      { from: 54, to: 70, kick: 'x.......x.x.....', snare: '....x.......x...', hat: 'xoxoxoxoxoxoxo.o', open: '..............x.', amp: 0.8, crash: true, rise: 2, fill: 2 },
     ],
-    bass: true,
-    dyn: [0.45, 0.5, 0.6, 0.6, 0.55, 0.5, 0.65, 0.7, 0.75, 0.85, 0.8],
+    pump: 0.55,
+    echo: 0.75,
+    accent: 'stab',
+    tick: false,
+    gain: 0.8,
+    dyn: [0.5, 0.55, 0.6, 0.65, 0.8, 0.8, 0.65, 0.65, 0.8, 0.9, 0.85],
   },
-  // The Long Dusk: dark synthwave (2 Nov, the player, as above: "Dusk dark"). E Aeolian, slow dark
-  // chords (i, VI, iv, v, VII), a brassy analog lead swelling and gliding through long notes (a
-  // minor sixth's leap and a fall), the choir's voice once, a drone, a quiet sequencer pulse an
-  // octave down and a slow arpeggio over it; no drums
+  // The Long Dusk: dark synthwave, slow and pulsing, as Kavinsky's Nightcall is (3 Nov, as above;
+  // before it, 2 Nov, "Dusk dark"). E minor, i–VI–iv–v (Em C Am Bm), two bars each from beat 2, its
+  // last chord the minor v going home to the title's E minor; a drone under it all; a pulse of eighths
+  // on the synth bass from the galaxy on, pumping with the kick; a half-time beat (a kick on 1, the
+  // gated snare on 3) from the star-forming curve, a busier kick from the stars' close-up, the full
+  // beat (the snare on 2 and 4) and the choir for the world and its settlements; a slow hook of long
+  // notes on the analog lead, in its echo, an arpeggio high over it in the second half; a dark stab
+  // on every cut, a crash under the title.
   dusk: {
     bpm: 90,
     beats: 72,
@@ -442,19 +578,35 @@ export const SCORES: Record<FilmId, Score> = {
     tonic: NOTE.E3,
     mode: 'aeolian',
     cuts: [0, 6, 10.5, 17, 23, 36, 41, 45.5, 49.5, 55.5, 60.5],
-    chords: [0, 5, 3, 4, 0, 5, 3, 6, 5, 4, 0],
+    // (only the first two beats' chord matters: from beat 2 the chords run on the bar)
+    chords: [0, 0, 0, 3, 4, 0, 5, 3, 4, 0, 0],
     title: { degree: 0, colour: 'minor' },
-    motif: [[0, 0, 3], [3, 4, 1], [4, 5, 3], [7, 4, 1], [8, 3, 4]],
-    melody: [{ at: 3 }, { at: 18, voice: 'voice', amp: 0.8 }, { at: 37 }, { at: 49.5, shift: -2, drop: 1 }, { at: 61, drop: 2 }],
+    prog: [{ from: 2, to: 66, every: 8, chords: [0, 5, 3, 4] }],
+    // (four bars each: E G B, a neighbour C, down to G over C; the answer C B A, up to B over Bm and
+    // down to E, the suspended fourth that the title's E minor resolves)
+    motif: [[0, 0, 2], [2, 2, 1], [3, 4, 3], [6, 5, 1], [7, 4, 1], [8, 2, 4], [12, 1, 1], [13, 0, 1], [14, -1, 2]],
+    motif2: [[0, 5, 2], [2, 4, 1], [3, 3, 3], [6, 4, 1], [7, 5, 1], [8, 4, 4], [12, 3, 1], [13, 1, 1], [14, 0, 2]],
+    melody: [{ at: 2, amp: 0.6 }, { at: 18, alt: true, amp: 0.85 }, { at: 34 }, { at: 50, alt: true }, { at: 50, alt: true, octave: 1, voice: 'lead', amp: 0.4 }],
     lead: 'synth',
-    pads: [[0, 'dark'], [23, 'pad'], [45.5, 'choir']],
+    pads: [[0, 'dark'], [34, 'pad'], [50, 'choir']],
     arps: [
-      { from: 23, to: 60.5, step: 0.5, pattern: [0, 0, 0, 0, 0, 0, 0, 0], voice: 'seq', octave: 0, amp: 0.32 },
-      { from: 36, to: 49.5, step: 1, pattern: [0, 2, 4, 2], voice: 'seq', octave: 2, amp: 0.22 },
+      // the pulse: each chord's root in eighths on the synth bass, an octave's leap in the last part
+      { from: 10, to: 50, step: 0.5, pattern: [0], voice: 'sbass', octave: 0, amp: 0.6 },
+      { from: 50, to: 70, step: 0.5, pattern: [0, 0, 0, 0, 0, 0, 3, 0], voice: 'sbass', octave: 0, amp: 0.7 },
+      { from: 34, to: 66, step: 0.5, pattern: [0, 2, 4, 2, 1, 2, 4, 2], voice: 'seq', octave: 3, amp: 0.22 },
     ],
-    bass: true,
+    beat: [
+      { from: 18, to: 34, kick: 'x.........x.....', snare: '........x.......', hat: 'o.o.o.o.o.o.o.o.', amp: 0.7, crash: true, rise: 2 },
+      { from: 34, to: 50, kick: 'x.....x...x.....', snare: '........x.......', hat: 'xoxoxoxoxoxoxoxo', amp: 0.75, crash: true },
+      { from: 50, to: 66, kick: 'x.......x.......', snare: '....x.......x...', hat: 'xoxoxoxoxoxoxo.o', open: '..............x.', amp: 0.8, crash: true, rise: 2, fill: 2 },
+    ],
     drone: true,
-    dyn: [0.5, 0.55, 0.6, 0.6, 0.65, 0.7, 0.7, 0.65, 0.7, 0.75, 0.65],
+    pump: 0.5,
+    echo: 0.75,
+    accent: 'stab',
+    tick: false,
+    gain: 0.8,
+    dyn: [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.75, 0.75, 0.8, 0.85, 0.85],
   },
   // The Last Light: C♯ Phrygian, a slow chromatic fall in the choir, the title on a bare fifth
   last_light: {
