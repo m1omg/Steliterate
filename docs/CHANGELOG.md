@@ -5016,3 +5016,11 @@ The Codex's Films seen plays a game's own cut.
 - Checks: `unit/film-scores` (the two films' real synthwave), `unit/last-gas-film` (new: the turn-48
   Interregnum save played to the Last Gas), `browser/films` (the cut's words, its frames, the plain
   cut unchanged). Hooks: `__stel.filmWords`, `filmFrames(…, args)`.
+- Tools: `tools/film-render.mjs` and `tools/cue-levels.mjs` start Vite itself, so stopping them stops
+  it (through `npx`, its Vite had stayed behind holding the port: five were found idle).
+- **Validated** (`index-CgxQ4W4K.js`): tsc and the build clean; the playtest (30/144 Hz parity
+  3e-16); savecompat on its 11 saves; all 114 unit checks; all 81 browser checks (70 in three lanes;
+  the other 11 again alone, all passing: they had timed out on a screenshot or a page load with the
+  machine's load at 7.6 on four cores). No rule changed, so no harness run. Previews sent to the
+  player before it went live: MP3s of both scores and 1080p videos of the Interregnum game's cut of
+  the Long Dusk's film and of the Interregnum's film.
