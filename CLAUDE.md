@@ -67,7 +67,9 @@ nebulae at a new Interregnum game's start (thin gas), a nebula up close as a clo
 grid's Stelliferous Age, worlds drawn apart, the survey reveal before the events (and Settings,
 Open charted systems), a pact offer's live price, and people costing a flare turn's time only (1 Nov),
 and PR m1omg/Steliterate#58, `bd3eeab`, synthwave music for the Twilight Interregnum's and the Long
-Dusk's films, and faster browser checks (2 Nov).
+Dusk's films, and faster browser checks (2 Nov), and PR m1omg/Steliterate#60, `f85739f`, real
+synthwave for those two films (a drum machine, chords on the bar, a rolling synth bass, pumping and
+echo) and the Long Dusk's film at the Last Gas in a game begun in the Interregnum (4 Nov).
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.

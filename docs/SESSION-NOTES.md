@@ -200,6 +200,12 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     there in such a game's own cut: our first star a white dwarf, our first world frozen (both by
     their heat), a world we settled, the age's own words for such a game. MP3s of both scores and
     1080p videos of the cut and of the Interregnum's film were sent before it went live.
+    ("*not handing it over": their first line, "node handling over for now, as the usage limit has
+    reset", meant they carry on in this session.) On 4 Nov: "Please merge." PR m1omg/Steliterate#60
+    (`f85739f`, live script `index-CgxQ4W4K.js` at both addresses). With it a brainstorming
+    question: "any ideas on how to make dark era more interesting? Like, there's a lot of crazy
+    events that would happen long before recurrence in the super far future, connected to
+    probability … Don't implement those yet." The ideas offered are under "Open threads".
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",
@@ -477,6 +483,41 @@ clone, with none of this session's scratch files, uploads or memory: everything 
      - a map marker for blue dwarfs.
 
 ## Open threads and pending decisions
+
+- **4 Nov, the Dark Era brainstorm** (the player: "Don't implement those yet. I just really
+  brainstorming"). Offered, none built; the player picks any to plan:
+  - the frame: a ladder of odds. A Dark turn covers powers of powers of years, so a fixed chance
+    per year goes from never to certain within one turn; the deep-time ruler shows the rungs and
+    their waits, each turn which it will likely cross, and we stay awake for one (dear) or sleep
+    through it;
+  - the horizon makes matter again: an electron–positron pair from the horizon's glow about
+    10^(10³⁹) years, a proton–antiproton pair 10^(10⁴³) (my rough estimate from its temperature
+    and the Boltzmann factor, not a published figure);
+  - minds out of nothing, then many (about 10^(10⁵⁰) years, Linde 2007): beyond today's one
+    event, the Boltzmann brain question for our Threads (trust the records, test the archive,
+    despair); physicists still debate whether such fluctuations happen at all;
+  - echoes before the Recurrence: a fluctuation briefly reassembling something of the player's
+    own game (a voice, a page, a lost settlement, the first world's sky), smaller things first;
+  - a cloud out of nothing: a Sun's mass of cold gas fluctuating into being, about 10^(10⁹⁹) years
+    (my rough estimate), collapsing and lighting once, late;
+  - the vacuum as a hidden fate like the fate of matter (about 10¹⁶¹ years, 95% range 10⁶⁵ to
+    10¹³⁸³: Andreassen, Frost & Schwartz 2018): a research question, and if metastable a rising
+    chance each turn of an end without warning, a race to finish the ending's work; perhaps a
+    setting, since a random ending can feel unfair;
+  - thoughts as the currency: a finite number of thoughts under a cosmological constant (Krauss &
+    Starkman 2000), each erased bit at least kT ln 2 at the horizon's temperature (Landauer):
+    the Dark's budget shown as thoughts left, spent on memory, listening, the ending's work, art;
+  - burning memories for warmth (Szilard's engine): blank memory turned into work, a structure or
+    charter trading Continuity for energy; the real amounts are absurdly small, so the game
+    would scale them and say so;
+  - the final energy state (about 10^(10¹²⁰) years, Linde 2007): a last crossing with its own
+    report before the Recurrence.
+
+  Ruled out as a rung: a new Big Bang by quantum fluctuation (Carroll & Chen 2004), quoted at
+  10^(10^(10⁵⁶)) years, beyond the Recurrence. Today's Dark Era for comparison: about 20 turns
+  from 10¹⁰⁰ years; Continuity; the events Forgetting, Atoms Wider Than Galaxies, The False Vacuum
+  and A Mind From Nowhere; the stable fate's black dwarf supernovae, iron stars and tunnelling
+  collapse (`eras.ts` DEEP_MILESTONES, `data/events.ts`).
 
 - **24 Oct, three screenshots** (the player named each file as its question): "why is my warship
   yellow?"; "the planet exploration popup occurs while it's showing all the planets"; "The world

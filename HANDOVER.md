@@ -9,20 +9,23 @@ the entry point; the details are in the other notes, and every section says wher
 Keep it spoiler-light, like everything the player may read. The stranger minds and the endings
 are in `docs/spoilers/`, for you only: never repeat them to the player.
 
-## 0. Start here (2 Nov)
+## 0. Start here (4 Nov)
 
 ### Where things stand
-- **Live:** the game is at both addresses as PR m1omg/Steliterate#58 (`bd3eeab`, script
-  `index-CwuzIw_v.js`). The addresses are in §1.
-- **Branches:** once this file's own PR is in, `main`, the work branch
-  (`claude/epic-wozniak-lyhulf`) and `next` hold the same files.
+- **Live:** the game is at both addresses as PR m1omg/Steliterate#60 (`f85739f`, script
+  `index-CgxQ4W4K.js`). The addresses are in §1.
+- **Branches:** the work branch (`claude/epic-wozniak-lyhulf`) and `next` hold the same files;
+  `main` lacks only the notes commit that says PR #60 is live, as after every batch.
 - **Nothing is in flight:** no batch half done, no check running, nothing uncommitted.
 
-### The last thing done (2 Nov)
-- Two films were rendered as MP4s at 1080p and 30 fps, with their new synthwave music, and sent
-  to the player: the Twilight Interregnum's and the Long Dusk's.
-- The other 16 films keep their music of 1 Nov.
-- Rendering those 16 too was offered (about 10 minutes each here). There is no answer yet.
+### The last thing done (3 and 4 Nov)
+- Real synthwave for the Twilight Interregnum's and the Long Dusk's films, and the Long Dusk's
+  film in a game begun in the Interregnum, played at the Last Gas (§3; PR m1omg/Steliterate#60).
+  The player heard and saw the previews first, then said "Please merge."
+- The player then asked to brainstorm the Dark Era ("Don't implement those yet"). The ideas
+  offered are in SESSION-NOTES, "Open threads and pending decisions"; none is built.
+- The other 16 films keep their music of 1 Nov. Rendering them as videos was offered on 2 Nov
+  (about 10 minutes each here). There is no answer yet.
 
 ### First steps
 1. `git fetch` every branch and look for work no PR has taken in:
@@ -83,8 +86,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#58 (synthwave film music, faster checks, 2 Nov), `bd3eeab` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-CwuzIw_v.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#60 (real synthwave for two films, the Long Dusk's film at the Last Gas, 4 Nov), `f85739f` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-CgxQ4W4K.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own; slots' data in IndexedDB `steliterate2` since 1 Nov) | the same | `steliterate.` keys |
 
 ## 2. Read in this order
@@ -449,51 +452,53 @@ The full picture is in SESSION-NOTES, "How the player likes to work".
 
 Start none of these without their word.
 
-1. **The other 16 films as videos** (offered 2 Nov). Use `tools/film-render.mjs`, one film at a
+1. **The Dark Era brainstorm** (4 Nov): nine ideas offered, none built, the player to pick any
+   (SESSION-NOTES, "Open threads": the ladder of odds and its rungs).
+2. **The other 16 films as videos** (offered 2 Nov). Use `tools/film-render.mjs`, one film at a
    time. Each takes about 10 minutes at 1080p here.
-2. **Firefox.**
+3. **Firefox.**
    - The container has no Firefox; software-drawn Chromium stands in for it.
    - The player said Firefox ran the films "very slow". That was before the fixes of 15 Oct;
      how they play there now is not known.
-3. **Offers with no answer** (12 and 13 Oct, and the audit of 31 Oct):
+4. **Offers with no answer** (12 and 13 Oct, and the audit of 31 Oct):
    - pulsar beams in line with real pulsars, or a stated bend;
    - Burst Catchers in neighbouring systems banking a share of a burst at η 68;
    - a rogue world's Coldminds at the dark-sky half upkeep;
    - the two rogue-world bends, stated in the Codex or changed: close passes 25 times slower, and
      evaporation casting out about half;
    - the neighbours' new-star rules and the Last Star.
-4. **Planned and approved, not built** (the audit of 31 Oct):
+5. **Planned and approved, not built** (the audit of 31 Oct):
    - the Lancer and the Penrose Corsair ("deferred, not dropped");
    - a slow-crossfade version of the films for players who ask for reduced motion.
 
    **Offered for later:** a battle fought by hand, focus fire on a chosen ship, and a retreat
    threshold in a tactic.
-5. **Left as they are by the project check** (15 Oct), each the player's choice:
+6. **Left as they are by the project check** (15 Oct), each the player's choice:
    - A slow device steps a film's resolution down and never back up. A slow first few seconds can
      leave the whole film at half resolution.
    - A build tool, `source-map-js`, has a reported flaw (a slow parse of a hostile source map). It
      is used only to build and never shipped, and nothing here reads one.
-6. **A Slovak translation of our own.** Planned on 10 Oct, not started. The plan:
+7. **A Slovak translation of our own.** Planned on 10 Oct, not started. The plan:
    - a glossary first;
    - side-by-side review sheets;
    - everything live at once;
    - about 40,000 words.
 
    SESSION-NOTES, "Picking up", has the rest.
-7. **Krea:** a second Dark track to replace the old drone. Measure it and let them hear it before
+8. **Krea:** a second Dark track to replace the old drone. Measure it and let them hear it before
    it goes in.
-8. **The friend's word on the magnifier mode** (`?lowvision`). Not built: read-aloud, moving the
+9. **The friend's word on the magnifier mode** (`?lowvision`). Not built: read-aloud, moving the
    camera from the keyboard, and reduced motion for camera flights.
-9. **From 11 Oct, each to raise:**
-   - the autoplayer researches Halo Siphons and never shuts them;
-   - ember restraint at a halo dwarf;
-   - only the Unlit's messages wait.
-10. **A Godot proposal** (26 Oct, from another session): `GODOT PROPOSAL 1.MD` on
+10. **From 11 Oct, each to raise:**
+    - the autoplayer researches Halo Siphons and never shuts them;
+    - ember restraint at a halo dwarf;
+    - only the Unlit's messages wait.
+11. **A Godot proposal** (26 Oct, from another session): `GODOT PROPOSAL 1.MD` on
     `claude/vibrant-edison-svhjtd`.
     - It proposes the game as a desktop game in Godot, with better graphics.
     - It is not approved, nothing is built, and no PR has taken it in.
     - Read it if the player raises it.
-11. **The discuss-first list** (SESSION-NOTES, "Picking up"):
+12. **The discuss-first list** (SESSION-NOTES, "Picking up"):
     - a Lattice rework;
     - deeper diplomacy;
     - tidal locking by locking time;
