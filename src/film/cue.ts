@@ -1,5 +1,5 @@
 import type { FilmId, FilmQuality } from './films';
-import { compose, oscillatorsOf, scoreOf, TAIL, type ScoreEvent, type Voice as Instrument } from './score';
+import { compose, oscillatorsOf, scoreOf, TAIL, type Score, type ScoreEvent, type Voice as Instrument } from './score';
 
 // The films' sound (part 4; rewritten 1 Nov): each film's music is composed in score.ts, its own
 // key, mode, melody, chords, arpeggios, bass and instruments, and played here, every note scheduled
@@ -17,12 +17,21 @@ interface Voice {
   stop(secs?: number): void;
 }
 
-/** Where a note goes: dry, and into the room (none at low quality), with the noise its breath and its drums are cut from; `low`: the lighter instruments (fewer oscillators). */
+/**
+ * Where a note goes: dry, and into the room (none at low quality), with the noise its breath and its
+ * drums are cut from; `low`: the lighter instruments (fewer oscillators). A synthwave score's
+ * (3 Nov) also: the pump, a dry and a room bus that each kick dips, as a sidechain does, for the
+ * pads, the basses and the sequencer; the echo, a ping-pong delay in time with the beat (none at low
+ * quality); and a longer noise for the crash.
+ */
 interface Out {
   dry: AudioNode;
   wet: AudioNode | null;
   n: AudioBuffer;
   low: boolean;
+  pump?: { dry: GainNode; wet: GainNode | null; depth: number };
+  echo?: AudioNode;
+  long?: AudioBuffer;
 }
 
 /** A deterministic noise (the same sound every time, for the videos). */
@@ -34,10 +43,10 @@ function rng(seed: number) {
   };
 }
 
-function noise(ctx: BaseAudioContext): AudioBuffer {
-  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.5), ctx.sampleRate);
+function noise(ctx: BaseAudioContext, secs = 0.5, seed = 12345): AudioBuffer {
+  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * secs), ctx.sampleRate);
   const d = buf.getChannelData(0);
-  const r = rng(12345);
+  const r = rng(seed);
   for (let i = 0; i < d.length; i++) d[i] = r();
   return buf;
 }
@@ -77,10 +86,15 @@ const LEVEL: Record<Instrument, number> = {
   bass: 0.14,
   synth: 0.14,
   seq: 0.21,
+  sbass: 0.13,
+  stab: 0.16,
   bell: 0.18,
   drone: 0.1,
-  kick: 0.42,
-  snare: 0.5,
+  kick: 0.6,
+  snare: 0.6,
+  hat: 0.65,
+  open: 0.3,
+  crash: 0.22,
   tom: 0.46,
   shaker: 0.84,
   metal: 0.42,
@@ -103,10 +117,15 @@ const WET: Record<Instrument, number> = {
   bass: 0.04,
   synth: 0.4,
   seq: 0.25,
+  sbass: 0.03,
+  stab: 0.35,
   bell: 0.5,
   drone: 0.1,
   kick: 0.05,
   snare: 0.3,
+  hat: 0.12,
+  open: 0.2,
+  crash: 0.45,
   tom: 0.15,
   shaker: 0.2,
   metal: 0.7,
@@ -117,13 +136,36 @@ const WET: Record<Instrument, number> = {
   tick: 0,
 };
 
-/** A note's way out: dry, and some into the room. */
-function send(ctx: BaseAudioContext, o: Out, node: AudioNode, wet: number) {
-  node.connect(o.dry);
-  if (o.wet && wet > 0) {
+/** How much of each voice goes into the echo, where a score has one. */
+const ECHO: Partial<Record<Instrument, number>> = { synth: 0.34, lead: 0.3, seq: 0.24, stab: 0.22 };
+/** The voices the pump dips with each kick, where a score has one: the pads, the basses, the sequencer. */
+const PUMPED: ReadonlySet<Instrument> = new Set<Instrument>(['pad', 'dark', 'glass', 'choir', 'bass', 'sbass', 'seq', 'drone']);
+
+/** A note's way out: dry, and some into the room; for a synthwave score's (`v`), through the pump and into the echo. */
+function send(ctx: BaseAudioContext, o: Out, node: AudioNode, wet: number, v?: Instrument) {
+  const pump = v && PUMPED.has(v) ? o.pump : undefined;
+  node.connect(pump?.dry ?? o.dry);
+  const room = pump ? pump.wet : o.wet;
+  if (room && wet > 0) {
     const s = ctx.createGain();
     s.gain.value = wet;
-    node.connect(s).connect(o.wet);
+    node.connect(s).connect(room);
+  }
+  const echo = v ? ECHO[v] : undefined;
+  if (o.echo && echo) {
+    const s = ctx.createGain();
+    s.gain.value = echo;
+    node.connect(s).connect(o.echo);
+  }
+}
+
+/** A kick's dip of the pumped voices: down at once, back over about a quarter of a second. */
+function duck(o: Out, at: number) {
+  if (!o.pump) return;
+  for (const g of [o.pump.dry, o.pump.wet]) {
+    if (!g) continue;
+    g.gain.setValueAtTime(1 - o.pump.depth, at);
+    g.gain.setTargetAtTime(1, at + 0.02, 0.075);
   }
 }
 
@@ -207,7 +249,7 @@ const pads: Record<'pad' | 'dark' | 'glass' | 'choir', Play> = {
       f.frequency.exponentialRampToValueAtTime(Math.min(hz * 6, 3600), at + attack * 1.4);
       const g = env(ctx, at, attack, secs - attack, TAIL.pad, per);
       f.connect(g);
-      send(ctx, o, g, WET.pad);
+      send(ctx, o, g, WET.pad, 'pad');
       if (o.low) osc(ctx, 'sawtooth', hz, at, end, i * 2).connect(f);
       else [-7, 7].forEach((c, k) => panned(ctx, osc(ctx, 'sawtooth', hz, at, end, c + i * 2), (k ? 0.5 : -0.5) * (0.6 + 0.2 * i)).connect(f));
     });
@@ -219,7 +261,7 @@ const pads: Record<'pad' | 'dark' | 'glass' | 'choir', Play> = {
     const per = (e.amp * LEVEL.dark) / Math.sqrt(e.hz.length);
     e.hz.forEach((hz, i) => {
       const g = env(ctx, at, attack, secs - attack, TAIL.dark, per);
-      send(ctx, o, g, WET.dark);
+      send(ctx, o, g, WET.dark, 'dark');
       const f = ctx.createBiquadFilter();
       f.type = 'lowpass';
       f.frequency.value = Math.min(hz * 2.6, 900);
@@ -236,7 +278,7 @@ const pads: Record<'pad' | 'dark' | 'glass' | 'choir', Play> = {
     const per = (e.amp * LEVEL.glass) / Math.sqrt(e.hz.length);
     e.hz.forEach((hz, i) => {
       const g = env(ctx, at, attack, secs - attack, TAIL.glass, per);
-      send(ctx, o, g, WET.glass);
+      send(ctx, o, g, WET.glass, 'glass');
       panned(ctx, osc(ctx, 'sine', hz, at, end, i * 3), (i - 1) * 0.45).connect(g);
       if (!o.low) {
         const t = ctx.createGain();
@@ -250,7 +292,7 @@ const pads: Record<'pad' | 'dark' | 'glass' | 'choir', Play> = {
     const attack = Math.min(1.6, Math.max(0.35, secs * 0.4));
     const end = at + attack + Math.max(0, secs - attack) + TAIL.choir + 0.05;
     const g = env(ctx, at, attack, secs - attack, TAIL.choir, e.amp * LEVEL.choir);
-    send(ctx, o, g, WET.choir);
+    send(ctx, o, g, WET.choir, 'choir');
     const mix = ctx.createGain();
     mix.gain.value = 1 / Math.sqrt(e.hz.length);
     formants(ctx, mix, g, 1);
@@ -331,7 +373,7 @@ const lines: Record<Exclude<Instrument, keyof typeof pads>, Play> = {
     const hz = e.hz[0];
     const end = at + secs + TAIL.lead + 0.1;
     const g = env(ctx, at, 0.02, secs - 0.02, TAIL.lead, e.amp * LEVEL.lead);
-    send(ctx, o, g, WET.lead);
+    send(ctx, o, g, WET.lead, 'lead');
     const a = osc(ctx, 'sine', hz, at, end);
     a.connect(g);
     if (!o.low) osc(ctx, 'sine', hz * 2, at, end).connect(strike(ctx, at, 0.6, 0.35)).connect(g);
@@ -366,7 +408,7 @@ const lines: Record<Exclude<Instrument, keyof typeof pads>, Play> = {
     const hz = e.hz[0];
     const end = at + secs + TAIL.bass + 0.1;
     const g = env(ctx, at, 0.05, secs - 0.05, TAIL.bass, e.amp * LEVEL.bass);
-    send(ctx, o, g, WET.bass);
+    send(ctx, o, g, WET.bass, 'bass');
     if (o.low) {
       osc(ctx, 'triangle', hz, at, end).connect(g);
       return;
@@ -382,7 +424,7 @@ const lines: Record<Exclude<Instrument, keyof typeof pads>, Play> = {
     const hz = e.hz[0];
     const end = at + secs + TAIL.synth + 0.1;
     const g = env(ctx, at, 0.03, secs - 0.03, TAIL.synth, e.amp * LEVEL.synth);
-    send(ctx, o, g, WET.synth);
+    send(ctx, o, g, WET.synth, 'synth');
     const f = ctx.createBiquadFilter();
     f.type = 'lowpass';
     f.Q.value = 2;
@@ -411,7 +453,7 @@ const lines: Record<Exclude<Instrument, keyof typeof pads>, Play> = {
     const gate = Math.min(secs * 0.45, 0.2);
     const end = at + gate + TAIL.seq + 0.05;
     const g = env(ctx, at, 0.004, gate, TAIL.seq, e.amp * LEVEL.seq);
-    send(ctx, o, panned(ctx, g, Math.max(-0.4, Math.min(0.4, Math.log2(hz / 200) * 0.3))), WET.seq);
+    send(ctx, o, panned(ctx, g, Math.max(-0.4, Math.min(0.4, Math.log2(hz / 200) * 0.3))), WET.seq, 'seq');
     const f = ctx.createBiquadFilter();
     f.type = 'lowpass';
     f.Q.value = 7;
@@ -460,18 +502,25 @@ const lines: Record<Exclude<Instrument, keyof typeof pads>, Play> = {
     const end = at + secs + TAIL.drone + 0.1;
     e.hz.forEach((hz, i) => {
       const g = env(ctx, at + i * 0.4, 2.4, secs - 2.4 - i * 0.4, TAIL.drone, (e.amp * LEVEL.drone) / (1 + i));
-      send(ctx, o, g, WET.drone);
+      send(ctx, o, g, WET.drone, 'drone');
       osc(ctx, 'sine', hz, at + i * 0.4, end, i ? 2 : 0).connect(g);
     });
   },
-  // a soft kick: a sine falling fast
+  // an 80s drum machine's kick: a sine falling fast from 150 to 48 Hz, with a click of noise on its
+  // front; it dips the pumped voices (3 Nov: before, a soft sine from 110 Hz, only the Interregnum's)
   kick(ctx, o, e, at) {
-    const x = osc(ctx, 'sine', 110, at, at + TAIL.kick + 0.05);
-    x.frequency.setValueAtTime(110, at);
-    x.frequency.exponentialRampToValueAtTime(44, at + 0.14);
+    const x = osc(ctx, 'sine', 150, at, at + TAIL.kick + 0.05);
+    x.frequency.setValueAtTime(150, at);
+    x.frequency.exponentialRampToValueAtTime(48, at + 0.08);
     const g = strike(ctx, at, TAIL.kick, e.amp * LEVEL.kick);
     send(ctx, o, g, WET.kick);
     x.connect(g);
+    if (!o.low) {
+      const click = strike(ctx, at, 0.012, e.amp * LEVEL.kick * 0.35);
+      breath(ctx, o, at, at + 0.03, 3200, 0.7).connect(click);
+      send(ctx, o, click, 0);
+    }
+    duck(o, at);
   },
   // an 80s gated snare: a crack of noise (its body a short falling tone), the room's sound held at
   // half strength for a moment and then shut, as a noise gate on a big reverb shut it in 1985
@@ -493,6 +542,79 @@ const lines: Record<Exclude<Instrument, keyof typeof pads>, Play> = {
     const tg = strike(ctx, at, 0.1, peak * 0.7);
     send(ctx, o, tg, WET.snare * 0.5);
     t.connect(tg);
+  },
+  // a closed hi-hat: a tick of noise above 7 kHz, a little to the right
+  hat(ctx, o, e, at) {
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 7000;
+    const g = strike(ctx, at, TAIL.hat, e.amp * LEVEL.hat);
+    breath(ctx, o, at, at + TAIL.hat + 0.03, 9500, 0.8).connect(hp).connect(g);
+    send(ctx, o, panned(ctx, g, 0.22), WET.hat);
+  },
+  // an open hi-hat: the same noise, ringing a third of a second
+  open(ctx, o, e, at) {
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 6000;
+    const g = strike(ctx, at, TAIL.open, e.amp * LEVEL.open);
+    breath(ctx, o, at, at + TAIL.open + 0.05, 8500, 0.7).connect(hp).connect(g);
+    send(ctx, o, panned(ctx, g, 0.22), WET.open);
+  },
+  // a crash cymbal: two seconds of noise above 4 kHz, ringing into the room, a little to the left
+  crash(ctx, o, e, at) {
+    const src = ctx.createBufferSource();
+    src.buffer = o.long ?? o.n;
+    src.loop = true;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 4000;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(e.amp * LEVEL.crash, at + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + TAIL.crash);
+    src.connect(hp).connect(g);
+    send(ctx, o, panned(ctx, g, -0.2), WET.crash);
+    src.start(at, (at * 3.7) % 1);
+    src.stop(at + TAIL.crash + 0.05);
+  },
+  // a synth bass: a saw through a resonant low-pass snapping shut, a sine under it, gated short
+  // (struck in eighths, the rolling bass of synthwave)
+  sbass(ctx, o, e, at, secs) {
+    const hz = e.hz[0];
+    const gate = Math.min(secs * 0.42, 0.3);
+    const end = at + gate + TAIL.sbass + 0.05;
+    const g = env(ctx, at, 0.005, gate, TAIL.sbass, e.amp * LEVEL.sbass);
+    send(ctx, o, g, WET.sbass, 'sbass');
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.Q.value = 4.5;
+    f.frequency.setValueAtTime(Math.min(hz * 16, 3200), at);
+    f.frequency.exponentialRampToValueAtTime(Math.max(220, hz * 3.5), at + 0.14);
+    f.connect(g);
+    osc(ctx, 'sawtooth', hz, at, end).connect(f);
+    if (!o.low) {
+      const s = ctx.createGain();
+      s.gain.value = 0.6;
+      osc(ctx, 'sine', hz, at, end).connect(s).connect(g);
+    }
+  },
+  // a stab: the chord struck once on brassy saws whose filter opens and shuts in a quarter of a second
+  stab(ctx, o, e, at) {
+    const per = (e.amp * LEVEL.stab) / Math.sqrt(e.hz.length);
+    const end = at + 0.07 + TAIL.stab + 0.05;
+    e.hz.forEach((hz, i) => {
+      const g = env(ctx, at, 0.006, 0.06, TAIL.stab, per);
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.Q.value = 1.4;
+      f.frequency.setValueAtTime(Math.min(hz * 9, 7000), at);
+      f.frequency.exponentialRampToValueAtTime(Math.max(200, hz * 2), at + 0.25);
+      f.connect(g);
+      send(ctx, o, panned(ctx, g, (i - 1) * 0.35), WET.stab, 'stab');
+      osc(ctx, 'sawtooth', hz, at, end, -9).connect(f);
+      if (!o.low) osc(ctx, 'sawtooth', hz, at, end, 9).connect(f);
+    });
   },
   // a tom: a low sine sagging as it dies
   tom(ctx, o, e, at) {
@@ -630,10 +752,42 @@ function make(ctx: BaseAudioContext, o: Out, x: CueNote, t0: number) {
   PLAY[x.e.v](ctx, o, x.e, t0 + x.at, x.secs);
 }
 
-/** The music's way out: a bus, and the room beside it (none at low quality); the lighter instruments below high quality. */
-function outlet(ctx: BaseAudioContext, out: AudioNode, quality: FilmQuality): { bus: GainNode; o: Out } {
+/** A ping-pong echo in time with the beat: the first repeat on the left, the next on the right, each darker and quieter than the last. */
+function echoBus(ctx: BaseAudioContext, bus: AudioNode, secs: number): AudioNode {
+  const into = ctx.createGain();
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 300;
+  const left = ctx.createDelay(2);
+  left.delayTime.value = secs;
+  const right = ctx.createDelay(2);
+  right.delayTime.value = secs;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 2600;
+  const back = ctx.createGain();
+  back.gain.value = 0.42;
+  into.connect(hp).connect(left);
+  left.connect(right);
+  right.connect(lp).connect(back).connect(left);
+  const out = ctx.createGain();
+  out.gain.value = 0.8;
+  for (const [node, pan] of [
+    [left, -0.7],
+    [right, 0.7],
+  ] as const) {
+    const p = ctx.createStereoPanner();
+    p.pan.value = pan;
+    node.connect(p).connect(out);
+  }
+  out.connect(bus);
+  return into;
+}
+
+/** The music's way out: a bus, and the room beside it (none at low quality); the lighter instruments below high quality; a synthwave score's pump, echo (none at low quality) and the crash's longer noise. */
+function outlet(ctx: BaseAudioContext, out: AudioNode, quality: FilmQuality, s?: Score): { bus: GainNode; o: Out } {
   const bus = ctx.createGain();
-  bus.gain.value = 1;
+  bus.gain.value = s?.gain ?? 1;
   bus.connect(out);
   const low = quality !== 'high';
   let wet: AudioNode | null = null;
@@ -645,7 +799,20 @@ function outlet(ctx: BaseAudioContext, out: AudioNode, quality: FilmQuality): { 
     conv.connect(back).connect(bus);
     wet = conv;
   }
-  return { bus, o: { dry: bus, wet, n: noise(ctx), low } };
+  const o: Out = { dry: bus, wet, n: noise(ctx), low };
+  if (s?.pump) {
+    const dry = ctx.createGain();
+    dry.connect(bus);
+    let w: GainNode | null = null;
+    if (wet) {
+      w = ctx.createGain();
+      w.connect(wet);
+    }
+    o.pump = { dry, wet: w, depth: s.pump };
+  }
+  if (s?.echo && quality !== 'low') o.echo = echoBus(ctx, bus, (s.echo * 60) / s.bpm);
+  if (s?.accent === 'stab' || s?.beat?.some((b) => b.crash)) o.long = noise(ctx, 2.2, 54321);
+  return { bus, o };
 }
 
 /** How far ahead (seconds) a playing cue's notes are made, and how often it looks. */
@@ -654,7 +821,7 @@ const EVERY = 250;
 
 /** Play a film's cue into `out` from `at` (on its context's clock): each note made a few seconds before it sounds. */
 export function playCue(id: FilmId, ctx: BaseAudioContext, out: AudioNode, at: number, fate?: string, quality: FilmQuality = 'high'): Voice {
-  const { bus, o } = outlet(ctx, out, quality);
+  const { bus, o } = outlet(ctx, out, quality, scoreOf(id, fate));
   const notes = cueOf(id, fate);
   let next = 0;
   const feed = () => {
@@ -695,7 +862,7 @@ export async function renderCue(id: FilmId, secs: number, rate = 48000, fate?: s
   comp.attack.value = 0.02;
   comp.release.value = 0.4;
   comp.connect(ctx.destination);
-  const { o } = outlet(ctx, comp, 'high');
+  const { o } = outlet(ctx, comp, 'high', scoreOf(id, fate));
   for (const x of cueOf(id, fate)) if (!only || only.includes(x.e.v)) make(ctx, o, x, 0);
   return ctx.startRendering();
 }

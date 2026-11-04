@@ -11,8 +11,9 @@
 //   (a tablet's medium, by default);
 // - has the synth's drive in the darker films (an analog sequencer and a metallic clank), and only
 //   a touch of it: several films have neither;
-// - the Twilight Interregnum's and the Long Dusk's in synthwave (2 Nov): minor, the analog lead,
-//   the sequencer, no harp, flute or horn; light drums in the Interregnum's middle only.
+// - the Twilight Interregnum's and the Long Dusk's in real synthwave (2 and 3 Nov): minor, chords on
+//   the bar, a drum machine, a rolling synth bass, pumping and echo, stabs on the cuts, the analog
+//   lead; no harp, flute, horn, clank or bell.
 import { FILMS, type FilmId } from '../../../src/film/films';
 import { compose, FATE_SCORES, melodyNotes, MODES, mostAtOnce, SCORES, scoreOf, type Score } from '../../../src/film/score';
 import { check, done } from '../lib';
@@ -71,26 +72,42 @@ const plain = ids.filter((id) => !uses(id, 'seq') && !uses(id, 'metal') && !uses
 check(dark.every((id) => uses(id, 'seq') && uses(id, 'metal')), `the darker films have the sequencer and the clank (${dark.join(', ')})`);
 check(plain.length >= 4 && ids.filter((id) => uses(id, 'metal')).length <= 7, `and only a touch: ${plain.length} films have none of the synth (${plain.join(', ')}), ${ids.filter((id) => uses(id, 'metal')).length} the clank`);
 // the Twilight Interregnum's and the Long Dusk's synthwave (2 Nov, the player: "too unsynthwave,
-// happy etc more like for a fantasy game"; asked, "Interregnum wistful, Dusk dark", drums for the
-// Interregnum only): minor, the analog lead their melody's voice, the sequencer, none of the
-// fantasy's instruments; the Interregnum's kick and gated snare in its middle only, no clank; the
-// Dusk with a drone and no drums
+// happy etc more like for a fantasy game"; 3 Nov, "redo the music once more in a more real synthwave
+// style"; asked, a full beat in both, "The Midnight / Kavinsky"): minor; chords on the bar, round and
+// round, for most of the film; a drum machine (kick, gated snare, hats) through most of it after its
+// intro; a rolling bass of eighths on the synth bass; the pads pumping with the kick and the lead in
+// its echo; a stab on every cut, never a bell; the analog lead the melody's voice; none of the
+// fantasy's instruments, nor the clank. The Interregnum's snare on 2 and 4; the Dusk's first in half
+// time (on 3), the full beat last.
 const minor = (id: FilmId) => MODES[SCORES[id].mode][2] === 3;
-const fantasy = (id: FilmId) => ['harp', 'flute', 'horn'].filter((v) => uses(id, v));
+const fantasy = (id: FilmId) => ['harp', 'flute', 'horn', 'metal', 'bell'].filter((v) => uses(id, v));
 const mostlySynth = (id: FilmId) => {
   const m = compose(SCORES[id]).filter((e) => e.melody);
   return m.filter((e) => e.v === 'synth').length / m.length;
 };
-const drums = (id: FilmId) => compose(SCORES[id]).filter((e) => e.v === 'kick' || e.v === 'snare');
-const ir = drums('interregnum');
-const irS = SCORES.interregnum;
-check(
-  minor('interregnum') && mostlySynth('interregnum') > 0.6 && uses('interregnum', 'seq') && !fantasy('interregnum').length && !uses('interregnum', 'metal') && ir.some((e) => e.v === 'snare') && ir.every((e) => e.b >= irS.cuts[5] && e.b < irS.cuts[9]),
-  `the Twilight Interregnum: wistful synthwave, ${SCORES.interregnum.mode}, ${Math.round(mostlySynth('interregnum') * 100)}% of its melody on the analog lead, the sequencer, a kick and a gated snare in its middle only (${ir.length} hits), no clank${fantasy('interregnum').length ? `; but ${fantasy('interregnum').join(', ')}` : ', no harp, flute or horn'}`,
-);
-check(
-  minor('dusk') && mostlySynth('dusk') > 0.6 && uses('dusk', 'seq') && uses('dusk', 'drone') && !fantasy('dusk').length && !drums('dusk').length,
-  `the Long Dusk: dark synthwave, ${SCORES.dusk.mode}, ${Math.round(mostlySynth('dusk') * 100)}% of its melody on the analog lead, a drone, the sequencer, no drums${fantasy('dusk').length ? `; but ${fantasy('dusk').join(', ')}` : ', no harp, flute or horn'}`,
-);
+for (const [id, want] of [
+  ['interregnum', 'The Midnight'],
+  ['dusk', 'Nightcall'],
+] as const) {
+  const s = SCORES[id];
+  const ev = compose(s);
+  const onBar = (s.prog ?? []).every((p) => p.every % 4 === 0);
+  const progShare = (s.prog ?? []).reduce((n, p) => n + p.to - p.from, 0) / s.titleAt;
+  const beatShare = (s.beat ?? []).reduce((n, p) => n + p.to - p.from, 0) / s.titleAt;
+  const kit = ['kick', 'snare', 'hat'].every((v) => ev.some((e) => e.v === v));
+  const sb = ev.filter((e) => e.v === 'sbass');
+  const rolling = sb.length > 0 && (sb[sb.length - 1].b - sb[0].b) / s.titleAt > 0.5 && sb.filter((e, i) => i > 0 && Math.abs(e.b - sb[i - 1].b - 0.5) < 1e-6).length / sb.length > 0.7;
+  const stabs = s.cuts.every((c) => ev.some((e) => e.cut && e.v === 'stab' && Math.abs(e.b - c) < 1e-9));
+  // where in its bar each snare falls (0 the first beat)
+  const snareBeats = (p: NonNullable<Score['beat']>[number]) => [...(p.snare ?? '')].flatMap((ch, k) => (ch === 'x' || ch === 'o') && k % 4 === 0 ? [(k / 4) % 4] : []);
+  const backbeat = (p: NonNullable<Score['beat']>[number]) => snareBeats(p).join() === '1,3';
+  const halftime = (p: NonNullable<Score['beat']>[number]) => snareBeats(p).join() === '2';
+  const beats = s.beat ?? [];
+  const feel = id === 'interregnum' ? beats.some(backbeat) : halftime(beats[0]) && backbeat(beats[beats.length - 1]);
+  check(
+    minor(id) && onBar && progShare > 0.85 && kit && beatShare > 0.5 && rolling && !!s.pump && !!s.echo && stabs && mostlySynth(id) > 0.6 && !fantasy(id).length && feel,
+    `${id === 'interregnum' ? 'the Twilight Interregnum' : 'the Long Dusk'}: synthwave like ${want}, ${s.mode}; its chords on the bar for ${Math.round(progShare * 100)}% of it, every ${(s.prog ?? []).map((p) => p.every).join(', ')} beats; a drum machine for ${Math.round(beatShare * 100)}% of it (kick, gated snare, hats${id === 'interregnum' ? ', the snare on 2 and 4' : ': half time first, the snare on 3, the full beat last'}${feel ? '' : ': NOT SO'}); ${rolling ? 'a rolling bass in eighths' : 'NO rolling bass'}; pumping ${s.pump ?? 0}, echo ${s.echo ?? 0} beats; ${stabs ? 'a stab on every cut' : 'NOT a stab on every cut'}; ${Math.round(mostlySynth(id) * 100)}% of its melody on the analog lead${fantasy(id).length ? `; but ${fantasy(id).join(', ')}` : '; no harp, flute, horn, clank or bell'}`,
+  );
+}
 
 done('FILM SCORES');

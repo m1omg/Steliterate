@@ -45,8 +45,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      try one in the browser, gunzip it and paste the JSON into Load / import → "Load from a save
      code".
    - Checks: `npm run check` (unit checks, about 15 s) and, with `vite preview` running,
-     `npm run check:browser -- http://localhost:4173/ --lanes=3` (browser checks: 79 since 1 Nov,
-     some 80 minutes one at a time, about 30 three at a time on four cores). Both must end with
+     `npm run check:browser -- http://localhost:4173/ --lanes=3` (browser checks: 81 since 1 Nov,
+     some 80 minutes one at a time, about 45 to 60 three at a time on four cores; unit checks: 114 since 3 Nov). Both must end with
      "ALL CHECKS PASSED". See Test hooks and scripts. The harness splits too: four
      `tools/sim.ts 75 … --from=0` (75, 150, 225) at once give 300 games in about 2.5 minutes.
 3. **Commit and go live:**
@@ -172,6 +172,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   45 minutes now, loses its server partway and every check after that fails at once ("no server").
   Stop it with `pkill -f "vite prev[i]ew"`: the bracket keeps the pattern from matching the shell
   running the command, which a plain `pkill -f "vite preview"` kills along with it.
+- **A tool that starts Vite through `npx` leaves it running** (3 Nov): killing `npx` does not kill
+  its child, which keeps the port (`--strictPort` then fails, or a later tool talks to the old
+  server). `tools/film-render.mjs` and `tools/cue-levels.mjs` start Vite itself
+  (`process.execPath` with `node_modules/vite/bin/vite.js`), so `server.kill()` stops it; a
+  scratch tool should do the same. Look with `ps -eo pid,args | grep "[v]ite --port"`.
 - **The container is ephemeral.** Anything installed with pip is gone next session: numpy,
   scipy, matplotlib, imageio-ffmpeg (ffmpeg binary at
   `/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2`).
@@ -1656,9 +1661,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     `off` (a chromatic step, a raised third), every cut accented, every note on a quarter-beat grid
     from the start or a cut and inside the film, at most 56 oscillators at once (32 below high),
     the sequencer and the clank in the darker films and none of the synth in at least four; the
-    Twilight Interregnum's and the Long Dusk's synthwave (2 Nov: minor, most of the melody on the
-    `synth`, the sequencer, no harp, flute or horn; the Interregnum's kick and gated `snare` in
-    its middle only, no clank; the Dusk's drone, no drums).
+    Twilight Interregnum's and the Long Dusk's real synthwave (3 Nov: minor, chords on the bar for
+    most of the film, a drum machine for most of it, a rolling `sbass` in eighths, `pump` and
+    `echo`, a stab on every cut, most of the melody on the `synth`; no harp, flute, horn, clank or
+    bell; the Interregnum's snare on 2 and 4, the Dusk's beat in half time first, the full beat
+    last).
   - Synthwave (2 Nov, the player: the Interregnum's and the Dusk's music "too unsynthwave, happy
     etc more like for a fantasy game"): what made them fantasy was a major mode (Mixolydian,
     Dorian's raised sixth), the flute, horn and harp; synthwave here is Aeolian with the minor's
@@ -1666,8 +1673,46 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
     octave down (octave 0) as the driving bass, detuned `pad`s, and for drums a `kick` on 1 and 3
     with the `snare` (noise held at half strength 0.17 s then shut: an 80s gated reverb) on 2 and
     4. `cue-levels`: both films near −18.7 dBFS RMS, peaks −3.8 and −4.3.
+  - Real synthwave (3 Nov, the player: "redo the music once more in a more real synthwave style";
+    asked, a full beat in both, "The Midnight / Kavinsky"). New in the engine, used only where a
+    score sets it, so every other film composes the same events (compared event by event):
+    - `prog`: chords on the bar, a loop of degrees from a beat to a beat, a new chord every `every`
+      beats; `chordAt(s, b)` gives a beat's chord (the title's under the title), and the pads,
+      `bass`, arpeggios and stabs follow it. Its last bar should lead home to the title's chord.
+    - `beat`: a drum machine, each drum (`kick`, `snare`, `hat`, `open`) a pattern of sixteenths
+      per bar from the section's start ('x', 'o' soft, '.'), with `crash`, `rise` (a `swell` into
+      it) and `fill` (toms falling in pitch over its last beats).
+    - `pump`: each `kick` dips the pads, the basses, the sequencer and the drone (`PUMPED`, a duck
+      bus in `outlet` with its own room send) to 1 − pump, back in about 0.25 s (`duck`).
+    - `echo`: a ping-pong delay in beats (0.75, a dotted eighth) for the `synth`, `lead`, `seq`
+      and `stab` (`ECHO`; none at low quality). `gain`: the whole cue's level (a dense score held
+      to the others' loudness). `tick: false` drops the reel's tick (the hats keep time).
+    - `accent: 'stab'`: a stab of the chord on every cut and a crash under the title, in place of
+      the bell.
+    - New instruments: `sbass` (a saw through a resonant low-pass snapping shut, a sine under it:
+      the rolling bass, played as an arpeggio of `[0, 3]`, root and octave), `stab`, `hat`,
+      `open`, `crash` (a 2.2 s noise of its own, `Out.long`), and the `kick` made an 80s machine's
+      (150 to 48 Hz with a click; only these two films use it).
+    - Balance them with the parts' loudness where they play, not over the film: the scratch tool
+      of 3 Nov rendered each part alone and measured it in beat windows. In the full beat: the lead
+      about −21.5 dBFS RMS, the bass −23.5, the pads −27, the arpeggio −29, the kick −27 (its peaks
+      about −7), the snare −31 (peaks −5), the hats −38. `cue-levels`: the Interregnum −19.4 dBFS
+      RMS, peak −1.7; the Dusk −19.0, peak −1.3 (`gain` 0.8 each).
   - Hooks: `__stel.cueOscillators(id, fate)` (in all, at the settings' quality),
-    `__stel.cueLevels(id, fate)` (offline, peak and RMS).
+    `__stel.cueLevels(id, fate)` (offline, peak and RMS); `__stel.filmWords(id, t, args)` (the
+    words over a film at a moment, told those args) and `filmFrames(…, args)` (3 Nov).
+  - The Long Dusk's film in a game begun in the Twilight Interregnum (3 Nov): `FilmArgs.begun`,
+    `homeK` and `homeLit`, given by `filmArgsOf(state)` (`src/ui/filmArgs.ts`: the crossing in
+    `turnflow.ts` and the Codex's Films seen use it; it lives in the interface so that the
+    painter thread, which loads `films.ts`, need not load the physics). `crossingFilm` gives
+    `'dusk'` for the Last Gas. `dusk.ts` reads `IR` (begun in the Interregnum) for its cut: the
+    galaxy's "OUR WORLDS", the curve's "WE BEGAN" at η 12, shot 6 `firstHome` (the white dwarf
+    and the Interregnum film's own world, its map's seed 213, frozen, both by their heat, `World`
+    with `heat` and `glint: 0`), shot 7 `starThenFlare` (the star whole, then in on its flare at
+    beat 43.8), a settled world (map seed 108, six lights), and the words of `ageIntro` for such a
+    game. Without `begun` the film draws exactly as before (eleven moments compared pixel for
+    pixel). Render the cut with `tools/film-render.mjs dusk out.mp4 --begun=interregnum
+    --homek=42 [--homelit]`. Checks: `unit/last-gas-film`, `browser/films`.
   - Traps: the export page (`film.html`) hangs on a film id `FILMS` lacks, so `cue-levels`
     cannot measure a score before its film exists; `pkill -f "vite preview"` inside a Bash call
     kills that call's own shell (its command line contains the pattern); a preview server run in

@@ -370,6 +370,16 @@ has the figures for each.
   (CLAUDE.md, "Which browser checks"), and the slowest trimmed. Live at both addresses as
   `bd3eeab`, script `index-CwuzIw_v.js`.
 
+- **Real synthwave for the two films, and the Long Dusk's film in a game begun in the Interregnum**
+  (3 Nov): "redo the music once more in a more real synthwave style"; asked, a full beat in both and
+  "The Midnight / Kavinsky". The score engine gained chords on the bar (`prog`), a drum machine
+  (`beat`), a rolling synth bass, a sidechain pump, an echo and stabs on the cuts, used only by
+  these two scores (the other 16 films compose the same events as before). And "redo the video for
+  the start of the long dusk when you start the twilight interregnum" (it showed a home world round a
+  red dwarf, gone by then): the Last Gas now plays the Long Dusk's film in that game's own cut (our
+  first star a white dwarf, our first world frozen, both by their heat; a world we settled), where
+  no film had played. `src/ui/filmArgs.ts`; checks `unit/last-gas-film`, `browser/films`.
+
 ## 4. Baselines (2 Nov)
 
 These are from the last validation of a rule change, PR m1omg/Steliterate#57 (1 Nov). PR #58
@@ -381,7 +391,7 @@ touches.
 | tsc, build | clean |
 | Playtest | passes (30/144 Hz parity) |
 | savecompat | 11 saves (the player's turn-52 flare save among them) |
-| Unit checks | 113 |
+| Unit checks | 114 (`last-gas-film`, 3 Nov) |
 | Browser checks, real fonts | 81 |
 | 300 games (survive / victories / Degenerate Age turns) | 181 / 69 / 102 |
 | By fate | decay 109 / 148, stable 30 / 81, curvature 42 / 71 |
@@ -558,6 +568,8 @@ The full list is in DEV-NOTES, "Gotchas".
   - It draws the nebula cloud at Low (`cloudQuality`, `src/render/nebulaCloud.ts`).
   - A shot of a system must wait for `engine.view === 'system'` and for the camera to settle, or
     it catches the zoom on its way in.
+- **A tool that starts Vite through `npx` leaves it running** after it is killed, holding its port:
+  the render and levels tools start Vite itself since 3 Nov; do the same in a scratch tool (DEV-NOTES).
 - **`pgrep -f` and `pkill -f` match their own shell.** Find a PID with a pattern that cannot match
   itself (`ps -eo pid,args | grep "[v]ite.js preview"`), or by its port.
 - **The stop hook** won't let a turn end with uncommitted, untracked or unpushed changes.

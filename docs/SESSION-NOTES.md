@@ -188,6 +188,18 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     minutes each), no answer yet. Then "update the HANDOVER.md for another handover": its section 0
     rewritten as where things stand on 2 Nov, the baselines, what waits on the player and the traps
     brought up to date, and the list of batches since 16 Oct kept as its section 3.
+  - Then (3 Nov), back after their usage reset: "Can you please redo the music once more in a more
+    real synthwave style? And please redo the video for the start of the long dusk when you start
+    the twilight interregnum. Because it shows you having a home world around the red dwarf, even
+    though at that time, if you started at 1 trillion years, your home world would be long gone.
+    You would be living on colony worlds." Asked, they chose "Full beat in both" (over the light
+    drums of 2 Nov) and "The Midnight / Kavinsky" (the Interregnum warm and nostalgic as The
+    Midnight or FM-84, the Dusk dark and slow as Kavinsky's Nightcall). Both scores rewritten:
+    chords on the bar, a drum machine, a rolling synth bass, pumping, echo, stabs on the cuts (the
+    other 16 films unchanged). No film had played at the Last Gas; now the Long Dusk's film plays
+    there in such a game's own cut: our first star a white dwarf, our first world frozen (both by
+    their heat), a world we settled, the age's own words for such a game. MP3s of both scores and
+    1080p videos of the cut and of the Interregnum's film were sent before it went live.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

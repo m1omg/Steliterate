@@ -15,7 +15,9 @@
 // cannot lay out it says so, for the page to paint. The films' music (1 Nov, its own score for each
 // film): its voices counted from the score, not a number written here; rendered offline, no film's
 // sound clips and each is about as loud as the others; and a game begun in the Twilight
-// Interregnum plays that age's own film before its words.
+// Interregnum plays that age's own film before its words. And (3 Nov) such a game's own cut of the
+// Long Dusk's film, at the Last Gas: our first star a white dwarf, our first world frozen, a world
+// we settled; the plain cut as it was.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('films', { films: true });
@@ -202,6 +204,31 @@ run(async () => {
     ]),
   );
   check(painter[0]?.failed === true && painter[1]?.i === 0, `a film the painter cannot lay out it answers "failed" (${JSON.stringify(painter[0])}), and paints one it can`);
+  // a game begun in the Twilight Interregnum (3 Nov): the Long Dusk's film in its own cut, played at
+  // the Last Gas (unit/last-gas-film): the star we were born under a white dwarf, our first world
+  // frozen, a world we settled; its own words, never "Your world circles one of them"; a moment of it
+  // drawn twice the same; and the film as it was for a game begun in the Dusk
+  const cut = await page.evaluate(() => {
+    const a = { begun: 'interregnum', homeK: 42 };
+    const at = (b, x) => window.__stel.filmWords('dusk', (b * 60) / 90, x);
+    return {
+      galaxy: at(15.5, a),
+      curve: at(22.8, a),
+      first: at(39.5, a),
+      red: at(43, a),
+      world: at(53.6, a),
+      plain: [at(39.5, {}), at(53.6, {})],
+      frames: window.__stel.filmFrames('dusk', [26.3, 5, 26.3], 320, 180, 'high', false, a),
+      plainFrames: [window.__stel.filmFrames('dusk', [26.3], 320, 180, 'high', false, {})[0], window.__stel.filmFrames('dusk', [26.3], 320, 180)[0]],
+    };
+  });
+  const firstWords = /white dwarf now, and your first world is ice/.test(cut.first) && /OUR FIRST STAR · A WHITE DWARF/.test(cut.first) && /42 K · SEEN BY ITS HEAT/.test(cut.first) && /OUR FIRST WORLD · FROZEN/.test(cut.first);
+  const theirs = /OUR WORLDS/.test(cut.galaxy) && /WE BEGAN/.test(cut.curve) && /worlds of the last red dwarfs/.test(cut.red) && /A WORLD WE SETTLED/.test(cut.world) && ![cut.galaxy, cut.first, cut.red, cut.world].some((x) => /Your world circles one of them|HOME\b/.test(x));
+  const plain = /Your world circles one of them/.test(cut.plain[0]) && !/A WORLD WE SETTLED/.test(cut.plain[1]) && cut.plainFrames[0] === cut.plainFrames[1];
+  check(
+    firstWords && theirs && plain && cut.frames[0] === cut.frames[2] && cut.frames[0] !== cut.frames[1],
+    `a game begun in the Twilight Interregnum sees the Long Dusk's own cut: "${cut.first.split(' | ').filter((x) => /white dwarf|FIRST/i.test(x)).join(' · ')}", then "${cut.red.split(' | ').find((x) => /red dwarfs,/.test(x)) ?? ''}" and ${/A WORLD WE SETTLED/.test(cut.world) ? 'A WORLD WE SETTLED' : 'NO SETTLED WORLD'}; a moment drawn twice the same; ${plain ? 'a game begun in the Dusk sees the film as it was' : 'BUT THE PLAIN CUT CHANGED'}`,
+  );
   // off in Settings: a new game goes straight to the introduction
   await page.reload();
   await page.waitForTimeout(1500);

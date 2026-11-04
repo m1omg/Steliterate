@@ -52,6 +52,14 @@ export interface FilmArgs {
   stillGrain?: boolean;
   /** (the Last Horizon) the Heart's mass as it went, in Suns, for its figures. */
   heartMass?: number;
+  /**
+   * (the Long Dusk, 3 Nov) a game begun in the Twilight Interregnum: its own cut, where the star we
+   * were born under is a white dwarf (at `homeK` kelvin, if known), our first world is frozen (lit, if
+   * one of our settlements is still there: `homeLit`), and we live on the last red dwarfs' worlds.
+   */
+  begun?: 'interregnum';
+  homeK?: number;
+  homeLit?: boolean;
 }
 
 /** The Heart's mass in a game (the supermassive hole, called the Heart; kept after it evaporates), for the Last Horizon's figures. */
@@ -115,6 +123,8 @@ export const FILMS: Record<FilmId, FilmDef> = {
 
 /** The film of a crossing, by its name (CrossingReport.title) and the age it goes to, or null for one with none. */
 export function crossingFilm(title: string | undefined, to: string): FilmId | null {
+  // (3 Nov: the Long Dusk's, in the cut of a game begun in the Twilight Interregnum: FilmArgs.begun)
+  if (title === 'The Last Gas' || to === 'dusk') return 'dusk';
   if (title === 'The Great Decay') return 'great_decay';
   if (title === 'The Last Warmth') return 'last_warmth';
   if (title === 'The Great Evaporation') return 'great_evaporation';

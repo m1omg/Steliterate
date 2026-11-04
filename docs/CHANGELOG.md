@@ -4941,3 +4941,86 @@ arpeggios.
   analog lead, the sequencer, no harp, flute or horn; the Interregnum's drums in its middle only,
   no clank; the Dusk's drone, no drums).
 
+
+## Real synthwave for the two films, and the Long Dusk's film in a game begun in the Interregnum (3 Nov)
+
+The player: "Can you please redo the music once more in a more real synthwave style? And please
+redo the video for the start of the long dusk when you start the twilight interregnum. Because it
+shows you having a home world around the red dwarf, even though at that time, if you started at 1
+trillion years, your home world would be long gone. You would be living on colony worlds." Asked,
+they chose a full beat in both films, and "The Midnight / Kavinsky": the Interregnum warm and
+nostalgic, as The Midnight or FM-84 sound; the Dusk dark, slow and pulsing, as Kavinsky's Nightcall
+(about 91 BPM; the films run at 90). No melody or riff is taken from them.
+
+**What kept the music of 2 Nov from the genre:** its chords changed once a scene, at the film's
+uneven cuts, not on a loop of bars; the drums were a soft kick and a snare in the Interregnum's
+middle, and none in the Dusk; the bass was a sine struck once a bar; nothing pumped with the kick,
+nothing echoed; and a bell rang on every cut, a film score's habit.
+
+**The engine** (`score.ts`, `cue.ts`; used only where a score asks, so the other 16 films and both
+fate cuts compose exactly the same events as before, compared event by event):
+- chords on the bar (`prog`), round and round, the pads, bass, arpeggios and stabs following them;
+- a drum machine (`beat`): sixteen steps a bar for the kick, the gated snare, closed and open
+  hi-hats, with a crash and a rising breath of noise into a section and a fill of toms out of it;
+- the kick made an 80s machine's (150 to 48 Hz with a click), and a sidechain (`pump`): each kick
+  dips the pads, the bass, the sequencer and the drone, which swell back in a quarter of a second;
+- a synth bass (`sbass`, a saw through a resonant filter snapping shut, a sine under it) rolling
+  in eighths; a ping-pong echo in time with the beat, a dotted eighth, on the lead, the arpeggio and
+  the stabs (`echo`; none at the low quality setting); a brassy stab of the chord on every cut and a
+  crash under the title in place of the bell.
+
+**The Twilight Interregnum:** D minor, the classic loop i–VI–III–VII (Dm, B♭, F, C), a bar each from
+beat 6, its last bar C going home to the title's D minor (an added ninth); a new hook of two bars and
+its answer on the analog lead (A G F A, D′ C B♭ A; then A G F D, E D C D); a sixteenth-note
+arpeggio and the rolling octave bass from the start; a kick and off-beat hats from the galaxy, the
+full beat (the snare on 2 and 4, sixteenth hats, an open hat on the "and" of 4) from the H–R
+diagram, a breakdown without drums over the nebula and the young star (the hook an octave up, a
+glassy pad), the beat again with a crash for our star, our world and our cities, a fill of toms
+into the title.
+
+**The Long Dusk:** E minor, i–VI–iv–v (Em, C, Am, Bm), two bars each from beat 2, the minor v going
+home to the title's E minor; a drone; a pulse of eighths on the synth bass from the galaxy on; a
+half-time beat (a kick on 1, the gated snare on 3) from the star-forming curve, a busier kick from
+the stars' close-up, the full beat with the choir for the world and its settlements; a slow hook of
+long notes (E G B, a neighbour C, down to G; the answer C B A, up to B and down to E, the
+suspended fourth the title resolves); an arpeggio high over it in the second half.
+
+Levels (`tools/cue-levels.mjs`): the Interregnum −19.4 dBFS RMS, peak −1.7; the Dusk −19.0, peak
+−1.3 (the Last Light and the Supernova −18.7). In the full beat, part by part: the lead about −21.5
+dBFS, the bass −23.5, the pads −27, the arpeggio −29, the kick −27 with peaks near −7, the snare −31
+with peaks near −5, the hats −38.
+
+**The Long Dusk's film in a game begun in the Twilight Interregnum.** The player is right: in such
+a game the star we were born under, a red dwarf of 0.19 to 0.22 M☉, flares and becomes a white dwarf
+1.2 to 1.8 × 10¹² years after the Big Bang; at the Long Dusk, 9 × 10¹³ years, it has been one for
+some 88 trillion years, at a few tens of kelvin (42 K in the save of `tools/saves/`). Until now no
+film played there at all: the Last Gas showed its report only (the film would have been wrong).
+Now the Last Gas plays the Long Dusk's film in that game's own cut, on the same beats and music
+(`FilmArgs.begun`, `src/ui/filmArgs.ts`), then its report:
+- the galaxy marks OUR WORLDS; the star-forming curve marks WE BEGAN at η 12 beside NOW;
+- shot 6: the star we were born under, a white dwarf, and our first world beside it, the
+  Interregnum film's own world (its map's seed) under ice, both too cold to see and so painted by
+  their faint heat, as the Black Hole Age's films paint the cold ("OUR FIRST STAR · A WHITE DWARF",
+  its temperature as the game has it, "OUR FIRST WORLD · FROZEN"; a few lights and "SOME OF US STILL
+  THERE" where a settlement of ours is still on it);
+- shot 7: one of the last red dwarfs, "BORN FROM THE LAST GAS", whole and then in on its flare;
+- then a world we settled, another than the first, with a colony's few lights;
+- the words are that age's introduction for such a game: "Ninety trillion years after the first
+  light, / the galaxy's gas is spent: no star will form from gas again. / The stars you were born
+  under are dead. What still shines was born last, from the last of the gas. / Your first star is a
+  white dwarf now, and your first world is ice. / Your people live on the worlds of the last red
+  dwarfs, / and they too are near the end of their fuel. Their worlds are already old."
+
+A game begun in the Dusk sees the film exactly as before (eleven moments compared pixel for pixel).
+The Codex's Films seen plays a game's own cut.
+- Checks: `unit/film-scores` (the two films' real synthwave), `unit/last-gas-film` (new: the turn-48
+  Interregnum save played to the Last Gas), `browser/films` (the cut's words, its frames, the plain
+  cut unchanged). Hooks: `__stel.filmWords`, `filmFrames(…, args)`.
+- Tools: `tools/film-render.mjs` and `tools/cue-levels.mjs` start Vite itself, so stopping them stops
+  it (through `npx`, its Vite had stayed behind holding the port: five were found idle).
+- **Validated** (`index-CgxQ4W4K.js`): tsc and the build clean; the playtest (30/144 Hz parity
+  3e-16); savecompat on its 11 saves; all 114 unit checks; all 81 browser checks (70 in three lanes;
+  the other 11 again alone, all passing: they had timed out on a screenshot or a page load with the
+  machine's load at 7.6 on four cores). No rule changed, so no harness run. Previews sent to the
+  player before it went live: MP3s of both scores and 1080p videos of the Interregnum game's cut of
+  the Long Dusk's film and of the Interregnum's film.

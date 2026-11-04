@@ -20,7 +20,8 @@ const fate = args.find((a) => a.startsWith('--fate='))?.slice(7) ?? '';
 const stems = args.includes('--stems');
 const named = args.filter((a) => !a.startsWith('--'));
 const port = 5181;
-const server = spawn('npx', ['vite', '--port', String(port), '--strictPort'], { stdio: 'ignore' });
+// (Vite itself, not through npx: killing npx left its Vite running, holding the port, 3 Nov)
+const server = spawn(process.execPath, [new URL('../node_modules/vite/bin/vite.js', import.meta.url).pathname, '--port', String(port), '--strictPort'], { stdio: 'ignore' });
 process.on('exit', () => server.kill());
 
 /** Peak and RMS (dBFS) of 16-bit PCM WAV bytes (base64), over every channel. */

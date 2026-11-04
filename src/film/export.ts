@@ -15,8 +15,11 @@ host.style.width = `${w}px`;
 host.style.height = `${h}px`;
 const fate = q.get('fate') as 'decay' | 'stable' | 'curvature' | null;
 const eta = q.get('eta');
+// (the Long Dusk's cut for a game begun in the Twilight Interregnum: ?begun=interregnum, its first star's kelvin, a settlement still there)
+const begun = q.get('begun') === 'interregnum' ? ('interregnum' as const) : undefined;
+const homeK = q.get('homek');
 host.style.setProperty('--film-accent', (FILMS[id] ?? FILMS.dusk).accent);
-const player = new FilmPlayer(host, FILMS[id] ? id : 'dusk', { quality: 'high', args: { fate: fate ?? undefined, eta: eta ? Number(eta) : undefined }, width: w, height: h, pixelRatio: 1 });
+const player = new FilmPlayer(host, FILMS[id] ? id : 'dusk', { quality: 'high', args: { fate: fate ?? undefined, eta: eta ? Number(eta) : undefined, begun, homeK: homeK ? Number(homeK) : undefined, homeLit: q.get('homelit') === '1' }, width: w, height: h, pixelRatio: 1 });
 
 (window as unknown as { __film: unknown }).__film = {
   length: player.length,

@@ -1,5 +1,6 @@
 // Renders one of the films (src/film) to an MP4, every frame drawn at its exact time:
 //   node tools/film-render.mjs <film> <out.mp4> [--size=1920x1080] [--fps=60] [--ffmpeg=<path>] [--jpeg] [--fate=decay|stable|curvature]
+//     [--begun=interregnum [--homek=<kelvin>] [--homelit]]   (the Long Dusk's cut for a game begun in the Twilight Interregnum)
 // It starts the Vite dev server for film.html (the export page, never built into the game),
 // steps the film's time by 1/fps, screenshots each frame (the canvas and the words over it),
 // renders the film's cue offline, and encodes with ffmpeg: H.264 and AAC. ffmpeg is not a
@@ -30,9 +31,13 @@ const ext = jpeg ? 'jpg' : 'png';
 const ffmpeg = opt('ffmpeg', process.env.FFMPEG ?? 'ffmpeg');
 // (the films that differ by the fate of matter: which one)
 const fate = opt('fate', '');
+const begun = opt('begun', '');
+const homek = opt('homek', '');
+const homelit = process.argv.includes('--homelit');
 const port = 5179;
 
-const server = spawn('npx', ['vite', '--port', String(port), '--strictPort'], { stdio: 'ignore' });
+// (Vite itself, not through npx: killing npx left its Vite running, holding the port, 3 Nov)
+const server = spawn(process.execPath, [new URL('../node_modules/vite/bin/vite.js', import.meta.url).pathname, '--port', String(port), '--strictPort'], { stdio: 'ignore' });
 const stop = () => server.kill();
 process.on('exit', stop);
 try {
@@ -46,7 +51,7 @@ try {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   await routeFonts(ctx);
   const page = await ctx.newPage();
-  await page.goto(`http://localhost:${port}/film.html?film=${film}&w=${w}&h=${h}${fate ? `&fate=${fate}` : ''}`, { timeout: 120000 });
+  await page.goto(`http://localhost:${port}/film.html?film=${film}&w=${w}&h=${h}${fate ? `&fate=${fate}` : ''}${begun ? `&begun=${begun}` : ''}${homek ? `&homek=${homek}` : ''}${homelit ? '&homelit=1' : ''}`, { timeout: 120000 });
   await page.waitForFunction(() => !!window.__film, null, { timeout: 120000 });
   await page.evaluate(() => window.__film.ready());
   const length = await page.evaluate(() => window.__film.length);

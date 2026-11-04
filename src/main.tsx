@@ -426,9 +426,9 @@ window.__stel = {
   slowSlices: (ms: number) => setSlowSlices(ms),
   /** The films, by id, with their names. */
   filmList: () => Object.fromEntries(Object.values(FILMS).map((f) => [f.id, f.name])),
-  /** A film's frames at these times, drawn one after another on one canvas (a hash of each), for the checks: a moment draws the same picture whatever was drawn before it. `timed`: each one's drawing time (ms) instead. */
-  filmFrames(id: FilmId, times: number[], w = 480, h = 270, quality: FilmQuality = 'high', timed = false) {
-    const p = new FilmPlayer(document.createElement('div'), id, { quality, width: w, height: h, pixelRatio: 1 });
+  /** A film's frames at these times, drawn one after another on one canvas (a hash of each), for the checks: a moment draws the same picture whatever was drawn before it. `timed`: each one's drawing time (ms) instead; `args`: what the film is told of the game (a cut of it). */
+  filmFrames(id: FilmId, times: number[], w = 480, h = 270, quality: FilmQuality = 'high', timed = false, args?: FilmArgs) {
+    const p = new FilmPlayer(document.createElement('div'), id, { quality, args, width: w, height: h, pixelRatio: 1 });
     const c = p.canvas.getContext('2d')!;
     const out = times.map((t) => {
       const a = performance.now();
@@ -464,6 +464,14 @@ window.__stel = {
     for (let i = 0; i < a.length; i += 4) sum += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
     return sum / (a.length / 4) / 3;
   },
+  /** The words standing over a film at a moment (its title, narration and labels showing), told these args, for the checks. */
+  filmWords: (id: FilmId, t: number, args: FilmArgs = {}) =>
+    FILMS[id]
+      .setup(480, 270, 'low', args, false)
+      .text(t)
+      .filter((x) => x.opacity > 0.05)
+      .map((x) => x.text)
+      .join(' | '),
   /** The painter thread's first answer to a job (askPainter), for the checks. */
   askPainter: (job: PaintJob) => askPainter(job),
   /** The last frames played: [film time (s), the page's time (ms)] (FilmPlayer.times). */
