@@ -1,6 +1,7 @@
 // Keeping time with a flare (1 Nov, the player's game, begun in the Twilight Interregnum, turn 52:
 // "No light to draw on right now? what?" under Kekoth's blue flare). Each of its six turns covers
-// 620 million years, 0.2% of a Tide turn there, and pays for that time only; the build list said
+// 620 million years, 0.2% of a Tide turn there (0.4% since 7 Nov, the Interregnum's Tide grown as
+// the Dusk's), and pays for that time only; the build list said
 // "No light to collect here right now", and the 18 Kin cost 51 energy a turn while it gathered 0.4.
 // Asked, the player chose "People cost for the time too" (economy.ts clockShare):
 // - in the flare's turns people's upkeep and the labs' draw are for the time a turn covers, as the
@@ -31,7 +32,7 @@ const net = p.energyIn - p.energyOut;
 check(Math.abs(net) < 2 && p.industry > 20, `its turn: ${p.energyIn.toFixed(2)} energy in, ${p.energyOut.toFixed(2)} out (it was 0.40 in, 51.17 out), industry ${p.industry.toFixed(1)}, a whole turn's`);
 const mer = colonies(s).find((c) => s.bodies[c.bodyId].name === 'Meranuhash II')!;
 const solar = structureEffect(s, mer, 'solar_array', p.ctx).notes.join(' ');
-check(/^A short turn: we keep time with Kekoth’s flare\. It covers 620 million years, 0\.2% of a Tide turn, and gathers for that time only: \+0\.01 energy now, \+5\.\d over a Tide turn/.test(solar), `a Solar Array at Meranuhash II: "${solar}"`);
+check(/^A short turn: we keep time with Kekoth’s flare\. It covers 620 million years, 0\.4% of a Tide turn, and gathers for that time only: \+0\.02 energy now, \+5\.\d over a Tide turn/.test(solar), `a Solar Array at Meranuhash II: "${solar}"`);
 // six turns of it: energy barely moves but for the pact's beams; then our own pace again
 const e0 = s.civ.energy;
 let beamed = 0;

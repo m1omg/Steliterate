@@ -28,8 +28,9 @@ check(Object.keys(s.systems).join() === Object.keys(dusk.systems).join(), 'the s
 // the home
 const home = s.systems[s.civ.homeSystemId];
 const p = home.primary;
-const turnsToFlare = turnsUntil('dusk', s.years, p.blueAt!, 'standard', 0, 80);
-check(p.kind === 'red_dwarf' && p.mass >= 0.19 && p.mass <= 0.22 && turnsToFlare >= 45 && turnsToFlare <= 51, `our star: a red dwarf of ${p.mass.toFixed(3)} M☉, flaring at turn ${turnsToFlare} of ${estimateEraTurns('interregnum', 'standard')}`);
+const turnsToFlare = turnsUntil('dusk', s.years, p.blueAt!, 'standard', 0, 200);
+// (turn 88 to 94 of 114 since 7 Nov, the Tide grown as the Dusk's; 46 to 50 of 60 until then)
+check(p.kind === 'red_dwarf' && p.mass >= 0.19 && p.mass <= 0.22 && turnsToFlare >= 86 && turnsToFlare <= 96, `our star: a red dwarf of ${p.mass.toFixed(3)} M☉, flaring at turn ${turnsToFlare} of ${estimateEraTurns('interregnum', 'standard')}`);
 const hw = home.bodies.map((id) => s.bodies[id]).find((b) => b.traits.includes('homeworld'))!;
 const hw0 = dusk.systems[dusk.civ.homeSystemId].bodies.map((id) => dusk.bodies[id]).find((b) => b.traits.includes('homeworld'))!;
 const widen = Math.sqrt((0.23 * Math.pow(p.mass, 2.3)) / (0.23 * Math.pow(0.1, 2.3)));

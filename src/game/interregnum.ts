@@ -267,7 +267,7 @@ function addCloseWorlds(state: GameState, sys: StarSystem, rng: Rng) {
 /**
  * A home (ours, or a neighbour's) at 10¹² years: the same system and worlds, around one of the
  * heavier red dwarfs, 0.19 to 0.22 M☉, old, which flares blue 2 × 10¹¹ to 8 × 10¹¹ years in
- * (about turn 46 to 50 of 60 at Standard; a red dwarf of 0.2 M☉ lives some 1.6 × 10¹² years) and
+ * (about turn 88 to 94 of 114 at Standard; a red dwarf of 0.2 M☉ lives some 1.6 × 10¹² years) and
  * then collapses to a white dwarf. Its worlds are widened by √ of its light beside the star it had
  * at the Dusk, so each keeps the light it was made for.
  */
@@ -306,7 +306,11 @@ function pastOfWhite(state: GameState, sys: StarSystem, rng: Rng) {
     return;
   }
   if (r < 0.72) {
-    const dies = INTERREGNUM_START + Math.pow(10, rng.range(10, Math.log10(1.2e13)));
+    // its death spread through the age as the Dusk spreads its own (gen.ts makePrimary): evenly in
+    // the logarithm of the time since the age began, from 10⁸ years in (since 7 Nov; from 10¹⁰
+    // until then, when every turn was already longer than a whole flare). A bend: in nature the old
+    // red dwarfs' deaths crowd toward the age's end (the Codex says so). The same one draw as ever.
+    const dies = INTERREGNUM_START + Math.pow(10, rng.range(8, Math.log10(1.2e13)));
     sys.primary = oldRedDwarf(rng, dies);
     sys.primary.halo = dusk.halo;
     addCloseWorlds(state, sys, rng);

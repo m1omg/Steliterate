@@ -32,7 +32,9 @@ const dist = (a: StarSystem, b: StarSystem) => Math.hypot(a.phys.x - b.phys.x, a
 
 // ---------------------------------------------------------------- generation
 const s = newGame({ seed: 1000, interregnum: true, civsAsleep: true });
-check(hashOf(without(newGame({ seed: 1000, interregnum: true }))) === 3292118343 && hashOf(without(newGame({ seed: 20260927, interregnum: true }))) === 3254906463, 'the same galaxy as before, but for the new field (seeds 1000 and 20260927)');
+// (the hashes of 1 Nov were 3292118343 and 3254906463; since 7 Nov the old red dwarfs' deaths are
+// spread from 10⁸ years into the age, as the Dusk spreads its own: interregnum-pace.ts)
+check(hashOf(without(newGame({ seed: 1000, interregnum: true }))) === 2767092969 && hashOf(without(newGame({ seed: 20260927, interregnum: true }))) === 2252565887, 'the same galaxy as before, but for the new field (seeds 1000 and 20260927)');
 let seen = 0;
 let nearHome = 0;
 let all = 0;

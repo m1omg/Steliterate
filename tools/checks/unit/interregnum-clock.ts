@@ -1,6 +1,7 @@
 // The Twilight Interregnum's clock (1 Nov, the player: "a sort of a prequel mode where you start
-// earlier, from 1e12 years"; about 60 turns at Standard). It begins at 10¹² years with 40-year
-// turns, lasts about 45 / 60 / 82 turns at Brief / Standard / Vast, and its last turn stops at
+// earlier, from 1e12 years"). It begins at 10¹² years with 40-year turns, lasts about 86 / 114 /
+// 148 turns at Brief / Standard / Vast (since 7 Nov its Tide grows as the Dusk's: "So the pacing
+// matches the original start"; 45 / 60 / 82 until then), and its last turn stops at
 // 9 × 10¹³ years, where The Last Gas hands over to the Dusk, whose Tide begins again at 40 years.
 // A game begun in the Dusk keeps its Tide exactly as before.
 import { ERA_BY_ID, INTERREGNUM, erasOf, estimateEraTurns, nextEra, stepTime, tideLength } from '../../../src/game/eras';
@@ -11,7 +12,16 @@ import { endTurn } from '../../../src/game/sim/turn';
 import { check, done, near } from '../lib';
 
 const turns = { brief: estimateEraTurns('interregnum', 'brief'), standard: estimateEraTurns('interregnum', 'standard'), vast: estimateEraTurns('interregnum', 'vast') };
-check(Math.abs(turns.brief - 45) <= 2 && Math.abs(turns.standard - 60) <= 2 && Math.abs(turns.vast - 82) <= 3, `about 45 / 60 / 82 turns (${turns.brief} / ${turns.standard} / ${turns.vast})`);
+check(Math.abs(turns.brief - 86) <= 2 && Math.abs(turns.standard - 114) <= 2 && Math.abs(turns.vast - 148) <= 3, `about 86 / 114 / 148 turns (${turns.brief} / ${turns.standard} / ${turns.vast})`);
+// turn for turn as long as the Dusk's (the same Tide from the same 40 years)
+for (const n of [10, 40, 70]) {
+  let a = INTERREGNUM.startYears, b = ERA_BY_ID.dusk.startYears;
+  for (let i = 0; i < n; i++) {
+    a = stepTime('interregnum', a, Math.log10(a), 0, 'standard').years;
+    b = stepTime('dusk', b, Math.log10(b), 0, 'standard').years;
+  }
+  near(`turn ${n + 1} as long as the Dusk’s`, tideLength('interregnum', a, 'standard'), tideLength('dusk', b, 'standard'), 1e-4); // (the years since each began differ in their last digits: 10¹² against 9 × 10¹³)
+}
 near('the first turn is 40 years', tideLength('interregnum', INTERREGNUM.startYears, 'standard'), 40);
 near('as the Dusk keeps it before 9 × 10¹³ years', tideLength('dusk', INTERREGNUM.startYears, 'standard'), 40);
 check(nextEra('interregnum') === 'dusk' && INTERREGNUM.index === -1 && ERA_BY_ID.dusk.index === 0, 'it stands before the Dusk, and no other age’s index moved');

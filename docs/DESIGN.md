@@ -291,12 +291,13 @@ sequence, a world reaching its dead star's tidal limit, galactic evaporation, th
 fading, proton decay, black holes evaporating, a swarm on its way, the free-energy trend.
 
 **0. The Twilight Interregnum** (1 Nov; a game begun in it, offered at /next/ only:
-`src/channel.ts`). An age before the Dusk, from 10¹² years (η 12) to 9 × 10¹³: 45 / 60 / 82 turns
-from 40-year turns, its calendar the Dusk's, its own Tide (`eras.ts`). The galaxy is the seed's
+`src/channel.ts`). An age before the Dusk, from 10¹² years (η 12) to 9 × 10¹³: 86 / 114 / 148 turns
+from 40-year turns (45 / 60 / 82 until 7 Nov), its calendar the Dusk's, its Tide grown as the Dusk's is (`eras.ts`). The galaxy is the seed's
 Dusk galaxy rewound (`src/game/interregnum.ts`), with draws of its own so every Dusk seed is
 unchanged. Every red dwarf shining at 10¹² years goes out within the age, the heaviest first (a
 red dwarf lives 10¹² years at 0.25 M☉, about 1.2 × 10¹³ at 0.08), among them our own, one of the
-heavier (0.19 to 0.22 M☉), near turn 46 to 50; the Dusk's small red dwarfs are nebulae, born one
+heavier (0.19 to 0.22 M☉), near turn 88 to 94 (the other old red dwarfs' deaths spread through
+the age as the Dusk spreads its own, from 10⁸ years in: a bend); the Dusk's small red dwarfs are nebulae, born one
 life before they flare, at the very end (since 1 Nov, in a new game, their gas thin and dark until
 half the galaxy's age at their birth, so only a few nebulae are seen at a trillion years); a few young orange and yellow dwarfs, rarer white stars
 and one or two blue giants (supernovae within tens of millions of years) burn among them; the gas

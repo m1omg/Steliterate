@@ -5024,3 +5024,44 @@ The Codex's Films seen plays a game's own cut.
   machine's load at 7.6 on four cores). No rule changed, so no harness run. Previews sent to the
   player before it went live: MP3s of both scores and 1080p videos of the Interregnum game's cut of
   the Long Dusk's film and of the Interregnum's film.
+
+## The Twilight Interregnum paced as the Long Dusk (7 Nov; at /next/ only)
+
+The player: "Any way to rework the interregnum? So the pacing matches the original start in that
+late stelliferous era [which] doesn't have stars going out in 1 turn. Mayhaps by starting with a
+shorter turn duration. How does turn scaling work here anyways?" It goes to /next/ alone, at their
+word ("ONLY to /next"): no PR into `main`.
+
+**Why its stars went out within a turn.** Both ages begin with 40-year turns, so a shorter first
+turn would not have helped. Two things differed:
+- the Interregnum's Tide grew ×1.6 a turn at Standard, the Dusk's ×1.27;
+- its old red dwarfs began to die only 10¹⁰ years in, when a turn already lasted longer than a whole
+  flare (2 to 6 billion years); the Dusk spreads its deaths from 10⁸ years in (`gen.ts`
+  `makePrimary`).
+
+On seeds 1000 to 1019, 91% of the Interregnum's flares came and went between two turns and none was
+seen at two turns' ends; in the Dusk 47% and 39%.
+
+**Now:**
+- its Tide grows as the Dusk's (×1.38 / 1.27 / 1.2 at Brief / Standard / Vast) from the same 40
+  years: 86 / 114 / 148 turns (45 / 60 / 82 before), each as long as the Dusk's turn of the same
+  number (`eras.ts`);
+- its old red dwarfs' deaths are spread evenly in the logarithm of the time since it began, from
+  10⁸ years in, as the Dusk's are (`interregnum.ts` `pastOfWhite`). It is the same one draw, so a
+  game begun in the Dusk is generated exactly as before; a new Interregnum game's dates differ. A
+  bend, said in the Codex: in nature most of them would go out toward the age's end;
+- on the same seeds 57% of its flares are now never seen at a turn's end and 30% are seen at two or
+  more. The rest of the gap with the Dusk is the red dwarfs born during the age, and the homes,
+  which go out late, when a turn is long;
+- our home star flares near turn 88 to 94 of 114 (46 to 50 of 60 before);
+- the young stars born during the age still light and go out within about a turn, as the Degenerate
+  Age's new stars do; keeping time with one follows it over six turns, as before.
+
+A game saved in the Interregnum keeps its stars, and its turns follow the new Tide from its next
+turn. The Manual's and the Codex's "about 60 turns" read 114.
+- Checks: `unit/interregnum-pace` (new: the turns, the flares seen against the Dusk's, the deaths
+  from 10⁸ years in and the heaviest first, a game begun in the Dusk unchanged), and
+  `unit/interregnum-clock` (turn for turn as long as the Dusk's), `unit/interregnum-galaxy` (our
+  star flares at turn 88 to 94), `unit/thin-gas` (the Interregnum galaxy's new hashes) and
+  `unit/flare-turns` (in the player's turn-52 save a flare turn is now 0.4% of a Tide turn, not
+  0.2%) follow.

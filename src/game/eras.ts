@@ -95,7 +95,12 @@ export const ERAS: EraDef[] = [
  * from ERAS, so no other age's index moves and a game begun in the Dusk never meets it: its index
  * is −1, nextEra gives the Dusk, and erasOf lists it first only for such a game. Its calendar is
  * the Dusk's (calendarEra, fate.ts): the same physics, units, research and structures, with a Tide
- * of its own before 9 × 10¹³ years (eraAt, below).
+ * of its own before 9 × 10¹³ years (eraAt, below). Since 7 Nov its Tide grows as the Dusk's does
+ * (until then ×1.9 / 1.6 / 1.4 a turn, about 60 turns at Standard; the player: "So the pacing
+ * matches the original start in that late stelliferous era [which] doesn't have stars going out in
+ * 1 turn"): about 86 / 114 / 148 turns at Brief / Standard / Vast, each as long as the Dusk's turn
+ * of the same number. A red dwarf's flare lasts 2 to 6 × 10⁹ years, and at ×1.6 the turns had
+ * already passed that before the first old star died.
  */
 export const INTERREGNUM: EraDef = {
   id: 'interregnum',
@@ -106,7 +111,7 @@ export const INTERREGNUM: EraDef = {
   startYears: 1e12,
   endEta: Math.log10(9e13),
   l0: 40,
-  growth: { brief: 1.9, standard: 1.6, vast: 1.4 },
+  growth: { brief: 1.38, standard: 1.27, vast: 1.2 },
   accent: '#f2b65a',
   accentSoft: '#ffd89c',
   neon: '#6fe0b4',

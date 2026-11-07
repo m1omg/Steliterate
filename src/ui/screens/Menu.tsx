@@ -136,7 +136,7 @@ export function Setup() {
               value={st.interregnum ? 1 : 0}
               options={[
                 { id: 0, name: 'At the Long Dusk', tip: '9 × 10¹³ years: the last red dwarfs near the end of their fuel, your world dying. The game as it has always begun.' },
-                { id: 1, name: 'In the Twilight Interregnum', tip: '10¹² years, ninety trillion years earlier (a preview, played at this address only): a galaxy of old red dwarfs, gas and a few young bright stars. Your star is one of the heavier red dwarfs, and it will die within the age. About 60 turns at Standard, then the Long Dusk and every age after it.' },
+                { id: 1, name: 'In the Twilight Interregnum', tip: '10¹² years, ninety trillion years earlier (a preview, played at this address only): a galaxy of old red dwarfs, gas and a few young bright stars. Your star is one of the heavier red dwarfs, and it will die within the age. About 114 turns at Standard, paced as the Long Dusk, then the Long Dusk and every age after it.' },
               ]}
               onPick={(v) => set({ interregnum: v === 1 ? true : undefined })}
             />
