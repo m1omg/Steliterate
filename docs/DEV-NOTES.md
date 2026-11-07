@@ -2190,7 +2190,11 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
   amount × `szilardYield`, Continuity/100 × the choice's yield, the Dark Era only);
   `szilardContinuity` added to `continuityLoss`; `FORGET` (`flags.forget_what` 1/2/3, the event
   `what_to_forget`, queued by `finishQueued` at the first engine). The tip in `standingNotes`
-  (`projection.ts`).
+  (`projection.ts`). Its research is `noAuto`, never worked out from surplus insight
+  (`discoverFromSurplus`): at 700 it was the Dark Era's cheapest project, taken at its start in
+  nearly every game. The autoplayer takes it up only when `burnWanted` (`pickResearch`: Continuity
+  above `SZILARD_FROM` and the reserve gone within six turns at its net). Research under way halves a
+  Great Work's insight (`researchAndWorks`, `turn.ts`): the trap to remember.
 - **The two films** (7 Nov): `src/film/cloud.ts` (`CLOUD_FILM`, played before `cloud_light`'s card
   in `turnflow.ts`, `flags.cloud_film`), and `end_vacuum` in `endings.ts` (`ending()`'s `make` now
   gets the args, and may give the title: `FilmArgs.vacuum` picks the cut; `filmArgsOf` sets it).

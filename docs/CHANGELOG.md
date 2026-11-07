@@ -5104,7 +5104,8 @@ vacuum types fully, the answer is now the Codex's page "The vacuum". At /next/ a
   turn 38).
 - The research The Vacuum Question (Black Hole Age, continuity, 700) is there only while the vacuum
   is unknown, and its answer says which and when. Once it is known to fall, a forecast gives the
-  chance this turn and within five, the distribution's given that we have lasted, never the date.
+  chance this turn and within five, the distribution's given that we have lasted, never the date;
+  before the Dark Era it gives the likeliest date (10⁶¹³ years) or the earliest (10^(10³⁴)).
 - The fall ends the game for everyone, as Endurance: "The True Vacuum" or "The Final State", each
   with its epilogue and its cut of a new ending film. A Work finished that turn stands; the fall comes
   before the Fade and the Recurrence.
@@ -5163,8 +5164,15 @@ reason.
   digits printed as "2.5e+99": seen in the Dark Era's endings too.
 
 **Also:**
-- The autoplayer researches both, builds Szilard Engines only when the reserve is short and
-  Continuity above 60 (down again below 35), and takes The Unbidden.
+- Szilard Engines are a deliberate choice: the scholars never work them out from surplus insight,
+  as with the Halo Siphons (said in the Manual). At 700 they were the Dark Era's cheapest project and
+  were taken that way at its start, pushing back what came after.
+- The autoplayer researches the Vacuum Question, and Szilard Engines only when it would light one:
+  Continuity above 60 and the reserve gone within six turns at its net. It builds them only when
+  the reserve is short (down again below 35), and takes The Unbidden. In the first harness run it
+  took the research in nearly every Dark Era game and lit an engine in two of 300. Research
+  under way halves a Great Work's insight (`turn.ts`), so the Long Thought came one to four
+  turns late and one victory was lost. The first run's numbers are below.
 - The harness gains `--vacuum=`.
 - `tools/film-render.mjs` gains `--vacuum=` and `--eta=`.
 - The Codex: the page "The vacuum", the Dark Era's page on what the horizon's warmth makes, and the

@@ -139,7 +139,7 @@ export const TECHS: TechDef[] = [
   // ============================================================ IV. Dark
   T({ id: 'asymptotic_mind', name: 'Asymptotic Mind', era: 'dark', field: 'mind', cost: 900, requires: [], desc: 'A mind whose thoughts can stretch without limit. Enables the Hibernal Cascade.', effects: { echoMaxClock: Infinity } }),
   T({ id: 'horizon_siphon', name: 'Horizon Siphoning', era: 'dark', field: 'harvest', cost: 800, requires: [], speculative: true, desc: 'Speculative: draw the faintest trickle from the cosmic horizon’s temperature. Unlocks Horizon Siphons.' }),
-  T({ id: 'szilard_engines', name: 'Szilard Engines', era: 'dark', field: 'harvest', cost: 700, requires: [], desc: 'A blank memory is fuel: erasing a bit costs kT ln 2 (Landauer), and a bit we know can be let go to noise for as much work (Szilard; Bennett). Our archive is the last fuel we have. Unlocks the Szilard Engine, which trades Continuity for energy.' }),
+  T({ id: 'szilard_engines', name: 'Szilard Engines', era: 'dark', field: 'harvest', cost: 700, requires: [], noAuto: true, desc: 'A blank memory is fuel: erasing a bit costs kT ln 2 (Landauer), and a bit we know can be let go to noise for as much work (Szilard; Bennett). Our archive is the last fuel we have. Unlocks the Szilard Engine, which trades Continuity for energy.' }),
   T({ id: 'garden_of_embers', name: 'Garden of Embers', era: 'dark', field: 'stewardship', cost: 900, requires: [], needsStable: true, desc: 'The protons held. Something could still grow. Enables the Great Work Garden of Embers.' }),
 ];
 

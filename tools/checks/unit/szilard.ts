@@ -4,12 +4,16 @@
 // - the first one lit raises the Threads' argument, "What Shall We Forget?": the copies held twice
 //   (0.6 of the energy for half the cost), the oldest memories (as rated; the Kin object), or what
 //   each of us remembers alone (1.6 times both; the Echoes object);
-// - taken down, it stops; its tip gives its cost and its yield as they are now.
+// - taken down, it stops; its tip gives its cost and its yield as they are now;
+// - its research a deliberate choice: never worked out from surplus insight, and the autoplayer
+//   takes it up only when it would light one.
+import { autoPlay } from '../../../src/game/auto';
 import { STRUCTURE_BY_ID } from '../../../src/game/data/structures';
 import { dismantle } from '../../../src/game/sim/actions';
 import { DARK_DECAY, continuityLoss } from '../../../src/game/sim/continuity';
 import { resolveEvent } from '../../../src/game/sim/events';
 import { project, structureEffect } from '../../../src/game/sim/projection';
+import { availableTechs, discoverFromSurplus } from '../../../src/game/sim/research';
 import { finishQueued } from '../../../src/game/sim/queue';
 import { ENGINE_CONTINUITY, FORGET, szilardYield } from '../../../src/game/sim/szilard';
 import { colonies } from '../../../src/game/sim/util';
@@ -55,5 +59,34 @@ near('and the Continuity', continuityLoss(s, false), loss0);
 // outside the Dark Era: nothing to burn
 const dusk = newGame({ seed: 1000, civsAsleep: true });
 check(szilardYield(dusk) === 0, 'outside the Dark Era it gives nothing (the archive is worth keeping)');
+
+// a deliberate choice: never worked out from surplus insight (research.ts), and the autoplayer takes
+// it up only when it would light one, much left to burn and the reserve gone within six turns (it
+// took it in nearly every Dark Era game and lit one in two of 300, halving a Great Work's insight)
+{
+  const g = darkGame();
+  for (let i = 0; i < 200; i++) {
+    g.civ.flags.insight_bank = 1e9;
+    if (!discoverFromSurplus(g).length) break;
+  }
+  check(g.civ.techs.includes('horizon_siphon') && !g.civ.techs.includes('szilard_engines') && availableTechs(g).some((t) => t.id === 'szilard_engines'), 'never worked out from surplus insight, as the Halo Siphons');
+  g.civ.flags.insight_bank = 0;
+  g.civ.researching = null;
+  g.civ.energy = 3000;
+  g.civ.flags.last_energy_net = 5;
+  autoPlay(g, 'competent');
+  check(g.civ.researching !== 'szilard_engines' && !g.civ.techs.includes('szilard_engines'), `the autoplayer, the reserve whole: not researched (${g.civ.researching})`);
+  const h = darkGame();
+  for (let i = 0; i < 200; i++) {
+    h.civ.flags.insight_bank = 1e9;
+    if (!discoverFromSurplus(h).length) break;
+  }
+  h.civ.flags.insight_bank = 0;
+  h.civ.researching = null;
+  h.civ.energy = 300;
+  h.civ.flags.last_energy_net = -80;
+  autoPlay(h, 'competent');
+  check(h.civ.researching === 'szilard_engines', `the reserve gone within six turns, much left to burn: researched (${h.civ.researching})`);
+}
 
 done('SZILARD');

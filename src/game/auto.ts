@@ -525,9 +525,14 @@ function pickResearch(state: GameState) {
   // where it would weave a vault in (its reserve would not last to the decay at its net, with time
   // left to use it): before the Great Evaporation the crossing changes the reserve
   const leptonic = colonies(state).some((c) => formOf(c) === 'leptonic');
+  // Szilard Engines only once one would be lit (planBuilds): much left to burn and the reserve gone
+  // within six turns at its net. Until then the research would only halve a Great Work's insight
+  // (turn.ts), as it did in nearly every Dark Era game that lit none (7 Nov)
+  const burnWanted = calendarEra(state) === 'dark' && civ.continuity > SZILARD_FROM && net < 0 && civ.energy < -net * 6;
   const useless = (id: string) =>
     never(id) ||
     (id === 'horizon_writing' && !leptonic) ||
+    (id === 'szilard_engines' && !burnWanted) ||
     (id === 'positronium_weaving' && (!leptonic || !positroniumHere(state) || !matterGone(state) || state.eta > WEAVE_WORTH || net >= 0 || civ.energy >= -net * turnsToDecay(state) || turnsToDecay(state) < WEAVE_TURNS));
   // what can no longer be of use is put down (what was put into it stays)
   if (civ.researching && never(civ.researching)) setResearch(state, null);
@@ -543,7 +548,7 @@ function pickResearch(state: GameState) {
     const order = [...(dark ? HUNGER_FIRST : []), ...(way ? WAY_RESEARCH[way] : []), ...TECH_PRIORITY];
     // (and the cheapest left, when the list is done, never one that can be of no use, nor the
     // weaving unless it would weave now: it is seldom of use, and idle insight is kept for what is)
-    const next = guard ?? order.find((id) => avail.has(id) && !useless(id)) ?? [...avail].filter((id) => !never(id) && !(id === 'positronium_weaving' && useless(id)) && (dark || !TECHS.find((t) => t.id === id)?.taint) && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
+    const next = guard ?? order.find((id) => avail.has(id) && !useless(id)) ?? [...avail].filter((id) => !never(id) && !((id === 'positronium_weaving' || id === 'szilard_engines') && useless(id)) && (dark || !TECHS.find((t) => t.id === id)?.taint) && (mine || !TECHS.find((t) => t.id === id)?.noAuto)).sort((a, b) => techCost(state, a) - techCost(state, b))[0];
     if (!next) break;
     setResearch(state, next);
   }
