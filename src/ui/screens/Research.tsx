@@ -95,8 +95,9 @@ export function ResearchModal({ s }: { s: GameState }) {
                     const active = s.civ.researching === t.id;
                     const prog = s.civ.research[t.id] ?? 0;
                     // a project for another fate of matter: a question mark until the Proton
-                    // Question is answered, and then gone (it does not exist in this universe)
-                    if (!visible && (protonFateKnown(s) || (t.interregnumOnly && !s.settings.interregnum))) return null;
+                    // Question is answered, and then gone (it does not exist in this universe).
+                    // The Vacuum Question where the vacuum was chosen is simply not there: no "???"
+                    if (!visible && (protonFateKnown(s) || (t.interregnumOnly && !s.settings.interregnum) || t.vacuumUnknown)) return null;
                     if (!visible)
                       return (
                         <div key={t.id} class="tech locked" data-tip="Depends on whether protons decay. Research the Proton Question to find out.">

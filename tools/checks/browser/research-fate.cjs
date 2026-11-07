@@ -5,7 +5,9 @@
 // with a hint that no longer helps (seen 11 Oct, after the Proton Question). Positronium Weaving
 // (the new version, part 3-5) is there under any fate but stable matter. Its first column is the
 // Stelliferous Age (1 Nov, the player: the Dusk's projects are "really the Technology … for the
-// Stelliferous Age").
+// Stelliferous Age"). The Vacuum Question, where the vacuum was chosen at the start (Stable here,
+// the default), is not there at all: on 7 Nov it showed as a fifth "???" with the Proton
+// Question's hint, and stayed after it.
 const { check, start, finish, run } = require('../lib.cjs');
 run(async () => {
   const ck = await start('research-fate');
