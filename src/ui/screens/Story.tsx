@@ -2,7 +2,7 @@ import { signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { SHIP_BY_ID } from '../../game/data/ships';
 import { EVENT_BY_ID, choiceHint, choiceOk, choiceShown } from '../../game/data/events';
-import { DARK_ENDING, ENDURANCE_ENDING, WORKS } from '../../game/data/works';
+import { DARK_ENDING, ENDURANCE_ENDING, VACUUM_EPILOGUE, WORKS } from '../../game/data/works';
 import { ageIntro, ERA_BY_ID, formatEta, formatYears } from '../../game/eras';
 import { answerEvent } from '../../game/sim/actions';
 import { fleets, threadTotals, totalPops } from '../../game/sim/util';
@@ -346,7 +346,7 @@ export function OutcomeScreen({ s }: { s: GameState }) {
   useFocusOnOpen(title, o?.ending);
   if (!o) return null;
   const work = WORKS.find((w) => w.ending === o.ending);
-  const epilogue = work?.epilogue ?? (o.kind === 'dark' ? DARK_ENDING.epilogue : o.kind === 'endurance' ? ENDURANCE_ENDING.epilogue : DEFEAT_TEXT[o.ending] ?? '');
+  const epilogue = work?.epilogue ?? (o.kind === 'dark' ? DARK_ENDING.epilogue : o.kind === 'endurance' ? (VACUUM_EPILOGUE[o.ending] ?? ENDURANCE_ENDING.epilogue) : DEFEAT_TEXT[o.ending] ?? '');
   const totals = threadTotals(s);
   const fates = Object.values(s.survivors);
   const head = o.kind === 'victory' ? 'An ending' : o.kind === 'dark' ? 'The dark ending' : o.kind === 'endurance' ? 'Endurance' : 'The end';

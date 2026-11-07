@@ -11,6 +11,7 @@ export type EnergyMode =
   | 'curvature' // curvature radiation: a neutron star's mass turned into particles by the space around it
   | 'siphon' // horizon siphoning (speculative)
   | 'positronium' // the shrinking orbits of positronium, then its never-ending annihilation (positronium.ts)
+  | 'szilard' // memories randomized into work, kT ln 2 a bit, scaled by Continuity (sim/szilard.ts)
   | 'rekindle'; // debris stream of a feeding world
 
 export interface StructureDef {
@@ -151,6 +152,7 @@ export const STRUCTURES: StructureDef[] = [
 
   // ---------------------------------------------------------------- Dark Era
   S({ id: 'horizon_siphon', name: 'Horizon Siphon', desc: 'Speculative: draws on the faint temperature of the cosmic horizon itself.', era: 'dark', tech: 'horizon_siphon', cost: 120, matter: 0, max: 4, energy: { mode: 'siphon', amount: 0.6 }, signature: 0, leptonic: {} }),
+  S({ id: 'szilard_engine', name: 'Szilard Engine', desc: 'Szilard’s engine, run on our own records: a memory we know is as good as a blank one, and letting it go to noise gives back kT ln 2 of work for every bit. We forget, and are warm. It burns what the archive holds (Continuity) and gives energy for it, the more the more there is left to burn; taken down, it stops. A bend: at the horizon’s temperature a bit is worth about 2 × 10⁻⁵³ J, and the game multiplies that beyond reason.', era: 'dark', tech: 'szilard_engines', cost: 100, matter: 0, max: 2, energy: { mode: 'szilard', amount: 4 }, signature: 0, leptonic: {} }),
   S({ id: 'preservation_array', name: 'Error-Correction Array', desc: 'Keeps the pattern of you from dissolving into noise.', era: 'dark', tech: 'error_correction', cost: 110, matter: 0, max: 2, continuityMult: 0.6, upkeep: 0.3, signature: 0, leptonic: {} }),
 ];
 

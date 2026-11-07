@@ -480,6 +480,10 @@ export const WAY_WORK: Record<SurvivorWay, string | null> = {
   fork: null,
 };
 
+/** The autoplayer builds Szilard Engines only above this Continuity, and takes them down below the other (szilard.ts). */
+const SZILARD_FROM = 60;
+const SZILARD_UNTIL = 35;
+
 const TECH_PRIORITY = [
   'energy_storage', 'magnetospherics', 'the_long_record', 'orbital_collectors', 'survey_optics', 'mind_substrate', 'fusion_drives', 'hardy_lineages',
   'subterranean_cities', 'orbital_industry', 'interstellar_scooping', 'fusion', 'upload', 'cold_sleep', 'slow_instancing', 'ember_harvest', 'orbital_defense', 'dyson_swarms',
@@ -491,10 +495,10 @@ const TECH_PRIORITY = [
   'deep_storage', 'brown_dwarf_mining', 'accretion_modelling', 'burst_capture', 'horizon_storage', 'abyssal_thought', 'gravitic_semaphore', 'quickening',
   'garden_arks', 'aegis_lattices', 'command_language',
   // black hole
-  'bastion_architecture', 'horizon_cognition', 'error_correction', 'hawking_patience', 'horizon_writing', 'last_horizon_protocols',
+  'bastion_architecture', 'horizon_cognition', 'error_correction', 'vacuum_question', 'hawking_patience', 'horizon_writing', 'last_horizon_protocols',
   'conformal_mathematics', 'archive_theory', 'total_confluence', 'ultimate_slowness', 'positronium_weaving',
   // dark
-  'asymptotic_mind', 'horizon_siphon', 'garden_of_embers',
+  'asymptotic_mind', 'horizon_siphon', 'szilard_engines', 'garden_of_embers',
 ];
 
 function pickResearch(state: GameState) {
@@ -602,6 +606,8 @@ const GONE_FOR_GOOD: EnergyMode[] = ['light', 'geo', 'spin', 'hawking', 'rekindl
  */
 function planDismantle(state: GameState) {
   const civ = state.civ;
+  // Szilard Engines taken down once too little is left to burn: Continuity is what we are (szilard.ts)
+  if (calendarEra(state) === 'dark' && civ.continuity < SZILARD_UNTIL) for (const c of colonies(state)) if (c.structures.szilard_engine) dismantle(state, c.id, 'szilard_engine');
   if (matterGone(state) || civ.matter >= 40) return;
   const pr = project(state);
   for (const c of colonies(state)) {
@@ -820,6 +826,8 @@ function planBuilds(state: GameState) {
     if (calendarEra(state) === 'blackhole') plan.push('penrose_harvester', 'hawking_collector', 'bastion', 'horizon_vault');
     if (calendarEra(state) === 'degenerate' && state.eta > 30) plan.push('penrose_harvester', 'hawking_collector');
     if (calendarEra(state) === 'dark') plan.push('preservation_array', 'horizon_siphon');
+    // memory burned for warmth (szilard.ts): only when the reserve is short and much is left to burn
+    if (calendarEra(state) === 'dark' && energyFirst && civ.continuity > SZILARD_FROM) plan.push('szilard_engine');
     // matter stable: the last flashes and the collapse, banked (deeptime.ts)
     if (calendarEra(state) === 'dark' && fate === 'stable' && !matterGone(state)) plan.push('burst_catcher');
     if (fate === 'curvature' && state.eta > 29 && state.eta < DEGENERATE_END.curvature) plan.push('curvature_collector');
@@ -1092,7 +1100,7 @@ function planThreads(state: GameState) {
 
 function planCharters(state: GameState) {
   // (one desperate and bold enough takes what the dead left: Consume the Dead, matter at once)
-  const order = [...(hungerSteps(state) ? ['consume_the_dead'] : []), 'open_archives', 'right_to_stop', 'thread_parity', 'merge_consent', 'sanctuary', 'the_long_watch', 'lattice_compact'];
+  const order = [...(hungerSteps(state) ? ['consume_the_dead'] : []), 'open_archives', 'right_to_stop', 'thread_parity', 'merge_consent', 'sanctuary', 'the_long_watch', 'lattice_compact', 'the_unbidden'];
   for (const id of order) if (!charterAvailable(state, id)) enactCharter(state, id);
 }
 

@@ -6,6 +6,7 @@
 import { STRUCTURE_BY_ID } from '../data/structures';
 import type { GameState } from '../types';
 import { wovenShare } from './positronium';
+import { szilardContinuity } from './szilard';
 import { colonies, popsOf } from './util';
 
 /** What a turn in the dark costs Continuity, before anything keeps it. */
@@ -43,5 +44,7 @@ export function continuityLoss(state: GameState, starving: boolean): number {
   // minds woven through the positronium keep their pattern better: half the loss for their share
   loss *= 1 - 0.5 * wovenShare(state);
   if (starving) loss += DARK_STARVE;
+  // what our Szilard Engines burn (szilard.ts): forgetting, on purpose, for warmth
+  loss += szilardContinuity(state);
   return loss;
 }

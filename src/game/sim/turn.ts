@@ -1,4 +1,5 @@
 import { autoPlay } from '../auto';
+import { CLOUD_JOULES, cloudNotes, echoesOfThePast, holdTheUnbidden, mindsOutOfNothing } from './fluctuations';
 import { asCiv, flushOutbox } from '../civs';
 import { tiesTurn } from './ties';
 import { STRUCTURE_BY_ID, structureLabel } from '../data/structures';
@@ -335,6 +336,8 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
   const notes = withRng(state, (rng) => evolveUniverse(state, from, step.years, () => rng.next()));
   // matter stable: the heaviest dead stars explode, everything turns to iron, then tunnels into black holes (no draw)
   notes.push(...deepTime(state, state.eta, step.eta));
+  // and late in the Dark Era a cloud out of nothing collapses, lights and goes out (fluctuations.ts)
+  notes.push(...cloudNotes(state, state.eta, step.eta));
   result.notes = notes;
   // from 10^65 years solid matter flows: once, the ruins no one awake is digging run into smooth lumps
   flowComes(state, step.eta, logL, modsOf, Math.log10(paceFactor));
@@ -346,6 +349,9 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
     if (id === me) {
       const lastStar = gatherTheLastStar(state, step.years);
       if (lastStar) queueEvent(state, 'last_star', { systemId: lastStar });
+      // what the noise reassembles of our own past, as the turn passes each date (fluctuations.ts)
+      echoesOfThePast(state, state.eta, step.eta);
+      mindsOutOfNothing(state, state.eta, step.eta);
     }
     // from 10^65 years solid matter flows: what no one is awake to mend runs into smooth lumps
     theLongFlow(state, step.eta, logL, c.mods, Math.log10(c.ctx.paceFactor));
@@ -354,6 +360,8 @@ export function* turnSlices(state: GameState): Generator<void, TurnResult, void>
     // and as positronium decays, whatever is still woven through it ends with it
     theWeaveEnds(state, state.eta, step.eta);
     continuity(state, c);
+    // minds out of nothing, held near our arrays, under The Unbidden (fluctuations.ts)
+    holdTheUnbidden(state, step.eta);
   });
   state.years = step.years;
   state.eta = step.eta;
@@ -785,6 +793,13 @@ export function handleNotes(state: GameState, notes: EvolutionNote[]) {
         log(state, `${sys.name} has collapsed into a white dwarf. Its light is going out.${warn}`, mine ? 'bad' : 'info', sys.id);
         break;
       }
+      case 'cloud':
+        // a Sun's mass of gas out of nothing collapsed, lit and went out within the turn
+        // (fluctuations.ts): all its light a flash for Burst Catchers, and for us a light to see
+        flashes.push({ sys, reach: flashReach(CLOUD_JOULES), own: true });
+        known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;
+        queueEvent(state, 'cloud_light', { systemId: sys.id });
+        break;
       case 'collision':
         queueEvent(state, 'new_star', { systemId: sys.id });
         known[sys.id] = Math.max(known[sys.id] ?? 0, 1) as 1 | 2;

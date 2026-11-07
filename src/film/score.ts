@@ -285,6 +285,11 @@ export interface Score {
   pulse?: { v: 'kick' | 'snare' | 'tom' | 'shaker' | 'metal'; from: number; to: number; every: number; amp?: number; skip?: number[]; groups?: number[] }[];
   /** how loud each scene is (0..1; default 0.7) */
   dyn?: number[];
+  /**
+   * the music stops dead here, mid-phrase, and is silent until the title (the vacuum's ending, 7 Nov):
+   * nothing struck in between, and whatever sounds is cut off (cue.ts shuts the bus at its beat)
+   */
+  silence?: number;
   /** the Supernova's and the Last Horizon's own sounds */
   chirp?: [number, number, number, number];
   thumps?: number[];
@@ -485,6 +490,14 @@ export function compose(s: Score): ScoreEvent[] {
     add({ b: end, v: 'stab', hz: tc.map((x) => hzOf(T, x + 12)), len: 1, amp: 0.8, cut: true });
     add({ b: end, v: 'crash', hz: [0], len: 2, amp: 0.8 });
   } else add({ b: end, v: 'bell', hz: [hzOf(T, tc[0] + 12)], len: 3, amp: 0.8, cut: true });
+  // a score that stops dead: nothing struck from its silence to the title, and what sounds then cut off
+  if (s.silence !== undefined) {
+    const from = s.silence;
+    return ev
+      .filter((e) => !(e.b >= from - 1e-9 && e.b < end - 1e-9))
+      .map((e) => (e.b < from && e.b + e.len > from ? { ...e, len: from - e.b } : e))
+      .sort((a, b) => a.b - b.b);
+  }
   return ev.sort((a, b) => a.b - b.b);
 }
 
@@ -887,6 +900,51 @@ export const SCORES: Record<FilmId, Score> = {
     bass: true,
     dyn: [0.6, 0.45, 0.3],
   },
+  // A Light in the Dark (the cloud out of nothing, 7 Nov): E Lydian, bright and strange; a dark
+  // drone and glass while the noise gathers, a harp quickening as the cloud falls in, a boom as it
+  // lights and the melody whole in its light, then the glass again as it goes out
+  cloud: {
+    bpm: 84,
+    beats: 48,
+    titleAt: 42,
+    tonic: NOTE.E3,
+    mode: 'lydian',
+    cuts: [0, 7.5, 15.5, 24, 31, 38.5],
+    chords: [0, 5, 3, 0, 1, 5],
+    title: { degree: 0, colour: 'add9' },
+    motif: [[0, 4, 1], [1, 3, 0.5], [1.5, 4, 0.5], [2, 7, 2], [4, 6, 1], [5, 4, 2]],
+    melody: [{ at: 8.5, amp: 0.45, voice: 'lead' }, { at: 16.5, shift: -1, amp: 0.55 }, { at: 25, voice: 'flute', amp: 0.95 }, { at: 32, shift: 2, voice: 'lead', amp: 0.8 }, { at: 39, drop: 3, amp: 0.45 }],
+    lead: 'flute',
+    pads: [[0, 'dark'], [7.5, 'glass'], [24, 'pad'], [38.5, 'glass']],
+    arps: [
+      { from: 7.5, to: 15.5, step: 1, pattern: [0, 2, 1, 3], voice: 'harp', octave: 1, amp: 0.35 },
+      { from: 15.5, to: 24, step: 0.5, pattern: [0, 1, 2, 3, 2, 1], voice: 'harp', octave: 1, amp: 0.45 },
+      { from: 24, to: 38.5, step: 0.5, pattern: [0, 2, 4, 2, 5, 2, 4, 2], voice: 'harp', octave: 2, amp: 0.45 },
+    ],
+    bass: true,
+    drone: true,
+    boom: { at: 24, swell: 4 },
+    dyn: [0.4, 0.5, 0.65, 0.95, 0.75, 0.45],
+  },
+  // The vacuum's end (7 Nov): F Mixolydian, a thought in progress on the harp and the flute, the
+  // chart's pad, the melody's last statement begun and never finished: everything stops at beat
+  // 23.5, mid-phrase, and the title comes after the silence on a bare fifth
+  end_vacuum: {
+    ...END,
+    tonic: NOTE.F3,
+    mode: 'mixolydian',
+    cuts: [0, 9, 18],
+    chords: [0, 5, 3],
+    title: { degree: 0, colour: 'fifth' },
+    motif: [[0, 2, 1], [1, 5, 1], [2, 4, 0.5], [2.5, 2, 0.5], [3, 1, 1], [4, 0, 2]],
+    melody: [{ at: 1 }, { at: 10, shift: 1, amp: 0.85 }, { at: 19.5, voice: 'lead', amp: 0.8 }],
+    lead: 'flute',
+    pads: [[0, 'glass'], [9, 'pad']],
+    arps: [{ from: 0, to: 31, step: 0.5, pattern: [0, 2, 1, 2], voice: 'harp', octave: 1, amp: 0.4 }],
+    bass: true,
+    silence: 23.5,
+    dyn: [0.55, 0.6, 0.7],
+  },
   end_will_fails: {
     ...END,
     tonic: NOTE.E3,
@@ -908,6 +966,15 @@ export const SCORES: Record<FilmId, Score> = {
 
 /** A film whose scenes fall on other beats in another fate of matter: its score for that fate (`id:fate`). */
 export const FATE_SCORES: Record<string, Score> = {
+  // (the vacuum's landscape cut: the same frame, D Aeolian, lower and darker, the same silence)
+  'end_vacuum:landscape': {
+    ...SCORES.end_vacuum,
+    tonic: NOTE.D3,
+    mode: 'aeolian',
+    chords: [0, 5, 6],
+    pads: [[0, 'dark'], [9, 'glass']],
+    melody: [{ at: 1, amp: 0.85 }, { at: 10, shift: -1, amp: 0.75 }, { at: 19.5, voice: 'voice', amp: 0.75 }],
+  },
   'last_horizon:stable': {
     ...SCORES.last_horizon,
     cuts: [0, 7, 14, 20, 26, 34, 40.5, 48.5, 54, 60.5, 67.5],

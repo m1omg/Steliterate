@@ -1,4 +1,8 @@
-import type { EpochLength, EraId, Fate } from './types';
+import type { EpochLength, EraId, Fate, Vacuum } from './types';
+import { LANDSCAPE_FROM } from './vacuum';
+
+/** A cloud of a Sun's mass fluctuates into being here, λ = log10 η (sim/fluctuations.ts): by our own Boltzmann estimate, about 10^(10⁹⁹) years. */
+export const CLOUD_LAMBDA = 99.4;
 
 // Scale follows time. Each era has a natural pace, the Tide: the turn length a civilization
 // surviving at that moment would naturally live at. The Tide grows in proportion to the time
@@ -455,19 +459,36 @@ export const MILESTONES: Milestone[] = milestonesFor(null);
 /** Deep-time milestones, on log10(eta). Speculative physics, labelled as such in the Codex. */
 export const DEEP_MILESTONES: Milestone[] = [
   { at: Math.log10(141), label: 'Positronium decays', detail: 'η ≈ 141 (Page & McKee), where protons decayed or space unmade matter.' },
-  { at: Math.log10(161), label: 'Vacuum decay?', detail: 'One Standard Model estimate puts the vacuum lifetime near 10¹⁶¹ years, with an uncertainty spanning over a thousand orders of magnitude.' },
+  // (7 Nov: from 10¹⁶¹ years, the vacuum's lifetime per volume of space, to the wait for a bubble that can reach us: vacuum.ts)
+  { at: Math.log10(613), label: 'Vacuum decay?', detail: 'If the Higgs vacuum is metastable, a bubble of the true vacuum reaches us most likely near 10⁶¹³ years, between 10²²⁹ and 10⁵⁵⁰¹ to nineteen chances in twenty: Andreassen, Frost & Schwartz’s lifetime of 10¹⁶¹ years, with only the bubbles inside our horizon able to reach us. No warning, no defence.' },
   { at: Math.log10(1100), label: 'Black dwarf supernovae', detail: 'If protons are stable, the few dead stars born heavy enough (1.16 to 1.35 Suns) explode as pycnonuclear fusion turns their cores to iron: from about 10¹¹⁰⁰ years, the heaviest first, the lightest near 10³²⁰⁰⁰ (Caplan 2020).' },
   { at: Math.log10(1500), label: 'Iron stars', detail: 'If protons are stable, cold fusion by tunnelling turns all matter to iron by about 10¹⁵⁰⁰ years (Dyson 1979): nothing is left to fuse or burn.' },
   { at: 26, label: 'Tunnelling collapse', detail: 'If protons are stable, matter tunnels into black holes that evaporate at once, between 10^(10²⁶) and 10^(10⁷⁶) years (Dyson 1979): each system at a time of its own, and whatever is still made of matter with it.' },
   { at: 76, label: 'Last collapse', detail: 'The slowest estimate for matter tunnelling into black holes: whole stars at once. After it no matter is left.' },
+  { at: LANDSCAPE_FROM, label: 'The final state?', detail: 'If our vacuum is one of the string landscape’s, it falls to its final state, a sink nothing returns from, between about 10^(10³⁴) years (the KKLT model) and the recurrence time, always before it (Linde 2007).' },
+  { at: 50, label: 'Minds out of nothing', detail: 'Linde’s estimate for a small mind to fluctuate into being from the horizon’s thermal noise, about 10^(10⁵⁰) years; then more and more of them. Whether such fluctuations happen at all is debated.' },
+  { at: CLOUD_LAMBDA, label: 'A cloud out of nothing', detail: 'By the game’s own rough estimate, a Sun’s mass of cold gas fluctuates into being after about 10^(10⁹⁹) years: big enough to collapse and light.' },
   { at: 122, label: 'Recurrence', detail: 'Poincaré recurrence of a de Sitter horizon, about 10^(10¹²²) years: given long enough, any state returns.' },
 ];
 
-/** The deep-time milestones for a fate: iron and collapse only if matter is stable, positronium only if it is not. */
-export function deepMilestonesFor(fate: Fate | null): Milestone[] {
+/**
+ * The deep-time milestones for a fate of matter and a vacuum, as far as each is known (null: not
+ * known): iron and collapse only if matter is stable, positronium only if it is not; the Higgs
+ * vacuum's decay and the landscape's final state only if they may come, and the Recurrence only if
+ * the vacuum may last (vacuum.ts).
+ */
+export function deepMilestonesFor(fate: Fate | null, vacuum: Vacuum | null = null): Milestone[] {
   return DEEP_MILESTONES.filter((m) => {
     if (m.label === 'Black dwarf supernovae' || m.label === 'Iron stars' || m.label === 'Tunnelling collapse' || m.label === 'Last collapse') return fate === 'stable' || fate === null;
     if (m.label === 'Positronium decays') return fate !== 'stable';
+    if (m.label === 'Vacuum decay?') return vacuum === null || vacuum === 'higgs';
+    if (m.label === 'The final state?') return vacuum === null || vacuum === 'landscape';
+    if (m.label === 'Recurrence') return vacuum === null || vacuum === 'stable';
     return true;
+  }).map((m) => {
+    if (vacuum === 'higgs' && m.label === 'Vacuum decay?') return { ...m, label: 'The true vacuum (most likely)' };
+    if (vacuum === 'landscape' && m.label === 'The final state?') return { ...m, label: 'The final state (earliest)' };
+    if (vacuum === null && m.label === 'Recurrence') return { ...m, detail: `${m.detail} If the vacuum lasts.` };
+    return m;
   });
 }

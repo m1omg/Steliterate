@@ -9,6 +9,9 @@ import { SURFACE_LIFE, boilingAway, buriedOcean, embersOutEta, haloEta, haloMove
 import { drawSwarmTo } from '../sim/hunger';
 import { feel } from '../sim/dealings';
 import { calendarEra, fateOf } from '../fate';
+import { vacuumKnown, vacuumOf } from '../vacuum';
+import { MANY_MINDS_FROM, MINDS_FROM, arraysStanding, firstWorld, foundingLine } from '../sim/fluctuations';
+import { charterAvailable, enactCharter } from '../sim/actions';
 import { send } from '../civs';
 import { CORRUPT_AT, easeTaint, hungerAct } from '../sim/judge';
 import { destroyColony } from '../sim/fleets';
@@ -1011,6 +1014,22 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
+    id: 'vacuum_answer',
+    title: 'The Vacuum Question',
+    art: 'blackhole',
+    once: true,
+    text: (s) =>
+      vacuumOf(s) === 'higgs'
+        ? 'The masses, measured to the last digit, leave no doubt: the Higgs field has a lower state than ours, far beyond any energy we can reach. Our vacuum is metastable. Somewhere, at a time no one can know, a bubble of the true vacuum will form, and it will come at nearly the speed of light, with no warning and no defence. Only bubbles inside our horizon can ever reach us, so the wait is long: most likely about 10⁶¹³ years, between 10²²⁹ and 10⁵⁵⁰¹ to nineteen chances in twenty. That is early in the Dark Era. Whatever we mean to finish, we must finish before it.'
+        : vacuumOf(s) === 'landscape'
+          ? 'The Higgs field holds, but the theory beneath it does not: our vacuum, dark energy and all, is one of a vast number, and not the lowest. One day space will tunnel down to its final state, a sink that nothing comes back from: flat space where hidden dimensions open up, or a space of negative energy that collapses. It must come before the Recurrence: not before about 10^(10³⁴) years, and at the latest about 10^(10¹²²), near the very end of the Dark Era. There is no defence. Whatever we mean to finish, we must finish before it.'
+          : 'The top quark, the Higgs boson and everything above them, measured to the last digit, and every search beyond them empty: our vacuum is the lowest there is. No bubble will ever come, and there is no deeper state for space to fall to. Whatever ends us, it will not be the floor of the world giving way.',
+    choices: [
+      { label: 'Tell everyone the truth', hint: 'Resolve ±5 depending on the answer.', run: (s) => { res(s, vacuumOf(s) === 'higgs' ? -5 : vacuumOf(s) === 'landscape' ? -3 : 5); } },
+      { label: 'Tell the councils only', hint: 'Dissent +3.', run: (s) => { dis(s, 3); } },
+    ],
+  },
+  {
     id: 'decay_shown',
     title: 'Not for Ever',
     art: 'degenerate',
@@ -1196,10 +1215,12 @@ export const EVENTS: EventDef[] = [
     eras: ['dark'],
     weight: 3,
     once: true,
+    // (only while we do not know which vacuum we have: vacuum.ts; since 7 Nov)
+    bind: (s) => (vacuumKnown(s) ? null : {}),
     text: () =>
-      'The old physics was never resolved: our vacuum may be metastable. Somewhere a bubble of truer vacuum could form and expand at the speed of light, and there would be no warning. Some estimates put the lifetime near 10¹⁶¹ years, give or take a thousand orders of magnitude. We are past 10¹⁰⁰.',
+      'The old physics was never resolved: our vacuum may not be the lowest there is. If it is metastable, somewhere a bubble of truer vacuum could form and grow at nearly the speed of light, and there would be no warning. One estimate puts its lifetime near 10¹⁶¹ years, give or take hundreds of orders of magnitude; with the dark energy, only bubbles inside our horizon could ever reach us, so the wait would be far longer, most likely about 10⁶¹³ years. We are past 10¹⁰⁰. The Vacuum Question would tell us which vacuum we have.',
     choices: [
-      { label: 'Write a record that could outlast it', hint: 'Energy −40. Resolve +4.', run: (s) => { energy(s, -40); res(s, 4); } },
+      { label: 'Write a record anyway', hint: 'Energy −40. Resolve +4.', run: (s) => { energy(s, -40); res(s, 4); } },
       { label: 'Live with it', hint: 'Resolve −2.', run: (s) => { res(s, -2); } },
     ],
   },
@@ -1208,14 +1229,116 @@ export const EVENTS: EventDef[] = [
     title: 'A Mind From Nowhere',
     art: 'dark',
     eras: ['dark'],
-    weight: 2,
+    // (queued as the turn passes its date: fluctuations.ts mindsOutOfNothing; a random event until 7 Nov)
     once: true,
-    bind: (s) => (s.eta > 1e3 ? {} : null),
+    // (from about 10^(10⁵⁰) years, Linde's estimate, since 7 Nov: until then from η 1000, which was far too soon; fluctuations.ts)
+    bind: (s) => (Math.log10(Math.max(1, s.eta)) >= MINDS_FROM ? {} : null),
     text: () =>
-      'In the thermal noise of the horizon, over spans that have no name, anything that can happen eventually does. A mind has fluctuated into being out of nothing. It knows it will dissolve in a moment. It has one question for us: what was it like, when there were stars?',
+      'In the thermal noise of the horizon, over spans that have no name, anything that can happen eventually does: by one estimate a mind comes out of nothing once in some 10^(10⁵⁰) years, and that time has come. A mind has fluctuated into being. It knows it will dissolve in a moment. It has one question for us: what was it like, when there were stars?',
     choices: [
+      {
+        label: 'Hold its pattern',
+        hint: (s) => (arraysStanding(s) ? 'An Error-Correction Array copies it before it dissolves: it wakes as one of our Echoes (into the archive if there is no room). Continuity +2.' : 'Needs an Error-Correction Array of ours to hold it.'),
+        ok: (s) => arraysStanding(s) > 0,
+        run: (s) => {
+          welcomeEchoes(s, 1);
+          s.civ.flags.unbidden = (s.civ.flags.unbidden ?? 0) + 1;
+          s.civ.continuity = Math.min(100, s.civ.continuity + 2);
+          log(s, 'The mind out of nothing was held: its pattern copied into an Error-Correction Array before it could dissolve, it woke as one of our Echoes.', 'good');
+        },
+      },
       { label: 'Tell it everything', hint: 'Continuity +8, Resolve +6.', run: (s) => { s.civ.continuity = Math.min(100, s.civ.continuity + 8); res(s, 6); } },
       { label: 'Ask it what it knows', hint: 'Insight +200.', run: (s) => { insight(s, 200); } },
+    ],
+  },
+  {
+    id: 'many_minds',
+    title: 'Many Minds',
+    art: 'dark',
+    eras: ['dark'],
+    // (queued a turn or more after the first mind: fluctuations.ts mindsOutOfNothing)
+    once: true,
+    bind: (s) => (Math.log10(Math.max(1, s.eta)) >= MANY_MINDS_FROM ? {} : null),
+    text: () =>
+      'They keep coming now: minds out of nothing, flickering into being in the horizon’s noise, most of them fragments, a few whole, and every one of them sure, for its instant, that it remembers a past. The Threads cannot stop arguing about what that means. If a mind can come out of nothing with its memories already in it, how do we know we did not? The Echoes say a record is a record. The Kin say a body is proof. The Coldminds say the question has no answer and should not be asked twice.',
+    choices: [
+      { label: 'Trust our records', hint: 'Resolve +4.', run: (s) => { res(s, 4); } },
+      { label: 'Test the archive against itself', hint: 'Insight −100. Continuity +4.', run: (s) => { insight(s, -100); s.civ.continuity = Math.min(100, s.civ.continuity + 4); } },
+      {
+        label: 'Give them room',
+        hint: (s) => (charterAvailable(s, 'the_unbidden') ? `Enact The Unbidden: ${charterAvailable(s, 'the_unbidden')}` : 'Enact The Unbidden (20 Accord): minds held near our Error-Correction Arrays stay, and wake as Echoes.'),
+        ok: (s) => charterAvailable(s, 'the_unbidden') === null,
+        run: (s) => { enactCharter(s, 'the_unbidden'); },
+      },
+    ],
+  },
+  // ------------------------------------------- what the noise reassembles of our past (fluctuations.ts)
+  {
+    id: 'echo_voice',
+    title: 'A Voice',
+    art: 'dark',
+    once: true,
+    text: (s, d) =>
+      d.who
+        ? `For an instant the receivers hold a voice out of nothing: some ten thousand radio photons, about the least a few seconds of speech can ride on, and the voice is one of ${String(d.who)}’s. It is no message they ever sent us. It is only theirs, whole for a breath, and then it is noise again. Small things come back first.`
+        : `For an instant the receivers hold a voice out of nothing: some ten thousand radio photons, about the least a few seconds of speech can ride on. It is one of us, in the first language of ${firstWorld(s)?.name ?? s.settings.homeName}, a voice no one has heard since we left it, counting softly in the dark. Then it is noise again. Small things come back first.`,
+    choices: [{ label: 'Listen until it is gone', hint: 'Nothing changes.', run: () => {} }],
+  },
+  {
+    id: 'echo_page',
+    title: 'A Page',
+    art: 'dark',
+    once: true,
+    text: (s) => `Ten thousand bits, held for an instant in pairs of electrons and positrons out of nothing, and they spell a page of our first record, word for word: “${foundingLine(s)}” The archive has the page. This copy was made by no one. Given long enough, the universe writes everything twice.`,
+    choices: [{ label: 'Keep the reading', hint: 'Nothing changes.', run: () => {} }],
+  },
+  {
+    id: 'echo_sky',
+    title: 'Our First Sky',
+    art: 'dark',
+    once: true,
+    text: (s) => {
+      const hw = firstWorld(s)?.name ?? s.settings.homeName;
+      const star = s.systems[s.civ.homeSystemId]?.name ?? 'our first star';
+      return `Out of nothing, for less than an instant, there is air: a few cubic metres of ${hw}’s sky, its very mixture, as warm as it was when ${star} still rose over it. No star lights it. The instruments disagree about whether it was there at all; the Kin among us do not. If a sky can come back, what cannot?`;
+    },
+    choices: [{ label: 'Remember it', hint: 'Nothing changes.', run: () => {} }],
+  },
+  {
+    id: 'echo_lost',
+    title: 'A Settlement We Lost',
+    art: 'dark',
+    once: true,
+    text: (_s, d) => `A billion tonnes of matter out of nothing, for an instant: ${String(d.name)}, as it was before it was lost${d.era ? ` in ${String(d.era)}` : ''} (${String(d.why).replace(/\.$/, '')}). Its streets, its machines, the shape of every room. Nothing in it moves, and then nothing of it is there at all. The universe is not done with what it has made. It is only slow.`,
+    choices: [{ label: 'Name it in the record', hint: 'Nothing changes.', run: () => {} }],
+  },
+  {
+    id: 'cloud_light',
+    title: 'A Light in the Dark',
+    art: 'dark',
+    once: true,
+    text: (s, d) => {
+      const sys = s.systems[String(d.systemId)];
+      const caught = colonies(s).some((c) => (c.structures.burst_catcher ?? 0) > 0);
+      return `Out of nothing, near ${sys?.name ?? 'us'}, a cloud: a Sun’s mass of cold hydrogen, fluctuated into being as, given long enough, anything will. It was big enough to fall in on itself. It collapsed, warmed, and lit: a star, the first in some 10^(10⁹⁹) years and the last there will be. It burned for some ten billion years, an instant of this turn, and went out.${caught ? ' Our Burst Catchers took what of its light they could reach.' : ' Without Burst Catchers we could only watch.'}`;
+    },
+    choices: [
+      { label: 'Remember it', hint: 'Resolve +6.', run: (s) => { res(s, 6); } },
+      { label: 'Study its light', hint: 'Insight +150.', run: (s) => { insight(s, 150); } },
+    ],
+  },
+  {
+    id: 'what_to_forget',
+    title: 'What Shall We Forget?',
+    scope: 'everyone',
+    art: 'dark',
+    once: true,
+    text: () =>
+      'The first Szilard Engine is lit: it lets our own records go to noise and gives back the work they were worth. Every bit forgotten is a little warmth, and there is nothing left to burn but memory. The Threads argue about what goes first. The Coldminds want only the copies we keep twice. The Kin will not see the Dusk and its stars forgotten. The Echoes, who are their memories, say that what each of us remembers alone is no one else’s to burn.',
+    choices: [
+      { label: 'Only what is held twice', hint: 'The engines give 0.6 of their energy for half the Continuity. Coldminds +4.', run: (s) => { s.civ.flags.forget_what = 1; stand(s, 'coldminds', 4); } },
+      { label: 'The oldest: the Dusk and its stars', hint: 'The engines at their rating. Kin −8, Echoes +2.', run: (s) => { s.civ.flags.forget_what = 2; stand(s, 'kin', -8); stand(s, 'echoes', 2); } },
+      { label: 'What each of us remembers alone', hint: 'The engines give 1.6 times their energy for 1.6 times the Continuity. Echoes −10, Chorus +4.', run: (s) => { s.civ.flags.forget_what = 3; stand(s, 'echoes', -10); stand(s, 'chorus', 4); } },
     ],
   },
 

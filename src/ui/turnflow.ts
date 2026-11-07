@@ -114,7 +114,7 @@ export async function doEndTurn() {
   if (r.outcome) {
     // the ending's film first, where it has one (the music turns once the film is over)
     const film = endingFilmFor(r.outcome.ending);
-    if (film && filmsOn()) playFilm(film, { kind: 'outcome' }, { eta: s.eta, fate: fateOf(s) });
+    if (film && filmsOn()) playFilm(film, { kind: 'outcome' }, { eta: s.eta, fate: fateOf(s), ...(film === 'end_vacuum' ? { vacuum: filmArgsOf(s).vacuum } : {}) });
     else {
       modal.value = { kind: 'outcome' };
       music.setMood('outcome');
@@ -220,6 +220,15 @@ export async function doEndTurn() {
       g.civ.flags.sn_film = g.turn;
     });
     playFilm('supernova', report, { eta: s.eta, fate: fateOf(s) });
+    return;
+  }
+  // the cloud out of nothing has its film before its card (7 Nov: "a real light in the Dark, once,
+  // late, with its own film"; sim/fluctuations.ts)
+  if (!modal.value && filmsOn() && s.civ.pending.some((p) => p.defId === 'cloud_light') && s.civ.flags.cloud_film === undefined) {
+    act((g) => {
+      g.civ.flags.cloud_film = g.turn;
+    });
+    playFilm('cloud', report, { eta: s.eta, fate: fateOf(s) });
     return;
   }
   if (report) {

@@ -1,5 +1,6 @@
 import { heartMassOf, type FilmArgs } from '../film/films';
 import { calendarEra, fateOf } from '../game/fate';
+import { vacuumOf } from '../game/vacuum';
 import { curvatureWarmth, decayWarmth, haloDrawn, isStarLike, primaryTemperature } from '../game/physics';
 import { colonies } from '../game/sim/util';
 import type { GameState } from '../game/types';
@@ -16,6 +17,9 @@ import type { GameState } from '../game/types';
 export function filmArgsOf(s: GameState | null | undefined): FilmArgs {
   if (!s) return {};
   const args: FilmArgs = { fate: fateOf(s), heartMass: heartMassOf(s) };
+  // (the vacuum's ending, 7 Nov: which vacuum, for its cut; vacuum.ts)
+  const v = vacuumOf(s);
+  if (v !== 'stable') args.vacuum = v;
   if (!s.settings.interregnum) return args;
   args.begun = 'interregnum';
   const home = s.systems[s.civ.homeSystemId];

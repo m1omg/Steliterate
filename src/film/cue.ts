@@ -785,10 +785,20 @@ function echoBus(ctx: BaseAudioContext, bus: AudioNode, secs: number): AudioNode
 }
 
 /** The music's way out: a bus, and the room beside it (none at low quality); the lighter instruments below high quality; a synthwave score's pump, echo (none at low quality) and the crash's longer noise. */
-function outlet(ctx: BaseAudioContext, out: AudioNode, quality: FilmQuality, s?: Score): { bus: GainNode; o: Out } {
+function outlet(ctx: BaseAudioContext, out: AudioNode, quality: FilmQuality, s?: Score, at = 0): { bus: GainNode; o: Out } {
   const bus = ctx.createGain();
   bus.gain.value = s?.gain ?? 1;
   bus.connect(out);
+  // a score that stops dead (score.ts `silence`): the bus shut at its beat, room and echo with it, and opened again for the title
+  if (s?.silence !== undefined) {
+    const g = s.gain ?? 1;
+    const t0 = at + (s.silence * 60) / s.bpm;
+    const t1 = at + (s.titleAt * 60) / s.bpm;
+    bus.gain.setValueAtTime(g, Math.max(0, t0 - 0.004));
+    bus.gain.linearRampToValueAtTime(0, t0);
+    bus.gain.setValueAtTime(0, Math.max(t0, t1 - 0.02));
+    bus.gain.linearRampToValueAtTime(g, t1 + 0.6);
+  }
   const low = quality !== 'high';
   let wet: AudioNode | null = null;
   if (quality !== 'low') {
@@ -821,7 +831,7 @@ const EVERY = 250;
 
 /** Play a film's cue into `out` from `at` (on its context's clock): each note made a few seconds before it sounds. */
 export function playCue(id: FilmId, ctx: BaseAudioContext, out: AudioNode, at: number, fate?: string, quality: FilmQuality = 'high'): Voice {
-  const { bus, o } = outlet(ctx, out, quality, scoreOf(id, fate));
+  const { bus, o } = outlet(ctx, out, quality, scoreOf(id, fate), at);
   const notes = cueOf(id, fate);
   let next = 0;
   const feed = () => {

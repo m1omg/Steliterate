@@ -5073,3 +5073,106 @@ turn. The Manual's and the Codex's "about 60 turns" read 114.
 - **Validated** (`76a35e7`, `index-3GlUVbsf.js`): tsc and the build clean; the playtest (30/144 Hz
   parity 3e-16); savecompat on its 11 saves; all 115 unit checks; the browser checks it touches
   (`interregnum`, `clocks`, `reveal-first`, `research-fate`, `films`). No film or music changed.
+
+## The Dark Era's six: the vacuum as a hidden fate, minds out of nothing, echoes, a cloud, Szilard's engine (7 Nov; at /next/ only)
+
+The player: "Implement:" six of the Dark Era ideas of 4 Nov. With them: "It should be possible to
+stabilize and integrate these minds into our civilization at least to some extent"; the vacuum "could
+be a setting, since a random ending can feel unfair"; and "I'm not sure what the last energy state
+would entail exactly. Clarify." It was not a quiet era, as the brainstorm had it: Linde's 10^(10¹²⁰)
+years is the latest date for a vacuum like ours to tunnel down to a sink, flat space where hidden
+dimensions open or a space of negative energy that collapses, and that always comes before the
+Recurrence. So it became one of the vacuum's answers, an ending, not a crossing. Asked to explain the
+vacuum types fully, the answer is now the Codex's page "The vacuum". At /next/ alone ("ONLY to
+/next").
+
+**The vacuum, a hidden fate** (`src/game/vacuum.ts`):
+- New Game asks "What of the vacuum?":
+  - Stable, the default: the game as it was;
+  - Unknown: a third each of the other three, by a hash of the seed (no draw);
+  - Metastable: the Higgs field's own lower state;
+  - Landscape: one of string theory's many vacua.
+- A game saved before reads as Stable.
+- The Higgs vacuum: Andreassen, Frost & Schwartz's lifetime (10¹⁶¹ years; 68% 10¹⁰² to 10³²¹, 95%
+  10⁶⁵ to 10¹³⁸³) is a rate per volume of space; with the dark energy only bubbles inside our
+  horizon can reach us, so the wait is about 10⁶¹³ years (95%: 10²²⁹ to 10⁵⁵⁰¹, our own conversion).
+  On the deep-time ruler that is a two-piece normal in √ln(λ/2), fitted to those quantiles: at the
+  Tide (Standard) Dark turn 8 to 15, half of them by turn 11; the chance per turn 3% in turn 8, then
+  11%, 23%, 34%, 44%, 53%, 61%, 68% in turn 15.
+- A landscape vacuum: λ uniform in [34, 122), the KKLT model's 10^(10³⁴) years to the recurrence
+  time: Dark turns 32 to 38, always before the Recurrence (the chance 6% in turn 32, up to certain in
+  turn 38).
+- The research The Vacuum Question (Black Hole Age, continuity, 700) is there only while the vacuum
+  is unknown, and its answer says which and when. Once it is known to fall, a forecast gives the
+  chance this turn and within five, the distribution's given that we have lasted, never the date.
+- The fall ends the game for everyone, as Endurance: "The True Vacuum" or "The Final State", each
+  with its epilogue and its cut of a new ending film. A Work finished that turn stands; the fall comes
+  before the Fade and the Recurrence.
+- The False Vacuum event now comes only while the vacuum is unknown, with the true wait and the
+  Vacuum Question named ("Write a record anyway"; its effects as before).
+- The Chronometer: "Vacuum decay?" moves from 10¹⁶¹ to 10⁶¹³ years; "The final state?" at
+  10^(10³⁴); "Minds out of nothing" at 10^(10⁵⁰); "A cloud out of nothing" at 10^(10⁹⁹.⁴); the
+  Recurrence "if the vacuum lasts". Known, only what can come is shown.
+
+**Minds out of nothing** (`src/game/sim/fluctuations.ts`):
+- A Mind From Nowhere comes as the turn passes 10^(10⁵⁰) years (Linde 2007): no longer from η 1000,
+  far too soon, nor left to chance. Its new first answer, "Hold its pattern", needs an
+  Error-Correction Array of ours: the mind wakes as one of our Echoes (Continuity +2).
+- Many Minds follows a turn or more later: if minds come out of nothing with their memories in
+  them, how do we know we did not? Trust our records (Resolve +4), test the archive against itself
+  (Insight −100, Continuity +4), or give them room (enact The Unbidden).
+- The Unbidden (a Dark Era law, with Deep Error Correction, 20 Accord; the Echoes and the Chorus for
+  it, the Kin against): from 10^(10⁵⁰) years each array holds one mind a turn, where its settlement
+  has Echo room free, and it wakes as an Echo (counted in `civ.flags.unbidden`). They are no Thread
+  of their own.
+
+**Echoes before the Recurrence** (words only, each once, the player's): a voice (some 10⁴ radio
+photons, λ 31: a civilization we knew that is gone, or one of our own), a page of our first record
+word for word (10⁴ bits in electron–positron pairs, λ 43), our first world's sky (a few cubic metres
+of its air, λ 70), and a settlement we lost (a billion tonnes, λ 78; from a new record of what we
+lost, `civ.lostPlaces`, the last 12, or a game saved before it from the log's lines). The dates are
+our own reckoning by the Boltzmann factor at the horizon's 2.2 × 10⁻³⁰ K, said in the Codex.
+
+**A cloud out of nothing** (λ 99.4, a Sun's mass): once, near our capital (a bend), it collapses,
+lights, lives and goes out within the turn. The turn stops at its date, even in the Long Sleep ("the
+light expected near 10^(10⁹⁹) years"; at the Tide no turn is added, at Slow one is cut in two). Its
+light is a flash our Burst Catchers bank (1.2 × 10⁴⁴ J, BURST_CATCH each), its card "A Light in the
+Dark" (Resolve +6 or Insight +150), and its own film plays before the card.
+
+**Szilard Engines** (research Szilard Engines, Dark Era, harvest, 700): a structure, two at most, its
+leptonic form too. Each burns 0.8 Continuity a turn and gives 4 energy by how much is left to burn
+(Continuity/100), in the Dark Era only. When the first is lit the Threads argue, "What Shall We
+Forget?": what is held twice (0.6 of the energy for half the cost; Coldminds +4), the oldest
+memories (as rated; Kin −8, Echoes +2) or what each of us remembers alone (1.6 times both; Echoes
+−10, Chorus +4). Taken down, it stops; its tip gives its cost and yield as they are now. The bend,
+in its own words: kT ln 2 at the horizon's temperature is about 2 × 10⁻⁵³ J a bit, multiplied beyond
+reason.
+
+**Two films** (each with its own score):
+- **"A Light in the Dark"** (`src/film/cloud.ts`, 48 beats at 84): the Dark; specks out of the
+  noise gathering into a cloud; its collapse, spinning up and flattening, the core warming; ignition,
+  its light reaching our lattice and its Burst Catchers; its life at speed (main sequence, red giant,
+  the shell shed, a white dwarf); and dark again. E Lydian, a boom as it lights.
+- **The vacuum's ending** (`end_vacuum`, two cuts by `FilmArgs.vacuum`): a thought in progress; the
+  chart of what lay below us (the Higgs field's potential, or the landscape's wells and the sink);
+  the bubble's wall at nearly the speed of light, or space itself giving way; then nothing. Its
+  score (F Mixolydian, the landscape's D Aeolian) stops dead mid-phrase at the fall (`Score.silence`:
+  nothing struck after it, the bus shut at its beat), and the epilogue's last words come in the
+  silence.
+- The reel's timecode writes an η past 10²¹ as a power ("η 10⁹⁹·⁴ · 10^10⁹⁹·⁴ YR"), where its
+  digits printed as "2.5e+99": seen in the Dark Era's endings too.
+
+**Also:**
+- The autoplayer researches both, builds Szilard Engines only when the reserve is short and
+  Continuity above 60 (down again below 35), and takes The Unbidden.
+- The harness gains `--vacuum=`.
+- `tools/film-render.mjs` gains `--vacuum=` and `--eta=`.
+- The Codex: the page "The vacuum", the Dark Era's page on what the horizon's warmth makes, and the
+  sources (Coleman & De Luccia 1980; Guth & Weinberg 1983; Andreassen, Frost & Schwartz 2018; Linde
+  2007; Dyson, Kleban & Susskind 2002; Boddy, Carroll & Pollack 2016; Szilard 1929; Bennett 1982;
+  DESI DR2 2025). The Manual: "The vacuum, and the late Dark Era", and the endings.
+- Saves: only optional fields and flags (`settings.vacuum`, `civ.lostPlaces`, `flags.unbidden`,
+  `cloud_lit`, `cloud_film`, `forget_what`); no `SAVE_VERSION` bump.
+- Checks: `unit/vacuum`, `unit/dark-fluctuations`, `unit/szilard` (new), `unit/film-scores` (the
+  two new scores), `unit/ladder` (the Slow turn cut at the light); `browser/vacuum`,
+  `browser/cloud-film` (new). Shared: `tools/checks/darkgame.ts`, a Dark Era game for the checks.

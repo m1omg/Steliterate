@@ -1,9 +1,9 @@
 import { circlePath, glow, ink, lerp, rgba, ss, type Ctx, type Pt } from './draw';
-import type { EndingId, FilmDef, FilmId } from './films';
+import type { EndingId, FilmArgs, FilmDef, FilmId } from './films';
 import { camera, landscape, layer, skyRatio } from './kit';
 import { HEAT_LUT, Lazy, Perlin, World, canvas, paintStar, paintWorldMap } from './paint';
 import { ease, note, reel2, type Moment, type ReelSpec, type Scene } from './reel';
-import { figure, hash, lattice, paintDark, plainHole, seen } from './holes';
+import { axes, figure, hash, lattice, paintDark, plainHole, seen } from './holes';
 
 // The endings, second cut: a film for each, in three or four scenes, on the words of its own
 // epilogue and nothing they do not say. Victories in gold, endurance in sea-green, the Hunger in
@@ -66,8 +66,8 @@ interface Kit {
   ember: Lazy<HTMLCanvasElement>;
 }
 
-/** An ending's film: 36 beats at 84, the title at 31; `make` lays out its scenes and words. */
-function ending(id: FilmId, name: string, kind: Kind, make: (kit: Kit) => Pick<ReelSpec, 'narration' | 'scenes'> & { card?: ReelSpec['card'] }): FilmDef {
+/** An ending's film: 36 beats at 84, the title at 31; `make` lays out its scenes and words (and, for a film of two endings, its title by the game's args). */
+function ending(id: FilmId, name: string, kind: Kind, make: (kit: Kit, args: FilmArgs) => Pick<ReelSpec, 'narration' | 'scenes'> & { card?: ReelSpec['card']; title?: string }): FilmDef {
   return reel2({ id, name, bpm: 84, beats: 36, accent: ACCENT[kind] }, (w, h, S, k, args) => {
     const pr = args.pr ?? 1;
     const M = 1.3;
@@ -89,10 +89,10 @@ function ending(id: FilmId, name: string, kind: Kind, make: (kit: Kit) => Pick<R
     });
     const ember = paintStar(Math.round(S * 0.06 * 2 * pr), { T: 2500, seed: 902, limb: [0.55, 0.3], cells: 14, grain: 0.2 });
     const kit: Kit = { w, h, S, k, pr, land: landscape(w, h), thin: Math.max(1, S * 0.0014), cx: w * 0.5, cy: h * 0.45, sky, M, ironWorld, ember };
-    const r = make(kit);
+    const r = make(kit, args);
     return {
       numeral: kind === 'defeat' ? '∅' : 'Ω',
-      title: name,
+      title: r.title ?? name,
       sub: SUB[kind],
       titleAt: 31,
       eta: [args.eta ?? 120, (args.eta ?? 120) + 0.2],
@@ -1657,6 +1657,172 @@ const FADE = ending('end_fade', 'The Fade', 'defeat', (K) => {
 });
 
 /** The endings, second cut, by id. */
+// ================================================================ The vacuum (7 Nov: vacuum.ts)
+
+// Two cuts, by the vacuum that fell (FilmArgs.vacuum): the Higgs field's true vacuum, whose bubble
+// grows at nearly the speed of light (Coleman & De Luccia 1980; Andreassen, Frost & Schwartz 2018),
+// or a landscape vacuum's final state, a sink nothing returns from (Linde 2007). A thought in
+// progress in the dark; the chart of what lay below us; the end coming; then nothing, the music
+// stopped mid-phrase (score.ts `silence`), and the epilogue's last words in the silence. Where the
+// film bends it: no one could have seen the bubble coming, and the film shows it all the same.
+const VACUUM = ending('end_vacuum', 'The Vacuum', 'endurance', (K, args) => {
+  const { w, h, S, thin, sky, M, land } = K;
+  const final = args.vacuum === 'landscape';
+  const LX = w * 0.5;
+  const LY = h * (land ? 0.42 : 0.4);
+  const R = S * (land ? 0.17 : 0.2);
+  const FALL = 23.5;
+  // the thoughts, every beat and a half, until the end comes mid-thought
+  const thoughts: number[] = [];
+  for (let b = 1.4; b < FALL; b += 1.5) thoughts.push(b);
+  const thinking = (c: Ctx, x: number, y: number, r: number, b: number, t: number, alpha: number) => {
+    const last = thoughts.filter((q) => q <= b).pop() ?? -99;
+    const pulse = Math.max(0, 1 - (b - last) / 0.6);
+    lattice(c, x, y, r, t, S, { color: TEAL, node: '#dff6ff', alpha: alpha * (0.45 + 0.55 * pulse), incl: 0.3, seed: 1601, lines: 12 });
+    if (pulse > 0) ink(c, ellipse(x, y, r * (1.05 + 0.5 * (1 - pulse)), 1602), 1, { width: thin, color: TEAL, seed: 1602, alpha: 0.5 * pulse * alpha });
+  };
+  const inProgress: Scene = {
+    from: 0,
+    to: 10,
+    assets: [sky],
+    draw(c, m) {
+      layer(c, sky.get(), w, h, M, 0, 0, 1.04 - 0.03 * m.p, 0.45);
+      thinking(c, LX, LY, R, m.b, m.t, ss(0.4, 2.4, m.b));
+    },
+    notes(m) {
+      return [note('va-thought', 'A THOUGHT IN PROGRESS', 0.5, (LY + R * 1.5) / h, ss(2, 3.5, m.b) * (1 - ss(8.5, 10, m.b)), { align: 'c', tone: 'ink' })];
+    },
+  };
+  // the chart: the Higgs field's potential (our vacuum a shallow well at 246 GeV, the true vacuum
+  // past about 10¹⁰ GeV), or the landscape's wells, ours high among them and the sink at the bottom
+  const X0 = w * (land ? 0.18 : 0.12);
+  const X1 = w * (land ? 0.82 : 0.88);
+  const Y0 = h * (land ? 0.7 : 0.68);
+  const Y1 = h * (land ? 0.2 : 0.22);
+  const higgsV = (u: number) => {
+    // u: 0..1 along log10 of the field, 2 to 19 GeV-decades. A well at 246 GeV, a gentle rise, the fall past 10¹⁰
+    const lg = 2 + 17 * u;
+    const well = -0.16 * Math.exp(-Math.pow((lg - 2.4) / 0.35, 2));
+    const rise = 0.05 * ss(2.6, 6, lg);
+    const fall = -1.3 * Math.pow(ss(9.5, 18.5, lg), 1.6);
+    return well + rise + fall;
+  };
+  const landV = (u: number) => {
+    // wells, each lower than the last, our own the second; the sink at the end, far below
+    const wells = [0.06, 0.24, 0.42, 0.6, 0.86];
+    const depth = [0.2, 0.32, 0.52, 0.72, 1.35];
+    let v = 0.42 - 0.35 * u;
+    wells.forEach((x0, i) => (v -= depth[i] * 0.45 * Math.exp(-Math.pow((u - x0) / 0.045, 2))));
+    return v;
+  };
+  const V = final ? landV : higgsV;
+  const toY = (v: number) => lerp(Y0, Y1, (v + 1.4) / 1.9);
+  const curve = Array.from({ length: 161 }, (_, i) => [lerp(X0, X1, i / 160), toY(V(i / 160))] as const);
+  const usU = final ? 0.24 : 0.4 / 17;
+  const sinkU = final ? 0.86 : 0.97;
+  const chart: Scene = {
+    from: 9,
+    to: 18.5,
+    assets: [sky],
+    draw(c, m) {
+      layer(c, sky.get(), w, h, M, 0, 0, 1.02, 0.35);
+      axes(c, X0, Y0, X1, Y1, ss(9.5, 11, m.b), S, 1610);
+      ink(c, curve, ss(10, 13, m.b), { width: Math.max(1.4, S * 0.0026), color: SEA, seed: 1611, alpha: 0.9 });
+      // where we are: a mind, sitting in its well
+      const ux = lerp(X0, X1, usU);
+      const uy = toY(V(usU)) - S * 0.012;
+      glow(c, ux, uy, S * 0.012, TEAL, 0.95 * ss(12, 13, m.b));
+      // the way down: through the barrier, dashed
+      const tun = ss(14, 17.5, m.b);
+      if (tun > 0) {
+        const sx = lerp(X0, X1, sinkU);
+        const sy = toY(V(sinkU));
+        const path = Array.from({ length: 40 }, (_, i) => {
+          const u = i / 39;
+          return [lerp(ux, sx, u), lerp(uy, sy, u) - Math.sin(Math.PI * u) * S * 0.04] as const;
+        }).filter((_, i) => i % 3 !== 2);
+        ink(c, path, tun, { width: thin, color: GSOFT, seed: 1612, alpha: 0.7 });
+        glow(c, sx, sy - S * 0.01, S * 0.014, '#ffffff', 0.5 * ss(16.5, 17.5, m.b));
+      }
+    },
+    notes(m) {
+      const on = (a: number) => ss(a, a + 1.2, m.b) * (1 - ss(17.5, 18.5, m.b));
+      const ux = lerp(X0, X1, usU);
+      const sx = lerp(X0, X1, sinkU);
+      return final
+        ? [
+            note('va-title', 'THE LANDSCAPE · ONE VACUUM AMONG A VAST NUMBER', 0.5, Y1 / h - 0.04, on(10.5), { align: 'c', tone: 'accent' }),
+            note('va-ours', 'OURS · DARK ENERGY AND ALL', ux / w, toY(V(usU)) / h - 0.06, on(12.5), { align: 'c', tone: 'ink' }),
+            note('va-sink', 'A SINK · NOTHING RETURNS', sx / w, toY(V(sinkU)) / h + 0.05, on(15.5), { align: 'c', tone: 'ink' }),
+            note('va-who', 'LINDE 2007', X1 / w, Y0 / h + 0.04, on(11), { align: 'r', tone: 'dim' }),
+          ]
+        : [
+            note('va-title', 'THE HIGGS FIELD · ITS ENERGY, BY ITS STRENGTH', 0.5, Y1 / h - 0.04, on(10.5), { align: 'c', tone: 'accent' }),
+            note('va-ours', 'OUR VACUUM · 246 GeV', ux / w + 0.01, toY(V(usU)) / h - 0.06, on(12.5), { tone: 'ink' }),
+            note('va-sink', 'THE TRUE VACUUM · PAST 10¹⁰ GeV', sx / w, toY(V(sinkU)) / h - 0.05, on(15.5), { align: 'r', tone: 'ink' }),
+            note('va-who', 'ANDREASSEN, FROST & SCHWARTZ 2018', X1 / w, Y0 / h + 0.04, on(11), { align: 'r', tone: 'dim' }),
+          ];
+    },
+  };
+  // the end coming: the bubble's wall, at nearly the speed of light; or space itself giving way
+  const coming: Scene = {
+    from: 18,
+    to: FALL,
+    assets: [sky],
+    draw(c, m) {
+      const u = ss(18.2, FALL, m.b);
+      layer(c, sky.get(), w, h, M, 0, 0, 1.03 + (final ? 0.25 * u * u : 0), 0.45 * (final ? 1 - 0.8 * u : 1));
+      thinking(c, LX, LY, R * (final ? 1 + 0.6 * u * u : 1), m.b, m.t, 1);
+      if (!final) {
+        // a wall of light, curving: a bubble far bigger than the frame, its edge sweeping in
+        const BR = S * 6;
+        const bx = LX - BR - S * 1.2 + (S * 1.2 + R * 0.4) * Math.pow(u, 2.2);
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 4; i++) ink(c, circlePath(bx, LY, BR + i * S * 0.006, 220, 1620 + i, -0.3, 0.3), 1, { width: Math.max(1.5, S * (0.004 - i * 0.0008)), color: i ? SEA : '#ffffff', seed: 1620 + i, alpha: 0.85 - i * 0.18 });
+        glow(c, bx + BR, LY, S * 0.25, '#e8fff8', 0.2 + 0.3 * u);
+        c.restore();
+      }
+    },
+    notes(m) {
+      return [note('va-wall', final ? 'SPACE ITSELF GIVING WAY' : 'AT NEARLY THE SPEED OF LIGHT', 0.5, land ? 0.12 : 0.1, ss(18.5, 19.5, m.b) * (1 - ss(FALL - 0.2, FALL, m.b)), { align: 'c', tone: 'dim' })];
+    },
+  };
+  // nothing: the frame black, the music stopped, the last words in the silence
+  const nothing: Scene = {
+    from: FALL,
+    to: 31,
+    enter: 'cut',
+    draw(c) {
+      c.fillStyle = '#000000';
+      c.fillRect(0, 0, w, h);
+    },
+  };
+  return {
+    title: final ? 'The Final State' : 'The True Vacuum',
+    narration: final
+      ? [
+          { from: 1, to: 8.6, text: 'This vacuum was never the bottom.' },
+          { from: 10, to: 17.6, text: 'Through a barrier nothing could climb, space found its way down to its last state, from which nothing comes back.' },
+          { from: 18.6, to: 23.4, text: 'It came before the Recurrence, as such a fall always must.' },
+          { from: 24.4, to: 27.4, text: 'Whatever was still thinking stopped mid-thought.' },
+          { from: 27.6, to: 30.6, text: 'You lasted as long as this universe could last.' },
+        ]
+      : [
+          { from: 1, to: 8.6, text: 'Nothing announced it.' },
+          { from: 10, to: 14.4, text: 'Somewhere beyond the reach of any instrument a bubble of the true vacuum formed,' },
+          { from: 14.6, to: 17.6, text: 'and it grew at nearly the speed of light,' },
+          { from: 18.6, to: 23.4, text: 'so the first anyone could have known of it was its wall.' },
+          { from: 24.4, to: 27.4, text: 'Every thought still running ended where it stood, mid-sentence.' },
+          { from: 27.6, to: 30.6, text: 'You lasted as long as this universe did.' },
+        ],
+    scenes: [inProgress, chart, coming, nothing],
+    card(c, m) {
+      layer(c, sky.get(), w, h, M, 0, 0, 1 + 0.04 * m.p, 0.25 * ss(0.3, 1, m.p));
+    },
+  };
+});
+
 export const ENDINGS2: Record<EndingId, FilmDef> = {
   end_long_thought: LONG_THOUGHT,
   end_one_voice: ONE_VOICE,
@@ -1668,4 +1834,5 @@ export const ENDINGS2: Record<EndingId, FilmDef> = {
   end_silence: SILENCE,
   end_will_fails: WILL_FAILS,
   end_fade: FADE,
+  end_vacuum: VACUUM,
 };

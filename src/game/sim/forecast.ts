@@ -1,7 +1,8 @@
-import { ERA_BY_ID, formatYears, logTurnLength, turnsUntil } from '../eras';
+import { ERA_BY_ID, formatYears, logTurnLength, stepTime, turnsUntil } from '../eras';
 import { BROWN_FADE_ETA, SUPERNOVA_LY, SURFACE_LIFE, boilingAway, fallsInAt, flashBoils, flashMelts, flashShelterFor, flashSheltered, giantFlash, giantWorld, meltLineAU, rubbleGame, takesWorldsIn, dwarfFadeEta, embersOutEta, haloEta, haloMoved, haloReachesYears, lampsOver, nextStellarChange, siphonsRunning } from '../physics';
 import type { Forecast, GameState } from '../types';
-import { turnStep, turnsUntilYears } from './flare';
+import { effectivePace, turnStep, turnsUntilYears } from './flare';
+import { LANDSCAPE_FROM, fallChance, fallQuantile, vacuumKnown, vacuumOf } from '../vacuum';
 import { colonies, formOf, hasCharter, hasTech, inItsSystem, protonFateKnown, threadTotals } from './util';
 import { readsSwarms, swarmArrives, swarmSight } from './sight';
 import { FLOW_ETA, flowAhead, flowing, keeping, nextToFlow } from './flow';
@@ -44,6 +45,59 @@ function stillOfMatter(state: GameState): string {
 /** A Thread this share of our people or more is warned about when its standing falls below STANDING_WARN (the player, 1 Nov: "25% please"). */
 export const STANDING_WARN_SHARE = 0.25;
 export const STANDING_WARN = 25;
+
+/** A chance in words: "under 1%", "37%", "over 99%". */
+export function chanceWords(p: number): string {
+  if (p <= 0) return 'no';
+  if (p < 0.01) return 'under 1%';
+  if (p > 0.99 && p < 1) return 'over 99%';
+  return `${Math.round(p * 100)}%`;
+}
+
+/** λ (log10 η) after each of the coming `n` turns at our pace, the first as the turn will really stop. */
+function lambdasAhead(state: GameState, n: number): number[] {
+  const out: number[] = [];
+  const first = turnStep(state);
+  let y = first.years;
+  let e = first.eta;
+  out.push(Math.log10(Math.max(1, e)));
+  const pace = effectivePace(state);
+  for (let i = 1; i < n; i++) {
+    const st = stepTime('dark', y, e, pace, state.settings.length);
+    y = st.years;
+    e = st.eta;
+    out.push(Math.log10(Math.max(1, e)));
+  }
+  return out;
+}
+
+/** The vacuum's warning: before the Dark Era when in it, in it the chance this turn and within five. */
+function vacuumForecast(state: GameState, vac: 'higgs' | 'landscape'): Omit<Forecast, 'uid'> {
+  const what = vac === 'higgs' ? 'a bubble of the true vacuum will come at nearly the speed of light' : 'space will fall to its final state, a sink nothing returns from';
+  const stands = 'There is no warning and no defence: only a Great Work finished first stands.';
+  const tide = (q: number) => darkTurnsAtTide(state, Math.pow(10, fallQuantile(vac, q)));
+  if (calendarEra(state) !== 'dark') {
+    const text =
+      vac === 'higgs'
+        ? `Our vacuum is metastable: early in the Dark Era, at a time no one can know, ${what}. Most likely about ${tide(0.5)} turns into it at the Tide, between turn ${tide(0.025)} and turn ${tide(0.975)} to nineteen chances in twenty. ${stands}`
+        : `Our vacuum is not the lowest there is: late in the Dark Era ${what}, not before about ${tide(0)} turns into it at the Tide, and always before the Recurrence. ${stands}`;
+    return { kind: 'vacuum', title: vac === 'higgs' ? 'The vacuum will fall' : 'The vacuum’s final state', text, dueYears: Infinity, severity: 'warn' };
+  }
+  const now = Math.log10(Math.max(1, state.eta));
+  if (vac === 'landscape' && now < LANDSCAPE_FROM) {
+    return { kind: 'vacuum', title: 'The vacuum’s final state', text: `Not before about 10^(10³⁴) years, and always before the Recurrence: ${what}. ${stands}`, dueYears: Infinity, dueEta: Math.pow(10, LANDSCAPE_FROM), severity: 'warn' };
+  }
+  const ahead = lambdasAhead(state, 5);
+  const one = fallChance(vac, now, ahead[0]);
+  const five = fallChance(vac, now, ahead[4]);
+  return {
+    kind: 'vacuum',
+    title: `The vacuum may fall: ${chanceWords(one)} this turn`,
+    text: `${vac === 'higgs' ? 'Our vacuum is metastable' : 'Our vacuum is not the lowest there is'}: at a time no one can know, ${what}. The chance it comes this turn: ${chanceWords(one)}; within five turns at our pace: ${chanceWords(five)}. It rises every turn. ${stands}`,
+    dueYears: Infinity,
+    severity: one >= 0.15 ? 'danger' : 'warn',
+  };
+}
 
 export function updateForecasts(state: GameState) {
   const out: Forecast[] = [];
@@ -351,6 +405,11 @@ export function updateForecasts(state: GameState) {
       add({ kind: 'collapse', title: collapsing(state) ? 'Matter is tunnelling into black holes' : 'Tunnelling collapse', text: `From 10^(10²⁶) years matter tunnels into black holes that evaporate at once, each system at a time no one can foresee, all of it by 10^(10⁷⁶): a flash for Burst Catchers. What is still made of matter goes with it; what made the Passage goes on, and so do minds on decay-proof substrate. ${stillOfMatter(state)}${when(Math.pow(10, COLLAPSE_FROM))}`, dueYears: Infinity, dueEta: Math.pow(10, COLLAPSE_FROM), severity: of ? 'danger' : 'info' });
     }
   }
+
+  // the vacuum, once we know it can fall (vacuum.ts): no defence, so only when at the earliest and
+  // how likely each turn, from what anyone can know, never from its hidden date
+  const vac = vacuumOf(state);
+  if (vac !== 'stable' && vacuumKnown(state) && (state.era === 'blackhole' || state.era === 'dark' || calendarEra(state) === 'blackhole' || calendarEra(state) === 'dark')) add(vacuumForecast(state, vac), 'vacuum');
 
   // the galaxy's free energy
   const prev = state.civ.flags.gfe_prev ?? 1;

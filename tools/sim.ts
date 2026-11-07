@@ -1,6 +1,6 @@
 // Headless balance harness: autoplay whole games and report how far each strategy gets.
 declare const process: { argv: string[] };
-// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [--asleep] [--war=N] [--interregnum] [-v]
+// Usage: npm run sim -- [games=4] [length=standard] [strategy=both] [--diff=standard] [--fate=decays|stable|curvature] [--from=0] [--asleep] [--war=N] [--interregnum] [--vacuum=stable|unknown|higgs|landscape] [-v]
 // --interregnum: games begun in the Twilight Interregnum, at 10¹² years (interregnum.ts).
 // Game g uses seed 1000 + g·7919; --from=N starts at game N, so runs can be split and run in parallel.
 // --asleep: the neighbours as they were before the new version, simulated lightly (civsAsleep).
@@ -13,7 +13,8 @@ import { formatEta } from '../src/game/eras';
 import { newGame } from '../src/game/newGame';
 import { endTurn } from '../src/game/sim/turn';
 import { capital, colonies, distLy, threadTotals, totalPops } from '../src/game/sim/util';
-import type { EpochLength, GameState, ProtonFate } from '../src/game/types';
+import type { EpochLength, GameState, ProtonFate, VacuumSetting } from '../src/game/types';
+import { vacuumOf } from '../src/game/vacuum';
 import { fateOf } from '../src/game/fate';
 import { shuns } from '../src/game/sim/judge';
 import { WAR_ACCORD, declareWar } from '../src/game/sim/war';
@@ -49,7 +50,9 @@ for (const strategy of strategies) {
     const seed = 1000 + g * 7919;
     const difficulty = (process.argv.find((a) => a.startsWith('--diff='))?.slice(7) ?? 'standard') as 'gentle' | 'standard' | 'harsh';
     const protonFate = (process.argv.find((a) => a.startsWith('--fate='))?.slice(7) ?? 'unknown') as ProtonFate;
-    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate, ...(asleep ? { civsAsleep: true } : {}), ...(interregnum ? { interregnum: true } : {}) });
+    // (--vacuum=stable|unknown|higgs|landscape: the vacuum's setting, vacuum.ts; absent, stable)
+    const vacuum = process.argv.find((a) => a.startsWith('--vacuum='))?.slice(9) as VacuumSetting | undefined;
+    const state = newGame({ seed, length, survivors: 3, difficulty, protonFate, ...(asleep ? { civsAsleep: true } : {}), ...(interregnum ? { interregnum: true } : {}), ...(vacuum ? { vacuum } : {}) });
     const eraTurns: Record<string, number> = {};
     let crossings = '';
     const t0 = Date.now();
@@ -87,7 +90,7 @@ for (const strategy of strategies) {
       })
       .join(' ');
     console.log(
-      `seed ${seed}: ${state.civ.outcome ? `${state.civ.outcome.kind.toUpperCase()} "${state.civ.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage}${state.civ.flags.wars ? ` wars ${state.civ.flags.wars}` : ''}${state.civ.flags.conquests ? ` took ${state.civ.flags.conquests}` : ''}${state.civ.flags.lost ? ` lost ${state.civ.flags.lost}` : ''}${state.civ.flags.horizons ? ` horizon ${state.civ.flags.horizons}` : ''}${state.civ.flags.drifts ? ` drift ${state.civ.flags.drifts}` : ''}${state.civ.flags.woven ? ` weave ${state.civ.flags.woven}` : ''} fate ${fateOf(state)} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
+      `seed ${seed}: ${state.civ.outcome ? `${state.civ.outcome.kind.toUpperCase()} "${state.civ.outcome.ending}"` : 'unfinished'} at turn ${state.turn} (${state.era}, η ${formatEta(state.eta, state.era)}) turns/era ${JSON.stringify(eraTurns)} pops ${totalPops(state)} techs ${state.civ.techs.length} taint ${state.civ.taint.toFixed(0)} halo ${state.minds.dark.stage}${state.civ.flags.wars ? ` wars ${state.civ.flags.wars}` : ''}${state.civ.flags.conquests ? ` took ${state.civ.flags.conquests}` : ''}${state.civ.flags.lost ? ` lost ${state.civ.flags.lost}` : ''}${state.civ.flags.horizons ? ` horizon ${state.civ.flags.horizons}` : ''}${state.civ.flags.drifts ? ` drift ${state.civ.flags.drifts}` : ''}${state.civ.flags.woven ? ` weave ${state.civ.flags.woven}` : ''} fate ${fateOf(state)} vacuum ${vacuumOf(state)}${state.civ.flags.unbidden ? ` unbidden ${state.civ.flags.unbidden}` : ''}${state.civ.flags.cloud_lit !== undefined ? ' cloud' : ''}${state.civ.flags.forget_what ? ` forget ${state.civ.flags.forget_what}` : ''} gfe ${(state.gfe * 100).toFixed(0)}%${crossings} | ${sv} | ${Date.now() - t0}ms`,
     );
   }
 }

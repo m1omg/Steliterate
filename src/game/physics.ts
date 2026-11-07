@@ -689,7 +689,9 @@ export interface EvolutionNote {
     // the Twilight Interregnum: a star lit from a nebula; a young star's death, or a blue giant's
     | 'born'
     | 'young_death'
-    | 'core_collapse';
+    | 'core_collapse'
+    // the Dark Era: a Sun's mass of gas out of nothing, lit and gone within the turn (sim/fluctuations.ts)
+    | 'cloud';
   bodyId?: string;
   /** (born) when it lit */
   bornAt?: number;

@@ -347,7 +347,9 @@ const at = (s: GameState, era: EraId, years: number, eta = Math.log10(years)) =>
     return { lost, paid, turns };
   };
   const [q, t, sl, s2] = [1, 0, -1, -2].map(total);
-  check(q.turns === 76 && t.turns === 38 && sl.turns === 19 && s2.turns === 19 && rel(q.paid, t.paid) < 1e-9 && rel(sl.paid, t.paid) < 1e-9 && rel(2 * sl.lost, t.lost) < 1e-9, `the whole Dark Era: ${q.turns} turns at Quick ×10, ${t.turns} at the Tide, ${sl.turns} at Slow ×10 and ×100, paid ${t.paid.toFixed(2)} Tide turns in all at each; Continuity lost a turn at a time, ${t.lost.toFixed(1)} at the Tide, ${sl.lost.toFixed(1)} at Slow (as before 20 Oct; on the ladder one Slow ×100 turn crossed it)`);
+  // (since 7 Nov a turn stops at the light expected near 10^(10⁹⁹) years, the cloud out of nothing:
+  // at the Tide and quicker a turn ends there already; at Slow one turn is cut in two, 20 not 19)
+  check(q.turns === 76 && t.turns === 38 && sl.turns === 20 && s2.turns === 20 && rel(q.paid, t.paid) < 1e-9 && rel(sl.paid, t.paid) < 1e-9 && rel(sl.lost / sl.turns, t.lost / t.turns) < 1e-9, `the whole Dark Era: ${q.turns} turns at Quick ×10, ${t.turns} at the Tide, ${sl.turns} at Slow ×10 and ×100 (one cut short at the cloud's light), paid ${t.paid.toFixed(2)} Tide turns in all at each; Continuity lost a turn at a time, ${t.lost.toFixed(1)} at the Tide, ${sl.lost.toFixed(1)} at Slow (as before 20 Oct; on the ladder one Slow ×100 turn crossed it)`);
 }
 
 // ---- after the Last Light every source gives LATE_YIELD times as much

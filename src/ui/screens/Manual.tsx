@@ -150,11 +150,22 @@ export const MANUAL: CodexEntry[] = [
     ],
   },
   {
+    id: 'm-darklate',
+    title: 'The vacuum, and the late Dark Era',
+    body: [
+      'What of the vacuum? (New Game): Stable, the default and the game as it always was; Unknown, one of the other three and nobody knows which; Metastable, the Higgs field’s own lower state; or Landscape, one of string theory’s many vacua. The Codex’s page on the vacuum says what each means. An unknown vacuum is told by the Vacuum Question (Black Hole Age). Once a vacuum is known to fall, a forecast gives the chance it comes this turn and within five turns at your pace, rising every turn: the chance anyone could know, never the date. Nothing defends against it. The Chronometer shows where each may come.',
+      'Late in the Dark Era the horizon’s faint warmth makes things out of nothing, the smaller the sooner. A voice, a page of your first record, your first world’s sky and a settlement you lost come back for an instant, each once: words only, and nothing changes. From about 10^(10⁵⁰) years minds come out of nothing too. An Error-Correction Array of yours can hold the first, and it wakes as an Echo; under The Unbidden (a law of the Dark Era, with Deep Error Correction) each array holds one a turn after that, where its settlement has Echo room free.',
+      'Near 10^(10⁹⁹) years a Sun’s mass of gas comes out of nothing near your capital, collapses and lights: a star, once, that lives and dies within the turn. The turn stops for it, even in the Long Sleep, its light is a flash your Burst Catchers bank, and it has a film of its own.',
+      'Szilard Engines (Szilard Engines, Dark Era) let your own records go to noise for the work they are worth: energy each turn by how much Continuity is left, for Continuity a turn (0.8 an engine as rated). When the first is lit the Threads argue what to forget: what is held twice (0.6 of the energy for half the cost), the oldest memories (as rated; the Kin object) or what each of you remembers alone (1.6 times both; the Echoes object). Taken down, an engine stops.',
+    ],
+  },
+  {
     id: 'm-endings',
     title: 'Endings',
     body: [
       'Victories come from the Great Works: The Long Thought (Echoes and Coldminds), One Voice (the Chorus), The Quiet Lattice (the Lattice), The Aeon Seed (at the Heart, with the Slow Ones), The Last Garden (living Kin, if protons are stable).',
-      'Recurrence: simply still exist when the calendar reaches 10^(10^122) years. The Hunger: become it.',
+      'Recurrence: simply still exist when the calendar reaches 10^(10^122) years, if the vacuum lasts that long. The Hunger: become it.',
+      'The vacuum’s ends, counted as Endurance: The True Vacuum (a metastable Higgs vacuum falls, early in the Dark Era) and The Final State (a landscape vacuum falls to its last state, late in it, always before the Recurrence). Neither has a defence; a Great Work finished first stands.',
       'Defeat: Silence (no one left), The Will Fails (resolve at zero for too long), The Fade (Continuity lost in the Dark Era), Conquered (your last settlement taken or destroyed in a war).',
     ],
   },

@@ -14,6 +14,13 @@ export type ProtonFate = 'decays' | 'stable' | 'curvature' | 'unknown';
  * neutron stars by η 68, worlds by η 89.5.
  */
 export type Fate = 'decay' | 'stable' | 'curvature';
+/**
+ * What of the vacuum (7 Nov; vacuum.ts): chosen at a new game, or left unknown. Absent, as in
+ * every game before, it is stable.
+ */
+export type VacuumSetting = 'stable' | 'unknown' | 'higgs' | 'landscape';
+/** The vacuum a game holds: the lowest there is, the Higgs field's metastable one, or one of the string landscape's. */
+export type Vacuum = 'stable' | 'higgs' | 'landscape';
 export type EpochLength = 'brief' | 'standard' | 'vast';
 export type Difficulty = 'gentle' | 'standard' | 'harsh';
 
@@ -340,6 +347,12 @@ export interface Civ {
   forecasts: Forecast[];
   pending: PendingEvent[];
   log: LogEntry[];
+  /**
+   * Our settlements lost (destroyColony), the last 12: what a fluctuation late in the Dark Era can
+   * reassemble for an instant (sim/fluctuations.ts; 7 Nov). Absent in a game saved before: the
+   * log's "is lost" lines stand in for it.
+   */
+  lostPlaces?: LostPlace[];
   crossing: CrossingReport | null;
   outcome: Outcome | null;
   /** Once-only and counted events: id -> times fired. */
@@ -577,6 +590,14 @@ export interface CrossingReport {
   coloniesAfter: number;
 }
 
+/** A settlement of ours that was lost: its name, when and in which age, and why. */
+export interface LostPlace {
+  name: string;
+  turn: number;
+  era: EraId;
+  why: string;
+}
+
 export interface Outcome {
   kind: 'victory' | 'dark' | 'endurance' | 'defeat';
   ending: string;
@@ -604,6 +625,11 @@ export interface GameSettings {
    * /next/ address only (src/channel.ts). Absent: begun in the Dusk, as every game before.
    */
   interregnum?: boolean;
+  /**
+   * What of the vacuum (7 Nov, the player: "It could be a setting, since a random ending can feel
+   * unfair"; vacuum.ts). Absent: stable, as every game before it was.
+   */
+  vacuum?: VacuumSetting;
 }
 
 export interface Battle {

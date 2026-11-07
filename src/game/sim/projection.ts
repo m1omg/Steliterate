@@ -5,6 +5,8 @@ import type { Colony, GameState, ThreadId } from '../types';
 import { THREADS } from '../types';
 import { capacity, clockShare, colonyTurn, latticeAlienation, reserveCapacity, upkeepOf, type ColonyTurn, type TurnContext } from './economy';
 import { BURST_CATCH } from './crossing';
+import { ENGINE_CONTINUITY, forgetting, szilardYield } from './szilard';
+import { calendarEra } from '../fate';
 import { computeMods, strainFor, type Strain } from './mods';
 import { researchDraw } from './research';
 import { jointIncome } from './survivors';
@@ -128,6 +130,8 @@ function noLight(state: GameState, c: Colony, ctx: TurnContext): string {
  * turn. Else there is truly nothing to gather.
  */
 function littleEnergy(state: GameState, c: Colony, less: Colony, more: Colony, mode: string, ctx: TurnContext): string {
+  // (memory is worth keeping while anything else gives warmth; once the archive is burned there is nothing left: szilard.ts)
+  if (mode === 'szilard') return calendarEra(state) !== 'dark' ? 'It runs only in the Dark Era, when memory is all there is left to burn' : 'Nothing left in the archive to burn';
   if (ctx.paceFactor < 1) {
     const whole: TurnContext = { ...ctx, paceFactor: 1 };
     const tide = colonyTurn(state, more, whole, state.civ.matter).y.energy - colonyTurn(state, less, whole, state.civ.matter).y.energy;
@@ -173,6 +177,10 @@ function standingNotes(state: GameState, c: Colony, withIt: Colony, id: string, 
   // one reserve, whatever fills it (storage.ts): a burst caught lands in it too, and Deep Storage's
   // quarter more counts (26 Oct, the player: "how much these actually increase my storage")
   if (d.reserveCap || d.burstCap) notes.push(`Energy reserve +${Math.floor(((d.reserveCap ?? 0) + (d.burstCap ?? 0)) * n * ctx.mods.reserveMult)}`);
+  if (id === 'szilard_engine') {
+    const f = forgetting(state);
+    notes.push(`Burns ${(ENGINE_CONTINUITY * f.cost * n).toFixed(1)} Continuity a turn, forgetting ${state.civ.flags.forget_what === undefined ? `${f.name} until the Threads decide` : f.name}; its energy is ${Math.round(szilardYield(state) * 100)}% of its rating now, by what is left to burn. Taken down, it stops`);
+  }
   if (id === 'burst_catcher') notes.push(`Catches bursts: up to +${BURST_CATCH * n} energy each into the reserve, even past its limit until the next turn ends (a black hole’s final burst here; a neutron star’s burst, a star that lights and goes out within a turn, or another flash nearby)`);
   if (d.defense) notes.push(`Defence +${d.defense * n} against swarms and raids`);
   if (d.declineMult !== undefined && d.declineMult < 1) notes.push(`The world declines ${Math.round((1 - d.declineMult) * 100)}% slower`);

@@ -4,6 +4,7 @@ import { queueEvent } from './events';
 import { capital, hasTech, log, protonFateKnown } from './util';
 import { hungerAct } from './judge';
 import { ageReached, fateOf } from '../fate';
+import { vacuumSetting } from '../vacuum';
 
 export function techCost(state: GameState, id: string): number {
   const def = TECH_BY_ID[id];
@@ -20,6 +21,7 @@ export function techCost(state: GameState, id: string): number {
 
 export function techVisible(state: GameState, def: TechDef): boolean {
   if (def.interregnumOnly && !state.settings.interregnum) return false;
+  if (def.vacuumUnknown && vacuumSetting(state) !== 'unknown') return false;
   if (def.needsStable || def.needsDecay || def.needsCurvature || def.needsUnstable) {
     if (!protonFateKnown(state)) return false;
     const fate = fateOf(state);
@@ -65,6 +67,7 @@ export function completeTech(state: GameState, id: string, how: 'research' | 'st
   const name = def.name;
   log(state, how === 'surplus' ? `With insight to spare, the scholars worked out ${name} on their own.` : how === 'stored' ? `Research complete: ${name}, at once, from stored insight.` : `Research complete: ${name}.`, 'good');
   if (id === 'proton_question') queueEvent(state, 'proton_answer');
+  if (id === 'vacuum_question') queueEvent(state, 'vacuum_answer');
 }
 
 /** At most this many projects are filled in from surplus in one turn. */

@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { DEFAULT_SETTINGS, newGame } from '../../game/newGame';
 import { hasSave, loadGame } from '../../game/save';
 import { hasOldGames, OLDER_BUILD } from '../../keys';
-import type { Difficulty, EpochLength, GameSettings, ProtonFate } from '../../game/types';
+import type { Difficulty, EpochLength, GameSettings, ProtonFate, VacuumSetting } from '../../game/types';
 import { music } from '../../audio/music';
 import { sfx } from '../../audio/sfx';
 import { modal, playFilm, screen, settings } from '../store';
@@ -189,6 +189,19 @@ export function Setup() {
               { id: 'curvature', name: 'Curvature', tip: 'Space itself slowly turns matter into particles (Falcke, Wondrak & van Suijlekom, unconfirmed): neutron stars burst near η 68, dwarfs fade by η 85, worlds by η 90.' },
             ]}
             onPick={(v) => set({ protonFate: v })}
+          />
+        </div>
+        <div class="field">
+          <label>What of the vacuum?</label>
+          <Seg<VacuumSetting>
+            value={st.vacuum ?? 'stable'}
+            options={[
+              { id: 'stable', name: 'Stable', tip: 'Our vacuum is the lowest there is: nothing ends by it, and the Recurrence can come. The game as it has always been.' },
+              { id: 'unknown', name: 'Unknown', tip: 'One of the other three, a third each, and nobody knows which, including you: the Vacuum Question (Black Hole Age) tells. If it can fall, it ends everything without warning.' },
+              { id: 'higgs', name: 'Metastable', tip: 'The Higgs field has a lower state, as the Standard Model’s measured masses say: a bubble of the true vacuum ends everything early in the Dark Era, most likely some 11 of its turns in at Standard, with no warning and no defence. A race to finish a Great Work first.' },
+              { id: 'landscape', name: 'Landscape', tip: 'One of string theory’s many vacua, not the lowest: it falls to its final state late in the Dark Era, always before the Recurrence, with no warning and no defence (Linde 2007). Only a Great Work wins.' },
+            ]}
+            onPick={(v) => set({ vacuum: v === 'stable' ? undefined : v })}
           />
         </div>
         <div class="field">

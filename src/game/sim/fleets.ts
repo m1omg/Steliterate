@@ -306,6 +306,8 @@ export function destroyColony(state: GameState, c: Colony, reason: string) {
   const owner = state.civs[c.owner] ?? state.civ;
   if (owner.capitalId === c.id) owner.capitalId = null;
   logTo(state, owner, `${c.name} is lost: ${reason}`, 'bad', c.systemId);
+  // (for the Dark Era's echoes: sim/fluctuations.ts)
+  owner.lostPlaces = [...(owner.lostPlaces ?? []), { name: c.name, turn: state.turn, era: state.era, why: reason }].slice(-12);
 }
 
 /** Past this, even a ship's long-baseline scan picks nothing out (ly). */

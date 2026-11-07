@@ -1,6 +1,7 @@
 // Renders one of the films (src/film) to an MP4, every frame drawn at its exact time:
 //   node tools/film-render.mjs <film> <out.mp4> [--size=1920x1080] [--fps=60] [--ffmpeg=<path>] [--jpeg] [--fate=decay|stable|curvature]
 //     [--begun=interregnum [--homek=<kelvin>] [--homelit]]   (the Long Dusk's cut for a game begun in the Twilight Interregnum)
+//     [--vacuum=higgs|landscape] [--eta=<η>]   (the vacuum's ending, its cut; the moment its timecode shows)
 // It starts the Vite dev server for film.html (the export page, never built into the game),
 // steps the film's time by 1/fps, screenshots each frame (the canvas and the words over it),
 // renders the film's cue offline, and encodes with ffmpeg: H.264 and AAC. ffmpeg is not a
@@ -34,6 +35,8 @@ const fate = opt('fate', '');
 const begun = opt('begun', '');
 const homek = opt('homek', '');
 const homelit = process.argv.includes('--homelit');
+const vacuum = opt('vacuum', '');
+const etaArg = opt('eta', '');
 const port = 5179;
 
 // (Vite itself, not through npx: killing npx left its Vite running, holding the port, 3 Nov)
@@ -51,7 +54,7 @@ try {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   await routeFonts(ctx);
   const page = await ctx.newPage();
-  await page.goto(`http://localhost:${port}/film.html?film=${film}&w=${w}&h=${h}${fate ? `&fate=${fate}` : ''}${begun ? `&begun=${begun}` : ''}${homek ? `&homek=${homek}` : ''}${homelit ? '&homelit=1' : ''}`, { timeout: 120000 });
+  await page.goto(`http://localhost:${port}/film.html?film=${film}&w=${w}&h=${h}${fate ? `&fate=${fate}` : ''}${begun ? `&begun=${begun}` : ''}${homek ? `&homek=${homek}` : ''}${homelit ? '&homelit=1' : ''}${vacuum ? `&vacuum=${vacuum}` : ''}${etaArg ? `&eta=${etaArg}` : ''}`, { timeout: 120000 });
   await page.waitForFunction(() => !!window.__film, null, { timeout: 120000 });
   await page.evaluate(() => window.__film.ready());
   const length = await page.evaluate(() => window.__film.length);

@@ -2,6 +2,7 @@ import { DARK_ENDING, ENDURANCE_ENDING, WORK_BY_ID } from '../data/works';
 import type { GameState, Outcome } from '../types';
 import { colonies, protonFateKnown, threadTotals, totalPops } from './util';
 import { calendarEra, fateOf } from '../fate';
+import { VACUUM_ENDING, vacuumFallen, vacuumOf } from '../vacuum';
 
 export function workRequirementMet(state: GameState, id: string): boolean {
   const civ = state.civ;
@@ -64,6 +65,13 @@ export function checkEndings(state: GameState, atLastHorizon = false): Outcome |
   for (const id of Object.keys(WORK_BY_ID)) {
     if (id === 'aeon_seed') continue;
     if ((civ.works[id] ?? 0) >= workCost(state, id) && workRequirementMet(state, id)) return end(state, 'victory', WORK_BY_ID[id].ending);
+  }
+  // the vacuum falls (vacuum.ts): without warning and with no defence, for everyone at once. A Work
+  // finished this turn stands (above); the fall comes before the turn's end can take the last of
+  // Continuity, and always before the Recurrence
+  if (vacuumFallen(state)) {
+    const v = vacuumOf(state);
+    if (v !== 'stable') return end(state, 'endurance', VACUUM_ENDING[v]);
   }
   if (calendarEra(state) === 'dark' && civ.continuity <= 0) return end(state, 'defeat', 'The Fade');
   if (calendarEra(state) === 'dark' && Math.log10(state.eta) >= 122) return end(state, 'endurance', ENDURANCE_ENDING.ending);

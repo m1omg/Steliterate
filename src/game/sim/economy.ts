@@ -1,4 +1,5 @@
 import { STRUCTURE_BY_ID, type StructureDef } from '../data/structures';
+import { szilardYield } from './szilard';
 import { FORMS, HORIZON_PACE, HORIZON_UPKEEP, WEAVE_PACE, WEAVE_ROOM, WEAVE_UPKEEP, horizonRoom } from '../data/forms';
 import { THREAD_DEFS } from '../data/threads';
 import { frozenHard, hawkingLight, insolation, siphonsRunning, sourceLight, tooColdForOpenAir } from '../physics';
@@ -297,6 +298,10 @@ export function colonyTurn(state: GameState, c: Colony, ctx: TurnContext, matter
         }
         case 'siphon':
           e = calendarEra(state) === 'dark' ? a : 0;
+          break;
+        case 'szilard':
+          // memories let go to noise: by what is left to burn, and what we chose to forget (szilard.ts)
+          e = a * szilardYield(state);
           break;
         case 'positronium':
           // its share of the window's trickle, or of the dole after it: the same in all whatever

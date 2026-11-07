@@ -1,5 +1,6 @@
 import { ERA_BY_ID, INTERREGNUM, INTERREGNUM_MILESTONES, deepMilestonesFor, erasOf, formatEta, formatYears, formatYearsShort, milestonesFor } from '../../game/eras';
 import { DEGENERATE_END, fateKnown, fateOf } from '../../game/fate';
+import { vacuumKnown, vacuumOf } from '../../game/vacuum';
 import { embersOutEta, haloMoved, siphonsRunning } from '../../game/physics';
 import type { EraId, GameState } from '../../game/types';
 import { phoneMore, rev } from '../store';
@@ -62,7 +63,7 @@ export function Chronometer({ s, nextYears }: { s: GameState; nextYears: number 
   // shows the stretch it might end in, and every date that depends on it, as questions
   const fate = fateKnown(s) ? fateOf(s) : null;
   const main = milestonesFor(fate, haloMoved(s) ? { at: embersOutEta(s), running: siphonsRunning(s) } : undefined);
-  const milestones = deep ? deepMilestonesFor(fate).map((m) => ({ ...m, x: deepPos(Math.pow(10, m.at)) })) : (inter ? [...INTERREGNUM_MILESTONES, ...main] : main).map((m) => ({ ...m, x: rulerPos(Math.pow(10, m.at), m.at, inter) }));
+  const milestones = deep ? deepMilestonesFor(fate, vacuumKnown(s) ? vacuumOf(s) : null).map((m) => ({ ...m, x: deepPos(Math.pow(10, m.at)) })) : (inter ? [...INTERREGNUM_MILESTONES, ...main] : main).map((m) => ({ ...m, x: rulerPos(Math.pow(10, m.at), m.at, inter) }));
   const at = (e: number) => rulerPos(Math.pow(10, e), e, inter);
   const split = at(fate ? DEGENERATE_END[fate] : DEGENERATE_END.stable);
   const unsure: [number, number] | null = fate ? null : [at(DEGENERATE_END.stable), at(DEGENERATE_END.curvature)];

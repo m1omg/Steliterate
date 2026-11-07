@@ -51,6 +51,8 @@ export interface ReelSpec {
 
 /** Years as the reel's timecode writes them: η and the mantissa × 10^n (in deep time, a power of a power). */
 export function timecode(eta: number): string {
+  // (η itself past 10²¹, where its digits would print as an exponent: as a power too, 7 Nov)
+  if (eta >= 1e21) return `η ${pow10(Math.log10(eta))} · 10^${pow10(Math.log10(eta))} YR`;
   if (eta > 300) return `η ${eta.toFixed(0)} · 10^${pow10(Math.log10(eta))} YR`;
   const e = Math.floor(eta);
   const m = Math.pow(10, eta - e);

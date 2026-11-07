@@ -1,6 +1,6 @@
 import { pointAt } from '../civs';
 import { STRUCTURE_BY_ID } from '../data/structures';
-import { ERA_BY_ID, eta, formatYears, paceShare, stepTime, tideTurnsAt, type TimeStep } from '../eras';
+import { CLOUD_LAMBDA, ERA_BY_ID, eta, formatYears, paceShare, stepTime, tideTurnsAt, type TimeStep } from '../eras';
 import { bodyClimate, primaryLuminosity } from '../physics';
 import type { Body, Colony, GameState, StarSystem } from '../types';
 import { computeMods } from './mods';
@@ -388,6 +388,8 @@ export function turnStep(state: GameState, pace = effectivePace(state)): TimeSte
  */
 export function turnEndEta(state: GameState): number {
   const ends = [ageEndEta(state)];
+  // the light expected late in the Dark Era, a cloud out of nothing (fluctuations.ts): a turn of its own, even asleep
+  if (calendarEra(state) === 'dark' && clockCiv(state).flags.cloud_lit === undefined) ends.push(Math.pow(10, CLOUD_LAMBDA));
   if (fateOf(state) !== 'decay' && (state.era === 'degenerate' || state.era === 'blackhole') && state.years < ERA_BY_ID.blackhole.startYears) ends.push(ERA_BY_ID.degenerate.endEta);
   if (fateOf(state) === 'curvature' && state.era !== 'dark' && state.flags.matter_gone === undefined) ends.push(MATTER_END.curvature);
   return Math.min(...ends.filter((e) => e > state.eta), Infinity);
@@ -398,6 +400,7 @@ export function turnEndWhy(state: GameState): string {
   const end = turnEndEta(state);
   if (end === ageEndEta(state)) return 'the end of the age';
   if (end === MATTER_END.curvature) return 'the Great Evaporation';
+  if (end === Math.pow(10, CLOUD_LAMBDA)) return 'the light expected near 10^(10⁹⁹) years';
   return 'the calendar’s turn at η 39';
 }
 

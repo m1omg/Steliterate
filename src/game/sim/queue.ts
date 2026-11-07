@@ -5,6 +5,7 @@ import { newFleet } from './fleets';
 import { completeHorizon } from './horizon';
 import { completePassage } from './passage';
 import { completeWeave } from './positronium';
+import { queueEvent } from './events';
 import { WORKS_WATER } from './terraform';
 import { fleets, formOf, log } from './util';
 
@@ -40,6 +41,8 @@ export function finishQueued(state: GameState, c: Colony, item: QueueItem) {
       if (d?.enables === 'merge') state.civ.flags.chorus_nodes_built = (state.civ.flags.chorus_nodes_built ?? 0) + 1;
     }
     log(state, `${c.name}: ${structureLabel(item.key, state.systems[c.systemId], formOf(c)).name} complete.`, 'good', c.systemId);
+    // the first Szilard Engine: the Threads argue over what to forget first (szilard.ts)
+    if (item.key === 'szilard_engine' && state.civ.flags.forget_what === undefined) queueEvent(state, 'what_to_forget');
   } else if (item.kind === 'passage') completePassage(state, c);
   else if (item.kind === 'horizon') completeHorizon(state, c);
   else if (item.kind === 'weave') completeWeave(state, c);

@@ -103,3 +103,14 @@ export const ENDURANCE_ENDING = {
   epilogue:
     'You outlasted every source, every bound atom, every clock. In a universe this old, given enough time, any state comes around again. You are still here to see it.',
 };
+
+/**
+ * The vacuum's endings (vacuum.ts): Endurance, as the Recurrence is, since there was no defence
+ * (7 Nov; the player may have them sting as defeats instead).
+ */
+export const VACUUM_EPILOGUE: Record<string, string> = {
+  'The True Vacuum':
+    'Nothing announced it. Somewhere beyond the reach of any instrument a bubble of the true vacuum formed, and it grew at nearly the speed of light, so the first anyone could have known of it was its wall. There was no defence and nowhere to go. Every thought still running ended where it stood, mid-sentence. You lasted as long as this universe did.',
+  'The Final State':
+    'This vacuum was never the bottom. Through a barrier nothing could climb, space found its way down to its last state, from which nothing comes back. It came before the Recurrence, as such a fall always must. Whatever was still thinking, in whatever form it had taken, stopped mid-thought. You lasted as long as this universe could last.',
+};

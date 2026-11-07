@@ -8,6 +8,7 @@ import { ENDINGS2 } from './endings';
 import { INTERREGNUM_FILM } from './interregnum';
 import { LAST_LIGHT2 } from './lastlight';
 import { SUPERNOVA2 } from './supernova';
+import { CLOUD_FILM } from './cloud';
 
 // The films (the new version, part 4): one for each age and each ending (and since 26 Oct one for
 // the Degenerate Age's first supernova), every frame drawn by
@@ -27,6 +28,7 @@ export type FilmId =
   | 'last_warmth'
   | 'great_evaporation'
   | 'last_horizon'
+  | 'cloud'
   | 'end_long_thought'
   | 'end_one_voice'
   | 'end_quiet_lattice'
@@ -36,7 +38,8 @@ export type FilmId =
   | 'end_recurrence'
   | 'end_silence'
   | 'end_fade'
-  | 'end_will_fails';
+  | 'end_will_fails'
+  | 'end_vacuum';
 /** The films that end a game. */
 export type EndingId = Extract<FilmId, `end_${string}`>;
 
@@ -60,6 +63,8 @@ export interface FilmArgs {
   begun?: 'interregnum';
   homeK?: number;
   homeLit?: boolean;
+  /** (the vacuum's ending, 7 Nov) which vacuum fell: the Higgs field's (absent) or a landscape vacuum's, its cut and its score's. */
+  vacuum?: 'higgs' | 'landscape';
 }
 
 /** The Heart's mass in a game (the supermassive hole, called the Heart; kept after it evaporates), for the Last Horizon's figures. */
@@ -118,6 +123,7 @@ export const FILMS: Record<FilmId, FilmDef> = {
   last_warmth: blackHoleAge2('last_warmth', 'The Last Warmth'),
   great_evaporation: GREAT_EVAPORATION2,
   last_horizon: LAST_HORIZON2,
+  cloud: CLOUD_FILM,
   ...ENDINGS2,
 };
 
@@ -146,6 +152,8 @@ export function endingFilmFor(ending: string): FilmId | null {
     Silence: 'end_silence',
     'The Fade': 'end_fade',
     'The Will Fails': 'end_will_fails',
+    'The True Vacuum': 'end_vacuum',
+    'The Final State': 'end_vacuum',
   };
   return by[ending] ?? null;
 }
