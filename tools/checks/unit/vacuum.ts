@@ -123,6 +123,16 @@ for (const length of ['brief', 'standard', 'vast'] as EpochLength[]) {
   const un = darkGame({ vacuum: 'unknown' });
   updateForecasts(un);
   check(!st.civ.forecasts.some((x) => x.kind === 'vacuum') && !un.civ.forecasts.some((x) => x.kind === 'vacuum'), 'none where it is stable, or not known');
+  // before the Dark Era: a date for the HUD (not "now"), the likeliest for the Higgs vacuum, the earliest for a landscape one
+  for (const [v, at] of [['higgs', Math.log10(fallQuantile('higgs', 0.5))], ['landscape', Math.log10(LANDSCAPE_FROM)]] as const) {
+    const b = darkGame({ vacuum: v });
+    b.era = 'blackhole';
+    b.eta = 0;
+    b.years = 1e80;
+    updateForecasts(b);
+    const g = b.civ.forecasts.find((x) => x.kind === 'vacuum');
+    check(!!g && g.dueEta !== undefined && Math.abs(Math.log10(Math.log10(g.dueEta)) - at) < 1e-9 && /turns into it at the Tide/.test(g.text), `in the Black Hole Age, the ${v} vacuum's forecast gives a date (η 10^${Math.log10(g?.dueEta ?? 1).toFixed(1)}): "${g?.text.slice(0, 60)}…"`);
+  }
 }
 {
   const labels = (v: 'stable' | 'higgs' | 'landscape' | null) => deepMilestonesFor(null, v).map((m) => m.label);

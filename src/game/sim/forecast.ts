@@ -81,7 +81,8 @@ function vacuumForecast(state: GameState, vac: 'higgs' | 'landscape'): Omit<Fore
       vac === 'higgs'
         ? `Our vacuum is metastable: early in the Dark Era, at a time no one can know, ${what}. Most likely about ${tide(0.5)} turns into it at the Tide, between turn ${tide(0.025)} and turn ${tide(0.975)} to nineteen chances in twenty. ${stands}`
         : `Our vacuum is not the lowest there is: late in the Dark Era ${what}, not before about ${tide(0)} turns into it at the Tide, and always before the Recurrence. ${stands}`;
-    return { kind: 'vacuum', title: vac === 'higgs' ? 'The vacuum will fall' : 'The vacuum’s final state', text, dueYears: Infinity, severity: 'warn' };
+    // (its date as the HUD gives it: the likeliest for the Higgs vacuum, the earliest for a landscape one; never the hidden one)
+    return { kind: 'vacuum', title: vac === 'higgs' ? 'The vacuum will fall' : 'The vacuum’s final state', text, dueYears: Infinity, dueEta: Math.pow(10, fallQuantile(vac, vac === 'higgs' ? 0.5 : 0)), severity: 'warn' };
   }
   const now = Math.log10(Math.max(1, state.eta));
   if (vac === 'landscape' && now < LANDSCAPE_FROM) {
