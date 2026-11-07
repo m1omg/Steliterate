@@ -46,7 +46,7 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      code".
    - Checks: `npm run check` (unit checks, about 15 s) and, with `vite preview` running,
      `npm run check:browser -- http://localhost:4173/ --lanes=3` (browser checks: 81 since 1 Nov,
-     some 80 minutes one at a time, about 45 to 60 three at a time on four cores; unit checks: 114 since 3 Nov). Both must end with
+     some 80 minutes one at a time, about 45 to 60 three at a time on four cores; unit checks: 115 since 7 Nov). Both must end with
      "ALL CHECKS PASSED". See Test hooks and scripts. The harness splits too: four
      `tools/sim.ts 75 … --from=0` (75, 150, 225) at once give 300 games in about 2.5 minutes.
 3. **Commit and go live:**
@@ -2393,3 +2393,4 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 | the Twilight Interregnum, a game begun at 10¹² years (1 Nov; at /next/ only) | 192 | games begun in the Dusk: all 300 the same as before, 73 victories, Degenerate Age 97 turns; by fate decay 106 / 148, stable 34 / 81, curvature 52 / 71. Begun in the Interregnum (`--interregnum`): 296 of 300 reach the Dusk, 186 survive, 80 victories, Degenerate Age 101 turns, the Interregnum 73 turns; by fate decay 126 / 148, stable 19 / 81, curvature 41 / 71 |
 | stars that brighten as they age (1 Nov, PR m1omg/Steliterate#56) | 181 | 69 victories, Degenerate Age 95 turns; by fate decay 103 / 148, stable 31 / 81, curvature 47 / 71; Harsh 158 / 34 / 93; begun in the Interregnum 183 / 80 / 102, 297 reaching the Dusk |
 | flare turns cost people for their time too, thin gas (1 Nov) | 181 | 69 victories, Degenerate Age 102 turns; by fate decay 109 / 148, stable 30 / 81, curvature 42 / 71; Harsh 148 / 29 / 92; begun in the Interregnum 186 / 74 / 109, 297 reaching the Dusk; within the noise |
+| the Twilight Interregnum paced as the Long Dusk: its Tide ×1.27 at Standard, its old red dwarfs' deaths from 10⁸ years in (7 Nov; at /next/ only) | 181 | games begun in the Dusk: all 300 as before, 69 victories, Degenerate Age 102 turns. Begun in the Interregnum (`--interregnum`): 198 / 122 / 120, 291 of 300 reaching the Dusk (the old code on the same 300: 186 / 74 / 109, 297). The longer age (about 134 turns at the autoplayer's pace, where it was 60 at the Tide) gives more growth: the Aeon Seed 92 (64 before), the Long Thought 30 (10), the Recurrence 76 (112), The Fade 43 (67), Silence 53 (39), nine games silent within the Interregnum (three before) |

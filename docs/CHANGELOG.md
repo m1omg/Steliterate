@@ -5065,3 +5065,11 @@ turn. The Manual's and the Codex's "about 60 turns" read 114.
   star flares at turn 88 to 94), `unit/thin-gas` (the Interregnum galaxy's new hashes) and
   `unit/flare-turns` (in the player's turn-52 save a flare turn is now 0.4% of a Tide turn, not
   0.2%) follow.
+- **Harness** (300 standard competent games): games begun in the Dusk all as before, 181 / 69 / 102.
+  Begun in the Interregnum: 198 survive, 122 victories, a Degenerate Age of 120 turns, 291 reaching
+  the Dusk; the old code on the same 300: 186 / 74 / 109, 297. The longer age gives more growth: the
+  Aeon Seed 92 (64 before), the Long Thought 30 (10), the Recurrence 76 (112), The Fade 43 (67),
+  Silence 53 (39; nine silent within the Interregnum, three before).
+- **Validated** (`76a35e7`, `index-3GlUVbsf.js`): tsc and the build clean; the playtest (30/144 Hz
+  parity 3e-16); savecompat on its 11 saves; all 115 unit checks; the browser checks it touches
+  (`interregnum`, `clocks`, `reveal-first`, `research-fate`, `films`). No film or music changed.

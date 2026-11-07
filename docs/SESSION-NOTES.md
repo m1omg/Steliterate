@@ -206,6 +206,22 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     question: "any ideas on how to make dark era more interesting? Like, there's a lot of crazy
     events that would happen long before recurrence in the super far future, connected to
     probability … Don't implement those yet." The ideas offered are under "Open threads".
+  - Then (6 and 7 Nov): "Implement:" six of those Dark Era ideas, with "It should be possible to
+    stabilize and integrate these minds into our civilization at least to some extent", the vacuum
+    a setting ("since a random ending can feel unfair"), and "I'm not sure what the last energy
+    state would entail exactly. Clarify." (Answered: not a quiet era but the latest date for our
+    vacuum to tunnel down to a sink, always before the Recurrence, so it became an ending, not a
+    crossing; my brainstorm's "after it, only fluctuations remain" was wrong.) Asked how turn
+    scaling works: "Any way to rework the interregnum? So the pacing matches the original start in
+    that late stelliferous era [which] doesn't have stars going out in 1 turn. Mayhaps by starting
+    with a shorter turn duration." The plan (`/root/.claude/plans/write-the-setup-script-zesty-quilt.md`
+    in that session) was approved after "you didnt explain the vacuum types fully" (the four types,
+    their physics and their chances, now in the Codex's page "The vacuum"). Then: **"ok, to be clear,
+    ONLY to /next"**: this work goes to `next` alone, no PR into `main`, until the player says
+    otherwise. Part A, the Interregnum paced as the Long Dusk, went to /next/ first (CHANGELOG, 7
+    Nov); Part B, the Dark Era's six, follows (minds out of nothing and The Unbidden, echoes before
+    the Recurrence, a cloud out of nothing with its own film, the vacuum as a hidden fate, Szilard
+    Engines, the vacuum's ending film).
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

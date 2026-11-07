@@ -9,14 +9,17 @@ the entry point; the details are in the other notes, and every section says wher
 Keep it spoiler-light, like everything the player may read. The stranger minds and the endings
 are in `docs/spoilers/`, for you only: never repeat them to the player.
 
-## 0. Start here (4 Nov)
+## 0. Start here (7 Nov)
 
 ### Where things stand
-- **Live:** the game is at both addresses as PR m1omg/Steliterate#60 (`f85739f`, script
-  `index-CgxQ4W4K.js`). The addresses are in §1.
-- **Branches:** the work branch (`claude/epic-wozniak-lyhulf`) and `next` hold the same files;
-  `main` lacks only the notes commit that says PR #60 is live, as after every batch.
-- **Nothing is in flight:** no batch half done, no check running, nothing uncommitted.
+- **ONLY to /next (7 Nov, the player: "ok, to be clear, ONLY to /next"):** the work since 6 Nov
+  goes to `next` alone. No PR into `main` until the player says otherwise. `main` stays at PR
+  m1omg/Steliterate#60 (`f85739f`, `index-CgxQ4W4K.js`); the work branch and `next` are ahead of
+  it. A fix the player wants at the main address must be made on a branch from `main`, not
+  merged from the work branch.
+- **At /next/:** the Twilight Interregnum paced as the Long Dusk (§3, 7 Nov).
+- **In flight:** the Dark Era's six (SESSION-NOTES, "Then (6 and 7 Nov)"), on the work branch.
+  Its films are shown to the player before it goes to `next`.
 
 ### The last thing done (3 and 4 Nov)
 - Real synthwave for the Twilight Interregnum's and the Long Dusk's films, and the Long Dusk's
@@ -35,7 +38,7 @@ are in `docs/spoilers/`, for you only: never repeat them to the player.
 3. Read in the order of §2.
 4. Set up the container as in §7.
 
-### How a batch goes live (since the switch, 27 Oct)
+### How a batch goes live (since the switch, 27 Oct; since 7 Nov, ONLY to /next: steps 2 and 3 wait for the player's word)
 1. Validate it (CLAUDE.md, "Validate every batch").
 2. Push the work branch, then open a PR into `main` and merge it yourself with a merge commit.
 3. Wait for `main`'s Pages run to finish: the workflow cancels a run in progress.
@@ -86,8 +89,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#60 (real synthwave for two films, the Long Dusk's film at the Last Gas, 4 Nov), `f85739f` | the same, with the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-CgxQ4W4K.js` | the same | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#60 (real synthwave for two films, the Long Dusk's film at the Last Gas, 4 Nov), `f85739f` | ahead of `main` since 7 Nov ("ONLY to /next"): the Interregnum paced as the Long Dusk, `76a35e7`; the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-CgxQ4W4K.js` | `index-3GlUVbsf.js` | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own; slots' data in IndexedDB `steliterate2` since 1 Nov) | the same | `steliterate.` keys |
 
 ## 2. Read in this order
@@ -383,6 +386,17 @@ has the figures for each.
   first star a white dwarf, our first world frozen, both by their heat; a world we settled), where
   no film had played. `src/ui/filmArgs.ts`; checks `unit/last-gas-film`, `browser/films`.
 
+- **The Twilight Interregnum paced as the Long Dusk** (7 Nov; at /next/ only, the player: "ONLY to
+  /next"): "So the pacing matches the original start in that late stelliferous era [which] doesn't
+  have stars going out in 1 turn." Both ages already began with 40-year turns; what differed was the
+  Interregnum's Tide (×1.6 a turn, the Dusk's ×1.27) and its old red dwarfs dying only from 10¹⁰
+  years in. Now its Tide grows as the Dusk's (86 / 114 / 148 turns, 45 / 60 / 82 before) and its
+  deaths spread from 10⁸ years in (a bend the Codex states): 57% of its flares are never seen at a
+  turn's end, 30% at two or more (91% and none before; the Dusk 47% and 39%). Games begun in the Dusk
+  are unchanged. Begun in the Interregnum, 198 / 122 / 120 (186 / 74 / 109 before): the longer age
+  gives more growth. At /next/ as `76a35e7`, script `index-3GlUVbsf.js`; check
+  `unit/interregnum-pace`.
+
 ## 4. Baselines (2 Nov)
 
 These are from the last validation of a rule change, PR m1omg/Steliterate#57 (1 Nov). PR #58
@@ -394,7 +408,7 @@ touches.
 | tsc, build | clean |
 | Playtest | passes (30/144 Hz parity) |
 | savecompat | 11 saves (the player's turn-52 flare save among them) |
-| Unit checks | 114 (`last-gas-film`, 3 Nov) |
+| Unit checks | 115 (`interregnum-pace`, 7 Nov) |
 | Browser checks, real fonts | 81 |
 | 300 games (survive / victories / Degenerate Age turns) | 181 / 69 / 102 |
 | By fate | decay 109 / 148, stable 30 / 81, curvature 42 / 71 |
