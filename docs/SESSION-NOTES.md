@@ -223,7 +223,11 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     the Recurrence, a cloud out of nothing with its own film, the vacuum as a hidden fate, Szilard
     Engines, the vacuum's ending film). Built on 7 Nov (`b9b91ff`, CHANGELOG "The Dark Era's six"):
     the previews of its two films (1080p MP4s, "A Light in the Dark" and the vacuum's ending in both
-    cuts) were sent; it goes to `next` only after the player has seen and heard them.
+    cuts) were sent; it goes to `next` only after the player has seen and heard them. Validated on 7
+    Nov (CHANGELOG), after two fixes the validation found:
+    - the harness: the autoplayer took the Szilard research in nearly every Dark Era game, which
+      halved its Great Works' insight; the research is now a deliberate choice, `27628d7`;
+    - the browser suite: a stray "???" for the Vacuum Question in the research grid, `c5851f8`.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",

@@ -209,4 +209,9 @@ by fate decay 103 / 148, stable 31 / 81, curvature 47 / 71; Harsh 158 / 34 / 93 
 it: 158 / 43 / 92); begun in the Interregnum 183 / 80 / 102, 297 reaching the Dusk; within the noise. Flare turns
 costing people their time only, and thin gas (1 Nov, PR m1omg/Steliterate#57): 181 / 69 / 102; by
 fate decay 109 / 148, stable 30 / 81, curvature 42 / 71; Harsh 148 / 29 / 92; begun in the
-Interregnum 186 / 74 / 109, 297 reaching the Dusk; within the noise.
+Interregnum 186 / 74 / 109, 297 reaching the Dusk; within the noise. The Interregnum paced as the
+Long Dusk (7 Nov, at /next/ only): begun in the Dusk the same in all 300; begun in the Interregnum
+198 / 122 / 120, 291 reaching the Dusk. The Dark Era's six (7 Nov, at /next/ only; the vacuum Stable
+by default): 181 / 69 / 102, 5 of 300 ending differently; Harsh 151 / 29 / 92; begun in the
+Interregnum 199 / 122 / 120, 291 reaching the Dusk; `--vacuum=higgs` 222 / 64 (158 of them "The True
+Vacuum"), `--vacuum=landscape` 186 / 69 (117 "The Final State"), `--vacuum=unknown` 200 / 67.

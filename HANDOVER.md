@@ -19,8 +19,12 @@ are in `docs/spoilers/`, for you only: never repeat them to the player.
   merged from the work branch.
 - **At /next/:** the Twilight Interregnum paced as the Long Dusk (§3, 7 Nov).
 - **In flight:** the Dark Era's six (SESSION-NOTES, "Then (6 and 7 Nov)"; CHANGELOG "The Dark
-  Era's six"), on the work branch since `b9b91ff`, not yet at `next`: its two films' previews were
-  sent on 7 Nov, and it goes to `next` once the player has seen and heard them.
+  Era's six"), on the work branch since `b9b91ff` and not yet at `next`. It was validated on 7 Nov,
+  harness and all, after two fixes the validation found: `27628d7` makes Szilard Engines a
+  deliberate choice, researched only when one would be lit; `c5851f8` removes a stray "???" from
+  the research grid. Its two films' previews were sent on 7 Nov. It goes to
+  `next` once the player has seen and heard them; the copy is `git push origin
+  claude/epic-wozniak-lyhulf:next`, then check that /next/ serves the new `index-*.js`.
 
 ### The last thing done (3 and 4 Nov)
 - Real synthwave for the Twilight Interregnum's and the Long Dusk's films, and the Long Dusk's

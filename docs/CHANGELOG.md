@@ -5179,8 +5179,45 @@ reason.
   sources (Coleman & De Luccia 1980; Guth & Weinberg 1983; Andreassen, Frost & Schwartz 2018; Linde
   2007; Dyson, Kleban & Susskind 2002; Boddy, Carroll & Pollack 2016; Szilard 1929; Bennett 1982;
   DESI DR2 2025). The Manual: "The vacuum, and the late Dark Era", and the endings.
+- The research grid: where the vacuum was chosen at the start, the Vacuum Question is not there at
+  all (`c5851f8`). It had shown as a fifth "???" with the Proton Question's hint, kept after the
+  Proton Question; `browser/research-fate` caught it.
 - Saves: only optional fields and flags (`settings.vacuum`, `civ.lostPlaces`, `flags.unbidden`,
   `cloud_lit`, `cloud_film`, `forget_what`); no `SAVE_VERSION` bump.
 - Checks: `unit/vacuum`, `unit/dark-fluctuations`, `unit/szilard` (new), `unit/film-scores` (the
   two new scores), `unit/ladder` (the Slow turn cut at the light); `browser/vacuum`,
   `browser/cloud-film` (new). Shared: `tools/checks/darkgame.ts`, a Dark Era game for the checks.
+- **Harness** (300 standard competent games each, after the autoplayer’s fix above):
+  - **Standard, Stable** (the default): 181 survive, 69 victories, a Degenerate Age of 102 turns:
+    the reference's totals (Part A's run). 5 of 300 end differently: two Fades become Recurrences,
+    two Recurrences Fades, one Fade The Will Fails. Every victory stands, 67 of 69 on the same turn
+    and two a turn later. A game reaching the Recurrence takes a turn more, the cloud's stop cutting
+    one of the autoplayer's slow turns in two.
+  - **Harsh:** 151 / 29 / 92 (1 Nov: 148 / 29 / 92).
+  - **Begun in the Interregnum:** 199 / 122 / 120, 291 reaching the Dusk (Part A: 198 / 122 / 120,
+    291); 3 of 300 end differently.
+  - **Metastable** (`--vacuum=higgs`): 222 survive, 158 of them "The True Vacuum"; 64 victories (59
+    Aeon Seed, 5 Long Thought), 61 Silence, 11 Fades and 6 Will Fails. Game for game against
+    Stable: the fall takes the place of 112 Recurrences, and of 37 Fades, 3 Silences and 1 Will
+    Fails that it came before (so those count as Endurance here), and cuts short 5 of the 10 Long
+    Thought victories.
+  - **Landscape** (`--vacuum=landscape`): 186 survive, 117 of them "The Final State"; 69 victories,
+    every one as in Stable; 44 Fades. Game for game: the final state takes the place of 112
+    Recurrences, 4 Fades and 1 Silence.
+  - **Unknown** (`--vacuum=unknown`): 200 survive (46 The True Vacuum, 42 The Final State, 45
+    Recurrence), 67 victories. These 300 seeds hold 80 Higgs vacua, 109 landscape and 111 stable;
+    over 9000 harness seeds the hash gives 2977 / 2994 / 3029.
+  - In every run the autoplayer lights no Szilard Engine (it needs Continuity above 60 with the
+    reserve nearly gone): they are the player's to use. It holds minds out of nothing under The
+    Unbidden in 42 Stable games (9 each in 33), and the cloud lights in 117 of the 174 that reach
+    the Dark Era.
+  - The first run, before the fix: Stable 179 / 68 / 102 (7 of 300 different), Harsh 151 / 29 / 92,
+    Interregnum 197 / 121 / 120, Metastable 221 / 63, Landscape 184 / 68, Unknown 200 / 66.
+- **Validated** (`c5851f8`, `index-BtiAGAlZ.js`):
+  - tsc and the build clean; the playtest (30/144 Hz parity 2e-15); savecompat on its 11 saves;
+    all 118 unit checks;
+  - the full browser suite, 83 checks in three lanes, on the build before the grid fix
+    (`27628d7`, `index-DVDvaDKb.js`): 82 passed, `research-fate` failed on the stray "???";
+  - after the fix, `research-fate` and `vacuum` pass, and the playtest again.
+- The two films were rendered as previews for the player (1080p, "A Light in the Dark" and the
+  vacuum's ending in both cuts); this goes to `next` once they have been seen and heard.
