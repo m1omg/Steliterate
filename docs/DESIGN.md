@@ -266,6 +266,20 @@ fused to iron (Dyson 1979), and between 10^(10^26) and 10^(10^76) years each sys
 tunnels into black holes that evaporate within the turn. Burst Catchers bank the flashes, and the
 Passage opens there once the fate is known.
 
+**The vacuum, a hidden fate** (7 Nov; `src/game/vacuum.ts`). A second hidden fate beside matter's,
+chosen at a new game or left unknown ("What of the vacuum?"; Stable by default, the game as it was):
+the Higgs field's metastable vacuum falls early in the Dark Era (its bubble inside our horizon most
+likely near 10^613 years, after Andreassen, Frost & Schwartz's 10^161), a landscape vacuum falls to
+its final state late in it (between 10^(10^34) and the Recurrence, always before it: Linde 2007).
+Physics allows no defence, so the age becomes a race to finish a Work; the Vacuum Question tells an
+unknown vacuum, and a forecast gives the chance each turn, never the date. Its two endings count as
+Endurance. **Late in the Dark Era** the horizon's warmth makes things out of nothing, the smaller
+the sooner (`sim/fluctuations.ts`): echoes of our own past, words only, foreshadowing the
+Recurrence; minds out of nothing from 10^(10^50) years, held as Echoes by our arrays (The
+Unbidden); and once, near 10^(10^99), a cloud that collapses and lights, with its own film.
+**Szilard Engines** (`sim/szilard.ts`) burn memory for warmth: Continuity for energy, and the
+Threads argue over what to forget.
+
 **The Long Flow** (η 65, stable and curvature fates, until the Great Evaporation; `sim/flow.ts`).
 Not a crossing but a change in the world: from 10^65 years even iron flows (Dyson 1979), so a
 solid is a slow liquid. Whether it matters depends on how fast a mind thinks, the player's idea:

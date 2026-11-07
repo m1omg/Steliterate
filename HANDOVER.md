@@ -18,8 +18,9 @@ are in `docs/spoilers/`, for you only: never repeat them to the player.
   it. A fix the player wants at the main address must be made on a branch from `main`, not
   merged from the work branch.
 - **At /next/:** the Twilight Interregnum paced as the Long Dusk (§3, 7 Nov).
-- **In flight:** the Dark Era's six (SESSION-NOTES, "Then (6 and 7 Nov)"), on the work branch.
-  Its films are shown to the player before it goes to `next`.
+- **In flight:** the Dark Era's six (SESSION-NOTES, "Then (6 and 7 Nov)"; CHANGELOG "The Dark
+  Era's six"), on the work branch since `b9b91ff`, not yet at `next`: its two films' previews were
+  sent on 7 Nov, and it goes to `next` once the player has seen and heard them.
 
 ### The last thing done (3 and 4 Nov)
 - Real synthwave for the Twilight Interregnum's and the Long Dusk's films, and the Long Dusk's

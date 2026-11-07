@@ -45,8 +45,8 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
      try one in the browser, gunzip it and paste the JSON into Load / import → "Load from a save
      code".
    - Checks: `npm run check` (unit checks, about 15 s) and, with `vite preview` running,
-     `npm run check:browser -- http://localhost:4173/ --lanes=3` (browser checks: 81 since 1 Nov,
-     some 80 minutes one at a time, about 45 to 60 three at a time on four cores; unit checks: 115 since 7 Nov). Both must end with
+     `npm run check:browser -- http://localhost:4173/ --lanes=3` (browser checks: 83 since 7 Nov,
+     some 80 minutes one at a time, about 45 to 60 three at a time on four cores; unit checks: 118 since 7 Nov). Both must end with
      "ALL CHECKS PASSED". See Test hooks and scripts. The harness splits too: four
      `tools/sim.ts 75 … --from=0` (75, 150, 225) at once give 300 games in about 2.5 minutes.
 3. **Commit and go live:**
@@ -2163,6 +2163,43 @@ three.js 0.186. Design is in `DESIGN.md`, history in `CHANGELOG.md`, and decisio
 - `formatDate(at, now)` (`eras.ts`): a date after the Big Bang with as many digits as tell it from
   now (the Drawer's Burns until). The research grid names its first column "The Stelliferous Age"
   (`Research.tsx`; the age itself is still `ERAS[0]`, the Long Dusk).
+- **The Interregnum paced as the Long Dusk** (7 Nov): `INTERREGNUM.growth` is the Dusk's (`eras.ts`),
+  86 / 114 / 148 turns; `pastOfWhite`'s old red dwarfs die from 10⁸ years in (`interregnum.ts`, the
+  same one draw: a Dusk seed unchanged). `unit/interregnum-pace` measures the flares seen.
+- **The vacuum, a hidden fate** (7 Nov): `src/game/vacuum.ts`. `settings.vacuum` (absent = stable);
+  `vacuumOf` (Unknown by `hashSeed('vacuum:'+seed)`, a third each), `vacuumKnown` (chosen, or the
+  `vacuum_question` tech: `TechDef.vacuumUnknown`, shown only in an Unknown game), `vacuumFallsAt`
+  (λ = log10 η, by `hashSeed('vacuum-fall:'+seed)` through `fallQuantile`), `fallChance(v, from, to)`
+  (the distribution's, given that we lasted: the forecast), `HIGGS_FALL` (the two-piece normal in
+  z = √ln(λ/2): mode 0.5515, 0.0745 below, 0.1135 above, least squares on the five quantiles after
+  the horizon conversion), `LANDSCAPE_FROM`/`TO` (34, 122). `checkEndings` ends 'endurance' with
+  `VACUUM_ENDING` after the Works, before the Fade; `VACUUM_EPILOGUE` (`works.ts`), picked by name in
+  `Story.tsx`. The forecast `vacuumForecast` (`forecast.ts`, kind 'vacuum'); the Chronometer's
+  `deepMilestonesFor(fate, vacuum)`; the False Vacuum event's `bind`; the picker in `Menu.tsx`.
+- **What the late Dark Era's noise makes** (7 Nov): `src/game/sim/fluctuations.ts`.
+  `echoesOfThePast` and `mindsOutOfNothing` (the player's, as the turn passes each date: `ECHO_DATES`,
+  `MINDS_FROM` 50, `MANY_MINDS_FROM` 52, events `echo_voice`/`page`/`sky`/`lost`,
+  `mind_from_nowhere`, `many_minds`), `holdTheUnbidden` (the charter `the_unbidden`, each turn after
+  `continuity`), `cloudNotes` (a note `kind: 'cloud'` at `CLOUD_LAMBDA` 99.4, `eras.ts`, near our
+  capital, `flags.cloud_lit` on the player's civ; `handleNotes` banks it as a flash of
+  `CLOUD_JOULES` and queues `cloud_light`; `turnEndEta` stops a turn there until it has lit).
+  `destroyColony` keeps `civ.lostPlaces` (the last 12) for the lost settlement's echo;
+  `lostToRemember` falls back on the log's "is lost:" lines. `foundingLine` is newGame's first log
+  line, rebuilt.
+- **Szilard Engines** (7 Nov): `src/game/sim/szilard.ts`. The energy mode 'szilard' (`economy.ts`:
+  amount × `szilardYield`, Continuity/100 × the choice's yield, the Dark Era only);
+  `szilardContinuity` added to `continuityLoss`; `FORGET` (`flags.forget_what` 1/2/3, the event
+  `what_to_forget`, queued by `finishQueued` at the first engine). The tip in `standingNotes`
+  (`projection.ts`).
+- **The two films** (7 Nov): `src/film/cloud.ts` (`CLOUD_FILM`, played before `cloud_light`'s card
+  in `turnflow.ts`, `flags.cloud_film`), and `end_vacuum` in `endings.ts` (`ending()`'s `make` now
+  gets the args, and may give the title: `FilmArgs.vacuum` picks the cut; `filmArgsOf` sets it).
+  Their scores in `score.ts` (`cloud`, `end_vacuum`, `FATE_SCORES['end_vacuum:landscape']`);
+  `Score.silence` drops what is struck from that beat to the title and cuts what sounds across it,
+  and `outlet` (`cue.ts`) shuts the bus at the beat and opens it for the title. `Film.tsx` and
+  `export.ts` pass `args.vacuum ?? args.fate` as the cue's cut. `tools/film-render.mjs --vacuum=
+  --eta=`. The reel's `timecode` writes an η past 10²¹ as a power.
+- `tools/checks/darkgame.ts` (`darkGame(settings, seed)`): a Dark Era game for the unit checks.
 
 ## Music tooling
 
