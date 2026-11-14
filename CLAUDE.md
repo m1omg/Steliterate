@@ -72,8 +72,9 @@ synthwave for those two films (a drum machine, chords on the bar, a rolling synt
 echo) and the Long Dusk's film at the Last Gas in a game begun in the Interregnum (4 Nov).
 **ONLY to /next (7 Nov, the player: "ok, to be clear, ONLY to /next"):** the work since then goes to
 `next` alone, with no PR into `main`, until the player says otherwise: the Twilight Interregnum paced
-as the Long Dusk (`76a35e7`, at /next/ on 7 Nov), and the Dark Era's six that follow it. A fix wanted
-at the main address is made on a branch from `main`.
+as the Long Dusk (`76a35e7`, at /next/ on 7 Nov), and the Dark Era's six that follow it (`7c2e3df`,
+at /next/ on 14 Nov, after the player saw and heard its films: "Go for it."). A fix wanted at the
+main address is made on a branch from `main`.
 The player asked me to open and merge these myself, every time, once a batch is
 validated ("Always. You merge pls.", 9 Oct). The old live branch stays behind `main`: never push
 an older commit to it, as Pages builds it too and would put the older build live.

@@ -5220,4 +5220,6 @@ reason.
     (`27628d7`, `index-DVDvaDKb.js`): 82 passed, `research-fate` failed on the stray "???";
   - after the fix, `research-fate` and `vacuum` pass, and the playtest again.
 - The two films were rendered as previews for the player (1080p, "A Light in the Dark" and the
-  vacuum's ending in both cuts); this goes to `next` once they have been seen and heard.
+  vacuum's ending in both cuts). They saw and heard them and said "Go for it." (13 Nov). It went to
+  /next/ on 14 Nov as `7c2e3df`, script `index-BtiAGAlZ.js`; the main address keeps PR
+  m1omg/Steliterate#60.

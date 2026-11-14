@@ -9,7 +9,7 @@ the entry point; the details are in the other notes, and every section says wher
 Keep it spoiler-light, like everything the player may read. The stranger minds and the endings
 are in `docs/spoilers/`, for you only: never repeat them to the player.
 
-## 0. Start here (7 Nov)
+## 0. Start here (14 Nov)
 
 ### Where things stand
 - **ONLY to /next (7 Nov, the player: "ok, to be clear, ONLY to /next"):** the work since 6 Nov
@@ -17,23 +17,19 @@ are in `docs/spoilers/`, for you only: never repeat them to the player.
   m1omg/Steliterate#60 (`f85739f`, `index-CgxQ4W4K.js`); the work branch and `next` are ahead of
   it. A fix the player wants at the main address must be made on a branch from `main`, not
   merged from the work branch.
-- **At /next/:** the Twilight Interregnum paced as the Long Dusk (§3, 7 Nov).
-- **In flight:** the Dark Era's six (SESSION-NOTES, "Then (6 and 7 Nov)"; CHANGELOG "The Dark
-  Era's six"), on the work branch since `b9b91ff` and not yet at `next`. It was validated on 7 Nov,
-  harness and all, after two fixes the validation found: `27628d7` makes Szilard Engines a
-  deliberate choice, researched only when one would be lit; `c5851f8` removes a stray "???" from
-  the research grid. Its two films' previews were sent on 7 Nov. It goes to
-  `next` once the player has seen and heard them; the copy is `git push origin
-  claude/epic-wozniak-lyhulf:next`, then check that /next/ serves the new `index-*.js`.
+- **At /next/** (`index-BtiAGAlZ.js`): the Twilight Interregnum paced as the Long Dusk (§3, 7
+  Nov), and the Dark Era's six (§3; at /next/ since 14 Nov).
+- **In flight:** nothing. §6 lists what waits on the player.
 
-### The last thing done (3 and 4 Nov)
-- Real synthwave for the Twilight Interregnum's and the Long Dusk's films, and the Long Dusk's
-  film in a game begun in the Interregnum, played at the Last Gas (§3; PR m1omg/Steliterate#60).
-  The player heard and saw the previews first, then said "Please merge."
-- The player then asked to brainstorm the Dark Era ("Don't implement those yet"). The ideas
-  offered are in SESSION-NOTES, "Open threads and pending decisions"; none is built.
-- The other 16 films keep their music of 1 Nov. Rendering them as videos was offered on 2 Nov
-  (about 10 minutes each here). There is no answer yet.
+### The last thing done (6 to 14 Nov)
+- The Dark Era's six (§3; CHANGELOG, "The Dark Era's six"; SESSION-NOTES, "Then (6 and 7 Nov)").
+  It was built and validated on 7 Nov, harness and all, after two fixes the validation found:
+  `27628d7` makes Szilard Engines a deliberate choice, researched only when one would be lit;
+  `c5851f8` removes a stray "???" from the research grid.
+- Its two films' previews (1080p) were sent on 7 Nov. The player saw and heard them and said "Go
+  for it." (13 Nov). It went to `next` on 14 Nov as `7c2e3df`, and the main address kept PR #60.
+- Before it, the Twilight Interregnum paced as the Long Dusk (7 Nov, §3), the first work under
+  "ONLY to /next".
 
 ### First steps
 1. `git fetch` every branch and look for work no PR has taken in:
@@ -94,8 +90,8 @@ last.
   |---|---|---|---|
   | Address | https://m1omg.github.io/Steliterate/ | https://m1omg.github.io/Steliterate/next/ | https://m1omg.github.io/Steliterate/archive/2026-10-27/ (and `/archive/2026-10-13/`) |
   | Branch | `main` | `next`, a copy of `claude/epic-wozniak-lyhulf` | `public/archive/` in the build, never edited |
-  | As of | PR m1omg/Steliterate#60 (real synthwave for two films, the Long Dusk's film at the Last Gas, 4 Nov), `f85739f` | ahead of `main` since 7 Nov ("ONLY to /next"): the Interregnum paced as the Long Dusk, `76a35e7`; the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
-  | Live script | `index-CgxQ4W4K.js` | `index-3GlUVbsf.js` | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
+  | As of | PR m1omg/Steliterate#60 (real synthwave for two films, the Long Dusk's film at the Last Gas, 4 Nov), `f85739f` | ahead of `main` since 7 Nov ("ONLY to /next"): the Interregnum paced as the Long Dusk, `76a35e7`, and the Dark Era's six, `7c2e3df` (14 Nov); the Interregnum offered | `0279db1` (PR #45), and `4aaaa2a` (13 Oct) |
+  | Live script | `index-CgxQ4W4K.js` | `index-BtiAGAlZ.js` | `index-D13F5Go2.js`, `index-B4EKBtSN.js` |
   | Saves | `steliterate2.` keys (their own; slots' data in IndexedDB `steliterate2` since 1 Nov) | the same | `steliterate.` keys |
 
 ## 2. Read in this order
@@ -402,23 +398,42 @@ has the figures for each.
   gives more growth. At /next/ as `76a35e7`, script `index-3GlUVbsf.js`; check
   `unit/interregnum-pace`.
 
-## 4. Baselines (2 Nov)
+- **The Dark Era's six** (7 Nov; at /next/ only since 14 Nov, after the player saw and heard the
+  films' previews: "Go for it."): "Implement:" six of the brainstorm's ideas. With them, the minds
+  out of nothing to be held and joined to us, and the vacuum a setting, "since a random ending can
+  feel unfair". These are:
+  - the vacuum as a hidden fate: New Game's "What of the vacuum?" (Stable by default, Unknown,
+    Metastable, a landscape vacuum), the Vacuum Question, and a chance each turn that rises;
+  - minds out of nothing from 10^(10⁵⁰) years, held as Echoes under the charter The Unbidden;
+  - four echoes of our own game before the Recurrence, in words only;
+  - a cloud out of nothing that lights once near 10^(10⁹⁹) years, with its film "A Light in the
+    Dark";
+  - Szilard Engines burning Continuity for energy, and the Threads' argument "What Shall We
+    Forget?";
+  - the vacuum's ending film in two cuts.
 
-These are from the last validation of a rule change, PR m1omg/Steliterate#57 (1 Nov). PR #58
-changed only the films' music and the checks. It ran the unit checks and the browser checks it
-touches.
+  The "final energy state" became the landscape vacuum's ending, not a crossing. With the vacuum
+  Stable, games play as before: 181 / 69 / 102, 5 of 300 ending differently. At /next/ as
+  `7c2e3df`, script `index-BtiAGAlZ.js`; CHANGELOG, "The Dark Era's six". Checks: `unit/vacuum`,
+  `unit/dark-fluctuations`, `unit/szilard`, `browser/vacuum`, `browser/cloud-film`.
+
+## 4. Baselines (7 Nov)
+
+These are from the last validation of a rule change, the Dark Era's six (7 Nov, `c5851f8`; at
+/next/ only).
 
 | | The game |
 |---|---|
 | tsc, build | clean |
 | Playtest | passes (30/144 Hz parity) |
 | savecompat | 11 saves (the player's turn-52 flare save among them) |
-| Unit checks | 115 (`interregnum-pace`, 7 Nov) |
-| Browser checks, real fonts | 81 |
+| Unit checks | 118 |
+| Browser checks | 83, the full suite in three lanes |
 | 300 games (survive / victories / Degenerate Age turns) | 181 / 69 / 102 |
-| By fate | decay 109 / 148, stable 30 / 81, curvature 42 / 71 |
-| 300 at Harsh | 148 / 29 / 92 |
-| 300 begun in the Interregnum | 186 / 74 / 109, 297 of them reaching the Dusk |
+| By fate | decay 108 / 148, stable 29 / 81, curvature 44 / 71 |
+| 300 at Harsh | 151 / 29 / 92 |
+| 300 begun in the Interregnum | 199 / 122 / 120, 291 of them reaching the Dusk |
+| 300 by vacuum (`--vacuum=`) | Metastable 222 / 64, landscape 186 / 69, Unknown 200 / 67 |
 | 900 games | 444 / 160 / 70 (15 Oct, not run since) |
 
 - **Noise:** with real neighbours, two runs of the same rules can differ by 32 survivors and 37
@@ -471,15 +486,20 @@ The full picture is in SESSION-NOTES, "How the player likes to work".
 
 Start none of these without their word.
 
-1. **The Dark Era brainstorm** (4 Nov): nine ideas offered, none built, the player to pick any
-   (SESSION-NOTES, "Open threads": the ladder of odds and its rungs).
+1. **The rest of the Dark Era brainstorm** (4 Nov): six of the nine ideas are built (§3, the Dark
+   Era's six). Three are still offered, the player to pick any: the ladder of odds (the deep-time
+   ruler's rungs), the horizon making matter again, and thoughts as the currency (SESSION-NOTES,
+   "Open threads").
 2. **The other 16 films as videos** (offered 2 Nov). Use `tools/film-render.mjs`, one film at a
    time. Each takes about 10 minutes at 1080p here.
 3. **Firefox.**
    - The container has no Firefox; software-drawn Chromium stands in for it.
    - The player said Firefox ran the films "very slow". That was before the fixes of 15 Oct;
      how they play there now is not known.
-4. **Offers with no answer** (12 and 13 Oct, and the audit of 31 Oct):
+4. **Offers with no answer** (12 and 13 Oct, the audit of 31 Oct, and 7 Nov):
+   - the vacuum's two endings counted as Defeat rather than Endurance (7 Nov). As built they count
+     as Endurance, so with the Metastable vacuum 41 games that would have been lost later count
+     as survivals;
    - pulsar beams in line with real pulsars, or a stated bend;
    - Burst Catchers in neighbouring systems banking a share of a burst at η 68;
    - a rogue world's Coldminds at the dark-sky half upkeep;

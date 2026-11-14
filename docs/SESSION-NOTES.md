@@ -228,6 +228,10 @@ clone, with none of this session's scratch files, uploads or memory: everything 
     - the harness: the autoplayer took the Szilard research in nearly every Dark Era game, which
       halved its Great Works' insight; the research is now a deliberate choice, `27628d7`;
     - the browser suite: a stray "???" for the Vacuum Question in the research grid, `c5851f8`.
+    - at /next/: on 13 Nov, the previews seen and heard, the player said "Go for it." It went to
+      `next` on 14 Nov (`7c2e3df`, live script `index-BtiAGAlZ.js`); `main` stays at PR
+      m1omg/Steliterate#60. The vacuum's endings count as Endurance, as planned; Defeat instead,
+      offered on 7 Nov, has no answer.
   - **The audit of 31 Oct** (the player: "check for other unimplemented things too"), against the
     plans and these notes, each checked in the code:
     - planned and approved, not built: the Lancer and the Penrose Corsair ("deferred, not dropped",
@@ -507,7 +511,11 @@ clone, with none of this session's scratch files, uploads or memory: everything 
 ## Open threads and pending decisions
 
 - **4 Nov, the Dark Era brainstorm** (the player: "Don't implement those yet. I just really
-  brainstorming"). Offered, none built; the player picks any to plan:
+  brainstorming"). Six were built on 7 Nov at the player's word ("Implement:"; the Dark Era's
+  six, at /next/ since 14 Nov): minds out of nothing, echoes before the Recurrence, a cloud out of
+  nothing, the vacuum as a hidden fate, burning memories for warmth, and the final energy state
+  (an ending, not a crossing). Three are still offered, the player to pick any: the ladder of
+  odds, the horizon making matter again, thoughts as the currency. The nine as offered:
   - the frame: a ladder of odds. A Dark turn covers powers of powers of years, so a fixed chance
     per year goes from never to certain within one turn; the deep-time ruler shows the rungs and
     their waits, each turn which it will likely cross, and we stay awake for one (dear) or sleep
